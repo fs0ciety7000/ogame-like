@@ -4,6 +4,16 @@
 
 function getBuildingImage(buildingId, level) {
     const b = buildings.find(x => x.id === buildingId);
+    
+    // Sécurité : si pas d'image définie, on met une image par défaut ou vide
+    if (!b || !b.imageBase) {
+        return "assets/buildings/default.png"; // Image de secours
+    }
+
+    // Version simple : Une seule image pour tous les niveaux (plus facile au début)
+    // return `${b.imageBase}.png`; 
+    
+    // Version avancée (la tienne) : Une image par niveau (ex: mine_lvl1.png)
     return `${b.imageBase}_lvl${level}.png`;
 }
 
@@ -23,18 +33,27 @@ slots.forEach((slot, index) => {
         return;
     }
 
-    const level = GameData.buildings[b.id].level;
+    // On récupère le niveau depuis GameData
+    const level = GameData.buildings[b.id]?.level || 1;
 
     slot.innerHTML = `
         <div class="building-card">
-            <img src="${getBuildingImage(b.id, level)}" class="building-image" alt="${b.name}">
+           <img 
+    src="${getBuildingImage(b.id, level)}" 
+    class="building-image" 
+    alt="${b.name}" 
+    onerror="this.onerror=null; this.src='https://placehold.co/100x100?text=Image+Manquante';"
+>
             <div class="building-name">${b.name}</div>
             <div class="building-description">${b.description}</div>
-            <div class="building-level">Niveau : ${level} / ${b.maxLevel}</div>
-            <div class="building-bonus">${b.bonus}</div>
+            <div class="building-level">Niveau : <span class="lvl-val">${level}</span> / ${b.maxLevel}</div>
+            
+            <div class="building-bonus">
+                 ${b.production ? `Production : ${b.production.base * level}/s` : "Pas de production"}
+            </div>
+
             <div class="building-cost">Coût : ${b.cost.scrap} ferraille, ${b.cost.energy} énergie</div>
-            <div class="building-time">Temps : ${b.time}</div>
-            <button class="building-button">Améliorer</button>
+            <div class="building-time">Temps : 1s</div> <button class="building-button">Améliorer</button>
         </div>
     `;
 
@@ -47,55 +66,33 @@ slots.forEach((slot, index) => {
     }
 
     button.addEventListener("click", () => {
+        // Vérifier le niveau max
+        if (GameData.buildings[b.id].level >= b.maxLevel) return;
 
-        // Vérifier le niveau max AVANT tout
-        if (GameData.buildings[b.id].level >= b.maxLevel) {
-            button.disabled = true;
-            button.textContent = "Niveau max";
-            return;
-        }
-
-        const cost = b.cost;
-
-        // Vérifie si le joueur peut payer
-        if (spendResource("scrap", cost.scrap) && spendResource("energy", cost.energy)) {
+        // On utilise la fonction globale spendResource (définie dans gameData.js)
+        if (spendResource("scrap", b.cost.scrap) && spendResource("energy", b.cost.energy)) {
 
             GameData.buildings[b.id].level++;
-            saveGame();
+            saveGame(); // Fonction globale de gameData.js
 
             const newLevel = GameData.buildings[b.id].level;
 
-            // Mise à jour du texte
-            slot.querySelector(".building-level").textContent =
-                `Niveau : ${newLevel} / ${b.maxLevel}`;
+            // Mise à jour visuelle locale
+            slot.querySelector(".lvl-val").textContent = newLevel;
+            slot.querySelector(".building-image").src = getBuildingImage(b.id, newLevel);
+            
+            // Mise à jour de la production affichée si nécessaire
+            if(b.production) {
+                slot.querySelector(".building-bonus").textContent = `Production : ${b.production.base * newLevel}/s`;
+            }
 
-            // Mise à jour de l’image
-            slot.querySelector(".building-image").src =
-                getBuildingImage(b.id, newLevel);
-
-            // Si on atteint le niveau max → désactiver le bouton
+            // Gestion niveau max
             if (newLevel >= b.maxLevel) {
                 button.disabled = true;
                 button.textContent = "Niveau max";
             }
-
         } else {
             alert("Pas assez de ressources !");
         }
     });
 });
-
-// ===============================
-// MISE À JOUR DU HUD
-// ===============================
-
-function updateResourceDisplay() {
-    document.getElementById("scrap").textContent = GameData.resources.scrap;
-    document.getElementById("energy").textContent = GameData.resources.energy;
-    document.getElementById("nano").textContent = GameData.resources.nano;
-    document.getElementById("data").textContent = GameData.resources.research;
-}
-
-function saveGame() {
-    localStorage.setItem("CosmicEmpiresSave", JSON.stringify(GameData));
-}

@@ -1,20 +1,14 @@
 // ===============================
-// DONNÉES GLOBALES DU JEU
+// DONNÉES GLOBALES DU JEU (gameData.js)
 // ===============================
 
-// Valeurs par défaut
 let GameData = {
-    resources: {
-        scrap: 0,
-        energy: 0,
-        nano: 0,
-        data: 0
-    },
+    // --- DEV MODE ---
+    devMultiplier: 1, 
+    // ----------------
 
-    // XP du joueur (utilisé pour le rang dans la page Profil)
+    resources: { scrap: 0, energy: 0, nano: 0, data: 0 },
     xp: 0,
-
-    // Niveaux des bâtiments
     buildings: {
         extracteur_ferraille: { level: 1 },
         reacteur_instable: { level: 1 },
@@ -22,8 +16,6 @@ let GameData = {
         archives_fracturees: { level: 1 },
         atelier_reparation: { level: 1 }
     },
-
-    // Niveaux + quantités des unités
     units: {
         hangar:              { level: 1, count: 0 },
         drone_recuperateur:  { level: 1, count: 0 },
@@ -37,209 +29,110 @@ let GameData = {
 // ===============================
 // DÉFINITION DES BÂTIMENTS
 // ===============================
-
+// J'ai ajouté "imageBase" ici 👇
 const buildings = [
-    {
-        id: "extracteur_ferraille",
-        name: "Extracteur de ferraille",
-        maxLevel: 10,
+    { 
+        id: "extracteur_ferraille", 
+        name: "Extracteur de ferraille", 
+        maxLevel: 10, 
         description: "Récupère des matériaux bruts dans les débris environnants.",
-        bonus: "+5% récupération de ferraille",
-        cost: { scrap: 200, energy: 50 },
-        time: "30s",
-        imageBase: "assets/batiments/extracteur_ferraille",
-        production: { resource: "scrap", base: 5 }
+        cost: { scrap: 200, energy: 50 }, 
+        production: { resource: "scrap", base: 5 },
+        imageBase: "assets/batiments/extracteur_ferraille" 
     },
-    {
-        id: "reacteur_instable",
-        name: "Réacteur instable",
+    { 
+        id: "reacteur_instable", 
+        name: "Réacteur instable", 
         maxLevel: 10,
-        description: "Fournit une énergie instable mais puissante.",
-        bonus: "+8% production énergétique",
-        cost: { scrap: 300, energy: 120 },
-        time: "45s",
-        imageBase: "assets/batiments/reacteur_instable",
-        production: { resource: "energy", base: 3 }
+         description: "Fournit une énergie instable mais puissante.", 
+        cost: { scrap: 300, energy: 120 }, 
+        production: { resource: "energy", base: 3 },
+        imageBase: "assets/batiments/reacteur_instable"
     },
-    {
-        id: "extracteur_nanocomposants",
-        name: "Extracteur de nano‑composants",
-        maxLevel: 10,
-        description: "Permet de récupérer des nano‑composants rares.",
-        bonus: "+4% extraction avancée",
-        cost: { scrap: 250, energy: 200 },
-        time: "60s",
-        imageBase: "assets/batiments/extracteur_nanocomposants",
-        production: { resource: "nano", base: 1 }
+    { 
+        id: "extracteur_nanocomposants", 
+        name: "Extracteur de nano", 
+        maxLevel: 10, 
+         description: "Permet de récupérer des nano‑composants rares.",
+        cost: { scrap: 250, energy: 200 }, 
+        production: { resource: "nano", base: 1 },
+        imageBase: "assets/batiments/extracteur_nanocomposants"
     },
-    {
-        id: "archives_fracturees",
-        name: "Centre d’archives fracturées",
-        maxLevel: 10,
+    { 
+        id: "archives_fracturees", 
+        name: "Archives fracturées", 
+        maxLevel: 10, 
         description: "Contient des données anciennes et instables.",
-        bonus: "+6% vitesse de recherche",
-        cost: { scrap: 150, energy: 300 },
-        time: "40s",
-        imageBase: "assets/batiments/archives_fracturees",
-        production: { resource: "data", base: 2 }
+        cost: { scrap: 150, energy: 300 }, 
+        production: { resource: "data", base: 2 },
+        imageBase: "assets/batiments/archives_fracturees"
     },
-    {
-        id: "atelier_reparation",
-        name: "Atelier de réparation",
-        maxLevel: 10,
-        description: "Répare les unités endommagées.",
-        bonus: "+10% vitesse de réparation",
+    { 
+        id: "atelier_reparation", 
+        name: "Atelier de réparation", 
+        maxLevel: 10, 
+         description: "Répare les unités endommagées.",
         cost: { scrap: 180, energy: 80 },
-        time: "35s",
-        imageBase: "assets/batiments/atelier_reparation"
-        // pas de production
+        imageBase: "assets/batiments/atelier"
+        // Pas de production
     }
 ];
 
 // ===============================
-// CHARGEMENT DE LA SAUVEGARDE
+// CHARGEMENT & INIT
 // ===============================
-
 const saved = localStorage.getItem("CosmicEmpiresSave");
 if (saved) {
     try {
         const parsed = JSON.parse(saved);
-        // On fusionne prudemment pour éviter de perdre des clés
-        GameData = {
-            ...GameData,
-            ...parsed,
-            resources: { ...GameData.resources, ...(parsed.resources || {}) },
-            buildings: { ...GameData.buildings, ...(parsed.buildings || {}) },
-            units:     { ...GameData.units,     ...(parsed.units || {}) }
+        GameData = { 
+            ...GameData, 
+            ...parsed, 
+            devMultiplier: parsed.devMultiplier || 1,
+            resources: { ...GameData.resources, ...(parsed.resources || {}) }, 
+            buildings: { ...GameData.buildings, ...(parsed.buildings || {}) }, 
+            units: { ...GameData.units, ...(parsed.units || {}) } 
         };
-    } catch (e) {
-        console.warn("Sauvegarde corrompue, utilisation des valeurs par défaut.", e);
-    }
+    } catch (e) { console.warn("Sauvegarde corrompue", e); }
 }
 
-// Sécurité : si l'XP n'existe pas (anciennes sauvegardes) → on l'ajoute
-if (GameData.xp === undefined) {
-    GameData.xp = 0;
-}
-
-// ===============================
-// CORRECTION DES BÂTIMENTS
-// ===============================
-
-buildings.forEach(b => {
-    if (!GameData.buildings[b.id]) {
-        GameData.buildings[b.id] = { level: 1 };
-    }
-
-    const current = GameData.buildings[b.id].level;
-    if (current > b.maxLevel) {
-        GameData.buildings[b.id].level = b.maxLevel;
-    }
-});
-
-// ===============================
-// CORRECTION / INITIALISATION DES UNITÉS
-// ===============================
-
-const defaultUnits = [
-    "hangar",
-    "drone_recuperateur",
-    "fregate",
-    "sentinelle",
-    "cargo",
-    "chasseur"
-];
-
-if (!GameData.units) {
-    GameData.units = {};
-}
-
-defaultUnits.forEach(id => {
-    if (!GameData.units[id]) {
-        GameData.units[id] = { level: 1, count: 0 };
-    } else {
-        if (GameData.units[id].level === undefined) {
-            GameData.units[id].level = 1;
-        }
-        if (GameData.units[id].count === undefined) {
-            GameData.units[id].count = 0;
-        }
-    }
-});
-
-// Sécurité supplémentaire : le hangar doit toujours exister et avoir au moins le niveau 1
-if (!GameData.units.hangar) {
-    GameData.units.hangar = { level: 1, count: 0 };
-} else {
-    if (!GameData.units.hangar.level || GameData.units.hangar.level < 1) {
-        GameData.units.hangar.level = 1;
-    }
-    if (GameData.units.hangar.count === undefined) {
-        GameData.units.hangar.count = 0;
-    }
-}
-
-// On sauvegarde immédiatement l’état corrigé (utile si ancienne sauvegarde bancale)
-localStorage.setItem("CosmicEmpiresSave", JSON.stringify(GameData));
-
-// ===============================
-// SAUVEGARDE
-// ===============================
+// Init Hangar
+if (!GameData.units.hangar) GameData.units.hangar = { level: 1, count: 0 };
+if ((GameData.units.hangar.level || 0) < 1) GameData.units.hangar.level = 1;
 
 function saveGame() {
     localStorage.setItem("CosmicEmpiresSave", JSON.stringify(GameData));
 }
 
 // ===============================
-// MISE À JOUR DU HUD
+// MISE À JOUR DU HUD (Ressources)
 // ===============================
-
 function updateHUD() {
+    // Si layout.js est présent, il s'en occupe via updateGlobalHUD s'il contient les IDs
+    // Sinon on met à jour manuellement si les IDs existent sur la page
     const ids = ["scrap", "energy", "nano", "data"];
-
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.textContent = GameData.resources[id];
+        if (el) el.textContent = Math.floor(GameData.resources[id]);
     });
-
-    const xpEl = document.getElementById("xp-points");
-    if (xpEl) xpEl.textContent = GameData.xp + " XP";
+    
+    if (typeof updateGlobalUnitHUD === "function") {
+        updateGlobalUnitHUD();
+    }
 }
-
-function updateInventory() {
-    const invScrap  = document.getElementById("invScrap");
-    const invEnergy = document.getElementById("invEnergy");
-    const invNano   = document.getElementById("invNano");
-    const invData   = document.getElementById("invData");
-
-    if (invScrap)  invScrap.textContent  = GameData.resources.scrap;
-    if (invEnergy) invEnergy.textContent = GameData.resources.energy;
-    if (invNano)   invNano.textContent   = GameData.resources.nano;
-    if (invData)   invData.textContent   = GameData.resources.data;
-}
-
-// ===============================
-// AJOUT DE RESSOURCES
-// ===============================
 
 function addResource(type, amount) {
     if (GameData.resources[type] !== undefined) {
         GameData.resources[type] += amount;
         updateHUD();
-        updateInventory();
         saveGame();
     }
 }
-
-// ===============================
-// CONSOMMATION DE RESSOURCES
-// ===============================
 
 function spendResource(type, amount) {
     if (GameData.resources[type] >= amount) {
         GameData.resources[type] -= amount;
         updateHUD();
-        updateInventory();
         saveGame();
         return true;
     }
@@ -247,39 +140,17 @@ function spendResource(type, amount) {
 }
 
 // ===============================
-// CHARGEMENT INITIAL DU HUD
+// BOUCLE DE JEU
 // ===============================
-
-window.addEventListener("load", () => {
-    updateHUD();
-    updateInventory();
-});
-
-// ===============================
-// PRODUCTION AUTOMATIQUE GLOBALE
-// ===============================
-
 setInterval(() => {
+    const multiplier = GameData.devMultiplier || 1;
     buildings.forEach(b => {
         const levelData = GameData.buildings[b.id];
-        if (!levelData) return;
-
-        const level = levelData.level;
-
-        if (level > 0 && b.production) {
-            const amount = b.production.base * level;
-            addResource(b.production.resource, amount);
+        if (levelData && levelData.level > 0 && b.production) {
+            const productionAmount = (b.production.base * levelData.level) * multiplier;
+            addResource(b.production.resource, productionAmount);
         }
     });
 }, 1000);
 
-// ===============================
-// MODE TEST : FORCER UN RANG
-// ===============================
-
-window.addEventListener("load", () => {
-    // GameData.xp = 52000;
-    if (typeof updateRankDisplay === "function") {
-        updateRankDisplay();
-    }
-});
+window.addEventListener("load", updateHUD);

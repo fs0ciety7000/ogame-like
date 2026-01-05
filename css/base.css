@@ -37,3 +37,52 @@ h1 {
     from { transform: translateY(0); }
     to { transform: translateY(20px); }
 }
+
+/* ============================
+   HUD GLOBAL (NAVBAR)
+============================ */
+.global-hud {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+    background: rgba(10, 15, 30, 0.95); /* Fond sombre */
+    border-bottom: 1px solid rgba(127, 255, 212, 0.3);
+    padding: 10px 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+}
+
+.resources {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-family: sans-serif;
+    align-items: center;
+}
+
+.resources p {
+    margin: 0;
+    color: #d0d4d8;
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+
+.resources span {
+    color: #fff;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+/* Style spécial pour le compteur d'unités */
+#unit-count-display {
+    color: #7fffd4;
+    border: 1px solid rgba(127, 255, 212, 0.3);
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: rgba(127, 255, 212, 0.05);
+    margin-left: 10px;
+    font-weight: bold;
+}
