@@ -16,11 +16,20 @@ header h1 {
     color: #7fffd4;
     margin-top: 20px;
     text-shadow: 0 0 10px rgba(127, 255, 212, 0.4);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 60px;
+    margin: 30px auto;
+    width: 100%;
+
 }
 
 /* ============================
    AFFICHAGE DU RANG (NOUVEAU)
 ============================ */
+
 
 .rank-display {
     display: flex;
