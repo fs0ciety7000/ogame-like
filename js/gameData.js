@@ -53,7 +53,7 @@ const buildings = [
         id: "extracteur_nanocomposants", 
         name: "Extracteur de nano", 
         maxLevel: 10, 
-         description: "Permet de récupérer des nano‑composants rares.",
+         description: "Permet de récupérer des nano‑composantsrares.",
         cost: { scrap: 250, energy: 200 }, 
         production: { resource: "nano", base: 1 },
         imageBase: "assets/batiments/extracteur_nanocomposants"
