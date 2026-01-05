@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bâtiments – Cosmic Empires</title>
+
+    <link rel="stylesheet" href="css/global-scale.css">
+
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/batiments.css">
+</head>
+
+<body class="bg-profil">
+
+    <!-- HUD DES RESSOURCES -->
+    <div class="resources">
+        <p>🔩 Ferraille : <span id="scrap">0</span></p>
+        <p>⚡ Énergie : <span id="energy">0</span></p>
+        <p>🧬 Nano‑composants : <span id="nano">0</span></p>
+        <p>📡 Données anciennes : <span id="data">0</span></p>
+    </div>
+
+    <!-- SLOTS DES BÂTIMENTS -->
+    <div class="building-slots" id="building-slots">
+        <div class="slot" data-slot="1"></div>
+        <div class="slot" data-slot="2"></div>
+        <div class="slot" data-slot="3"></div>
+        <div class="slot" data-slot="4"></div>
+        <div class="slot" data-slot="5"></div>
+    </div>
+
+    <!-- CONTENEUR DES CARTES DE BÂTIMENTS -->
+    <div class="buildings-container" id="buildings-container">
+        <!-- Les cartes seront générées automatiquement -->
+    </div>
+
+    <script src="js/gameData.js"></script>
+    <script src="js/batiments.js"></script>
+
+</body>
+</html>

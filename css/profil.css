@@ -1,0 +1,149 @@
+/* ============================
+   PAGE PROFIL
+============================ */
+
+/* Fond spécifique */
+body.bg-profil {
+    background-image: url("../assets/Logo/profil.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Titre */
+header h1 {
+    text-align: center;
+    color: #7fffd4;
+    margin-top: 20px;
+    text-shadow: 0 0 10px rgba(127, 255, 212, 0.4);
+}
+
+/* ============================
+   AFFICHAGE DU RANG (NOUVEAU)
+============================ */
+
+.rank-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 60px;
+    margin: 30px auto;
+    width: 100%;
+    text-align: center;
+}
+
+/* Rang précédent / suivant */
+.rank-side {
+    font-size: 1.2em;
+    color: #ffffff;
+    opacity: 1;
+    min-width: 120px;
+}
+
+/* Rang actif centré */
+.rank-current {
+    font-size: 2.4em;
+    font-weight: 900;
+    color: #ffffff;
+    padding: 12px 25px;
+    border-radius: 10px;
+
+    background: rgba(255, 140, 0, 0.25);
+    border: 2px solid rgba(255, 140, 0, 0.6);
+
+    text-shadow: 0 0 10px rgba(255,255,255,0.8);
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+
+    min-width: 200px;
+}
+
+/* ============================
+   PANNEAU PRINCIPAL
+============================ */
+
+.rank-panel {
+    width: 90%;
+    margin: 20px auto;
+    padding: 25px;
+
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+}
+
+/* Icône du rang */
+#rank-icon {
+    display: block;
+    margin: 0 auto 20px auto;
+    width: 240px;
+    height: auto;
+    filter: drop-shadow(0 0 10px rgba(251, 252, 252, 0.7));
+}
+
+/* ============================
+   GRILLE D'INFOS
+============================ */
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Ligne d'information */
+.info-line {
+    display: flex;
+    justify-content: space-between;
+    color: #d0d4d8;
+    font-size: 1.1em;
+}
+
+.section-title {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-size: 1.3em;
+    color: #7fffd4;
+    text-shadow: 0 0 6px rgba(127, 255, 212, 0.4);
+}
+
+/* ============================
+   BARRES DE PROGRESSION
+============================ */
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7fffd4, #00bcd4);
+    transition: width 0.4s ease;
+}
+
+/* Couleur troupes */
+.troop-fill {
+    background: linear-gradient(90deg, #4aff9c, #00d47a);
+}
+
+/* Couleur bâtiments */
+.building-fill {
+    background: linear-gradient(90deg, #ffd86b, #ffb84a);
+}
+
+/* Totaux */
+.total-line span:last-child {
+    font-weight: bold;
+    color: #ffffff;
+}

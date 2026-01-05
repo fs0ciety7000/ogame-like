@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventaire – Cosmic Empires</title>
+
+    <link rel="stylesheet" href="css/global-scale.css">
+
+    <!-- CSS globaux -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <!-- CSS spécifique à l’inventaire -->
+    <link rel="stylesheet" href="css/inventaire.css">
+</head>
+
+<body class="bg-inventory">
+
+    <h1 class="page-title">Inventaire</h1>
+
+    <div class="inventory-grid">
+
+        <div class="inventory-item">
+            <span class="emoji">🔩</span>
+            <p class="item-name">Ferraille</p>
+            <p id="invScrap" class="item-value">0</p>
+        </div>
+
+        <div class="inventory-item">
+            <span class="emoji">⚡</span>
+            <p class="item-name">Énergie</p>
+            <p id="invEnergy" class="item-value">0</p>
+        </div>
+
+        <div class="inventory-item">
+            <span class="emoji">🧬</span>
+            <p class="item-name">Nano‑composants</p>
+            <p id="invNano" class="item-value">0</p>
+        </div>
+
+        <div class="inventory-item">
+            <span class="emoji">📡</span>
+            <p class="item-name">Données anciennes</p>
+            <p id="invData" class="item-value">0</p>
+        </div>
+
+    </div>
+
+<script src="js/gameData.js"></script>
+<script>
+    window.addEventListener("load", () => {
+        updateInventory();
+    });
+</script>
+
+
+
+</body>
+</html>

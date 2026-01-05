@@ -1,0 +1,48 @@
+/* --- LAYOUT GÉNÉRAL --- */
+.main-layout {
+    display: flex;
+    gap: 40px;
+}
+
+.column {
+    flex: 1;
+    padding: 15px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(4px);
+}
+
+.column h2 {
+    color: #7fffd4;
+    margin-bottom: 15px;
+}
+
+/* --- BACKGROUNDS GLOBAUX --- */
+.bg-inventory {
+    background-image: url("assets/Logo/salle.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.bg-profil {
+    background-image: url("assets/Logo/profil.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.bg-missions {
+    background-image: url("assets/Logo/mission.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.dashboard-bg {
+    background-image: url("assets/Logo/tableau.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}

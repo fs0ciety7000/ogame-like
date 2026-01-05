@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil – Cosmic Empires</title>
+
+    <link rel="stylesheet" href="css/global-scale.css">
+
+    <!-- CSS globaux -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <!-- CSS spécifique -->
+    <link rel="stylesheet" href="css/profil.css">
+</head>
+
+<body class="bg-profil">
+
+<header>
+    <h1>Profil du Commandant</h1>
+</header>
+
+<!-- Ligne des rangs -->
+<div class="rank-display">
+    <div id="rank-prev" class="rank-side"></div>
+
+    <div id="rank-current" class="rank-current"></div>
+
+    <div id="rank-next" class="rank-side"></div>
+</div>
+
+
+<!-- Panneau principal -->
+<div class="rank-panel">
+
+    <!-- Icône du rang -->
+    <img id="rank-icon" src="assets/ranks/non_classe.png" alt="Rang">
+
+    <!-- Grille d'informations -->
+    <div class="info-grid">
+
+        <!-- Colonne 1 -->
+        <div class="col">
+
+            <div class="info-line">
+                <span>Temps de jeu :</span>
+                <span id="playtime">0h 00m</span>
+            </div>
+
+            <div class="info-line">
+                <span>Points d'expérience :</span>
+                <span id="xp-points">0 XP</span>
+            </div>
+
+            <div class="info-line">
+                <span>Progression du rang :</span>
+                <span id="rank-progress-text">0%</span>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="rank-progress"></div>
+            </div>
+
+            <div class="section-title">Troupes</div>
+
+            <div class="info-line">
+                <span>Drone</span>
+                <span id="drone-level">0 / 10</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill troop-fill" id="drone-fill"></div>
+            </div>
+
+            <div class="info-line">
+                <span>Frégate</span>
+                <span id="frigate-level">0 / 10</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill troop-fill" id="frigate-fill"></div>
+            </div>
+
+            <div class="info-line">
+                <span>Sentinelle</span>
+                <span id="sentinel-level">0 / 10</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill troop-fill" id="sentinel-fill"></div>
+            </div>
+
+            <div class="info-line total-line">
+                <span>Total troupes</span>
+                <span id="troops-total-text">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="troops-total-fill"></div>
+            </div>
+
+        </div>
+
+        <!-- Colonne 2 -->
+        <div class="col">
+
+    <div class="section-title">Bâtiments</div>
+
+    <div class="info-line">
+        <span id="bat1-name"></span>
+        <span id="bat1-level">0 / 10</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill building-fill" id="bat1-fill"></div>
+    </div>
+
+    <div class="info-line">
+        <span id="bat2-name"></span>
+        <span id="bat2-level">0 / 10</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill building-fill" id="bat2-fill"></div>
+    </div>
+
+    <div class="info-line">
+        <span id="bat3-name"></span>
+        <span id="bat3-level">0 / 10</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill building-fill" id="bat3-fill"></div>
+    </div>
+
+    <div class="info-line">
+        <span id="bat4-name"></span>
+        <span id="bat4-level">0 / 10</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill building-fill" id="bat4-fill"></div>
+    </div>
+
+    <div class="info-line">
+        <span id="bat5-name"></span>
+        <span id="bat5-level">0 / 10</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill building-fill" id="bat5-fill"></div>
+    </div>
+
+    <div class="info-line total-line">
+        <span>Total bâtiments</span>
+        <span id="buildings-total-text">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="buildings-total-fill"></div>
+    </div>
+
+</div>
+
+
+        </div>
+
+    </div>
+</div>
+
+<!-- Script -->
+<script src="js/gameData.js"></script>
+<script src="js/profil.js"></script>
+
+</body>
+</html>

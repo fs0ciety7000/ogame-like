@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Missions – Cosmic Empires</title>
+
+    <link rel="stylesheet" href="css/global-scale.css">
+
+    <!-- CSS globaux -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <!-- CSS spécifique à cette page -->
+    <link rel="stylesheet" href="css/missions.css">
+</head>
+
+<body class="bg-missions">
+
+    <!-- HUD des ressources -->
+    <div class="resources">
+        <p>🔩 Ferraille : <span id="scrap">0</span></p>
+        <p>⚡ Énergie : <span id="energy">0</span></p>
+        <p>🧬 Nano-composants : <span id="nano">0</span></p>
+        <p>📡 Données anciennes : <span id="data">0</span></p>
+        <p id="unit-count-display">Unités : 0 / 0</p>
+
+
+        <button class="btn-map" onclick="window.location.href='map.html'">
+            🌌 Carte Galactique
+        </button>
+    </div>
+
+    <h1>Missions</h1>
+
+    <div class="main-layout">
+
+        <!-- Colonne 1 : Missions disponibles -->
+        <div class="column">
+            <h2>Missions disponibles</h2>
+
+            <!-- Conteneur rempli automatiquement par missions.js -->
+            <div id="missionsList"></div>
+
+            <p id="missionStatus"></p>
+        </div>
+
+        <!-- Colonne 2 : Journal -->
+        <div class="column">
+            <h2>Journal de mission</h2>
+
+            <div class="building">
+                <p id="missionLog">Aucune mission en cours.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/gameData.js"></script>
+    <script src="js/missions.js"></script>
+    <script src="js/unites.js"></script>
+
+
+    <!-- Correction du bug de retour arrière (Safari/Firefox) -->
+    <script>
+        window.addEventListener("pageshow", () => {
+            document.body.offsetHeight; // force reflow
+        });
+    </script>
+
+</body>
+</html>

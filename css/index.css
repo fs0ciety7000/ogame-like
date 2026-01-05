@@ -1,0 +1,114 @@
+/* ============================
+   PAGE INDEX (Accueil du jeu)
+============================ */
+
+/* --- ÉCRAN D’ACCUEIL --- */
+#home-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+
+    background-image: url("../assets/Logo/logo.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+
+    padding-top: 10vh;
+    padding-bottom: 1vh;
+
+    color: white;
+    text-align: center;
+    z-index: 2;
+}
+
+/* On masque l’image <img> si elle existe */
+#game-logo {
+    display: none;
+}
+
+/* --- TITRE --- */
+#home-screen h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 60px;
+    letter-spacing: 3px;
+    margin: 0;
+    padding: 15px 30px;
+    color: #ffffff;
+    text-shadow:
+        0 0 10px rgba(127, 255, 212, 0.6),
+        0 0 20px rgba(127, 255, 212, 0.4);
+}
+
+/* --- ZONES TITRE / BOUTON --- */
+.title-zone {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.button-zone {
+    margin-bottom: 30vh;
+}
+
+/* --- BOUTON START (style spécifique) --- */
+#start-btn {
+    padding: 15px 30px;
+    font-size: 20px;
+    margin-top: 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+
+    background: rgba(76, 175, 80, 0.85);
+    color: white;
+    transition: 0.3s;
+}
+
+#start-btn:hover {
+    background: rgba(69, 160, 73, 0.9);
+    box-shadow:
+        0 0 10px rgba(127, 255, 212, 0.7),
+        0 0 20px rgba(127, 255, 212, 0.5),
+        0 0 40px rgba(127, 255, 212, 0.3);
+}
+
+/* --- EFFET VERRE DÉPOLI SUR LE BOUTON --- */
+#home-screen #start-btn {
+    background: rgba(0, 0, 0, 0.45);
+    padding: 12px 25px;
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+}
+
+/* ============================
+   ÉTOILES SCINTILLANTES
+============================ */
+
+.shooting-stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.star-static {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.8;
+
+    box-shadow:
+        0 0 6px rgba(255, 255, 255, 0.9),
+        0 0 12px rgba(127, 255, 212, 0.5),
+        0 0 20px rgba(127, 255, 212, 0.3);
+
+    animation:
+        twinkle 3s infinite ease-in-out,
+        drift calc(40s * var(--parallax)) linear infinite;
+}

@@ -1,0 +1,144 @@
+/* ================================
+   PAGE CARTE (isolation totale)
+================================ */
+
+.map-page {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000; /* Fond neutre */
+    position: relative;
+}
+
+/* Empêche le style global du jeu d'affecter la carte */
+.map-page * {
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+/* ================================
+   CONTENEUR (CAMÉRA)
+================================ */
+
+#map-container {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: grab;
+    z-index: 1;
+}
+
+#map-container.dragging {
+    cursor: grabbing;
+}
+
+/* ================================
+   CARTE GALACTIQUE
+================================ */
+
+#map {
+    width: 6144px;
+    height: 4096px;
+    background-image: url("assets/map/map.png");
+    background-size: 100% 100%;
+    background-position: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: inherit;
+    z-index: 2;
+    
+    transform-origin: top left;
+}
+
+/* ================================
+   SYSTÈMES STELLAIRES
+================================ */
+
+.system {
+    width: 28px;
+    height: 28px;
+    background: radial-gradient(circle, #ffffff, #4ab3ff 60%, #003b66);
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow:
+        0 0 10px #4ab3ff,
+        0 0 20px #4ab3ff,
+        0 0 40px #4ab3ff;
+    transition: transform 0.2s, box-shadow 0.2s;
+    z-index: 5;
+}
+
+.system:hover {
+    transform: scale(1.3);
+    box-shadow:
+        0 0 15px #4ab3ff,
+        0 0 30px #4ab3ff,
+        0 0 60px #4ab3ff;
+}
+
+/* ================================
+   TOOLTIP XXL
+================================ */
+
+.system::after {
+    content: attr(data-icon) "  " attr(data-name);
+    position: absolute;
+    top: -70px;
+    left: 60px;
+    background: rgba(0, 0, 0, 0.92);
+    padding: 14px 22px;
+    border-radius: 10px;
+    color: white;
+    font-size: 32px;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    box-shadow:
+        0 0 12px rgba(0,0,0,0.9),
+        0 0 25px rgba(0,0,0,0.8),
+        0 0 40px rgba(0,150,255,0.4);
+    border: 3px solid rgba(0,150,255,0.5);
+    z-index: 10;
+}
+
+.system:hover::after {
+    opacity: 1;
+}
+
+.fog-cell {
+    position: absolute;
+    width: 128px;
+    height: 128px;
+    background: rgba(0, 0, 0, 0.95);
+    transition: background 0.3s, opacity 0.5s;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.fog-exploring {
+    background: rgba(255, 0, 0, 0.7);
+}
+
+.fog-revealed {
+    opacity: 0;
+}
+
+#fog-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6144px;
+    height: 4096px;
+    z-index: 9999; /* AU-DESSUS DE TOUT */
+    pointer-events: none;
+}

@@ -1,0 +1,63 @@
+/* ============================
+   PAGE INVENTAIRE
+============================ */
+
+/* Fond spécifique */
+body.bg-inventory {
+    background-image: url("../assets/Logo/salle.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Titre */
+.page-title {
+    text-align: center;
+    color: #7fffd4;
+    margin-top: 20px;
+}
+
+/* Grille des ressources */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 25px;
+    padding: 40px;
+}
+
+/* Carte ressource */
+.inventory-item {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    backdrop-filter: blur(4px);
+    transition: 0.25s;
+}
+
+.inventory-item:hover {
+    transform: translateY(-4px);
+    background: rgba(0, 0, 0, 0.45);
+}
+
+/* Emoji */
+.inventory-item .emoji {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* Nom de ressource */
+.item-name {
+    font-size: 1.2em;
+    color: #7fffd4;
+    margin: 5px 0;
+}
+
+/* Valeur */
+.item-value {
+    font-size: 1.4em;
+    color: #ffffff;
+    font-weight: bold;
+}
