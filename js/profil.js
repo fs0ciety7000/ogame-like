@@ -98,6 +98,68 @@ function updateRankProgress(rankIndex, xp) {
 }
 
 // ===============================
+// MISE À JOUR DES UNITÉS (TOUTES LES UNITÉS DU JEU)
+// ===============================
+
+function updateProfileUnits() {
+
+    const U = GameData.units;
+
+    // --- DRONE ---
+    const droneLevel = U.drone_recuperateur?.level ?? 1;
+    document.getElementById("drone-level").textContent = `${droneLevel} / 10`;
+    document.getElementById("drone-fill").style.width = `${(droneLevel / 10) * 100}%`;
+
+    // --- FRÉGATE ---
+    const frigateLevel = U.fregate?.level ?? 1;
+    document.getElementById("frigate-level").textContent = `${frigateLevel} / 10`;
+    document.getElementById("frigate-fill").style.width = `${(frigateLevel / 10) * 100}%`;
+
+    // --- SENTINELLE ---
+    const sentinelLevel = U.sentinelle?.level ?? 1;
+    document.getElementById("sentinel-level").textContent = `${sentinelLevel} / 10`;
+    document.getElementById("sentinel-fill").style.width = `${(sentinelLevel / 10) * 100}%`;
+
+    // --- CARGO ---
+    const cargoLevel = U.cargo?.level ?? 1;
+    document.getElementById("cargo-level").textContent = `${cargoLevel} / 10`;
+    document.getElementById("cargo-fill").style.width = `${(cargoLevel / 10) * 100}%`;
+
+    // --- CHASSEUR ---
+    const chasseurLevel = U.chasseur?.level ?? 1;
+    document.getElementById("chasseur-level").textContent = `${chasseurLevel} / 10`;
+    document.getElementById("chasseur-fill").style.width = `${(chasseurLevel / 10) * 100}%`;
+
+    // --- HANGAR ---
+    const hangarLevel = U.hangar?.level ?? 1;
+    document.getElementById("hangar-level").textContent = `${hangarLevel} / 10`;
+    document.getElementById("hangar-fill").style.width = `${(hangarLevel / 10) * 100}%`;
+
+    // ===============================
+    // TOTAL DES TROUPES = PROGRESSION GLOBALE DES NIVEAUX
+    // ===============================
+
+    const levels = [
+        droneLevel,
+        frigateLevel,
+        sentinelLevel,
+        cargoLevel,
+        chasseurLevel,
+        hangarLevel
+    ];
+
+    const sumLevels = levels.reduce((s, v) => s + v, 0);
+    const maxTotal = levels.length * 10; // 6 unités * 10 niveaux
+
+    const percent = Math.floor((sumLevels / maxTotal) * 100);
+
+    document.getElementById("troops-total-text").textContent = `${percent}%`;
+    document.getElementById("troops-total-fill").style.width = `${percent}%`;
+}
+
+
+
+// ===============================
 // CHARGEMENT
 // ===============================
 
@@ -106,6 +168,7 @@ window.addEventListener("load", () => {
     updateBuildingBars();
     updateBuildingsTotal();
     updateBuildingNames();
+    updateProfileUnits(); // 🔥 AJOUT ICI
 });
 
 
@@ -174,3 +237,4 @@ function updateBuildingNames() {
         }
     });
 }
+
