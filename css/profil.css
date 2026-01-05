@@ -2,28 +2,32 @@
    PAGE PROFIL
 ============================ */
 
+* {
+    box-sizing: border-box; /* Crucial pour que les bordures ne mangent pas la largeur */
+}
+
+
+
 /* Fond spécifique */
 body.bg-profil {
     background-image: url("../assets/Logo/profil.png");
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+     margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centre tout verticalement dans le viewport */
 }
 
 /* Titre */
 header h1 {
     text-align: center;
     color: #7fffd4;
-    margin-top: 20px;
+    margin: 20px 0; /* On s'assure qu'il n'y a pas de marges latérales parasites */
+    width: 100%;    /* Force l'occupation de toute la largeur */
     text-shadow: 0 0 10px rgba(127, 255, 212, 0.4);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 60px;
-    margin: 30px auto;
-    width: 100%;
-
 }
 
 /* ============================
@@ -35,19 +39,21 @@ header h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 60px;
+    gap: 20px; /* Réduit un peu le gap pour plus de flexibilité */
     margin: 30px auto;
-    width: 100%;
-    text-align: center;
+    width: 90%; /* Aligné sur la largeur du panel */
+    max-width: 1200px;
 }
 
-/* Rang précédent / suivant */
 .rank-side {
     font-size: 1.2em;
     color: #ffffff;
-    opacity: 1;
-    min-width: 120px;
+    opacity: 0.7; /* Légère transparence pour le style */
+    flex: 1;      /* FORCE les deux côtés à faire la même taille */
 }
+
+#rank-prev { text-align: right; } /* Pousse le texte vers le centre */
+#rank-next { text-align: left; }  /* Pousse le texte vers le centre */
 
 /* Rang actif centré */
 .rank-current {
@@ -56,7 +62,8 @@ header h1 {
     color: #ffffff;
     padding: 12px 25px;
     border-radius: 10px;
-
+flex: 0 0 auto; /* Le centre ne s'étire pas, il garde sa taille */
+    min-width: 250px;
     background: rgba(255, 140, 0, 0.25);
     border: 2px solid rgba(255, 140, 0, 0.6);
 
