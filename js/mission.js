@@ -125,6 +125,8 @@ function formatTime(seconds) {
 
 /* =====================================================
    Vérification des prérequis
+   (générique : lit directement les clés de mission.prereq,
+   peu importe l'unité, tant que son id correspond à save.units)
 ===================================================== */
 function hasPrerequisites(missionKey) {
     const mission = MISSIONS[missionKey];
@@ -152,7 +154,6 @@ function isMissionActive(missionKey, activeList) {
 
 /* =====================================================
    Utilitaire : construit le texte des récompenses
-   (commun à renderMissionsList et updateMissionLogDisplay)
 ===================================================== */
 function getRewardText(reward) {
     let rewardText = [];
@@ -180,13 +181,14 @@ function getRewardText(reward) {
 
 /* =====================================================
    Utilitaire : construit le texte des prérequis
+   (drone_recuperateur = même id que dans MISSIONS et save.units)
 ===================================================== */
 function getPrereqText(prereq) {
     let prereqText = [];
 
     if (!prereq) return ["Aucun"];
 
-    if (prereq.drones) prereqText.push(`${prereq.drones} Drones récupérateurs`);
+    if (prereq.drone_recuperateur) prereqText.push(`${prereq.drone_recuperateur} Drones récupérateurs`);
     if (prereq.chasseur) prereqText.push(`${prereq.chasseur} Chasseurs`);
     if (prereq.fregate) prereqText.push(`${prereq.fregate} Frégates`);
     if (prereq.sentinelle) prereqText.push(`${prereq.sentinelle} Sentinelles`);
@@ -380,7 +382,6 @@ function finishMission(missionKey) {
         if (mission.reward.aiFragment) save.aiFragment = (save.aiFragment || 0) + mission.reward.aiFragment;
 
         if (mission.reward.exploration) {
-            // 🔥 Nouvelle intégration fog
             if (typeof onExplorationMissionComplete === "function") {
                 onExplorationMissionComplete();
             }
@@ -389,7 +390,6 @@ function finishMission(missionKey) {
 
     localStorage.setItem("cosmicSave", JSON.stringify(save));
 
-    // Mise à jour immédiate de l'affichage (HUD + page ressources)
     updateHUD?.();
     updateRessourcesPage?.();
 

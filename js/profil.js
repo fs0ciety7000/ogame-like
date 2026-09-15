@@ -69,6 +69,7 @@ function updateRankDisplay() {
 
     document.getElementById("rank-icon").src = "assets/ranks/" + rankIcons[rankIndex];
 
+    // Affichage des points d'expérience
     document.getElementById("xp-points").textContent = xp + " XP";
 
     updateRankProgress(rankIndex, xp);
@@ -115,7 +116,7 @@ function updateProfileUnits() {
     let total = 0;
 
     units.forEach(u => {
-        const level = U[u.id]?.level ?? 1;
+        const level = U[u.id]?.level ?? 0;
         total += level;
 
         document.getElementById(u.text).textContent = `${level} / 10`;
@@ -131,6 +132,26 @@ function updateProfileUnits() {
 // BÂTIMENTS
 // ===============================
 
+// Bâtiments qui doivent être débloqués avant de compter (mêmes que sur la page bâtiments)
+const LOCKABLE_BUILDINGS_PROFIL = [
+    "reacteur_instable",
+    "extracteur_nanocomposants",
+    "archives_fracturees",
+    "hangar_attaque",
+    "hangar_defense"
+];
+
+function getDisplayBuildingLevel(id) {
+    const bData = GameData.buildings[id];
+    if (!bData) return 0;
+
+    if (LOCKABLE_BUILDINGS_PROFIL.includes(id) && bData.unlocked !== true) {
+        return 0;
+    }
+
+    return bData.level;
+}
+
 function updateBuildingBars() {
     const buildingList = [
         { id: "extracteur_ferraille", text: "bat1-level", bar: "bat1-fill" },
@@ -143,7 +164,7 @@ function updateBuildingBars() {
     ];
 
     buildingList.forEach(b => {
-        const level = GameData.buildings[b.id].level;
+        const level = getDisplayBuildingLevel(b.id);
         const percent = (level / 10) * 100;
 
         document.getElementById(b.text).textContent = `${level} / 10`;
@@ -163,7 +184,7 @@ function updateBuildingsTotal() {
     ];
 
     let total = 0;
-    ids.forEach(id => total += GameData.buildings[id].level);
+    ids.forEach(id => total += getDisplayBuildingLevel(id));
 
     const percent = Math.floor((total / (ids.length * 10)) * 100);
 

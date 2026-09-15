@@ -1,10 +1,9 @@
 /* ===============================
-   UNITS.JS - VERSION CORRIGÉE
+   UNITS.JS - VERSION AVEC VERROUILLAGE LABO
    =============================== */
 
 const unitsData = [
 
-    
     // === Drone récupérateur ===
     {
         id: "drone_recuperateur",
@@ -150,6 +149,33 @@ const unitsData = [
 ];
 
 /* ===============================
+   CORRESPONDANCE UNITÉ → TECHNOLOGIE LABO
+   (pour afficher quelle recherche débloque quelle unité)
+   =============================== */
+
+const UNIT_TO_TECH = {
+    drone_recuperateur: "tech9",
+    fregate: "tech10",
+    cargo: "tech11",
+    sentinelle: "tech12",
+    chasseur: "tech13",
+    roquette: "tech14",
+    canon_impulsion: "tech15",
+    canon_plasma: "tech16",
+    batterie_aa: "tech17",
+    intercepteur: "tech18",
+    etoile_noire: "tech19"
+};
+
+function getUnlockTechName(unitId) {
+    const techId = UNIT_TO_TECH[unitId];
+    if (!techId || typeof technologies === "undefined") return "une recherche du Labo";
+
+    const tech = technologies.find(t => t.id === techId);
+    return tech ? tech.nom : "une recherche du Labo";
+}
+
+/* ===============================
     FONCTIONS UTILITAIRES
     =============================== */
 
@@ -169,7 +195,6 @@ function getResourceEmoji(res) {
 
 function loadGame() {
     let save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
-
     GameData.units = save.units || {};
 }
 
@@ -208,16 +233,12 @@ function initUnites() {
         if (unit.category === "defense") defenseUnits += data.count || 0;
     });
 
-    /* ===============================
-       BARRES + TEXTES
-       =============================== */
-
     const capacityInfo = document.createElement("div");
     capacityInfo.className = "capacity-info";
 
     capacityInfo.innerHTML = `
     <div class="capacity-slot" style="display:flex; align-items:center; gap:20px; width:100%;">
-        <span class="capacity-line1">Capacité hangar d’attaque :</span>
+        <span class="capacity-line1">Capacité hangar d'attaque :</span>
         <span class="capacity-line4">${attackUnits} / ${attackCapacity}</span>
 
         <div class="capacity-bar" style="flex:1; margin-left:20px;">
@@ -235,132 +256,128 @@ function initUnites() {
     </div>
 `;
 
-   capContainer.appendChild(capacityInfo);
+    capContainer.appendChild(capacityInfo);
 
-   
+    /* ===============================
+       CARTES UNITÉS
+       =============================== */
 
-/* ===============================
-   CARTES UNITÉS
-   =============================== */
+    unitsData.forEach(unit => {
 
-unitsData.forEach(unit => {
+        const data = GameData.units[unit.id] || { level: 0, count: 0 };
+        const level = data.level ?? 0;
+        const count = data.count || 0;
+        const isLocked = level <= 0;
 
-    const data = GameData.units[unit.id] || { level: 1, count: 0 };
-    const level = data.level;
-    const count = data.count || 0;
+        const card = document.createElement("div");
+        card.className = "unit-card";
+        card.classList.toggle("locked-unit", isLocked);
 
-    const card = document.createElement("div");
-    card.className = "unit-card";
+        // ===============================
+        // CARTE VERROUILLÉE (recherche labo non faite)
+        // ===============================
+        if (isLocked) {
+            const techName = getUnlockTechName(unit.id);
 
-    // Stats
-    const statsHTML = `
-    <div class="unit-stats-row">
-        <div class="stat-badge">ATK <span>${unit.stats.attaque + (level - 1) * 5}</span></div>
-        <div class="stat-badge">DEF <span>${unit.stats.defense + (level - 1) * 5}</span></div>
-        <div class="stat-badge">VIT <span>${unit.stats.vitesse * level}</span></div>
-        <div class="stat-badge">CAP <span>${unit.stats.cargo * level}</span></div>
-    </div>
-`;
-
-    const qty = parseInt(document.getElementById(`qty-${unit.id}`)?.value) || 1;
-
-const costHTML = `
-    <div class="unit-cost-row">
-        ${Object.entries(unit.cost).map(([res, val]) => `
-            <div class="cost-badge">
-                ${getResourceEmoji(res)} 
-                <span>${val * qty}</span>
-            </div>
-        `).join("")}
-    </div>
-`;
-
-
-const sellHTML = `
-    <div class="unit-cost-row">
-        ${Object.entries(unit.cost).map(([res, val]) => `
-            <div class="cost-badge">
-                ${getResourceEmoji(res)} <span>${Math.floor(val * 0.5)}</span>
-            </div>
-        `).join("")}
-    </div>
-`;
-
-
-    // Coût construction
-    let buildCostHTML = "";
-    if (!unit.isBuilding && unit.cost) {
-        buildCostHTML = Object.entries(unit.cost)
-            .map(([res, val]) => `<div class="cost-item">${getResourceEmoji(res)} ${val}</div>`)
-            .join("");
-    }
-
-    // Actions (nouvelle version)
-    const actionsHTML = `
-        <div class="unit-count">Possédés : <strong>${count}</strong></div>
-
-        <div class="unit-actions-horizontal" style="margin-top:10px;">
-
-            <label class="qty-label">Quantité :</label>
-            <input type="number" id="qty-${unit.id}" min="1" value="1" class="qty-input">
-
-            <div class="action-buttons">
-                <button class="btn-build" data-id="${unit.id}">Construire</button>
-                <button class="btn-sell" data-id="${unit.id}" title="La vente permet de récupérer 50% du coût de construction.">Vendre</button>
-            </div>
-
-        </div>
-    `;
-
-    // Carte complète
-    card.innerHTML = `
-        <div class="unit-image-container">
-            <img src="${unit.image}" alt="${unit.name}" class="unit-image" />
-        </div>
-
-        <div class="unit-content">
-            <div class="unit-header">
-                <h3>${unit.name}</h3>
-            </div>
-
-            <div class="unit-level">
-                <span>Niveau ${level} / ${unit.maxLevel}</span>
-                <div class="level-progress">
-                    <div class="level-fill" style="width: ${(level / unit.maxLevel) * 100}%"></div>
+            card.innerHTML = `
+                <div class="unit-image-container">
+                    <img src="${unit.image}" alt="${unit.name}" class="unit-image" />
                 </div>
-            </div>
 
-            ${unit.description ? `<p class="unit-description">${unit.description}</p>` : ""}
+                <div class="unit-content">
+                    <div class="unit-header">
+                        <h3>${unit.name}</h3>
+                    </div>
 
-            <div class="unit-stats">${statsHTML}</div>
+                    <p class="unit-description">${unit.description || ""}</p>
 
-            <div id="cost-${unit.id}" class="unit-cost-row">
-    ${Object.entries(unit.cost).map(([res, val]) => `
-        <div class="cost-badge">
-            ${getResourceEmoji(res)} <span>${val}</span>
-        </div>
-    `).join("")}
-</div>
+                    <div class="unit-locked-message">
+                        🔒 Débloquez cette unité via le Labo : <strong>${techName}</strong>
+                    </div>
 
-            ${actionsHTML}
+                    <button class="btn-build" disabled>Verrouillé</button>
+                </div>
+            `;
+
+            container.appendChild(card);
+            return; // pas de logique construire/vendre pour une unité verrouillée
+        }
+
+        // ===============================
+        // CARTE DÉBLOQUÉE (logique normale, inchangée)
+        // ===============================
+
+        const statsHTML = `
+        <div class="unit-stats-row">
+            <div class="stat-badge">ATK <span>${unit.stats.attaque + (level - 1) * 5}</span></div>
+            <div class="stat-badge">DEF <span>${unit.stats.defense + (level - 1) * 5}</span></div>
+            <div class="stat-badge">VIT <span>${unit.stats.vitesse * level}</span></div>
+            <div class="stat-badge">CAP <span>${unit.stats.cargo * level}</span></div>
         </div>
     `;
 
-    container.appendChild(card);
-    
-    // Boutons
-if (!unit.isBuilding) {
-    const btnBuild = card.querySelector(".btn-build");
-    if (btnBuild) btnBuild.addEventListener("click", () => buildUnit(unit));
+        const actionsHTML = `
+            <div class="unit-count">Possédés : <strong>${count}</strong></div>
 
-    const btnSell = card.querySelector(".btn-sell");
-    if (btnSell) btnSell.addEventListener("click", () => sellUnit(unit));
+            <div class="unit-actions-horizontal" style="margin-top:10px;">
 
-    // Mise à jour dynamique des coûts
-    const qtyInput = card.querySelector(`#qty-${unit.id}`);
-    if (qtyInput) qtyInput.addEventListener("input", () => updateCost(unit));
-}
-});
+                <label class="qty-label">Quantité :</label>
+                <input type="number" id="qty-${unit.id}" min="1" value="1" class="qty-input">
+
+                <div class="action-buttons">
+                    <button class="btn-build" data-id="${unit.id}">Construire</button>
+                    <button class="btn-sell" data-id="${unit.id}" title="La vente permet de récupérer 50% du coût de construction.">Vendre</button>
+                </div>
+
+            </div>
+        `;
+
+        card.innerHTML = `
+            <div class="unit-image-container">
+                <img src="${unit.image}" alt="${unit.name}" class="unit-image" />
+            </div>
+
+            <div class="unit-content">
+                <div class="unit-header">
+                    <h3>${unit.name}</h3>
+                </div>
+
+                <div class="unit-level">
+                    <span>Niveau ${level} / ${unit.maxLevel}</span>
+                    <div class="level-progress">
+                        <div class="level-fill" style="width: ${(level / unit.maxLevel) * 100}%"></div>
+                    </div>
+                </div>
+
+                ${unit.description ? `<p class="unit-description">${unit.description}</p>` : ""}
+
+                <div class="unit-stats">${statsHTML}</div>
+
+                <div id="cost-${unit.id}" class="unit-cost-row">
+                    ${Object.entries(unit.cost).map(([res, val]) => `
+                        <div class="cost-badge">
+                            ${getResourceEmoji(res)} <span>${val}</span>
+                        </div>
+                    `).join("")}
+                </div>
+
+                ${actionsHTML}
+            </div>
+        `;
+
+        container.appendChild(card);
+
+        if (!unit.isBuilding) {
+            const btnBuild = card.querySelector(".btn-build");
+            if (btnBuild) btnBuild.addEventListener("click", () => buildUnit(unit));
+
+            const btnSell = card.querySelector(".btn-sell");
+            if (btnSell) btnSell.addEventListener("click", () => sellUnit(unit));
+
+            const qtyInput = card.querySelector(`#qty-${unit.id}`);
+            if (qtyInput) qtyInput.addEventListener("input", () => updateCost(unit));
+        }
+    });
 }
 
 /* ===============================
@@ -382,6 +399,13 @@ function buildUnit(unit) {
    =============================== */
 
 function attemptBuildUnit(unit) {
+
+    // Sécurité : impossible de construire une unité non débloquée au labo
+    const currentLevel = GameData.units[unit.id]?.level ?? 0;
+    if (currentLevel <= 0) {
+        alert("Cette unité doit d'abord être débloquée via le Labo.");
+        return false;
+    }
 
     const hangarAttaqueLevel = GameData.buildings.hangar_attaque?.level || 0;
     const hangarDefenseLevel = GameData.buildings.hangar_defense?.level || 0;
@@ -418,7 +442,7 @@ function attemptBuildUnit(unit) {
     }
 
     if (!GameData.units[unit.id]) {
-        GameData.units[unit.id] = { level: 1, count: 0 };
+        GameData.units[unit.id] = { level: currentLevel, count: 0 };
     }
 
     GameData.units[unit.id].count++;
@@ -437,13 +461,12 @@ function sellUnit(unit) {
 
     const data = GameData.units[unit.id];
     if (!data || data.count < qty) {
-        alert("Tu n’as pas assez d’unités à vendre.");
+        alert("Tu n'as pas assez d'unités à vendre.");
         return;
     }
 
     data.count -= qty;
 
-    // Gain simple : 50% du coût de construction
     for (const res in unit.cost) {
         addResource(res, Math.floor(unit.cost[res] * 0.5) * qty);
     }

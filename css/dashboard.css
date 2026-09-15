@@ -236,3 +236,15 @@ main {
     margin: 0 !important;
     padding: 0 !important;
 }
+
+/*css unites*/
+.locked-unit {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.unit-locked-message {
+    color: #ff6b6b;
+    font-size: 0.9em;
+    margin: 10px 0;
+}

@@ -25,11 +25,12 @@ const DEFENSIVE_UNITS = [
    Calcul de la stat effective d'une unité (base + progression labo)
 ===================================================== */
 function getUnitStat(unitId, statName) {
+    const level = GameData.units[unitId]?.level ?? 0;
+    if (level <= 0) return 0; // unité non débloquée au labo
+
     const base = (typeof UNIT_BASE_STATS !== "undefined" && UNIT_BASE_STATS[unitId])
         ? UNIT_BASE_STATS[unitId][statName] ?? 0
         : 0;
-
-    const level = GameData.units[unitId]?.level ?? 1;
 
     return base + (level - 1) * 5;
 }
