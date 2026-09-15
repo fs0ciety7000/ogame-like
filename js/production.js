@@ -4,59 +4,26 @@
 
 // Production PAR SECONDE de l'extracteur de ferraille (niv 1 → 10)
 const scrapProduction = [
-    2,    // niv 1
-    4,    // niv 2
-    7,    // niv 3
-    13,   // niv 4
-    23,   // niv 5
-    42,   // niv 6
-    75,   // niv 7
-    135,  // niv 8
-    259,  // niv 9
-    500   // niv 10
+    2, 4, 7, 13, 23, 42, 75, 135, 259, 500
 ];
 
 // Production PAR SECONDE du réacteur instable (niv 1 → 10)
 const energyProduction = [
-    2,    // niv 1
-    4,    // niv 2
-    7,    // niv 3
-    13,   // niv 4
-    23,   // niv 5
-    42,   // niv 6
-    75,   // niv 7
-    135,  // niv 8
-    259,  // niv 9
-    500   // niv 10
+    2, 4, 7, 13, 23, 42, 75, 135, 259, 500
 ];
 
 // Production PAR SECONDE des nanocomposants (niv 1 → 10)
 const nanoProduction = [
-    2,    // niv 1
-    4,    // niv 2
-    7,    // niv 3
-    13,   // niv 4
-    23,   // niv 5
-    42,   // niv 6
-    75,   // niv 7
-    135,  // niv 8
-    259,  // niv 9
-    500   // niv 10
+    2, 4, 7, 13, 23, 42, 75, 135, 259, 500
 ];
 
 // Production PAR SECONDE des données anciennes (niv 1 → 10)
 const dataProduction = [
-    2,    // niv 1
-    4,    // niv 2
-    7,    // niv 3
-    13,   // niv 4
-    23,   // niv 5
-    42,   // niv 6
-    75,   // niv 7
-    135,  // niv 8
-    259,  // niv 9
-    500   // niv 10
+    2, 4, 7, 13, 23, 42, 75, 135, 259, 500
 ];
+
+// Bâtiments qui doivent être débloqués avant de produire
+const LOCKABLE_BUILDINGS = ["reacteur_instable", "extracteur_nanocomposants", "archives_fracturees"];
 
 // Tick toutes les secondes
 setInterval(productionTick, 1000);
@@ -86,39 +53,46 @@ function productionTick() {
     ====================================================== */
 
     buildings.forEach(building => {
-    const level = save.buildings[building.id] || 0;
+        const bData = save.buildings[building.id] || {};
+        const level = bData.level || 0;
 
-    if (!building.production || level <= 0) return;
+        // Pour les bâtiments verrouillables, il faut unlocked === true explicitement
+        let unlocked = true;
+        if (LOCKABLE_BUILDINGS.includes(building.id)) {
+            unlocked = bData.unlocked === true;
+        }
 
-    // Extracteur de ferraille
-    if (building.id === "extracteur_ferraille") {
-        const perSecondRate = scrapProduction[level - 1] || 0;
-        save.scrap += perSecondRate;
-        return;
-    }
+        if (!building.production || level <= 0 || !unlocked) return;
 
-    // Réacteur instable
-    if (building.id === "reacteur_instable") {
-        let amount = energyProduction[level - 1] || 0;
-        amount = Math.floor(amount * (1 + energyBonus));
-        save.energy += amount;
-        return;
-    }
+        // Extracteur de ferraille
+        if (building.id === "extracteur_ferraille") {
+            const perSecondRate = scrapProduction[level - 1] || 0;
+            save.scrap += perSecondRate;
+            return;
+        }
 
-    // Extracteur de nanocomposants
-    if (building.id === "extracteur_nanocomposants") {
-        const perSecondRate = nanoProduction[level - 1] || 0;
-        save.nano += perSecondRate;
-        return;
-    }
+        // Réacteur instable
+        if (building.id === "reacteur_instable") {
+            let amount = energyProduction[level - 1] || 0;
+            amount = Math.floor(amount * (1 + energyBonus));
+            save.energy += amount;
+            return;
+        }
 
-    // Archives fracturées
-    if (building.id === "archives_fracturees") {
-        const perSecondRate = dataProduction[level - 1] || 0;
-        save.data += perSecondRate;
-        return;
-    }
-});
+        // Extracteur de nanocomposants
+        if (building.id === "extracteur_nanocomposants") {
+            const perSecondRate = nanoProduction[level - 1] || 0;
+            save.nano += perSecondRate;
+            return;
+        }
+
+        // Archives fracturées
+        if (building.id === "archives_fracturees") {
+            const perSecondRate = dataProduction[level - 1] || 0;
+            save.data += perSecondRate;
+            return;
+        }
+    });
 
     localStorage.setItem("cosmicSave", JSON.stringify(save));
 
@@ -151,11 +125,10 @@ function updateHUD() {
 }
 
 /* =====================================================
-   Mise à jour de la page Ressources (réellement compatible)
+   Mise à jour de la page Ressources
 ===================================================== */
 
 function updateRessourcesPage() {
-    // Vérifier si la page Ressources est visible
     const page = document.getElementById("ressources");
     if (!page || page.style.display === "none") return;
 

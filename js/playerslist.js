@@ -21,10 +21,10 @@ function initPlayers() {
 
     const players = [
         { pseudo: "Axelle", rank: 19 },   // Challenger
-        { pseudo: "Massoulsse", rank: 10 }, // Or III
-        { pseudo: "Mercedes", rank: 7 },  // Bronze I
-        { pseudo: "Hervé", rank: 3 },     // Fer I
-        { pseudo: "Mehdi", rank: 0 }      // Non-classé
+        { pseudo: "Tomdindon", rank: 10 }, // Or III
+        { pseudo: "Tartiflex", rank: 7 },  // Bronze I
+        { pseudo: "Sam", rank: 3 },     // Fer I
+        { pseudo: "Trevor", rank: 0 }      // Non-classé
     ];
 
     players.forEach(p => {

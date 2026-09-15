@@ -75,7 +75,7 @@ const unitsData = [
         id: "etoile_noire",
         name: "Étoile Noire",
         image: "assets/units/etoile_noire.png",
-        maxLevel: 1,
+        maxLevel: 10,
         description: "Arme ultime. Capacité de destruction massive.",
         cost: { scrap: 5000, energy: 3000 },
         stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
@@ -255,8 +255,8 @@ unitsData.forEach(unit => {
     // Stats
     const statsHTML = `
     <div class="unit-stats-row">
-        <div class="stat-badge">ATK <span>${unit.stats.attaque * level}</span></div>
-        <div class="stat-badge">DEF <span>${unit.stats.defense * level}</span></div>
+        <div class="stat-badge">ATK <span>${unit.stats.attaque + (level - 1) * 5}</span></div>
+        <div class="stat-badge">DEF <span>${unit.stats.defense + (level - 1) * 5}</span></div>
         <div class="stat-badge">VIT <span>${unit.stats.vitesse * level}</span></div>
         <div class="stat-badge">CAP <span>${unit.stats.cargo * level}</span></div>
     </div>

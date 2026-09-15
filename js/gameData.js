@@ -5,14 +5,9 @@
 const GameData = {
 
     // XP du joueur (modifie cette valeur pour tester les rangs)
-    xp: 55000,
+    xp: 5200,
 
-    // Temps de jeu
-    playtime: {
-        hours: 0,
-        minutes: 0
-    },
-
+    
     // ============================
     // UNITÉS
     // ============================
@@ -38,12 +33,12 @@ const GameData = {
     // ============================
     buildings: {
         extracteur_ferraille: { level: 1 },
-        reacteur_instable: { level: 1 },
-        extracteur_nanocomposants: { level: 1 },
-        archives_fracturees: { level: 1 },
+        reacteur_instable: { level: 1, unlocked: false },
+        extracteur_nanocomposants: { level: 1, unlocked: false },
+        archives_fracturees: { level: 1, unlocked: false },
         atelier_reparation: { level: 1 },
-        hangar_attaque: { level: 1 },
-        hangar_defense: { level: 1 }
+        hangar_attaque: { level: 1, unlocked: false },
+        hangar_defense: { level: 1, unlocked: false }
     },
 
     // ============================

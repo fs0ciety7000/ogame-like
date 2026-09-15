@@ -52,7 +52,10 @@ function saveGame() {
     // Sauvegarder les bâtiments
     save.buildings = {};
     for (const id in GameData.buildings) {
-        save.buildings[id] = GameData.buildings[id].level;
+        save.buildings[id] = {
+            level: GameData.buildings[id].level,
+            unlocked: GameData.buildings[id].unlocked !== false
+            };
     }
 
     // ❌ NE PAS sauvegarder GameData.resources

@@ -69,6 +69,8 @@ function updateRankDisplay() {
 
     document.getElementById("rank-icon").src = "assets/ranks/" + rankIcons[rankIndex];
 
+    document.getElementById("xp-points").textContent = xp + " XP";
+
     updateRankProgress(rankIndex, xp);
 }
 

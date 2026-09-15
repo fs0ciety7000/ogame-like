@@ -11,7 +11,7 @@ const technologies = [
         id: "tech1",
         nom: "Analyse de matériaux",
         desc: "Débloque de nouvelles recettes dans le laboratoire.",
-        maxLevel: 17,
+        maxLevel: 18,
         baseCost: { scrap: 100, energy: 20 },
         baseTime: 30,
         effect: "unlock_recipe",
@@ -194,7 +194,17 @@ const technologies = [
         baseTime: 70,
         effect: "unlock_next_level",
         prereq: { tech13: 5, tech16: 2 }
-    }
+    },
+    {
+    id: "tech19",
+    nom: "Étoile noire",
+    desc: "Arme ultime. Capacité de destruction massive.",
+    maxLevel: 10,
+    baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 },
+    baseTime: 70,
+    effect: "unlock_next_level",
+    prereq: { tech18: 5, tech16: 5 }
+}
 ];
 
 // ============================
@@ -536,11 +546,30 @@ function terminerRecherche() {
 // APPLICATION DES EFFETS
 // ============================
 
+// =======================================
+// STATS DE BASE PAR UNITÉ (niveau 1)
+// Progression : +5 ATK et +5 DEF par niveau supplémentaire
+// =======================================
+
+const UNIT_BASE_STATS = {
+    drone_recuperateur: { attack: 0,   defense: 5 },
+    fregate:             { attack: 15,  defense: 20 },
+    cargo:               { attack: 0,   defense: 10 },
+    sentinelle:          { attack: 5,   defense: 30 },
+    chasseur:            { attack: 40,  defense: 10 },
+    etoile_noire:        { attack: 500, defense: 500 },
+    roquette:            { attack: 15,  defense: 0 },
+    canon_impulsion:     { attack: 80,  defense: 10 },
+    canon_plasma:        { attack: 100, defense: 20 },
+    batterie_aa:         { attack: 10,  defense: 60 },
+    intercepteur:        { attack: 60,  defense: 15 }
+};
+
+// =======================================
+// APPLICATION DES EFFETS — MISE À JOUR UNITÉ
+// =======================================
+
 function upgradeUnit(techId, level) {
-    const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
-
-    if (!save.units) save.units = {};
-
     const techToUnit = {
         tech9: "drone_recuperateur",
         tech10: "fregate",
@@ -551,25 +580,29 @@ function upgradeUnit(techId, level) {
         tech15: "canon_impulsion",
         tech16: "canon_plasma",
         tech17: "batterie_aa",
-        tech18: "intercepteur"
+        tech18: "intercepteur",
+        tech19: "etoile_noire"
     };
 
     const unitId = techToUnit[techId];
     if (!unitId) return;
 
-    if (!save.units[unitId]) {
-        save.units[unitId] = {
+    if (!GameData.units[unitId]) {
+        GameData.units[unitId] = {
             level: 0,
-            attack: 1,
-            defense: 1
+            count: 0,
+            attack: 0,
+            defense: 0
         };
     }
 
-    save.units[unitId].level = level;
-    save.units[unitId].attack = 1 + (level * 0.5);
-    save.units[unitId].defense = 1 + (level * 0.3);
+    const base = UNIT_BASE_STATS[unitId] || { attack: 0, defense: 0 };
 
-    localStorage.setItem("cosmicSave", JSON.stringify(save));
+    GameData.units[unitId].level = level;
+    GameData.units[unitId].attack = base.attack + (level - 1) * 5;
+    GameData.units[unitId].defense = base.defense + (level - 1) * 5;
+
+    saveGame();
 }
 
 function appliquerEffet(tech, level) {
@@ -599,6 +632,19 @@ function appliquerEffet(tech, level) {
 
         case "unlock_next_level":
             upgradeUnit(tech.id, level);
+            break;
+        case "unlock_hangars":
+            GameData.buildings.hangar_attaque.unlocked = true;
+            GameData.buildings.hangar_defense.unlocked = true;
+            saveGame();
+
+            // Rafraîchir la page bâtiments si elle est actuellement ouverte
+            if (typeof initBatiments === "function") {
+               const page = document.getElementById("batiments");
+               if (page && page.style.display !== "none") {
+                  initBatiments();
+                }
+            }
             break;
     }
 

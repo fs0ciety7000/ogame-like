@@ -146,3 +146,20 @@
     border-color: rgba(255, 255, 255, 0.4);
     transform: translateY(-2px);
 }
+
+.locked-building .building-image,
+.locked-building .building-name,
+.locked-building .building-description,
+.locked-building .building-level,
+.locked-building .building-bonus {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+/* Le bouton reste bien visible et cliquable */
+.locked-building .building-button {
+    opacity: 1;
+    filter: none;
+    background: rgba(0, 217, 255, 0.25);
+    border: 1px solid rgba(0, 217, 255, 0.5);
+}

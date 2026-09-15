@@ -1,4 +1,14 @@
 // =======================================
+// COÛTS DE DÉBLOCAGE
+// =======================================
+
+const BUILDING_UNLOCK_COST = {
+    reacteur_instable: { resource: "scrap", amount: 500, label: "Ferraille" },
+    extracteur_nanocomposants: { resource: "energy", amount: 500, label: "Énergie" },
+    archives_fracturees: { resource: "nano", amount: 500, label: "Nanocomposants" }
+};
+
+// =======================================
 // IMAGE PAR NIVEAU
 // =======================================
 
@@ -9,13 +19,11 @@ function getBuildingImage(buildingId, level) {
         return "assets/buildings/default.png";
     }
 
-    // Version avancée : image par niveau
     return `${b.imageBase}_lvl${level}.png`;
 }
 
-
 // =======================================
-// TEXTE DE PRODUCTION (gère les bâtiments avec courbe spécifique)
+// TEXTE DE PRODUCTION
 // =======================================
 
 function getBuildingProductionText(building, level) {
@@ -24,23 +32,18 @@ function getBuildingProductionText(building, level) {
     if (building.id === "extracteur_ferraille") {
         return `Production : ${scrapProduction[level - 1] || 0}/s`;
     }
-
     if (building.id === "reacteur_instable") {
         return `Production : ${energyProduction[level - 1] || 0}/s`;
     }
-
     if (building.id === "extracteur_nanocomposants") {
         return `Production : ${nanoProduction[level - 1] || 0}/s`;
     }
-
     if (building.id === "archives_fracturees") {
         return `Production : ${dataProduction[level - 1] || 0}/s`;
     }
 
-    // Autres bâtiments (sans table dédiée) : formule générique inchangée
     return `Production : ${building.production.base * level}/s`;
 }
-
 
 // =======================================
 // INITIALISATION DE LA PAGE BÂTIMENTS
@@ -53,17 +56,18 @@ function initBatiments() {
     slots.forEach((slot, index) => {
         const b = buildings[index];
 
-        // Si pas de bâtiment pour ce slot → slot vide
         if (!b) {
             slot.classList.add("empty");
             slot.textContent = "Emplacement vide";
             return;
         }
 
-        // Niveau actuel depuis GameData
         const level = GameData.buildings[b.id]?.level || 1;
+        const isLocked = GameData.buildings[b.id]?.unlocked === false;
+        const unlockInfo = BUILDING_UNLOCK_COST[b.id];
 
-        // Génération de la carte bâtiment
+        slot.classList.toggle("locked-building", isLocked);
+
         slot.innerHTML = `
             <div class="building-card">
                 <img 
@@ -81,7 +85,7 @@ function initBatiments() {
                 </div>
 
                 <div class="building-bonus">
-                    ${getBuildingProductionText(b, level)}
+                    ${isLocked ? (unlockInfo ? "Verrouillé — aucune production" : "Verrouillé — débloqué via le Labo") : getBuildingProductionText(b, level)}
                 </div>
 
                 <div class="building-cost">
@@ -90,21 +94,44 @@ function initBatiments() {
 
                 <div class="building-time">Temps : 1s</div>
 
-                <button class="building-button">Améliorer</button>
+                <button class="building-button">
+                    ${isLocked ? (unlockInfo ? `Débloquer (${unlockInfo.amount} ${unlockInfo.label})` : "Débloqué via le Labo") : "Améliorer"}
+                </button>
             </div>
         `;
 
         const button = slot.querySelector(".building-button");
 
-        // Désactiver si niveau max
+        // ===============================
+        // BÂTIMENT VERROUILLÉ → bouton "Débloquer"
+        // ===============================
+        if (isLocked) {
+            if (unlockInfo) {
+                // Déblocage classique par ressource (réacteur, extracteur nano, archives)
+                button.addEventListener("click", () => {
+                    if (spendResource(unlockInfo.resource, unlockInfo.amount)) {
+                        GameData.buildings[b.id].unlocked = true;
+                        saveGame();
+                        initBatiments();
+                    } else {
+                        alert("Pas assez de ressources !");
+                    }
+                });
+            } else {
+                // Déblocage via recherche labo (hangars) : bouton non actionnable ici
+                button.disabled = true;
+            }
+            return;
+        }
+
+        // ===============================
+        // BÂTIMENT DÉVERROUILLÉ → logique normale
+        // ===============================
+
         if (level >= b.maxLevel) {
             button.disabled = true;
             button.textContent = "Niveau max";
         }
-
-        // ===============================
-        // BOUTON AMÉLIORER
-        // ===============================
 
         button.addEventListener("click", () => {
 
@@ -112,23 +139,19 @@ function initBatiments() {
 
             if (currentLevel >= b.maxLevel) return;
 
-            // Vérifier les ressources
             if (spendResource("scrap", b.cost.scrap) && spendResource("energy", b.cost.energy)) {
 
-                // Amélioration
                 GameData.buildings[b.id].level++;
                 saveGame();
 
                 const newLevel = GameData.buildings[b.id].level;
 
-                // Mise à jour visuelle
                 slot.querySelector(".lvl-val").textContent = newLevel;
                 slot.querySelector(".building-image").src = getBuildingImage(b.id, newLevel);
 
                 slot.querySelector(".building-bonus").textContent =
                     getBuildingProductionText(b, newLevel);
 
-                // Niveau max atteint
                 if (newLevel >= b.maxLevel) {
                     button.disabled = true;
                     button.textContent = "Niveau max";

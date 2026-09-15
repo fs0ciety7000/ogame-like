@@ -2,24 +2,37 @@
    PAGE ACCUEIL — PUISSANCE MILITAIRE / MISSIONS / AMÉLIORATIONS
 ===================================================== */
 
-// Unités offensives : points d'attaque fixes par unité (bonus labo à ajouter plus tard)
-const OFFENSIVE_UNITS = {
-    drone_recuperateur: 0,
-    fregate: 15,
-    sentinelle: 5,
-    cargo: 0,
-    chasseur: 40,
-    etoile_noire: 500
-};
+// Unités offensives (comptent pour ATK, capacité liée au Hangar d'attaque)
+const OFFENSIVE_UNITS = [
+    "drone_recuperateur",
+    "fregate",
+    "sentinelle",
+    "cargo",
+    "chasseur",
+    "etoile_noire"
+];
 
-// Unités défensives : points de défense fixes par unité (bonus labo à ajouter plus tard)
-const DEFENSIVE_UNITS = {
-    roquette: 10,
-    canon_impulsion: 80,
-    canon_plasma: 100,
-    batterie_aa: 10,
-    intercepteur: 60
-};
+// Unités défensives (comptent pour DEF, capacité liée au Hangar de défense)
+const DEFENSIVE_UNITS = [
+    "roquette",
+    "canon_impulsion",
+    "canon_plasma",
+    "batterie_aa",
+    "intercepteur"
+];
+
+/* =====================================================
+   Calcul de la stat effective d'une unité (base + progression labo)
+===================================================== */
+function getUnitStat(unitId, statName) {
+    const base = (typeof UNIT_BASE_STATS !== "undefined" && UNIT_BASE_STATS[unitId])
+        ? UNIT_BASE_STATS[unitId][statName] ?? 0
+        : 0;
+
+    const level = GameData.units[unitId]?.level ?? 1;
+
+    return base + (level - 1) * 5;
+}
 
 /* =====================================================
    Puissance militaire (ATK / DEF)
@@ -32,16 +45,18 @@ function updateAccueilMilitaryPower() {
     const U = GameData.units || {};
 
     let totalAttack = 0;
-    for (const [id, attackValue] of Object.entries(OFFENSIVE_UNITS)) {
+    OFFENSIVE_UNITS.forEach(id => {
+        const attack = getUnitStat(id, "attack");
         const count = U[id]?.count ?? 0;
-        totalAttack += attackValue * count;
-    }
+        totalAttack += attack * count;
+    });
 
     let totalDefense = 0;
-    for (const [id, defenseValue] of Object.entries(DEFENSIVE_UNITS)) {
+    DEFENSIVE_UNITS.forEach(id => {
+        const attack = getUnitStat(id, "attack");
         const count = U[id]?.count ?? 0;
-        totalDefense += defenseValue * count;
-    }
+        totalDefense += attack * count;
+    });
 
     attackEl.textContent = Math.floor(totalAttack);
     defenseEl.textContent = Math.floor(totalDefense);

@@ -12,14 +12,14 @@ const MISSIONS = {
         name: "Patrouille courte",
         duration: 60,
         reward: { scrap: 150 },
-        prereq: { drones: 2 }
+        prereq: { drone_recuperateur: 2 }
     },
     forage_profond: {
         key: "forage_profond",
         name: "Forage profond",
         duration: 1800,
         reward: { scrap: 3500 },
-        prereq: { drones: 12, cargo: 3 }
+        prereq: { drone_recuperateur: 12, cargo: 3 }
     },
     collecte_energie: {
         key: "collecte_energie",
@@ -33,14 +33,14 @@ const MISSIONS = {
         name: "Analyse de signal",
         duration: 900,
         reward: { data: 250 },
-        prereq: { drones: 6, sentinelle: 2 }
+        prereq: { drone_recuperateur: 6, sentinelle: 2 }
     },
     synthese_nano: {
         key: "synthese_nano",
         name: "Synthèse de nanocomposants",
         duration: 1800,
         reward: { nano: 60 },
-        prereq: { drones: 10, sentinelle: 4 }
+        prereq: { drone_recuperateur: 10, sentinelle: 4 }
     },
     expedition_longue: {
         key: "expedition_longue",
@@ -59,7 +59,7 @@ const MISSIONS = {
         name: "Récupération d'acier renforcé",
         duration: 1200,
         reward: { reinforcedSteel: 3 },
-        prereq: { drones: 8, chasseur: 4 }
+        prereq: { drone_recuperateur: 8, chasseur: 4 }
     },
     extraction_module: {
         key: "extraction_module",
@@ -73,7 +73,7 @@ const MISSIONS = {
         name: "Récolte de nanites synthétiques",
         duration: 2400,
         reward: { syntheticNanites: 5 },
-        prereq: { drones: 15, sentinelle: 6 }
+        prereq: { drone_recuperateur: 15, sentinelle: 6 }
     },
     fouille_archives_IA: {
         key: "fouille_archives_IA",
@@ -131,14 +131,14 @@ function hasPrerequisites(missionKey) {
     if (!mission) return false;
 
     const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
-
-    const drones = save.droneCount || 0;
-    const chasseurs = save.chasseurCount || 0;
+    const units = save.units || {};
 
     const req = mission.prereq || {};
 
-    if (req.drones && drones < req.drones) return false;
-    if (req.chasseur && chasseurs < req.chasseur) return false;
+    for (const [unitId, requiredCount] of Object.entries(req)) {
+        const owned = units[unitId]?.count ?? 0;
+        if (owned < requiredCount) return false;
+    }
 
     return true;
 }
@@ -160,16 +160,16 @@ function getRewardText(reward) {
     if (!reward) return ["Aucune récompense directe"];
 
     // Ressources communes
-    if (reward.scrap) rewardText.push(`${reward.scrap} Ferraille`);
-    if (reward.energy) rewardText.push(`${reward.energy} Énergie`);
-    if (reward.nano) rewardText.push(`${reward.nano} Nano‑composants`);
-    if (reward.data) rewardText.push(`${reward.data} Données anciennes`);
+    if (reward.scrap) rewardText.push(`🔩 ${reward.scrap} Ferraille`);
+    if (reward.energy) rewardText.push(`⚡ ${reward.energy} Énergie`);
+    if (reward.nano) rewardText.push(`🧬 ${reward.nano} Nano‑composants`);
+    if (reward.data) rewardText.push(`📡 ${reward.data} Données anciennes`);
 
     // Ressources rares
-    if (reward.reinforcedSteel) rewardText.push(`${reward.reinforcedSteel} Acier renforcé`);
-    if (reward.cyberModule) rewardText.push(`${reward.cyberModule} Module cybernétique`);
-    if (reward.syntheticNanites) rewardText.push(`${reward.syntheticNanites} Nanites synthétiques`);
-    if (reward.aiFragment) rewardText.push(`${reward.aiFragment} Fragment d'IA`);
+    if (reward.reinforcedSteel) rewardText.push(`🛠️ ${reward.reinforcedSteel} Acier renforcé`);
+    if (reward.cyberModule) rewardText.push(`🧩 ${reward.cyberModule} Module cybernétique`);
+    if (reward.syntheticNanites) rewardText.push(`🤖 ${reward.syntheticNanites} Nanites synthétiques`);
+    if (reward.aiFragment) rewardText.push(`🧠 ${reward.aiFragment} Fragment d'IA`);
 
     if (reward.exploration) rewardText.push(`Révélation d'un secteur galactique`);
 
