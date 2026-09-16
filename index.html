@@ -14,19 +14,39 @@
 
     <!-- Écran d'accueil -->
     <div id="home-screen">
-
+ 
         <div class="title-zone">
             <h1>Cosmic Empires</h1>
         </div>
-
+ 
         <div class="button-zone">
-            <button id="start-btn">Démarrer</button>
-        </div>
+ 
+            <!-- 🔹 LOGIN BOX -->
+            <div id="login-box">
+ 
+                <input type="text" id="username" placeholder="Nom du joueur">
+                <input type="password" id="password" placeholder="Mot de passe">
 
+                <p id="auth-error" style="color:#ff6b6b; font-size:0.9em; min-height:1.2em;"></p>
+                 
+                <button id="login-btn">Connexion</button>
+ 
+                <div class="new-player-zone">
+                    <button id="register-btn">Nouveau joueur</button>
+                </div>
+ 
+            </div>
+            <!-- 🔹 FIN LOGIN BOX -->
+ 
+        </div>
+ 
     </div>
 
     <!-- Étoiles scintillantes -->
     <div class="shooting-stars"></div>
+
+    <script type="module" src="js/firebase-init.js"></script>
+    <script type="module" src="js/auth.js"></script>
 
     <!-- Script bouton -->
     <script>

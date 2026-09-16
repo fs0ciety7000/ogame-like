@@ -248,3 +248,20 @@ main {
     font-size: 0.9em;
     margin: 10px 0;
 }
+
+#logout-btn {
+    background: none;
+    border: none;
+    font-size: 26px;
+    cursor: pointer;
+    color: #8beaff;
+    margin-left: 15px;
+    padding: 0;
+    transition: 0.25s ease;
+}
+
+#logout-btn:hover {
+    transform: scale(1.15);
+    color: #b8f7ff;
+    text-shadow: 0 0 10px #00eaff;
+}
