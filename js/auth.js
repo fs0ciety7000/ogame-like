@@ -94,7 +94,14 @@ async function loginPlayer(rawPseudo, password) {
     const email = pseudoToEmail(sanitized);
 
     try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+
+        // Auto-réparation : si le document Firestore n'a pas encore de pseudo
+        // (comptes créés avant cette fonctionnalité), on le renseigne maintenant.
+        await setDoc(doc(db, "players", result.user.uid), {
+            pseudo: rawPseudo.trim()
+        }, { merge: true });
+
         window.location.href = "dashboard.html";
 
     } catch (error) {

@@ -9,6 +9,18 @@ const { onAuthStateChanged, doc, getDoc, setDoc, serverTimestamp } = window.fire
 const SYNC_INTERVAL_MS = 60000; // toutes les 60 secondes
 
 /* =====================================================
+   Attend de connaître l'utilisateur connecté (une seule fois)
+===================================================== */
+function waitForUser() {
+    return new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe();
+            resolve(user);
+        });
+    });
+}
+
+/* =====================================================
    Charger la sauvegarde cloud dans localStorage
 ===================================================== */
 async function loadCloudSaveIntoLocalStorage(uid) {
@@ -35,24 +47,22 @@ async function pushLocalSaveToCloud(uid) {
 }
 
 /* =====================================================
-   Initialisation
+   Exécution au chargement
+   Le "await" ici met en pause tous les scripts <script defer>
+   suivants jusqu'à ce que la sauvegarde cloud soit chargée.
 ===================================================== */
-onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
+const currentUser = await waitForUser();
 
-    // 1. On charge la sauvegarde cloud avant que le jeu ne démarre vraiment
-    await loadCloudSaveIntoLocalStorage(user.uid);
+if (currentUser) {
+    await loadCloudSaveIntoLocalStorage(currentUser.uid);
 
-    // Signal pour d'éventuels scripts qui voudraient attendre ce moment précis
-    window.dispatchEvent(new Event("cloudSaveReady"));
-
-    // 2. Sauvegarde périodique vers le cloud
     setInterval(() => {
-        pushLocalSaveToCloud(user.uid);
+        pushLocalSaveToCloud(currentUser.uid);
     }, SYNC_INTERVAL_MS);
 
-    // 3. Dernière tentative de sauvegarde à la fermeture de l'onglet
     window.addEventListener("beforeunload", () => {
-        pushLocalSaveToCloud(user.uid);
+        pushLocalSaveToCloud(currentUser.uid);
     });
-});
+}
+
+window.dispatchEvent(new Event("cloudSaveReady"));

@@ -48,6 +48,7 @@ function saveGame() {
 
     // Sauvegarder les unités
     save.units = GameData.units;
+    save.xp = GameData.xp;
 
     // Sauvegarder les bâtiments
     save.buildings = {};
