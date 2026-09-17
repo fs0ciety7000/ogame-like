@@ -63,6 +63,9 @@ if (currentUser) {
     window.addEventListener("beforeunload", () => {
         pushLocalSaveToCloud(currentUser.uid);
     });
+
+    // Permet à d'autres scripts (ex: combat.js) de forcer une sauvegarde immédiate
+    window.forceCloudSync = () => pushLocalSaveToCloud(currentUser.uid);
 }
 
 window.dispatchEvent(new Event("cloudSaveReady"));

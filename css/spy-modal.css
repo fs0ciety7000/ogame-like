@@ -2,7 +2,8 @@
    POPUP ESPIONNAGE
 ===================================================== */
 
-#spy-modal-overlay {
+#spy-modal-overlay,
+.spy-overlay-style {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
@@ -13,7 +14,8 @@
     z-index: 1000;
 }
 
-#spy-modal {
+#spy-modal,
+.spy-modal-style {
     position: relative;
     width: 90%;
     max-width: 600px;
@@ -47,7 +49,8 @@
     font-size: 0.9em;
 }
 
-#spy-modal-close {
+#spy-modal-close,
+#combat-modal-close {
     position: absolute;
     top: 15px;
     right: 15px;

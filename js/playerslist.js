@@ -115,7 +115,11 @@ async function initPlayers() {
             if (action === "spy") {
                 openSpyModal(targetUid);
             } else if (action === "attack") {
-                alert("Le système d'attaque arrive bientôt !");
+                const playerCard = btn.closest(".player-card");
+                const pseudo = playerCard?.querySelector(".player-name")?.textContent || "ce joueur";
+                if (confirm(`Attaquer ${pseudo} ?`)) {
+                    initiateAttack(targetUid, pseudo);
+                }
             }
         });
 
