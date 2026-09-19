@@ -86,7 +86,7 @@ async function initPlayers() {
 
         card.innerHTML = `
             <div class="player-main">
-                <span class="player-name">${p.pseudo}${isSelf ? " (Vous)" : ""}</span>
+                <span class="player-name">${p.pseudo}</span>
                 <span class="player-rank">${getRankLabelFromXP(p.xp)}</span>
             </div>
 
@@ -117,9 +117,7 @@ async function initPlayers() {
             } else if (action === "attack") {
                 const playerCard = btn.closest(".player-card");
                 const pseudo = playerCard?.querySelector(".player-name")?.textContent || "ce joueur";
-                if (confirm(`Attaquer ${pseudo} ?`)) {
-                    initiateAttack(targetUid, pseudo);
-                }
+                openAttackModal(targetUid, pseudo);
             }
         });
 

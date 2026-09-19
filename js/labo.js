@@ -606,51 +606,63 @@ function upgradeUnit(techId, level) {
 }
 
 function appliquerEffet(tech, level) {
-    const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
-
     switch (tech.effect) {
-        case "energy_efficiency":
+        case "energy_efficiency": {
+            const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
             save.energyEfficiency = level * 0.05;
+            localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
+        }
 
-        case "unit_defense":
+        case "unit_defense": {
+            const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
             save.unitDefenseBonus = level * 0.10;
+            localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
+        }
 
-        case "unit_attack":
+        case "unit_attack": {
+            const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
             save.unitAttackBonus = level * 0.10;
+            localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
+        }
 
-        case "building_discount":
+        case "building_discount": {
+            const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
             save.buildingUpgradeDiscount = level * 0.05;
+            localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
+        }
 
-        case "unlock_recipe":
+        case "unlock_recipe": {
+            const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
             if (!save.unlockedRecipes) save.unlockedRecipes = 0;
             save.unlockedRecipes = level;
+            localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
+        }
 
         case "unlock_next_level":
+            // upgradeUnit() met à jour GameData.units ET appelle saveGame(),
+            // qui persiste déjà tout dans localStorage. Rien à faire de plus ici.
             upgradeUnit(tech.id, level);
             break;
+
         case "unlock_hangars":
             GameData.buildings.hangar_attaque.unlocked = true;
             GameData.buildings.hangar_defense.unlocked = true;
-            saveGame();
+            saveGame(); // persiste déjà tout, pareil que ci-dessus
 
-            // Rafraîchir la page bâtiments si elle est actuellement ouverte
             if (typeof initBatiments === "function") {
-               const page = document.getElementById("batiments");
-               if (page && page.style.display !== "none") {
-                  initBatiments();
+                const page = document.getElementById("batiments");
+                if (page && page.style.display !== "none") {
+                    initBatiments();
                 }
             }
             break;
     }
-
-    localStorage.setItem("cosmicSave", JSON.stringify(save));
 }
-
 
 // ============================
 // TICK RECHERCHE

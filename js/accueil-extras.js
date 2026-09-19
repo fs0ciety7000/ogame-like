@@ -120,6 +120,38 @@ function updateAccueilUpgrades() {
 }
 
 /* =====================================================
+   Production horaire (bâtiments + bonus labo)
+===================================================== */
+function updateAccueilProduction() {
+    const scrapEl = document.getElementById("acc-prod-scrap");
+    if (!scrapEl) return;
+
+    const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
+
+    const getLevel = (id) => save.buildings?.[id]?.level || 0;
+    const isUnlocked = (id) => save.buildings?.[id]?.unlocked === true;
+
+    const scrapLevel = getLevel("extracteur_ferraille");
+    const energyLevel = getLevel("reacteur_instable");
+    const nanoLevel = getLevel("extracteur_nanocomposants");
+    const dataLevel = getLevel("archives_fracturees");
+
+    const energyBonus = save.energyEfficiency || 0;
+
+    const prod = {
+        scrap: scrapProduction[scrapLevel - 1] || 0,
+        energy: isUnlocked("reacteur_instable") ? Math.floor((energyProduction[energyLevel - 1] || 0) * (1 + energyBonus)) : 0,
+        nano: isUnlocked("extracteur_nanocomposants") ? (nanoProduction[nanoLevel - 1] || 0) : 0,
+        data: isUnlocked("archives_fracturees") ? (dataProduction[dataLevel - 1] || 0) : 0
+    };
+
+    scrapEl.textContent = prod.scrap;
+    document.getElementById("acc-prod-energy").textContent = prod.energy;
+    document.getElementById("acc-prod-nano").textContent = prod.nano;
+    document.getElementById("acc-prod-data").textContent = prod.data;
+}
+
+/* =====================================================
    Rafraîchissement global (uniquement si la page accueil est visible)
 ===================================================== */
 function refreshAccueilExtras() {
@@ -129,6 +161,7 @@ function refreshAccueilExtras() {
     updateAccueilMilitaryPower();
     updateAccueilMissions();
     updateAccueilUpgrades();
+    updateAccueilProduction();
 }
 
 // Tick toutes les secondes (timers missions/labo à jour en direct)

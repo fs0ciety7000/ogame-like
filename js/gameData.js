@@ -5,7 +5,6 @@
 const GameData = {
 
     // XP du joueur (modifie cette valeur pour tester les rangs)
-    xp: 5200,
 
     
     // ============================
@@ -33,7 +32,7 @@ const GameData = {
         reacteur_instable: { level: 1, unlocked: false },
         extracteur_nanocomposants: { level: 1, unlocked: false },
         archives_fracturees: { level: 1, unlocked: false },
-        atelier_reparation: { level: 1 },
+        atelier_reparation: { level: 1, unlocked: false },
         hangar_attaque: { level: 1, unlocked: false },
         hangar_defense: { level: 1, unlocked: false }
     },

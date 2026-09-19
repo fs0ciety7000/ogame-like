@@ -8,6 +8,7 @@ function initProfil() {
     updateBuildingsTotal();
     updateBuildingNames();
     updateProfileUnits();
+    updateBattleStats();
 }
 
 // ===============================
@@ -40,6 +41,16 @@ const rankIcons = [
     "emeraude.png", "diamant.png", "master.png",
     "challenger.png", "elite.png"
 ];
+
+
+// ===============================
+// VICTOIRES / DÉFAITES
+// ===============================
+
+function updateBattleStats() {
+    document.getElementById("wins").textContent = GameData.victories || 0;
+    document.getElementById("losses").textContent = GameData.defeats || 0;
+}
 
 // ===============================
 // DÉTERMINER LE RANG
@@ -137,6 +148,7 @@ const LOCKABLE_BUILDINGS_PROFIL = [
     "reacteur_instable",
     "extracteur_nanocomposants",
     "archives_fracturees",
+    "atelier_reparation",
     "hangar_attaque",
     "hangar_defense"
 ];

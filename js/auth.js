@@ -13,6 +13,9 @@ const {
     serverTimestamp
 } = window.firebaseFns;
 
+// Empêche la redirection automatique de couper une inscription/connexion en cours
+let authFlowInProgress = false;
+
 /* =====================================================
    Transforme un pseudo en "faux email" pour Firebase Auth
 ===================================================== */
@@ -52,15 +55,18 @@ function translateFirebaseError(code) {
 ===================================================== */
 async function registerPlayer(rawPseudo, password) {
     showAuthError("");
+    authFlowInProgress = true;
 
     const sanitized = sanitizePseudo(rawPseudo);
 
     if (sanitized.length < 3) {
         showAuthError("Le pseudo doit contenir au moins 3 caractères valides.");
+        authFlowInProgress = false;
         return;
     }
     if (password.length < 6) {
         showAuthError("Le mot de passe doit contenir au moins 6 caractères.");
+        authFlowInProgress = false;
         return;
     }
 
@@ -81,6 +87,7 @@ async function registerPlayer(rawPseudo, password) {
     } catch (error) {
         console.error(error);
         showAuthError(translateFirebaseError(error.code));
+        authFlowInProgress = false;
     }
 }
 
@@ -89,6 +96,7 @@ async function registerPlayer(rawPseudo, password) {
 ===================================================== */
 async function loginPlayer(rawPseudo, password) {
     showAuthError("");
+    authFlowInProgress = true;
 
     const sanitized = sanitizePseudo(rawPseudo);
     const email = pseudoToEmail(sanitized);
@@ -107,14 +115,17 @@ async function loginPlayer(rawPseudo, password) {
     } catch (error) {
         console.error(error);
         showAuthError(translateFirebaseError(error.code));
+        authFlowInProgress = false;
     }
 }
 
 /* =====================================================
    Redirection automatique si déjà connecté
+   (seulement si ce n'est PAS une inscription/connexion en cours,
+   pour ne pas couper l'écriture du pseudo dans Firestore)
 ===================================================== */
 onAuthStateChanged(auth, (user) => {
-    if (user) {
+    if (user && !authFlowInProgress) {
         window.location.href = "dashboard.html";
     }
 });

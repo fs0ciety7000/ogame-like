@@ -92,3 +92,64 @@
     margin-bottom: 6px;
     font-size: 0.95em;
 }
+
+.recovered-text {
+    color: #4aff9c;
+    font-size: 0.85em;
+}
+
+/* === Sélection de flotte === */
+.fleet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fleet-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.fleet-unit-name {
+    flex: 1;
+    font-size: 0.95em;
+}
+
+.fleet-unit-owned {
+    font-size: 0.8em;
+    color: #8beaff;
+}
+
+.fleet-qty-input {
+    width: 70px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.35);
+    color: white;
+}
+
+.fleet-confirm-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 107, 0.5);
+    background: rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.fleet-confirm-btn:hover {
+    background: rgba(255, 107, 107, 0.35);
+    transform: translateY(-2px);
+}

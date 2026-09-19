@@ -29,7 +29,7 @@ function initSaveIfMissing() {
             reacteur_instable: { level: 1, unlocked: false },
             extracteur_nanocomposants: { level: 1, unlocked: false },
             archives_fracturees: { level: 1, unlocked: false },
-            atelier_reparation: { level: 1, unlocked: true },
+            atelier_reparation: { level: 1, unlocked: false },
             hangar_attaque: { level: 1, unlocked: false },
             hangar_defense: { level: 1, unlocked: false }
         };
@@ -46,6 +46,13 @@ function initSaveIfMissing() {
     // TECHNOLOGIES
     // ============================
     save.techLevels ??= {};
+
+    // ============================
+    // XP / STATISTIQUES DE COMBAT
+    // ============================
+    save.xp ??= 0;
+    save.victories ??= 0;
+    save.defeats ??= 0;
 
     // ============================
     // BONUS LABO

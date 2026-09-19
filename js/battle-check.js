@@ -15,13 +15,24 @@ function waitForUserBC() {
     });
 }
 
-function applyDefenderLossesAndLoot(losses, loot) {
+function applyDefenderLossesAndLoot(losses, loot, outcome) {
     // Pertes d'unités
     for (const unitId in losses) {
         if (GameData.units[unitId]) {
             GameData.units[unitId].count = Math.max(0, (GameData.units[unitId].count || 0) - losses[unitId]);
         }
     }
+
+    // --- XP et statistiques (côté défenseur) ---
+    if (outcome === "defender_win") {
+        GameData.victories = (GameData.victories || 0) + 1;
+        GameData.xp = (GameData.xp || 0) + 40;
+    } else if (outcome === "attacker_win") {
+        GameData.defeats = (GameData.defeats || 0) + 1;
+        GameData.xp = Math.max(0, (GameData.xp || 0) - 20);
+    }
+    // draw : aucun changement
+
     if (typeof saveGame === "function") saveGame();
 
     // Ressources volées
@@ -37,30 +48,20 @@ function applyDefenderLossesAndLoot(losses, loot) {
     if (typeof updateRessourcesPage === "function") updateRessourcesPage();
 }
 
-function notifyPlayerOfAttack(report) {
-    const lines = [`Tu as été attaqué par ${report.attackerPseudo} !`];
-
-    const outcomeText = {
-        attacker_win: "Tu as perdu ce combat.",
-        defender_win: "Tu as repoussé l'attaque !",
-        draw: "Match nul."
-    }[report.outcome];
-
-    lines.push(outcomeText);
-
-    if (report.loot) {
-        const stolen = Object.entries(report.loot).filter(([, v]) => v > 0);
-        if (stolen.length > 0) {
-            lines.push("Ressources volées : " + stolen.map(([res, val]) => `${val} ${res}`).join(", "));
-        }
-    }
-
-    alert(lines.join("\n"));
+function queueBattleNotification(report) {
+    window.pendingBattleNotifications = window.pendingBattleNotifications || [];
+    window.pendingBattleNotifications.push(report);
 }
 
 async function checkPendingBattleReports() {
     const currentUser = await waitForUserBC();
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log("[battle-check] Aucun utilisateur connecté.");
+        window.dispatchEvent(new CustomEvent("battleReportsReady"));
+        return;
+    }
+
+    console.log("[battle-check] Recherche des rapports pour uid :", currentUser.uid);
 
     try {
         const q = query(
@@ -71,22 +72,29 @@ async function checkPendingBattleReports() {
 
         const snapshot = await getDocs(q);
 
+        console.log("[battle-check] Rapports trouvés :", snapshot.docs.length);
+
         for (const reportDoc of snapshot.docs) {
             const report = reportDoc.data();
+            console.log("[battle-check] Traitement du rapport :", reportDoc.id, report);
 
-            applyDefenderLossesAndLoot(report.defenderLosses || {}, report.loot);
-            notifyPlayerOfAttack(report);
+            applyDefenderLossesAndLoot(report.defenderLosses || {}, report.loot, report.outcome);
+            queueBattleNotification(report);
 
             // Marquer comme traité pour ne pas le réappliquer au prochain chargement
             await setDoc(doc(db, "battle_reports", reportDoc.id), { defenderProcessed: true }, { merge: true });
         }
+
+        console.log("[battle-check] File d'attente après traitement :", window.pendingBattleNotifications);
 
         if (snapshot.docs.length > 0 && typeof window.forceCloudSync === "function") {
             window.forceCloudSync();
         }
 
     } catch (error) {
-        console.error("Erreur lors de la vérification des rapports de combat :", error);
+        console.error("[battle-check] Erreur lors de la vérification des rapports de combat :", error);
+    } finally {
+        window.dispatchEvent(new CustomEvent("battleReportsReady"));
     }
 }
 

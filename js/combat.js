@@ -1,9 +1,11 @@
 /* =====================================================
-   SYSTÈME DE COMBAT
+   SYSTÈME DE COMBAT (v2 : flotte sélectionnée + réparation)
 ===================================================== */
 
 const COMBAT_OFFENSIVE_UNITS = ["drone_recuperateur", "fregate", "sentinelle", "cargo", "chasseur", "etoile_noire"];
 const COMBAT_DEFENSIVE_UNITS = ["roquette", "canon_impulsion", "canon_plasma", "batterie_aa", "intercepteur"];
+
+const LOOT_PERCENT = 0.08; // % des ressources RARES du défenseur, volées en cas de victoire nette
 
 // Copie de secours si UNIT_BASE_STATS (labo.js) n'est pas chargé pour une raison ou une autre
 const COMBAT_FALLBACK_BASE_STATS = {
@@ -29,7 +31,24 @@ function combatUnitStat(unitsObj, unitId, statName) {
     return base + (level - 1) * 5;
 }
 
-function computeCombatPower(unitsObj, idList, statNames) {
+// Puissance basée sur une flotte spécifique (quantités choisies), pas tout le stock
+function computeFleetPower(unitsObj, fleet, statNames) {
+    let total = 0;
+
+    for (const id in fleet) {
+        const qty = fleet[id];
+        if (qty <= 0) continue;
+
+        let value = 0;
+        statNames.forEach(stat => { value += combatUnitStat(unitsObj, id, stat); });
+        total += value * qty;
+    }
+
+    return total;
+}
+
+// Puissance basée sur tout le stock (utilisé pour la défense, non sélectionnable pour l'instant)
+function computeFullPower(unitsObj, idList, statNames) {
     let total = 0;
 
     idList.forEach(id => {
@@ -47,9 +66,19 @@ function clamp(v, min, max) {
 }
 
 /* =====================================================
-   Lancer une attaque contre un autre joueur
+   Récupération via l'atelier de réparation
+   (5% par niveau, 50% max au niveau 10)
 ===================================================== */
-async function initiateAttack(targetUid, targetPseudoFallback) {
+function getRepairPercent(buildingsObj) {
+    const level = buildingsObj?.atelier_reparation?.level ?? 1;
+    return clamp(level * 0.05, 0, 0.5);
+}
+
+/* =====================================================
+   Lancer une attaque contre un autre joueur
+   fleet = { unitId: quantitéEnvoyée, ... }
+===================================================== */
+async function initiateAttack(targetUid, targetPseudoFallback, fleet) {
     const auth = window.firebaseAuth;
     const db = window.firebaseDb;
     const { doc, getDoc, setDoc, collection, serverTimestamp } = window.firebaseFns;
@@ -87,8 +116,8 @@ async function initiateAttack(targetUid, targetPseudoFallback) {
     const attackerUnits = GameData.units;
 
     // --- Calcul des puissances ---
-    const attackerPower = computeCombatPower(attackerUnits, COMBAT_OFFENSIVE_UNITS, ["attack"]);
-    const defenderPower = computeCombatPower(defenderUnits, COMBAT_DEFENSIVE_UNITS, ["attack", "defense"]);
+    const attackerPower = computeFleetPower(attackerUnits, fleet, ["attack"]);
+    const defenderPower = computeFullPower(defenderUnits, COMBAT_DEFENSIVE_UNITS, ["attack", "defense"]);
 
     const totalPower = attackerPower + defenderPower;
     const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
@@ -113,37 +142,64 @@ async function initiateAttack(targetUid, targetPseudoFallback) {
         defenderLossPct = 0.30;
     }
 
-    // --- Pertes attaquant (appliquées immédiatement, c'est son propre compte) ---
+    // --- Taux de récupération (atelier de réparation, chaque camp le sien) ---
+    const attackerRepairPct = getRepairPercent(GameData.buildings);
+    const defenderRepairPct = getRepairPercent(defenderGame.buildings);
+
+    // --- Pertes attaquant (sur la flotte envoyée uniquement) ---
     const attackerLosses = {};
-    COMBAT_OFFENSIVE_UNITS.forEach(id => {
-        const count = attackerUnits[id]?.count ?? 0;
-        const lost = Math.floor(count * attackerLossPct);
-        if (lost > 0) {
-            attackerLosses[id] = lost;
-            attackerUnits[id].count = Math.max(0, count - lost);
-        }
-    });
+    const attackerRecovered = {};
 
-    // --- Pertes défenseur (calculées ici, appliquées plus tard par son propre client) ---
+    for (const unitId in fleet) {
+        const sent = fleet[unitId];
+        const rawLost = Math.floor(sent * attackerLossPct);
+        const recovered = Math.floor(rawLost * attackerRepairPct);
+        const effectiveLost = rawLost - recovered;
+
+        if (rawLost > 0) {
+            attackerLosses[unitId] = effectiveLost;
+            attackerRecovered[unitId] = recovered;
+
+            const currentCount = attackerUnits[unitId]?.count ?? 0;
+            attackerUnits[unitId].count = Math.max(0, currentCount - effectiveLost);
+        }
+    }
+
+    // --- Pertes défenseur (sur tout son stock défensif, calculées ici avec sa réparation) ---
     const defenderLosses = {};
-    COMBAT_DEFENSIVE_UNITS.forEach(id => {
-        const count = defenderUnits[id]?.count ?? 0;
-        const lost = Math.floor(count * defenderLossPct);
-        if (lost > 0) {
-            defenderLosses[id] = lost;
+    const defenderRecovered = {};
+
+    COMBAT_DEFENSIVE_UNITS.forEach(unitId => {
+        const count = defenderUnits[unitId]?.count ?? 0;
+        const rawLost = Math.floor(count * defenderLossPct);
+        const recovered = Math.floor(rawLost * defenderRepairPct);
+        const effectiveLost = rawLost - recovered;
+
+        if (rawLost > 0) {
+            defenderLosses[unitId] = effectiveLost;
+            defenderRecovered[unitId] = recovered;
         }
     });
 
-    // --- Butin (seulement en cas de victoire nette de l'attaquant) ---
+    // --- Butin en ressources RARES (seulement en cas de victoire nette de l'attaquant) ---
     let loot = null;
     if (outcome === "attacker_win") {
-        const LOOT_PERCENT = 0.12;
         loot = {};
-        ["scrap", "energy", "nano", "data"].forEach(res => {
+        ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"].forEach(res => {
             const available = defenderGame[res] ?? 0;
             loot[res] = Math.floor(available * LOOT_PERCENT);
         });
     }
+
+        // --- XP et statistiques (côté attaquant) ---
+    if (outcome === "attacker_win") {
+        GameData.victories = (GameData.victories || 0) + 1;
+        GameData.xp = (GameData.xp || 0) + 40;
+    } else if (outcome === "defender_win") {
+        GameData.defeats = (GameData.defeats || 0) + 1;
+        GameData.xp = Math.max(0, (GameData.xp || 0) - 20);
+    }
+    // draw : aucun changement
 
     // --- Application immédiate côté attaquant ---
     if (typeof saveGame === "function") saveGame();
@@ -175,7 +231,9 @@ async function initiateAttack(targetUid, targetPseudoFallback) {
             attackerLossPercent: attackerLossPct,
             defenderLossPercent: defenderLossPct,
             attackerLosses,
+            attackerRecovered,
             defenderLosses,
+            defenderRecovered,
             loot: loot || null,
             defenderProcessed: false
         });
@@ -189,7 +247,9 @@ async function initiateAttack(targetUid, targetPseudoFallback) {
         attackerPower,
         defenderPower,
         attackerLosses,
+        attackerRecovered,
         defenderLosses,
+        defenderRecovered,
         loot
     });
 }
@@ -205,11 +265,16 @@ function getUnitDisplayName(unitId) {
     return unitId;
 }
 
-function buildLossListHTML(losses) {
+function buildLossListHTML(losses, recovered) {
     const entries = Object.entries(losses);
     if (entries.length === 0) return "<li>Aucune perte</li>";
 
-    return entries.map(([id, count]) => `<li><span>${getUnitDisplayName(id)}</span><span>-${count}</span></li>`).join("");
+    return entries.map(([id, count]) => {
+        const rec = recovered?.[id] || 0;
+        const total = count + rec;
+        const recText = rec > 0 ? ` <span class="recovered-text">(dont ${rec} réparées)</span>` : "";
+        return `<li><span>${getUnitDisplayName(id)}</span><span>-${total} au combat, -${count} définitif${recText}</span></li>`;
+    }).join("");
 }
 
 function showCombatResultPopup(result) {
@@ -230,7 +295,12 @@ function showCombatResultPopup(result) {
 
     let lootHTML = "<li>Aucun butin</li>";
     if (result.loot) {
-        const emojiMap = { scrap: "🔩", energy: "⚡", nano: "🧬", data: "📡" };
+        const emojiMap = {
+            reinforcedSteel: "🛠️",
+            cyberModule: "🧩",
+            syntheticNanites: "🤖",
+            aiFragment: "🧠"
+        };
         const entries = Object.entries(result.loot).filter(([, v]) => v > 0);
         if (entries.length > 0) {
             lootHTML = entries.map(([res, val]) => `<li><span>${emojiMap[res] || ""} ${res}</span><span>+${val}</span></li>`).join("");
@@ -251,16 +321,16 @@ function showCombatResultPopup(result) {
 
             <div class="spy-section">
                 <h3>Tes pertes</h3>
-                <ul class="spy-list">${buildLossListHTML(result.attackerLosses)}</ul>
+                <ul class="spy-list">${buildLossListHTML(result.attackerLosses, result.attackerRecovered)}</ul>
             </div>
 
             <div class="spy-section">
                 <h3>Pertes adverses (à venir chez lui)</h3>
-                <ul class="spy-list">${buildLossListHTML(result.defenderLosses)}</ul>
+                <ul class="spy-list">${buildLossListHTML(result.defenderLosses, result.defenderRecovered)}</ul>
             </div>
 
             <div class="spy-section">
-                <h3>Butin</h3>
+                <h3>Butin (ressources rares)</h3>
                 <ul class="spy-list">${lootHTML}</ul>
             </div>
         </div>
