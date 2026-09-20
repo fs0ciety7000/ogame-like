@@ -6,16 +6,28 @@ import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { loginPlayer, registerPlayer, translateAuthError, validatePassword, validatePseudo } from "@/services/authService";
+import {
+  loginPlayer,
+  NoRecoveryEmailError,
+  registerPlayer,
+  requestPasswordReset,
+  translateAuthError,
+  validateEmail,
+  validatePassword,
+  validatePseudo,
+} from "@/services/authService";
 import { firebaseConfigured } from "@/lib/firebase";
+
+type Mode = "login" | "register" | "forgot";
 
 interface FormValues {
   pseudo: string;
+  email: string;
   password: string;
 }
 
 export function LoginPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<Mode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const {
@@ -28,7 +40,29 @@ export function LoginPage() {
     const pseudoError = validatePseudo(values.pseudo);
     if (pseudoError) return toast.error(pseudoError);
 
+    if (mode === "forgot") {
+      setSubmitting(true);
+      try {
+        await requestPasswordReset(values.pseudo);
+        toast.success("Email envoyé ! Vérifie ta boîte de réception (et tes spams).");
+        setMode("login");
+      } catch (err) {
+        if (err instanceof NoRecoveryEmailError) {
+          toast.error(
+            "Ce compte n'a pas d'email de récupération associé (créé avant l'ajout de cette fonctionnalité).",
+          );
+        } else {
+          toast.error("Impossible d'envoyer l'email pour le moment. Réessaie plus tard.");
+        }
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     if (mode === "register") {
+      const emailError = validateEmail(values.email);
+      if (emailError) return toast.error(emailError);
       const passwordError = validatePassword(values.password);
       if (passwordError) return toast.error(passwordError);
     }
@@ -38,7 +72,7 @@ export function LoginPage() {
       if (mode === "login") {
         await loginPlayer(values.pseudo, values.password);
       } else {
-        await registerPlayer(values.pseudo, values.password);
+        await registerPlayer(values.pseudo, values.email, values.password);
         toast.success("Empire créé avec succès !");
       }
     } catch (err) {
@@ -80,38 +114,76 @@ export function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+          {mode === "forgot" && (
+            <p className="text-xs text-slate-400">
+              Entre ton pseudo : si un email de récupération y est associé, on t'y enverra un lien de réinitialisation.
+            </p>
+          )}
+
           <div>
             <Input placeholder="Nom du joueur" autoComplete="username" {...register("pseudo", { required: true })} />
             {errors.pseudo && <p className="mt-1 text-xs text-danger-glow">Pseudo requis.</p>}
           </div>
 
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              {...register("password", { required: true })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          {mode === "register" && (
+            <div>
+              <Input
+                type="email"
+                placeholder="Email (pour récupérer ton compte)"
+                autoComplete="email"
+                {...register("email", { required: true })}
+              />
+              {errors.email && <p className="mt-1 text-xs text-danger-glow">Email requis.</p>}
+            </div>
+          )}
+
+          {mode !== "forgot" && (
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Mot de passe"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                {...register("password", { required: true })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
 
           <Button type="submit" size="lg" disabled={submitting} className="mt-1">
-            {submitting ? "Connexion…" : mode === "login" ? "Connexion" : "Créer mon empire"}
+            {submitting
+              ? "…"
+              : mode === "login"
+                ? "Connexion"
+                : mode === "register"
+                  ? "Créer mon empire"
+                  : "Envoyer le lien"}
           </Button>
+
+          {mode === "login" && (
+            <button
+              type="button"
+              className="text-center text-xs text-slate-500 transition hover:text-cyan-glow"
+              onClick={() => setMode("forgot")}
+            >
+              Mot de passe oublié ?
+            </button>
+          )}
 
           <button
             type="button"
             className="mt-1 text-center text-xs text-slate-400 transition hover:text-cyan-glow"
-            onClick={() => setMode((m) => (m === "login" ? "register" : "login"))}
+            onClick={() => setMode(mode === "register" ? "login" : mode === "forgot" ? "login" : "register")}
           >
-            {mode === "login" ? "Nouveau joueur ? Crée ton empire" : "Déjà un empire ? Connecte-toi"}
+            {mode === "login" && "Nouveau joueur ? Crée ton empire"}
+            {mode === "register" && "Déjà un empire ? Connecte-toi"}
+            {mode === "forgot" && "Retour à la connexion"}
           </button>
         </form>
       </motion.div>

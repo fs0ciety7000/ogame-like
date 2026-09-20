@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom";
-import { LogOut, Music, Music as MusicOff } from "lucide-react";
+import { Link, Outlet } from "react-router-dom";
+import { LogOut, Music, Music as MusicOff, Settings } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
 import { NavBar } from "@/components/layout/NavBar";
@@ -79,6 +79,11 @@ export function AppShell() {
           <div className="order-2 ml-auto flex items-center gap-2 md:order-3 md:ml-0">
             <MusicToggle />
             <NotificationBell />
+            <Button variant="outline" size="icon" title="Réglages" asChild>
+              <Link to="/game/reglages">
+                <Settings className="h-4 w-4" />
+              </Link>
+            </Button>
             <Button variant="outline" size="icon" title="Déconnexion" onClick={() => void logout()}>
               <LogOut className="h-4 w-4" />
             </Button>

@@ -33,3 +33,16 @@ export function formatClock(totalSeconds: number): string {
   const r = s % 60;
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
+
+export function sanitizePseudo(pseudo: string): string {
+  return pseudo
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+}
+
+/** Domaine fictif utilisé comme identifiant Firebase Auth pour les comptes
+ *  créés avant l'ajout d'un email de récupération réel (voir authService). */
+export function legacyPseudoEmail(sanitizedPseudo: string): string {
+  return `${sanitizedPseudo}@cosmic-empires.local`;
+}

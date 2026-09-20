@@ -22,7 +22,9 @@ Réécriture complète du prototype HTML/CSS/JS d'origine (conservé dans
 
 ## Fonctionnalités
 
-- Connexion / inscription par pseudo (email technique généré en interne).
+- Connexion / inscription par pseudo, avec un vrai email de récupération
+  (mot de passe oublié fonctionnel) et une page Réglages (changer de mot de
+  passe, supprimer son compte).
 - Ressources (communes + rares), production continue même hors‑ligne,
   comptoir d'échange.
 - Bâtiments à niveaux, coûts/temps échelonnés, déblocages.
@@ -35,6 +37,9 @@ Réécriture complète du prototype HTML/CSS/JS d'origine (conservé dans
   de combat détaillé — livré instantanément au défenseur, même si son
   onglet était fermé au moment de l'attaque.
 - Rangs, statistiques de victoires/défaites, temps de jeu.
+- Suite de tests (Vitest) sur toute la logique de jeu — `npm run test`.
+- Code-splitting par page + animations (compteurs de ressources, transitions,
+  célébration de montée de rang).
 
 ## Démarrage
 
@@ -95,7 +100,23 @@ players/{uid}/meta/queues        files d'attente (constructions/unités/recherch
 players/{uid}/notifications/{id} journal d'évènements (temps réel)
 battle_reports/{id}              rapports de combat (créés par l'attaquant,
                                   traités et notifiés au défenseur en direct)
+usernames/{pseudo}               réservation pseudo -> email, pour résoudre la
+                                  connexion et le mot de passe oublié (Firebase
+                                  Auth ne connaît que des emails) — lecture par
+                                  id seul, jamais de liste consultable en masse
 ```
+
+### Mot de passe oublié
+
+Les comptes créés **avant** l'ajout de cette fonctionnalité utilisent un
+email technique interne (non joignable) : ils n'ont pas de mot de passe
+oublié tant qu'ils n'ont pas été recréés. C'est un choix assumé — changer
+l'email Firebase Auth d'un compte existant nécessite une confirmation par
+lien (asynchrone, parfois sur un autre appareil) qu'on ne peut pas fiabiliser
+sans backend, donc plutôt que de risquer de bloquer l'accès à un compte, la
+fonctionnalité ne s'applique qu'aux nouvelles inscriptions (email réel
+demandé dès la création). Ces joueurs peuvent toujours changer leur mot de
+passe depuis Réglages tant qu'ils restent connectés.
 
 Toute la logique (production, files, combat) est rejouée côté client à
 partir d'un horodatage (`resourcesUpdatedAtMs`) à chaque action et à

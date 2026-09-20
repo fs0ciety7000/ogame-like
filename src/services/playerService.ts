@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -13,6 +14,7 @@ import {
   Unsubscribe,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
@@ -45,6 +47,7 @@ const playerRef = (uid: string) => doc(db, "players", uid);
 const queuesRef = (uid: string) => doc(db, "players", uid, "meta", "queues");
 const notificationsCol = (uid: string) => collection(db, "players", uid, "notifications");
 const battleReportsCol = () => collection(db, "battle_reports");
+const usernameRef = (sanitizedPseudo: string) => doc(db, "usernames", sanitizedPseudo);
 
 export class GameActionError extends Error {}
 
@@ -68,6 +71,25 @@ export async function ensurePlayerDoc(uid: string, pseudo: string) {
  *  ce correctif s'exécute). Sans effet de bord sur le reste du document. */
 export async function setPlayerPseudo(uid: string, pseudo: string) {
   await setDoc(playerRef(uid), { pseudo }, { merge: true });
+}
+
+/* =====================================================
+   Résolution pseudo -> email (connexion, mot de passe oublié)
+
+   Firebase Auth ne connaît que des emails, pas des pseudos. Ce document
+   public (lecture par id seule, jamais de liste — voir firestore.rules)
+   permet de retrouver l'email associé à un pseudo AVANT authentification.
+   Écrit par claimUsername() à l'inscription et depuis Réglages quand un
+   joueur ajoute un email de récupération.
+===================================================== */
+
+export async function claimUsername(uid: string, sanitizedPseudo: string, email: string) {
+  await setDoc(usernameRef(sanitizedPseudo), { uid, email }, { merge: true });
+}
+
+export async function resolveEmailForPseudo(sanitizedPseudo: string): Promise<string | null> {
+  const snap = await getDoc(usernameRef(sanitizedPseudo));
+  return snap.exists() ? ((snap.data().email as string) ?? null) : null;
 }
 
 export function subscribePlayer(uid: string, cb: (player: PlayerState | null) => void): Unsubscribe {
@@ -500,4 +522,23 @@ export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
   return snap.docs
     .map((d) => ({ uid: d.id, pseudo: (d.data().pseudo as string) || "Joueur inconnu", xp: (d.data().xp as number) || 0 }))
     .sort((a, b) => b.xp - a.xp);
+}
+
+/** Supprime les données Firestore du joueur (profil, files, notifications,
+ *  réservation de pseudo). Le compte Firebase Auth lui-même est supprimé
+ *  séparément par authService.deleteAccount juste après. */
+export async function deletePlayerAccountData(uid: string, pseudo: string) {
+  const notifSnap = await getDocs(notificationsCol(uid));
+
+  const batch = writeBatch(db);
+  notifSnap.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(queuesRef(uid));
+  batch.delete(playerRef(uid));
+  await batch.commit();
+
+  const sanitized = pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  const usernameSnap = await getDoc(usernameRef(sanitized));
+  if (usernameSnap.exists() && usernameSnap.data().uid === uid) {
+    await deleteDoc(usernameRef(sanitized));
+  }
 }

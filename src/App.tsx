@@ -17,6 +17,7 @@ const LabPage = lazy(() => import("@/pages/LabPage").then((m) => ({ default: m.L
 const MissionsPage = lazy(() => import("@/pages/MissionsPage").then((m) => ({ default: m.MissionsPage })));
 const PlayersPage = lazy(() => import("@/pages/PlayersPage").then((m) => ({ default: m.PlayersPage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="missions" element={<MissionsPage />} />
               <Route path="joueurs" element={<PlayersPage />} />
               <Route path="profil" element={<ProfilePage />} />
+              <Route path="reglages" element={<SettingsPage />} />
             </Route>
           </Route>
 
