@@ -69,11 +69,16 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         if (!player.units[u.id]) player.units[u.id] = { level: 1, count: 0 };
         player.units[u.id].count += 1;
       }
+      const completedEndTime = front.endTime;
       queue.shift();
 
       if (queue.length > 0 && queue[0].endTime === null) {
         const nu = findUnit(queue[0].unitId);
-        queue[0].endTime = now + (nu ? getUnitBuildTime(nu) : 0) * 1000;
+        // Chaîné depuis la fin programmée de l'unité précédente (pas "now") :
+        // si le joueur était hors-ligne longtemps, plusieurs unités en file
+        // peuvent ainsi se terminer d'affilée dans ce même flush, au lieu de
+        // réinitialiser le minuteur sur l'instant présent à chaque appel.
+        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu) : 0) * 1000;
       }
     }
   });
