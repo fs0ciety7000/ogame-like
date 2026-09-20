@@ -69,3 +69,14 @@ export function combatDisplayFromReport(report: BattleReport): CombatDisplay {
     loot: report.loot,
   };
 }
+
+/** Le journal de combat affiche à la fois les attaques lancées et reçues :
+ *  on ne peut pas supposer la perspective "défenseur" comme le fait
+ *  combatDisplayFromReport (utilisé uniquement pour un rapport qu'on vient
+ *  de recevoir en tant que défenseur). Ici on compare avec son propre uid. */
+export function combatDisplayFromReportForViewer(report: BattleReport, viewerUid: string): CombatDisplay {
+  if (report.attackerUid === viewerUid) {
+    return combatDisplayFromAttackerResult(report.defenderPseudo, report);
+  }
+  return combatDisplayFromReport(report);
+}

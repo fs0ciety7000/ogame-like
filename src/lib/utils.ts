@@ -34,6 +34,27 @@ export function formatClock(totalSeconds: number): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+export function timeAgo(ms: number): string {
+  const diff = Math.max(0, Date.now() - ms);
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return "à l'instant";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `il y a ${h} h`;
+  return `il y a ${Math.floor(h / 24)} j`;
+}
+
+/** Convertit un Timestamp Firestore (ou une écriture serveur pas encore
+ *  synchronisée, qui apparaît comme `null` dans le cache local) en
+ *  millisecondes exploitables côté client. */
+export function firestoreMillis(value: unknown): number {
+  if (value && typeof value === "object" && "toMillis" in value && typeof (value as { toMillis: unknown }).toMillis === "function") {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  return Date.now();
+}
+
 export function sanitizePseudo(pseudo: string): string {
   return pseudo
     .trim()

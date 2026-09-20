@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
-import { resourceEmoji } from "@/game/resources";
+import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import type { CombatOutcome } from "@/types/game";
 
@@ -72,7 +72,7 @@ export function CombatResultModal() {
                   .map(([res, v]) => (
                     <li key={res} className="flex items-center justify-between text-slate-300">
                       <span>
-                        {resourceEmoji(res)} {res}
+                        {resourceEmoji(res)} {RESOURCE_LIST.find((r) => r.id === res)?.name ?? res}
                       </span>
                       <span className={current.perspective === "attacker" ? "text-mint-glow" : "text-danger-glow"}>
                         {current.perspective === "attacker" ? "+" : "-"}

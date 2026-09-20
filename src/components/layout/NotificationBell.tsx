@@ -4,18 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigg
 import { useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
-import { cn } from "@/lib/utils";
-
-function timeAgo(ms: number): string {
-  const diff = Math.max(0, Date.now() - ms);
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return "à l'instant";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `il y a ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `il y a ${h} h`;
-  return `il y a ${Math.floor(h / 24)} j`;
-}
+import { cn, timeAgo } from "@/lib/utils";
 
 export function NotificationBell() {
   const items = useNotificationStore((s) => s.items);
