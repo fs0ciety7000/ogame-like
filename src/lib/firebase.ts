@@ -1,9 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -31,10 +27,15 @@ const app = getApps().length ? getApps()[0]! : initializeApp(effectiveConfig);
 
 export const auth = getAuth(app);
 
-// Cache local persistant + synchro multi-onglets : permet un fonctionnement
-// hors-ligne fluide et une UI qui reste réactive pendant les allers-retours réseau.
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-});
+// Cache mémoire (par défaut du SDK), volontairement SANS persistance
+// IndexedDB (persistentLocalCache) : cette dernière lève des
+// DOMException("The operation failed for an operation-specific reason")
+// non rattrapables dans pas mal de contextes réels (navigation privée
+// Safari, protections anti-tracking strictes de Firefox/Brave, stockage
+// plein ou profil endommagé) — le SDK ne bascule pas toujours proprement
+// sur la mémoire dans ces cas-là. Le jeu est de toute façon un jeu
+// multijoueur temps réel : la persistance hors-ligne entre rechargements
+// de page n'apporte pas grand-chose, alors que le crash, lui, se voit.
+export const db = getFirestore(app);
 
 export default app;
