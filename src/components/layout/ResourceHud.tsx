@@ -15,7 +15,7 @@ export function ResourceHud() {
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center justify-center gap-1.5 md:justify-start">
       {common.map((res) => {
         const rate = rates[res.id] ?? 0;
         return (
@@ -34,7 +34,7 @@ export function ResourceHud() {
         );
       })}
 
-      <span className="mx-1 h-5 w-px bg-white/10" />
+      <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
 
       {rare.map((res) => (
         <Tooltip key={res.id}>

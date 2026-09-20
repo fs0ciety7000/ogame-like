@@ -54,13 +54,13 @@ export function AppShell() {
   }, [player]);
 
   return (
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[1400px] flex-col gap-3 p-3 pb-20 md:flex-row md:pb-3">
+    <div className="relative flex min-h-screen w-full flex-col pb-16 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
       <Starfield count={80} />
       <NavBar />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <header className="glass-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3">
-          <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/5 bg-space-900/60 px-4 py-3 backdrop-blur-xl sm:px-6">
+          <div className="order-1 flex items-center gap-2">
             <img src="/assets/Logo/logo.png" alt="" className="h-9 w-9 rounded-lg object-cover" />
             <div className="hidden sm:block">
               <p className="font-display text-sm text-white glow-text">Cosmic Empires</p>
@@ -68,9 +68,11 @@ export function AppShell() {
             </div>
           </div>
 
-          <ResourceHud />
+          <div className="order-3 w-full basis-full md:order-2 md:w-auto md:flex-1 md:basis-auto md:px-4">
+            <ResourceHud />
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="order-2 ml-auto flex items-center gap-2 md:order-3 md:ml-0">
             <MusicToggle />
             <NotificationBell />
             <Button variant="outline" size="icon" title="Déconnexion" onClick={() => void logout()}>
@@ -79,7 +81,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1">
+        <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto">
           {loading ? (
             <div className="flex h-64 items-center justify-center text-slate-400">Chargement de l'empire…</div>
           ) : (

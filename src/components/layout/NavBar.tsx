@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 
 export function NavBar() {
   return (
-    <nav className="glass-panel sticky bottom-0 z-30 flex w-full items-center justify-around gap-1 overflow-x-auto rounded-none border-x-0 border-b-0 px-2 py-2 md:static md:w-64 md:flex-col md:items-stretch md:justify-start md:rounded-2xl md:border md:p-3">
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around gap-1 overflow-x-auto border-t border-white/5 bg-space-900/95 px-2 py-2 backdrop-blur-xl md:sticky md:inset-x-auto md:top-0 md:h-screen md:w-60 md:shrink-0 md:flex-col md:items-stretch md:justify-start md:gap-1 md:overflow-y-auto md:border-t-0 md:border-r md:bg-space-900/60 md:p-3">
       {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
