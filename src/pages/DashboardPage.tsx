@@ -12,6 +12,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { formatClock, formatNumber } from "@/lib/utils";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
+import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 
 export function DashboardPage() {
   useNowTicker();
@@ -40,6 +41,8 @@ export function DashboardPage() {
           Rang <span className="text-cyan-glow">{getRankLabel(player.xp)}</span> — {formatNumber(player.xp)} XP
         </p>
       </motion.div>
+
+      <OnboardingChecklist player={player} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>

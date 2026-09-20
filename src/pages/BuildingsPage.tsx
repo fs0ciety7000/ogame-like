@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { Lock, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -101,6 +101,7 @@ export function BuildingsPage() {
                       <Lock className="h-8 w-8 text-slate-400" />
                     </div>
                   )}
+                  {activeUpgrade && <ConstructionOverlay />}
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-4">
@@ -186,6 +187,36 @@ export function BuildingsPage() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Effet visuel "chantier en cours" sur la vignette d'un bâtiment en
+ *  amélioration : hachures de sécurité, faisceau qui balaye l'image, et
+ *  badge outil animé — plus parlant qu'une simple barre de progression. */
+function ConstructionOverlay() {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 bg-space-950/45" />
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, rgba(255,216,107,0.12) 0px, rgba(255,216,107,0.12) 10px, transparent 10px, transparent 20px)",
+        }}
+      />
+      <motion.div
+        className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-cyan-glow/25 to-transparent"
+        animate={{ x: ["-120%", "220%"] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+      />
+      <motion.div
+        className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-gold-glow text-space-950 shadow-[0_0_12px_-2px_var(--color-gold-glow)]"
+        animate={{ rotate: [0, -18, 18, 0] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <Wrench className="h-4 w-4" />
+      </motion.div>
     </div>
   );
 }
