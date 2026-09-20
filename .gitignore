@@ -8,3 +8,4 @@ dist-ssr
 *.log
 .firebase
 firebase-debug.log
+*.tsbuildinfo
