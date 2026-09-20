@@ -1,6 +1,12 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  getAuth,
+  inMemoryPersistence,
+  initializeAuth,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,7 +31,23 @@ const effectiveConfig = firebaseConfigured
 
 const app = getApps().length ? getApps()[0]! : initializeApp(effectiveConfig);
 
-export const auth = getAuth(app);
+// Par défaut, le SDK Auth essaie d'abord une persistance basée sur
+// IndexedDB — même famille de DOMException non rattrapable que le cache
+// Firestore juste en dessous, et sur le même genre de contextes (navigation
+// privée, protections anti-tracking strictes, stockage endommagé). On
+// force explicitement localStorage en premier (stable depuis des années),
+// avec repli sur sessionStorage puis la mémoire si même ça échoue.
+export const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
+    });
+  } catch {
+    // initializeAuth ne peut être appelé qu'une fois par app (ex: re-exécution
+    // du module en HMR) : on récupère alors l'instance déjà initialisée.
+    return getAuth(app);
+  }
+})();
 
 // Cache mémoire (par défaut du SDK), volontairement SANS persistance
 // IndexedDB (persistentLocalCache) : cette dernière lève des
