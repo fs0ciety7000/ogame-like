@@ -17,6 +17,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { firestoreMillis } from "@/lib/utils";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState, type NewNotification } from "@/game/flush";
 import {
@@ -455,6 +456,34 @@ export async function initiateAttack(params: AttackParams) {
 export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): Unsubscribe {
   const q = query(battleReportsCol(), where("defenderUid", "==", uid), where("defenderProcessed", "==", false));
   return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }))));
+}
+
+/** Journal de combat complet (attaques lancées + reçues), temps réel.
+ *  Deux abonnements simples (une égalité chacun, sans orderBy) plutôt
+ *  qu'une requête OR + tri serveur : évite d'avoir à déployer de nouveaux
+ *  index composites, le tri se fait ici côté client. */
+export function subscribeBattleLog(uid: string, cb: (reports: BattleReport[]) => void): Unsubscribe {
+  let sent: BattleReport[] = [];
+  let received: BattleReport[] = [];
+
+  const emit = () => {
+    const merged = [...sent, ...received].sort((a, b) => firestoreMillis(b.timestamp) - firestoreMillis(a.timestamp));
+    cb(merged);
+  };
+
+  const unsubSent = onSnapshot(query(battleReportsCol(), where("attackerUid", "==", uid)), (snap) => {
+    sent = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }));
+    emit();
+  });
+  const unsubReceived = onSnapshot(query(battleReportsCol(), where("defenderUid", "==", uid)), (snap) => {
+    received = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }));
+    emit();
+  });
+
+  return () => {
+    unsubSent();
+    unsubReceived();
+  };
 }
 
 export async function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {

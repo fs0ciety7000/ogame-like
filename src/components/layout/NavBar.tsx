@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Users, UserCircle } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Users, Swords, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/game/labo", label: "Labo", icon: FlaskConical },
   { to: "/game/missions", label: "Missions", icon: MapPin },
   { to: "/game/joueurs", label: "Joueurs", icon: Users },
+  { to: "/game/combats", label: "Combats", icon: Swords },
   { to: "/game/profil", label: "Profil", icon: UserCircle },
 ];
 
