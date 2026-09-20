@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  ensurePlayerDoc,
+  GameActionError,
   processBattleReportForDefender,
   subscribeNotifications,
   subscribePendingBattleReports,
@@ -8,6 +10,7 @@ import {
   subscribeQueues,
   syncPlayer,
 } from "@/services/playerService";
+import { auth } from "@/lib/firebase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
 import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
@@ -25,6 +28,30 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string }> = {
   system: { icon: "✨" },
 };
 
+/** syncPlayer suppose que les documents Firestore du joueur existent déjà.
+ *  Ils sont créés par authService juste après connexion/inscription, mais
+ *  la navigation vers /game (déclenchée dès que Firebase Auth signale un
+ *  utilisateur connecté) peut survenir avant que cette création n'ait fini
+ *  d'écrire — on retombe donc ici sur ensurePlayerDoc en filet de sécurité,
+ *  plutôt que de laisser une promesse échouer sans être interceptée. */
+async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0) {
+  try {
+    await syncPlayer(uid, playtimeDeltaSeconds);
+  } catch (err) {
+    if (err instanceof GameActionError) {
+      try {
+        await ensurePlayerDoc(uid, auth.currentUser?.displayName || "Joueur");
+        await syncPlayer(uid, playtimeDeltaSeconds);
+        return;
+      } catch (retryErr) {
+        console.error("Impossible de synchroniser le profil joueur :", retryErr);
+        return;
+      }
+    }
+    console.error("Erreur de synchronisation :", err);
+  }
+}
+
 /** Point d'entrée unique de la synchro temps réel : abonnements Firestore,
  *  rattrapage de production hors-ligne, heartbeat, et traitement des rapports
  *  de combat reçus (même si l'onglet était fermé au moment de l'attaque). */
@@ -40,7 +67,7 @@ export function useGameSync(uid: string | null) {
     }
 
     lastHeartbeatAt.current = Date.now();
-    void syncPlayer(uid);
+    void safeSyncPlayer(uid);
 
     const unsubPlayer = subscribePlayer(uid, setPlayerData);
     const unsubQueues = subscribeQueues(uid, setQueuesData);
@@ -80,11 +107,11 @@ export function useGameSync(uid: string | null) {
       const now = Date.now();
       const deltaSeconds = Math.round((now - lastHeartbeatAt.current) / 1000);
       lastHeartbeatAt.current = now;
-      void syncPlayer(uid, deltaSeconds);
+      void safeSyncPlayer(uid, deltaSeconds);
     }, HEARTBEAT_MS);
 
     const flushOnHide = () => {
-      if (document.visibilityState === "hidden") void syncPlayer(uid);
+      if (document.visibilityState === "hidden") void safeSyncPlayer(uid);
     };
     document.addEventListener("visibilitychange", flushOnHide);
 

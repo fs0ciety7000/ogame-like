@@ -38,6 +38,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   "auth/invalid-email": "Pseudo invalide (utilise uniquement lettres, chiffres, - et _).",
   "auth/too-many-requests": "Trop de tentatives. Réessaie dans quelques minutes.",
   "auth/network-request-failed": "Problème réseau. Vérifie ta connexion.",
+  "auth/operation-not-allowed":
+    "La connexion par mot de passe n'est pas activée sur ce projet Firebase (Authentication → Sign-in method → Email/Password).",
+  "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "Clé API Firebase invalide. Vérifie ton .env.local.",
 };
 
 export function translateAuthError(code: string): string {
