@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Profil joueur : lisible par tout joueur connecté (classement, espionnage),
+    // modifiable uniquement par son propriétaire. Le jeu est côté client
+    // (comme le prototype d'origine) : pas de Cloud Functions nécessaires,
+    // ce qui garde le déploiement gratuit sur le plan Spark de Firebase.
+    match /players/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false;
+
+      // Files d'attente (constructions, recherches, missions) : privées.
+      match /meta/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Journal d'évènements du joueur : privé.
+      match /notifications/{notifId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Rapports de combat : l'attaquant peut créer un rapport le concernant ;
+    // les deux belligérants peuvent le lire ; seul le défenseur peut le
+    // marquer comme traité (et rien d'autre) une fois consulté.
+    match /battle_reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.attackerUid == request.auth.uid
+        && request.resource.data.defenderProcessed == false;
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.attackerUid || request.auth.uid == resource.data.defenderUid);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.defenderUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['defenderProcessed']);
+
+      allow delete: if false;
+    }
+  }
+}
