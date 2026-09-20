@@ -22,7 +22,8 @@ const DEFENSIVE_UNITS = [
 ];
 
 /* =====================================================
-   Calcul de la stat effective d'une unité (base + progression labo)
+   Calcul de la stat effective d'une unité (base + progression labo
+   + bonus % du laboratoire : tech2 = défense, tech5 = attaque)
 ===================================================== */
 function getUnitStat(unitId, statName) {
     const level = GameData.units[unitId]?.level ?? 0;
@@ -32,7 +33,22 @@ function getUnitStat(unitId, statName) {
         ? UNIT_BASE_STATS[unitId][statName] ?? 0
         : 0;
 
-    return base + (level - 1) * 5;
+    let value = base + (level - 1) * 5;
+
+    // Bonus % du laboratoire, recalculés depuis le niveau actuel des techs
+    // (tech2 = défense, tech5 = attaque) plutôt qu'une valeur sauvegardée
+    // qui pourrait devenir périmée si le taux par niveau change.
+    const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
+    const techLevels = save.techLevels || {};
+
+    if (statName === "attack") {
+        value *= (1 + (techLevels.tech5 || 0) * 0.10);
+    }
+    if (statName === "defense") {
+        value *= (1 + (techLevels.tech2 || 0) * 0.10);
+    }
+
+    return value;
 }
 
 /* =====================================================
@@ -102,21 +118,27 @@ function updateAccueilUpgrades() {
 
     list.innerHTML = "";
 
-    const active = JSON.parse(localStorage.getItem("rechercheActive"));
+    const active = typeof loadActiveResearches === "function"
+        ? loadActiveResearches()
+        : (JSON.parse(localStorage.getItem("activeResearches")) || []);
 
-    if (!active) {
+    if (!active || active.length === 0) {
         list.innerHTML = "<li>Aucune amélioration en cours</li>";
         return;
     }
 
-    const tech = technologies.find(t => t.id === active.id);
-    if (!tech) return;
+    const now = Date.now();
 
-    const remaining = Math.max(0, Math.floor((active.endTime - Date.now()) / 1000));
+    active.forEach(r => {
+        const tech = technologies.find(t => t.id === r.id);
+        if (!tech) return;
 
-    const li = document.createElement("li");
-    li.textContent = `${tech.nom} — ${formatTime(remaining)}`;
-    list.appendChild(li);
+        const remaining = Math.max(0, Math.floor((r.endTime - now) / 1000));
+
+        const li = document.createElement("li");
+        li.textContent = `${tech.nom} — ${formatTime(remaining)}`;
+        list.appendChild(li);
+    });
 }
 
 /* =====================================================
@@ -136,13 +158,15 @@ function updateAccueilProduction() {
     const nanoLevel = getLevel("extracteur_nanocomposants");
     const dataLevel = getLevel("archives_fracturees");
 
-    const energyBonus = save.energyEfficiency || 0;
+    // Bonus labo (tech3) : recalculé depuis le niveau actuel de la tech.
+    const tech3Level = save.techLevels?.tech3 || 0;
+    const productionBonus = tech3Level * 0.10;
 
     const prod = {
-        scrap: scrapProduction[scrapLevel - 1] || 0,
-        energy: isUnlocked("reacteur_instable") ? Math.floor((energyProduction[energyLevel - 1] || 0) * (1 + energyBonus)) : 0,
-        nano: isUnlocked("extracteur_nanocomposants") ? (nanoProduction[nanoLevel - 1] || 0) : 0,
-        data: isUnlocked("archives_fracturees") ? (dataProduction[dataLevel - 1] || 0) : 0
+        scrap: Math.floor((scrapProduction[scrapLevel - 1] || 0) * (1 + productionBonus)),
+        energy: isUnlocked("reacteur_instable") ? Math.floor((energyProduction[energyLevel - 1] || 0) * (1 + productionBonus)) : 0,
+        nano: isUnlocked("extracteur_nanocomposants") ? Math.floor((nanoProduction[nanoLevel - 1] || 0) * (1 + productionBonus)) : 0,
+        data: isUnlocked("archives_fracturees") ? Math.floor((dataProduction[dataLevel - 1] || 0) * (1 + productionBonus)) : 0
     };
 
     scrapEl.textContent = prod.scrap;

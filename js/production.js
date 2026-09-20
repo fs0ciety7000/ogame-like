@@ -36,8 +36,11 @@ function productionTick() {
     let save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
     if (!save.buildings) return;
 
-    // Bonus labo
-    const energyBonus = save.energyEfficiency || 0;
+    // Bonus labo (tech3) : recalculé à partir du niveau actuel de la tech,
+    // pas d'une valeur figée sauvegardée (qui deviendrait périmée si le
+    // taux par niveau change un jour).
+    const tech3Level = save.techLevels?.tech3 || 0;
+    const productionBonus = tech3Level * 0.10;
 
     // Initialisation des ressources si absentes
     save.scrap = save.scrap || 0;
@@ -66,30 +69,29 @@ function productionTick() {
 
         // Extracteur de ferraille
         if (building.id === "extracteur_ferraille") {
-            const perSecondRate = scrapProduction[level - 1] || 0;
-            save.scrap += perSecondRate;
+            const baseRate = scrapProduction[level - 1] || 0;
+            save.scrap += Math.floor(baseRate * (1 + productionBonus));
             return;
         }
 
         // Réacteur instable
         if (building.id === "reacteur_instable") {
-            let amount = energyProduction[level - 1] || 0;
-            amount = Math.floor(amount * (1 + energyBonus));
-            save.energy += amount;
+            const baseRate = energyProduction[level - 1] || 0;
+            save.energy += Math.floor(baseRate * (1 + productionBonus));
             return;
         }
 
         // Extracteur de nanocomposants
         if (building.id === "extracteur_nanocomposants") {
-            const perSecondRate = nanoProduction[level - 1] || 0;
-            save.nano += perSecondRate;
+            const baseRate = nanoProduction[level - 1] || 0;
+            save.nano += Math.floor(baseRate * (1 + productionBonus));
             return;
         }
 
         // Archives fracturées
         if (building.id === "archives_fracturees") {
-            const perSecondRate = dataProduction[level - 1] || 0;
-            save.data += perSecondRate;
+            const baseRate = dataProduction[level - 1] || 0;
+            save.data += Math.floor(baseRate * (1 + productionBonus));
             return;
         }
     });

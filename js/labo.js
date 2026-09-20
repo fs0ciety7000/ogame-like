@@ -15,6 +15,10 @@ const technologies = [
         baseCost: { scrap: 100, energy: 20 },
         baseTime: 30,
         effect: "unlock_recipe",
+        // Cette techno monte jusqu'au niveau 18 (au lieu de 10 pour la plupart
+        // des autres) : elle a besoin de son propre facteur de coût pour ne
+        // pas devenir absurde trop tôt, tout en finissant autour de 6-7M.
+        costGrowth: 1.92,
         prereq: {} 
     },
     {
@@ -99,7 +103,7 @@ const technologies = [
         baseCost: { scrap: 400, energy: 100, cyberModule: 100 },
         baseTime: 70,
         effect: "unlock_next_level",
-        prereq: { tech5: 3, tech6: 1 }
+        prereq: { tech1: 3, tech3: 2 }
     },
     {
         id: "tech14",
@@ -109,7 +113,7 @@ const technologies = [
         baseCost: { scrap: 250, nano: 80 },
         baseTime: 70,
         effect: "unlock_next_level",
-        prereq: { tech5: 3, tech2: 2 }
+        prereq: { tech8: 1, tech2: 4 }
     },
 
     // --- PALIER 4 : Spécialisation et Défense Lourde ---
@@ -121,7 +125,7 @@ const technologies = [
         baseCost: { scrap: 500, nano: 200, data: 100 },
         baseTime: 70,
         effect: "unlock_defense_units",
-        prereq: { tech2: 5, tech6: 1 }
+        prereq: { tech1: 2, tech3: 2 }
     },
     {
         id: "tech7",
@@ -214,6 +218,30 @@ const technologies = [
 const techGrid = document.getElementById("techGrid");
 const infoBox = document.getElementById("infoBox");
 
+// Tech actuellement affichée dans le panneau de détails (pour rafraîchir
+// son affichage quand sa recherche se termine, même si l'utilisateur a
+// lancé d'autres recherches en parallèle).
+let currentInfoTechId = null;
+
+// ============================
+// FILE DE RECHERCHES (jusqu'à 4 en parallèle)
+// ============================
+
+const MAX_CONCURRENT_RESEARCH = 4;
+const ACTIVE_RESEARCH_KEY = "activeResearches";
+
+function loadActiveResearches() {
+    return JSON.parse(localStorage.getItem(ACTIVE_RESEARCH_KEY)) || [];
+}
+
+function saveActiveResearches(list) {
+    localStorage.setItem(ACTIVE_RESEARCH_KEY, JSON.stringify(list));
+}
+
+function isResearchActive(techId, list) {
+    return list.some(r => r.id === techId);
+}
+
 // ============================
 // CHARGER / SAUVER NIVEAUX
 // ============================
@@ -241,8 +269,15 @@ function saveTechLevels(levels) {
 
 // Ajout du calcul pour chaque ressource individuellement
 
+// Facteurs de croissance par niveau (calibrés pour qu'un niveau 10 sur une
+// techno "unité" classique - baseTime ~70s, baseCost ~400 - atteigne environ
+// 2h de temps et plusieurs millions de ressources).
+const COST_GROWTH = 2.7;
+const TIME_GROWTH = 1.67;
+
 function getCost(tech, level) {
-    const factor = Math.pow(1.15, level - 1);
+    const growth = tech.costGrowth || COST_GROWTH;
+    const factor = Math.pow(growth, level - 1);
     let scaledCost = {};
     
     for (const [res, amount] of Object.entries(tech.baseCost)) {
@@ -253,7 +288,7 @@ function getCost(tech, level) {
 }
 
 function getTime(tech, level) {
-    return Math.floor(tech.baseTime * Math.pow(1.12, level - 1));
+    return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
 }
 
 // ============================
@@ -262,6 +297,7 @@ function getTime(tech, level) {
 
 function genererTechnologies() {
     const levels = loadTechLevels();
+    const activeResearches = loadActiveResearches();
     const techGrid = document.getElementById("techGrid");
     techGrid.innerHTML = "";
 
@@ -279,10 +315,13 @@ function genererTechnologies() {
         // 3. Ajout d'un indicateur visuel (cadenas) si bloqué
         const lockIcon = checkReq.valid ? "" : "🔒 ";
 
+        // 4. Indicateur si la techno est actuellement en recherche
+        const activeIcon = isResearchActive(tech.id, activeResearches) ? " ⏳" : "";
+
         card.innerHTML = `
             <h3>${lockIcon}${tech.nom}</h3>
             <p>${tech.desc}</p>
-            <p>Niveau : ${level} / ${tech.maxLevel}</p>
+            <p>Niveau : ${level} / ${tech.maxLevel}${activeIcon}</p>
         `;
 
         // Le joueur peut toujours cliquer pour voir les prérequis manquants
@@ -299,11 +338,40 @@ function afficherInfo(tech) {
     const levels = loadTechLevels();
     const level = levels[tech.id];
 
+    currentInfoTechId = tech.id;
+
     if (level >= tech.maxLevel) {
         infoBox.innerHTML = `
             <strong>${tech.nom}</strong><br>
             ${tech.desc}<br><br>
             <strong>Niveau max atteint.</strong>
+        `;
+        return;
+    }
+
+    const activeResearches = loadActiveResearches();
+    const activeEntry = activeResearches.find(r => r.id === tech.id);
+
+    // Si cette techno est déjà en cours de recherche, on affiche sa
+    // progression au lieu du formulaire de lancement.
+    if (activeEntry) {
+        const nextLevel = level + 1;
+        const totalTime = getTime(tech, nextLevel);
+        const remaining = Math.max(0, Math.floor((activeEntry.endTime - Date.now()) / 1000));
+        const elapsed = totalTime - remaining;
+        const percent = Math.min(100, Math.floor((elapsed / totalTime) * 100));
+
+        infoBox.innerHTML = `
+            <strong>${tech.nom}</strong><br>
+            Recherche en cours…<br><br>
+
+            <div class="progressBar">
+                <div id="researchProgress-${tech.id}" class="progressFill" style="width:${percent}%"></div>
+            </div>
+
+            <p id="researchTimer-${tech.id}">Temps restant : ${remaining}s</p>
+
+            <button class="btn-recherche" disabled>Recherche en cours…</button>
         `;
         return;
     }
@@ -335,7 +403,6 @@ function afficherInfo(tech) {
 
     // Vérification des prérequis avec notre nouvelle fonction
     const checkReq = verifierPrerequis(tech, levels);
-    const rechercheActive = JSON.parse(localStorage.getItem("rechercheActive"));
 
     // Construction du bloc HTML pour les prérequis
     let prereqHTML = "";
@@ -359,8 +426,8 @@ function afficherInfo(tech) {
     let bouton = "";
     if (!checkReq.valid) {
         bouton = `<button class="btn-recherche" disabled style="opacity: 0.5; cursor: not-allowed; border-color: #f44336; color: #f44336;">Prérequis manquants</button>`;
-    } else if (rechercheActive) {
-        bouton = `<button class="btn-recherche" disabled>Recherche en cours…</button>`;
+    } else if (activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
+        bouton = `<button class="btn-recherche" disabled style="opacity: 0.5; cursor: not-allowed;">File de recherche pleine (${activeResearches.length}/${MAX_CONCURRENT_RESEARCH})</button>`;
     } else {
         bouton = `<button class="btn-recherche" onclick="lancerRecherche('${tech.id}')">Améliorer</button>`;
     }
@@ -430,6 +497,18 @@ function lancerRecherche(idTech) {
 
     if (nextLevel > tech.maxLevel) return;
 
+    let activeResearches = loadActiveResearches();
+
+    if (isResearchActive(idTech, activeResearches)) {
+        alert("Cette technologie est déjà en cours de recherche.");
+        return;
+    }
+
+    if (activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
+        alert(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
+        return;
+    }
+
     // 1. Charger la sauvegarde pour vérifier les ressources
     let save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
     const cost = getCost(tech, nextLevel);
@@ -458,27 +537,15 @@ function lancerRecherche(idTech) {
         updateHUD();
     }
 
-    // 5. Lancement du timer (code existant)
+    // 5. Ajout à la file de recherches (jusqu'à 4 en parallèle)
     const time = getTime(tech, nextLevel);
     const endTime = Date.now() + time * 1000;
 
-    localStorage.setItem("rechercheActive", JSON.stringify({
-        id: tech.id,
-        endTime: endTime
-    }));
+    activeResearches.push({ id: tech.id, endTime: endTime });
+    saveActiveResearches(activeResearches);
 
-    infoBox.innerHTML = `
-        <strong>${tech.nom}</strong><br>
-        Recherche lancée !<br><br>
-
-        <div class="progressBar">
-            <div id="researchProgress" class="progressFill" style="width:0%"></div>
-        </div>
-
-        <p id="researchTimer">Temps restant : ${time}s</p>
-
-        <button class="btn-recherche" disabled>Recherche en cours…</button>
-    `;
+    genererTechnologies();
+    afficherInfo(tech);
 }
 
 // ============================
@@ -486,35 +553,53 @@ function lancerRecherche(idTech) {
 // ============================
 
 function updateResearchProgress() {
-    const active = JSON.parse(localStorage.getItem("rechercheActive"));
-    if (!active) return;
-
-    const tech = technologies.find(t => t.id === active.id);
-    if (!tech) return;
-
-    const levels = loadTechLevels();
-    const nextLevel = levels[tech.id] + 1;
-    const totalTime = getTime(tech, nextLevel);
+    let activeResearches = loadActiveResearches();
+    if (activeResearches.length === 0) return;
 
     const now = Date.now();
-    const remaining = Math.floor((active.endTime - now) / 1000);
+    const stillActive = [];
+    let completedSomething = false;
 
-    const elapsed = totalTime - Math.max(remaining, 0);
-    const percent = Math.min(100, Math.floor((elapsed / totalTime) * 100));
+    activeResearches.forEach(r => {
+        const tech = technologies.find(t => t.id === r.id);
+        if (!tech) return; // techno invalide, on l'ignore/supprime
 
-    const bar = document.getElementById("researchProgress");
-    if (bar) bar.style.width = percent + "%";
+        const levels = loadTechLevels();
+        const nextLevel = levels[tech.id] + 1;
+        const totalTime = getTime(tech, nextLevel);
+        const remaining = Math.floor((r.endTime - now) / 1000);
 
-    const timer = document.getElementById("researchTimer");
-    if (timer) timer.textContent = `Temps restant : ${Math.max(remaining, 0)}s`;
+        if (remaining <= 0) {
+            terminerRecherche(r.id);
+            completedSomething = true;
 
-    if (remaining <= 0) {
-        terminerRecherche();
-        infoBox.innerHTML = `
-            <strong>${tech.nom}</strong><br>
-            Recherche terminée !<br><br>
-            <button class="btn-recherche" disabled>Complété</button>
-        `;
+            // Si le panneau de détails affiche justement cette techno,
+            // on montre le message de complétion.
+            if (currentInfoTechId === tech.id) {
+                infoBox.innerHTML = `
+                    <strong>${tech.nom}</strong><br>
+                    Recherche terminée !<br><br>
+                    <button class="btn-recherche" disabled>Complété</button>
+                `;
+            }
+        } else {
+            stillActive.push(r);
+
+            const elapsed = totalTime - remaining;
+            const percent = Math.min(100, Math.floor((elapsed / totalTime) * 100));
+
+            const bar = document.getElementById(`researchProgress-${tech.id}`);
+            if (bar) bar.style.width = percent + "%";
+
+            const timer = document.getElementById(`researchTimer-${tech.id}`);
+            if (timer) timer.textContent = `Temps restant : ${Math.max(remaining, 0)}s`;
+        }
+    });
+
+    saveActiveResearches(stillActive);
+
+    if (completedSomething) {
+        genererTechnologies();
     }
 }
 
@@ -522,11 +607,8 @@ function updateResearchProgress() {
 // FINALISATION DE LA RECHERCHE
 // ============================
 
-function terminerRecherche() {
-    const active = JSON.parse(localStorage.getItem("rechercheActive"));
-    if (!active) return;
-
-    const tech = technologies.find(t => t.id === active.id);
+function terminerRecherche(techId) {
+    const tech = technologies.find(t => t.id === techId);
     if (!tech) return;
 
     const levels = loadTechLevels();
@@ -538,7 +620,8 @@ function terminerRecherche() {
         appliquerEffet(tech, levels[tech.id]);
     }
 
-    localStorage.removeItem("rechercheActive");
+    // Le retrait de la file active est géré par updateResearchProgress()
+    // (qui appelle cette fonction), donc rien à faire ici de ce côté.
     genererTechnologies();
 }
 
@@ -556,13 +639,13 @@ const UNIT_BASE_STATS = {
     fregate:             { attack: 15,  defense: 20 },
     cargo:               { attack: 0,   defense: 10 },
     sentinelle:          { attack: 5,   defense: 30 },
-    chasseur:            { attack: 40,  defense: 10 },
+    chasseur:            { attack: 105, defense: 10 },
     etoile_noire:        { attack: 500, defense: 500 },
-    roquette:            { attack: 15,  defense: 0 },
-    canon_impulsion:     { attack: 80,  defense: 10 },
-    canon_plasma:        { attack: 100, defense: 20 },
-    batterie_aa:         { attack: 10,  defense: 60 },
-    intercepteur:        { attack: 60,  defense: 15 }
+    roquette:            { attack: 70,  defense: 0 },
+    canon_impulsion:     { attack: 90,  defense: 10 },
+    canon_plasma:        { attack: 125, defense: 20 },
+    batterie_aa:         { attack: 155, defense: 60 },
+    intercepteur:        { attack: 255, defense: 15 }
 };
 
 // =======================================
@@ -609,7 +692,7 @@ function appliquerEffet(tech, level) {
     switch (tech.effect) {
         case "energy_efficiency": {
             const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
-            save.energyEfficiency = level * 0.05;
+            save.energyEfficiency = level * 0.10;
             localStorage.setItem("cosmicSave", JSON.stringify(save));
             break;
         }
@@ -676,29 +759,10 @@ setInterval(updateResearchProgress, 1000);
 
 window.addEventListener("load", () => {
     genererTechnologies();
-
-    // Si une recherche était déjà en cours au rechargement
-    const active = JSON.parse(localStorage.getItem("rechercheActive"));
-    if (active) {
-        const tech = technologies.find(t => t.id === active.id);
-        if (tech) {
-            const levels = loadTechLevels();
-            const nextLevel = levels[tech.id] + 1;
-            const totalTime = getTime(tech, nextLevel);
-            const remaining = Math.max(0, Math.floor((active.endTime - Date.now()) / 1000));
-
-            infoBox.innerHTML = `
-                <strong>${tech.nom}</strong><br>
-                Recherche en cours…<br><br>
-
-                <div class="progressBar">
-                    <div id="researchProgress" class="progressFill" style="width:0%"></div>
-                </div>
-
-                <p id="researchTimer">Temps restant : ${remaining}s</p>
-
-                <button class="btn-recherche" disabled>Recherche en cours…</button>
-            `;
-        }
-    }
+    // Le panneau de détails (infoBox) reste vide au chargement : avec
+    // jusqu'à 4 recherches en parallèle, il n'y a plus une seule recherche
+    // "active" à restaurer automatiquement. Cliquer sur une carte en cours
+    // de recherche affichera sa progression (géré par afficherInfo()).
+    // Le récapitulatif de toutes les recherches en cours reste visible sur
+    // la page d'accueil (accueil-extra.js).
 });

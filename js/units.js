@@ -343,10 +343,26 @@ function updateUnitQueuesProgress() {
                 queue[0].endTime = Date.now() + getUnitBuildTime(nu) * 1000;
             }
         } else {
-            // Mise à jour du temps restant directement sur la ligne "temps / unité" de la carte
-            const remaining = Math.max(0, Math.floor((front.endTime - Date.now()) / 1000));
-            const el = document.getElementById(`build-time-${front.unitId}`);
-            if (el) el.textContent = `⏱️ Temps restant : ${formatUnitTime(remaining)}`;
+            // Temps restant + nombre d'unités restantes pour TOUT le lot contigu
+            // de la même unité en tête de file (pas seulement l'exemplaire en cours).
+            const unitId = front.unitId;
+            const u = unitsData.find(x => x.id === unitId);
+
+            let remainingCount = 0;
+            for (let i = 0; i < queue.length; i++) {
+                if (queue[i].unitId === unitId) remainingCount++;
+                else break; // dès qu'une autre unité s'intercale, on arrête le comptage du lot
+            }
+
+            const remainingCurrent = Math.max(0, Math.floor((front.endTime - Date.now()) / 1000));
+            const buildTimePerUnit = u ? getUnitBuildTime(u) : 0;
+            const totalRemaining = remainingCurrent + (remainingCount - 1) * buildTimePerUnit;
+
+            const el = document.getElementById(`build-time-${unitId}`);
+            if (el) {
+                const unitLabel = remainingCount > 1 ? "unités restantes" : "unité restante";
+                el.textContent = `⏱️ Temps restant : ${formatUnitTime(totalRemaining)} (${remainingCount} ${unitLabel})`;
+            }
         }
     });
 
@@ -520,7 +536,12 @@ function initUnites() {
             if (btnSell) btnSell.addEventListener("click", () => sellUnit(unit));
 
             const qtyInput = card.querySelector(`#qty-${unit.id}`);
-            if (qtyInput) qtyInput.addEventListener("input", () => updateCost(unit));
+            if (qtyInput) {
+                qtyInput.addEventListener("input", () => {
+                    updateCost(unit);
+                    updateBuildTimeDisplay(unit);
+                });
+            }
         }
     });
 }
@@ -574,4 +595,27 @@ function updateCost(unit) {
             ${getResourceEmoji(res)} <span>${val * qty}</span>
         </div>
     `).join("");
+}
+
+/* ===============================
+   MISE À JOUR DE L'APERÇU DU TEMPS (DYNAMIQUE, SELON LA QUANTITÉ)
+   =============================== */
+
+function updateBuildTimeDisplay(unit) {
+    const qty = parseInt(document.getElementById(`qty-${unit.id}`).value) || 1;
+
+    const el = document.getElementById(`build-time-${unit.id}`);
+    if (!el) return;
+
+    // Si cette unité est actuellement en tête de file (en cours de construction réelle),
+    // on ne touche pas à l'affichage : c'est le "Temps restant" live qui doit rester visible.
+    const queues = loadUnitQueues();
+    const queue = queues[unit.category] || [];
+    if (queue.length > 0 && queue[0].unitId === unit.id) return;
+
+    const totalTime = getUnitBuildTime(unit) * qty;
+
+    el.textContent = qty > 1
+        ? `⏱️ ${formatUnitTime(totalTime)} pour ${qty} unités`
+        : `⏱️ ${formatUnitTime(totalTime)} / unité`;
 }

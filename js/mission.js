@@ -11,42 +11,42 @@ const MISSIONS = {
         key: "patrouille_courte",
         name: "Patrouille courte",
         duration: 60,
-        reward: { scrap: 150 },
+        reward: { scrap: 150, xp: 10 },
         prereq: { drone_recuperateur: 2 }
     },
     forage_profond: {
         key: "forage_profond",
         name: "Forage profond",
         duration: 1800,
-        reward: { scrap: 3500 },
+        reward: { scrap: 3500, xp: 150 },
         prereq: { drone_recuperateur: 12, cargo: 3 }
     },
     collecte_energie: {
         key: "collecte_energie",
         name: "Collecte d'énergie",
         duration: 900,
-        reward: { energy: 400 },
+        reward: { energy: 400, xp: 80 },
         prereq: { chasseur: 6, fregate: 2 }
     },
     analyse_signal: {
         key: "analyse_signal",
         name: "Analyse de signal",
         duration: 900,
-        reward: { data: 250 },
+        reward: { data: 250, xp: 80 },
         prereq: { drone_recuperateur: 6, sentinelle: 2 }
     },
     synthese_nano: {
         key: "synthese_nano",
         name: "Synthèse de nanocomposants",
         duration: 1800,
-        reward: { nano: 60 },
+        reward: { nano: 60, xp: 150 },
         prereq: { drone_recuperateur: 10, sentinelle: 4 }
     },
     expedition_longue: {
         key: "expedition_longue",
         name: "Expédition longue durée",
         duration: 3600,
-        reward: { scrap: 6000, energy: 1200 },
+        reward: { scrap: 6000, energy: 1200, xp: 300 },
         prereq: { fregate: 5, cargo: 4, chasseur: 6 }
     },
 
@@ -58,28 +58,28 @@ const MISSIONS = {
         key: "recuperation_acier",
         name: "Récupération d'acier renforcé",
         duration: 1200,
-        reward: { reinforcedSteel: 3 },
+        reward: { reinforcedSteel: 3, xp: 100 },
         prereq: { drone_recuperateur: 8, chasseur: 4 }
     },
     extraction_module: {
         key: "extraction_module",
         name: "Extraction de module cybernétique",
         duration: 1800,
-        reward: { cyberModule: 4 },
+        reward: { cyberModule: 4, xp: 150 },
         prereq: { sentinelle: 5, fregate: 3 }
     },
     recolte_nanites: {
         key: "recolte_nanites",
         name: "Récolte de nanites synthétiques",
         duration: 2400,
-        reward: { syntheticNanites: 5 },
+        reward: { syntheticNanites: 5, xp: 200 },
         prereq: { drone_recuperateur: 15, sentinelle: 6 }
     },
     fouille_archives_IA: {
         key: "fouille_archives_IA",
         name: "Fouille d'archives d'IA",
         duration: 3600,
-        reward: { aiFragment: 6 },
+        reward: { aiFragment: 6, xp: 300 },
         prereq: { fregate: 6, sentinelle: 8 }
     },
     mission_elite: {
@@ -90,7 +90,8 @@ const MISSIONS = {
             reinforcedSteel: 8,
             cyberModule: 6,
             syntheticNanites: 5,
-            aiFragment: 4
+            aiFragment: 4,
+            xp: 600
         },
         prereq: { fregate: 10, sentinelle: 10, chasseur: 10, cargo: 5 }
     }
@@ -171,6 +172,9 @@ function getRewardText(reward) {
     if (reward.cyberModule) rewardText.push(`🧩 ${reward.cyberModule} Module cybernétique`);
     if (reward.syntheticNanites) rewardText.push(`🤖 ${reward.syntheticNanites} Nanites synthétiques`);
     if (reward.aiFragment) rewardText.push(`🧠 ${reward.aiFragment} Fragment d'IA`);
+
+    // Expérience
+    if (reward.xp) rewardText.push(`⭐ ${reward.xp} XP`);
 
     if (reward.exploration) rewardText.push(`Révélation d'un secteur galactique`);
 
@@ -390,11 +394,19 @@ function finishMission(missionKey) {
 
     localStorage.setItem("cosmicSave", JSON.stringify(save));
 
+    // Expérience : même système que combat.js, stockée dans GameData.xp
+    // (pas dans cosmicSave) et persistée via saveGame().
+    if (mission && mission.reward && mission.reward.xp && typeof GameData !== "undefined") {
+        GameData.xp = (GameData.xp || 0) + mission.reward.xp;
+    }
+    if (typeof saveGame === "function") saveGame();
+
     updateHUD?.();
     updateRessourcesPage?.();
 
+    const xpGained = mission?.reward?.xp;
     const logText = mission
-        ? `Mission "${mission.name}" terminée : récompense obtenue`
+        ? `Mission "${mission.name}" terminée : récompense obtenue${xpGained ? ` (+${xpGained} XP)` : ""}`
         : "Mission terminée : récompense obtenue";
 
     localStorage.setItem(MISSION_LAST_LOG_KEY, logText);

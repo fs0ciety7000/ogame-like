@@ -13,13 +13,13 @@ const COMBAT_FALLBACK_BASE_STATS = {
     fregate: { attack: 15, defense: 20 },
     cargo: { attack: 0, defense: 10 },
     sentinelle: { attack: 5, defense: 30 },
-    chasseur: { attack: 40, defense: 10 },
+    chasseur: { attack: 105, defense: 10 },
     etoile_noire: { attack: 500, defense: 500 },
-    roquette: { attack: 15, defense: 0 },
-    canon_impulsion: { attack: 80, defense: 10 },
-    canon_plasma: { attack: 100, defense: 20 },
-    batterie_aa: { attack: 10, defense: 60 },
-    intercepteur: { attack: 60, defense: 15 }
+    roquette: { attack: 70, defense: 0 },
+    canon_impulsion: { attack: 90, defense: 10 },
+    canon_plasma: { attack: 125, defense: 20 },
+    batterie_aa: { attack: 155, defense: 60 },
+    intercepteur: { attack: 255, defense: 15 }
 };
 
 function combatUnitStat(unitsObj, unitId, statName) {
@@ -28,7 +28,24 @@ function combatUnitStat(unitsObj, unitId, statName) {
     const level = unitsObj?.[unitId]?.level ?? 0;
 
     if (level <= 0) return 0;
-    return base + (level - 1) * 5;
+
+    let value = base + (level - 1) * 5;
+
+    // Bonus globaux issus du laboratoire (tech2 = défense, tech5 = attaque),
+    // appliqués à TOUTES les unités, offensives comme défensives.
+    // Recalculés depuis le niveau actuel des techs, pas une valeur
+    // sauvegardée qui pourrait devenir périmée.
+    const save = JSON.parse(localStorage.getItem("cosmicSave")) || {};
+    const techLevels = save.techLevels || {};
+
+    if (statName === "attack") {
+        value *= (1 + (techLevels.tech5 || 0) * 0.10);
+    }
+    if (statName === "defense") {
+        value *= (1 + (techLevels.tech2 || 0) * 0.10);
+    }
+
+    return value;
 }
 
 // Puissance basée sur une flotte spécifique (quantités choisies), pas tout le stock
