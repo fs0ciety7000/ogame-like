@@ -9,6 +9,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  setDoc,
   Unsubscribe,
   updateDoc,
   where,
@@ -59,6 +60,14 @@ export async function ensurePlayerDoc(uid: string, pseudo: string) {
       tx.set(queuesRef(uid), defaultQueues());
     });
   }
+}
+
+/** Impose le pseudo exact saisi par le joueur, y compris si le profil a déjà
+ *  été créé entre-temps par le filet de sécurité de useGameSync (qui ne
+ *  connaît pas le pseudo tapé et retombe sur un nom générique le temps que
+ *  ce correctif s'exécute). Sans effet de bord sur le reste du document. */
+export async function setPlayerPseudo(uid: string, pseudo: string) {
+  await setDoc(playerRef(uid), { pseudo }, { merge: true });
 }
 
 export function subscribePlayer(uid: string, cb: (player: PlayerState | null) => void): Unsubscribe {

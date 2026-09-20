@@ -5,7 +5,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ensurePlayerDoc } from "@/services/playerService";
+import { ensurePlayerDoc, setPlayerPseudo } from "@/services/playerService";
 
 export function sanitizePseudo(pseudo: string): string {
   return pseudo
@@ -55,6 +55,9 @@ export async function registerPlayer(rawPseudo: string, password: string) {
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(credential.user, { displayName: pseudo });
   await ensurePlayerDoc(credential.user.uid, pseudo);
+  // Rétablit le pseudo exact même si useGameSync a déjà créé le profil
+  // entre-temps avec son nom de repli générique (voir setPlayerPseudo).
+  await setPlayerPseudo(credential.user.uid, pseudo);
   return credential.user;
 }
 
@@ -63,7 +66,9 @@ export async function loginPlayer(rawPseudo: string, password: string) {
   const email = pseudoToEmail(sanitized);
 
   const credential = await signInWithEmailAndPassword(auth, email, password);
-  await ensurePlayerDoc(credential.user.uid, rawPseudo.trim());
+  const pseudo = rawPseudo.trim();
+  await ensurePlayerDoc(credential.user.uid, pseudo);
+  await setPlayerPseudo(credential.user.uid, pseudo);
   return credential.user;
 }
 
