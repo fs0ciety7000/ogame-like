@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources } from "@/hooks/useLiveResources";
 import { RESOURCE_LIST, getTradeRate } from "@/game/resources";
@@ -25,13 +27,14 @@ export function ResourcesPage() {
 
   const rate = getTradeRate(sellId, buyId);
   const preview = Math.floor(amount * rate);
+  const buyRes = RESOURCE_LIST.find((r) => r.id === buyId)!;
 
   const handleTrade = async () => {
     if (!uid) return;
     setSubmitting(true);
     try {
       const gained = await tradeResources(uid, sellId, buyId, amount);
-      toast.success(`Échange effectué : +${formatNumber(gained)} ${buyId}`);
+      toast.success(`Échange effectué : +${formatNumber(gained)} ${buyRes.name}`);
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Échange impossible.");
     } finally {
@@ -44,14 +47,26 @@ export function ResourcesPage() {
       <h1 className="font-display text-xl text-white glow-text">Ressources</h1>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {RESOURCE_LIST.map((res) => (
-          <Card key={res.id}>
-            <CardContent className="flex flex-col items-center gap-1 py-4">
-              <span className="text-2xl">{res.emoji}</span>
-              <span className="text-xs text-slate-400">{res.name}</span>
-              <span className="font-display text-lg tabular-nums text-slate-100">{formatNumber(resources[res.id])}</span>
-            </CardContent>
-          </Card>
+        {RESOURCE_LIST.map((res, i) => (
+          <motion.div
+            key={res.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.03 }}
+            whileHover={{ y: -2 }}
+          >
+            <Card>
+              <CardContent className="flex flex-col items-center gap-1 py-4">
+                <span className="text-2xl">{res.emoji}</span>
+                <span className="text-xs text-slate-400">{res.name}</span>
+                <AnimatedNumber
+                  value={resources[res.id]}
+                  format={formatNumber}
+                  className="font-display text-lg tabular-nums text-slate-100"
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
@@ -109,7 +124,7 @@ export function ResourcesPage() {
           <div className="flex items-center justify-between rounded-lg bg-space-800/60 px-4 py-3 text-sm">
             <span className="text-slate-400">Tu recevras</span>
             <span className="font-display text-cyan-glow">
-              {formatNumber(preview)} {buyId}
+              {formatNumber(preview)} {buyRes.emoji} {buyRes.name}
             </span>
           </div>
 

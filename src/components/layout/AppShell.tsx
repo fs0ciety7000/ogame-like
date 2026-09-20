@@ -1,13 +1,16 @@
 import { Outlet } from "react-router-dom";
 import { LogOut, Music, Music as MusicOff } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
 import { NavBar } from "@/components/layout/NavBar";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { PageLoader } from "@/components/layout/PageLoader";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
+import { useRankCelebration } from "@/hooks/useRankCelebration";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
@@ -48,6 +51,7 @@ export function AppShell() {
   const loading = usePlayerStore((s) => s.loading);
 
   useGameSync(user?.uid ?? null);
+  useRankCelebration(player);
 
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
@@ -83,9 +87,13 @@ export function AppShell() {
 
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto">
           {loading ? (
-            <div className="flex h-64 items-center justify-center text-slate-400">Chargement de l'empire…</div>
+            <PageLoader />
           ) : (
-            <Outlet />
+            <Suspense fallback={<PageLoader />}>
+              <PageTransition>
+                <Outlet />
+              </PageTransition>
+            </Suspense>
           )}
         </main>
       </div>

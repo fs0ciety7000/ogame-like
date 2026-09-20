@@ -65,7 +65,7 @@ export function BuildingsPage() {
       <h1 className="font-display text-xl text-white glow-text">Bâtiments</h1>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {BUILDINGS.map((building) => {
+        {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
           const isLocked = LOCKABLE_BUILDINGS.includes(building.id) ? !state.unlocked : false;
           const unlockInfo = BUILDING_UNLOCK_COST[building.id];
@@ -78,7 +78,14 @@ export function BuildingsPage() {
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
 
           return (
-            <motion.div key={building.id} layout>
+            <motion.div
+              key={building.id}
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.04 }}
+              whileHover={{ y: -3 }}
+            >
               <Card className="flex h-full flex-col overflow-hidden">
                 <div className="relative aspect-video bg-space-800">
                   <img

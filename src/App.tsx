@@ -1,17 +1,22 @@
+import { lazy } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { LoginPage } from "@/pages/LoginPage";
 import { AppShell } from "@/components/layout/AppShell";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { ResourcesPage } from "@/pages/ResourcesPage";
-import { BuildingsPage } from "@/pages/BuildingsPage";
-import { UnitsPage } from "@/pages/UnitsPage";
-import { LabPage } from "@/pages/LabPage";
-import { MissionsPage } from "@/pages/MissionsPage";
-import { PlayersPage } from "@/pages/PlayersPage";
-import { ProfilePage } from "@/pages/ProfilePage";
+
+// Chargées à la demande : chaque page du jeu part dans son propre chunk,
+// pour ne pas alourdir le bundle initial (écran de connexion) avec des
+// écrans que le joueur ne visitera peut-être pas tout de suite.
+const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const ResourcesPage = lazy(() => import("@/pages/ResourcesPage").then((m) => ({ default: m.ResourcesPage })));
+const BuildingsPage = lazy(() => import("@/pages/BuildingsPage").then((m) => ({ default: m.BuildingsPage })));
+const UnitsPage = lazy(() => import("@/pages/UnitsPage").then((m) => ({ default: m.UnitsPage })));
+const LabPage = lazy(() => import("@/pages/LabPage").then((m) => ({ default: m.LabPage })));
+const MissionsPage = lazy(() => import("@/pages/MissionsPage").then((m) => ({ default: m.MissionsPage })));
+const PlayersPage = lazy(() => import("@/pages/PlayersPage").then((m) => ({ default: m.PlayersPage })));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 
 export default function App() {
   return (

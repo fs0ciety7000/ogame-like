@@ -3,6 +3,7 @@ import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
 import { usePlayerStore } from "@/store/playerStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 export function ResourceHud() {
   const player = usePlayerStore((s) => s.player);
@@ -23,7 +24,11 @@ export function ResourceHud() {
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/70 px-2.5 py-1.5 text-sm tabular-nums">
                 <span className="text-base leading-none">{res.emoji}</span>
-                <span className="font-medium text-slate-100">{formatCompact(resources[res.id])}</span>
+                <AnimatedNumber
+                  value={resources[res.id]}
+                  format={formatCompact}
+                  className="font-medium text-slate-100"
+                />
                 {rate > 0 && <span className="text-[10px] text-mint-glow">+{formatCompact(rate)}/s</span>}
               </div>
             </TooltipTrigger>
@@ -41,7 +46,7 @@ export function ResourceHud() {
           <TooltipTrigger asChild>
             <div className="hidden items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/50 px-2 py-1.5 text-sm tabular-nums sm:flex">
               <span className="text-base leading-none opacity-80">{res.emoji}</span>
-              <span className="text-slate-300">{formatCompact(resources[res.id])}</span>
+              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="text-slate-300" />
             </div>
           </TooltipTrigger>
           <TooltipContent>
