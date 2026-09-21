@@ -24,6 +24,8 @@
   --animate-shimmer: shimmer 2.5s linear infinite;
   --animate-drift: drift 22s ease-in-out infinite;
   --animate-pulse-alert: pulse-alert 1.8s ease-out infinite;
+  --animate-spin-slow: spin 46s linear infinite;
+  --animate-orbit: spin 9s linear infinite;
 
   @keyframes pulse-slow {
     0%, 100% { opacity: 1; }
@@ -45,6 +47,9 @@
   @keyframes drift {
     0%, 100% { transform: translate(0, 0) scale(1); }
     50% { transform: translate(3%, -4%) scale(1.08); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 }
 

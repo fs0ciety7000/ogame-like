@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, Hourglass } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -12,7 +11,7 @@ import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEAR
 import { formatDuration } from "@/lib/utils";
 import { resourceEmoji } from "@/game/resources";
 import { GameActionError, startResearch } from "@/services/playerService";
-import { cn } from "@/lib/utils";
+import { TechTree } from "@/components/game/TechTree";
 
 export function LabPage() {
   useNowTicker();
@@ -57,36 +56,12 @@ export function LabPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {TECHNOLOGIES.map((tech) => {
-            const level = levels[tech.id] ?? 0;
-            const check = checkPrereqs(tech, levels);
-            const active = queues.activeResearches.some((r) => r.id === tech.id);
-            const maxed = level >= tech.maxLevel;
-
-            return (
-              <button
-                key={tech.id}
-                onClick={() => setSelectedId(tech.id)}
-                className={cn(
-                  "glass-panel rounded-xl p-3 text-left transition-all",
-                  selectedId === tech.id && "border-cyan-glow/60 shadow-[0_0_0_1px_var(--color-cyan-glow)]",
-                  !check.valid && "opacity-50",
-                )}
-              >
-                <div className="flex items-center gap-1.5 text-sm text-slate-100">
-                  {!check.valid && <Lock className="h-3.5 w-3.5 text-slate-500" />}
-                  {active && <Hourglass className="h-3.5 w-3.5 animate-pulse-slow text-mint-glow" />}
-                  <span className="font-medium">{tech.nom}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">{tech.desc}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Niveau {level} / {tech.maxLevel} {maxed && "(max)"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+        <TechTree
+          levels={levels}
+          selectedId={selectedId}
+          activeIds={new Set(queues.activeResearches.map((r) => r.id))}
+          onSelect={setSelectedId}
+        />
 
         <Card className="h-fit p-4">
           <h2 className="font-display text-base text-white">{selected.nom}</h2>

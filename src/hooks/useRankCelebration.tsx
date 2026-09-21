@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getRankIcon, getRankIndex, getRankLabel } from "@/game/ranks";
+import { triggerRankCelebration } from "@/store/celebrationStore";
+import { playUnlock } from "@/lib/sfx";
 import type { PlayerState } from "@/types/game";
 
 /** Fête discrètement chaque montée de rang (comparaison avec le dernier XP
@@ -19,6 +21,8 @@ export function useRankCelebration(player: PlayerState | null) {
 
     if (currentIndex > lastRankIndex.current) {
       lastRankIndex.current = currentIndex;
+      triggerRankCelebration(getRankLabel(player.xp), getRankIcon(player.xp));
+      playUnlock();
       toast.success(`Nouveau rang : ${getRankLabel(player.xp)} !`, {
         description: "Ton empire gagne en réputation dans la galaxie.",
         icon: <img src={getRankIcon(player.xp)} alt="" className="h-6 w-6 object-contain" />,

@@ -5,6 +5,7 @@ import { Lock, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -109,9 +110,31 @@ export function BuildingsPage() {
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-display text-sm text-slate-100">{building.name}</h3>
-                    <span className="text-xs text-slate-400">
-                      Niv. {level} / {building.maxLevel}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help text-xs text-slate-400">
+                          Niv. {level} / {building.maxLevel}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-56">
+                        {!isLocked && productionResource ? (
+                          <div className="space-y-0.5">
+                            <p className="mb-1 font-semibold text-slate-300">Prochains paliers</p>
+                            {[1, 2, 3].map((step) => {
+                              const lvl = level + step;
+                              if (lvl > building.maxLevel) return null;
+                              return (
+                                <p key={lvl} className="tabular-mono">
+                                  Niv. {lvl} — {resourceEmoji(productionResource)} {productionPerSecond(building.id, lvl)}/s
+                                </p>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p>Aucune production directe.</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <p className="text-xs text-slate-400">{building.description}</p>
 

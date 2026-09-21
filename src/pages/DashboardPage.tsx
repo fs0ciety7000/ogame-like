@@ -15,6 +15,8 @@ import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
+import { HomePlanet } from "@/components/game/HomePlanet";
+import { BUILDINGS } from "@/game/buildings";
 
 export function DashboardPage() {
   useNowTicker();
@@ -35,6 +37,10 @@ export function DashboardPage() {
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const now = Date.now();
 
+  const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + (player.buildings[b.id]?.level ?? 0), 0);
+  const maxBuildingLevels = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
+  const developmentPercent = maxBuildingLevels > 0 ? Math.round((totalBuildingLevels / maxBuildingLevels) * 100) : 0;
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -42,6 +48,17 @@ export function DashboardPage() {
         title={`Bienvenue, ${player.pseudo}`}
         description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
       />
+
+      <Card className="flex flex-wrap items-center gap-6 p-6">
+        <HomePlanet buildings={player.buildings} />
+        <div>
+          <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
+          <p className="font-display text-3xl text-white">{developmentPercent}%</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {totalBuildingLevels} / {maxBuildingLevels} niveaux de bâtiments cumulés
+          </p>
+        </div>
+      </Card>
 
       <OnboardingChecklist player={player} />
 
