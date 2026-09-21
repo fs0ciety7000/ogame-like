@@ -86,6 +86,7 @@ export interface PlayerState {
   resourceHistory?: ResourceHistoryPoint[];
   unlockedAchievements?: string[];
   allianceId?: string | null;
+  allianceLastReadMs?: number;
   createdAt?: unknown;
 }
 
@@ -146,6 +147,9 @@ export interface Alliance {
   createdAt: unknown;
   members: string[];
   memberPseudos: Record<string, string>;
+  /** Officiers explicitement promus ; le fondateur (createdBy) n'y figure
+   *  pas et quiconque d'autre est un simple membre par défaut. */
+  roles?: Record<string, "officer">;
 }
 
 export interface AllianceMessage {

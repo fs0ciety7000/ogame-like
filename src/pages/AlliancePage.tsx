@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Crown, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +9,21 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import {
   AllianceError,
+  clearOwnAllianceId,
   createAlliance,
+  demoteOfficer,
   joinAlliance,
+  kickMember,
   leaveAlliance,
+  markAllianceRead,
+  promoteToOfficer,
   sendAllianceMessage,
   subscribeAlliance,
   subscribeAllianceMessages,
   subscribeAlliances,
 } from "@/services/allianceService";
-import { timeAgo } from "@/lib/utils";
+import { splitMentions } from "@/game/mentions";
+import { timeAgo, cn } from "@/lib/utils";
 import type { Alliance, AllianceMessage } from "@/types/game";
 
 function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
@@ -103,6 +110,19 @@ function AllianceRoom({ uid, pseudo, allianceId }: { uid: string; pseudo: string
 
   useEffect(() => subscribeAlliance(allianceId, setAlliance), [allianceId]);
   useEffect(() => subscribeAllianceMessages(allianceId, setMessages), [allianceId]);
+  useEffect(() => {
+    void markAllianceRead(uid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- marque "lu à l'instant" une fois à l'ouverture, pas à chaque nouveau message reçu pendant que le chat reste ouvert
+  }, [allianceId]);
+
+  // On ne peut plus écrire sur le doc alliance une fois exclu (plus dans
+  // `members`) : on efface donc soi-même son allianceId en le détectant.
+  useEffect(() => {
+    if (alliance && !alliance.members.includes(uid)) {
+      void clearOwnAllianceId(uid);
+      toast.info("Tu as été exclu de cette alliance.");
+    }
+  }, [alliance, uid]);
 
   const handleSend = async () => {
     if (!text.trim()) return;
@@ -127,7 +147,36 @@ function AllianceRoom({ uid, pseudo, allianceId }: { uid: string; pseudo: string
     }
   };
 
+  const handlePromote = async (targetUid: string) => {
+    try {
+      await promoteToOfficer(uid, allianceId, targetUid);
+      toast.success("Membre promu officier.");
+    } catch (err) {
+      toast.error(err instanceof AllianceError ? err.message : "Promotion impossible.");
+    }
+  };
+
+  const handleDemote = async (targetUid: string) => {
+    try {
+      await demoteOfficer(uid, allianceId, targetUid);
+      toast.success("Officier rétrogradé.");
+    } catch (err) {
+      toast.error(err instanceof AllianceError ? err.message : "Rétrogradation impossible.");
+    }
+  };
+
+  const handleKick = async (targetUid: string) => {
+    try {
+      await kickMember(uid, allianceId, targetUid);
+      toast.success("Membre exclu de l'alliance.");
+    } catch (err) {
+      toast.error(err instanceof AllianceError ? err.message : "Exclusion impossible.");
+    }
+  };
+
   if (!alliance) return null;
+
+  const isFounder = uid === alliance.createdBy;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
@@ -141,12 +190,33 @@ function AllianceRoom({ uid, pseudo, allianceId }: { uid: string; pseudo: string
           </p>
         </div>
         <ul className="space-y-1.5 text-sm text-slate-300">
-          {alliance.members.map((m) => (
-            <li key={m} className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
-              {alliance.memberPseudos[m] ?? "?"}
-            </li>
-          ))}
+          {alliance.members.map((m) => {
+            const role = m === alliance.createdBy ? "founder" : alliance.roles?.[m] === "officer" ? "officer" : "member";
+            return (
+              <li key={m} className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
+                <span className="flex-1 truncate">{alliance.memberPseudos[m] ?? "?"}</span>
+                {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}
+                {role === "officer" && <Shield className="h-3.5 w-3.5 shrink-0 text-cyan-glow" aria-label="Officier" />}
+                {isFounder && m !== uid && (
+                  <div className="flex shrink-0 gap-1">
+                    {role === "officer" ? (
+                      <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs" onClick={() => void handleDemote(m)}>
+                        Rétrograder
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs" onClick={() => void handlePromote(m)}>
+                        Promouvoir
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-danger-glow" onClick={() => void handleKick(m)}>
+                      Exclure
+                    </Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
         <Button variant="outline" disabled={leaving} onClick={() => void handleLeave()}>
           Quitter l'alliance
@@ -161,7 +231,13 @@ function AllianceRoom({ uid, pseudo, allianceId }: { uid: string; pseudo: string
             <div key={m.id} className="text-sm">
               <span className="text-cyan-glow">{m.authorPseudo}</span>{" "}
               <span className="text-xs text-slate-600">{timeAgo(m.createdAtMs)}</span>
-              <p className="text-slate-200">{m.text}</p>
+              <p className="text-slate-200">
+                {splitMentions(m.text, Object.values(alliance.memberPseudos)).map((seg, i) => (
+                  <span key={i} className={cn(seg.isMention && "font-medium text-gold-glow")}>
+                    {seg.text}
+                  </span>
+                ))}
+              </p>
             </div>
           ))}
         </div>

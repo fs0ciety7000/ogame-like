@@ -133,6 +133,23 @@ service cloud.firestore {
         && request.resource.data.members.size() == resource.data.members.size() - 1
         && request.resource.data.members.hasOnly(resource.data.members);
 
+      // Rôles (promouvoir/rétrograder un officier) : réservé au fondateur,
+      // ne touche que `roles`. Pas de délégation en cascade (un officier ne
+      // peut pas lui-même promouvoir quelqu'un) pour garder la règle simple.
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.createdBy
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roles']);
+
+      // Exclure un membre : réservé au fondateur, qui doit rester présent
+      // (pour se retirer lui-même il utilise "Quitter", pas cette règle) ;
+      // retire exactement un membre, jamais plusieurs, jamais lui-même.
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.createdBy
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberPseudos', 'roles'])
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.members.size() == resource.data.members.size() - 1
+        && request.resource.data.members.hasOnly(resource.data.members);
+
       allow delete: if false;
 
       // Messages d'alliance : réservés aux membres actuels de l'alliance,

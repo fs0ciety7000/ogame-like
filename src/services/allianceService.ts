@@ -99,3 +99,67 @@ export async function sendAllianceMessage(allianceId: string, authorUid: string,
     createdAtMs: Date.now(),
   });
 }
+
+/** Marque le chat d'alliance comme lu (écrit sur son propre profil, déjà
+ *  couvert par la règle existante `allow update: if isOwner(uid)` — aucun
+ *  changement de firestore.rules nécessaire pour ça). */
+export async function markAllianceRead(uid: string) {
+  await setDoc(playerRef(uid), { allianceLastReadMs: Date.now() }, { merge: true });
+}
+
+/* =====================================================
+   Rôles et modération — réservés au fondateur (createdBy) pour garder des
+   règles Firestore simples à auditer : pas de délégation en cascade.
+===================================================== */
+
+export async function promoteToOfficer(actorUid: string, allianceId: string, targetUid: string) {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(allianceRef(allianceId));
+    if (!snap.exists()) throw new AllianceError("Alliance introuvable.");
+    const data = snap.data() as Omit<Alliance, "id">;
+    if (data.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut promouvoir un officier.");
+    if (!data.members.includes(targetUid)) throw new AllianceError("Ce joueur n'est pas membre de l'alliance.");
+    tx.update(allianceRef(allianceId), { roles: { ...(data.roles ?? {}), [targetUid]: "officer" } });
+  });
+}
+
+export async function demoteOfficer(actorUid: string, allianceId: string, targetUid: string) {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(allianceRef(allianceId));
+    if (!snap.exists()) throw new AllianceError("Alliance introuvable.");
+    const data = snap.data() as Omit<Alliance, "id">;
+    if (data.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut rétrograder un officier.");
+    const roles = { ...(data.roles ?? {}) };
+    delete roles[targetUid];
+    tx.update(allianceRef(allianceId), { roles });
+  });
+}
+
+export async function kickMember(actorUid: string, allianceId: string, targetUid: string) {
+  if (targetUid === actorUid) throw new AllianceError("Tu ne peux pas t'exclure toi-même.");
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(allianceRef(allianceId));
+    if (!snap.exists()) throw new AllianceError("Alliance introuvable.");
+    const data = snap.data() as Omit<Alliance, "id">;
+    if (data.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut exclure un membre.");
+    if (!data.members.includes(targetUid)) throw new AllianceError("Ce joueur n'est pas membre de l'alliance.");
+
+    const memberPseudos = { ...data.memberPseudos };
+    delete memberPseudos[targetUid];
+    const roles = { ...(data.roles ?? {}) };
+    delete roles[targetUid];
+    tx.update(allianceRef(allianceId), {
+      members: data.members.filter((m) => m !== targetUid),
+      memberPseudos,
+      roles,
+    });
+  });
+}
+
+/** Auto-nettoyage côté client : une fois exclu, on ne peut plus écrire sur
+ *  le document alliance (on n'y figure plus dans `members`), donc chaque
+ *  client efface lui-même son propre `allianceId` en le détectant (voir
+ *  AlliancePage) — jamais une écriture croisée sur le profil d'un autre. */
+export async function clearOwnAllianceId(uid: string) {
+  await setDoc(playerRef(uid), { allianceId: null }, { merge: true });
+}
