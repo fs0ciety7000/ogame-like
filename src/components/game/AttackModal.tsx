@@ -56,15 +56,15 @@ export function AttackModal({
 
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      {target && player && (
+      {target && (
         <DialogContent>
           <DialogTitle>Envoyer une flotte</DialogTitle>
           <p className="text-sm text-slate-400">
             Cible : <strong className="text-slate-200">{target.pseudo}</strong>
           </p>
 
-          {submitting ? (
-            <RadarScan label="Transmission de la flotte…" />
+          {!player || submitting ? (
+            <RadarScan label={submitting ? "Transmission de la flotte…" : "Chargement…"} />
           ) : (
             <>
               <div className="mt-4 space-y-2">

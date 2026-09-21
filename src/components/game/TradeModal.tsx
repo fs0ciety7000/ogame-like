@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadarScan } from "@/components/game/RadarScan";
 import { RESOURCE_LIST } from "@/game/resources";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -49,39 +50,45 @@ export function TradeModal({
 
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      {target && player && (
+      {target && (
         <DialogContent>
           <DialogTitle>Envoyer des ressources</DialogTitle>
           <p className="text-sm text-slate-400">
             Destinataire : <strong className="text-slate-200">{target.pseudo}</strong>
           </p>
 
-          <div className="mt-4 space-y-2">
-            {RESOURCE_LIST.map((res) => {
-              const owned = player.resources[res.id] ?? 0;
-              return (
-                <div key={res.id} className="flex items-center gap-3 text-sm">
-                  <span className="flex-1 text-slate-200">
-                    {res.emoji} {res.name}
-                  </span>
-                  <span className="text-xs text-slate-500">Possédé : {owned}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={owned}
-                    disabled={owned === 0}
-                    value={amounts[res.id] ?? 0}
-                    onChange={(e) => setQty(res.id, owned, parseInt(e.target.value) || 0)}
-                    className="w-24"
-                  />
-                </div>
-              );
-            })}
-          </div>
+          {!player || submitting ? (
+            <RadarScan label={submitting ? "Envoi en cours…" : "Chargement…"} />
+          ) : (
+            <>
+              <div className="mt-4 space-y-2">
+                {RESOURCE_LIST.map((res) => {
+                  const owned = player.resources[res.id] ?? 0;
+                  return (
+                    <div key={res.id} className="flex items-center gap-3 text-sm">
+                      <span className="flex-1 text-slate-200">
+                        {res.emoji} {res.name}
+                      </span>
+                      <span className="text-xs text-slate-500">Possédé : {owned}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={owned}
+                        disabled={owned === 0}
+                        value={amounts[res.id] ?? 0}
+                        onChange={(e) => setQty(res.id, owned, parseInt(e.target.value) || 0)}
+                        className="w-24"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
 
-          <Button className="mt-4 w-full" disabled={submitting} onClick={() => void handleConfirm()}>
-            {submitting ? "Envoi…" : "Envoyer"}
-          </Button>
+              <Button className="mt-4 w-full" onClick={() => void handleConfirm()}>
+                Envoyer
+              </Button>
+            </>
+          )}
         </DialogContent>
       )}
     </Dialog>
