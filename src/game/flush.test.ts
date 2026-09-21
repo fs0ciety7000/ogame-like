@@ -224,6 +224,7 @@ describe("flushState — missions", () => {
 
     expect(after.resources.scrap).toBe(player.resources.scrap + 150);
     expect(after.xp).toBe(10);
+    expect(after.seasonXp).toBe(10);
     expect(afterQueues.activeMissions).toHaveLength(0);
     expect(notifications.some((n) => n.kind === "mission")).toBe(true);
   });

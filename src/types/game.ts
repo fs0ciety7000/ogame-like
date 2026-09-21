@@ -77,6 +77,8 @@ export interface PlayerState {
   techLevels: TechLevels;
   bonuses: PlayerBonuses;
   xp: number;
+  seasonId?: string;
+  seasonXp?: number;
   victories: number;
   defeats: number;
   playtimeSeconds: number;

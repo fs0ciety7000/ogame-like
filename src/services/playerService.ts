@@ -20,6 +20,7 @@ import { db } from "@/lib/firebase";
 import { firestoreMillis } from "@/lib/utils";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState, type NewNotification } from "@/game/flush";
+import { applyXpDelta } from "@/game/seasons";
 import {
   applyBuildingDiscount,
   BUILDING_UNLOCK_COST,
@@ -129,13 +130,25 @@ export interface LeaderboardEntry {
   uid: string;
   pseudo: string;
   xp: number;
+  seasonId: string | null;
+  seasonXp: number;
 }
 
+function leaderboardEntryFromDoc(d: { id: string; data: () => Record<string, unknown> }): LeaderboardEntry {
+  const data = d.data();
+  return {
+    uid: d.id,
+    pseudo: (data.pseudo as string) || "Joueur inconnu",
+    xp: (data.xp as number) || 0,
+    seasonId: (data.seasonId as string) ?? null,
+    seasonXp: (data.seasonXp as number) || 0,
+  };
+}
+
+/** Classement "total" (tout le temps), trié côté serveur par XP cumulée. */
 export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): Unsubscribe {
   const q = query(playersCol(), orderBy("xp", "desc"), fsLimit(100));
-  return onSnapshot(q, (snap) =>
-    cb(snap.docs.map((d) => ({ uid: d.id, pseudo: (d.data().pseudo as string) || "Joueur inconnu", xp: (d.data().xp as number) || 0 }))),
-  );
+  return onSnapshot(q, (snap) => cb(snap.docs.map(leaderboardEntryFromDoc)));
 }
 
 export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
@@ -561,10 +574,10 @@ export async function initiateAttack(params: AttackParams) {
     }
     if (combat.outcome === "attacker_win") {
       flushed.player.victories += 1;
-      flushed.player.xp += 40;
+      applyXpDelta(flushed.player, 40, now);
     } else if (combat.outcome === "defender_win") {
       flushed.player.defeats += 1;
-      flushed.player.xp = Math.max(0, flushed.player.xp - 20);
+      applyXpDelta(flushed.player, -20, now);
     }
 
     tx.set(playerRef(attackerUid), flushed.player);
@@ -651,10 +664,10 @@ export async function processBattleReportForDefender(uid: string, reportId: stri
     }
     if (report.outcome === "defender_win") {
       flushed.player.victories += 1;
-      flushed.player.xp += 40;
+      applyXpDelta(flushed.player, 40, now);
     } else if (report.outcome === "attacker_win") {
       flushed.player.defeats += 1;
-      flushed.player.xp = Math.max(0, flushed.player.xp - 20);
+      applyXpDelta(flushed.player, -20, now);
     }
     if (report.loot) {
       for (const [res, amt] of Object.entries(report.loot)) {
@@ -691,9 +704,7 @@ export async function processBattleReportForDefender(uid: string, reportId: stri
 
 export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
   const snap = await getDocs(playersCol());
-  return snap.docs
-    .map((d) => ({ uid: d.id, pseudo: (d.data().pseudo as string) || "Joueur inconnu", xp: (d.data().xp as number) || 0 }))
-    .sort((a, b) => b.xp - a.xp);
+  return snap.docs.map(leaderboardEntryFromDoc).sort((a, b) => b.xp - a.xp);
 }
 
 /** Supprime les données Firestore du joueur (profil, files, notifications,
