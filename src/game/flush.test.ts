@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flushState } from "@/game/flush";
+import { flushState, RESOURCE_HISTORY_INTERVAL_MS, RESOURCE_HISTORY_MAX_POINTS } from "@/game/flush";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { getUnitBuildTime, findUnit } from "@/game/units";
 import type { PlayerState, QueuesState } from "@/types/game";
@@ -145,6 +145,48 @@ describe("flushState — research", () => {
 
     expect(after.units.drone_recuperateur?.level).toBe(1);
     expect(after.units.drone_recuperateur?.count).toBe(0);
+  });
+});
+
+describe("flushState — historique des ressources", () => {
+  it("enregistre un premier point quand l'historique est vide", () => {
+    const player = makePlayer({ resourceHistory: [] });
+    const { player: after } = flushState(player, makeQueues(), NOW);
+
+    expect(after.resourceHistory).toHaveLength(1);
+    expect(after.resourceHistory![0].t).toBe(NOW);
+    expect(after.resourceHistory![0].r.scrap).toBe(after.resources.scrap);
+  });
+
+  it("n'ajoute pas de point avant l'intervalle d'une heure", () => {
+    const player = makePlayer({
+      resourceHistory: [{ t: NOW - 10 * 60_000, r: { ...defaultPlayerState("u1", "Testeur").resources } }],
+    });
+    const { player: after } = flushState(player, makeQueues(), NOW);
+
+    expect(after.resourceHistory).toHaveLength(1);
+  });
+
+  it("ajoute un nouveau point une fois l'intervalle dépassé", () => {
+    const player = makePlayer({
+      resourceHistory: [{ t: NOW - RESOURCE_HISTORY_INTERVAL_MS - 1000, r: { ...defaultPlayerState("u1", "Testeur").resources } }],
+    });
+    const { player: after } = flushState(player, makeQueues(), NOW);
+
+    expect(after.resourceHistory).toHaveLength(2);
+    expect(after.resourceHistory![1].t).toBe(NOW);
+  });
+
+  it("plafonne la taille de l'historique", () => {
+    const oldHistory = Array.from({ length: RESOURCE_HISTORY_MAX_POINTS }, (_, i) => ({
+      t: NOW - (RESOURCE_HISTORY_MAX_POINTS - i) * RESOURCE_HISTORY_INTERVAL_MS,
+      r: { ...defaultPlayerState("u1", "Testeur").resources },
+    }));
+    const player = makePlayer({ resourceHistory: oldHistory });
+    const { player: after } = flushState(player, makeQueues(), NOW);
+
+    expect(after.resourceHistory).toHaveLength(RESOURCE_HISTORY_MAX_POINTS);
+    expect(after.resourceHistory![after.resourceHistory!.length - 1].t).toBe(NOW);
   });
 });
 

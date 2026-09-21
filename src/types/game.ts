@@ -63,6 +63,11 @@ export interface PlayerBonuses {
   unlockedRecipes: number;
 }
 
+export interface ResourceHistoryPoint {
+  t: number;
+  r: Resources;
+}
+
 export interface PlayerState {
   uid: string;
   pseudo: string;
@@ -76,6 +81,7 @@ export interface PlayerState {
   defeats: number;
   playtimeSeconds: number;
   resourcesUpdatedAtMs: number;
+  resourceHistory?: ResourceHistoryPoint[];
   createdAt?: unknown;
 }
 

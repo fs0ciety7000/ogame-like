@@ -17,6 +17,25 @@ export interface FlushResult {
   notifications: NewNotification[];
 }
 
+// Un point par heure de jeu écoulée (pas par appel de flush, qui peut
+// survenir toutes les 20s via le heartbeat) : le flush écrit de toute façon
+// le document joueur en entier à chaque action, donc consigner l'historique
+// ici ne coûte aucune écriture Firestore supplémentaire.
+export const RESOURCE_HISTORY_INTERVAL_MS = 60 * 60 * 1000;
+export const RESOURCE_HISTORY_MAX_POINTS = 72; // ~3 jours d'historique horaire
+
+function recordResourceHistory(player: PlayerState, now: number): void {
+  const history = player.resourceHistory ?? [];
+  const last = history[history.length - 1];
+  if (last && now - last.t < RESOURCE_HISTORY_INTERVAL_MS) {
+    player.resourceHistory = history;
+    return;
+  }
+  const next = [...history, { t: now, r: { ...player.resources } }];
+  player.resourceHistory =
+    next.length > RESOURCE_HISTORY_MAX_POINTS ? next.slice(next.length - RESOURCE_HISTORY_MAX_POINTS) : next;
+}
+
 /** Rejoue localement (côté client) le temps écoulé depuis la dernière synchro :
  *  production continue, files de construction / recherche / missions terminées. */
 export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: number): FlushResult {
@@ -31,6 +50,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   player.resourcesUpdatedAtMs = now;
+  recordResourceHistory(player, now);
 
   // --- Bâtiments en construction ---
   for (const buildingId of Object.keys(queues.buildingUpgrades) as (keyof typeof queues.buildingUpgrades)[]) {

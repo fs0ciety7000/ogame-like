@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ParticleBurst } from "@/components/ui/particle-burst";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
@@ -35,11 +36,16 @@ function LossList({ losses, recovered }: { losses: Record<string, number>; recov
 
 export function CombatResultModal() {
   const current = useCombatModalStore((s) => s.current);
+  const isVictory =
+    !!current &&
+    ((current.perspective === "attacker" && current.outcome === "attacker_win") ||
+      (current.perspective === "defender" && current.outcome === "defender_win"));
 
   return (
     <Dialog open={current !== null} onOpenChange={(open) => !open && closeCombatResult()}>
       {current && (
-        <DialogContent>
+        <DialogContent className="relative overflow-visible">
+          {isVictory && <ParticleBurst />}
           <DialogTitle className={OUTCOME_STYLE[current.outcome].color}>
             {current.perspective === "attacker" ? OUTCOME_STYLE[current.outcome].attacker : OUTCOME_STYLE[current.outcome].defender}
           </DialogTitle>
