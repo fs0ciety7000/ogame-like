@@ -16,6 +16,7 @@ import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
+import { useAllianceUnread } from "@/hooks/useAllianceUnread";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
@@ -79,6 +80,7 @@ export function AppShell() {
 
   useGameSync(user?.uid ?? null);
   useRankCelebration(player);
+  useAllianceUnread(user?.uid ?? null, player);
 
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
