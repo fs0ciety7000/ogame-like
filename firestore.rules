@@ -67,5 +67,86 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Rapports d'espionnage : uniquement créés quand la tentative est
+    // détectée (voir rollSpyDetection côté client) — l'espion peut créer
+    // un rapport le concernant ; les deux parties peuvent le lire ; seule
+    // la cible peut le marquer comme traité une fois la notif générée.
+    match /spy_reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.spyUid == request.auth.uid
+        && request.resource.data.targetProcessed == false;
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.spyUid || request.auth.uid == resource.data.targetUid);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.targetUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['targetProcessed']);
+
+      allow delete: if false;
+    }
+
+    // Dons de ressources entre joueurs : l'expéditeur crée le don (déjà
+    // débité dans la même transaction côté client) ; les deux parties
+    // peuvent le lire ; seul le destinataire peut le marquer comme
+    // réclamé (et rien d'autre) en créditant ses propres ressources.
+    match /resource_gifts/{giftId} {
+      allow create: if signedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.claimed == false;
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.toUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed']);
+
+      allow delete: if false;
+    }
+
+    // Alliances : liste et fiches lisibles par tout joueur connecté (pour
+    // pouvoir en parcourir/rejoindre une). La création se limite à poser
+    // sa propre alliance (créateur = seul membre initial). Rejoindre/
+    // quitter ne peut jamais modifier que son propre uid dans `members`
+    // (et le pseudo associé dans `memberPseudos`), jamais celui d'un
+    // autre membre ni aucun autre champ.
+    match /alliances/{allianceId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.members == [request.auth.uid];
+
+      // Rejoindre : ajoute exactement son propre uid en fin de liste.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberPseudos'])
+        && !(request.auth.uid in resource.data.members)
+        && request.resource.data.members == resource.data.members.concat([request.auth.uid]);
+
+      // Quitter : retire exactement son propre uid, rien d'autre.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberPseudos'])
+        && request.auth.uid in resource.data.members
+        && !(request.auth.uid in request.resource.data.members)
+        && request.resource.data.members.size() == resource.data.members.size() - 1
+        && request.resource.data.members.hasOnly(resource.data.members);
+
+      allow delete: if false;
+
+      // Messages d'alliance : réservés aux membres actuels de l'alliance,
+      // journal immuable (pas d'édition ni de suppression).
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/alliances/$(allianceId)).data.members;
+
+        allow create: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/alliances/$(allianceId)).data.members
+          && request.resource.data.authorUid == request.auth.uid;
+
+        allow update, delete: if false;
+      }
+    }
   }
 }

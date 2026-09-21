@@ -4,8 +4,12 @@ import { useForm } from "react-hook-form";
 import { Rocket, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
+import { Nebula } from "@/components/layout/Nebula";
+import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusDot } from "@/components/ui/status-dot";
+import { CornerBrackets } from "@/components/ui/corner-brackets";
 import {
   loginPlayer,
   NoRecoveryEmailError,
@@ -84,36 +88,70 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 lg:px-12">
+      <SchematicGrid />
+      <Nebula />
       <Starfield count={160} />
 
-      <div
-        className="pointer-events-none absolute inset-0 -z-[1] bg-cover bg-center opacity-25"
-        style={{ backgroundImage: "url(/assets/Logo/logo.png)" }}
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-sm"
-      >
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
-            <Rocket className="h-7 w-7" />
+      <div className="relative z-10 grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_420px]">
+        <motion.div
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="hidden lg:block"
+        >
+          <StatusDot label="Réseau stellaire actif" />
+          <h1 className="mt-5 font-display text-5xl leading-[1.05] text-white glow-text xl:text-6xl">
+            BÂTIS.
+            <br />
+            CONQUIERS.
+            <br />
+            <span className="text-cyan-glow">RÈGNE.</span>
+          </h1>
+          <p className="mt-5 max-w-md text-sm text-slate-400">
+            Gère ton économie, développe ta flotte et affronte d'autres commandants en temps réel dans Cosmic
+            Empires.
+          </p>
+          <div className="mt-10 flex gap-8">
+            {[
+              { value: "8", label: "Ressources" },
+              { value: "∞", label: "Combats" },
+              { value: "24/7", label: "Temps réel" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <span className="block font-display text-xl text-white">{stat.value}</span>
+                <span className="hud-eyebrow text-slate-500">{stat.label}</span>
+              </div>
+            ))}
           </div>
-          <h1 className="font-display text-3xl tracking-wide text-white glow-text">Cosmic Empires</h1>
-          <p className="text-sm text-slate-400">Bâtis ton empire. Recherche. Combats. En temps réel.</p>
-        </div>
+        </motion.div>
 
-        {!firebaseConfigured && (
-          <div className="mb-4 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
-            Configuration Firebase manquante — copie <code>.env.example</code> en <code>.env.local</code> et renseigne ton
-            projet Firebase.
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="w-full max-w-sm justify-self-center lg:justify-self-end"
+        >
+          <div className="mb-8 flex flex-col items-center gap-3 text-center lg:hidden">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
+              <Rocket className="h-7 w-7" />
+            </div>
+            <h1 className="font-display text-3xl tracking-wide text-white glow-text">Cosmic Empires</h1>
+            <p className="text-sm text-slate-400">Bâtis ton empire. Recherche. Combats. En temps réel.</p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+          {!firebaseConfigured && (
+            <div className="mb-4 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
+              Configuration Firebase manquante — copie <code>.env.example</code> en <code>.env.local</code> et renseigne ton
+              projet Firebase.
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+            <CornerBrackets />
+            <p className="hud-eyebrow hidden text-slate-500 lg:block">
+              {mode === "login" ? "Accès commandement" : mode === "register" ? "Nouvel empire" : "Récupération"}
+            </p>
           {mode === "forgot" && (
             <p className="text-xs text-slate-400">
               Entre ton pseudo : si un email de récupération y est associé, on t'y enverra un lien de réinitialisation.
@@ -186,7 +224,8 @@ export function LoginPage() {
             {mode === "forgot" && "Retour à la connexion"}
           </button>
         </form>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

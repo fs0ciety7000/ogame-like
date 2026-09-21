@@ -4,6 +4,7 @@
 @theme {
   --font-display: "Orbitron", sans-serif;
   --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
   --color-space-950: #03040a;
   --color-space-900: #05070f;
@@ -16,14 +17,22 @@
   --color-mint-glow: #4aff9c;
   --color-danger-glow: #ff5d6c;
   --color-gold-glow: #ffd86b;
+  --color-ember-glow: #ff7a45;
 
   --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-drift: drift 22s ease-in-out infinite;
+  --animate-pulse-alert: pulse-alert 1.8s ease-out infinite;
 
   @keyframes pulse-slow {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
+  }
+  @keyframes pulse-alert {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ember-glow) 60%, transparent); }
+    70% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-ember-glow) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ember-glow) 0%, transparent); }
   }
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
@@ -32,6 +41,10 @@
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(3%, -4%) scale(1.08); }
   }
 }
 
@@ -76,13 +89,74 @@ body {
 }
 
 .glass-panel {
+  position: relative;
   background: color-mix(in srgb, var(--color-space-700) 65%, transparent);
   backdrop-filter: blur(14px);
   border: 1px solid color-mix(in srgb, var(--color-cyan-glow) 14%, transparent);
 }
 
+/* Fin liseré lumineux en haut de chaque panneau : lecture "instrument de
+   bord" plutôt qu'une simple carte, sans alourdir le balisage. */
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-cyan-glow) 55%, transparent) 20%,
+    color-mix(in srgb, var(--color-cyan-glow) 55%, transparent) 80%,
+    transparent
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
 .glow-text {
   text-shadow: 0 0 12px color-mix(in srgb, var(--color-cyan-glow) 55%, transparent);
+}
+
+.hud-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.tabular-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.nebula-field {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nebula-blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.35;
+  animation: var(--animate-drift);
+}
+
+/* Quadrillage façon plan technique, très discret, derrière les nébuleuses. */
+.schematic-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-cyan-glow) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-cyan-glow) 8%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 85%);
 }
 
 .starfield {

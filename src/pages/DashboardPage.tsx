@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { usePlayerStore } from "@/store/playerStore";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
@@ -13,6 +14,7 @@ import { formatClock, formatNumber } from "@/lib/utils";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
+import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 
 export function DashboardPage() {
   useNowTicker();
@@ -35,39 +37,39 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="font-display text-2xl text-white glow-text">Bienvenue, {player.pseudo}</h1>
-        <p className="text-sm text-slate-400">
-          Rang <span className="text-cyan-glow">{getRankLabel(player.xp)}</span> — {formatNumber(player.xp)} XP
-        </p>
-      </motion.div>
+      <PageHeader
+        eyebrow="Cosmic Empires / Commandement"
+        title={`Bienvenue, ${player.pseudo}`}
+        description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
+      />
 
       <OnboardingChecklist player={player} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="relative -m-2 grid gap-4 p-2 sm:grid-cols-2 xl:grid-cols-4">
+        <CornerBrackets />
         <Card>
           <CardHeader>
             <CardTitle>Puissance d'attaque</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-display text-mint-glow">{formatNumber(attackPower)}</CardContent>
+          <CardContent className="text-2xl font-display tabular-nums text-mint-glow">{formatNumber(attackPower)}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Puissance défensive</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-display text-cyan-glow">{formatNumber(defensePower)}</CardContent>
+          <CardContent className="text-2xl font-display tabular-nums text-cyan-glow">{formatNumber(defensePower)}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Victoires</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-display text-slate-100">{player.victories}</CardContent>
+          <CardContent className="text-2xl font-display tabular-nums text-slate-100">{player.victories}</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Défaites</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-display text-slate-100">{player.defeats}</CardContent>
+          <CardContent className="text-2xl font-display tabular-nums text-slate-100">{player.defeats}</CardContent>
         </Card>
       </div>
 
@@ -143,6 +145,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <SystemLogPanel />
     </div>
   );
 }

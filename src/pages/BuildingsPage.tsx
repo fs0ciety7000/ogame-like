@@ -5,6 +5,7 @@ import { Lock, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -19,7 +20,7 @@ import {
   productionPerSecond,
   PRODUCTION_RESOURCE_BY_BUILDING,
 } from "@/game/buildings";
-import { formatDuration } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { formatCost, resourceEmoji } from "@/game/resources";
 import type { BuildingId } from "@/types/game";
@@ -62,7 +63,7 @@ export function BuildingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl text-white glow-text">Bâtiments</h1>
+      <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {BUILDINGS.map((building, index) => {
@@ -76,6 +77,7 @@ export function BuildingsPage() {
           const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
           const time = getBuildingUpgradeTime(building, nextLevel);
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
+          const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
 
           return (
             <motion.div
@@ -86,7 +88,7 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className="flex h-full flex-col overflow-hidden">
+              <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
                 <div className="relative aspect-video bg-space-800">
                   <img
                     src={buildingImage(building, level)}

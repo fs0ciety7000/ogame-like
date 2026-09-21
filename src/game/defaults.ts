@@ -1,4 +1,5 @@
 import { defaultBuildings } from "@/game/buildings";
+import { currentSeasonId } from "@/game/seasons";
 import type { PlayerState, QueuesState, Resources } from "@/types/game";
 
 export function defaultResources(): Resources {
@@ -30,10 +31,14 @@ export function defaultPlayerState(uid: string, pseudo: string): Omit<PlayerStat
       unlockedRecipes: 0,
     },
     xp: 0,
+    seasonId: currentSeasonId(),
+    seasonXp: 0,
     victories: 0,
     defeats: 0,
     playtimeSeconds: 0,
     resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
+    unlockedAchievements: [],
   };
 }
 

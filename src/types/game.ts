@@ -63,6 +63,11 @@ export interface PlayerBonuses {
   unlockedRecipes: number;
 }
 
+export interface ResourceHistoryPoint {
+  t: number;
+  r: Resources;
+}
+
 export interface PlayerState {
   uid: string;
   pseudo: string;
@@ -72,10 +77,15 @@ export interface PlayerState {
   techLevels: TechLevels;
   bonuses: PlayerBonuses;
   xp: number;
+  seasonId?: string;
+  seasonXp?: number;
   victories: number;
   defeats: number;
   playtimeSeconds: number;
   resourcesUpdatedAtMs: number;
+  resourceHistory?: ResourceHistoryPoint[];
+  unlockedAchievements?: string[];
+  allianceId?: string | null;
   createdAt?: unknown;
 }
 
@@ -108,6 +118,44 @@ export interface BattleReport {
   defenderProcessed: boolean;
 }
 
+export interface SpyReport {
+  id: string;
+  spyUid: string;
+  spyPseudo: string;
+  targetUid: string;
+  timestamp: unknown;
+  targetProcessed: boolean;
+}
+
+export interface ResourceGift {
+  id: string;
+  fromUid: string;
+  fromPseudo: string;
+  toUid: string;
+  toPseudo: string;
+  resources: Partial<Resources>;
+  timestamp: unknown;
+  claimed: boolean;
+}
+
+export interface Alliance {
+  id: string;
+  name: string;
+  tag: string;
+  createdBy: string;
+  createdAt: unknown;
+  members: string[];
+  memberPseudos: Record<string, string>;
+}
+
+export interface AllianceMessage {
+  id: string;
+  authorUid: string;
+  authorPseudo: string;
+  text: string;
+  createdAtMs: number;
+}
+
 export type NotificationKind =
   | "building"
   | "research"
@@ -115,6 +163,9 @@ export type NotificationKind =
   | "mission"
   | "combat-attacker"
   | "combat-defender"
+  | "achievement"
+  | "spy-detected"
+  | "gift"
   | "system";
 
 export interface GameNotification {

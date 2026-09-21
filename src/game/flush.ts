@@ -3,6 +3,8 @@ import { computeElapsedProduction } from "@/game/production";
 import { MISSIONS } from "@/game/missions";
 import { findTech, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
+import { checkNewAchievements } from "@/game/achievements";
+import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 const TECH_TO_UNIT: Record<string, string> = Object.fromEntries(
@@ -15,6 +17,25 @@ export interface FlushResult {
   player: PlayerState;
   queues: QueuesState;
   notifications: NewNotification[];
+}
+
+// Un point par heure de jeu écoulée (pas par appel de flush, qui peut
+// survenir toutes les 20s via le heartbeat) : le flush écrit de toute façon
+// le document joueur en entier à chaque action, donc consigner l'historique
+// ici ne coûte aucune écriture Firestore supplémentaire.
+export const RESOURCE_HISTORY_INTERVAL_MS = 60 * 60 * 1000;
+export const RESOURCE_HISTORY_MAX_POINTS = 72; // ~3 jours d'historique horaire
+
+function recordResourceHistory(player: PlayerState, now: number): void {
+  const history = player.resourceHistory ?? [];
+  const last = history[history.length - 1];
+  if (last && now - last.t < RESOURCE_HISTORY_INTERVAL_MS) {
+    player.resourceHistory = history;
+    return;
+  }
+  const next = [...history, { t: now, r: { ...player.resources } }];
+  player.resourceHistory =
+    next.length > RESOURCE_HISTORY_MAX_POINTS ? next.slice(next.length - RESOURCE_HISTORY_MAX_POINTS) : next;
 }
 
 /** Rejoue localement (côté client) le temps écoulé depuis la dernière synchro :
@@ -31,6 +52,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   player.resourcesUpdatedAtMs = now;
+  recordResourceHistory(player, now);
+  ensureSeasonRollover(player, now);
 
   // --- Bâtiments en construction ---
   for (const buildingId of Object.keys(queues.buildingUpgrades) as (keyof typeof queues.buildingUpgrades)[]) {
@@ -120,7 +143,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
 
     for (const [res, amount] of Object.entries(mission.reward)) {
       if (res === "xp") {
-        player.xp = (player.xp ?? 0) + amount;
+        applyXpDelta(player, amount, now);
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
       }
@@ -134,6 +157,21 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     });
   }
   queues.activeMissions = stillActiveMissions;
+
+  // --- Succès ---
+  const newAchievements = checkNewAchievements(player);
+  if (newAchievements.length > 0) {
+    player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
+    for (const a of newAchievements) {
+      notifications.push({
+        kind: "achievement",
+        title: "Succès débloqué !",
+        message: `${a.emoji} ${a.name} — ${a.description}`,
+        createdAtMs: now,
+        read: false,
+      });
+    }
+  }
 
   return { player, queues, notifications };
 }

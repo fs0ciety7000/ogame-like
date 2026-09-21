@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { ResourceHistoryChart } from "@/components/game/ResourceHistoryChart";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources } from "@/hooks/useLiveResources";
 import { RESOURCE_LIST, getTradeRate } from "@/game/resources";
@@ -44,7 +46,7 @@ export function ResourcesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl text-white glow-text">Ressources</h1>
+      <PageHeader eyebrow="Cosmic Empires / Stocks" title="Ressources" description="Extraction, réserves et comptoir d'échange." />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {RESOURCE_LIST.map((res, i) => (
@@ -69,6 +71,8 @@ export function ResourcesPage() {
           </motion.div>
         ))}
       </div>
+
+      <ResourceHistoryChart history={player?.resourceHistory} />
 
       <Card>
         <CardHeader>

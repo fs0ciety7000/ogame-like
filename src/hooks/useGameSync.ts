@@ -1,11 +1,15 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  acknowledgeSpyReport,
+  claimResourceGift,
   ensurePlayerDoc,
   GameActionError,
   processBattleReportForDefender,
   subscribeNotifications,
   subscribePendingBattleReports,
+  subscribePendingGifts,
+  subscribePendingSpyReports,
   subscribePlayer,
   subscribeQueues,
   syncPlayer,
@@ -13,19 +17,24 @@ import {
 import { auth } from "@/lib/firebase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
+import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
+import { playAlert, playConfirm, playUnlock } from "@/lib/sfx";
 import type { NotificationKind } from "@/types/game";
 
 const HEARTBEAT_MS = 20_000;
 
-const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string }> = {
-  building: { icon: "🏗️" },
-  research: { icon: "🔬" },
-  unit: { icon: "🚀" },
-  mission: { icon: "🧭" },
-  "combat-attacker": { icon: "⚔️" },
-  "combat-defender": { icon: "🛡️" },
-  system: { icon: "✨" },
+const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => void }> = {
+  building: { icon: "🏗️", sound: playConfirm },
+  research: { icon: "🔬", sound: playConfirm },
+  unit: { icon: "🚀", sound: playConfirm },
+  mission: { icon: "🧭", sound: playConfirm },
+  "combat-attacker": { icon: "⚔️", sound: playConfirm },
+  "combat-defender": { icon: "🛡️", sound: playAlert },
+  achievement: { icon: "🏆", sound: playUnlock },
+  "spy-detected": { icon: "🔍", sound: playAlert },
+  gift: { icon: "🎁", sound: playConfirm },
+  system: { icon: "✨", sound: playConfirm },
 };
 
 /** syncPlayer suppose que les documents Firestore du joueur existent déjà.
@@ -57,10 +66,14 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0) {
  *  de combat reçus (même si l'onglet était fermé au moment de l'attaque). */
 export function useGameSync(uid: string | null) {
   const processingReports = useRef<Set<string>>(new Set());
+  const processingSpyReports = useRef<Set<string>>(new Set());
+  const processingGifts = useRef<Set<string>>(new Set());
   const lastHeartbeatAt = useRef<number>(Date.now());
   const seenNotificationIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
+    startConnectionListeners();
+
     if (!uid) {
       resetPlayerStore();
       return;
@@ -69,7 +82,7 @@ export function useGameSync(uid: string | null) {
     lastHeartbeatAt.current = Date.now();
     void safeSyncPlayer(uid);
 
-    const unsubPlayer = subscribePlayer(uid, setPlayerData);
+    const unsubPlayer = subscribePlayer(uid, setPlayerData, setSyncedFromServer);
     const unsubQueues = subscribeQueues(uid, setQueuesData);
 
     const unsubNotifications = subscribeNotifications(uid, (items) => {
@@ -82,7 +95,13 @@ export function useGameSync(uid: string | null) {
       for (const item of items) {
         if (!seenNotificationIds.current.has(item.id)) {
           seenNotificationIds.current.add(item.id);
-          toast(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon });
+          NOTIFICATION_STYLE[item.kind]?.sound();
+          const isAchievement = item.kind === "achievement";
+          if (isAchievement) {
+            toast.success(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon, duration: 6000 });
+          } else {
+            toast(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon });
+          }
         }
       }
     });
@@ -103,6 +122,28 @@ export function useGameSync(uid: string | null) {
       });
     });
 
+    const unsubSpyReports = subscribePendingSpyReports(uid, (reports) => {
+      reports.forEach((report) => {
+        if (processingSpyReports.current.has(report.id)) return;
+        processingSpyReports.current.add(report.id);
+
+        acknowledgeSpyReport(uid, report.id)
+          .catch((err) => console.error("Erreur de traitement du rapport d'espionnage :", err))
+          .finally(() => processingSpyReports.current.delete(report.id));
+      });
+    });
+
+    const unsubGifts = subscribePendingGifts(uid, (gifts) => {
+      gifts.forEach((gift) => {
+        if (processingGifts.current.has(gift.id)) return;
+        processingGifts.current.add(gift.id);
+
+        claimResourceGift(uid, gift.id)
+          .catch((err) => console.error("Erreur de réception du don de ressources :", err))
+          .finally(() => processingGifts.current.delete(gift.id));
+      });
+    });
+
     const heartbeat = setInterval(() => {
       const now = Date.now();
       const deltaSeconds = Math.round((now - lastHeartbeatAt.current) / 1000);
@@ -120,6 +161,8 @@ export function useGameSync(uid: string | null) {
       unsubQueues();
       unsubNotifications();
       unsubBattleReports();
+      unsubSpyReports();
+      unsubGifts();
       clearInterval(heartbeat);
       document.removeEventListener("visibilitychange", flushOnHide);
       seenNotificationIds.current = null;
