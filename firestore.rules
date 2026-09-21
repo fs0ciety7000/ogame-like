@@ -105,5 +105,48 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Alliances : liste et fiches lisibles par tout joueur connecté (pour
+    // pouvoir en parcourir/rejoindre une). La création se limite à poser
+    // sa propre alliance (créateur = seul membre initial). Rejoindre/
+    // quitter ne peut jamais modifier que son propre uid dans `members`
+    // (et le pseudo associé dans `memberPseudos`), jamais celui d'un
+    // autre membre ni aucun autre champ.
+    match /alliances/{allianceId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.members == [request.auth.uid];
+
+      // Rejoindre : ajoute exactement son propre uid en fin de liste.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberPseudos'])
+        && !(request.auth.uid in resource.data.members)
+        && request.resource.data.members == resource.data.members.concat([request.auth.uid]);
+
+      // Quitter : retire exactement son propre uid, rien d'autre.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberPseudos'])
+        && request.auth.uid in resource.data.members
+        && !(request.auth.uid in request.resource.data.members)
+        && request.resource.data.members.size() == resource.data.members.size() - 1
+        && request.resource.data.members.hasOnly(resource.data.members);
+
+      allow delete: if false;
+
+      // Messages d'alliance : réservés aux membres actuels de l'alliance,
+      // journal immuable (pas d'édition ni de suppression).
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/alliances/$(allianceId)).data.members;
+
+        allow create: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/alliances/$(allianceId)).data.members
+          && request.resource.data.authorUid == request.auth.uid;
+
+        allow update, delete: if false;
+      }
+    }
   }
 }

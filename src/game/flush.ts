@@ -4,6 +4,7 @@ import { MISSIONS } from "@/game/missions";
 import { findTech, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
 import { checkNewAchievements } from "@/game/achievements";
+import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 const TECH_TO_UNIT: Record<string, string> = Object.fromEntries(
@@ -52,6 +53,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   }
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
+  ensureSeasonRollover(player, now);
 
   // --- Bâtiments en construction ---
   for (const buildingId of Object.keys(queues.buildingUpgrades) as (keyof typeof queues.buildingUpgrades)[]) {
@@ -141,7 +143,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
 
     for (const [res, amount] of Object.entries(mission.reward)) {
       if (res === "xp") {
-        player.xp = (player.xp ?? 0) + amount;
+        applyXpDelta(player, amount, now);
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
       }

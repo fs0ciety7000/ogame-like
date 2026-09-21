@@ -77,12 +77,15 @@ export interface PlayerState {
   techLevels: TechLevels;
   bonuses: PlayerBonuses;
   xp: number;
+  seasonId?: string;
+  seasonXp?: number;
   victories: number;
   defeats: number;
   playtimeSeconds: number;
   resourcesUpdatedAtMs: number;
   resourceHistory?: ResourceHistoryPoint[];
   unlockedAchievements?: string[];
+  allianceId?: string | null;
   createdAt?: unknown;
 }
 
@@ -133,6 +136,24 @@ export interface ResourceGift {
   resources: Partial<Resources>;
   timestamp: unknown;
   claimed: boolean;
+}
+
+export interface Alliance {
+  id: string;
+  name: string;
+  tag: string;
+  createdBy: string;
+  createdAt: unknown;
+  members: string[];
+  memberPseudos: Record<string, string>;
+}
+
+export interface AllianceMessage {
+  id: string;
+  authorUid: string;
+  authorPseudo: string;
+  text: string;
+  createdAtMs: number;
 }
 
 export type NotificationKind =
