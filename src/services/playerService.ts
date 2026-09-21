@@ -40,7 +40,10 @@ import type {
   GameNotification,
   PlayerState,
   QueuesState,
+  ResourceGift,
   ResourceId,
+  Resources,
+  SpyReport,
 } from "@/types/game";
 
 const playersCol = () => collection(db, "players");
@@ -48,6 +51,8 @@ const playerRef = (uid: string) => doc(db, "players", uid);
 const queuesRef = (uid: string) => doc(db, "players", uid, "meta", "queues");
 const notificationsCol = (uid: string) => collection(db, "players", uid, "notifications");
 const battleReportsCol = () => collection(db, "battle_reports");
+const spyReportsCol = () => collection(db, "spy_reports");
+const resourceGiftsCol = () => collection(db, "resource_gifts");
 const usernameRef = (sanitizedPseudo: string) => doc(db, "usernames", sanitizedPseudo);
 
 export class GameActionError extends Error {}
@@ -136,6 +141,47 @@ export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void):
 export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
   const snap = await getDoc(playerRef(uid));
   return snap.exists() ? (snap.data() as PlayerState) : null;
+}
+
+/* =====================================================
+   Contre-espionnage
+
+   Aucune trace n'est écrite en cas de non-détection (voir SpyModal, qui
+   tire au sort côté client via rollSpyDetection avant d'appeler ceci) :
+   seule une tentative détectée crée un document, lu par la cible via
+   subscribePendingSpyReports (même schéma que les rapports de combat).
+===================================================== */
+
+export async function createSpyReport(spyUid: string, spyPseudo: string, targetUid: string) {
+  await setDoc(doc(spyReportsCol()), {
+    spyUid,
+    spyPseudo,
+    targetUid,
+    timestamp: serverTimestamp(),
+    targetProcessed: false,
+  });
+}
+
+export function subscribePendingSpyReports(uid: string, cb: (reports: SpyReport[]) => void): Unsubscribe {
+  const q = query(spyReportsCol(), where("targetUid", "==", uid), where("targetProcessed", "==", false));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SpyReport, "id">) }))));
+}
+
+export async function acknowledgeSpyReport(uid: string, reportId: string) {
+  const reportRef = doc(spyReportsCol(), reportId);
+  const snap = await getDoc(reportRef);
+  if (!snap.exists()) return;
+  const report = { id: snap.id, ...(snap.data() as Omit<SpyReport, "id">) };
+  if (report.targetProcessed) return;
+
+  await updateDoc(reportRef, { targetProcessed: true });
+  await setDoc(doc(notificationsCol(uid)), {
+    kind: "spy-detected",
+    title: "Espionnage détecté !",
+    message: `${report.spyPseudo} a tenté de t'espionner.`,
+    createdAtMs: Date.now(),
+    read: false,
+  });
 }
 
 /* =====================================================
@@ -364,6 +410,93 @@ export async function tradeResources(uid: string, sellId: ResourceId, buyId: Res
     player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
 
     return { player, queues, result: gained };
+  });
+}
+
+/* =====================================================
+   Échange entre joueurs
+
+   Le débit de l'expéditeur et la création du don sont dans la même
+   transaction (comme initiateAttack) : impossible de perdre des
+   ressources si l'écriture échoue à mi-chemin. Le crédit du
+   destinataire se fait séparément, dans SA propre transaction, quand
+   il traite le don (voir claimResourceGift) — jamais l'expéditeur qui
+   n'a pas le droit d'écrire sur le document d'un autre joueur.
+===================================================== */
+
+export async function sendResourceGift(params: {
+  fromUid: string;
+  fromPseudo: string;
+  toUid: string;
+  toPseudo: string;
+  resources: Partial<Resources>;
+}) {
+  const { fromUid, fromPseudo, toUid, toPseudo, resources } = params;
+  if (fromUid === toUid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
+
+  const entries = (Object.entries(resources) as [ResourceId, number | undefined][]).filter(([, v]) => (v ?? 0) > 0);
+  if (entries.length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
+
+  await runTransaction(db, async (tx) => {
+    const [pSnap, qSnap] = await Promise.all([tx.get(playerRef(fromUid)), tx.get(queuesRef(fromUid))]);
+    if (!pSnap.exists() || !qSnap.exists()) throw new GameActionError("Profil joueur introuvable.");
+
+    const now = Date.now();
+    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
+
+    for (const [res, amt] of entries) {
+      if ((flushed.player.resources[res] ?? 0) < (amt ?? 0)) throw new GameActionError("Ressources insuffisantes.");
+      flushed.player.resources[res] -= amt ?? 0;
+    }
+
+    tx.set(playerRef(fromUid), flushed.player);
+    tx.set(queuesRef(fromUid), flushed.queues);
+    for (const n of flushed.notifications) tx.set(doc(notificationsCol(fromUid)), n);
+
+    tx.set(doc(resourceGiftsCol()), {
+      fromUid,
+      fromPseudo,
+      toUid,
+      toPseudo,
+      resources: Object.fromEntries(entries),
+      timestamp: serverTimestamp(),
+      claimed: false,
+    });
+  });
+}
+
+export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): Unsubscribe {
+  const q = query(resourceGiftsCol(), where("toUid", "==", uid), where("claimed", "==", false));
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ResourceGift, "id">) }))));
+}
+
+export async function claimResourceGift(uid: string, giftId: string) {
+  await runTransaction(db, async (tx) => {
+    const giftRef = doc(resourceGiftsCol(), giftId);
+    const [giftSnap, pSnap, qSnap] = await Promise.all([tx.get(giftRef), tx.get(playerRef(uid)), tx.get(queuesRef(uid))]);
+    if (!giftSnap.exists()) return;
+    const gift = { id: giftSnap.id, ...(giftSnap.data() as Omit<ResourceGift, "id">) };
+    if (gift.claimed || !pSnap.exists() || !qSnap.exists()) return;
+
+    const now = Date.now();
+    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
+
+    for (const [res, amt] of Object.entries(gift.resources)) {
+      const key = res as ResourceId;
+      flushed.player.resources[key] = (flushed.player.resources[key] ?? 0) + (amt ?? 0);
+    }
+
+    tx.set(playerRef(uid), flushed.player);
+    tx.set(queuesRef(uid), flushed.queues);
+    tx.update(giftRef, { claimed: true });
+    tx.set(doc(notificationsCol(uid)), {
+      kind: "gift",
+      title: "Ressources reçues !",
+      message: `${gift.fromPseudo} t'a envoyé des ressources.`,
+      createdAtMs: now,
+      read: false,
+    });
+    for (const n of flushed.notifications) tx.set(doc(notificationsCol(uid)), n);
   });
 }
 

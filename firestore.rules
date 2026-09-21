@@ -67,5 +67,43 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Rapports d'espionnage : uniquement créés quand la tentative est
+    // détectée (voir rollSpyDetection côté client) — l'espion peut créer
+    // un rapport le concernant ; les deux parties peuvent le lire ; seule
+    // la cible peut le marquer comme traité une fois la notif générée.
+    match /spy_reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.spyUid == request.auth.uid
+        && request.resource.data.targetProcessed == false;
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.spyUid || request.auth.uid == resource.data.targetUid);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.targetUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['targetProcessed']);
+
+      allow delete: if false;
+    }
+
+    // Dons de ressources entre joueurs : l'expéditeur crée le don (déjà
+    // débité dans la même transaction côté client) ; les deux parties
+    // peuvent le lire ; seul le destinataire peut le marquer comme
+    // réclamé (et rien d'autre) en créditant ses propres ressources.
+    match /resource_gifts/{giftId} {
+      allow create: if signedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.claimed == false;
+
+      allow read: if signedIn()
+        && (request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
+
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.toUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed']);
+
+      allow delete: if false;
+    }
   }
 }
