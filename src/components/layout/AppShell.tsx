@@ -14,6 +14,7 @@ import { useRankCelebration } from "@/hooks/useRankCelebration";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
+import { WarpOverlay } from "@/components/game/WarpOverlay";
 
 function MusicToggle() {
   const ref = useRef<HTMLAudioElement | null>(null);
@@ -104,6 +105,7 @@ export function AppShell() {
       </div>
 
       <CombatResultModal />
+      <WarpOverlay />
     </div>
   );
 }

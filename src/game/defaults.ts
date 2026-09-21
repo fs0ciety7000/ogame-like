@@ -34,6 +34,7 @@ export function defaultPlayerState(uid: string, pseudo: string): Omit<PlayerStat
     defeats: 0,
     playtimeSeconds: 0,
     resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
   };
 }
 

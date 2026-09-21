@@ -10,6 +10,7 @@ import { getRewardText, hasPrerequisites, MISSIONS } from "@/game/missions";
 import { findUnit } from "@/game/units";
 import { formatClock } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
+import { triggerWarpEffect } from "@/store/warpEffectStore";
 
 export function MissionsPage() {
   useNowTicker();
@@ -27,6 +28,7 @@ export function MissionsPage() {
     setPending(key);
     try {
       await startMission(uid, key);
+      triggerWarpEffect();
       toast.success("Mission lancée !");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Action impossible.");

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { ResourceHistoryChart } from "@/components/game/ResourceHistoryChart";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources } from "@/hooks/useLiveResources";
 import { RESOURCE_LIST, getTradeRate } from "@/game/resources";
@@ -69,6 +70,8 @@ export function ResourcesPage() {
           </motion.div>
         ))}
       </div>
+
+      <ResourceHistoryChart history={player?.resourceHistory} />
 
       <Card>
         <CardHeader>
