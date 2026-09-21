@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -64,7 +65,7 @@ export function UnitsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl text-white glow-text">Unités</h1>
+      <PageHeader eyebrow="Cosmic Empires / Chantier naval" title="Unités" description="Construis ta flotte d'attaque et de défense." />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {(["attack", "defense"] as const).map((cat) => {
@@ -125,7 +126,7 @@ export function UnitsPage() {
                   ) : (
                     <>
                       <p className="text-xs text-slate-400">{unit.description}</p>
-                      <div className="flex flex-wrap gap-1.5 text-[11px]">
+                      <div className="flex flex-wrap gap-1.5 tabular-mono text-[11px]">
                         <span className="rounded bg-space-800 px-1.5 py-0.5 text-danger-glow">
                           ATK {unit.stats.attaque + (data.level - 1) * 5}
                         </span>

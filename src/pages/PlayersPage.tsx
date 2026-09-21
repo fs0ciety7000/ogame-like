@@ -3,6 +3,7 @@ import { Sword, Eye, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
 import { useAuthStore } from "@/store/authStore";
@@ -29,7 +30,7 @@ export function PlayersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl text-white glow-text">Classement des joueurs</h1>
+      <PageHeader eyebrow="Cosmic Empires / Renseignement" title="Classement des joueurs" description="Espionne ou attaque les autres empires." />
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -51,7 +52,7 @@ export function PlayersPage() {
           return (
             <div key={p.uid} className="flex items-center justify-between gap-3 p-3">
               <div className="flex items-center gap-3">
-                <span className="w-6 text-center text-xs text-slate-500">#{p.rank}</span>
+                <span className="tabular-mono w-6 text-center text-xs text-slate-500">#{p.rank}</span>
                 <div>
                   <p className="text-sm font-medium text-slate-100">{p.pseudo}</p>
                   <p className="text-xs text-cyan-glow">{getRankLabel(p.xp)}</p>

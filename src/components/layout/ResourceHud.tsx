@@ -22,14 +22,14 @@ export function ResourceHud() {
         return (
           <Tooltip key={res.id}>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/70 px-2.5 py-1.5 text-sm tabular-nums">
+              <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/70 px-2.5 py-1.5 text-sm">
                 <span className="text-base leading-none">{res.emoji}</span>
                 <AnimatedNumber
                   value={resources[res.id]}
                   format={formatCompact}
-                  className="font-medium text-slate-100"
+                  className="tabular-mono font-medium text-slate-100"
                 />
-                {rate > 0 && <span className="text-[10px] text-mint-glow">+{formatCompact(rate)}/s</span>}
+                {rate > 0 && <span className="tabular-mono text-[10px] text-mint-glow">+{formatCompact(rate)}/s</span>}
               </div>
             </TooltipTrigger>
             <TooltipContent>
@@ -44,9 +44,9 @@ export function ResourceHud() {
       {rare.map((res) => (
         <Tooltip key={res.id}>
           <TooltipTrigger asChild>
-            <div className="hidden items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/50 px-2 py-1.5 text-sm tabular-nums sm:flex">
+            <div className="hidden items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/50 px-2 py-1.5 text-sm sm:flex">
               <span className="text-base leading-none opacity-80">{res.emoji}</span>
-              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="text-slate-300" />
+              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-300" />
             </div>
           </TooltipTrigger>
           <TooltipContent>

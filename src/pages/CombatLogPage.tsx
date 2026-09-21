@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sword, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeBattleLog } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
 import { firestoreMillis, formatNumber, timeAgo } from "@/lib/utils";
 import type { BattleReport, CombatOutcome } from "@/types/game";
 
-const OUTCOME_STYLE: Record<"victory" | "defeat" | "draw", { label: string; className: string }> = {
-  victory: { label: "Victoire", className: "text-mint-glow" },
-  defeat: { label: "Défaite", className: "text-danger-glow" },
-  draw: { label: "Match nul", className: "text-gold-glow" },
+const OUTCOME_STYLE: Record<"victory" | "defeat" | "draw", { label: string; variant: "success" | "danger" | "warning" }> = {
+  victory: { label: "Victoire", variant: "success" },
+  defeat: { label: "Défaite", variant: "danger" },
+  draw: { label: "Match nul", variant: "warning" },
 };
 
 function outcomeForViewer(outcome: CombatOutcome, isAttacker: boolean): "victory" | "defeat" | "draw" {
@@ -31,7 +33,7 @@ export function CombatLogPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl text-white glow-text">Journal de combat</h1>
+      <PageHeader eyebrow="Cosmic Empires / Archives" title="Journal de combat" description="Historique des attaques lancées et reçues." />
 
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
@@ -66,16 +68,16 @@ export function CombatLogPage() {
                     {isAttacker ? "Toi" : opponent} <span className="text-slate-500">vs</span>{" "}
                     {isAttacker ? opponent : "Toi"}
                   </span>
-                  <span className={`shrink-0 text-xs font-medium ${OUTCOME_STYLE[result].className}`}>
+                  <Badge variant={OUTCOME_STYLE[result].variant} className="shrink-0">
                     {OUTCOME_STYLE[result].label}
-                  </span>
+                  </Badge>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="tabular-mono text-xs text-slate-500">
                   Puissance {formatNumber(myPower)} contre {formatNumber(opponentPower)}
                 </p>
               </div>
 
-              <span className="shrink-0 text-xs text-slate-500">{timeAgo(firestoreMillis(report.timestamp))}</span>
+              <span className="tabular-mono shrink-0 text-xs text-slate-500">{timeAgo(firestoreMillis(report.timestamp))}</span>
             </motion.button>
           );
         })}
