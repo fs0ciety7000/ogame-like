@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { playWarp } from "@/lib/sfx";
 
 interface WarpEffectState {
   playId: number;
@@ -11,4 +12,5 @@ export const useWarpEffectStore = create<WarpEffectState>(() => ({ playId: 0 }))
  *  déclenchements rapprochés relancent bien l'animation à chaque fois. */
 export function triggerWarpEffect() {
   useWarpEffectStore.setState((s) => ({ playId: s.playId + 1 }));
+  playWarp();
 }

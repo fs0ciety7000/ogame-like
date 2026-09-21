@@ -35,6 +35,7 @@ export function defaultPlayerState(uid: string, pseudo: string): Omit<PlayerStat
     playtimeSeconds: 0,
     resourcesUpdatedAtMs: Date.now(),
     resourceHistory: [],
+    unlockedAchievements: [],
   };
 }
 

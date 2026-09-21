@@ -82,6 +82,7 @@ export interface PlayerState {
   playtimeSeconds: number;
   resourcesUpdatedAtMs: number;
   resourceHistory?: ResourceHistoryPoint[];
+  unlockedAchievements?: string[];
   createdAt?: unknown;
 }
 
@@ -121,6 +122,7 @@ export type NotificationKind =
   | "mission"
   | "combat-attacker"
   | "combat-defender"
+  | "achievement"
   | "system";
 
 export interface GameNotification {

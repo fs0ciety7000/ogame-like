@@ -8,7 +8,8 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { getRankIcon, getRankIndex, getRankLabel, getRankProgress, RANK_NAMES } from "@/game/ranks";
 import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
 import { UNITS } from "@/game/units";
-import { formatNumber } from "@/lib/utils";
+import { ACHIEVEMENTS } from "@/game/achievements";
+import { formatNumber, cn } from "@/lib/utils";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -131,6 +132,35 @@ export function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Succès</CardTitle>
+          <span className="tabular-mono text-xs text-slate-400">
+            {(player.unlockedAchievements ?? []).length} / {ACHIEVEMENTS.length}
+          </span>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {ACHIEVEMENTS.map((a) => {
+              const unlocked = (player.unlockedAchievements ?? []).includes(a.id);
+              return (
+                <div
+                  key={a.id}
+                  title={a.description}
+                  className={cn(
+                    "flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition",
+                    unlocked ? "border-gold-glow/40 bg-gold-glow/5 shadow-[0_0_16px_-8px_var(--color-gold-glow)]" : "border-white/5 opacity-40 grayscale",
+                  )}
+                >
+                  <span className="text-2xl">{a.emoji}</span>
+                  <span className="text-[11px] text-slate-300">{a.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

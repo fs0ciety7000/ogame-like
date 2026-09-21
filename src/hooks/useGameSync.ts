@@ -15,18 +15,20 @@ import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerSt
 import { setNotifications } from "@/store/notificationStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
+import { playAlert, playConfirm, playUnlock } from "@/lib/sfx";
 import type { NotificationKind } from "@/types/game";
 
 const HEARTBEAT_MS = 20_000;
 
-const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string }> = {
-  building: { icon: "🏗️" },
-  research: { icon: "🔬" },
-  unit: { icon: "🚀" },
-  mission: { icon: "🧭" },
-  "combat-attacker": { icon: "⚔️" },
-  "combat-defender": { icon: "🛡️" },
-  system: { icon: "✨" },
+const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => void }> = {
+  building: { icon: "🏗️", sound: playConfirm },
+  research: { icon: "🔬", sound: playConfirm },
+  unit: { icon: "🚀", sound: playConfirm },
+  mission: { icon: "🧭", sound: playConfirm },
+  "combat-attacker": { icon: "⚔️", sound: playConfirm },
+  "combat-defender": { icon: "🛡️", sound: playAlert },
+  achievement: { icon: "🏆", sound: playUnlock },
+  system: { icon: "✨", sound: playConfirm },
 };
 
 /** syncPlayer suppose que les documents Firestore du joueur existent déjà.
@@ -85,7 +87,13 @@ export function useGameSync(uid: string | null) {
       for (const item of items) {
         if (!seenNotificationIds.current.has(item.id)) {
           seenNotificationIds.current.add(item.id);
-          toast(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon });
+          NOTIFICATION_STYLE[item.kind]?.sound();
+          const isAchievement = item.kind === "achievement";
+          if (isAchievement) {
+            toast.success(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon, duration: 6000 });
+          } else {
+            toast(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon });
+          }
         }
       }
     });
