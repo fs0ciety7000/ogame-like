@@ -13,16 +13,21 @@ import {
   subscribePlayer,
   subscribeQueues,
   syncPlayer,
+  type AwaySummary,
 } from "@/services/playerService";
 import { auth } from "@/lib/firebase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
+import { showAwaySummary } from "@/store/awaySummaryStore";
 import { playAlert, playConfirm, playUnlock } from "@/lib/sfx";
 import type { NotificationKind } from "@/types/game";
 
 const HEARTBEAT_MS = 20_000;
+// En dessous de ce seuil, la resynchronisation est trop récente pour
+// justifier une modale — ça couvrirait aussi les rechargements de page.
+const AWAY_SUMMARY_THRESHOLD_MS = 3 * 60 * 1000;
 
 const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => void }> = {
   building: { icon: "🏗️", sound: playConfirm },
@@ -43,21 +48,21 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
  *  utilisateur connecté) peut survenir avant que cette création n'ait fini
  *  d'écrire — on retombe donc ici sur ensurePlayerDoc en filet de sécurité,
  *  plutôt que de laisser une promesse échouer sans être interceptée. */
-async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0) {
+async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary | undefined> {
   try {
-    await syncPlayer(uid, playtimeDeltaSeconds);
+    return await syncPlayer(uid, playtimeDeltaSeconds);
   } catch (err) {
     if (err instanceof GameActionError) {
       try {
         await ensurePlayerDoc(uid, auth.currentUser?.displayName || "Joueur");
-        await syncPlayer(uid, playtimeDeltaSeconds);
-        return;
+        return await syncPlayer(uid, playtimeDeltaSeconds);
       } catch (retryErr) {
         console.error("Impossible de synchroniser le profil joueur :", retryErr);
-        return;
+        return undefined;
       }
     }
     console.error("Erreur de synchronisation :", err);
+    return undefined;
   }
 }
 
@@ -80,7 +85,11 @@ export function useGameSync(uid: string | null) {
     }
 
     lastHeartbeatAt.current = Date.now();
-    void safeSyncPlayer(uid);
+    void safeSyncPlayer(uid).then((summary) => {
+      if (!summary || summary.elapsedMs < AWAY_SUMMARY_THRESHOLD_MS) return;
+      if (Object.keys(summary.resourceGains).length === 0 && summary.notifications.length === 0) return;
+      showAwaySummary(summary);
+    });
 
     const unsubPlayer = subscribePlayer(uid, setPlayerData, setSyncedFromServer);
     const unsubQueues = subscribeQueues(uid, setQueuesData);
