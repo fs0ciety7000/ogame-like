@@ -16,6 +16,7 @@ const UnitsPage = lazy(() => import("@/pages/UnitsPage").then((m) => ({ default:
 const LabPage = lazy(() => import("@/pages/LabPage").then((m) => ({ default: m.LabPage })));
 const MissionsPage = lazy(() => import("@/pages/MissionsPage").then((m) => ({ default: m.MissionsPage })));
 const PlayersPage = lazy(() => import("@/pages/PlayersPage").then((m) => ({ default: m.PlayersPage })));
+const AlliancePage = lazy(() => import("@/pages/AlliancePage").then((m) => ({ default: m.AlliancePage })));
 const CombatLogPage = lazy(() => import("@/pages/CombatLogPage").then((m) => ({ default: m.CombatLogPage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
@@ -44,6 +45,7 @@ export default function App() {
               <Route path="missions" element={<MissionsPage />} />
               <Route path="joueurs" element={<PlayersPage />} />
               <Route path="combats" element={<CombatLogPage />} />
+              <Route path="alliance" element={<AlliancePage />} />
               <Route path="profil" element={<ProfilePage />} />
               <Route path="reglages" element={<SettingsPage />} />
             </Route>
