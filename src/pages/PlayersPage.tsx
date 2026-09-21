@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { TargetReticle } from "@/components/ui/target-reticle";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
 import { useAuthStore } from "@/store/authStore";
@@ -59,17 +60,26 @@ export function PlayersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" title="Espionner" onClick={() => setSpyTarget(p.uid)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Espionner"
+                  className="group relative"
+                  onClick={() => setSpyTarget(p.uid)}
+                >
                   <Eye className="h-4 w-4" />
+                  <TargetReticle color="var(--color-cyan-glow)" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   title="Attaquer"
                   disabled={isSelf}
+                  className="group relative"
                   onClick={() => setAttackTarget({ uid: p.uid, pseudo: p.pseudo })}
                 >
                   <Sword className="h-4 w-4" />
+                  <TargetReticle color="var(--color-danger-glow)" />
                 </Button>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -62,32 +63,38 @@ export function AttackModal({
             Cible : <strong className="text-slate-200">{target.pseudo}</strong>
           </p>
 
-          <div className="mt-4 space-y-2">
-            {OFFENSIVE_UNITS.map((unitId) => {
-              const unit = findUnit(unitId);
-              const owned = player.units[unitId]?.count ?? 0;
-              if (!unit) return null;
-              return (
-                <div key={unitId} className="flex items-center gap-3 text-sm">
-                  <span className="flex-1 text-slate-200">{unit.name}</span>
-                  <span className="text-xs text-slate-500">Possédés : {owned}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={owned}
-                    disabled={owned === 0}
-                    value={fleet[unitId] ?? 0}
-                    onChange={(e) => setQty(unitId, owned, parseInt(e.target.value) || 0)}
-                    className="w-20"
-                  />
-                </div>
-              );
-            })}
-          </div>
+          {submitting ? (
+            <RadarScan label="Transmission de la flotte…" />
+          ) : (
+            <>
+              <div className="mt-4 space-y-2">
+                {OFFENSIVE_UNITS.map((unitId) => {
+                  const unit = findUnit(unitId);
+                  const owned = player.units[unitId]?.count ?? 0;
+                  if (!unit) return null;
+                  return (
+                    <div key={unitId} className="flex items-center gap-3 text-sm">
+                      <span className="flex-1 text-slate-200">{unit.name}</span>
+                      <span className="text-xs text-slate-500">Possédés : {owned}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={owned}
+                        disabled={owned === 0}
+                        value={fleet[unitId] ?? 0}
+                        onChange={(e) => setQty(unitId, owned, parseInt(e.target.value) || 0)}
+                        className="w-20"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
 
-          <Button className="mt-4 w-full" variant="danger" disabled={submitting} onClick={() => void handleConfirm()}>
-            {submitting ? "Envoi de la flotte…" : "Lancer l'attaque"}
-          </Button>
+              <Button className="mt-4 w-full" variant="danger" onClick={() => void handleConfirm()}>
+                Lancer l'attaque
+              </Button>
+            </>
+          )}
         </DialogContent>
       )}
     </Dialog>

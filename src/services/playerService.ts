@@ -93,8 +93,18 @@ export async function resolveEmailForPseudo(sanitizedPseudo: string): Promise<st
   return snap.exists() ? ((snap.data().email as string) ?? null) : null;
 }
 
-export function subscribePlayer(uid: string, cb: (player: PlayerState | null) => void): Unsubscribe {
-  return onSnapshot(playerRef(uid), (snap) => cb(snap.exists() ? (snap.data() as PlayerState) : null));
+/** onMeta signale si le dernier instantané reçu vient du cache local
+ *  (hors-ligne) plutôt que du serveur — utilisé pour l'indicateur de
+ *  connexion réel de l'en-tête (voir connectionStore). */
+export function subscribePlayer(
+  uid: string,
+  cb: (player: PlayerState | null) => void,
+  onMeta?: (fromCache: boolean) => void,
+): Unsubscribe {
+  return onSnapshot(playerRef(uid), { includeMetadataChanges: true }, (snap) => {
+    cb(snap.exists() ? (snap.data() as PlayerState) : null);
+    onMeta?.(snap.metadata.fromCache);
+  });
 }
 
 export function subscribeQueues(uid: string, cb: (queues: QueuesState | null) => void): Unsubscribe {

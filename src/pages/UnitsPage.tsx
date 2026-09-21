@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { RadialGauge } from "@/components/ui/radial-gauge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -71,15 +71,18 @@ export function UnitsPage() {
         {(["attack", "defense"] as const).map((cat) => {
           const b = built(cat);
           const cap = capacity(cat);
+          const percent = cap > 0 ? (b / cap) * 100 : 0;
           return (
-            <Card key={cat} className="p-4">
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="text-slate-300">Capacité {cat === "attack" ? "d'attaque" : "de défense"}</span>
-                <span className="text-slate-400">
+            <Card key={cat} className="flex items-center gap-4 p-4">
+              <RadialGauge value={percent} size={64} strokeWidth={5} color={cat === "attack" ? "var(--color-danger-glow)" : "var(--color-cyan-glow)"}>
+                <span className="tabular-mono text-xs font-medium text-slate-200">{Math.round(percent)}%</span>
+              </RadialGauge>
+              <div>
+                <p className="text-sm text-slate-300">Capacité {cat === "attack" ? "d'attaque" : "de défense"}</p>
+                <p className="tabular-mono text-xs text-slate-500">
                   {formatNumber(b)} / {formatNumber(cap)}
-                </span>
+                </p>
               </div>
-              <Progress value={cap > 0 ? (b / cap) * 100 : 0} />
             </Card>
           );
         })}

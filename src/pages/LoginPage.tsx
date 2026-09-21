@@ -5,9 +5,11 @@ import { Rocket, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
+import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusDot } from "@/components/ui/status-dot";
+import { CornerBrackets } from "@/components/ui/corner-brackets";
 import {
   loginPlayer,
   NoRecoveryEmailError,
@@ -87,6 +89,7 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 lg:px-12">
+      <SchematicGrid />
       <Nebula />
       <Starfield count={160} />
 
@@ -145,6 +148,7 @@ export function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+            <CornerBrackets />
             <p className="hud-eyebrow hidden text-slate-500 lg:block">
               {mode === "login" ? "Accès commandement" : mode === "register" ? "Nouvel empire" : "Récupération"}
             </p>

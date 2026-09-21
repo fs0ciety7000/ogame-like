@@ -23,10 +23,16 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
   --animate-drift: drift 22s ease-in-out infinite;
+  --animate-pulse-alert: pulse-alert 1.8s ease-out infinite;
 
   @keyframes pulse-slow {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
+  }
+  @keyframes pulse-alert {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ember-glow) 60%, transparent); }
+    70% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-ember-glow) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ember-glow) 0%, transparent); }
   }
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
@@ -137,6 +143,20 @@ body {
   filter: blur(70px);
   opacity: 0.35;
   animation: var(--animate-drift);
+}
+
+/* Quadrillage façon plan technique, très discret, derrière les nébuleuses. */
+.schematic-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-cyan-glow) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-cyan-glow) 8%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 85%);
 }
 
 .starfield {

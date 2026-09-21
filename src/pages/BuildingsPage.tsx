@@ -20,7 +20,7 @@ import {
   productionPerSecond,
   PRODUCTION_RESOURCE_BY_BUILDING,
 } from "@/game/buildings";
-import { formatDuration } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { formatCost, resourceEmoji } from "@/game/resources";
 import type { BuildingId } from "@/types/game";
@@ -77,6 +77,7 @@ export function BuildingsPage() {
           const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
           const time = getBuildingUpgradeTime(building, nextLevel);
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
+          const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
 
           return (
             <motion.div
@@ -87,7 +88,7 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className="flex h-full flex-col overflow-hidden">
+              <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
                 <div className="relative aspect-video bg-space-800">
                   <img
                     src={buildingImage(building, level)}
