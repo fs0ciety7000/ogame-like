@@ -73,7 +73,7 @@ export function CommandPalette() {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in" />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-24 z-[100] w-[92vw] max-w-lg -translate-x-1/2 glass-panel overflow-hidden rounded-2xl shadow-2xl focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95"
+          className="!fixed left-1/2 top-24 z-[100] w-[92vw] max-w-lg -translate-x-1/2 glass-panel overflow-hidden rounded-2xl shadow-2xl focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95"
           aria-describedby={undefined}
         >
           <DialogPrimitive.Title className="sr-only">Palette de commandes</DialogPrimitive.Title>
