@@ -1,11 +1,15 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  acknowledgeSpyReport,
+  claimResourceGift,
   ensurePlayerDoc,
   GameActionError,
   processBattleReportForDefender,
   subscribeNotifications,
   subscribePendingBattleReports,
+  subscribePendingGifts,
+  subscribePendingSpyReports,
   subscribePlayer,
   subscribeQueues,
   syncPlayer,
@@ -28,6 +32,8 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   "combat-attacker": { icon: "⚔️", sound: playConfirm },
   "combat-defender": { icon: "🛡️", sound: playAlert },
   achievement: { icon: "🏆", sound: playUnlock },
+  "spy-detected": { icon: "🔍", sound: playAlert },
+  gift: { icon: "🎁", sound: playConfirm },
   system: { icon: "✨", sound: playConfirm },
 };
 
@@ -60,6 +66,8 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0) {
  *  de combat reçus (même si l'onglet était fermé au moment de l'attaque). */
 export function useGameSync(uid: string | null) {
   const processingReports = useRef<Set<string>>(new Set());
+  const processingSpyReports = useRef<Set<string>>(new Set());
+  const processingGifts = useRef<Set<string>>(new Set());
   const lastHeartbeatAt = useRef<number>(Date.now());
   const seenNotificationIds = useRef<Set<string> | null>(null);
 
@@ -114,6 +122,28 @@ export function useGameSync(uid: string | null) {
       });
     });
 
+    const unsubSpyReports = subscribePendingSpyReports(uid, (reports) => {
+      reports.forEach((report) => {
+        if (processingSpyReports.current.has(report.id)) return;
+        processingSpyReports.current.add(report.id);
+
+        acknowledgeSpyReport(uid, report.id)
+          .catch((err) => console.error("Erreur de traitement du rapport d'espionnage :", err))
+          .finally(() => processingSpyReports.current.delete(report.id));
+      });
+    });
+
+    const unsubGifts = subscribePendingGifts(uid, (gifts) => {
+      gifts.forEach((gift) => {
+        if (processingGifts.current.has(gift.id)) return;
+        processingGifts.current.add(gift.id);
+
+        claimResourceGift(uid, gift.id)
+          .catch((err) => console.error("Erreur de réception du don de ressources :", err))
+          .finally(() => processingGifts.current.delete(gift.id));
+      });
+    });
+
     const heartbeat = setInterval(() => {
       const now = Date.now();
       const deltaSeconds = Math.round((now - lastHeartbeatAt.current) / 1000);
@@ -131,6 +161,8 @@ export function useGameSync(uid: string | null) {
       unsubQueues();
       unsubNotifications();
       unsubBattleReports();
+      unsubSpyReports();
+      unsubGifts();
       clearInterval(heartbeat);
       document.removeEventListener("visibilitychange", flushOnHide);
       seenNotificationIds.current = null;

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { RadarScan } from "@/components/game/RadarScan";
-import { fetchPlayerSnapshot } from "@/services/playerService";
+import { createSpyReport, fetchPlayerSnapshot } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { getRankLabel } from "@/game/ranks";
+import { rollSpyDetection } from "@/game/espionage";
 import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
@@ -56,8 +57,14 @@ export function SpyModal({ uid, onClose }: { uid: string | null; onClose: () => 
     }
     setLoading(true);
     fetchPlayerSnapshot(uid)
-      .then(setData)
+      .then((snap) => {
+        setData(snap);
+        if (snap && me && rollSpyDetection()) {
+          void createSpyReport(me.uid, me.pseudo, uid);
+        }
+      })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- un seul jet par ouverture de la cible, pas à chaque mise à jour de "me"
   }, [uid]);
 
   return (

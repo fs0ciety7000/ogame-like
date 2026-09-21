@@ -115,6 +115,26 @@ export interface BattleReport {
   defenderProcessed: boolean;
 }
 
+export interface SpyReport {
+  id: string;
+  spyUid: string;
+  spyPseudo: string;
+  targetUid: string;
+  timestamp: unknown;
+  targetProcessed: boolean;
+}
+
+export interface ResourceGift {
+  id: string;
+  fromUid: string;
+  fromPseudo: string;
+  toUid: string;
+  toPseudo: string;
+  resources: Partial<Resources>;
+  timestamp: unknown;
+  claimed: boolean;
+}
+
 export type NotificationKind =
   | "building"
   | "research"
@@ -123,6 +143,8 @@ export type NotificationKind =
   | "combat-attacker"
   | "combat-defender"
   | "achievement"
+  | "spy-detected"
+  | "gift"
   | "system";
 
 export interface GameNotification {

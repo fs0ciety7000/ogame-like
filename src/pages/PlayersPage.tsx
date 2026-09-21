@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Sword, Eye, Search } from "lucide-react";
+import { Sword, Eye, Search, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { getRankLabel } from "@/game/ranks";
 import { useAuthStore } from "@/store/authStore";
 import { SpyModal } from "@/components/game/SpyModal";
 import { AttackModal } from "@/components/game/AttackModal";
+import { TradeModal } from "@/components/game/TradeModal";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -17,6 +18,7 @@ export function PlayersPage() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [spyTarget, setSpyTarget] = useState<string | null>(null);
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
+  const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
 
   useEffect(() => subscribeLeaderboard(setPlayers), []);
 
@@ -81,6 +83,17 @@ export function PlayersPage() {
                   <Sword className="h-4 w-4" />
                   <TargetReticle color="var(--color-danger-glow)" />
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Envoyer des ressources"
+                  disabled={isSelf}
+                  className="group relative"
+                  onClick={() => setTradeTarget({ uid: p.uid, pseudo: p.pseudo })}
+                >
+                  <Gift className="h-4 w-4" />
+                  <TargetReticle color="var(--color-mint-glow)" />
+                </Button>
               </div>
             </div>
           );
@@ -89,6 +102,7 @@ export function PlayersPage() {
 
       <SpyModal uid={spyTarget} onClose={() => setSpyTarget(null)} />
       <AttackModal target={attackTarget} onClose={() => setAttackTarget(null)} />
+      <TradeModal target={tradeTarget} onClose={() => setTradeTarget(null)} />
     </div>
   );
 }

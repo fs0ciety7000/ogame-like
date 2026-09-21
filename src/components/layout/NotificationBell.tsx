@@ -11,7 +11,7 @@ export function NotificationBell() {
   const uid = useAuthStore((s) => s.user?.uid);
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
   const hasUrgentUnread = useMemo(
-    () => items.some((n) => !n.read && n.kind === "combat-defender"),
+    () => items.some((n) => !n.read && (n.kind === "combat-defender" || n.kind === "spy-detected")),
     [items],
   );
 
