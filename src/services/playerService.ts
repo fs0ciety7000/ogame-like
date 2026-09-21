@@ -211,7 +211,12 @@ interface MutateOutput<T> {
 
 async function runFlushedAction<T>(
   uid: string,
-  mutate: (state: { player: PlayerState; queues: QueuesState }) => MutateOutput<T>,
+  mutate: (state: {
+    player: PlayerState;
+    queues: QueuesState;
+    preFlushPlayer: PlayerState;
+    flushNotifications: NewNotification[];
+  }) => MutateOutput<T>,
 ): Promise<T> {
   let result!: T;
 
@@ -220,8 +225,9 @@ async function runFlushedAction<T>(
     if (!pSnap.exists() || !qSnap.exists()) throw new GameActionError("Profil joueur introuvable.");
 
     const now = Date.now();
-    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
-    const mutated = mutate({ player: flushed.player, queues: flushed.queues });
+    const preFlushPlayer = pSnap.data() as PlayerState;
+    const flushed = flushState(preFlushPlayer, qSnap.data() as QueuesState, now);
+    const mutated = mutate({ player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications });
 
     tx.set(playerRef(uid), mutated.player);
     tx.set(queuesRef(uid), mutated.queues);
@@ -236,13 +242,33 @@ async function runFlushedAction<T>(
   return result;
 }
 
+export interface AwaySummary {
+  elapsedMs: number;
+  resourceGains: Partial<Record<ResourceId, number>>;
+  notifications: NewNotification[];
+}
+
 /** Flush pur (production + complétions), sans action supplémentaire. Utilisé
  *  au chargement et par le "heartbeat" périodique pour rester à jour sans
- *  dépendre uniquement des actions du joueur. */
-export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0) {
-  return runFlushedAction(uid, ({ player, queues }) => {
+ *  dépendre uniquement des actions du joueur. Retourne un résumé (gains de
+ *  ressources, temps écoulé, complétions) pour le modal "pendant ton absence",
+ *  que useGameSync n'affiche que pour le tout premier appel après montage. */
+export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary> {
+  return runFlushedAction(uid, ({ player, queues, preFlushPlayer, flushNotifications }) => {
     player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.max(0, playtimeDeltaSeconds);
-    return { player, queues, result: undefined };
+
+    const elapsedMs = Date.now() - (preFlushPlayer.resourcesUpdatedAtMs || Date.now());
+    const resourceGains: Partial<Record<ResourceId, number>> = {};
+    for (const key of Object.keys(player.resources) as ResourceId[]) {
+      const delta = (player.resources[key] ?? 0) - (preFlushPlayer.resources[key] ?? 0);
+      if (delta > 0) resourceGains[key] = delta;
+    }
+
+    return {
+      player,
+      queues,
+      result: { elapsedMs, resourceGains, notifications: flushNotifications },
+    };
   });
 }
 

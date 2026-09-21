@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
@@ -5,6 +6,43 @@ import { findUnit } from "@/game/units";
 import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import type { CombatOutcome } from "@/types/game";
+
+/** Réplique animée du choc des deux flottes : deux barres de puissance
+ *  grandissent l'une vers l'autre depuis les bords, se rencontrent au
+ *  point proportionnel à leur rapport de force, puis un flash marque
+ *  l'impact — plus parlant que les seuls chiffres qui suivent. */
+function CombatClash({ myPower, opponentPower }: { myPower: number; opponentPower: number }) {
+  const total = Math.max(myPower + opponentPower, 1);
+  const myPct = (myPower / total) * 100;
+  const oppPct = 100 - myPct;
+
+  return (
+    <div className="relative mt-3 h-9 overflow-hidden rounded-lg bg-space-800/80">
+      <motion.div
+        className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-glow/80 to-cyan-glow/40"
+        initial={{ width: "0%" }}
+        animate={{ width: `${myPct}%` }}
+        transition={{ duration: 0.65, ease: "easeOut" }}
+      />
+      <motion.div
+        className="absolute inset-y-0 right-0 bg-gradient-to-l from-danger-glow/80 to-danger-glow/40"
+        initial={{ width: "0%" }}
+        animate={{ width: `${oppPct}%` }}
+        transition={{ duration: 0.65, ease: "easeOut" }}
+      />
+      <motion.div
+        className="absolute inset-0 bg-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.85, 0] }}
+        transition={{ delay: 0.6, duration: 0.35, ease: "easeOut" }}
+      />
+      <div className="absolute inset-0 flex items-center justify-between px-2.5 text-[11px] font-medium tabular-mono text-white/90">
+        <span>{formatNumber(myPower)}</span>
+        <span>{formatNumber(opponentPower)}</span>
+      </div>
+    </div>
+  );
+}
 
 const OUTCOME_STYLE: Record<CombatOutcome, { attacker: string; defender: string; color: string }> = {
   attacker_win: { attacker: "Victoire !", defender: "Tu as perdu ce combat…", color: "text-mint-glow" },
@@ -55,6 +93,8 @@ export function CombatResultModal() {
           <p className="text-xs text-slate-500">
             Ta puissance : {formatNumber(current.myPower)} — Puissance adverse : {formatNumber(current.opponentPower)}
           </p>
+
+          <CombatClash myPower={current.myPower} opponentPower={current.opponentPower} />
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
