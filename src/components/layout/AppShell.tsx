@@ -1,13 +1,16 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { LogOut, Music, Music as MusicOff, Settings } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
-import { NavBar } from "@/components/layout/NavBar";
+import { Nebula } from "@/components/layout/Nebula";
+import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { LiveClock } from "@/components/layout/LiveClock";
 import { Button } from "@/components/ui/button";
+import { StatusDot } from "@/components/ui/status-dot";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
@@ -50,6 +53,7 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
   const loading = usePlayerStore((s) => s.loading);
+  const location = useLocation();
 
   useGameSync(user?.uid ?? null);
   useRankCelebration(player);
@@ -58,8 +62,13 @@ export function AppShell() {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
   }, [player]);
 
+  const currentLabel = ALL_NAV_ITEMS.find((item) =>
+    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
+  )?.label;
+
   return (
     <div className="relative flex min-h-screen w-full flex-col pb-16 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
+      <Nebula />
       <Starfield count={80} />
       <NavBar />
 
@@ -68,7 +77,9 @@ export function AppShell() {
           <div className="order-1 flex items-center gap-2">
             <img src="/assets/Logo/logo.png" alt="" className="h-9 w-9 rounded-lg object-cover" />
             <div className="hidden sm:block">
-              <p className="font-display text-sm text-white glow-text">Cosmic Empires</p>
+              <p className="hud-eyebrow text-slate-500">
+                Cosmic Empires{currentLabel ? ` / ${currentLabel}` : ""}
+              </p>
               <p className="text-xs text-slate-400">{player?.pseudo ?? "…"}</p>
             </div>
           </div>
@@ -77,7 +88,11 @@ export function AppShell() {
             <ResourceHud />
           </div>
 
-          <div className="order-2 ml-auto flex items-center gap-2 md:order-3 md:ml-0">
+          <div className="order-2 ml-auto flex items-center gap-3 md:order-3 md:ml-0">
+            <div className="hidden items-center gap-3 border-r border-white/10 pr-3 lg:flex">
+              <StatusDot label="Sync" />
+              <LiveClock />
+            </div>
             <MusicToggle />
             <NotificationBell />
             <Button variant="outline" size="icon" title="Réglages" asChild>

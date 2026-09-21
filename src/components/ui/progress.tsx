@@ -13,7 +13,10 @@ export function Progress({
   const clamped = Math.min(100, Math.max(0, value));
   return (
     <ProgressPrimitive.Root
-      className={cn("relative h-2 w-full overflow-hidden rounded-full bg-space-600/80", className)}
+      className={cn(
+        "relative h-2 w-full overflow-hidden rounded-full bg-space-600/80 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(10%-1px),rgba(255,255,255,0.08)_10%)]",
+        className,
+      )}
     >
       <ProgressPrimitive.Indicator
         className={cn(

@@ -4,6 +4,7 @@ import { Lock, Hourglass } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -44,12 +45,16 @@ export function LabPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-xl text-white glow-text">Laboratoire</h1>
-        <span className="text-xs text-slate-400">
-          File de recherche : {queues.activeResearches.length} / {MAX_CONCURRENT_RESEARCH}
-        </span>
-      </div>
+      <PageHeader
+        eyebrow="Cosmic Empires / R&D"
+        title="Laboratoire"
+        description="Fais progresser tes technologies."
+        right={
+          <span className="tabular-mono text-xs text-slate-400">
+            File {queues.activeResearches.length} / {MAX_CONCURRENT_RESEARCH}
+          </span>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
