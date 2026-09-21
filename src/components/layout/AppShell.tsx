@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { LogOut, Music, Music as MusicOff, Settings } from "lucide-react";
+import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
@@ -20,6 +20,10 @@ import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { toggleCommandPalette } from "@/store/commandPaletteStore";
+import { useSfxStore, toggleSfx } from "@/store/sfxStore";
+import { playClick } from "@/lib/sfx";
 
 function MusicToggle() {
   const ref = useRef<HTMLAudioElement | null>(null);
@@ -51,6 +55,20 @@ function MusicToggle() {
   );
 }
 
+function SfxToggle() {
+  const enabled = useSfxStore((s) => s.enabled);
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      title={enabled ? "Couper les bips" : "Activer les bips"}
+      onClick={() => toggleSfx()}
+    >
+      {enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 opacity-50" />}
+    </Button>
+  );
+}
+
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
@@ -63,6 +81,18 @@ export function AppShell() {
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
   }, [player]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        playClick();
+        toggleCommandPalette();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const currentLabel = ALL_NAV_ITEMS.find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
@@ -96,6 +126,18 @@ export function AppShell() {
               <SignalIndicator />
               <LiveClock />
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              title="Palette de commandes (Ctrl/Cmd+K)"
+              onClick={() => {
+                playClick();
+                toggleCommandPalette();
+              }}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <SfxToggle />
             <MusicToggle />
             <NotificationBell />
             <Button variant="outline" size="icon" title="Réglages" asChild>
@@ -124,6 +166,7 @@ export function AppShell() {
 
       <CombatResultModal />
       <WarpOverlay />
+      <CommandPalette />
     </div>
   );
 }

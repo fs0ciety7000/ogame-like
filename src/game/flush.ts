@@ -3,6 +3,7 @@ import { computeElapsedProduction } from "@/game/production";
 import { MISSIONS } from "@/game/missions";
 import { findTech, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
+import { checkNewAchievements } from "@/game/achievements";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 const TECH_TO_UNIT: Record<string, string> = Object.fromEntries(
@@ -154,6 +155,21 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     });
   }
   queues.activeMissions = stillActiveMissions;
+
+  // --- Succès ---
+  const newAchievements = checkNewAchievements(player);
+  if (newAchievements.length > 0) {
+    player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
+    for (const a of newAchievements) {
+      notifications.push({
+        kind: "achievement",
+        title: "Succès débloqué !",
+        message: `${a.emoji} ${a.name} — ${a.description}`,
+        createdAtMs: now,
+        read: false,
+      });
+    }
+  }
 
   return { player, queues, notifications };
 }

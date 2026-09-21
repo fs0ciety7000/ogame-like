@@ -10,6 +10,7 @@ const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }
   mission: { level: "SUCCESS", className: "text-mint-glow" },
   "combat-attacker": { level: "INFO", className: "text-cyan-glow" },
   "combat-defender": { level: "WARN", className: "text-ember-glow" },
+  achievement: { level: "UNLOCK", className: "text-gold-glow" },
   system: { level: "INFO", className: "text-cyan-glow" },
 };
 

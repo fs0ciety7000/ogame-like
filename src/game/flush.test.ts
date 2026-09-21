@@ -148,6 +148,23 @@ describe("flushState — research", () => {
   });
 });
 
+describe("flushState — succès", () => {
+  it("débloque un succès et notifie quand sa condition devient vraie", () => {
+    const player = makePlayer({ victories: 1 });
+    const { player: after, notifications } = flushState(player, makeQueues(), NOW);
+
+    expect(after.unlockedAchievements).toContain("first_blood");
+    expect(notifications.some((n) => n.kind === "achievement")).toBe(true);
+  });
+
+  it("ne re-notifie pas un succès déjà débloqué", () => {
+    const player = makePlayer({ victories: 1, unlockedAchievements: ["first_blood"] });
+    const { notifications } = flushState(player, makeQueues(), NOW);
+
+    expect(notifications.some((n) => n.kind === "achievement")).toBe(false);
+  });
+});
+
 describe("flushState — historique des ressources", () => {
   it("enregistre un premier point quand l'historique est vide", () => {
     const player = makePlayer({ resourceHistory: [] });
