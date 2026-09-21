@@ -3,14 +3,16 @@ import { LogOut, Music, Music as MusicOff, Settings } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
+import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { PageLoader } from "@/components/layout/PageLoader";
+import { BootSequence } from "@/components/layout/BootSequence";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { LiveClock } from "@/components/layout/LiveClock";
 import { Button } from "@/components/ui/button";
-import { StatusDot } from "@/components/ui/status-dot";
+import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
@@ -68,6 +70,7 @@ export function AppShell() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col pb-16 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
+      <SchematicGrid />
       <Nebula />
       <Starfield count={80} />
       <NavBar />
@@ -90,7 +93,7 @@ export function AppShell() {
 
           <div className="order-2 ml-auto flex items-center gap-3 md:order-3 md:ml-0">
             <div className="hidden items-center gap-3 border-r border-white/10 pr-3 lg:flex">
-              <StatusDot label="Sync" />
+              <SignalIndicator />
               <LiveClock />
             </div>
             <MusicToggle />
@@ -108,7 +111,7 @@ export function AppShell() {
 
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto">
           {loading ? (
-            <PageLoader />
+            <BootSequence />
           ) : (
             <Suspense fallback={<PageLoader />}>
               <PageTransition>

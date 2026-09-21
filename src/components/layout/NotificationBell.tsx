@@ -10,6 +10,10 @@ export function NotificationBell() {
   const items = useNotificationStore((s) => s.items);
   const uid = useAuthStore((s) => s.user?.uid);
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
+  const hasUrgentUnread = useMemo(
+    () => items.some((n) => !n.read && n.kind === "combat-defender"),
+    [items],
+  );
 
   return (
     <DropdownMenu
@@ -21,7 +25,10 @@ export function NotificationBell() {
     >
       <DropdownMenuTrigger asChild>
         <button
-          className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-space-800/70 text-slate-300 transition hover:text-white hover:border-cyan-glow/40"
+          className={cn(
+            "relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-space-800/70 text-slate-300 transition hover:text-white hover:border-cyan-glow/40",
+            hasUrgentUnread && "animate-pulse-alert",
+          )}
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />

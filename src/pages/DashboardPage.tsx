@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { usePlayerStore } from "@/store/playerStore";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
@@ -13,6 +14,7 @@ import { formatClock, formatNumber } from "@/lib/utils";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
+import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 
 export function DashboardPage() {
   useNowTicker();
@@ -43,7 +45,8 @@ export function DashboardPage() {
 
       <OnboardingChecklist player={player} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="relative -m-2 grid gap-4 p-2 sm:grid-cols-2 xl:grid-cols-4">
+        <CornerBrackets />
         <Card>
           <CardHeader>
             <CardTitle>Puissance d'attaque</CardTitle>
@@ -142,6 +145,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <SystemLogPanel />
     </div>
   );
 }

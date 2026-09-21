@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { RadarScan } from "@/components/game/RadarScan";
 import { fetchPlayerSnapshot } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
 import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
@@ -26,7 +27,7 @@ export function SpyModal({ uid, onClose }: { uid: string | null; onClose: () => 
       {uid && (
         <DialogContent>
           {loading || !data ? (
-            <p className="py-8 text-center text-slate-400">Espionnage en cours…</p>
+            <RadarScan label="Espionnage en cours…" />
           ) : (
             <>
               <DialogTitle>{data.pseudo}</DialogTitle>

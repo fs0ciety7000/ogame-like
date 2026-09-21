@@ -13,6 +13,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
+import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
 import type { NotificationKind } from "@/types/game";
 
@@ -61,6 +62,8 @@ export function useGameSync(uid: string | null) {
   const seenNotificationIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
+    startConnectionListeners();
+
     if (!uid) {
       resetPlayerStore();
       return;
@@ -69,7 +72,7 @@ export function useGameSync(uid: string | null) {
     lastHeartbeatAt.current = Date.now();
     void safeSyncPlayer(uid);
 
-    const unsubPlayer = subscribePlayer(uid, setPlayerData);
+    const unsubPlayer = subscribePlayer(uid, setPlayerData, setSyncedFromServer);
     const unsubQueues = subscribeQueues(uid, setQueuesData);
 
     const unsubNotifications = subscribeNotifications(uid, (items) => {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { DecodeText } from "@/components/ui/decode-text";
 
 /** En-tête de page commun : fil d'Ariane mono + gros titre display, avec un
  *  slot optionnel à droite (statut, compteur clé...) — remplace le simple
@@ -24,7 +25,9 @@ export function PageHeader({
     >
       <div>
         <p className="hud-eyebrow text-slate-500">{eyebrow}</p>
-        <h1 className="font-display text-2xl text-white glow-text sm:text-3xl">{title}</h1>
+        <h1 className="font-display text-2xl text-white glow-text sm:text-3xl">
+          <DecodeText text={title} />
+        </h1>
         {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
       </div>
       {right && <div className="shrink-0">{right}</div>}

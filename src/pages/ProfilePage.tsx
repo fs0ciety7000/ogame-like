@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { RadialGauge } from "@/components/ui/radial-gauge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -50,8 +51,10 @@ export function ProfilePage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." />
 
-      <Card className="flex flex-col items-center gap-3 p-6 text-center sm:flex-row sm:text-left">
-        <img src={getRankIcon(player.xp)} alt="" className="h-20 w-20 object-contain" />
+      <Card className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
+        <RadialGauge value={progress.percent} size={96} strokeWidth={5}>
+          <img src={getRankIcon(player.xp)} alt="" className="h-16 w-16 object-contain" />
+        </RadialGauge>
         <div className="flex-1">
           <p className="font-display text-xl text-white">{getRankLabel(player.xp)}</p>
           <p className="text-xs text-slate-500">
@@ -59,7 +62,6 @@ export function ProfilePage() {
           </p>
           <p className="text-xs text-slate-500">{progress.next ? `Rang suivant : ${progress.next}` : "Rang maximum atteint"}</p>
           <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
-          <Progress value={progress.percent} className="mt-2" />
         </div>
       </Card>
 
