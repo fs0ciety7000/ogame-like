@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getRankIcon, getRankIndex, getRankLabel, getRankProgress, RANK_NAMES } from "@/game/ranks";
-import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { UNITS } from "@/game/units";
 import { ACHIEVEMENTS } from "@/game/achievements";
 import { formatNumber, cn } from "@/lib/utils";
@@ -36,13 +36,7 @@ export function ProfilePage() {
   const hours = Math.floor(playtime / 3600);
   const minutes = Math.floor((playtime % 3600) / 60);
 
-  const buildingLevel = (id: (typeof BUILDINGS)[number]["id"]) => {
-    const state = player.buildings[id];
-    if (LOCKABLE_BUILDINGS.includes(id) && !state?.unlocked) return 0;
-    return state?.level ?? 0;
-  };
-
-  const buildingsTotal = BUILDINGS.reduce((sum, b) => sum + buildingLevel(b.id), 0);
+  const buildingsTotal = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
   const buildingsPercent = Math.floor((buildingsTotal / (BUILDINGS.length * 10)) * 100);
 
   const unitsTotal = UNITS.reduce((sum, u) => sum + (player.units[u.id]?.level ?? 0), 0);
@@ -97,7 +91,7 @@ export function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {BUILDINGS.map((b) => {
-              const level = buildingLevel(b.id);
+              const level = effectiveBuildingLevel(player.buildings, b.id);
               return (
                 <div key={b.id}>
                   <div className="flex justify-between text-xs text-slate-400">
