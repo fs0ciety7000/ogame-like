@@ -118,9 +118,18 @@ export function UnitsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className="flex flex-col overflow-hidden">
-                <div className="aspect-video bg-space-800">
-                  <img src={unit.image} alt={unit.name} className="h-full w-full object-contain p-4" />
-                </div>
+                <div className="flex justify-center pt-3">
+  <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
+    <img
+      src={unit.image}
+      alt={unit.name}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.opacity = "0";
+      }}
+    />
+  </div>
+</div>
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <h3 className="font-display text-sm text-slate-100">{unit.name}</h3>
   
