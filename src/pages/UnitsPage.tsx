@@ -90,7 +90,7 @@ export function UnitsPage() {
         })}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
         {UNITS.map((unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
@@ -117,22 +117,25 @@ export function UnitsPage() {
               transition={{ duration: 0.3, delay: index * 0.03 }}
               whileHover={{ y: -3 }}
             >
-              <Card className="flex flex-col overflow-hidden">
+              <Card className="flex h-full flex-col overflow-hidden">
                 <div className="flex justify-center pt-3">
-  <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
-    <img
-      src={unit.image}
-      alt={unit.name}
-      className="h-full w-full object-cover"
-      onError={(e) => {
-        (e.target as HTMLImageElement).style.opacity = "0";
-      }}
-    />
-  </div>
-</div>
+                  <div className="relative h-[180px] w-[180px] shrink-0 overflow-hidden rounded-lg bg-space-800">
+                    <img
+                      src={unit.image}
+                      alt={unit.name}
+                      width={180}
+                      height={180}
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.opacity = "0";
+                      }}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <h3 className="font-display text-sm text-slate-100">{unit.name}</h3>
-  
+
                   {isLocked ? (
                     <p className="text-xs text-slate-500">
                       🔒 Débloquez via le Labo : <strong>{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
@@ -186,11 +189,11 @@ export function UnitsPage() {
                           );
                         })()}
                       </div>
-  
+
                       <p className="text-xs text-slate-400">
                         Possédés : <strong className="text-slate-200">{data.count}</strong>
                       </p>
-  
+
                       {queueInfo ? (
                         <p className="text-xs text-mint-glow">
                           ⏱️ {formatDuration(queueInfo.remaining)} ({queueInfo.count} en file)
@@ -200,7 +203,7 @@ export function UnitsPage() {
                           ⏱️ {formatDuration(buildTime)} / unité — {unit.cost.scrap} 🔩 {unit.cost.energy} ⚡
                         </p>
                       )}
-  
+
                       <div className="mt-auto flex items-center gap-2 pt-2">
                         <Input
                           type="number"
