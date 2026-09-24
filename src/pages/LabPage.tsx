@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES } from "@/game/technologies";
-import { formatDuration } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import { resourceEmoji } from "@/game/resources";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
@@ -20,6 +20,21 @@ export function LabPage() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [selectedId, setSelectedId] = useState<string>(TECHNOLOGIES[0].id);
   const [pending, setPending] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Plein écran de l'arbre : Échap pour sortir, et la page derrière ne
+  // défile plus tant que la surcouche est ouverte.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setFullscreen(false);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [fullscreen]);
 
   if (!player || !queues) return null;
 
@@ -55,15 +70,27 @@ export function LabPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      {/* L'arbre prend toute la largeur ; sur grand écran, le panneau de
+          détails flotte en haut à droite, sur la zone laissée vide par
+          l'agencement (Économie/Logistique n'occupent que les premiers paliers). */}
+      <div className={cn("relative flex flex-col gap-4", fullscreen && "fixed inset-0 z-50 bg-space-950/95 p-4 backdrop-blur")}>
         <TechTree
+          // Remonté à chaque bascule pour recadrer l'arbre (fitView) sur la nouvelle taille.
+          key={fullscreen ? "full" : "inline"}
           levels={levels}
           selectedId={selectedId}
           activeIds={new Set(queues.activeResearches.map((r) => r.id))}
           onSelect={setSelectedId}
+          fullscreen={fullscreen}
+          onToggleFullscreen={() => setFullscreen((v) => !v)}
         />
 
-        <Card className="h-fit p-4">
+        <Card
+          className={cn(
+            "h-fit p-4 lg:!absolute lg:right-4 lg:top-4 lg:z-10 lg:w-[340px] lg:bg-space-800/90 lg:backdrop-blur",
+            fullscreen && "max-h-[40vh] shrink-0 overflow-auto lg:right-8 lg:top-8 lg:max-h-[calc(100vh-4rem)]",
+          )}
+        >
           <h2 className="font-display text-base text-white">{selected.nom}</h2>
           <p className="mt-1 text-sm text-slate-400">{selected.desc}</p>
 

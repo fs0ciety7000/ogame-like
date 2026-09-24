@@ -4,6 +4,7 @@ import {
   BackgroundVariant,
   Controls,
   Handle,
+  Panel,
   Position,
   ReactFlow,
   type Edge,
@@ -20,6 +21,8 @@ import {
   FlaskConical,
   Hourglass,
   Lock,
+  Maximize2,
+  Minimize2,
   Microscope,
   Navigation,
   Orbit,
@@ -182,11 +185,15 @@ export function TechTree({
   selectedId,
   activeIds,
   onSelect,
+  fullscreen = false,
+  onToggleFullscreen,
 }: {
   levels: Record<string, number>;
   selectedId: string;
   activeIds: Set<string>;
   onSelect: (id: string) => void;
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const focusId = hoveredId ?? selectedId;
@@ -273,8 +280,13 @@ export function TechTree({
   }, [focusId, selectedId, levels, activeKey]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="glass-panel tech-flow h-[520px] overflow-hidden rounded-2xl">
+    <div className={cn("flex flex-col gap-2", fullscreen && "min-h-0 flex-1")}>
+      <div
+        className={cn(
+          "glass-panel tech-flow overflow-hidden rounded-2xl",
+          fullscreen ? "min-h-0 flex-1" : "h-[min(75vh,760px)] min-h-[520px]",
+        )}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -299,6 +311,18 @@ export function TechTree({
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(75,232,255,0.12)" bgColor="transparent" />
           <Controls showInteractive={false} position="bottom-left" />
+          {onToggleFullscreen && (
+            <Panel position="top-left">
+              <button
+                type="button"
+                onClick={onToggleFullscreen}
+                className="flex items-center gap-1.5 rounded-lg border border-cyan-glow/20 bg-space-700/90 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:border-cyan-glow/50 hover:text-cyan-glow"
+              >
+                {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                {fullscreen ? "Quitter le plein écran" : "Plein écran"}
+              </button>
+            </Panel>
+          )}
         </ReactFlow>
       </div>
 
