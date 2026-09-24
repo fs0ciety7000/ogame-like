@@ -65,7 +65,7 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),19rem))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
         {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
           // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
@@ -92,21 +92,23 @@ export function BuildingsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="relative aspect-square bg-space-800">
-                  <img
-                    src={buildingImage(building, level)}
-                    alt={building.name}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.opacity = "0";
-                    }}
-                  />
-                  {isLocked && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <Lock className="h-8 w-8 text-slate-400" />
-                    </div>
-                  )}
-                  {activeUpgrade && <ConstructionOverlay />}
+                <div className="flex justify-center pt-3">
+                  <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
+                    <img
+                      src={buildingImage(building, level)}
+                      alt={building.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.opacity = "0";
+                      }}
+                    />
+                    {isLocked && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <Lock className="h-8 w-8 text-slate-400" />
+                      </div>
+                    )}
+                    {activeUpgrade && <ConstructionOverlay />}
+                  </div>
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">
