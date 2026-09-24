@@ -17,7 +17,6 @@ import {
   buildingImage,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
-  LOCKABLE_BUILDINGS,
   productionPerSecond,
   PRODUCTION_RESOURCE_BY_BUILDING,
 } from "@/game/buildings";
@@ -66,10 +65,13 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
-          const isLocked = LOCKABLE_BUILDINGS.includes(building.id) ? !state.unlocked : false;
+          // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
+          // bâtiment non débloqué est verrouillé, y compris l'Atelier de
+          // réparation et les hangars (débloqués via le Labo).
+          const isLocked = !state.unlocked;
           const unlockInfo = BUILDING_UNLOCK_COST[building.id];
           const activeUpgrade = queues.buildingUpgrades[building.id];
           const level = state.level;
@@ -90,7 +92,7 @@ export function BuildingsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="relative aspect-video bg-space-800">
+                <div className="relative h-16 bg-space-800">
                   <img
                     src={buildingImage(building, level)}
                     alt={building.name}
@@ -101,13 +103,13 @@ export function BuildingsPage() {
                   />
                   {isLocked && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <Lock className="h-8 w-8 text-slate-400" />
+                      <Lock className="h-6 w-6 text-slate-400" />
                     </div>
                   )}
                   {activeUpgrade && <ConstructionOverlay />}
                 </div>
 
-                <div className="flex flex-1 flex-col gap-2 p-4">
+                <div className="flex flex-1 flex-col gap-2 p-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-display text-sm text-slate-100">{building.name}</h3>
                     <Tooltip>
