@@ -299,9 +299,8 @@ export function TechTree({
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
-          zoomOnScroll={false}
+          zoomOnScroll
           panOnScroll={false}
-          preventScrolling={false}
           zoomOnDoubleClick={false}
           proOptions={{ hideAttribution: true }}
           onNodeClick={(_, node) => node.type === "tech" && onSelect(node.id)}

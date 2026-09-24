@@ -23,11 +23,11 @@ export const TECH_GRID: Record<string, { col: number; row: number }> = {
   tech9: { col: 1, row: 1 },
   tech11: { col: 3, row: 1 },
   // Défense
-  tech2: { col: 1, row: 2 },
+  tech14: { col: 1, row: 2 },
   tech8: { col: 1, row: 3 },
-  tech14: { col: 2, row: 2 },
-  tech12: { col: 2, row: 3 },
-  tech17: { col: 3, row: 2 },
+  tech2: { col: 2, row: 2 },
+  tech17: { col: 2, row: 3 },
+  tech12: { col: 3, row: 2 },
   // Armement
   tech5: { col: 1, row: 4 },
   tech10: { col: 1, row: 5 },
