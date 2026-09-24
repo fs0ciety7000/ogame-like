@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadialGauge } from "@/components/ui/radial-gauge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -12,6 +13,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH } from "@/game/units";
 import { findTech } from "@/game/technologies";
+import { unitStat } from "@/game/combat";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 
@@ -130,18 +132,50 @@ export function UnitsPage() {
                     <>
                       <p className="text-xs text-slate-400">{unit.description}</p>
                       <div className="flex flex-wrap gap-1.5 tabular-mono text-[11px]">
-                        <span className="rounded bg-space-800 px-1.5 py-0.5 text-danger-glow">
-                          ATK {unit.stats.attaque + (data.level - 1) * 5}
-                        </span>
-                        <span className="rounded bg-space-800 px-1.5 py-0.5 text-cyan-glow">
-                          DEF {unit.stats.defense + (data.level - 1) * 5}
-                        </span>
-                        <span className="rounded bg-space-800 px-1.5 py-0.5 text-slate-300">
-                          VIT {unit.stats.vitesse * data.level}
-                        </span>
-                        <span className="rounded bg-space-800 px-1.5 py-0.5 text-slate-300">
-                          CAP {unit.stats.cargo * data.level}
-                        </span>
+                        {(() => {
+                          const attackTechBonus = (player.techLevels.tech5 ?? 0) * 10;
+                          const defenseTechBonus = (player.techLevels.tech2 ?? 0) * 10;
+                          return (
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help rounded bg-space-800 px-1.5 py-0.5 text-danger-glow">
+                                    ATK {Math.round(unitStat(player.units, player.techLevels, unit.id, "attack"))}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Base {unit.stats.attaque} + {(data.level - 1) * 5} (niveau) {attackTechBonus > 0 && `× ${attackTechBonus}% (tech Puissance d'attaque)`}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help rounded bg-space-800 px-1.5 py-0.5 text-cyan-glow">
+                                    DEF {Math.round(unitStat(player.units, player.techLevels, unit.id, "defense"))}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Base {unit.stats.defense} + {(data.level - 1) * 5} (niveau) {defenseTechBonus > 0 && `× ${defenseTechBonus}% (tech Blindage avancé)`}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help rounded bg-space-800 px-1.5 py-0.5 text-slate-300">
+                                    VIT {unit.stats.vitesse * data.level}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>Vitesse de base {unit.stats.vitesse} × niveau {data.level}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help rounded bg-space-800 px-1.5 py-0.5 text-slate-300">
+                                    CAP {unit.stats.cargo * data.level}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>Capacité de cargaison de base {unit.stats.cargo} × niveau {data.level}</TooltipContent>
+                              </Tooltip>
+                            </>
+                          );
+                        })()}
                       </div>
   
                       <p className="text-xs text-slate-400">

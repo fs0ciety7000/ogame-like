@@ -24,6 +24,8 @@
   --animate-shimmer: shimmer 2.5s linear infinite;
   --animate-drift: drift 22s ease-in-out infinite;
   --animate-pulse-alert: pulse-alert 1.8s ease-out infinite;
+  --animate-spin-slow: spin 46s linear infinite;
+  --animate-orbit: spin 9s linear infinite;
 
   @keyframes pulse-slow {
     0%, 100% { opacity: 1; }
@@ -45,6 +47,9 @@
   @keyframes drift {
     0%, 100% { transform: translate(0, 0) scale(1); }
     50% { transform: translate(3%, -4%) scale(1.08); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 }
 
@@ -165,6 +170,16 @@ body {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
+}
+
+/* Même trame que .schematic-grid, mais scopée à son conteneur (reste dans
+   le flux normal, pas de position:fixed) — pour une carte comme la vue
+   galactique, dont la position:relative doit rester le repère des blips. */
+.tactical-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-cyan-glow) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-cyan-glow) 10%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 .starfield span {

@@ -16,10 +16,13 @@ import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
+import { useAllianceUnread } from "@/hooks/useAllianceUnread";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
+import { RankUpCelebration } from "@/components/game/RankUpCelebration";
+import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { toggleCommandPalette } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
@@ -77,6 +80,7 @@ export function AppShell() {
 
   useGameSync(user?.uid ?? null);
   useRankCelebration(player);
+  useAllianceUnread(user?.uid ?? null, player);
 
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
@@ -166,6 +170,8 @@ export function AppShell() {
 
       <CombatResultModal />
       <WarpOverlay />
+      <RankUpCelebration />
+      <AwaySummaryModal />
       <CommandPalette />
     </div>
   );

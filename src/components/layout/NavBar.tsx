@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Users, Swords, Flag, UserCircle } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 
 interface NavItem {
   to: string;
@@ -24,6 +25,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Opérations",
     items: [
       { to: "/game/missions", label: "Missions", icon: MapPin },
+      { to: "/game/galaxie", label: "Galaxie", icon: Orbit },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/combats", label: "Combats", icon: Swords },
       { to: "/game/alliance", label: "Alliance", icon: Flag },
@@ -39,6 +41,9 @@ export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 const ALL_ITEMS = ALL_NAV_ITEMS;
 
 function NavItemLink({ item }: { item: NavItem }) {
+  const allianceUnread = useAllianceUnreadStore((s) => s.count);
+  const badgeCount = item.to === "/game/alliance" ? allianceUnread : 0;
+
   return (
     <NavLink
       to={item.to}
@@ -52,7 +57,14 @@ function NavItemLink({ item }: { item: NavItem }) {
         )
       }
     >
-      <item.icon className="h-4 w-4 md:h-4 md:w-4" />
+      <span className="relative">
+        <item.icon className="h-4 w-4 md:h-4 md:w-4" />
+        {badgeCount > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-danger-glow px-1 text-[9px] font-bold text-space-950">
+            {badgeCount > 9 ? "9+" : badgeCount}
+          </span>
+        )}
+      </span>
       <span>{item.label}</span>
     </NavLink>
   );
