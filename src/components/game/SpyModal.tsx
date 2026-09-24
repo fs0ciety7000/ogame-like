@@ -5,7 +5,7 @@ import { createSpyReport, fetchPlayerSnapshot } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { getRankLabel } from "@/game/ranks";
 import { rollSpyDetection } from "@/game/espionage";
-import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
 import { formatNumber } from "@/lib/utils";
@@ -20,7 +20,7 @@ function powerOf(p: PlayerState) {
     (sum, id) => sum + unitStat(p.units, p.techLevels, id, "attack") * (p.units[id]?.count ?? 0),
     0,
   );
-  const buildingLevels = BUILDINGS.reduce((sum, b) => sum + (p.buildings[b.id]?.level ?? 0), 0);
+  const buildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(p.buildings, b.id), 0);
   return { attack, defense, buildingLevels };
 }
 
@@ -102,8 +102,7 @@ export function SpyModal({ uid, onClose }: { uid: string | null; onClose: () => 
                   <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Bâtiments</h4>
                   <ul className="space-y-1 text-sm text-slate-300">
                     {BUILDINGS.map((b) => {
-                      const state = data.buildings[b.id];
-                      const level = LOCKABLE_BUILDINGS.includes(b.id) && !state?.unlocked ? 0 : state?.level ?? 0;
+                      const level = effectiveBuildingLevel(data.buildings, b.id);
                       return (
                         <li key={b.id} className="flex justify-between">
                           <span>{b.name}</span>

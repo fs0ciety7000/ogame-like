@@ -77,7 +77,20 @@ export async function ensurePlayerDoc(uid: string, pseudo: string) {
  *  connaît pas le pseudo tapé et retombe sur un nom générique le temps que
  *  ce correctif s'exécute). Sans effet de bord sur le reste du document. */
 export async function setPlayerPseudo(uid: string, pseudo: string) {
-  await setDoc(playerRef(uid), { pseudo }, { merge: true });
+  // updateDoc plutôt que setDoc({ merge }) : le document vient d'être créé
+  // par une transaction, que le cache local ne connaît pas encore. Un merge
+  // y serait appliqué localement sur un document "absent" et produirait un
+  // instantané { pseudo } seul (units/buildings… undefined → plantage).
+  await updateDoc(playerRef(uid), { pseudo });
+}
+
+/** Un instantané sans les champs de base (écriture partielle compensée
+ *  localement avant la création complète du profil) est traité comme
+ *  "pas encore chargé" plutôt que transmis tel quel à l'interface. */
+function playerFromSnapshotData(data: Record<string, unknown> | undefined): PlayerState | null {
+  if (!data || !data.resources || !data.buildings) return null;
+  const player = data as unknown as PlayerState;
+  return { ...player, units: player.units ?? {}, techLevels: player.techLevels ?? {} };
 }
 
 /* =====================================================
@@ -108,7 +121,7 @@ export function subscribePlayer(
   onMeta?: (fromCache: boolean) => void,
 ): Unsubscribe {
   return onSnapshot(playerRef(uid), { includeMetadataChanges: true }, (snap) => {
-    cb(snap.exists() ? (snap.data() as PlayerState) : null);
+    cb(snap.exists() ? playerFromSnapshotData(snap.data()) : null);
     onMeta?.(snap.metadata.fromCache);
   });
 }
@@ -153,7 +166,7 @@ export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void):
 
 export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
   const snap = await getDoc(playerRef(uid));
-  return snap.exists() ? (snap.data() as PlayerState) : null;
+  return snap.exists() ? playerFromSnapshotData(snap.data()) : null;
 }
 
 /* =====================================================

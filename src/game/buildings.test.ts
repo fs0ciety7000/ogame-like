@@ -3,6 +3,7 @@ import {
   applyBuildingDiscount,
   BUILDINGS,
   defaultBuildings,
+  effectiveBuildingLevel,
   findBuilding,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
@@ -89,6 +90,16 @@ describe("applyBuildingDiscount", () => {
   it("never goes negative", () => {
     const discounted = applyBuildingDiscount({ scrap: 10 }, 5);
     expect(discounted.scrap).toBe(0);
+  });
+});
+
+describe("effectiveBuildingLevel", () => {
+  it("counts locked buildings as level 0", () => {
+    const buildings = defaultBuildings();
+    const total = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(buildings, b.id), 0);
+    expect(total).toBe(1); // seul l'extracteur de ferraille est débloqué
+    buildings.atelier_reparation = { level: 3, unlocked: true };
+    expect(effectiveBuildingLevel(buildings, "atelier_reparation")).toBe(3);
   });
 });
 

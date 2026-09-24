@@ -226,6 +226,13 @@ export function getUnitCapacity(buildings: Buildings, category: "attack" | "defe
   return level * 2000;
 }
 
+/** Niveau effectif d'un bâtiment : 0 tant qu'il n'est pas débloqué (tous
+ *  démarrent au niveau 1 dans defaultBuildings, y compris les verrouillés). */
+export function effectiveBuildingLevel(buildings: Buildings, id: BuildingId): number {
+  const state = buildings[id];
+  return state?.unlocked ? state.level ?? 0 : 0;
+}
+
 export function defaultBuildings(): Buildings {
   return {
     extracteur_ferraille: { level: 1, unlocked: true },
