@@ -65,7 +65,7 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),19rem))] gap-4">
         {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
           // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
@@ -92,7 +92,7 @@ export function BuildingsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="relative h-16 bg-space-800">
+                <div className="relative aspect-square bg-space-800">
                   <img
                     src={buildingImage(building, level)}
                     alt={building.name}
@@ -103,7 +103,7 @@ export function BuildingsPage() {
                   />
                   {isLocked && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <Lock className="h-6 w-6 text-slate-400" />
+                      <Lock className="h-8 w-8 text-slate-400" />
                     </div>
                   )}
                   {activeUpgrade && <ConstructionOverlay />}
