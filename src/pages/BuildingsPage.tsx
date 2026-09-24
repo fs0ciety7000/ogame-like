@@ -92,7 +92,7 @@ export function BuildingsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="relative h-28 bg-space-800">
+                <div className="relative h-16 bg-space-800">
                   <img
                     src={buildingImage(building, level)}
                     alt={building.name}
