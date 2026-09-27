@@ -30,11 +30,11 @@ export function UnitsPage() {
   const qty = (id: string) => quantities[id] ?? 1;
   const setQty = (id: string, v: number) => setQuantities((q) => ({ ...q, [id]: Math.max(1, v) }));
 
-  const built = (category: "attack" | "defense") =>
-    Object.entries(player.units).reduce((sum, [id, u]) => {
-      const def = findUnit(id);
-      return def?.category === category ? sum + u.count : sum;
-    }, 0);
+const built = (category: "attack" | "defense") =>
+  Object.entries(player.units).reduce((sum, [id, u]) => {
+    const def = findUnit(id);
+    return def?.category === category ? sum + u.count * def.hangarSpace : sum;
+  }, 0);
 
   const capacity = (category: "attack" | "defense") => getUnitCapacity(player.buildings, category);
 
