@@ -352,13 +352,21 @@ export async function enqueueUnitBuild(uid: string, unitId: string, qty: number)
 
     const category = unit.category;
     const capacity = getUnitCapacity(player.buildings, category);
+
     const built = Object.entries(player.units).reduce((sum, [id, u]) => {
       const def = findUnit(id);
-      return def?.category === category ? sum + u.count : sum;
+      if (def?.category !== category) return sum;
+      return sum + u.count * def.hangarSpace;
     }, 0);
-    const reserved = queues.unitQueues[category].length;
 
-    if (built + reserved + qty > capacity) {
+    const reserved = queues.unitQueues[category].reduce((sum, item) => {
+      const def = findUnit(item.unitId);
+      return sum + (def?.hangarSpace ?? 1);
+    }, 0);
+
+    const requested = qty * unit.hangarSpace;
+
+    if (built + reserved + requested > capacity) {
       throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
     }
 

@@ -17,6 +17,7 @@ export interface UnitDef {
   cost: { scrap: number; energy: number };
   stats: UnitStats;
   category: UnitCategory;
+  hangarSpace: number;
 }
 
 export const UNITS: UnitDef[] = [
@@ -29,6 +30,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 500, energy: 200 },
     stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
     category: "attack",
+    hangarSpace: 1,
   },
   {
     id: "fregate",
@@ -39,6 +41,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1000, energy: 500 },
     stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
     category: "attack",
+    hangarSpace: 1,
   },
   {
     id: "cargo",
@@ -49,6 +52,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1200, energy: 300 },
     stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
     category: "attack",
+    hangarSpace: 1,
   },
   {
     id: "sentinelle",
@@ -59,6 +63,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 800, energy: 400 },
     stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
     category: "attack",
+    hangarSpace: 1,
   },
   {
     id: "chasseur",
@@ -69,6 +74,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1500, energy: 800 },
     stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
     category: "attack",
+    hangarSpace: 20,
   },
   {
     id: "etoile_noire",
@@ -79,6 +85,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 50000, energy: 30000 },
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
     category: "attack",
+    hangarSpace: 200,
   },
   {
     id: "roquette",
@@ -89,6 +96,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 200, energy: 100 },
     stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
     category: "defense",
+    hangarSpace: 1,
   },
   {
     id: "canon_impulsion",
@@ -99,6 +107,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2000, energy: 1200 },
     stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
     category: "defense",
+    hangarSpace: 1,
   },
   {
     id: "canon_plasma",
@@ -109,6 +118,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2500, energy: 1500 },
     stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
     category: "defense",
+    hangarSpace: 1,
   },
   {
     id: "batterie_aa",
@@ -119,6 +129,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1800, energy: 900 },
     stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
     category: "defense",
+    hangarSpace: 1,
   },
   {
     id: "intercepteur",
@@ -129,6 +140,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2000, energy: 1200 },
     stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
     category: "defense",
+    hangarSpace: 20,
   },
 ];
 
