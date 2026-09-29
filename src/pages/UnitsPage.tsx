@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { getUnitCapacity } from "@/game/buildings";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH } from "@/game/units";
 import { findTech } from "@/game/technologies";
 import { unitStat } from "@/game/combat";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 
 export function UnitsPage() {
@@ -30,11 +31,15 @@ export function UnitsPage() {
   const qty = (id: string) => quantities[id] ?? 1;
   const setQty = (id: string, v: number) => setQuantities((q) => ({ ...q, [id]: Math.max(1, v) }));
 
-const built = (category: "attack" | "defense") =>
-  Object.entries(player.units).reduce((sum, [id, u]) => {
-    const def = findUnit(id);
-    return def?.category === category ? sum + u.count * def.hangarSpace : sum;
-  }, 0);
+  // Places occupées dans le hangar : unités construites + unités en file
+  // (déjà réservées, même calcul que enqueueUnitBuild côté service).
+  const built = (category: "attack" | "defense") =>
+    Object.entries(player.units).reduce((sum, [id, u]) => {
+      const def = findUnit(id);
+      return def?.category === category ? sum + u.count * def.hangarSpace : sum;
+    }, 0);
+  const reserved = (category: "attack" | "defense") =>
+    queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
 
   const capacity = (category: "attack" | "defense") => getUnitCapacity(player.buildings, category);
 
@@ -72,8 +77,9 @@ const built = (category: "attack" | "defense") =>
       <div className="grid gap-3 sm:grid-cols-2">
         {(["attack", "defense"] as const).map((cat) => {
           const b = built(cat);
+          const r = reserved(cat);
           const cap = capacity(cat);
-          const percent = cap > 0 ? (b / cap) * 100 : 0;
+          const percent = cap > 0 ? ((b + r) / cap) * 100 : 0;
           return (
             <Card key={cat} className="flex items-center gap-4 p-4">
               <RadialGauge value={percent} size={64} strokeWidth={5} color={cat === "attack" ? "var(--color-danger-glow)" : "var(--color-cyan-glow)"}>
@@ -82,7 +88,8 @@ const built = (category: "attack" | "defense") =>
               <div>
                 <p className="text-sm text-slate-300">Capacité {cat === "attack" ? "d'attaque" : "de défense"}</p>
                 <p className="tabular-mono text-xs text-slate-500">
-                  {formatNumber(b)} / {formatNumber(cap)}
+                  {formatNumber(b + r)} / {formatNumber(cap)} places
+                  {r > 0 && <span className="text-mint-glow"> (dont {formatNumber(r)} en file)</span>}
                 </p>
               </div>
             </Card>
@@ -97,6 +104,9 @@ const built = (category: "attack" | "defense") =>
           const buildTime = getUnitBuildTime(unit);
           const queue = queues.unitQueues[unit.category];
           const isBuildingThis = queue.length > 0 && queue[0].unitId === unit.id;
+          const hangarLabel = unit.category === "attack" ? "d'attaque" : "de défense";
+          const freeSpace = Math.max(0, capacity(unit.category) - built(unit.category) - reserved(unit.category));
+          const neededSpace = qty(unit.id) * unit.hangarSpace;
 
           let queueInfo: { remaining: number; count: number } | null = null;
           if (isBuildingThis) {
@@ -130,6 +140,26 @@ const built = (category: "attack" | "defense") =>
                         (e.target as HTMLImageElement).style.opacity = "0";
                       }}
                     />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            "absolute right-1.5 top-1.5 flex cursor-help items-center gap-1 rounded-md border bg-space-950/80 px-1.5 py-0.5 text-[11px] font-semibold backdrop-blur tabular-mono",
+                            unit.hangarSpace >= 100
+                              ? "border-danger-glow/50 text-danger-glow"
+                              : unit.hangarSpace > 1
+                                ? "border-gold-glow/50 text-gold-glow"
+                                : "border-white/15 text-slate-300",
+                          )}
+                        >
+                          <Boxes className="h-3 w-3" />
+                          {unit.hangarSpace}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Occupe {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""} dans le hangar {hangarLabel}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -185,6 +215,17 @@ const built = (category: "attack" | "defense") =>
                                 </TooltipTrigger>
                                 <TooltipContent>Capacité de cargaison de base {unit.stats.cargo} × niveau {data.level}</TooltipContent>
                               </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex cursor-help items-center gap-1 rounded bg-space-800 px-1.5 py-0.5 text-gold-glow">
+                                    <Boxes className="h-3 w-3" /> PLACE {unit.hangarSpace}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""} par unité dans le hangar {hangarLabel}
+                                  {data.count > 0 && ` — tes ${data.count} unités en occupent ${formatNumber(data.count * unit.hangarSpace)}`}
+                                </TooltipContent>
+                              </Tooltip>
                             </>
                           );
                         })()}
@@ -204,7 +245,17 @@ const built = (category: "attack" | "defense") =>
                         </p>
                       )}
 
-                      <div className="mt-auto flex items-center gap-2 pt-2">
+                      <p
+                        className={cn(
+                          "mt-auto flex items-center gap-1 pt-2 text-[11px] tabular-mono",
+                          neededSpace > freeSpace ? "text-danger-glow" : "text-slate-500",
+                        )}
+                      >
+                        <Boxes className="h-3 w-3 shrink-0" />
+                        {formatNumber(neededSpace)} pl. requise{neededSpace > 1 ? "s" : ""} / {formatNumber(freeSpace)} libre
+                        {freeSpace > 1 ? "s" : ""}
+                      </p>
+                      <div className="flex items-center gap-2">
                         <Input
                           type="number"
                           min={1}

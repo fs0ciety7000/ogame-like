@@ -33,10 +33,11 @@ export default function App() {
             element={
               <GuestRoute>
                 <LoginPage />
-                <ResetPasswordPage />
               </GuestRoute>
             }
           />
+          {/* Lien de l'email « mot de passe oublié » : accessible connecté ou non. */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/game" element={<AppShell />}>
