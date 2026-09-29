@@ -67,6 +67,35 @@ main : admin PocketBase → Settings → Import collections). Pour le mot de
 passe oublié, configure le SMTP dans Settings → Mail settings et l'URL de
 l'application dans Settings → Application.
 
+## Hooks serveur (PocketBase)
+
+Les attaques sont arbitrées par le serveur : protections (délai de 2 h par
+cible, bouclier de 1 h après une défaite, protection débutant de 72 h, écart
+d'XP), combat et XP sont calculés par `pocketbase/pb_hooks/cosmic.pb.js`,
+jamais par le navigateur de l'attaquant.
+
+Le dossier `pocketbase/pb_hooks/` doit se retrouver dans le dossier
+`pb_hooks` du serveur PocketBase (à côté de `pb_data`) :
+
+- **Coolify** : dans le service PocketBase → *Storages*, ajoute un volume
+  monté sur `/pb/pb_hooks` (ou le chemin `pb_hooks` de ton image, voir sa
+  doc), puis copies-y `cosmic.pb.js` et `cosmic_game.js` (onglet *Terminal*
+  du conteneur, ou *File mount* avec le contenu des deux fichiers).
+  Redémarre le service.
+- Vérification : `curl -X POST https://ton-pocketbase/api/cosmic/attack`
+  doit répondre **401** (route présente, connexion requise) et non 404.
+
+`cosmic_game.js` est généré depuis `src/game` : après toute modification des
+règles de jeu, lance `npm run build:hooks`, commite, et recopie le fichier
+sur le serveur (un test échoue si le fichier est périmé).
+
+Remise à zéro de l'XP de tous les joueurs (ressources et bâtiments conservés) :
+
+```bash
+PB_URL=… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… node scripts/reset-xp.mjs --dry-run
+PB_URL=… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… node scripts/reset-xp.mjs
+```
+
 ## Migrer les données depuis Firebase
 
 1. Console Firebase → Paramètres du projet → Comptes de service →
@@ -106,8 +135,9 @@ src/
   hooks/       synchro temps réel, ressources affichées en direct, tickers
   components/  UI (primitives + composants de jeu)
   pages/       une page par écran du jeu
-pocketbase/    schéma (pb_schema.json) + script d'installation
-scripts/       migration Firebase -> PocketBase
+pocketbase/    schéma (pb_schema.json), script d'installation, hooks serveur (pb_hooks/)
+scripts/       migration Firebase -> PocketBase, remise à zéro de l'XP
+src/server/    point d'entrée de la logique compilée pour les hooks
 legacy/        ancien prototype HTML/CSS/JS (référence, non utilisé)
 ```
 

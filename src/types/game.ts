@@ -88,6 +88,10 @@ export interface PlayerState {
   allianceId?: string | null;
   allianceLastReadMs?: number;
   createdAtMs?: number;
+  /** Dernière défaite en défense (ms) — écrit par le serveur, sert au bouclier. */
+  lastDefeatAtMs?: number;
+  /** Dernière attaque lancée (ms) — écrit par le serveur ; lève la protection débutant. */
+  lastAttackAtMs?: number;
 }
 
 export interface QueuesState {
@@ -118,6 +122,10 @@ export interface BattleReport {
   defenderRecovered: Record<string, number>;
   loot: Partial<Record<RareResourceId, number>> | null;
   defenderProcessed: boolean;
+  /** XP gagnée/perdue par chaque camp, calculée par le serveur (absente des
+   *  anciens rapports, créés avant le combat côté serveur). */
+  attackerXpDelta?: number;
+  defenderXpDelta?: number;
 }
 
 export interface SpyReport {

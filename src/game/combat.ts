@@ -103,6 +103,12 @@ export function resolveCombat(params: {
     defenderLossPct = 0.3;
   }
 
+  // Chaque camp ne peut pas détruire plus que sa propre puissance : sans ce
+  // plafond, une attaque à 1 drone faisait perdre 5 % de TOUTE la défense
+  // adverse (pertes minimales du vainqueur) sans rien coûter à l'attaquant.
+  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
+  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
+
   const attackerLosses: Record<string, number> = {};
   const attackerRecovered: Record<string, number> = {};
   for (const unitId in fleet) {

@@ -8,14 +8,14 @@ import {
   findBuilding,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
-  getRepairPercent,
   getUnitCapacity,
 } from "@/game/buildings";
 import { canAffordAll, getTradeRate } from "@/game/resources";
 import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
-import { resolveCombat } from "@/game/combat";
+import { GAME_FIELDS } from "@/game/playerFields";
+import type { CombatResult } from "@/game/combat";
 import type {
   BattleReport,
   BuildingId,
@@ -39,28 +39,6 @@ export class GameActionError extends Error {}
 ===================================================== */
 
 type PbRecord = Record<string, unknown> & { id: string };
-
-/** Champs que le moteur de jeu (flushState + actions) peut modifier. Le
- *  pseudo et l'alliance sont exclus : ils sont écrits à part (connexion,
- *  écran Alliance) et une action de jeu lue juste avant les écraserait
- *  sinon avec une valeur périmée — sans transactions côté client,
- *  PocketBase ne protège pas de ce genre de conflit. */
-const GAME_FIELDS = [
-  "resources",
-  "buildings",
-  "units",
-  "techLevels",
-  "bonuses",
-  "xp",
-  "seasonId",
-  "seasonXp",
-  "victories",
-  "defeats",
-  "playtimeSeconds",
-  "resourcesUpdatedAtMs",
-  "resourceHistory",
-  "unlockedAchievements",
-] as const;
 
 function playerFromRecord(record: PbRecord | null | undefined): PlayerState | null {
   if (!record || !record.resources || !record.buildings) return null;
@@ -270,6 +248,9 @@ export interface LeaderboardEntry {
   xp: number;
   seasonId: string | null;
   seasonXp: number;
+  createdAtMs?: number;
+  lastDefeatAtMs?: number;
+  lastAttackAtMs?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -279,10 +260,13 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     xp: (data.xp as number) || 0,
     seasonId: (data.seasonId as string) || null,
     seasonXp: (data.seasonXp as number) || 0,
+    createdAtMs: (data.createdAtMs as number) || undefined,
+    lastDefeatAtMs: (data.lastDefeatAtMs as number) || undefined,
+    lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs";
 
 /** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
  *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à
@@ -730,83 +714,41 @@ export interface AttackParams {
   fleet: Record<string, number>;
 }
 
-export function initiateAttack(params: AttackParams) {
-  const { attackerUid, attackerPseudo, targetUid, targetPseudo, fleet } = params;
+/** L'attaque est arbitrée par le serveur (pocketbase/pb_hooks/cosmic.pb.js) :
+ *  protections, combat, XP et écriture du rapport dans une transaction. */
+export function initiateAttack(params: AttackParams): Promise<CombatResult & { defenderPseudo: string; attackerXpDelta: number }> {
+  const { attackerUid, targetUid, targetPseudo, fleet } = params;
   if (attackerUid === targetUid) return Promise.reject(new GameActionError("Tu ne peux pas t'attaquer toi-même !"));
 
   return serialized(async () => {
-    const [{ flushed }, defenderRecord] = await Promise.all([
-      loadFlushed(attackerUid),
-      pb
-        .collection("players")
-        .getOne<PbRecord>(targetUid)
-        .catch(() => null),
-    ]);
-    const defender = playerFromRecord(defenderRecord);
-    if (!defender) throw new GameActionError("Ce joueur est introuvable.");
-    const now = Date.now();
-    const attacker = flushed.player;
-
-    for (const [unitId, qty] of Object.entries(fleet)) {
-      if ((attacker.units[unitId]?.count ?? 0) < qty) {
-        throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
+    try {
+      const res = await pb.send<BattleReport & { combat: CombatResult }>("/api/cosmic/attack", {
+        method: "POST",
+        body: { targetUid, fleet },
+      });
+      return { ...res.combat, defenderPseudo: targetPseudo, attackerXpDelta: res.attackerXpDelta ?? 0 };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 404 && !(err as { response?: { message?: string } })?.response?.message?.includes("joueur")) {
+        throw new GameActionError("Attaques indisponibles : le serveur n'a pas encore les hooks du jeu (voir README).");
       }
+      const message = (err as { response?: { message?: string } })?.response?.message;
+      if (status === 400 || status === 404) throw new GameActionError(message || "Attaque impossible.");
+      throw err;
     }
-
-    const combat = resolveCombat({
-      attackerUnits: attacker.units,
-      attackerTechLevels: attacker.techLevels,
-      attackerRepairPct: getRepairPercent(attacker.buildings),
-      fleet,
-      defenderUnits: defender.units,
-      defenderTechLevels: defender.techLevels,
-      defenderRepairPct: getRepairPercent(defender.buildings),
-      defenderResources: defender.resources,
-    });
-
-    for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
-      if (attacker.units[unitId]) {
-        attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
-      }
-    }
-    if (combat.loot) {
-      for (const [res, amt] of Object.entries(combat.loot)) {
-        attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
-      }
-    }
-    if (combat.outcome === "attacker_win") {
-      attacker.victories += 1;
-      applyXpDelta(attacker, 40, now);
-    } else if (combat.outcome === "defender_win") {
-      attacker.defeats += 1;
-      applyXpDelta(attacker, -20, now);
-    }
-
-    await savePlayerState(attackerUid, attacker, flushed.queues);
-    await createNotifications(attackerUid, flushed.notifications);
-
-    const report: Omit<BattleReport, "id"> = {
-      attackerUid,
-      attackerPseudo,
-      defenderUid: targetUid,
-      defenderPseudo: targetPseudo,
-      timestamp: now,
-      outcome: combat.outcome,
-      attackerPower: combat.attackerPower,
-      defenderPower: combat.defenderPower,
-      attackerLossPercent: combat.attackerLossPercent,
-      defenderLossPercent: combat.defenderLossPercent,
-      attackerLosses: combat.attackerLosses,
-      attackerRecovered: combat.attackerRecovered,
-      defenderLosses: combat.defenderLosses,
-      defenderRecovered: combat.defenderRecovered,
-      loot: combat.loot,
-      defenderProcessed: false,
-    };
-    await pb.collection("battle_reports").create(report);
-
-    return { ...combat, defenderPseudo: targetPseudo };
   });
+}
+
+/** Mes attaques récentes (pour afficher le délai avant de pouvoir
+ *  réattaquer une même cible). */
+export async function fetchMyRecentAttacks(uid: string, sinceMs: number): Promise<Record<string, number>> {
+  const res = await pb.collection("battle_reports").getFullList<BattleReport>({
+    filter: pb.filter("attackerUid = {:uid} && timestamp > {:since}", { uid, since: sinceMs }),
+    fields: "defenderUid,timestamp",
+  });
+  const last: Record<string, number> = {};
+  for (const r of res) last[r.defenderUid] = Math.max(last[r.defenderUid] ?? 0, r.timestamp);
+  return last;
 }
 
 export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): () => void {
@@ -862,13 +804,10 @@ async function processBattleReportOnce(uid: string, reportId: string): Promise<B
     }
 
     const now = Date.now();
-    if (report.outcome === "defender_win") {
-      player.victories += 1;
-      applyXpDelta(player, 40, now);
-    } else if (report.outcome === "attacker_win") {
-      player.defeats += 1;
-      applyXpDelta(player, -20, now);
-    }
+    if (report.outcome === "defender_win") player.victories += 1;
+    else if (report.outcome === "attacker_win") player.defeats += 1;
+    // XP calculée et plafonnée par le serveur (voir src/game/pvp.ts).
+    applyXpDelta(player, report.defenderXpDelta ?? 0, now);
 
     for (const [res, amt] of Object.entries(report.loot ?? {})) {
       const key = res as ResourceId;
@@ -882,7 +821,7 @@ async function processBattleReportOnce(uid: string, reportId: string): Promise<B
         {
           kind: "combat-defender",
           title: outcomeLabel[report.outcome] ?? "Rapport de combat",
-          message: `Attaque de ${report.attackerPseudo}.`,
+          message: `Attaque de ${report.attackerPseudo}${report.defenderXpDelta ? ` (${report.defenderXpDelta > 0 ? "+" : ""}${report.defenderXpDelta} XP)` : ""}.`,
           createdAtMs: Date.now(),
           read: false,
         },

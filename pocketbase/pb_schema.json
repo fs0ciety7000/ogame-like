@@ -6,7 +6,7 @@
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
     "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
-    "updateRule": "id = @request.auth.id",
+    "updateRule": "id = @request.auth.id && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false",
     "deleteRule": "id = @request.auth.id",
     "fields": [
       {
@@ -119,6 +119,18 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "lastDefeatAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "lastAttackAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
@@ -222,7 +234,7 @@
     "type": "base",
     "listRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
     "viewRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
-    "createRule": "@request.auth.id != \"\" && @request.body.attackerUid = @request.auth.id && @request.body.defenderProcessed = false",
+    "createRule": null,
     "updateRule": "defenderUid = @request.auth.id && defenderProcessed = false && @request.body.defenderProcessed = true && @request.body.attackerUid:isset = false && @request.body.defenderUid:isset = false && @request.body.outcome:isset = false && @request.body.loot:isset = false && @request.body.attackerLosses:isset = false && @request.body.defenderLosses:isset = false",
     "deleteRule": null,
     "fields": [
@@ -325,6 +337,18 @@
         "name": "defenderProcessed",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "attackerXpDelta",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "defenderXpDelta",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
