@@ -24,7 +24,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "drone_recuperateur",
     name: "Drone récupérateur",
-    image: "/assets/units/drone_recuperateur.png",
+    image: "/assets/units/drone_recuperateur.webp",
     maxLevel: 10,
     description: "Petit drone autonome conçu pour récupérer des ressources dispersées.",
     cost: { scrap: 500, energy: 200 },
@@ -35,7 +35,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "fregate",
     name: "Frégate",
-    image: "/assets/units/fregate.png",
+    image: "/assets/units/fregate.webp",
     maxLevel: 10,
     description: "Vaisseau polyvalent, équilibré entre attaque et défense.",
     cost: { scrap: 1000, energy: 500 },
@@ -46,7 +46,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "cargo",
     name: "Cargo",
-    image: "/assets/units/cargo.png",
+    image: "/assets/units/cargo.webp",
     maxLevel: 10,
     description: "Transporteur massif conçu pour déplacer de grandes quantités de ressources.",
     cost: { scrap: 1200, energy: 300 },
@@ -57,7 +57,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "sentinelle",
     name: "Sentinelle",
-    image: "/assets/units/Sentinelle.png",
+    image: "/assets/units/sentinelle.webp",
     maxLevel: 10,
     description: "Unité offensive spécialisée dans la détection et la protection.",
     cost: { scrap: 800, energy: 400 },
@@ -68,7 +68,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "chasseur",
     name: "Chasseur",
-    image: "/assets/units/chasseur.png",
+    image: "/assets/units/chasseur.webp",
     maxLevel: 10,
     description: "Vaisseau rapide conçu pour les attaques éclairs.",
     cost: { scrap: 1500, energy: 800 },
@@ -79,7 +79,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "etoile_noire",
     name: "Étoile Noire",
-    image: "/assets/units/etoile_noire.png",
+    image: "/assets/units/etoile_noire.webp",
     maxLevel: 10,
     description: "Arme ultime. Capacité de destruction massive.",
     cost: { scrap: 50000, energy: 30000 },
@@ -90,7 +90,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "roquette",
     name: "Roquette",
-    image: "/assets/units/roquette.png",
+    image: "/assets/units/roquette.webp",
     maxLevel: 10,
     description: "Arme simple mais efficace pour saturer une zone.",
     cost: { scrap: 200, energy: 100 },
@@ -101,7 +101,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "canon_impulsion",
     name: "Canon à impulsion",
-    image: "/assets/units/canon_impulsion.png",
+    image: "/assets/units/canon_impulsion.webp",
     maxLevel: 10,
     description: "Canon énergétique puissant, idéal contre les cibles blindées.",
     cost: { scrap: 2000, energy: 1200 },
@@ -112,7 +112,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "canon_plasma",
     name: "Canon Plasma",
-    image: "/assets/units/canon_plasma.png",
+    image: "/assets/units/canon_plasma.webp",
     maxLevel: 10,
     description: "Arme lourde tirant des projectiles de plasma surchauffé.",
     cost: { scrap: 2500, energy: 1500 },
@@ -123,7 +123,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "batterie_aa",
     name: "Batterie Anti-Aérienne",
-    image: "/assets/units/batterie_aa.png",
+    image: "/assets/units/batterie_aa.webp",
     maxLevel: 10,
     description: "Défense spécialisée contre les unités rapides et aériennes.",
     cost: { scrap: 1800, energy: 900 },
@@ -134,7 +134,7 @@ export const UNITS: UnitDef[] = [
   {
     id: "intercepteur",
     name: "Intercepteur",
-    image: "/assets/units/intercepteur.png",
+    image: "/assets/units/intercepteur.webp",
     maxLevel: 10,
     description: "Vaisseau ultra-rapide conçu pour intercepter les cibles prioritaires.",
     cost: { scrap: 2000, energy: 1200 },

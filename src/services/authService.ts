@@ -1,12 +1,7 @@
-import { pb } from "@/lib/pocketbase";
 import { ClientResponseError } from "pocketbase";
+import { pb } from "@/lib/pocketbase";
 import { legacyPseudoEmail, sanitizePseudo } from "@/lib/utils";
-import { 
-  claimUsername, 
-  deletePlayerAccountData, 
-  ensurePlayerDoc, 
-  setPlayerPseudo 
-} from "@/services/playerService";
+import { deletePlayerAccountData, ensurePlayerDoc, setPlayerPseudo } from "@/services/playerService";
 
 export { sanitizePseudo };
 
@@ -19,7 +14,8 @@ export function validatePseudo(pseudo: string): string | null {
 }
 
 export function validatePassword(password: string): string | null {
-  if (password.length < 6) return "Le mot de passe doit contenir au moins 6 caractères.";
+  // Minimum imposé par PocketBase pour la collection users.
+  if (password.length < 8) return "Le mot de passe doit contenir au moins 8 caractères.";
   return null;
 }
 
@@ -28,17 +24,22 @@ export function validateEmail(email: string): string | null {
   return null;
 }
 
-/** 
- * PocketBase renvoie des erreurs HTTP via ClientResponseError.
- * On traduit ici les statuts ou les messages spécifiques.
- */
+/** Traduit une erreur PocketBase (statut HTTP + erreurs par champ) en
+ *  message lisible pour le joueur. */
 export function translateAuthError(err: unknown): string {
-  if (err instanceof ClientResponseError) {
-    if (err.status === 400) return "Identifiants incorrects ou données invalides.";
-    if (err.status === 403) return "Action non autorisée.";
-    if (err.status === 404) return "Utilisateur introuvable.";
-    if (err.status === 429) return "Trop de tentatives. Réessaie dans quelques minutes.";
-  }
+  if (!(err instanceof ClientResponseError)) return "Une erreur est survenue. Réessaie.";
+  if (err.status === 0) return "Serveur injoignable. Vérifie ta connexion.";
+  if (err.status === 429) return "Trop de tentatives. Réessaie dans quelques minutes.";
+
+  const fields = (err.response?.data ?? {}) as Record<string, { code?: string }>;
+  if (fields.email?.code === "validation_not_unique") return "Cet email est déjà utilisé.";
+  if (fields.username?.code === "validation_not_unique") return "Ce pseudo est déjà pris.";
+  if (fields.email) return "Adresse email invalide.";
+  if (fields.password) return "Mot de passe trop court (8 caractères minimum).";
+  if (fields.oldPassword) return "Mot de passe actuel incorrect.";
+
+  if (err.status === 400) return "Pseudo/email ou mot de passe incorrect.";
+  if (err.status === 403) return "Action non autorisée.";
   return "Une erreur est survenue. Réessaie.";
 }
 
@@ -47,101 +48,84 @@ export async function registerPlayer(rawPseudo: string, email: string, password:
   const pseudo = rawPseudo.trim();
   const cleanEmail = email.trim();
 
-  // 1. Création de l'utilisateur (PocketBase requiert passwordConfirm)
-  const user = await pb.collection("users").create({
+  await pb.collection("users").create({
     username: sanitized,
     name: pseudo,
     email: cleanEmail,
-    password: password,
+    emailVisibility: false,
+    password,
     passwordConfirm: password,
   });
+  const auth = await pb.collection("users").authWithPassword(cleanEmail, password);
 
-  // 2. Connexion automatique dans la foulée
-  const authData = await pb.collection("users").authWithPassword(cleanEmail, password);
-
-  // 3. Création des documents liés au jeu
-  await ensurePlayerDoc(authData.record.id, pseudo);
-  await setPlayerPseudo(authData.record.id, pseudo);
-  await claimUsername(authData.record.id, sanitized, cleanEmail);
-
-  return authData.record;
+  await ensurePlayerDoc(auth.record.id, pseudo);
+  // Rétablit le pseudo exact si useGameSync a créé le profil entre-temps
+  // avec son nom de repli.
+  await setPlayerPseudo(auth.record.id, pseudo);
+  return auth.record;
 }
 
-export async function loginPlayer(rawPseudo: string, password: string) {
-  const sanitized = sanitizePseudo(rawPseudo);
-  const pseudo = rawPseudo.trim();
+/** Connexion par pseudo ou par email. Les comptes créés avant l'ajout de
+ *  l'email de récupération ont un email fictif dérivé du pseudo : on le
+ *  tente en dernier recours. */
+export async function loginPlayer(identity: string, password: string) {
+  const trimmed = identity.trim();
+  const candidates = trimmed.includes("@")
+    ? [trimmed]
+    : [sanitizePseudo(trimmed), legacyPseudoEmail(sanitizePseudo(trimmed))];
 
-  try {
-    // PocketBase accepte indifféremment l'email ou l'username dans le premier paramètre.
-    // Plus besoin de la boucle sur les "candidates" !
-    const authData = await pb.collection("users").authWithPassword(sanitized, password);
-    
-    await ensurePlayerDoc(authData.record.id, pseudo);
-    await setPlayerPseudo(authData.record.id, pseudo);
-    
-    return authData.record;
-  } catch (err) {
-    // Fallback pour les très vieux comptes qui n'auraient pas de champ "username" valide dans PB
+  let lastError: unknown;
+  for (const candidate of candidates) {
     try {
-      const legacyEmail = legacyPseudoEmail(sanitized);
-      const authData = await pb.collection("users").authWithPassword(legacyEmail, password);
-      return authData.record;
-    } catch (fallbackErr) {
-      throw err; // On throw l'erreur d'origine si le fallback échoue
+      const auth = await pb.collection("users").authWithPassword(candidate, password);
+      await ensurePlayerDoc(auth.record.id, (auth.record.name as string) || trimmed);
+      return auth.record;
+    } catch (err) {
+      lastError = err;
+      // Seul un échec d'identifiants justifie d'essayer le candidat suivant.
+      if (!(err instanceof ClientResponseError) || err.status !== 400) throw err;
     }
   }
+  throw lastError;
 }
 
 export function logout() {
+  pb.realtime.unsubscribe().catch(() => {});
   pb.authStore.clear();
 }
 
-export async function requestPasswordReset(rawPseudo: string) {
-  const sanitized = sanitizePseudo(rawPseudo);
-  
-  try {
-    // On cherche l'utilisateur par son username pour trouver son email réel
-    const user = await pb.collection("users").getFirstListItem(`username="${sanitized}"`);
-    
-    if (!hasRecoveryEmail(user.email)) {
-      throw new NoRecoveryEmailError();
-    }
-    
-    await pb.collection("users").requestPasswordReset(user.email);
-  } catch (err) {
-    if (err instanceof NoRecoveryEmailError) throw err;
-    // Si l'utilisateur n'existe pas, on throw la même erreur pour ne pas fuiter d'infos
-    throw new NoRecoveryEmailError(); 
-  }
+/** PocketBase envoie le lien de réinitialisation à l'email du compte : le
+ *  joueur doit donc saisir son email (le pseudo seul ne permet pas de le
+ *  retrouver sans exposer les emails de tous les joueurs). */
+export async function requestPasswordReset(email: string) {
+  const clean = email.trim();
+  if (!clean.includes("@")) throw new NoRecoveryEmailError();
+  // Réponse identique que le compte existe ou non (pas de fuite d'info).
+  await pb.collection("users").requestPasswordReset(clean);
 }
 
 export async function changePassword(currentPassword: string, newPassword: string) {
-  const user = pb.authStore.model;
+  const user = pb.authStore.record;
   if (!user) throw new Error("Non connecté.");
 
-  // PocketBase gère le changement de mot de passe via l'API update classique
-  // en passant l'ancien mot de passe pour des raisons de sécurité
   await pb.collection("users").update(user.id, {
     oldPassword: currentPassword,
     password: newPassword,
     passwordConfirm: newPassword,
   });
+  // Changer le mot de passe invalide les jetons existants : on se reconnecte.
+  await pb.collection("users").authWithPassword(user.email as string, newPassword);
 }
 
 export async function deleteAccount(currentPassword: string, pseudo: string) {
-  const user = pb.authStore.model;
+  const user = pb.authStore.record;
   if (!user) throw new Error("Non connecté.");
 
-  // On vérifie que le mot de passe actuel est bon avant de tout supprimer
-  await pb.collection("users").authWithPassword(user.username || user.email, currentPassword);
-
-  // Suppression des données annexes (planètes, flottes, etc.)
+  // Vérifie le mot de passe avant toute suppression.
+  await pb.collection("users").authWithPassword(user.email as string, currentPassword);
   await deletePlayerAccountData(user.id, pseudo);
-  
-  // Suppression définitive du compte Auth
   await pb.collection("users").delete(user.id);
-  
-  pb.authStore.clear();
+  logout();
 }
 
 export function hasRecoveryEmail(email: string | null | undefined): boolean {

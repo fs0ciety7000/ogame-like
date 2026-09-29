@@ -57,7 +57,7 @@ export function PlayersPage() {
   // Le classement (#N) reste basé sur la position réelle dans le tableau
   // complet, même une fois la liste filtrée par la recherche. Le tri par
   // saison se fait ici côté client (top 100 déjà chargé) plutôt que via
-  // un second abonnement Firestore.
+  // un second abonnement temps réel.
   const ranked = useMemo(() => {
     const sorted = [...players].sort((a, b) =>
       mode === "season"

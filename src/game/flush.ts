@@ -22,7 +22,7 @@ export interface FlushResult {
 // Un point par heure de jeu écoulée (pas par appel de flush, qui peut
 // survenir toutes les 20s via le heartbeat) : le flush écrit de toute façon
 // le document joueur en entier à chaque action, donc consigner l'historique
-// ici ne coûte aucune écriture Firestore supplémentaire.
+// ici ne coûte aucune écriture serveur supplémentaire.
 export const RESOURCE_HISTORY_INTERVAL_MS = 60 * 60 * 1000;
 export const RESOURCE_HISTORY_MAX_POINTS = 72; // ~3 jours d'historique horaire
 

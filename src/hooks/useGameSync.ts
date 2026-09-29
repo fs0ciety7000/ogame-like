@@ -51,9 +51,8 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<Aw
   } catch (err) {
     if (err instanceof GameActionError) {
       try {
-        // Avec PocketBase, l'utilisateur est stocké dans pb.authStore.model
-        const currentUser = pb.authStore.model;
-        const fallbackName = currentUser?.name || currentUser?.username || "Joueur";
+        const currentUser = pb.authStore.record;
+        const fallbackName = (currentUser?.name as string) || (currentUser?.username as string) || "Joueur";
         await ensurePlayerDoc(uid, fallbackName);
         return await syncPlayer(uid, playtimeDeltaSeconds);
       } catch (retryErr) {

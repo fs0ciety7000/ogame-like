@@ -10,12 +10,12 @@ Réécriture complète du prototype HTML/CSS/JS d'origine (conservé dans
 - **React 18 + TypeScript + Vite** — SPA rapide, typée de bout en bout.
 - **Tailwind CSS v4 + Radix UI + Framer Motion** — interface sombre façon
   sci‑fi, accessible, animée.
-- **Firebase Auth + Firestore** — connexion par pseudo, données en temps
-  réel (`onSnapshot`), transactions atomiques pour chaque action de jeu.
-  100 % compatible avec le plan gratuit **Spark** (aucune Cloud Function
-  requise : toute la logique de jeu tourne côté client, comme dans le jeu
-  original, mais avec une production hors‑ligne rattrapée automatiquement).
-- **Zustand** — état client léger, alimenté par les abonnements Firestore.
+- **PocketBase** — comptes (connexion par pseudo ou email), base de
+  données et temps réel (SSE), auto‑hébergé. Toute la logique de jeu tourne
+  côté client, avec une production hors‑ligne rattrapée automatiquement ;
+  les règles d'accès PocketBase limitent chaque joueur à ses propres
+  données.
+- **Zustand** — état client léger, alimenté par les abonnements temps réel.
 - **sonner** — toasts, **cloche de notifications** — journal d'évènements
   persistant (constructions, recherches, missions, combats) alimenté en
   temps réel.
@@ -45,81 +45,85 @@ Réécriture complète du prototype HTML/CSS/JS d'origine (conservé dans
 
 ```bash
 npm install
-cp .env.example .env.local   # renseigne ta config Firebase (voir ci-dessous)
+cp .env.example .env.local   # renseigne VITE_POCKETBASE_URL
 npm run dev
 ```
 
-Sans configuration Firebase, l'application démarre quand même et affiche un
-bandeau d'avertissement sur l'écran de connexion.
+Sans `VITE_POCKETBASE_URL`, l'application vise `http://127.0.0.1:8090` et
+affiche un bandeau d'avertissement sur l'écran de connexion.
 
-## Configurer Firebase (gratuit)
+## Installer le schéma PocketBase
 
-1. Crée un projet sur <https://console.firebase.google.com> (plan **Spark**,
-   gratuit).
-2. Active **Authentication → Email/mot de passe**.
-3. Active **Firestore Database** (mode production).
-4. Dans les paramètres du projet → Vos applications, ajoute une application
-   Web et copie sa config dans `.env.local`.
-5. Déploie les règles de sécurité et l'index nécessaire :
-
-   ```bash
-   npm install -g firebase-tools
-   firebase login
-   firebase use --add            # sélectionne ton projet
-   firebase deploy --only firestore:rules,firestore:indexes
-   ```
-
-## Déploiement (Firebase Hosting, gratuit)
+Une seule commande (relançable sans risque) crée les collections du jeu
+avec leurs règles d'accès, et active la connexion par pseudo sur `users` :
 
 ```bash
-npm run build
-firebase deploy --only hosting
+PB_URL=https://ton-pocketbase PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
+  node pocketbase/setup.mjs
 ```
 
-`firebase.json` sert le dossier `dist/` avec un rewrite SPA (`index.html`)
-et un cache long sur `assets/`.
+Le schéma est décrit dans `pocketbase/pb_schema.json` (importable aussi à la
+main : admin PocketBase → Settings → Import collections). Pour le mot de
+passe oublié, configure le SMTP dans Settings → Mail settings et l'URL de
+l'application dans Settings → Application.
+
+## Migrer les données depuis Firebase
+
+1. Console Firebase → Paramètres du projet → Comptes de service →
+   « Générer une nouvelle clé privée » → enregistre le fichier sous
+   `service-account.json` à la racine (ignoré par git).
+2. Lance d'abord une simulation, puis la vraie migration :
+
+   ```bash
+   export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+   export PB_URL=https://ton-pocketbase PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=…
+   node scripts/migrate-firebase-to-pocketbase.mjs --dry-run
+   node scripts/migrate-firebase-to-pocketbase.mjs
+   ```
+
+Comptes, profils, files d'attente, notifications, alliances et messages,
+rapports et dons sont copiés. Les mots de passe Firebase ne sont pas
+transférables : chaque compte reçoit un mot de passe provisoire, listé dans
+`migration-output/passwords.csv` (à transmettre en privé ; ajoute
+`--send-reset-emails` pour envoyer aussi un lien de réinitialisation aux
+comptes qui ont un vrai email). Le script est relançable.
+
+## Déploiement
+
+`npm run build` produit `dist/` (SPA statique : rediriger toutes les routes
+vers `index.html`, voir `vercel.json`). Renseigne `VITE_POCKETBASE_URL` dans
+les variables d'environnement de l'hébergeur. Si le site est servi en
+HTTPS, PocketBase doit l'être aussi (sinon le navigateur bloque les
+requêtes).
 
 ## Structure
 
 ```
 src/
   game/        formules pures du jeu (bâtiments, unités, recherche, combat…)
-  services/    accès Firestore (transactions, abonnements temps réel)
+  services/    accès PocketBase (actions de jeu, abonnements temps réel)
   store/       état client (Zustand) alimenté par les abonnements
   hooks/       synchro temps réel, ressources affichées en direct, tickers
   components/  UI (primitives + composants de jeu)
   pages/       une page par écran du jeu
+pocketbase/    schéma (pb_schema.json) + script d'installation
+scripts/       migration Firebase -> PocketBase
 legacy/        ancien prototype HTML/CSS/JS (référence, non utilisé)
 ```
 
-### Modèle de données Firestore
+### Modèle de données PocketBase
 
 ```
-players/{uid}                    profil, ressources, bâtiments, unités, techs
-players/{uid}/meta/queues        files d'attente (constructions/unités/recherches/missions)
-players/{uid}/notifications/{id} journal d'évènements (temps réel)
-battle_reports/{id}              rapports de combat (créés par l'attaquant,
-                                  traités et notifiés au défenseur en direct)
-usernames/{pseudo}               réservation pseudo -> email, pour résoudre la
-                                  connexion et le mot de passe oublié (Firebase
-                                  Auth ne connaît que des emails) — lecture par
-                                  id seul, jamais de liste consultable en masse
+users                 comptes (email, username = pseudo, name = pseudo affiché)
+players/{id}          profil, ressources, bâtiments, unités, techs (id = id du compte)
+queues/{id}           files d'attente (constructions/unités/recherches/missions)
+notifications         journal d'évènements (temps réel)
+battle_reports        rapports de combat (créés par l'attaquant, traités une
+                      seule fois par le défenseur)
+spy_reports, resource_gifts, alliances, alliance_messages
 ```
-
-### Mot de passe oublié
-
-Les comptes créés **avant** l'ajout de cette fonctionnalité utilisent un
-email technique interne (non joignable) : ils n'ont pas de mot de passe
-oublié tant qu'ils n'ont pas été recréés. C'est un choix assumé — changer
-l'email Firebase Auth d'un compte existant nécessite une confirmation par
-lien (asynchrone, parfois sur un autre appareil) qu'on ne peut pas fiabiliser
-sans backend, donc plutôt que de risquer de bloquer l'accès à un compte, la
-fonctionnalité ne s'applique qu'aux nouvelles inscriptions (email réel
-demandé dès la création). Ces joueurs peuvent toujours changer leur mot de
-passe depuis Réglages tant qu'ils restent connectés.
 
 Toute la logique (production, files, combat) est rejouée côté client à
 partir d'un horodatage (`resourcesUpdatedAtMs`) à chaque action et à
 intervalle régulier (~20s), ce qui permet un rattrapage correct de la
-progression pendant les périodes hors‑ligne, sans dépasser les quotas
-gratuits Firestore.
+progression pendant les périodes hors‑ligne.

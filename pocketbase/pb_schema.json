@@ -1,0 +1,551 @@
+[
+  {
+    "id": "pbc_ce_players",
+    "name": "players",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id",
+    "fields": [
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "resources",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "buildings",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "units",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "techLevels",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "bonuses",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "xp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "seasonId",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "seasonXp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "victories",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "defeats",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "playtimeSeconds",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "resourcesUpdatedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "resourceHistory",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "unlockedAchievements",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "allianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "allianceLastReadMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_players_xp ON players (xp)"
+    ]
+  },
+  {
+    "id": "pbc_ce_queues",
+    "name": "queues",
+    "type": "base",
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id",
+    "fields": [
+      {
+        "name": "buildingUpgrades",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "unitQueues",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "activeResearches",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "activeMissions",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "pbc_ce_notifications",
+    "name": "notifications",
+    "type": "base",
+    "listRule": "player_id = @request.auth.id",
+    "viewRule": "player_id = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.player_id = @request.auth.id",
+    "updateRule": "player_id = @request.auth.id && @request.body.player_id:isset = false",
+    "deleteRule": "player_id = @request.auth.id",
+    "fields": [
+      {
+        "name": "player_id",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "message",
+        "type": "text",
+        "required": false,
+        "max": 1000,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "read",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_battle_reports",
+    "name": "battle_reports",
+    "type": "base",
+    "listRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
+    "viewRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.attackerUid = @request.auth.id && @request.body.defenderProcessed = false",
+    "updateRule": "defenderUid = @request.auth.id && defenderProcessed = false && @request.body.defenderProcessed = true && @request.body.attackerUid:isset = false && @request.body.defenderUid:isset = false && @request.body.outcome:isset = false && @request.body.loot:isset = false && @request.body.attackerLosses:isset = false && @request.body.defenderLosses:isset = false",
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "attackerUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "attackerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "defenderUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "defenderPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "timestamp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "outcome",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "attackerPower",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "defenderPower",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "attackerLossPercent",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "defenderLossPercent",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "attackerLosses",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "attackerRecovered",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "defenderLosses",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "defenderRecovered",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "loot",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "defenderProcessed",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)",
+      "CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"
+    ]
+  },
+  {
+    "id": "pbc_ce_spy_reports",
+    "name": "spy_reports",
+    "type": "base",
+    "listRule": "spyUid = @request.auth.id || targetUid = @request.auth.id",
+    "viewRule": "spyUid = @request.auth.id || targetUid = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.spyUid = @request.auth.id && @request.body.targetProcessed = false",
+    "updateRule": "targetUid = @request.auth.id && targetProcessed = false && @request.body.targetProcessed = true && @request.body.spyUid:isset = false && @request.body.targetUid:isset = false",
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "spyUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "spyPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "targetUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "timestamp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "targetProcessed",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"
+    ]
+  },
+  {
+    "id": "pbc_ce_resource_gifts",
+    "name": "resource_gifts",
+    "type": "base",
+    "listRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "viewRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.fromUid = @request.auth.id && @request.body.claimed = false",
+    "updateRule": "toUid = @request.auth.id && claimed = false && @request.body.claimed = true && @request.body.resources:isset = false && @request.body.fromUid:isset = false && @request.body.toUid:isset = false",
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "fromUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "fromPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "resources",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "timestamp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "claimed",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"
+    ]
+  },
+  {
+    "id": "pbc_ce_alliances",
+    "name": "alliances",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\" && @request.body.createdBy = @request.auth.id",
+    "updateRule": "@request.auth.id != \"\" && (createdBy = @request.auth.id || (@request.body.name:isset = false && @request.body.tag:isset = false && @request.body.createdBy:isset = false && @request.body.roles:isset = false))",
+    "deleteRule": "createdBy = @request.auth.id",
+    "fields": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "tag",
+        "type": "text",
+        "required": false,
+        "max": 5,
+        "presentable": false
+      },
+      {
+        "name": "createdBy",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "members",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "memberPseudos",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "roles",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"
+    ]
+  },
+  {
+    "id": "pbc_ce_alliance_messages",
+    "name": "alliance_messages",
+    "type": "base",
+    "listRule": "@collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= allianceId",
+    "viewRule": "@collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= allianceId",
+    "createRule": "@request.body.authorUid = @request.auth.id && @collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= @request.body.allianceId",
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "allianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "authorUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "authorPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": false,
+        "max": 500,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"
+    ]
+  }
+]

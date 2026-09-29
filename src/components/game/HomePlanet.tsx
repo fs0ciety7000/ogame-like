@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import type { Buildings } from "@/types/game";
 
 /** Rendu de la planète-siège du joueur : plus les bâtiments sont
  *  développés, plus la sphère, l'anneau et le halo sont lumineux. */
 export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; size?: number }) {
   const percent = useMemo(() => {
-    const total = BUILDINGS.reduce((sum, b) => sum + (buildings[b.id]?.level ?? 0), 0);
+    const total = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(buildings, b.id), 0);
     const max = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
     return max > 0 ? Math.min(1, total / max) : 0;
   }, [buildings]);
