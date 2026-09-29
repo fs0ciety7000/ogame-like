@@ -1,3 +1,4 @@
+// src/routes/ProtectedRoute.tsx
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";

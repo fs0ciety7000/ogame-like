@@ -15,7 +15,7 @@ import {
   syncPlayer,
   type AwaySummary,
 } from "@/services/playerService";
-import { auth } from "@/lib/firebase";
+import { pb } from "@/lib/pocketbase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
@@ -42,19 +42,19 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   system: { icon: "✨", sound: playConfirm },
 };
 
-/** syncPlayer suppose que les documents Firestore du joueur existent déjà.
+/** syncPlayer suppose que les documents PocketBase du joueur existent déjà.
  *  Ils sont créés par authService juste après connexion/inscription, mais
- *  la navigation vers /game (déclenchée dès que Firebase Auth signale un
- *  utilisateur connecté) peut survenir avant que cette création n'ait fini
- *  d'écrire — on retombe donc ici sur ensurePlayerDoc en filet de sécurité,
- *  plutôt que de laisser une promesse échouer sans être interceptée. */
+ *  on retombe ici sur ensurePlayerDoc en filet de sécurité si besoin. */
 async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary | undefined> {
   try {
     return await syncPlayer(uid, playtimeDeltaSeconds);
   } catch (err) {
     if (err instanceof GameActionError) {
       try {
-        await ensurePlayerDoc(uid, auth.currentUser?.displayName || "Joueur");
+        // Avec PocketBase, l'utilisateur est stocké dans pb.authStore.model
+        const currentUser = pb.authStore.model;
+        const fallbackName = currentUser?.name || currentUser?.username || "Joueur";
+        await ensurePlayerDoc(uid, fallbackName);
         return await syncPlayer(uid, playtimeDeltaSeconds);
       } catch (retryErr) {
         console.error("Impossible de synchroniser le profil joueur :", retryErr);
@@ -66,9 +66,9 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<Aw
   }
 }
 
-/** Point d'entrée unique de la synchro temps réel : abonnements Firestore,
+/** Point d'entrée unique de la synchro temps réel : abonnements PocketBase,
  *  rattrapage de production hors-ligne, heartbeat, et traitement des rapports
- *  de combat reçus (même si l'onglet était fermé au moment de l'attaque). */
+ *  de combat reçus. */
 export function useGameSync(uid: string | null) {
   const processingReports = useRef<Set<string>>(new Set());
   const processingSpyReports = useRef<Set<string>>(new Set());

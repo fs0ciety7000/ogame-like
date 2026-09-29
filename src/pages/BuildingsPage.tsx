@@ -95,7 +95,7 @@ export function BuildingsPage() {
                 <div className="flex justify-center pt-3">
                   <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
                     <img
-                      src={buildingImage(building, level)}
+                      src={buildingDef.image}
                       alt={building.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {

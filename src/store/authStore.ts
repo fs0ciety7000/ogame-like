@@ -1,38 +1,19 @@
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { create } from "zustand";
-import { auth, firebaseConfigured } from "@/lib/firebase";
+// src/store/authStore.ts
+import { create } from 'zustand';
+import { pb } from '@/lib/pocketbase';
 
 interface AuthState {
-  user: User | null;
-  initializing: boolean;
+  user: any | null;
+  setUser: (user: any | null) => void;
 }
 
-export const useAuthStore = create<AuthState>(() => ({
-  user: null,
-  initializing: true,
+export const useAuthStore = create<AuthState>((set) => ({
+  user: pb.authStore.model,
+  setUser: (user) => set({ user }),
 }));
 
-let started = false;
 export function startAuthListener() {
-  if (started) return;
-  started = true;
-
-  // Sans configuration Firebase valide, le SDK peut lever une erreur
-  // synchrone (clé API invalide) : on l'isole pour ne jamais faire planter
-  // l'appli, et on affiche simplement l'écran de connexion (avec son
-  // bandeau d'avertissement) comme si personne n'était connecté.
-  if (!firebaseConfigured) {
-    useAuthStore.setState({ user: null, initializing: false });
-    return;
-  }
-
-  try {
-    onAuthStateChanged(
-      auth,
-      (user) => useAuthStore.setState({ user, initializing: false }),
-      () => useAuthStore.setState({ user: null, initializing: false }),
-    );
-  } catch {
-    useAuthStore.setState({ user: null, initializing: false });
-  }
+  pb.authStore.onChange((token, model) => {
+    useAuthStore.getState().setUser(model);
+  }, true);
 }
