@@ -19,7 +19,7 @@ function Bars({ level, color }: { level: 0 | 1 | 2 | 3; color: string }) {
   );
 }
 
-/** Reflète l'état réel de la connexion à Firestore (pas un simple point
+/** Reflète l'état réel de la connexion au serveur PocketBase (pas un simple point
  *  statique) : hors-ligne navigateur, données en cache local, ou données
  *  fraîches du serveur. */
 export function SignalIndicator() {

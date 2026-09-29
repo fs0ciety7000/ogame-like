@@ -14,7 +14,6 @@ import {
   applyBuildingDiscount,
   BUILDING_UNLOCK_COST,
   BUILDINGS,
-  buildingImage,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
   productionPerSecond,
@@ -95,7 +94,7 @@ export function BuildingsPage() {
                 <div className="flex justify-center pt-3">
                   <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
                     <img
-                      src={buildingImage(building, level)}
+                      src={building.image}
                       alt={building.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {

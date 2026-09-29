@@ -1,38 +1,35 @@
-import { onAuthStateChanged, type User } from "firebase/auth";
 import { create } from "zustand";
-import { auth, firebaseConfigured } from "@/lib/firebase";
+import type { RecordModel } from "pocketbase";
+import { pb } from "@/lib/pocketbase";
+
+/** Utilisateur connecté, sous la même forme que du temps de Firebase
+ *  (`uid`, `email`, `displayName`) pour que les écrans n'aient pas à
+ *  connaître le format des enregistrements PocketBase. */
+export interface AuthUser {
+  uid: string;
+  email: string;
+  displayName: string;
+}
+
+function toAuthUser(record: RecordModel | null): AuthUser | null {
+  if (!record || !pb.authStore.isValid) return null;
+  return {
+    uid: record.id,
+    email: (record.email as string) ?? "",
+    displayName: (record.name as string) || (record.username as string) || "",
+  };
+}
 
 interface AuthState {
-  user: User | null;
-  initializing: boolean;
+  user: AuthUser | null;
 }
 
 export const useAuthStore = create<AuthState>(() => ({
-  user: null,
-  initializing: true,
+  user: toAuthUser(pb.authStore.record),
 }));
 
-let started = false;
-export function startAuthListener() {
-  if (started) return;
-  started = true;
-
-  // Sans configuration Firebase valide, le SDK peut lever une erreur
-  // synchrone (clé API invalide) : on l'isole pour ne jamais faire planter
-  // l'appli, et on affiche simplement l'écran de connexion (avec son
-  // bandeau d'avertissement) comme si personne n'était connecté.
-  if (!firebaseConfigured) {
-    useAuthStore.setState({ user: null, initializing: false });
-    return;
-  }
-
-  try {
-    onAuthStateChanged(
-      auth,
-      (user) => useAuthStore.setState({ user, initializing: false }),
-      () => useAuthStore.setState({ user: null, initializing: false }),
-    );
-  } catch {
-    useAuthStore.setState({ user: null, initializing: false });
-  }
-}
+// Session restaurée depuis le localStorage au démarrage, puis mise à jour à
+// chaque connexion/déconnexion/rafraîchissement du jeton.
+pb.authStore.onChange((_token, record) => {
+  useAuthStore.setState({ user: toAuthUser(record) });
+});

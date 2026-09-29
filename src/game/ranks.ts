@@ -16,13 +16,13 @@ export const RANK_THRESHOLDS = [
 ];
 
 export const RANK_ICONS = [
-  "non_classe.png", "fer3.png", "fer2.png", "fer1.png",
-  "bronze3.png", "bronze2.png", "bronze1.png",
-  "argent3.png", "argent2.png", "argent1.png",
-  "or3.png", "or2.png", "or1.png",
-  "platine3.png", "platine2.png", "platine1.png",
-  "emeraude.png", "diamant.png", "master.png",
-  "challenger.png", "elite.png",
+  "non_classe.webp", "fer3.webp", "fer2.webp", "fer1.webp",
+  "bronze3.webp", "bronze2.webp", "bronze1.webp",
+  "argent3.webp", "argent2.webp", "argent1.webp",
+  "or3.webp", "or2.webp", "or1.webp",
+  "platine3.webp", "platine2.webp", "platine1.webp",
+  "emeraude.webp", "diamant.webp", "master.webp",
+  "challenger.webp", "elite.webp",
 ];
 
 export function getRankIndex(xp: number): number {

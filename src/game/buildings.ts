@@ -4,7 +4,7 @@ export interface BuildingDef {
   id: BuildingId;
   name: string;
   description: string;
-  imageBase: string;
+  image: string; // Simplifié : une seule image par bâtiment
   maxLevel: number;
   cost: { scrap?: number; energy?: number };
   production: boolean;
@@ -16,7 +16,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "extracteur_ferraille",
     name: "Extracteur de ferraille",
     description: "Récupère automatiquement de la ferraille dans les débris environnants.",
-    imageBase: "/assets/buildings/extracteur_ferraille",
+    image: "/assets/buildings/extracteur_ferraille.webp",
     maxLevel: 10,
     cost: { scrap: 50, energy: 20 },
     production: true,
@@ -26,7 +26,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "reacteur_instable",
     name: "Réacteur instable",
     description: "Génère de l'énergie brute, au prix d'une certaine instabilité.",
-    imageBase: "/assets/buildings/reacteur_instable",
+    image: "/assets/buildings/reacteur_instable.webp",
     maxLevel: 10,
     cost: { scrap: 50, energy: 20 },
     production: true,
@@ -36,7 +36,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "extracteur_nanocomposants",
     name: "Extracteur de nanocomposants",
     description: "Synthétise des nanocomposants à partir de matières recyclées.",
-    imageBase: "/assets/buildings/extracteur_nanocomposants",
+    image: "/assets/buildings/extracteur_nanocomposants.webp",
     maxLevel: 10,
     cost: { scrap: 50, energy: 20 },
     production: true,
@@ -46,7 +46,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "archives_fracturees",
     name: "Archives fracturées",
     description: "Fouille des données anciennes dans des serveurs endommagés.",
-    imageBase: "/assets/buildings/archives_fracturees",
+    image: "/assets/buildings/archives_fracturees.webp",
     maxLevel: 10,
     cost: { scrap: 50, energy: 20 },
     production: true,
@@ -56,7 +56,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "atelier_reparation",
     name: "Atelier de réparation",
     description: "Répare une partie des unités perdues après chaque combat.",
-    imageBase: "/assets/buildings/atelier_reparation",
+    image: "/assets/buildings/atelier_reparation.webp",
     maxLevel: 10,
     cost: {},
     production: false,
@@ -66,7 +66,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "hangar_attaque",
     name: "Hangar d'attaque",
     description: "Augmente la capacité de stockage des unités offensives.",
-    imageBase: "/assets/buildings/hangar_attaque",
+    image: "/assets/buildings/hangar_attaque.webp",
     maxLevel: 10,
     cost: { scrap: 300, energy: 150 },
     production: false,
@@ -76,7 +76,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "hangar_defense",
     name: "Hangar de défense",
     description: "Augmente la capacité de stockage des unités défensives.",
-    imageBase: "/assets/buildings/hangar_defense",
+    image: "/assets/buildings/hangar_defense.webp",
     maxLevel: 10,
     cost: { scrap: 300, energy: 150 },
     production: false,
@@ -91,7 +91,11 @@ export const LOCKABLE_BUILDINGS: BuildingId[] = [
 ];
 
 export const BUILDING_UNLOCK_COST: Partial<
-  Record<BuildingId, { resource: string; amount: number; label: string } | { multi: true; resources: { resource: string; amount: number; label: string }[] }>
+  Record<
+    BuildingId,
+    | { resource: string; amount: number; label: string }
+    | { multi: true; resources: { resource: string; amount: number; label: string }[] }
+  >
 > = {
   reacteur_instable: { resource: "scrap", amount: 500, label: "Ferraille" },
   extracteur_nanocomposants: { resource: "energy", amount: 500, label: "Énergie" },
@@ -109,11 +113,6 @@ export const BUILDING_UNLOCK_COST: Partial<
 
 export function findBuilding(id: string): BuildingDef | undefined {
   return BUILDINGS.find((b) => b.id === id);
-}
-
-export function buildingImage(building: BuildingDef, level: number): string {
-  const lvl = Math.max(1, Math.min(building.maxLevel, level));
-  return `${building.imageBase}_lvl${lvl}.png`;
 }
 
 /* ============================
@@ -190,14 +189,20 @@ function hangarTime(level: number) {
   return (level - 1) * 900;
 }
 
-export function getBuildingUpgradeCost(building: BuildingDef, nextLevel: number): { scrap?: number; energy?: number; nano?: number; data?: number } {
+export function getBuildingUpgradeCost(
+  building: BuildingDef,
+  nextLevel: number
+): { scrap?: number; energy?: number; nano?: number; data?: number } {
   if (building.id === "atelier_reparation") return atelierCost(nextLevel);
   if (building.id === "hangar_attaque" || building.id === "hangar_defense") return hangarCost(nextLevel);
   return scaledCost(nextLevel);
 }
 
 /** tech4 (Optimisation industrielle) réduit le coût des améliorations de bâtiments. */
-export function applyBuildingDiscount<T extends Record<string, number | undefined>>(cost: T, discount: number): T {
+export function applyBuildingDiscount<T extends Record<string, number | undefined>>(
+  cost: T,
+  discount: number
+): T {
   if (!discount) return cost;
   const out = { ...cost };
   for (const key of Object.keys(out) as (keyof T)[]) {

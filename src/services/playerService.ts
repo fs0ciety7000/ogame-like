@@ -1,23 +1,4 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit as fsLimit,
-  onSnapshot,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  Unsubscribe,
-  updateDoc,
-  where,
-  writeBatch,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { firestoreMillis } from "@/lib/utils";
+import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState, type NewNotification } from "@/game/flush";
 import { applyXpDelta } from "@/game/seasons";
@@ -47,96 +28,240 @@ import type {
   SpyReport,
 } from "@/types/game";
 
-const playersCol = () => collection(db, "players");
-const playerRef = (uid: string) => doc(db, "players", uid);
-const queuesRef = (uid: string) => doc(db, "players", uid, "meta", "queues");
-const notificationsCol = (uid: string) => collection(db, "players", uid, "notifications");
-const battleReportsCol = () => collection(db, "battle_reports");
-const spyReportsCol = () => collection(db, "spy_reports");
-const resourceGiftsCol = () => collection(db, "resource_gifts");
-const usernameRef = (sanitizedPseudo: string) => doc(db, "usernames", sanitizedPseudo);
-
 export class GameActionError extends Error {}
+
+/* =====================================================
+   Conversion enregistrements PocketBase <-> état du jeu
+
+   Un joueur = un enregistrement `players` dont l'id est celui de son
+   compte `users`, et un enregistrement `queues` (files d'attente) avec ce
+   même id. Voir pocketbase/pb_schema.json.
+===================================================== */
+
+type PbRecord = Record<string, unknown> & { id: string };
+
+/** Champs que le moteur de jeu (flushState + actions) peut modifier. Le
+ *  pseudo et l'alliance sont exclus : ils sont écrits à part (connexion,
+ *  écran Alliance) et une action de jeu lue juste avant les écraserait
+ *  sinon avec une valeur périmée — sans transactions côté client,
+ *  PocketBase ne protège pas de ce genre de conflit. */
+const GAME_FIELDS = [
+  "resources",
+  "buildings",
+  "units",
+  "techLevels",
+  "bonuses",
+  "xp",
+  "seasonId",
+  "seasonXp",
+  "victories",
+  "defeats",
+  "playtimeSeconds",
+  "resourcesUpdatedAtMs",
+  "resourceHistory",
+  "unlockedAchievements",
+] as const;
+
+function playerFromRecord(record: PbRecord | null | undefined): PlayerState | null {
+  if (!record || !record.resources || !record.buildings) return null;
+  const player = { ...record, uid: record.id } as unknown as PlayerState;
+  return {
+    ...player,
+    units: player.units ?? {},
+    techLevels: player.techLevels ?? {},
+    resourceHistory: player.resourceHistory ?? [],
+    unlockedAchievements: player.unlockedAchievements ?? [],
+  };
+}
+
+function gameFieldsOf(player: PlayerState): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of GAME_FIELDS) out[key] = player[key] ?? null;
+  return out;
+}
+
+function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | null {
+  if (!record) return null;
+  const defaults = defaultQueues();
+  return {
+    buildingUpgrades: (record.buildingUpgrades as QueuesState["buildingUpgrades"]) ?? defaults.buildingUpgrades,
+    unitQueues: (record.unitQueues as QueuesState["unitQueues"]) ?? defaults.unitQueues,
+    activeResearches: (record.activeResearches as QueuesState["activeResearches"]) ?? defaults.activeResearches,
+    activeMissions: (record.activeMissions as QueuesState["activeMissions"]) ?? defaults.activeMissions,
+  };
+}
 
 /* =====================================================
    Création / lecture
 ===================================================== */
 
-export async function ensurePlayerDoc(uid: string, pseudo: string) {
-  const pSnap = await getDoc(playerRef(uid));
-  if (!pSnap.exists()) {
-    await runTransaction(db, async (tx) => {
-      tx.set(playerRef(uid), { ...defaultPlayerState(uid, pseudo), createdAt: serverTimestamp() });
-      tx.set(queuesRef(uid), defaultQueues());
-    });
+async function createIgnoringDuplicate(collection: string, data: Record<string, unknown>) {
+  try {
+    await pb.collection(collection).create(data);
+  } catch (err) {
+    // Création concurrente (inscription + filet de sécurité de useGameSync) :
+    // l'enregistrement existe déjà, c'est le résultat voulu.
+    if ((err as { status?: number })?.status !== 400) throw err;
+    await pb.collection(collection).getOne(data.id as string);
   }
 }
 
-/** Impose le pseudo exact saisi par le joueur, y compris si le profil a déjà
- *  été créé entre-temps par le filet de sécurité de useGameSync (qui ne
- *  connaît pas le pseudo tapé et retombe sur un nom générique le temps que
- *  ce correctif s'exécute). Sans effet de bord sur le reste du document. */
-export async function setPlayerPseudo(uid: string, pseudo: string) {
-  // updateDoc plutôt que setDoc({ merge }) : le document vient d'être créé
-  // par une transaction, que le cache local ne connaît pas encore. Un merge
-  // y serait appliqué localement sur un document "absent" et produirait un
-  // instantané { pseudo } seul (units/buildings… undefined → plantage).
-  await updateDoc(playerRef(uid), { pseudo });
+export async function ensurePlayerDoc(uid: string, pseudo: string) {
+  try {
+    await pb.collection("players").getOne(uid, { fields: "id" });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+    const state: Partial<PlayerState> = defaultPlayerState(uid, pseudo);
+    delete state.uid;
+    await createIgnoringDuplicate("players", { ...state, id: uid, createdAtMs: Date.now() });
+  }
+  try {
+    await pb.collection("queues").getOne(uid, { fields: "id" });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+    await createIgnoringDuplicate("queues", { ...defaultQueues(), id: uid });
+  }
 }
 
-/** Un instantané sans les champs de base (écriture partielle compensée
- *  localement avant la création complète du profil) est traité comme
- *  "pas encore chargé" plutôt que transmis tel quel à l'interface. */
-function playerFromSnapshotData(data: Record<string, unknown> | undefined): PlayerState | null {
-  if (!data || !data.resources || !data.buildings) return null;
-  const player = data as unknown as PlayerState;
-  return { ...player, units: player.units ?? {}, techLevels: player.techLevels ?? {} };
+export async function setPlayerPseudo(uid: string, pseudo: string) {
+  await pb.collection("players").update(uid, { pseudo });
+}
+
+export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
+  try {
+    return playerFromRecord(await pb.collection("players").getOne<PbRecord>(uid));
+  } catch {
+    return null;
+  }
 }
 
 /* =====================================================
-   Résolution pseudo -> email (connexion, mot de passe oublié)
-
-   Firebase Auth ne connaît que des emails, pas des pseudos. Ce document
-   public (lecture par id seule, jamais de liste — voir firestore.rules)
-   permet de retrouver l'email associé à un pseudo AVANT authentification.
-   Écrit par claimUsername() à l'inscription et depuis Réglages quand un
-   joueur ajoute un email de récupération.
+   Abonnements temps réel
 ===================================================== */
 
-export async function claimUsername(uid: string, sanitizedPseudo: string, email: string) {
-  await setDoc(usernameRef(sanitizedPseudo), { uid, email }, { merge: true });
+/** Lecture initiale d'un abonnement. Juste après l'inscription, l'écran
+ *  de jeu s'ouvre avant que le profil ne soit créé (404) : on réessaie
+ *  quelques fois plutôt que d'attendre le prochain évènement temps réel. */
+function loadInitial(
+  collection: string,
+  id: string,
+  isActive: () => boolean,
+  onRecord: (record: PbRecord) => void,
+  onMissing: (serverAnswered: boolean) => void,
+  attempt = 0,
+) {
+  pb.collection(collection)
+    .getOne<PbRecord>(id)
+    .then((rec) => isActive() && onRecord(rec))
+    .catch((err) => {
+      if (!isActive()) return;
+      onMissing(isNotFound(err));
+      if (isNotFound(err) && attempt < 5) {
+        setTimeout(() => loadInitial(collection, id, isActive, onRecord, onMissing, attempt + 1), 1000 * (attempt + 1));
+      }
+    });
 }
 
-export async function resolveEmailForPseudo(sanitizedPseudo: string): Promise<string | null> {
-  const snap = await getDoc(usernameRef(sanitizedPseudo));
-  return snap.exists() ? ((snap.data().email as string) ?? null) : null;
-}
-
-/** onMeta signale si le dernier instantané reçu vient du cache local
- *  (hors-ligne) plutôt que du serveur — utilisé pour l'indicateur de
- *  connexion réel de l'en-tête (voir connectionStore). */
+/** onServerData(true) dès qu'une donnée fraîche arrive du serveur — sert à
+ *  l'indicateur de connexion de l'en-tête (voir connectionStore). */
 export function subscribePlayer(
   uid: string,
   cb: (player: PlayerState | null) => void,
-  onMeta?: (fromCache: boolean) => void,
-): Unsubscribe {
-  return onSnapshot(playerRef(uid), { includeMetadataChanges: true }, (snap) => {
-    cb(snap.exists() ? playerFromSnapshotData(snap.data()) : null);
-    onMeta?.(snap.metadata.fromCache);
+  onServerData?: (fromServer: boolean) => void,
+): () => void {
+  let active = true;
+  loadInitial(
+    "players",
+    uid,
+    () => active,
+    (rec) => {
+      cb(playerFromRecord(rec));
+      onServerData?.(true);
+    },
+    // 404 = réponse du serveur (profil pas encore créé) ; sinon serveur injoignable.
+    (serverAnswered) => {
+      if (serverAnswered) cb(null);
+      onServerData?.(serverAnswered);
+    },
+  );
+
+  const unsubscribe = subscribeRecords<PbRecord>("players", uid, (e) => {
+    if (e.action === "delete") cb(null);
+    else cb(playerFromRecord(e.record));
+    onServerData?.(true);
   });
+
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
-export function subscribeQueues(uid: string, cb: (queues: QueuesState | null) => void): Unsubscribe {
-  return onSnapshot(queuesRef(uid), (snap) => cb(snap.exists() ? (snap.data() as QueuesState) : null));
+export function subscribeQueues(uid: string, cb: (queues: QueuesState | null) => void): () => void {
+  let active = true;
+  loadInitial(
+    "queues",
+    uid,
+    () => active,
+    (rec) => cb(queuesFromRecord(rec)),
+    (serverAnswered) => serverAnswered && cb(null),
+  );
+
+  const unsubscribe = subscribeRecords<PbRecord>("queues", uid, (e) => {
+    cb(e.action === "delete" ? null : queuesFromRecord(e.record));
+  });
+
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
-export function subscribeNotifications(uid: string, cb: (items: GameNotification[]) => void): Unsubscribe {
-  const q = query(notificationsCol(uid), orderBy("createdAtMs", "desc"), fsLimit(30));
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<GameNotification, "id">) }))));
+/** Recharge une liste à l'ouverture puis à chaque évènement temps réel
+ *  correspondant au filtre. */
+function subscribeList<T>(
+  collection: string,
+  filter: string,
+  load: () => Promise<T>,
+  cb: (items: T) => void,
+  throttleMs = 0,
+): () => void {
+  let active = true;
+  const refresh = () => {
+    load()
+      .then((items) => active && cb(items))
+      .catch((err) => console.error(`Lecture ${collection} impossible :`, err));
+  };
+  const trigger = throttleMs > 0 ? throttle(refresh, throttleMs) : refresh;
+  refresh();
+  const unsubscribe = subscribeRecords(collection, "*", trigger, filter || undefined);
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
-export async function markNotificationRead(uid: string, id: string) {
-  await updateDoc(doc(notificationsCol(uid), id), { read: true });
+export function subscribeNotifications(uid: string, cb: (items: GameNotification[]) => void): () => void {
+  const filter = pb.filter("player_id = {:uid}", { uid });
+  return subscribeList(
+    "notifications",
+    filter,
+    async () => {
+      const res = await pb.collection("notifications").getList<GameNotification>(1, 30, { filter, sort: "-createdAtMs" });
+      return res.items;
+    },
+    cb,
+  );
+}
+
+export async function markNotificationRead(_uid: string, id: string) {
+  await pb.collection("notifications").update(id, { read: true });
+}
+
+async function createNotifications(uid: string, notifications: NewNotification[]) {
+  for (const n of notifications) {
+    await pb.collection("notifications").create({ ...n, player_id: uid });
+  }
 }
 
 export interface LeaderboardEntry {
@@ -147,73 +272,120 @@ export interface LeaderboardEntry {
   seasonXp: number;
 }
 
-function leaderboardEntryFromDoc(d: { id: string; data: () => Record<string, unknown> }): LeaderboardEntry {
-  const data = d.data();
+function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
   return {
-    uid: d.id,
+    uid: data.id,
     pseudo: (data.pseudo as string) || "Joueur inconnu",
     xp: (data.xp as number) || 0,
-    seasonId: (data.seasonId as string) ?? null,
+    seasonId: (data.seasonId as string) || null,
     seasonXp: (data.seasonXp as number) || 0,
   };
 }
 
-/** Classement "total" (tout le temps), trié côté serveur par XP cumulée. */
-export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): Unsubscribe {
-  const q = query(playersCol(), orderBy("xp", "desc"), fsLimit(100));
-  return onSnapshot(q, (snap) => cb(snap.docs.map(leaderboardEntryFromDoc)));
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp";
+
+/** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
+ *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à
+ *  une fois toutes les 10 s pour ne pas saturer le serveur. */
+export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): () => void {
+  return subscribeList(
+    "players",
+    "",
+    async () => {
+      const res = await pb.collection("players").getList<PbRecord>(1, 100, { sort: "-xp", fields: LEADERBOARD_FIELDS });
+      return res.items.map(leaderboardEntryFromRecord);
+    },
+    cb,
+    10_000,
+  );
 }
 
-export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
-  const snap = await getDoc(playerRef(uid));
-  return snap.exists() ? playerFromSnapshotData(snap.data()) : null;
+export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
+  const res = await pb.collection("players").getFullList<PbRecord>({ sort: "-xp", fields: LEADERBOARD_FIELDS });
+  return res.map(leaderboardEntryFromRecord);
 }
 
 /* =====================================================
    Contre-espionnage
-
-   Aucune trace n'est écrite en cas de non-détection (voir SpyModal, qui
-   tire au sort côté client via rollSpyDetection avant d'appeler ceci) :
-   seule une tentative détectée crée un document, lu par la cible via
-   subscribePendingSpyReports (même schéma que les rapports de combat).
 ===================================================== */
 
 export async function createSpyReport(spyUid: string, spyPseudo: string, targetUid: string) {
-  await setDoc(doc(spyReportsCol()), {
+  await pb.collection("spy_reports").create({
     spyUid,
     spyPseudo,
     targetUid,
-    timestamp: serverTimestamp(),
+    timestamp: Date.now(),
     targetProcessed: false,
   });
 }
 
-export function subscribePendingSpyReports(uid: string, cb: (reports: SpyReport[]) => void): Unsubscribe {
-  const q = query(spyReportsCol(), where("targetUid", "==", uid), where("targetProcessed", "==", false));
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SpyReport, "id">) }))));
+export function subscribePendingSpyReports(uid: string, cb: (reports: SpyReport[]) => void): () => void {
+  const filter = pb.filter("targetUid = {:uid} && targetProcessed = false", { uid });
+  return subscribeList(
+    "spy_reports",
+    pb.filter("targetUid = {:uid}", { uid }),
+    () => pb.collection("spy_reports").getFullList<SpyReport>({ filter }),
+    cb,
+  );
 }
 
-export async function acknowledgeSpyReport(uid: string, reportId: string) {
-  const reportRef = doc(spyReportsCol(), reportId);
-  const snap = await getDoc(reportRef);
-  if (!snap.exists()) return;
-  const report = { id: snap.id, ...(snap.data() as Omit<SpyReport, "id">) };
-  if (report.targetProcessed) return;
+export function acknowledgeSpyReport(uid: string, reportId: string) {
+  return once(`spy:${reportId}`, () => acknowledgeSpyReportOnce(uid, reportId));
+}
 
-  await updateDoc(reportRef, { targetProcessed: true });
-  await setDoc(doc(notificationsCol(uid)), {
-    kind: "spy-detected",
-    title: "Espionnage détecté !",
-    message: `${report.spyPseudo} a tenté de t'espionner.`,
-    createdAtMs: Date.now(),
-    read: false,
-  });
+async function acknowledgeSpyReportOnce(uid: string, reportId: string) {
+  let report: SpyReport;
+  try {
+    // La règle d'accès n'autorise ce passage qu'une seule fois
+    // (targetProcessed doit encore valoir false) : un second onglet qui
+    // traiterait le même rapport reçoit une 404 et s'arrête là.
+    report = await pb.collection("spy_reports").update<SpyReport>(reportId, { targetProcessed: true });
+  } catch (err) {
+    if (isNotFound(err)) return;
+    throw err;
+  }
+  await createNotifications(uid, [
+    {
+      kind: "spy-detected",
+      title: "Espionnage détecté !",
+      message: `${report.spyPseudo} a tenté de t'espionner.`,
+      createdAtMs: Date.now(),
+      read: false,
+    },
+  ]);
 }
 
 /* =====================================================
-   Action transactionnelle générique
-   (flush production + files en attente, puis mutation)
+   Actions de jeu
+
+   PocketBase n'offre pas de transactions côté client : chaque action lit
+   le joueur, applique la production accumulée (flushState), la modifie
+   puis réécrit. Toutes les actions de cet onglet passent par une file
+   unique pour qu'un heartbeat et un clic ne s'écrasent pas mutuellement.
 ===================================================== */
+
+let actionQueue: Promise<unknown> = Promise.resolve();
+
+/** Un seul traitement à la fois par rapport/don dans cet onglet : deux
+ *  requêtes parties au même instant passeraient toutes deux la règle
+ *  d'accès (PocketBase ne verrouille pas l'enregistrement entre la
+ *  vérification et l'écriture). La règle, elle, bloque les passages
+ *  suivants (autre onglet, rechargement). */
+const inFlight = new Map<string, Promise<unknown>>();
+
+function once<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const pending = inFlight.get(key) as Promise<T> | undefined;
+  if (pending) return pending.then(() => null as T);
+  const run = task().finally(() => inFlight.delete(key));
+  inFlight.set(key, run);
+  return run;
+}
+
+function serialized<T>(task: () => Promise<T>): Promise<T> {
+  const run = actionQueue.then(task, task);
+  actionQueue = run.catch(() => undefined);
+  return run;
+}
 
 interface MutateOutput<T> {
   player: PlayerState;
@@ -222,7 +394,30 @@ interface MutateOutput<T> {
   result: T;
 }
 
-async function runFlushedAction<T>(
+async function loadFlushed(uid: string) {
+  let playerRecord: PbRecord;
+  let queueRecord: PbRecord;
+  try {
+    [playerRecord, queueRecord] = await Promise.all([
+      pb.collection("players").getOne<PbRecord>(uid),
+      pb.collection("queues").getOne<PbRecord>(uid),
+    ]);
+  } catch (err) {
+    if (isNotFound(err)) throw new GameActionError("Profil joueur introuvable.");
+    throw err;
+  }
+  const preFlushPlayer = playerFromRecord(playerRecord);
+  const queues = queuesFromRecord(queueRecord);
+  if (!preFlushPlayer || !queues) throw new GameActionError("Profil joueur introuvable.");
+  return { preFlushPlayer, flushed: flushState(preFlushPlayer, queues, Date.now()) };
+}
+
+async function savePlayerState(uid: string, player: PlayerState, queues: QueuesState) {
+  await pb.collection("players").update(uid, gameFieldsOf(player));
+  await pb.collection("queues").update(uid, { ...queues });
+}
+
+function runFlushedAction<T>(
   uid: string,
   mutate: (state: {
     player: PlayerState;
@@ -231,28 +426,18 @@ async function runFlushedAction<T>(
     flushNotifications: NewNotification[];
   }) => MutateOutput<T>,
 ): Promise<T> {
-  let result!: T;
-
-  await runTransaction(db, async (tx) => {
-    const [pSnap, qSnap] = await Promise.all([tx.get(playerRef(uid)), tx.get(queuesRef(uid))]);
-    if (!pSnap.exists() || !qSnap.exists()) throw new GameActionError("Profil joueur introuvable.");
-
-    const now = Date.now();
-    const preFlushPlayer = pSnap.data() as PlayerState;
-    const flushed = flushState(preFlushPlayer, qSnap.data() as QueuesState, now);
-    const mutated = mutate({ player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications });
-
-    tx.set(playerRef(uid), mutated.player);
-    tx.set(queuesRef(uid), mutated.queues);
-
-    for (const n of [...flushed.notifications, ...(mutated.notifications ?? [])]) {
-      tx.set(doc(notificationsCol(uid)), n);
-    }
-
-    result = mutated.result;
+  return serialized(async () => {
+    const { preFlushPlayer, flushed } = await loadFlushed(uid);
+    const mutated = mutate({
+      player: flushed.player,
+      queues: flushed.queues,
+      preFlushPlayer,
+      flushNotifications: flushed.notifications,
+    });
+    await savePlayerState(uid, mutated.player, mutated.queues);
+    await createNotifications(uid, [...flushed.notifications, ...(mutated.notifications ?? [])]);
+    return mutated.result;
   });
-
-  return result;
 }
 
 export interface AwaySummary {
@@ -261,11 +446,6 @@ export interface AwaySummary {
   notifications: NewNotification[];
 }
 
-/** Flush pur (production + complétions), sans action supplémentaire. Utilisé
- *  au chargement et par le "heartbeat" périodique pour rester à jour sans
- *  dépendre uniquement des actions du joueur. Retourne un résumé (gains de
- *  ressources, temps écoulé, complétions) pour le modal "pendant ton absence",
- *  que useGameSync n'affiche que pour le tout premier appel après montage. */
 export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary> {
   return runFlushedAction(uid, ({ player, queues, preFlushPlayer, flushNotifications }) => {
     player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.max(0, playtimeDeltaSeconds);
@@ -284,10 +464,6 @@ export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise
     };
   });
 }
-
-/* =====================================================
-   Bâtiments
-===================================================== */
 
 export async function unlockBuilding(uid: string, buildingId: BuildingId) {
   return runFlushedAction(uid, ({ player, queues }) => {
@@ -337,10 +513,6 @@ export async function startBuildingUpgrade(uid: string, buildingId: BuildingId) 
     return { player, queues, result: undefined };
   });
 }
-
-/* =====================================================
-   Unités
-===================================================== */
 
 export async function enqueueUnitBuild(uid: string, unitId: string, qty: number) {
   return runFlushedAction(uid, ({ player, queues }) => {
@@ -400,10 +572,6 @@ export async function sellUnit(uid: string, unitId: string, qty: number) {
   });
 }
 
-/* =====================================================
-   Recherche
-===================================================== */
-
 export async function startResearch(uid: string, techId: string) {
   return runFlushedAction(uid, ({ player, queues }) => {
     const tech = findTech(techId);
@@ -436,10 +604,6 @@ export async function startResearch(uid: string, techId: string) {
   });
 }
 
-/* =====================================================
-   Missions
-===================================================== */
-
 export async function startMission(uid: string, missionKey: string) {
   return runFlushedAction(uid, ({ player, queues }) => {
     const mission = MISSIONS[missionKey];
@@ -453,10 +617,6 @@ export async function startMission(uid: string, missionKey: string) {
     return { player, queues, result: undefined };
   });
 }
-
-/* =====================================================
-   Commerce
-===================================================== */
 
 export async function tradeResources(uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {
   return runFlushedAction(uid, ({ player, queues }) => {
@@ -474,14 +634,7 @@ export async function tradeResources(uid: string, sellId: ResourceId, buyId: Res
 }
 
 /* =====================================================
-   Échange entre joueurs
-
-   Le débit de l'expéditeur et la création du don sont dans la même
-   transaction (comme initiateAttack) : impossible de perdre des
-   ressources si l'écriture échoue à mi-chemin. Le crédit du
-   destinataire se fait séparément, dans SA propre transaction, quand
-   il traite le don (voir claimResourceGift) — jamais l'expéditeur qui
-   n'a pas le droit d'écrire sur le document d'un autre joueur.
+   Échanges entre joueurs
 ===================================================== */
 
 export async function sendResourceGift(params: {
@@ -497,66 +650,71 @@ export async function sendResourceGift(params: {
   const entries = (Object.entries(resources) as [ResourceId, number | undefined][]).filter(([, v]) => (v ?? 0) > 0);
   if (entries.length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
 
-  await runTransaction(db, async (tx) => {
-    const [pSnap, qSnap] = await Promise.all([tx.get(playerRef(fromUid)), tx.get(queuesRef(fromUid))]);
-    if (!pSnap.exists() || !qSnap.exists()) throw new GameActionError("Profil joueur introuvable.");
-
-    const now = Date.now();
-    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
-
+  await runFlushedAction(fromUid, ({ player, queues }) => {
     for (const [res, amt] of entries) {
-      if ((flushed.player.resources[res] ?? 0) < (amt ?? 0)) throw new GameActionError("Ressources insuffisantes.");
-      flushed.player.resources[res] -= amt ?? 0;
+      if ((player.resources[res] ?? 0) < (amt ?? 0)) throw new GameActionError("Ressources insuffisantes.");
+      player.resources[res] -= amt ?? 0;
     }
+    return { player, queues, result: undefined };
+  });
 
-    tx.set(playerRef(fromUid), flushed.player);
-    tx.set(queuesRef(fromUid), flushed.queues);
-    for (const n of flushed.notifications) tx.set(doc(notificationsCol(fromUid)), n);
-
-    tx.set(doc(resourceGiftsCol()), {
-      fromUid,
-      fromPseudo,
-      toUid,
-      toPseudo,
-      resources: Object.fromEntries(entries),
-      timestamp: serverTimestamp(),
-      claimed: false,
-    });
+  await pb.collection("resource_gifts").create({
+    fromUid,
+    fromPseudo,
+    toUid,
+    toPseudo,
+    resources: Object.fromEntries(entries),
+    timestamp: Date.now(),
+    claimed: false,
   });
 }
 
-export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): Unsubscribe {
-  const q = query(resourceGiftsCol(), where("toUid", "==", uid), where("claimed", "==", false));
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ResourceGift, "id">) }))));
+export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): () => void {
+  const filter = pb.filter("toUid = {:uid} && claimed = false", { uid });
+  return subscribeList(
+    "resource_gifts",
+    pb.filter("toUid = {:uid}", { uid }),
+    () => pb.collection("resource_gifts").getFullList<ResourceGift>({ filter }),
+    cb,
+  );
 }
 
-export async function claimResourceGift(uid: string, giftId: string) {
-  await runTransaction(db, async (tx) => {
-    const giftRef = doc(resourceGiftsCol(), giftId);
-    const [giftSnap, pSnap, qSnap] = await Promise.all([tx.get(giftRef), tx.get(playerRef(uid)), tx.get(queuesRef(uid))]);
-    if (!giftSnap.exists()) return;
-    const gift = { id: giftSnap.id, ...(giftSnap.data() as Omit<ResourceGift, "id">) };
-    if (gift.claimed || !pSnap.exists() || !qSnap.exists()) return;
+export function claimResourceGift(uid: string, giftId: string) {
+  return once(`gift:${giftId}`, () => claimResourceGiftOnce(uid, giftId));
+}
 
-    const now = Date.now();
-    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
+async function claimResourceGiftOnce(uid: string, giftId: string) {
+  let gift: ResourceGift;
+  try {
+    // Marqué comme réclamé AVANT de créditer : la règle d'accès refuse un
+    // second passage (claimed doit encore valoir false), donc un don ne
+    // peut jamais être crédité deux fois, même depuis deux onglets.
+    gift = await pb.collection("resource_gifts").update<ResourceGift>(giftId, { claimed: true });
+  } catch (err) {
+    if (isNotFound(err)) return;
+    throw err;
+  }
+  if (gift.toUid !== uid) return;
 
-    for (const [res, amt] of Object.entries(gift.resources)) {
+  await runFlushedAction(uid, ({ player, queues }) => {
+    for (const [res, amt] of Object.entries(gift.resources ?? {})) {
       const key = res as ResourceId;
-      flushed.player.resources[key] = (flushed.player.resources[key] ?? 0) + (amt ?? 0);
+      player.resources[key] = (player.resources[key] ?? 0) + ((amt as number) ?? 0);
     }
-
-    tx.set(playerRef(uid), flushed.player);
-    tx.set(queuesRef(uid), flushed.queues);
-    tx.update(giftRef, { claimed: true });
-    tx.set(doc(notificationsCol(uid)), {
-      kind: "gift",
-      title: "Ressources reçues !",
-      message: `${gift.fromPseudo} t'a envoyé des ressources.`,
-      createdAtMs: now,
-      read: false,
-    });
-    for (const n of flushed.notifications) tx.set(doc(notificationsCol(uid)), n);
+    return {
+      player,
+      queues,
+      notifications: [
+        {
+          kind: "gift",
+          title: "Ressources reçues !",
+          message: `${gift.fromPseudo} t'a envoyé des ressources.`,
+          createdAtMs: Date.now(),
+          read: false,
+        },
+      ],
+      result: undefined,
+    };
   });
 }
 
@@ -572,72 +730,67 @@ export interface AttackParams {
   fleet: Record<string, number>;
 }
 
-export async function initiateAttack(params: AttackParams) {
+export function initiateAttack(params: AttackParams) {
   const { attackerUid, attackerPseudo, targetUid, targetPseudo, fleet } = params;
-  if (attackerUid === targetUid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
+  if (attackerUid === targetUid) return Promise.reject(new GameActionError("Tu ne peux pas t'attaquer toi-même !"));
 
-  return runTransaction(db, async (tx) => {
-    const [aSnap, aQSnap, dSnap] = await Promise.all([
-      tx.get(playerRef(attackerUid)),
-      tx.get(queuesRef(attackerUid)),
-      tx.get(playerRef(targetUid)),
+  return serialized(async () => {
+    const [{ flushed }, defenderRecord] = await Promise.all([
+      loadFlushed(attackerUid),
+      pb
+        .collection("players")
+        .getOne<PbRecord>(targetUid)
+        .catch(() => null),
     ]);
-    if (!aSnap.exists() || !aQSnap.exists()) throw new GameActionError("Profil attaquant introuvable.");
-    if (!dSnap.exists()) throw new GameActionError("Ce joueur est introuvable.");
-
+    const defender = playerFromRecord(defenderRecord);
+    if (!defender) throw new GameActionError("Ce joueur est introuvable.");
     const now = Date.now();
-    const flushed = flushState(aSnap.data() as PlayerState, aQSnap.data() as QueuesState, now);
-    const defender = dSnap.data() as PlayerState;
+    const attacker = flushed.player;
 
     for (const [unitId, qty] of Object.entries(fleet)) {
-      if ((flushed.player.units[unitId]?.count ?? 0) < qty) {
+      if ((attacker.units[unitId]?.count ?? 0) < qty) {
         throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
       }
     }
 
-    const attackerRepairPct = getRepairPercent(flushed.player.buildings);
-    const defenderRepairPct = getRepairPercent(defender.buildings);
-
     const combat = resolveCombat({
-      attackerUnits: flushed.player.units,
-      attackerTechLevels: flushed.player.techLevels,
-      attackerRepairPct,
+      attackerUnits: attacker.units,
+      attackerTechLevels: attacker.techLevels,
+      attackerRepairPct: getRepairPercent(attacker.buildings),
       fleet,
       defenderUnits: defender.units,
       defenderTechLevels: defender.techLevels,
-      defenderRepairPct,
+      defenderRepairPct: getRepairPercent(defender.buildings),
       defenderResources: defender.resources,
     });
 
     for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
-      if (flushed.player.units[unitId]) {
-        flushed.player.units[unitId].count = Math.max(0, flushed.player.units[unitId].count - lost);
+      if (attacker.units[unitId]) {
+        attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
       }
     }
     if (combat.loot) {
       for (const [res, amt] of Object.entries(combat.loot)) {
-        flushed.player.resources[res as ResourceId] += amt ?? 0;
+        attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
       }
     }
     if (combat.outcome === "attacker_win") {
-      flushed.player.victories += 1;
-      applyXpDelta(flushed.player, 40, now);
+      attacker.victories += 1;
+      applyXpDelta(attacker, 40, now);
     } else if (combat.outcome === "defender_win") {
-      flushed.player.defeats += 1;
-      applyXpDelta(flushed.player, -20, now);
+      attacker.defeats += 1;
+      applyXpDelta(attacker, -20, now);
     }
 
-    tx.set(playerRef(attackerUid), flushed.player);
-    tx.set(queuesRef(attackerUid), flushed.queues);
-    for (const n of flushed.notifications) tx.set(doc(notificationsCol(attackerUid)), n);
+    await savePlayerState(attackerUid, attacker, flushed.queues);
+    await createNotifications(attackerUid, flushed.notifications);
 
-    const reportRef = doc(battleReportsCol());
     const report: Omit<BattleReport, "id"> = {
       attackerUid,
       attackerPseudo,
       defenderUid: targetUid,
       defenderPseudo: targetPseudo,
-      timestamp: serverTimestamp(),
+      timestamp: now,
       outcome: combat.outcome,
       attackerPower: combat.attackerPower,
       defenderPower: combat.defenderPower,
@@ -650,125 +803,107 @@ export async function initiateAttack(params: AttackParams) {
       loot: combat.loot,
       defenderProcessed: false,
     };
-    tx.set(reportRef, report);
+    await pb.collection("battle_reports").create(report);
 
     return { ...combat, defenderPseudo: targetPseudo };
   });
 }
 
-export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): Unsubscribe {
-  const q = query(battleReportsCol(), where("defenderUid", "==", uid), where("defenderProcessed", "==", false));
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }))));
+export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): () => void {
+  const filter = pb.filter("defenderUid = {:uid} && defenderProcessed = false", { uid });
+  return subscribeList(
+    "battle_reports",
+    pb.filter("defenderUid = {:uid}", { uid }),
+    () => pb.collection("battle_reports").getFullList<BattleReport>({ filter }),
+    cb,
+  );
 }
 
-/** Journal de combat complet (attaques lancées + reçues), temps réel.
- *  Deux abonnements simples (une égalité chacun, sans orderBy) plutôt
- *  qu'une requête OR + tri serveur : évite d'avoir à déployer de nouveaux
- *  index composites, le tri se fait ici côté client. */
-export function subscribeBattleLog(uid: string, cb: (reports: BattleReport[]) => void): Unsubscribe {
-  let sent: BattleReport[] = [];
-  let received: BattleReport[] = [];
-
-  const emit = () => {
-    const merged = [...sent, ...received].sort((a, b) => firestoreMillis(b.timestamp) - firestoreMillis(a.timestamp));
-    cb(merged);
-  };
-
-  const unsubSent = onSnapshot(query(battleReportsCol(), where("attackerUid", "==", uid)), (snap) => {
-    sent = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }));
-    emit();
-  });
-  const unsubReceived = onSnapshot(query(battleReportsCol(), where("defenderUid", "==", uid)), (snap) => {
-    received = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BattleReport, "id">) }));
-    emit();
-  });
-
-  return () => {
-    unsubSent();
-    unsubReceived();
-  };
+export function subscribeBattleLog(uid: string, cb: (reports: BattleReport[]) => void): () => void {
+  const filter = pb.filter("attackerUid = {:uid} || defenderUid = {:uid}", { uid });
+  return subscribeList(
+    "battle_reports",
+    filter,
+    async () => {
+      const res = await pb.collection("battle_reports").getList<BattleReport>(1, 50, { filter, sort: "-timestamp" });
+      return res.items;
+    },
+    cb,
+  );
 }
 
-export async function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {
-  return runTransaction(db, async (tx) => {
-    const reportDocRef = doc(battleReportsCol(), reportId);
-    const [reportSnap, pSnap, qSnap] = await Promise.all([
-      tx.get(reportDocRef),
-      tx.get(playerRef(uid)),
-      tx.get(queuesRef(uid)),
-    ]);
-    if (!reportSnap.exists()) return null;
-    const report = { id: reportSnap.id, ...(reportSnap.data() as Omit<BattleReport, "id">) };
-    if (report.defenderProcessed || !pSnap.exists() || !qSnap.exists()) return null;
+export function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {
+  return once(`battle:${reportId}`, () => processBattleReportOnce(uid, reportId));
+}
+
+async function processBattleReportOnce(uid: string, reportId: string): Promise<BattleReport | null> {
+  let report: BattleReport;
+  try {
+    // Passage unique garanti par la règle d'accès (defenderProcessed doit
+    // encore valoir false) : les pertes ne sont jamais appliquées deux fois.
+    report = await pb.collection("battle_reports").update<BattleReport>(reportId, { defenderProcessed: true });
+  } catch (err) {
+    if (isNotFound(err)) return null;
+    throw err;
+  }
+  if (report.defenderUid !== uid) return null;
+
+  const outcomeLabel: Record<string, string> = {
+    attacker_win: "Tu as perdu ce combat...",
+    defender_win: "Attaque repoussée !",
+    draw: "Match nul.",
+  };
+
+  await runFlushedAction(uid, ({ player, queues }) => {
+    for (const [unitId, lost] of Object.entries(report.defenderLosses ?? {})) {
+      if (player.units[unitId]) {
+        player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
+      }
+    }
 
     const now = Date.now();
-    const flushed = flushState(pSnap.data() as PlayerState, qSnap.data() as QueuesState, now);
-
-    for (const [unitId, lost] of Object.entries(report.defenderLosses || {})) {
-      if (flushed.player.units[unitId]) {
-        flushed.player.units[unitId].count = Math.max(0, flushed.player.units[unitId].count - lost);
-      }
-    }
     if (report.outcome === "defender_win") {
-      flushed.player.victories += 1;
-      applyXpDelta(flushed.player, 40, now);
+      player.victories += 1;
+      applyXpDelta(player, 40, now);
     } else if (report.outcome === "attacker_win") {
-      flushed.player.defeats += 1;
-      applyXpDelta(flushed.player, -20, now);
-    }
-    if (report.loot) {
-      for (const [res, amt] of Object.entries(report.loot)) {
-        const key = res as ResourceId;
-        flushed.player.resources[key] = Math.max(0, (flushed.player.resources[key] ?? 0) - (amt ?? 0));
-      }
+      player.defeats += 1;
+      applyXpDelta(player, -20, now);
     }
 
-    tx.set(playerRef(uid), flushed.player);
-    tx.set(queuesRef(uid), flushed.queues);
-    tx.update(reportDocRef, { defenderProcessed: true });
+    for (const [res, amt] of Object.entries(report.loot ?? {})) {
+      const key = res as ResourceId;
+      player.resources[key] = Math.max(0, (player.resources[key] ?? 0) - (amt ?? 0));
+    }
 
-    const outcomeLabel: Record<string, string> = {
-      attacker_win: "Tu as perdu ce combat...",
-      defender_win: "Attaque repoussée !",
-      draw: "Match nul.",
+    return {
+      player,
+      queues,
+      notifications: [
+        {
+          kind: "combat-defender",
+          title: outcomeLabel[report.outcome] ?? "Rapport de combat",
+          message: `Attaque de ${report.attackerPseudo}.`,
+          createdAtMs: Date.now(),
+          read: false,
+        },
+      ],
+      result: undefined,
     };
-    tx.set(doc(notificationsCol(uid)), {
-      kind: "combat-defender",
-      title: outcomeLabel[report.outcome] ?? "Rapport de combat",
-      message: `Attaque de ${report.attackerPseudo}.`,
-      createdAtMs: now,
-      read: false,
-    });
-    for (const n of flushed.notifications) tx.set(doc(notificationsCol(uid)), n);
-
-    return report;
   });
+
+  return report;
 }
 
 /* =====================================================
-   Divers
+   Suppression de compte
 ===================================================== */
 
-export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
-  const snap = await getDocs(playersCol());
-  return snap.docs.map(leaderboardEntryFromDoc).sort((a, b) => b.xp - a.xp);
-}
-
-/** Supprime les données Firestore du joueur (profil, files, notifications,
- *  réservation de pseudo). Le compte Firebase Auth lui-même est supprimé
- *  séparément par authService.deleteAccount juste après. */
-export async function deletePlayerAccountData(uid: string, pseudo: string) {
-  const notifSnap = await getDocs(notificationsCol(uid));
-
-  const batch = writeBatch(db);
-  notifSnap.docs.forEach((d) => batch.delete(d.ref));
-  batch.delete(queuesRef(uid));
-  batch.delete(playerRef(uid));
-  await batch.commit();
-
-  const sanitized = pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-  const usernameSnap = await getDoc(usernameRef(sanitized));
-  if (usernameSnap.exists() && usernameSnap.data().uid === uid) {
-    await deleteDoc(usernameRef(sanitized));
-  }
+export async function deletePlayerAccountData(uid: string, _pseudo: string) {
+  const notifications = await pb
+    .collection("notifications")
+    .getFullList({ filter: pb.filter("player_id = {:uid}", { uid }), fields: "id" })
+    .catch(() => []);
+  for (const n of notifications) await pb.collection("notifications").delete(n.id).catch(() => {});
+  await pb.collection("queues").delete(uid).catch(() => {});
+  await pb.collection("players").delete(uid).catch(() => {});
 }

@@ -1,9 +1,8 @@
-import { useEffect } from "react";
-import { startAuthListener, useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 
+/** La session PocketBase est restaurée de façon synchrone depuis le
+ *  localStorage : pas d'état "initialisation" à attendre. */
 export function useAuth() {
-  useEffect(() => {
-    startAuthListener();
-  }, []);
-  return useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  return { user, initializing: false };
 }

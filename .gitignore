@@ -9,3 +9,7 @@ dist-ssr
 .firebase
 firebase-debug.log
 *.tsbuildinfo
+
+# Migration Firebase -> PocketBase (secrets, jamais commités)
+migration-output/
+service-account*.json
