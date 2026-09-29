@@ -26,6 +26,7 @@ import PocketBase from "pocketbase";
 const DRY_RUN = process.argv.includes("--dry-run");
 const SEND_RESET = process.argv.includes("--send-reset-emails");
 const LEGACY_DOMAIN = "@cosmic-empires.local";
+const KEEP_NOTIFICATIONS = 50;
 
 /* ---------- utilitaires purs (exportés pour les tests) ---------- */
 
@@ -69,6 +70,8 @@ async function readFirebase() {
   initializeApp({ credential: applicationDefault() });
   const auth = getAuth();
   const db = getFirestore();
+  // REST plutôt que gRPC : passe les proxys/pare-feux d'entreprise.
+  db.settings({ preferRest: true });
 
   const users = [];
   let pageToken;
@@ -115,10 +118,11 @@ export async function writePocketBase(pb, data, { dryRun = false, sendReset = fa
   async function upsert(collection, id, record) {
     if (dryRun) return;
     try {
-      await pb.collection(collection).update(id, record);
-    } catch (err) {
-      if (err?.status !== 404) throw err;
       await pb.collection(collection).create({ ...record, id });
+    } catch (err) {
+      // Déjà copié lors d'un précédent passage : mise à jour.
+      if (err?.status !== 400 || !err?.response?.data?.id) throw err;
+      await pb.collection(collection).update(id, record);
     }
   }
 
@@ -186,11 +190,13 @@ export async function writePocketBase(pb, data, { dryRun = false, sendReset = fa
       createdAtMs: typeof createdAt === "number" ? createdAt : Date.now(),
     });
     if (queues) await upsert("queues", id, queues);
-    for (const n of notifications) {
+    // Le jeu n'affiche que les 30 dernières : inutile de copier tout l'historique.
+    const recent = [...notifications].sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0)).slice(0, KEEP_NOTIFICATIONS);
+    for (const n of recent) {
       const { id: nid, ...rest } = n;
       await upsert("notifications", pbId("notif", `${p.id}/${nid}`), { ...rest, player_id: id });
     }
-    log(`+ joueur ${p.pseudo} (${notifications.length} notifications)`);
+    log(`+ joueur ${p.pseudo} (${recent.length}/${notifications.length} notifications)`);
   }
 
   // 3. Alliances et messages
