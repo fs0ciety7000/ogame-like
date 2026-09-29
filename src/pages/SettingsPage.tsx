@@ -32,8 +32,7 @@ function ChangePasswordCard() {
       toast.success("Mot de passe mis à jour.");
       reset();
     } catch (err) {
-      const code = (err as { code?: string })?.code ?? "";
-      toast.error(translateAuthError(code));
+      toast.error(translateAuthError(err));
     } finally {
       setSubmitting(false);
     }
@@ -86,8 +85,7 @@ function DangerZoneCard() {
       await deleteAccount(password, player.pseudo);
       toast.success("Compte supprimé.");
     } catch (err) {
-      const code = (err as { code?: string })?.code ?? "";
-      toast.error(translateAuthError(code));
+      toast.error(translateAuthError(err));
       setSubmitting(false);
     }
   };

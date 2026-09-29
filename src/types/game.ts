@@ -87,7 +87,7 @@ export interface PlayerState {
   unlockedAchievements?: string[];
   allianceId?: string | null;
   allianceLastReadMs?: number;
-  createdAt?: unknown;
+  createdAtMs?: number;
 }
 
 export interface QueuesState {
@@ -105,7 +105,8 @@ export interface BattleReport {
   attackerPseudo: string;
   defenderUid: string;
   defenderPseudo: string;
-  timestamp: unknown;
+  /** Horodatage en millisecondes. */
+  timestamp: number;
   outcome: CombatOutcome;
   attackerPower: number;
   defenderPower: number;
@@ -124,7 +125,8 @@ export interface SpyReport {
   spyUid: string;
   spyPseudo: string;
   targetUid: string;
-  timestamp: unknown;
+  /** Horodatage en millisecondes. */
+  timestamp: number;
   targetProcessed: boolean;
 }
 
@@ -135,7 +137,8 @@ export interface ResourceGift {
   toUid: string;
   toPseudo: string;
   resources: Partial<Resources>;
-  timestamp: unknown;
+  /** Horodatage en millisecondes. */
+  timestamp: number;
   claimed: boolean;
 }
 
@@ -144,7 +147,7 @@ export interface Alliance {
   name: string;
   tag: string;
   createdBy: string;
-  createdAt: unknown;
+  createdAtMs?: number;
   members: string[];
   memberPseudos: Record<string, string>;
   /** Officiers explicitement promus ; le fondateur (createdBy) n'y figure

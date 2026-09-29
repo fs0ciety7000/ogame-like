@@ -20,7 +20,7 @@ import {
   validatePassword,
   validatePseudo,
 } from "@/services/authService";
-import { firebaseConfigured } from "@/lib/firebase";
+import { pbConfigured } from "@/lib/pocketbase";
 
 type Mode = "login" | "register" | "forgot";
 
@@ -41,20 +41,17 @@ export function LoginPage() {
   } = useForm<FormValues>();
 
   const onSubmit = async (values: FormValues) => {
-    const pseudoError = validatePseudo(values.pseudo);
-    if (pseudoError) return toast.error(pseudoError);
-
     if (mode === "forgot") {
+      const emailError = validateEmail(values.email);
+      if (emailError) return toast.error(emailError);
       setSubmitting(true);
       try {
-        await requestPasswordReset(values.pseudo);
-        toast.success("Email envoyé ! Vérifie ta boîte de réception (et tes spams).");
+        await requestPasswordReset(values.email);
+        toast.success("Si un compte utilise cet email, un lien vient d'y être envoyé (pense aux spams).");
         setMode("login");
       } catch (err) {
         if (err instanceof NoRecoveryEmailError) {
-          toast.error(
-            "Ce compte n'a pas d'email de récupération associé (créé avant l'ajout de cette fonctionnalité).",
-          );
+          toast.error("Entre l'adresse email de ton compte.");
         } else {
           toast.error("Impossible d'envoyer l'email pour le moment. Réessaie plus tard.");
         }
@@ -62,6 +59,12 @@ export function LoginPage() {
         setSubmitting(false);
       }
       return;
+    }
+
+    // En connexion, le champ accepte le pseudo ou l'email du compte.
+    if (mode === "register" || !values.pseudo.includes("@")) {
+      const pseudoError = validatePseudo(values.pseudo);
+      if (pseudoError) return toast.error(pseudoError);
     }
 
     if (mode === "register") {
@@ -80,8 +83,7 @@ export function LoginPage() {
         toast.success("Empire créé avec succès !");
       }
     } catch (err) {
-      const code = (err as { code?: string })?.code ?? "";
-      toast.error(translateAuthError(code));
+      toast.error(translateAuthError(err));
     } finally {
       setSubmitting(false);
     }
@@ -140,10 +142,10 @@ export function LoginPage() {
             <p className="text-sm text-slate-400">Bâtis ton empire. Recherche. Combats. En temps réel.</p>
           </div>
 
-          {!firebaseConfigured && (
+          {!pbConfigured && (
             <div className="mb-4 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
-              Configuration Firebase manquante — copie <code>.env.example</code> en <code>.env.local</code> et renseigne ton
-              projet Firebase.
+              Serveur PocketBase non configuré — copie <code>.env.example</code> en <code>.env.local</code> et renseigne{" "}
+              <code>VITE_POCKETBASE_URL</code>.
             </div>
           )}
 
@@ -154,20 +156,26 @@ export function LoginPage() {
             </p>
           {mode === "forgot" && (
             <p className="text-xs text-slate-400">
-              Entre ton pseudo : si un email de récupération y est associé, on t'y enverra un lien de réinitialisation.
+              Entre l'email de ton compte : on t'y enverra un lien pour choisir un nouveau mot de passe.
             </p>
           )}
 
-          <div>
-            <Input placeholder="Nom du joueur" autoComplete="username" {...register("pseudo", { required: true })} />
-            {errors.pseudo && <p className="mt-1 text-xs text-danger-glow">Pseudo requis.</p>}
-          </div>
+          {mode !== "forgot" && (
+            <div>
+              <Input
+                placeholder={mode === "login" ? "Pseudo ou email" : "Nom du joueur"}
+                autoComplete="username"
+                {...register("pseudo", { required: true })}
+              />
+              {errors.pseudo && <p className="mt-1 text-xs text-danger-glow">Pseudo requis.</p>}
+            </div>
+          )}
 
-          {mode === "register" && (
+          {mode !== "login" && (
             <div>
               <Input
                 type="email"
-                placeholder="Email (pour récupérer ton compte)"
+                placeholder={mode === "register" ? "Email (pour récupérer ton compte)" : "Email du compte"}
                 autoComplete="email"
                 {...register("email", { required: true })}
               />

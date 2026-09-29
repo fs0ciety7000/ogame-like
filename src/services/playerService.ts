@@ -1,4 +1,4 @@
-import { pb } from "@/lib/pocketbase";
+import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState, type NewNotification } from "@/game/flush";
 import { applyXpDelta } from "@/game/seasons";
@@ -31,33 +31,95 @@ import type {
 export class GameActionError extends Error {}
 
 /* =====================================================
-   Utilitaires de conversion PocketBase <-> App
+   Conversion enregistrements PocketBase <-> état du jeu
+
+   Un joueur = un enregistrement `players` dont l'id est celui de son
+   compte `users`, et un enregistrement `queues` (files d'attente) avec ce
+   même id. Voir pocketbase/pb_schema.json.
 ===================================================== */
 
-function playerFromRecord(record: any): PlayerState | null {
+type PbRecord = Record<string, unknown> & { id: string };
+
+/** Champs que le moteur de jeu (flushState + actions) peut modifier. Le
+ *  pseudo et l'alliance sont exclus : ils sont écrits à part (connexion,
+ *  écran Alliance) et une action de jeu lue juste avant les écraserait
+ *  sinon avec une valeur périmée — sans transactions côté client,
+ *  PocketBase ne protège pas de ce genre de conflit. */
+const GAME_FIELDS = [
+  "resources",
+  "buildings",
+  "units",
+  "techLevels",
+  "bonuses",
+  "xp",
+  "seasonId",
+  "seasonXp",
+  "victories",
+  "defeats",
+  "playtimeSeconds",
+  "resourcesUpdatedAtMs",
+  "resourceHistory",
+  "unlockedAchievements",
+] as const;
+
+function playerFromRecord(record: PbRecord | null | undefined): PlayerState | null {
   if (!record || !record.resources || !record.buildings) return null;
+  const player = { ...record, uid: record.id } as unknown as PlayerState;
   return {
-    ...record,
-    units: record.units ?? {},
-    techLevels: record.techLevels ?? {},
-  } as PlayerState;
+    ...player,
+    units: player.units ?? {},
+    techLevels: player.techLevels ?? {},
+    resourceHistory: player.resourceHistory ?? [],
+    unlockedAchievements: player.unlockedAchievements ?? [],
+  };
+}
+
+function gameFieldsOf(player: PlayerState): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of GAME_FIELDS) out[key] = player[key] ?? null;
+  return out;
+}
+
+function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | null {
+  if (!record) return null;
+  const defaults = defaultQueues();
+  return {
+    buildingUpgrades: (record.buildingUpgrades as QueuesState["buildingUpgrades"]) ?? defaults.buildingUpgrades,
+    unitQueues: (record.unitQueues as QueuesState["unitQueues"]) ?? defaults.unitQueues,
+    activeResearches: (record.activeResearches as QueuesState["activeResearches"]) ?? defaults.activeResearches,
+    activeMissions: (record.activeMissions as QueuesState["activeMissions"]) ?? defaults.activeMissions,
+  };
 }
 
 /* =====================================================
    Création / lecture
 ===================================================== */
 
+async function createIgnoringDuplicate(collection: string, data: Record<string, unknown>) {
+  try {
+    await pb.collection(collection).create(data);
+  } catch (err) {
+    // Création concurrente (inscription + filet de sécurité de useGameSync) :
+    // l'enregistrement existe déjà, c'est le résultat voulu.
+    if ((err as { status?: number })?.status !== 400) throw err;
+    await pb.collection(collection).getOne(data.id as string);
+  }
+}
+
 export async function ensurePlayerDoc(uid: string, pseudo: string) {
   try {
-    await pb.collection("players").getOne(uid);
+    await pb.collection("players").getOne(uid, { fields: "id" });
   } catch (err) {
-    // Si le joueur n'existe pas, on le crée avec l'ID forcé
-    // (Dans PocketBase, on peut forcer un ID de 15 caractères, ce qui correspond à l'ID utilisateur)
-    const newPlayer = { ...defaultPlayerState(uid, pseudo), id: uid };
-    await pb.collection("players").create(newPlayer);
-    
-    const newQueues = { ...defaultQueues(), player_id: uid };
-    await pb.collection("queues").create(newQueues);
+    if (!isNotFound(err)) throw err;
+    const state: Partial<PlayerState> = defaultPlayerState(uid, pseudo);
+    delete state.uid;
+    await createIgnoringDuplicate("players", { ...state, id: uid, createdAtMs: Date.now() });
+  }
+  try {
+    await pb.collection("queues").getOne(uid, { fields: "id" });
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+    await createIgnoringDuplicate("queues", { ...defaultQueues(), id: uid });
   }
 }
 
@@ -65,84 +127,141 @@ export async function setPlayerPseudo(uid: string, pseudo: string) {
   await pb.collection("players").update(uid, { pseudo });
 }
 
-export async function claimUsername(uid: string, sanitizedPseudo: string, email: string) {
-  // Avec PocketBase, l'unicité de l'username est gérée nativement dans la collection 'users'.
-  // Cette fonction est conservée pour la compatibilité avec votre authService refactorisé.
-  return Promise.resolve();
-}
-
 export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
   try {
-    const record = await pb.collection("players").getOne(uid);
-    return playerFromRecord(record);
-  } catch (e) {
+    return playerFromRecord(await pb.collection("players").getOne<PbRecord>(uid));
+  } catch {
     return null;
   }
 }
 
 /* =====================================================
-   Abonnements (Temps Réel via SSE PocketBase)
+   Abonnements temps réel
 ===================================================== */
 
+/** Lecture initiale d'un abonnement. Juste après l'inscription, l'écran
+ *  de jeu s'ouvre avant que le profil ne soit créé (404) : on réessaie
+ *  quelques fois plutôt que d'attendre le prochain évènement temps réel. */
+function loadInitial(
+  collection: string,
+  id: string,
+  isActive: () => boolean,
+  onRecord: (record: PbRecord) => void,
+  onMissing: (serverAnswered: boolean) => void,
+  attempt = 0,
+) {
+  pb.collection(collection)
+    .getOne<PbRecord>(id)
+    .then((rec) => isActive() && onRecord(rec))
+    .catch((err) => {
+      if (!isActive()) return;
+      onMissing(isNotFound(err));
+      if (isNotFound(err) && attempt < 5) {
+        setTimeout(() => loadInitial(collection, id, isActive, onRecord, onMissing, attempt + 1), 1000 * (attempt + 1));
+      }
+    });
+}
+
+/** onServerData(true) dès qu'une donnée fraîche arrive du serveur — sert à
+ *  l'indicateur de connexion de l'en-tête (voir connectionStore). */
 export function subscribePlayer(
   uid: string,
   cb: (player: PlayerState | null) => void,
-  onMeta?: (fromCache: boolean) => void,
+  onServerData?: (fromServer: boolean) => void,
 ): () => void {
-  // Fetch initial
-  pb.collection("players").getOne(uid)
-    .then((rec) => { cb(playerFromRecord(rec)); onMeta?.(false); })
-    .catch(() => { cb(null); onMeta?.(false); });
+  let active = true;
+  loadInitial(
+    "players",
+    uid,
+    () => active,
+    (rec) => {
+      cb(playerFromRecord(rec));
+      onServerData?.(true);
+    },
+    // 404 = réponse du serveur (profil pas encore créé) ; sinon serveur injoignable.
+    (serverAnswered) => {
+      if (serverAnswered) cb(null);
+      onServerData?.(serverAnswered);
+    },
+  );
 
-  // Abonnement aux changements
-  pb.collection("players").subscribe(uid, (e) => {
-    if (e.action === "update" || e.action === "create") cb(playerFromRecord(e.record));
+  const unsubscribe = subscribeRecords<PbRecord>("players", uid, (e) => {
     if (e.action === "delete") cb(null);
+    else cb(playerFromRecord(e.record));
+    onServerData?.(true);
   });
 
-  return () => { pb.collection("players").unsubscribe(uid); };
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
 export function subscribeQueues(uid: string, cb: (queues: QueuesState | null) => void): () => void {
-  const fetchInitial = async () => {
-    try {
-      const res = await pb.collection("queues").getFirstListItem(`player_id="${uid}"`);
-      cb(res as unknown as QueuesState);
-    } catch { cb(null); }
-  };
-  
-  fetchInitial();
-  
-  pb.collection("queues").subscribe("*", (e) => {
-    if (e.record.player_id === uid) {
-      if (e.action === "update" || e.action === "create") cb(e.record as unknown as QueuesState);
-      if (e.action === "delete") cb(null);
-    }
+  let active = true;
+  loadInitial(
+    "queues",
+    uid,
+    () => active,
+    (rec) => cb(queuesFromRecord(rec)),
+    (serverAnswered) => serverAnswered && cb(null),
+  );
+
+  const unsubscribe = subscribeRecords<PbRecord>("queues", uid, (e) => {
+    cb(e.action === "delete" ? null : queuesFromRecord(e.record));
   });
 
-  return () => { pb.collection("queues").unsubscribe("*"); };
+  return () => {
+    active = false;
+    unsubscribe();
+  };
+}
+
+/** Recharge une liste à l'ouverture puis à chaque évènement temps réel
+ *  correspondant au filtre. */
+function subscribeList<T>(
+  collection: string,
+  filter: string,
+  load: () => Promise<T>,
+  cb: (items: T) => void,
+  throttleMs = 0,
+): () => void {
+  let active = true;
+  const refresh = () => {
+    load()
+      .then((items) => active && cb(items))
+      .catch((err) => console.error(`Lecture ${collection} impossible :`, err));
+  };
+  const trigger = throttleMs > 0 ? throttle(refresh, throttleMs) : refresh;
+  refresh();
+  const unsubscribe = subscribeRecords(collection, "*", trigger, filter || undefined);
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
 export function subscribeNotifications(uid: string, cb: (items: GameNotification[]) => void): () => void {
-  const fetchList = async () => {
-    const res = await pb.collection("notifications").getList(1, 30, {
-      filter: `player_id="${uid}"`,
-      sort: "-createdAtMs",
-    });
-    cb(res.items as unknown as GameNotification[]);
-  };
-
-  fetchList();
-  
-  pb.collection("notifications").subscribe("*", (e) => {
-    if (e.record.player_id === uid) fetchList();
-  });
-
-  return () => { pb.collection("notifications").unsubscribe("*"); };
+  const filter = pb.filter("player_id = {:uid}", { uid });
+  return subscribeList(
+    "notifications",
+    filter,
+    async () => {
+      const res = await pb.collection("notifications").getList<GameNotification>(1, 30, { filter, sort: "-createdAtMs" });
+      return res.items;
+    },
+    cb,
+  );
 }
 
-export async function markNotificationRead(uid: string, id: string) {
+export async function markNotificationRead(_uid: string, id: string) {
   await pb.collection("notifications").update(id, { read: true });
+}
+
+async function createNotifications(uid: string, notifications: NewNotification[]) {
+  for (const n of notifications) {
+    await pb.collection("notifications").create({ ...n, player_id: uid });
+  }
 }
 
 export interface LeaderboardEntry {
@@ -153,25 +272,37 @@ export interface LeaderboardEntry {
   seasonXp: number;
 }
 
-function leaderboardEntryFromRecord(data: any): LeaderboardEntry {
+function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
   return {
     uid: data.id,
-    pseudo: data.pseudo || "Joueur inconnu",
-    xp: data.xp || 0,
-    seasonId: data.seasonId ?? null,
-    seasonXp: data.seasonXp || 0,
+    pseudo: (data.pseudo as string) || "Joueur inconnu",
+    xp: (data.xp as number) || 0,
+    seasonId: (data.seasonId as string) || null,
+    seasonXp: (data.seasonXp as number) || 0,
   };
 }
 
-export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): () => void {
-  const fetchList = async () => {
-    const res = await pb.collection("players").getList(1, 100, { sort: "-xp" });
-    cb(res.items.map(leaderboardEntryFromRecord));
-  };
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp";
 
-  fetchList();
-  pb.collection("players").subscribe("*", fetchList);
-  return () => { pb.collection("players").unsubscribe("*"); };
+/** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
+ *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à
+ *  une fois toutes les 10 s pour ne pas saturer le serveur. */
+export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): () => void {
+  return subscribeList(
+    "players",
+    "",
+    async () => {
+      const res = await pb.collection("players").getList<PbRecord>(1, 100, { sort: "-xp", fields: LEADERBOARD_FIELDS });
+      return res.items.map(leaderboardEntryFromRecord);
+    },
+    cb,
+    10_000,
+  );
+}
+
+export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
+  const res = await pb.collection("players").getFullList<PbRecord>({ sort: "-xp", fields: LEADERBOARD_FIELDS });
+  return res.map(leaderboardEntryFromRecord);
 }
 
 /* =====================================================
@@ -183,49 +314,78 @@ export async function createSpyReport(spyUid: string, spyPseudo: string, targetU
     spyUid,
     spyPseudo,
     targetUid,
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     targetProcessed: false,
   });
 }
 
 export function subscribePendingSpyReports(uid: string, cb: (reports: SpyReport[]) => void): () => void {
-  const fetchList = async () => {
-    const res = await pb.collection("spy_reports").getFullList({
-      filter: `targetUid="${uid}" && targetProcessed=false`,
-    });
-    cb(res as unknown as SpyReport[]);
-  };
-
-  fetchList();
-  pb.collection("spy_reports").subscribe("*", (e) => {
-    if (e.record.targetUid === uid) fetchList();
-  });
-
-  return () => { pb.collection("spy_reports").unsubscribe("*"); };
+  const filter = pb.filter("targetUid = {:uid} && targetProcessed = false", { uid });
+  return subscribeList(
+    "spy_reports",
+    pb.filter("targetUid = {:uid}", { uid }),
+    () => pb.collection("spy_reports").getFullList<SpyReport>({ filter }),
+    cb,
+  );
 }
 
-export async function acknowledgeSpyReport(uid: string, reportId: string) {
-  try {
-    const report = await pb.collection("spy_reports").getOne(reportId);
-    if (report.targetProcessed) return;
+export function acknowledgeSpyReport(uid: string, reportId: string) {
+  return once(`spy:${reportId}`, () => acknowledgeSpyReportOnce(uid, reportId));
+}
 
-    await pb.collection("spy_reports").update(reportId, { targetProcessed: true });
-    await pb.collection("notifications").create({
-      player_id: uid,
+async function acknowledgeSpyReportOnce(uid: string, reportId: string) {
+  let report: SpyReport;
+  try {
+    // La règle d'accès n'autorise ce passage qu'une seule fois
+    // (targetProcessed doit encore valoir false) : un second onglet qui
+    // traiterait le même rapport reçoit une 404 et s'arrête là.
+    report = await pb.collection("spy_reports").update<SpyReport>(reportId, { targetProcessed: true });
+  } catch (err) {
+    if (isNotFound(err)) return;
+    throw err;
+  }
+  await createNotifications(uid, [
+    {
       kind: "spy-detected",
       title: "Espionnage détecté !",
       message: `${report.spyPseudo} a tenté de t'espionner.`,
       createdAtMs: Date.now(),
       read: false,
-    });
-  } catch (e) {
-    console.error(e);
-  }
+    },
+  ]);
 }
 
 /* =====================================================
-   Action transactionnelle (Émulation pour API REST)
+   Actions de jeu
+
+   PocketBase n'offre pas de transactions côté client : chaque action lit
+   le joueur, applique la production accumulée (flushState), la modifie
+   puis réécrit. Toutes les actions de cet onglet passent par une file
+   unique pour qu'un heartbeat et un clic ne s'écrasent pas mutuellement.
 ===================================================== */
+
+let actionQueue: Promise<unknown> = Promise.resolve();
+
+/** Un seul traitement à la fois par rapport/don dans cet onglet : deux
+ *  requêtes parties au même instant passeraient toutes deux la règle
+ *  d'accès (PocketBase ne verrouille pas l'enregistrement entre la
+ *  vérification et l'écriture). La règle, elle, bloque les passages
+ *  suivants (autre onglet, rechargement). */
+const inFlight = new Map<string, Promise<unknown>>();
+
+function once<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const pending = inFlight.get(key) as Promise<T> | undefined;
+  if (pending) return pending.then(() => null as T);
+  const run = task().finally(() => inFlight.delete(key));
+  inFlight.set(key, run);
+  return run;
+}
+
+function serialized<T>(task: () => Promise<T>): Promise<T> {
+  const run = actionQueue.then(task, task);
+  actionQueue = run.catch(() => undefined);
+  return run;
+}
 
 interface MutateOutput<T> {
   player: PlayerState;
@@ -234,7 +394,30 @@ interface MutateOutput<T> {
   result: T;
 }
 
-async function runFlushedAction<T>(
+async function loadFlushed(uid: string) {
+  let playerRecord: PbRecord;
+  let queueRecord: PbRecord;
+  try {
+    [playerRecord, queueRecord] = await Promise.all([
+      pb.collection("players").getOne<PbRecord>(uid),
+      pb.collection("queues").getOne<PbRecord>(uid),
+    ]);
+  } catch (err) {
+    if (isNotFound(err)) throw new GameActionError("Profil joueur introuvable.");
+    throw err;
+  }
+  const preFlushPlayer = playerFromRecord(playerRecord);
+  const queues = queuesFromRecord(queueRecord);
+  if (!preFlushPlayer || !queues) throw new GameActionError("Profil joueur introuvable.");
+  return { preFlushPlayer, flushed: flushState(preFlushPlayer, queues, Date.now()) };
+}
+
+async function savePlayerState(uid: string, player: PlayerState, queues: QueuesState) {
+  await pb.collection("players").update(uid, gameFieldsOf(player));
+  await pb.collection("queues").update(uid, { ...queues });
+}
+
+function runFlushedAction<T>(
   uid: string,
   mutate: (state: {
     player: PlayerState;
@@ -243,36 +426,18 @@ async function runFlushedAction<T>(
     flushNotifications: NewNotification[];
   }) => MutateOutput<T>,
 ): Promise<T> {
-  // En l'absence de transactions client dans PB, on séquence les requêtes.
-  // Idéalement, sur un gros jeu, cette logique irait dans un hook Go ou JS côté serveur PB.
-  const [playerRecord, queueRecord] = await Promise.all([
-    pb.collection("players").getOne(uid),
-    pb.collection("queues").getFirstListItem(`player_id="${uid}"`)
-  ]);
-
-  if (!playerRecord || !queueRecord) throw new GameActionError("Profil joueur introuvable.");
-
-  const now = Date.now();
-  const preFlushPlayer = playerFromRecord(playerRecord) as PlayerState;
-  const flushed = flushState(preFlushPlayer, queueRecord as unknown as QueuesState, now);
-  const mutated = mutate({ 
-    player: flushed.player, 
-    queues: flushed.queues, 
-    preFlushPlayer, 
-    flushNotifications: flushed.notifications 
+  return serialized(async () => {
+    const { preFlushPlayer, flushed } = await loadFlushed(uid);
+    const mutated = mutate({
+      player: flushed.player,
+      queues: flushed.queues,
+      preFlushPlayer,
+      flushNotifications: flushed.notifications,
+    });
+    await savePlayerState(uid, mutated.player, mutated.queues);
+    await createNotifications(uid, [...flushed.notifications, ...(mutated.notifications ?? [])]);
+    return mutated.result;
   });
-
-  await Promise.all([
-    pb.collection("players").update(uid, mutated.player),
-    pb.collection("queues").update(queueRecord.id, mutated.queues)
-  ]);
-
-  const allNotifs = [...flushed.notifications, ...(mutated.notifications ?? [])];
-  for (const n of allNotifs) {
-    await pb.collection("notifications").create({ player_id: uid, ...n });
-  }
-
-  return mutated.result;
 }
 
 export interface AwaySummary {
@@ -299,11 +464,6 @@ export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise
     };
   });
 }
-
-/* =====================================================
-   Bâtiments, Unités, Recherche, Missions, Commerce
-   (Logique identique, seule l'enveloppe transactionnelle a changé)
-===================================================== */
 
 export async function unlockBuilding(uid: string, buildingId: BuildingId) {
   return runFlushedAction(uid, ({ player, queues }) => {
@@ -490,7 +650,6 @@ export async function sendResourceGift(params: {
   const entries = (Object.entries(resources) as [ResourceId, number | undefined][]).filter(([, v]) => (v ?? 0) > 0);
   if (entries.length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
 
-  // Retire les ressources de l'envoyeur
   await runFlushedAction(fromUid, ({ player, queues }) => {
     for (const [res, amt] of entries) {
       if ((player.resources[res] ?? 0) < (amt ?? 0)) throw new GameActionError("Ressources insuffisantes.");
@@ -499,54 +658,63 @@ export async function sendResourceGift(params: {
     return { player, queues, result: undefined };
   });
 
-  // Crée le don
   await pb.collection("resource_gifts").create({
     fromUid,
     fromPseudo,
     toUid,
     toPseudo,
     resources: Object.fromEntries(entries),
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     claimed: false,
   });
 }
 
 export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): () => void {
-  const fetchList = async () => {
-    const res = await pb.collection("resource_gifts").getFullList({
-      filter: `toUid="${uid}" && claimed=false`
-    });
-    cb(res as unknown as ResourceGift[]);
-  };
-
-  fetchList();
-  pb.collection("resource_gifts").subscribe("*", (e) => {
-    if (e.record.toUid === uid) fetchList();
-  });
-
-  return () => { pb.collection("resource_gifts").unsubscribe("*"); };
+  const filter = pb.filter("toUid = {:uid} && claimed = false", { uid });
+  return subscribeList(
+    "resource_gifts",
+    pb.filter("toUid = {:uid}", { uid }),
+    () => pb.collection("resource_gifts").getFullList<ResourceGift>({ filter }),
+    cb,
+  );
 }
 
-export async function claimResourceGift(uid: string, giftId: string) {
-  const gift = await pb.collection("resource_gifts").getOne(giftId);
-  if (gift.claimed || gift.toUid !== uid) return;
+export function claimResourceGift(uid: string, giftId: string) {
+  return once(`gift:${giftId}`, () => claimResourceGiftOnce(uid, giftId));
+}
+
+async function claimResourceGiftOnce(uid: string, giftId: string) {
+  let gift: ResourceGift;
+  try {
+    // Marqué comme réclamé AVANT de créditer : la règle d'accès refuse un
+    // second passage (claimed doit encore valoir false), donc un don ne
+    // peut jamais être crédité deux fois, même depuis deux onglets.
+    gift = await pb.collection("resource_gifts").update<ResourceGift>(giftId, { claimed: true });
+  } catch (err) {
+    if (isNotFound(err)) return;
+    throw err;
+  }
+  if (gift.toUid !== uid) return;
 
   await runFlushedAction(uid, ({ player, queues }) => {
-    for (const [res, amt] of Object.entries(gift.resources)) {
+    for (const [res, amt] of Object.entries(gift.resources ?? {})) {
       const key = res as ResourceId;
-      player.resources[key] = (player.resources[key] ?? 0) + (amt as number ?? 0);
+      player.resources[key] = (player.resources[key] ?? 0) + ((amt as number) ?? 0);
     }
-    return { player, queues, result: undefined };
-  });
-
-  await pb.collection("resource_gifts").update(giftId, { claimed: true });
-  await pb.collection("notifications").create({
-    player_id: uid,
-    kind: "gift",
-    title: "Ressources reçues !",
-    message: `${gift.fromPseudo} t'a envoyé des ressources.`,
-    createdAtMs: Date.now(),
-    read: false,
+    return {
+      player,
+      queues,
+      notifications: [
+        {
+          kind: "gift",
+          title: "Ressources reçues !",
+          message: `${gift.fromPseudo} t'a envoyé des ressources.`,
+          createdAtMs: Date.now(),
+          read: false,
+        },
+      ],
+      result: undefined,
+    };
   });
 }
 
@@ -562,139 +730,134 @@ export interface AttackParams {
   fleet: Record<string, number>;
 }
 
-export async function initiateAttack(params: AttackParams) {
+export function initiateAttack(params: AttackParams) {
   const { attackerUid, attackerPseudo, targetUid, targetPseudo, fleet } = params;
-  if (attackerUid === targetUid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
+  if (attackerUid === targetUid) return Promise.reject(new GameActionError("Tu ne peux pas t'attaquer toi-même !"));
 
-  const [aRecord, aQRecord, dRecord] = await Promise.all([
-    pb.collection("players").getOne(attackerUid),
-    pb.collection("queues").getFirstListItem(`player_id="${attackerUid}"`),
-    pb.collection("players").getOne(targetUid),
-  ]);
+  return serialized(async () => {
+    const [{ flushed }, defenderRecord] = await Promise.all([
+      loadFlushed(attackerUid),
+      pb
+        .collection("players")
+        .getOne<PbRecord>(targetUid)
+        .catch(() => null),
+    ]);
+    const defender = playerFromRecord(defenderRecord);
+    if (!defender) throw new GameActionError("Ce joueur est introuvable.");
+    const now = Date.now();
+    const attacker = flushed.player;
 
-  if (!aRecord || !aQRecord) throw new GameActionError("Profil attaquant introuvable.");
-  if (!dRecord) throw new GameActionError("Ce joueur est introuvable.");
-
-  const now = Date.now();
-  const preFlushAttacker = playerFromRecord(aRecord) as PlayerState;
-  const flushedAttacker = flushState(preFlushAttacker, aQRecord as unknown as QueuesState, now);
-  const defender = playerFromRecord(dRecord) as PlayerState;
-
-  for (const [unitId, qty] of Object.entries(fleet)) {
-    if ((flushedAttacker.player.units[unitId]?.count ?? 0) < qty) {
-      throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
+    for (const [unitId, qty] of Object.entries(fleet)) {
+      if ((attacker.units[unitId]?.count ?? 0) < qty) {
+        throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
+      }
     }
-  }
 
-  const attackerRepairPct = getRepairPercent(flushedAttacker.player.buildings);
-  const defenderRepairPct = getRepairPercent(defender.buildings);
+    const combat = resolveCombat({
+      attackerUnits: attacker.units,
+      attackerTechLevels: attacker.techLevels,
+      attackerRepairPct: getRepairPercent(attacker.buildings),
+      fleet,
+      defenderUnits: defender.units,
+      defenderTechLevels: defender.techLevels,
+      defenderRepairPct: getRepairPercent(defender.buildings),
+      defenderResources: defender.resources,
+    });
 
-  const combat = resolveCombat({
-    attackerUnits: flushedAttacker.player.units,
-    attackerTechLevels: flushedAttacker.player.techLevels,
-    attackerRepairPct,
-    fleet,
-    defenderUnits: defender.units,
-    defenderTechLevels: defender.techLevels,
-    defenderRepairPct,
-    defenderResources: defender.resources,
+    for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
+      if (attacker.units[unitId]) {
+        attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
+      }
+    }
+    if (combat.loot) {
+      for (const [res, amt] of Object.entries(combat.loot)) {
+        attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+      }
+    }
+    if (combat.outcome === "attacker_win") {
+      attacker.victories += 1;
+      applyXpDelta(attacker, 40, now);
+    } else if (combat.outcome === "defender_win") {
+      attacker.defeats += 1;
+      applyXpDelta(attacker, -20, now);
+    }
+
+    await savePlayerState(attackerUid, attacker, flushed.queues);
+    await createNotifications(attackerUid, flushed.notifications);
+
+    const report: Omit<BattleReport, "id"> = {
+      attackerUid,
+      attackerPseudo,
+      defenderUid: targetUid,
+      defenderPseudo: targetPseudo,
+      timestamp: now,
+      outcome: combat.outcome,
+      attackerPower: combat.attackerPower,
+      defenderPower: combat.defenderPower,
+      attackerLossPercent: combat.attackerLossPercent,
+      defenderLossPercent: combat.defenderLossPercent,
+      attackerLosses: combat.attackerLosses,
+      attackerRecovered: combat.attackerRecovered,
+      defenderLosses: combat.defenderLosses,
+      defenderRecovered: combat.defenderRecovered,
+      loot: combat.loot,
+      defenderProcessed: false,
+    };
+    await pb.collection("battle_reports").create(report);
+
+    return { ...combat, defenderPseudo: targetPseudo };
   });
-
-  for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
-    if (flushedAttacker.player.units[unitId]) {
-      flushedAttacker.player.units[unitId].count = Math.max(0, flushedAttacker.player.units[unitId].count - lost);
-    }
-  }
-
-  if (combat.loot) {
-    for (const [res, amt] of Object.entries(combat.loot)) {
-      flushedAttacker.player.resources[res as ResourceId] += amt ?? 0;
-    }
-  }
-
-  if (combat.outcome === "attacker_win") {
-    flushedAttacker.player.victories += 1;
-    applyXpDelta(flushedAttacker.player, 40, now);
-  } else if (combat.outcome === "defender_win") {
-    flushedAttacker.player.defeats += 1;
-    applyXpDelta(flushedAttacker.player, -20, now);
-  }
-
-  await Promise.all([
-    pb.collection("players").update(attackerUid, flushedAttacker.player),
-    pb.collection("queues").update(aQRecord.id, flushedAttacker.queues)
-  ]);
-
-  for (const n of flushedAttacker.notifications) {
-    await pb.collection("notifications").create({ player_id: attackerUid, ...n });
-  }
-
-  const report: Omit<BattleReport, "id"> = {
-    attackerUid,
-    attackerPseudo,
-    defenderUid: targetUid,
-    defenderPseudo: targetPseudo,
-    timestamp: new Date().toISOString(), // Conversion en Date standard pour PocketBase
-    outcome: combat.outcome,
-    attackerPower: combat.attackerPower,
-    defenderPower: combat.defenderPower,
-    attackerLossPercent: combat.attackerLossPercent,
-    defenderLossPercent: combat.defenderLossPercent,
-    attackerLosses: combat.attackerLosses,
-    attackerRecovered: combat.attackerRecovered,
-    defenderLosses: combat.defenderLosses,
-    defenderRecovered: combat.defenderRecovered,
-    loot: combat.loot,
-    defenderProcessed: false,
-  };
-
-  await pb.collection("battle_reports").create(report);
-
-  return { ...combat, defenderPseudo: targetPseudo };
 }
 
 export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): () => void {
-  const fetchList = async () => {
-    const res = await pb.collection("battle_reports").getFullList({
-      filter: `defenderUid="${uid}" && defenderProcessed=false`
-    });
-    cb(res as unknown as BattleReport[]);
-  };
-
-  fetchList();
-  pb.collection("battle_reports").subscribe("*", (e) => {
-    if (e.record.defenderUid === uid) fetchList();
-  });
-
-  return () => { pb.collection("battle_reports").unsubscribe("*"); };
+  const filter = pb.filter("defenderUid = {:uid} && defenderProcessed = false", { uid });
+  return subscribeList(
+    "battle_reports",
+    pb.filter("defenderUid = {:uid}", { uid }),
+    () => pb.collection("battle_reports").getFullList<BattleReport>({ filter }),
+    cb,
+  );
 }
 
 export function subscribeBattleLog(uid: string, cb: (reports: BattleReport[]) => void): () => void {
-  const fetchLogs = async () => {
-    // Dans PocketBase, on peut utiliser un OR direct dans le filtre
-    const res = await pb.collection("battle_reports").getList(1, 50, {
-      filter: `attackerUid="${uid}" || defenderUid="${uid}"`,
-      sort: "-timestamp"
-    });
-    cb(res.items as unknown as BattleReport[]);
-  };
-
-  fetchLogs();
-  pb.collection("battle_reports").subscribe("*", (e) => {
-    if (e.record.attackerUid === uid || e.record.defenderUid === uid) fetchLogs();
-  });
-
-  return () => { pb.collection("battle_reports").unsubscribe("*"); };
+  const filter = pb.filter("attackerUid = {:uid} || defenderUid = {:uid}", { uid });
+  return subscribeList(
+    "battle_reports",
+    filter,
+    async () => {
+      const res = await pb.collection("battle_reports").getList<BattleReport>(1, 50, { filter, sort: "-timestamp" });
+      return res.items;
+    },
+    cb,
+  );
 }
 
-export async function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {
-  const report = await pb.collection("battle_reports").getOne(reportId);
-  if (report.defenderProcessed || report.defenderUid !== uid) return null;
+export function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {
+  return once(`battle:${reportId}`, () => processBattleReportOnce(uid, reportId));
+}
+
+async function processBattleReportOnce(uid: string, reportId: string): Promise<BattleReport | null> {
+  let report: BattleReport;
+  try {
+    // Passage unique garanti par la règle d'accès (defenderProcessed doit
+    // encore valoir false) : les pertes ne sont jamais appliquées deux fois.
+    report = await pb.collection("battle_reports").update<BattleReport>(reportId, { defenderProcessed: true });
+  } catch (err) {
+    if (isNotFound(err)) return null;
+    throw err;
+  }
+  if (report.defenderUid !== uid) return null;
+
+  const outcomeLabel: Record<string, string> = {
+    attacker_win: "Tu as perdu ce combat...",
+    defender_win: "Attaque repoussée !",
+    draw: "Match nul.",
+  };
 
   await runFlushedAction(uid, ({ player, queues }) => {
-    for (const [unitId, lost] of Object.entries(report.defenderLosses || {})) {
+    for (const [unitId, lost] of Object.entries(report.defenderLosses ?? {})) {
       if (player.units[unitId]) {
-        player.units[unitId].count = Math.max(0, player.units[unitId].count - (lost as number));
+        player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
       }
     }
 
@@ -707,60 +870,40 @@ export async function processBattleReportForDefender(uid: string, reportId: stri
       applyXpDelta(player, -20, now);
     }
 
-    if (report.loot) {
-      for (const [res, amt] of Object.entries(report.loot)) {
-        const key = res as ResourceId;
-        player.resources[key] = Math.max(0, (player.resources[key] ?? 0) - (amt as number ?? 0));
-      }
+    for (const [res, amt] of Object.entries(report.loot ?? {})) {
+      const key = res as ResourceId;
+      player.resources[key] = Math.max(0, (player.resources[key] ?? 0) - (amt ?? 0));
     }
 
-    return { player, queues, result: undefined };
+    return {
+      player,
+      queues,
+      notifications: [
+        {
+          kind: "combat-defender",
+          title: outcomeLabel[report.outcome] ?? "Rapport de combat",
+          message: `Attaque de ${report.attackerPseudo}.`,
+          createdAtMs: Date.now(),
+          read: false,
+        },
+      ],
+      result: undefined,
+    };
   });
 
-  await pb.collection("battle_reports").update(reportId, { defenderProcessed: true });
-
-  const outcomeLabel: Record<string, string> = {
-    attacker_win: "Tu as perdu ce combat...",
-    defender_win: "Attaque repoussée !",
-    draw: "Match nul.",
-  };
-
-  await pb.collection("notifications").create({
-    player_id: uid,
-    kind: "combat-defender",
-    title: outcomeLabel[report.outcome] ?? "Rapport de combat",
-    message: `Attaque de ${report.attackerPseudo}.`,
-    createdAtMs: Date.now(),
-    read: false,
-  });
-
-  return report as unknown as BattleReport;
+  return report;
 }
 
 /* =====================================================
-   Divers
+   Suppression de compte
 ===================================================== */
 
-export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
-  const res = await pb.collection("players").getFullList({ sort: "-xp" });
-  return res.map(leaderboardEntryFromRecord);
-}
-
-export async function deletePlayerAccountData(uid: string, pseudo: string) {
-  // Supprime toutes les données relatives au joueur via une suppression en cascade (si configurée côté PocketBase)
-  // ou en requêtant puis supprimant chaque entité (PocketBase requiert des suppressions individuelles par ID).
-  
-  try {
-    const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${uid}"` });
-    for (const n of notifs) await pb.collection("notifications").delete(n.id);
-  } catch(e) {}
-
-  try {
-    const queues = await pb.collection("queues").getFirstListItem(`player_id="${uid}"`);
-    await pb.collection("queues").delete(queues.id);
-  } catch(e) {}
-
-  try {
-    await pb.collection("players").delete(uid);
-  } catch(e) {}
+export async function deletePlayerAccountData(uid: string, _pseudo: string) {
+  const notifications = await pb
+    .collection("notifications")
+    .getFullList({ filter: pb.filter("player_id = {:uid}", { uid }), fields: "id" })
+    .catch(() => []);
+  for (const n of notifications) await pb.collection("notifications").delete(n.id).catch(() => {});
+  await pb.collection("queues").delete(uid).catch(() => {});
+  await pb.collection("players").delete(uid).catch(() => {});
 }

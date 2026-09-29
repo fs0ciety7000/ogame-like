@@ -3,7 +3,7 @@ import { computeElapsedProduction, getProductionRatesPerSecond } from "@/game/pr
 import type { PlayerState, Resources } from "@/types/game";
 
 /** Ressources affichées côté client, incrémentées en douceur chaque seconde
- *  entre deux synchros Firestore (aucune écriture réseau ici). */
+ *  entre deux synchros serveur (aucune écriture réseau ici). */
 export function useLiveResources(player: PlayerState | null): Resources | null {
   const [display, setDisplay] = useState<Resources | null>(null);
 

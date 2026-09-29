@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeBattleLog } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
-import { firestoreMillis, formatNumber, timeAgo } from "@/lib/utils";
+import { toMillis, formatNumber, timeAgo } from "@/lib/utils";
 import type { BattleReport, CombatOutcome } from "@/types/game";
 
 const OUTCOME_STYLE: Record<"victory" | "defeat" | "draw", { label: string; variant: "success" | "danger" | "warning" }> = {
@@ -77,7 +77,7 @@ export function CombatLogPage() {
                 </p>
               </div>
 
-              <span className="tabular-mono shrink-0 text-xs text-slate-500">{timeAgo(firestoreMillis(report.timestamp))}</span>
+              <span className="tabular-mono shrink-0 text-xs text-slate-500">{timeAgo(toMillis(report.timestamp))}</span>
             </motion.button>
           );
         })}

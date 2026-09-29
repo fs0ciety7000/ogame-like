@@ -16,7 +16,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet } from "@/components/game/HomePlanet";
-import { BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 
 export function DashboardPage() {
   useNowTicker();
@@ -37,7 +37,7 @@ export function DashboardPage() {
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const now = Date.now();
 
-  const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + (player.buildings[b.id]?.level ?? 0), 0);
+  const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
   const maxBuildingLevels = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
   const developmentPercent = maxBuildingLevels > 0 ? Math.round((totalBuildingLevels / maxBuildingLevels) * 100) : 0;
 

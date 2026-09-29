@@ -45,12 +45,13 @@ export function timeAgo(ms: number): string {
   return `il y a ${Math.floor(h / 24)} j`;
 }
 
-/** Convertit un Timestamp Firestore (ou une écriture serveur pas encore
- *  synchronisée, qui apparaît comme `null` dans le cache local) en
- *  millisecondes exploitables côté client. */
-export function firestoreMillis(value: unknown): number {
-  if (value && typeof value === "object" && "toMillis" in value && typeof (value as { toMillis: unknown }).toMillis === "function") {
-    return (value as { toMillis: () => number }).toMillis();
+/** Horodatage (millisecondes, ou date ISO pour d'anciennes données) en
+ *  millisecondes ; maintenant si la valeur est absente ou illisible. */
+export function toMillis(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return parsed;
   }
   return Date.now();
 }
@@ -62,7 +63,7 @@ export function sanitizePseudo(pseudo: string): string {
     .replace(/[^a-z0-9_-]/g, "");
 }
 
-/** Domaine fictif utilisé comme identifiant Firebase Auth pour les comptes
+/** Domaine fictif utilisé comme email des comptes
  *  créés avant l'ajout d'un email de récupération réel (voir authService). */
 export function legacyPseudoEmail(sanitizedPseudo: string): string {
   return `${sanitizedPseudo}@cosmic-empires.local`;

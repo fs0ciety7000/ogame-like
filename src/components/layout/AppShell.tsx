@@ -112,7 +112,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
         <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/5 bg-space-900/60 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="order-1 flex items-center gap-2">
-            <img src="/assets/Logo/logo.png" alt="" className="h-9 w-9 rounded-lg object-cover" />
+            <img src="/assets/logo/logo.webp" alt="" className="h-9 w-9 rounded-lg object-cover" />
             <div className="hidden sm:block">
               <p className="hud-eyebrow text-slate-500">
                 Cosmic Empires{currentLabel ? ` / ${currentLabel}` : ""}

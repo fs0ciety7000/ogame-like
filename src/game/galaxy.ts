@@ -1,6 +1,6 @@
 // Position galactique déterministe : dérivée par hash de l'uid, jamais
 // stockée. Chaque joueur retombe toujours sur les mêmes coordonnées sans
-// nécessiter de migration ni d'écriture Firestore supplémentaire.
+// nécessiter de migration ni d'écriture serveur supplémentaire.
 export interface GalaxyCoords {
   galaxy: number;
   system: number;
