@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { LoginPage } from "@/pages/LoginPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { AppShell } from "@/components/layout/AppShell";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
@@ -32,6 +33,7 @@ export default function App() {
             element={
               <GuestRoute>
                 <LoginPage />
+                <ResetPasswordPage />
               </GuestRoute>
             }
           />

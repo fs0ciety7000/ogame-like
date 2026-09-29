@@ -117,6 +117,15 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await pb.collection("users").authWithPassword(user.email as string, newPassword);
 }
 
+export async function confirmPasswordReset(token: string, newPassword: string) {
+  // PocketBase exige le nouveau mot de passe et sa confirmation (identique)
+  await pb.collection("users").confirmPasswordReset(
+    token,
+    newPassword,
+    newPassword
+  );
+}
+
 export async function deleteAccount(currentPassword: string, pseudo: string) {
   const user = pb.authStore.record;
   if (!user) throw new Error("Non connecté.");
