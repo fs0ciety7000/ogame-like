@@ -21,6 +21,7 @@ export interface AttackInput {
   attackerQueues: QueuesState;
   defenderUid: string;
   defender: PlayerState;
+  defenderQueues: QueuesState;
   fleet: Record<string, number>;
   /** Dernière attaque de cet attaquant sur cette cible (ms). */
   lastAttackOnTargetMs: number | null;
@@ -35,6 +36,11 @@ export type AttackOutput =
       attacker: PlayerState;
       attackerQueues: QueuesState;
       notifications: NewNotification[];
+      /** Le serveur applique aussi le résultat au défenseur (pertes, pillage,
+       *  XP) : son navigateur ne fait plus qu'afficher le rapport. */
+      defender: PlayerState;
+      defenderQueues: QueuesState;
+      defenderNotifications: NewNotification[];
       report: Omit<BattleReport, "id">;
       combat: CombatResult;
     };
@@ -79,15 +85,19 @@ export function performAttack(input: AttackInput): AttackOutput {
     }
   }
 
+  // Défenseur rattrapé lui aussi (production, unités terminées) avant le combat.
+  const flushedDefender = flushState({ ...defender, buildings: withMissingBuildings(defender.buildings) }, input.defenderQueues, now);
+  const def = flushedDefender.player;
+
   const combat = resolveCombat({
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
     fleet,
-    defenderUnits: defender.units ?? {},
-    defenderTechLevels: defender.techLevels ?? {},
-    defenderRepairPct: getRepairPercent(defender.buildings),
-    defenderResources: defender.resources ?? {},
+    defenderUnits: def.units ?? {},
+    defenderTechLevels: def.techLevels ?? {},
+    defenderRepairPct: getRepairPercent(def.buildings),
+    defenderResources: def.resources ?? {},
   });
 
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
@@ -95,6 +105,10 @@ export function performAttack(input: AttackInput): AttackOutput {
   }
   for (const [res, amt] of Object.entries(combat.loot ?? {})) {
     attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+    def.resources[res as ResourceId] = Math.max(0, (def.resources[res as ResourceId] ?? 0) - (amt ?? 0));
+  }
+  for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
+    if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
 
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
@@ -102,6 +116,14 @@ export function performAttack(input: AttackInput): AttackOutput {
   if (combat.outcome === "attacker_win") attacker.victories = (attacker.victories ?? 0) + 1;
   else if (combat.outcome === "defender_win") attacker.defeats = (attacker.defeats ?? 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
+  attacker.lastAttackAtMs = now;
+
+  if (combat.outcome === "defender_win") def.victories = (def.victories ?? 0) + 1;
+  else if (combat.outcome === "attacker_win") {
+    def.defeats = (def.defeats ?? 0) + 1;
+    def.lastDefeatAtMs = now;
+  }
+  applyXpDelta(def, defenderXpDelta, now);
 
   const outcomeTitle: Record<string, string> = {
     attacker_win: "Victoire !",
@@ -114,6 +136,22 @@ export function performAttack(input: AttackInput): AttackOutput {
       kind: "combat-attacker",
       title: outcomeTitle[combat.outcome] ?? "Rapport de combat",
       message: `Attaque contre ${defender.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      createdAtMs: now,
+      read: false,
+    },
+  ];
+
+  const defenderTitle: Record<string, string> = {
+    attacker_win: "Tu as perdu ce combat...",
+    defender_win: "Attaque repoussée !",
+    draw: "Match nul.",
+  };
+  const defenderNotifications: NewNotification[] = [
+    ...flushedDefender.notifications,
+    {
+      kind: "combat-defender",
+      title: defenderTitle[combat.outcome] ?? "Rapport de combat",
+      message: `Attaque de ${input.attacker.pseudo}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
       createdAtMs: now,
       read: false,
     },
@@ -138,7 +176,18 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderProcessed: false,
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
+    defenderApplied: true,
   };
 
-  return { ok: true, attacker, attackerQueues: flushed.queues, notifications, report, combat };
+  return {
+    ok: true,
+    attacker,
+    attackerQueues: flushed.queues,
+    notifications,
+    defender: def,
+    defenderQueues: flushedDefender.queues,
+    defenderNotifications,
+    report,
+    combat,
+  };
 }

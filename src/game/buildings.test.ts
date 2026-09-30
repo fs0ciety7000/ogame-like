@@ -127,9 +127,16 @@ describe("effectiveBuildingLevel", () => {
 });
 
 describe("getRepairPercent", () => {
+  it("is 0 while the workshop is locked", () => {
+    expect(getRepairPercent(defaultBuildings())).toBe(0);
+  });
+
   it("is clamped between 0 and 50%", () => {
-    expect(getRepairPercent(defaultBuildings())).toBeCloseTo(0.05);
+    const unlocked = defaultBuildings();
+    unlocked.atelier_reparation.unlocked = true;
+    expect(getRepairPercent(unlocked)).toBeCloseTo(0.05);
     const maxed = defaultBuildings();
+    maxed.atelier_reparation.unlocked = true;
     maxed.atelier_reparation.level = 20; // au-delà du niveau max théorique
     expect(getRepairPercent(maxed)).toBe(0.5);
   });

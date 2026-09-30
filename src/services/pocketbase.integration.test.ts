@@ -1,9 +1,11 @@
 // Tests de bout en bout contre un VRAI serveur PocketBase de test (jamais
 // celui de production : ils créent des comptes). Ignorés par défaut :
-//   PB_TEST_URL=http://127.0.0.1:8090 [PB_TEST_ADMIN_EMAIL=… PB_TEST_ADMIN_PASSWORD=…] \
+//   PB_TEST_URL=http://127.0.0.1:8090 PB_TEST_ADMIN_EMAIL=… PB_TEST_ADMIN_PASSWORD=… \
 //     npx vitest run src/services/pocketbase.integration.test.ts
 // Le serveur doit avoir le schéma (pocketbase/setup.mjs) et les hooks
-// (pocketbase/pb_hooks) installés.
+// (pocketbase/pb_hooks) installés. Le compte superuser sert à préparer les
+// scénarios (donner des ressources, vieillir un compte) : les joueurs ne
+// peuvent plus modifier eux-mêmes ces champs.
 import { beforeAll, describe, expect, it } from "vitest";
 import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
@@ -19,26 +21,33 @@ const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdep
 const B = { pseudo: `Bravo_${suffix}`, email: `b${suffix}@test.dev`, pw: "motdepasse2" };
 
 const PB_TEST_URL = process.env.PB_TEST_URL;
-// Facultatif : compte superuser du serveur de test, pour les scénarios qui
-// demandent de modifier des champs réservés (ex. ancienneté d'un compte).
 const PB_TEST_ADMIN = process.env.PB_TEST_ADMIN_EMAIL
   ? { email: process.env.PB_TEST_ADMIN_EMAIL, password: process.env.PB_TEST_ADMIN_PASSWORD ?? "" }
   : null;
 
-describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
-  beforeAll(() => {
+const RICH = { scrap: 100000, energy: 100000, nano: 100000, data: 100000, reinforcedSteel: 500, cyberModule: 500, syntheticNanites: 500, aiFragment: 500 };
+const MONTH_AGO = () => Date.now() - 30 * 24 * 3600 * 1000;
+
+describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => {
+  const admin = new PocketBase(PB_TEST_URL);
+
+  beforeAll(async () => {
     pb.baseURL = PB_TEST_URL!;
     pb.authStore.clear();
+    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN!.email, PB_TEST_ADMIN!.password);
   });
 
   let aId = "", bId = "", allianceId = "";
 
-  it("registers two players and creates their docs", async () => {
+  it("registers two players and the server creates their profiles", async () => {
     aId = (await registerPlayer(A.pseudo, A.email, A.pw)).id;
     const p = await ps.fetchPlayerSnapshot(aId);
     expect(p?.pseudo).toBe(A.pseudo);
     expect(p?.uid).toBe(aId);
     expect(p?.buildings.extracteur_ferraille.unlocked).toBe(true);
+    expect(p?.createdAtMs).toBeGreaterThan(0);
+    // Deuxième appel : le profil existe déjà, rien n'est écrasé.
+    await ps.ensurePlayerDoc(aId, A.pseudo);
     logout();
     bId = (await registerPlayer(B.pseudo, B.email, B.pw)).id;
     logout();
@@ -56,20 +65,40 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
     await loginPlayer(A.pseudo, A.pw);
   });
 
-  it("runs game actions (sync, research, trade) serialized", async () => {
-    await pb.collection("players").update(aId, { resources: { scrap: 100000, energy: 100000, nano: 100000, data: 100000, reinforcedSteel: 500, cyberModule: 500, syntheticNanites: 500, aiFragment: 500 } });
-    const results = await Promise.all([ps.syncPlayer(aId, 5), ps.unlockBuilding(aId, "reacteur_instable"), ps.startResearch(aId, "tech1"), ps.tradeResources(aId, "scrap", "energy", 100)]);
+  it("the browser can no longer write its own game data", async () => {
+    await expect(pb.collection("players").update(aId, { resources: RICH })).rejects.toBeTruthy();
+    await expect(pb.collection("players").update(aId, { xp: 999999 })).rejects.toBeTruthy();
+    await expect(pb.collection("players").update(aId, { units: { chasseur: { level: 1, count: 999 } } })).rejects.toBeTruthy();
+    await expect(pb.collection("queues").update(aId, { activeResearches: [] })).rejects.toBeTruthy();
+    await expect(
+      pb.collection("resource_gifts").create({ fromUid: aId, toUid: bId, resources: { scrap: 1 }, claimed: false }),
+    ).rejects.toBeTruthy();
+    // Le pseudo reste modifiable par le joueur.
+    await ps.setPlayerPseudo(aId, A.pseudo);
+  });
+
+  it("runs game actions (sync, unlock, research, trade) on the server", async () => {
+    await admin.collection("players").update(aId, { resources: RICH });
+    const results = await Promise.all([
+      ps.syncPlayer(aId, 5),
+      ps.unlockBuilding(aId, "reacteur_instable"),
+      ps.startResearch(aId, "tech1"),
+      ps.tradeResources(aId, "scrap", "energy", 100),
+    ]);
     expect(results[3]).toBeGreaterThan(0);
     const p = await ps.fetchPlayerSnapshot(aId);
     expect(p?.buildings.reacteur_instable.unlocked).toBe(true);
-    expect(p?.playtimeSeconds).toBe(5);
+    expect(p?.playtimeSeconds).toBeGreaterThan(0);
+    expect(p?.playtimeSeconds).toBeLessThanOrEqual(5);
     const q = await pb.collection("queues").getOne(aId);
     expect(q.activeResearches.map((r: { id: string }) => r.id)).toContain("tech1");
     await expect(ps.startResearch(aId, "tech1")).rejects.toThrow(/déjà en cours/);
+    await expect(ps.tradeResources(aId, "scrap", "energy", -5)).rejects.toThrow(/invalide/);
+    await expect(ps.enqueueUnitBuild(aId, "chasseur", 1)).rejects.toThrow(/Labo/);
   });
 
   it("forbids writing another player's data", async () => {
-    await expect(pb.collection("players").update(bId, { xp: 999999 })).rejects.toMatchObject({ status: 404 });
+    await expect(pb.collection("players").update(bId, { pseudo: "pirate" })).rejects.toMatchObject({ status: 404 });
     await expect(pb.collection("queues").getOne(bId)).rejects.toMatchObject({ status: 404 });
     await expect(pb.collection("players").create({ id: "aaaaaaaaaaaaaaa", pseudo: "x", resources: {}, buildings: {} })).rejects.toBeTruthy();
     const other = await ps.fetchPlayerSnapshot(bId); // lecture autorisée (espionnage, classement)
@@ -79,7 +108,7 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
   it("creates an alliance, chat is members-only", async () => {
     allianceId = await al.createAlliance(aId, A.pseudo, "Les Testeurs", "tst" + suffix.slice(0, 2));
     await al.sendAllianceMessage(allianceId, aId, A.pseudo, "Bienvenue");
-    // pseudo mis à jour côté joueur -> allianceId renseigné, pas écrasé par une action de jeu
+    // allianceId renseigné par le joueur, pas écrasé par une action de jeu
     await ps.syncPlayer(aId);
     expect((await ps.fetchPlayerSnapshot(aId))?.allianceId).toBe(allianceId);
     logout();
@@ -93,80 +122,106 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
     await expect(pb.collection("alliances").update(allianceId, { name: "Pirates" })).rejects.toBeTruthy();
   });
 
-  it("gift can only be claimed once", async () => {
-    await pb.collection("players").update(bId, { resources: { scrap: 5000, energy: 5000, nano: 0, data: 0, reinforcedSteel: 0, cyberModule: 0, syntheticNanites: 0, aiFragment: 0 } });
-    await ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 1000 } });
-    logout();
-    await loginPlayer(A.pseudo, A.pw);
-    const gifts = await pb.collection("resource_gifts").getFullList({ filter: `toUid="${aId}" && claimed=false` });
-    expect(gifts.length).toBe(1);
+  it("gifts are transferred immediately by the server", async () => {
+    await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 } });
     const before = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
-    await Promise.all([ps.claimResourceGift(aId, gifts[0].id), ps.claimResourceGift(aId, gifts[0].id)]);
+    await ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 1000 } });
+    const b = (await ps.fetchPlayerSnapshot(bId))!;
+    expect(b.resources.scrap).toBeLessThan(5000 - 999 + 100); // débité (hors production des dernières secondes)
     const after = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
     expect(after - before).toBeGreaterThanOrEqual(1000);
-    expect(after - before).toBeLessThan(2000);
-    await ps.claimResourceGift(aId, gifts[0].id); // passage suivant refusé par la règle
-    expect((await ps.fetchPlayerSnapshot(aId))!.resources.scrap - after).toBeLessThan(1000);
+    await expect(
+      ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 10_000_000 } }),
+    ).rejects.toThrow(/insuffisantes/);
   });
 
-  it("attack is arbitrated by the server: protections, XP, single defender processing", async () => {
-    // Ni l'attaquant ni le défenseur ne peuvent écrire eux-mêmes un rapport
-    // ou les champs JcJ réservés au serveur.
-    await expect(
-      pb.collection("battle_reports").create({ attackerUid: aId, defenderUid: bId, outcome: "attacker_win", defenderProcessed: false }),
-    ).rejects.toBeTruthy();
-    await expect(pb.collection("players").update(aId, { createdAtMs: 1 })).rejects.toBeTruthy();
+  it("legacy gifts (old system) are credited once", async () => {
+    const gift = await admin.collection("resource_gifts").create({
+      fromUid: aId, fromPseudo: A.pseudo, toUid: bId, toPseudo: B.pseudo, resources: { scrap: 700 }, timestamp: Date.now(), claimed: false,
+    });
+    const before = (await ps.fetchPlayerSnapshot(bId))!.resources.scrap;
+    await Promise.all([ps.claimResourceGift(bId, gift.id), ps.claimResourceGift(bId, gift.id)]);
+    await ps.claimResourceGift(bId, gift.id);
+    const after = (await ps.fetchPlayerSnapshot(bId))!.resources.scrap;
+    expect(after - before).toBeGreaterThanOrEqual(700);
+    expect(after - before).toBeLessThan(1400);
+  });
 
-    await pb.collection("players").update(aId, { units: { chasseur: { level: 1, count: 10 } } });
+  it("attack is arbitrated by the server and applied to both players", async () => {
+    // B est connecté. Ni l'attaquant ni le défenseur ne peuvent écrire un
+    // rapport ou les champs JcJ réservés au serveur.
+    await expect(
+      pb.collection("battle_reports").create({ attackerUid: bId, defenderUid: aId, outcome: "attacker_win", defenderProcessed: false }),
+    ).rejects.toBeTruthy();
+    await expect(pb.collection("players").update(bId, { createdAtMs: 1 })).rejects.toBeTruthy();
+
+    logout();
+    await loginPlayer(A.pseudo, A.pw);
+    await admin.collection("players").update(aId, { units: { chasseur: { level: 1, count: 10 } } });
     // B vient de s'inscrire : protection débutant.
     await expect(
       ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } }),
     ).rejects.toThrow(/débute/);
 
-    if (!PB_TEST_ADMIN) return; // la suite demande de vieillir le compte de B (superuser)
-    const admin = new PocketBase(PB_TEST_URL);
-    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN.email, PB_TEST_ADMIN.password);
-    await admin.collection("players").update(bId, { createdAtMs: Date.now() - 30 * 24 * 3600 * 1000 });
+    await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO() });
+    const bBefore = (await ps.fetchPlayerSnapshot(bId))!;
 
     const res = await ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } });
     expect(res.outcome).toBe("attacker_win");
     expect(res.attackerXpDelta).toBeGreaterThan(0);
-    const me = await ps.fetchPlayerSnapshot(aId);
-    expect(me?.victories).toBe(1);
+    expect((await ps.fetchPlayerSnapshot(aId))?.victories).toBe(1);
+
+    // Le défenseur est mis à jour par le serveur, sans attendre sa connexion.
+    const bAfter = (await ps.fetchPlayerSnapshot(bId))!;
+    expect(bAfter.defeats).toBe(1);
+    expect(bAfter.lastDefeatAtMs).toBeGreaterThan(0);
+    // Butin limité par la cargaison des 5 chasseurs, retiré au défenseur.
+    const looted = Object.values(res.loot ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    expect(looted).toBe(res.cargoCapacity);
+    expect(bAfter.resources.reinforcedSteel).toBe(bBefore.resources.reinforcedSteel - (res.loot?.reinforcedSteel ?? 0));
 
     // Délai de 2 h (et bouclier) sur la même cible.
     await expect(
       ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 1 } }),
     ).rejects.toThrow(/bouclier|récemment/);
-    const recent = await ps.fetchMyRecentAttacks(aId, Date.now() - 3600 * 1000);
-    expect(recent[bId]).toBeGreaterThan(0);
+    expect((await ps.fetchMyRecentAttacks(aId, Date.now() - 3600 * 1000))[bId]).toBeGreaterThan(0);
 
     const [rep] = await pb.collection("battle_reports").getFullList({ filter: `attackerUid="${aId}"` });
     expect(rep.defenderXpDelta).toBeLessThan(0);
-    await expect(pb.collection("battle_reports").update(rep.id, { defenderProcessed: true })).rejects.toBeTruthy();
+    expect(rep.defenderApplied).toBe(true);
+    expect(bAfter.xp).toBe(Math.max(0, bBefore.xp + rep.defenderXpDelta));
 
+    // Le défenseur voit le rapport une seule fois ; rien n'est réappliqué.
     logout();
     await loginPlayer(B.pseudo, B.pw);
-    const xpBefore = (await ps.fetchPlayerSnapshot(bId))!.xp;
+    await expect(pb.collection("battle_reports").update(rep.id, { defenderProcessed: true })).rejects.toBeTruthy();
     const r = await Promise.all([ps.processBattleReportForDefender(bId, rep.id), ps.processBattleReportForDefender(bId, rep.id)]);
     expect(r.filter(Boolean).length).toBe(1);
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
-    const b = (await ps.fetchPlayerSnapshot(bId))!;
-    expect(b.xp).toBe(Math.max(0, xpBefore + rep.defenderXpDelta));
-    expect(b.defeats).toBe(1);
-    expect(b.lastDefeatAtMs).toBeGreaterThan(0);
+    expect((await ps.fetchPlayerSnapshot(bId))!.defeats).toBe(1);
     const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="combat-defender"` });
     expect(notifs.length).toBe(1);
   });
 
+  it("legacy battle reports (old system) are applied when seen", async () => {
+    const rep = await admin.collection("battle_reports").create({
+      attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now() - 5000,
+      outcome: "defender_win", defenderLosses: {}, loot: null, defenderProcessed: false, defenderXpDelta: 3,
+    });
+    const before = (await ps.fetchPlayerSnapshot(bId))!;
+    const seen = await ps.processBattleReportForDefender(bId, rep.id);
+    expect(seen?.id).toBe(rep.id);
+    const after = (await ps.fetchPlayerSnapshot(bId))!;
+    expect(after.victories).toBe(before.victories + 1);
+    expect(after.xp).toBe(before.xp + 3);
+    expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
+  });
+
   it("game content: only admins edit it, and the server applies it in combat", async () => {
-    // Connecté en B (test précédent). Un joueur normal ne peut pas modifier le contenu.
+    // Connecté en B. Un joueur normal ne peut pas modifier le contenu.
     await expect(pb.collection("game_config").create({ key: "units", data: [] })).rejects.toBeTruthy();
     expect(await checkIsAdmin(bId)).toBe(false);
-    if (!PB_TEST_ADMIN) return;
 
-    const admin = new PocketBase(PB_TEST_URL);
-    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN.email, PB_TEST_ADMIN.password);
     await admin.collection("admins").create({ id: bId, note: "test" });
     expect(await checkIsAdmin(bId)).toBe(true);
 
@@ -175,8 +230,8 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
     const units = defaultGameContent().units.map((u) => (u.id === "chasseur" ? { ...u, stats: { ...u.stats, attaque: 0 } } : u));
     await saveContentSection("units", units);
     try {
-      await admin.collection("players").update(aId, { createdAtMs: Date.now() - 30 * 24 * 3600 * 1000 });
-      await pb.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
+      await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), units: {} });
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
       const res = await ps.initiateAttack({ attackerUid: bId, attackerPseudo: B.pseudo, targetUid: aId, targetPseudo: A.pseudo, fleet: { chasseur: 5 } });
       expect(res.attackerPower).toBe(0);
       expect(res.outcome).toBe("draw");
