@@ -735,5 +735,113 @@
     "indexes": [
       "CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"
     ]
+  },
+  {
+    "id": "pbc_ce_fleets",
+    "name": "fleets",
+    "type": "base",
+    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\")",
+    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\")",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "ownerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "targetUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "targetPseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "mission",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "units",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "departAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "arriveAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "returnAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "loot",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "reportId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "outcome",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "recalled",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)",
+      "CREATE INDEX idx_fleets_owner ON fleets (ownerUid)",
+      "CREATE INDEX idx_fleets_target ON fleets (targetUid)"
+    ]
   }
 ]

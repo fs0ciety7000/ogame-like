@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeFleetPower, resolveCombat, unitStat } from "@/game/combat";
+import { computeFleetPower, getShieldPercent, resolveCombat, unitStat } from "@/game/combat";
+import { defaultBuildings } from "@/game/buildings";
 import { UNIT_BASE_STATS } from "@/game/units";
 import type { TechLevels, Units } from "@/types/game";
 
@@ -135,5 +136,48 @@ describe("resolveCombat", () => {
     const result = resolveCombat(params);
     const lost = (result.attackerLosses.chasseur ?? 0) + (result.attackerRecovered.chasseur ?? 0);
     expect(lost).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("v1.6 combat balance", () => {
+  it("adds the home bonus and lets ships at home support the defense", () => {
+    const params = baseCombatParams();
+    params.defenderUnits = unitsWith({ roquette: { level: 1, count: 10 } });
+    const without = resolveCombat(params);
+    params.defenderUnits = unitsWith({ roquette: { level: 1, count: 10 }, chasseur: { level: 1, count: 100 } });
+    const withShips = resolveCombat(params);
+    expect(without.defenderPower).toBeCloseTo(10 * 60 * 1.15);
+    expect(withShips.defenderPower).toBeCloseTo((10 * 60 + 100 * 255 * 0.1) * 1.15);
+  });
+
+  it("shield absorbs part of the attack", () => {
+    const params = baseCombatParams();
+    const plain = resolveCombat(params);
+    const shielded = resolveCombat({ ...params, defenderShieldPct: 0.15 });
+    expect(shielded.attackerPower).toBeCloseTo(plain.attackerPower * 0.85);
+    expect(shielded.shieldPercent).toBe(0.15);
+  });
+
+  it("rebuilds 60 % of destroyed defenses; ships at home only use the workshop", () => {
+    const params = baseCombatParams();
+    params.fleet = { chasseur: 100 };
+    params.attackerUnits = unitsWith({ chasseur: { level: 1, count: 100 } });
+    params.defenderUnits = unitsWith({ roquette: { level: 1, count: 100 }, fregate: { level: 1, count: 1000 } });
+    const r = resolveCombat(params);
+    expect(r.outcome).toBe("attacker_win");
+    const rawRoquette = (r.defenderLosses.roquette ?? 0) + (r.defenderRecovered.roquette ?? 0);
+    expect(r.defenderRebuilt?.roquette).toBe(Math.floor(rawRoquette * 0.6));
+    // Frégates à quai : 10 % du taux de pertes, pas de reconstruction.
+    const rawFregate = (r.defenderLosses.fregate ?? 0) + (r.defenderRecovered.fregate ?? 0);
+    expect(rawFregate).toBe(Math.floor(1000 * r.defenderLossPercent * 0.1));
+    expect(r.defenderRebuilt?.fregate).toBeUndefined();
+  });
+
+  it("derives the shield from the defense hangar level", () => {
+    const b = defaultBuildings();
+    b.hangar_defense = { level: 10, unlocked: true };
+    expect(getShieldPercent(b)).toBeCloseTo(0.075);
+    b.hangar_defense.level = 40;
+    expect(getShieldPercent(b)).toBe(0.15);
   });
 });

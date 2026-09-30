@@ -58,8 +58,11 @@ __export(hooksEntry_exports, {
   defaultQueues: () => defaultQueues,
   newPlayerProfile: () => newPlayerProfile,
   performAttack: () => performAttack,
+  performFleetReturn: () => performFleetReturn,
   performGift: () => performGift,
-  performPlayerAction: () => performPlayerAction
+  performLaunch: () => performLaunch,
+  performPlayerAction: () => performPlayerAction,
+  recallFleet: () => recallFleet
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -224,230 +227,16 @@ function getUnitBuildTime(unit) {
   return Math.max(3, Math.ceil(total / 100));
 }
 
-// src/game/technologies.ts
-var TECH_EFFECT_DEFAULTS = {
-  energy_efficiency: 0.1,
-  unit_attack: 0.1,
-  unit_defense: 0.1,
-  building_discount: 0.05
-};
-var DEFAULT_TECHNOLOGIES = [
-  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
-  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
-  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
-  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
-  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
-  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
-  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
-  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
-  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
-  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
-  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
-  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
-  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
-  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
-  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
-  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
-];
-var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
-function setTechnologies(defs) {
-  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
-}
-function techBonus(techLevels, effect) {
-  var _a, _b, _c;
-  let total = 0;
-  for (const tech of TECHNOLOGIES) {
-    if (tech.effect !== effect) continue;
-    total += ((_a = techLevels[tech.id]) != null ? _a : 0) * ((_c = (_b = tech.effectValue) != null ? _b : TECH_EFFECT_DEFAULTS[effect]) != null ? _c : 0);
+// src/game/format.ts
+function formatInt(value) {
+  const n = Math.round(Number(value) || 0);
+  const digits = String(Math.abs(n));
+  let out = "";
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
+    out += digits[i];
   }
-  return total;
-}
-var MAX_CONCURRENT_RESEARCH = 4;
-var COST_GROWTH = 2.7;
-var TIME_GROWTH = 1.67;
-function findTech(id) {
-  return TECHNOLOGIES.find((t) => t.id === id);
-}
-function getTechCost(tech, level) {
-  var _a;
-  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
-  const factor = Math.pow(growth, level - 1);
-  const cost = {};
-  for (const [res, amount] of Object.entries(tech.baseCost)) {
-    cost[res] = Math.floor(amount * factor);
-  }
-  return cost;
-}
-function getTechTime(tech, level) {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
-}
-function checkPrereqs(tech, levels) {
-  const entries = Object.entries(tech.prereq);
-  if (entries.length === 0) return { valid: true, list: [] };
-  let allValid = true;
-  const list = entries.map(([reqId, reqLevel]) => {
-    var _a, _b;
-    const current2 = (_a = levels[reqId]) != null ? _a : 0;
-    const valide = current2 >= reqLevel;
-    if (!valide) allValid = false;
-    const reqTech = findTech(reqId);
-    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
-  });
-  return { valid: allValid, list };
-}
-
-// src/game/combat.ts
-var COMBAT_RULES = {
-  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
-  lootPercent: 0.08,
-  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
-  lootPercentCommon: 0.1
-};
-var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
-function fleetCargoCapacity(units, fleet) {
-  var _a, _b, _c;
-  let total = 0;
-  for (const [id, qty] of Object.entries(fleet)) {
-    const def = findUnit(id);
-    const level = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def || qty <= 0 || level <= 0) continue;
-    total += ((_c = def.stats.cargo) != null ? _c : 0) * level * qty;
-  }
-  return total;
-}
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-function unitStat(units, techLevels, unitId, stat) {
-  var _a, _b, _c, _d;
-  const base = (_b = (_a = UNIT_BASE_STATS[unitId]) == null ? void 0 : _a[stat]) != null ? _b : 0;
-  const level = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
-  if (level <= 0) return 0;
-  let value = base + (level - 1) * 5;
-  if (stat === "attack") value *= 1 + techBonus(techLevels, "unit_attack");
-  if (stat === "defense") value *= 1 + techBonus(techLevels, "unit_defense");
-  return value;
-}
-function computeFleetPower(units, techLevels, fleet, stats) {
-  let total = 0;
-  for (const id in fleet) {
-    const qty = fleet[id];
-    if (qty <= 0) continue;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels, id, s));
-    total += value * qty;
-  }
-  return total;
-}
-function computeFullPower(units, techLevels, idList, stats) {
-  let total = 0;
-  idList.forEach((id) => {
-    var _a, _b;
-    const count = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels, id, s));
-    total += value * count;
-  });
-  return total;
-}
-function resolveCombat(params) {
-  var _a, _b, _c, _d, _e;
-  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
-  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]);
-  const defenderPower = computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]);
-  const totalPower = attackerPower + defenderPower;
-  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
-  let outcome;
-  if (attackerPower > defenderPower) outcome = "attacker_win";
-  else if (attackerPower < defenderPower) outcome = "defender_win";
-  else outcome = "draw";
-  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
-  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
-  let attackerLossPct, defenderLossPct;
-  if (outcome === "attacker_win") {
-    attackerLossPct = winnerLossPct;
-    defenderLossPct = loserLossPct;
-  } else if (outcome === "defender_win") {
-    attackerLossPct = loserLossPct;
-    defenderLossPct = winnerLossPct;
-  } else {
-    attackerLossPct = 0.3;
-    defenderLossPct = 0.3;
-  }
-  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
-  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
-  const attackerLosses = {};
-  const attackerRecovered = {};
-  for (const unitId in fleet) {
-    const sent = fleet[unitId];
-    const rawLost = Math.floor(sent * attackerLossPct);
-    const recovered = Math.floor(rawLost * attackerRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      attackerLosses[unitId] = effectiveLost;
-      attackerRecovered[unitId] = recovered;
-    }
-  }
-  const defenderLosses = {};
-  const defenderRecovered = {};
-  DEFENSIVE_UNITS.forEach((unitId) => {
-    var _a2, _b2;
-    const count = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
-    const rawLost = Math.floor(count * defenderLossPct);
-    const recovered = Math.floor(rawLost * defenderRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      defenderLosses[unitId] = effectiveLost;
-      defenderRecovered[unitId] = recovered;
-    }
-  });
-  const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_a = attackerLosses[unitId]) != null ? _a : 0));
-  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
-  let loot = null;
-  if (outcome === "attacker_win") {
-    const wanted = {};
-    let total = 0;
-    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
-      const pct2 = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const amount = Math.floor(Math.max(0, (_b = defenderResources[res]) != null ? _b : 0) * pct2);
-      wanted[res] = amount;
-      total += amount;
-    }
-    const ratio = total > cargoCapacity ? cargoCapacity / total : 1;
-    loot = {};
-    const entries = Object.entries(wanted);
-    for (const [res, amount] of entries) loot[res] = Math.floor(amount * ratio);
-    let left = Math.min(total, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
-      var _a2;
-      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
-    }, 0);
-    const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
-    for (const { res } of byRemainder) {
-      if (left <= 0) break;
-      if (((_c = loot[res]) != null ? _c : 0) < ((_d = wanted[res]) != null ? _d : 0)) {
-        loot[res] = ((_e = loot[res]) != null ? _e : 0) + 1;
-        left--;
-      }
-    }
-  }
-  return {
-    outcome,
-    attackerPower,
-    defenderPower,
-    attackerLossPercent: attackerLossPct,
-    defenderLossPercent: defenderLossPct,
-    attackerLosses,
-    attackerRecovered,
-    defenderLosses,
-    defenderRecovered,
-    loot,
-    cargoCapacity
-  };
+  return n < 0 ? `-${out}` : out;
 }
 
 // src/game/resources.ts
@@ -742,6 +531,256 @@ function withMissingBuildings(buildings, resources) {
     out[b.id] = { level, unlocked: !!b.startsUnlocked };
   }
   return out;
+}
+
+// src/game/technologies.ts
+var TECH_EFFECT_DEFAULTS = {
+  energy_efficiency: 0.1,
+  unit_attack: 0.1,
+  unit_defense: 0.1,
+  building_discount: 0.05
+};
+var DEFAULT_TECHNOLOGIES = [
+  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
+  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
+  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
+  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
+  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
+  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
+  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
+  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
+  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
+  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
+  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
+  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
+  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
+  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
+  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
+  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
+];
+var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
+function setTechnologies(defs) {
+  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
+}
+function techBonus(techLevels, effect) {
+  var _a, _b, _c;
+  let total = 0;
+  for (const tech of TECHNOLOGIES) {
+    if (tech.effect !== effect) continue;
+    total += ((_a = techLevels[tech.id]) != null ? _a : 0) * ((_c = (_b = tech.effectValue) != null ? _b : TECH_EFFECT_DEFAULTS[effect]) != null ? _c : 0);
+  }
+  return total;
+}
+var MAX_CONCURRENT_RESEARCH = 4;
+var COST_GROWTH = 2.7;
+var TIME_GROWTH = 1.67;
+function findTech(id) {
+  return TECHNOLOGIES.find((t) => t.id === id);
+}
+function getTechCost(tech, level) {
+  var _a;
+  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
+  const factor = Math.pow(growth, level - 1);
+  const cost = {};
+  for (const [res, amount] of Object.entries(tech.baseCost)) {
+    cost[res] = Math.floor(amount * factor);
+  }
+  return cost;
+}
+function getTechTime(tech, level) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
+}
+function checkPrereqs(tech, levels) {
+  const entries = Object.entries(tech.prereq);
+  if (entries.length === 0) return { valid: true, list: [] };
+  let allValid = true;
+  const list = entries.map(([reqId, reqLevel]) => {
+    var _a, _b;
+    const current2 = (_a = levels[reqId]) != null ? _a : 0;
+    const valide = current2 >= reqLevel;
+    if (!valide) allValid = false;
+    const reqTech = findTech(reqId);
+    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
+  });
+  return { valid: allValid, list };
+}
+
+// src/game/combat.ts
+var COMBAT_RULES = {
+  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
+  lootPercent: 0.08,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
+  lootPercentCommon: 0.1,
+  /** Bonus de puissance du défenseur, qui se bat chez lui. */
+  homeDefenseBonus: 0.15,
+  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
+  shieldPerLevel: 75e-4,
+  /** …plafonnée à cette valeur. */
+  shieldMax: 0.15,
+  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
+   *  puissance, et subissent la même part des pertes. Réglé pour viser
+   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
+  homeFleetDefenseFactor: 0.1,
+  /** Part des défenses détruites reconstruites gratuitement après le combat. */
+  defenseRebuildPct: 0.6
+};
+function getShieldPercent(buildings) {
+  var _a;
+  let levels = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+  }
+  return Math.min(COMBAT_RULES.shieldMax, levels * COMBAT_RULES.shieldPerLevel);
+}
+var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
+function fleetCargoCapacity(units, fleet) {
+  var _a, _b, _c;
+  let total = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const def = findUnit(id);
+    const level = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def || qty <= 0 || level <= 0) continue;
+    total += ((_c = def.stats.cargo) != null ? _c : 0) * level * qty;
+  }
+  return total;
+}
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+function unitStat(units, techLevels, unitId, stat) {
+  var _a, _b, _c, _d;
+  const base = (_b = (_a = UNIT_BASE_STATS[unitId]) == null ? void 0 : _a[stat]) != null ? _b : 0;
+  const level = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
+  if (level <= 0) return 0;
+  let value = base + (level - 1) * 5;
+  if (stat === "attack") value *= 1 + techBonus(techLevels, "unit_attack");
+  if (stat === "defense") value *= 1 + techBonus(techLevels, "unit_defense");
+  return value;
+}
+function computeFleetPower(units, techLevels, fleet, stats) {
+  let total = 0;
+  for (const id in fleet) {
+    const qty = fleet[id];
+    if (qty <= 0) continue;
+    let value = 0;
+    stats.forEach((s) => value += unitStat(units, techLevels, id, s));
+    total += value * qty;
+  }
+  return total;
+}
+function computeFullPower(units, techLevels, idList, stats) {
+  let total = 0;
+  idList.forEach((id) => {
+    var _a, _b;
+    const count = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
+    let value = 0;
+    stats.forEach((s) => value += unitStat(units, techLevels, id, s));
+    total += value * count;
+  });
+  return total;
+}
+function resolveCombat(params) {
+  var _a, _b, _c, _d, _e, _f;
+  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
+  const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
+  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
+  const defenderPower = (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) + computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
+  const totalPower = attackerPower + defenderPower;
+  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
+  let outcome;
+  if (attackerPower > defenderPower) outcome = "attacker_win";
+  else if (attackerPower < defenderPower) outcome = "defender_win";
+  else outcome = "draw";
+  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
+  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
+  let attackerLossPct, defenderLossPct;
+  if (outcome === "attacker_win") {
+    attackerLossPct = winnerLossPct;
+    defenderLossPct = loserLossPct;
+  } else if (outcome === "defender_win") {
+    attackerLossPct = loserLossPct;
+    defenderLossPct = winnerLossPct;
+  } else {
+    attackerLossPct = 0.3;
+    defenderLossPct = 0.3;
+  }
+  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
+  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
+  const attackerLosses = {};
+  const attackerRecovered = {};
+  for (const unitId in fleet) {
+    const sent = fleet[unitId];
+    const rawLost = Math.floor(sent * attackerLossPct);
+    const recovered = Math.floor(rawLost * attackerRepairPct);
+    const effectiveLost = rawLost - recovered;
+    if (rawLost > 0) {
+      attackerLosses[unitId] = effectiveLost;
+      attackerRecovered[unitId] = recovered;
+    }
+  }
+  const defenderLosses = {};
+  const defenderRecovered = {};
+  const defenderRebuilt = {};
+  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
+    var _a2, _b2;
+    const count = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
+    const isDefense = DEFENSIVE_UNITS.includes(unitId);
+    const rawLost = Math.floor(count * defenderLossPct * (isDefense ? 1 : COMBAT_RULES.homeFleetDefenseFactor));
+    if (rawLost <= 0) return;
+    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
+    defenderLosses[unitId] = rawLost - recovered;
+    defenderRecovered[unitId] = recovered;
+    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
+  });
+  const survivors = {};
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_b = attackerLosses[unitId]) != null ? _b : 0));
+  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
+  let loot = null;
+  if (outcome === "attacker_win") {
+    const wanted = {};
+    let total = 0;
+    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
+      const pct2 = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const amount = Math.floor(Math.max(0, (_c = defenderResources[res]) != null ? _c : 0) * pct2);
+      wanted[res] = amount;
+      total += amount;
+    }
+    const ratio = total > cargoCapacity ? cargoCapacity / total : 1;
+    loot = {};
+    const entries = Object.entries(wanted);
+    for (const [res, amount] of entries) loot[res] = Math.floor(amount * ratio);
+    let left = Math.min(total, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
+      var _a2;
+      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
+    }, 0);
+    const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
+    for (const { res } of byRemainder) {
+      if (left <= 0) break;
+      if (((_d = loot[res]) != null ? _d : 0) < ((_e = wanted[res]) != null ? _e : 0)) {
+        loot[res] = ((_f = loot[res]) != null ? _f : 0) + 1;
+        left--;
+      }
+    }
+  }
+  return {
+    outcome,
+    attackerPower,
+    defenderPower,
+    attackerLossPercent: attackerLossPct,
+    defenderLossPercent: defenderLossPct,
+    attackerLosses,
+    attackerRecovered,
+    defenderLosses,
+    defenderRecovered,
+    loot,
+    cargoCapacity,
+    shieldPercent: shield,
+    defenderRebuilt
+  };
 }
 
 // src/game/production.ts
@@ -1459,9 +1498,9 @@ function checkAttackAllowed(ctx) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w;
   const { now, attackerUid, defenderUid, defender } = input;
-  const check = checkAttackAllowed({
+  const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
     attackerUid,
     attackerXp: (_a = input.attacker.xp) != null ? _a : 0,
@@ -1487,8 +1526,14 @@ function performAttack(input) {
     now
   );
   const attacker = flushed.player;
+  if (input.inFlight) {
+    for (const [unitId, qty] of Object.entries(fleet)) {
+      const state = (_g = attacker.units[unitId]) != null ? _g : { level: 1, count: 0 };
+      attacker.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
+    }
+  }
   for (const [unitId, qty] of Object.entries(fleet)) {
-    if (((_h = (_g = attacker.units[unitId]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) {
+    if (((_i = (_h = attacker.units[unitId]) == null ? void 0 : _h.count) != null ? _i : 0) < qty) {
       return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
     }
   }
@@ -1499,33 +1544,41 @@ function performAttack(input) {
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
     fleet,
-    defenderUnits: (_i = def.units) != null ? _i : {},
-    defenderTechLevels: (_j = def.techLevels) != null ? _j : {},
+    defenderUnits: (_j = def.units) != null ? _j : {},
+    defenderTechLevels: (_k = def.techLevels) != null ? _k : {},
     defenderRepairPct: getRepairPercent(def.buildings),
+    defenderShieldPct: getShieldPercent(def.buildings),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_k = def.resources) != null ? _k : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def.buildings, res))])
+      Object.entries((_l = def.resources) != null ? _l : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def.buildings, res))])
     )
   });
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
-  for (const [res, amt] of Object.entries((_l = combat.loot) != null ? _l : {})) {
-    attacker.resources[res] = ((_m = attacker.resources[res]) != null ? _m : 0) + (amt != null ? amt : 0);
-    def.resources[res] = Math.max(0, ((_n = def.resources[res]) != null ? _n : 0) - (amt != null ? amt : 0));
+  const survivors = {};
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_m = combat.attackerLosses[unitId]) != null ? _m : 0));
+  if (input.inFlight) {
+    for (const [unitId, qty] of Object.entries(survivors)) {
+      if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
+    }
+  }
+  for (const [res, amt] of Object.entries((_n = combat.loot) != null ? _n : {})) {
+    if (!input.inFlight) attacker.resources[res] = ((_o = attacker.resources[res]) != null ? _o : 0) + (amt != null ? amt : 0);
+    def.resources[res] = Math.max(0, ((_p = def.resources[res]) != null ? _p : 0) - (amt != null ? amt : 0));
   }
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
-  if (combat.outcome === "attacker_win") attacker.victories = ((_o = attacker.victories) != null ? _o : 0) + 1;
-  else if (combat.outcome === "defender_win") attacker.defeats = ((_p = attacker.defeats) != null ? _p : 0) + 1;
+  if (combat.outcome === "attacker_win") attacker.victories = ((_q = attacker.victories) != null ? _q : 0) + 1;
+  else if (combat.outcome === "defender_win") attacker.defeats = ((_r = attacker.defeats) != null ? _r : 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
   attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") def.victories = ((_q = def.victories) != null ? _q : 0) + 1;
+  if (combat.outcome === "defender_win") def.victories = ((_s = def.victories) != null ? _s : 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    def.defeats = ((_r = def.defeats) != null ? _r : 0) + 1;
+    def.defeats = ((_t = def.defeats) != null ? _t : 0) + 1;
     def.lastDefeatAtMs = now;
   }
   applyXpDelta(def, defenderXpDelta, now);
@@ -1540,7 +1593,7 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_s = outcomeTitle[combat.outcome]) != null ? _s : "Rapport de combat",
+      title: (_u = outcomeTitle[combat.outcome]) != null ? _u : "Rapport de combat",
       message: `Attaque contre ${defender.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
       createdAtMs: now,
       read: false
@@ -1555,7 +1608,7 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_t = defenderTitle[combat.outcome]) != null ? _t : "Rapport de combat",
+      title: (_v = defenderTitle[combat.outcome]) != null ? _v : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
       createdAtMs: now,
       read: false
@@ -1591,7 +1644,9 @@ function performAttack(input) {
     defenderQueues: flushedDefender.queues,
     defenderNotifications,
     report,
-    combat
+    combat,
+    survivors,
+    loot: (_w = combat.loot) != null ? _w : {}
   };
 }
 
@@ -2061,6 +2116,158 @@ function computeInsights(s) {
   return out;
 }
 
+// src/game/galaxy.ts
+function hashString(input, seed) {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function galaxyCoords(uid) {
+  return {
+    galaxy: 1 + hashString(uid, 3) % 9,
+    system: 1 + hashString(uid, 4) % 499,
+    position: 1 + hashString(uid, 5) % 15,
+    x: hashString(uid, 1) / 4294967296,
+    y: hashString(uid, 2) / 4294967296
+  };
+}
+
+// src/game/fleets.ts
+var FLEET_RULES = {
+  /** Durée fixe de tout trajet (décollage, approche), en minutes. */
+  baseMinutes: 5,
+  /** Minutes par unité de distance, divisées par la vitesse de la flotte. */
+  minutesPerDistance: 3,
+  /** Côté de la carte de la galaxie (distance max ≈ 141). */
+  mapSize: 100
+};
+function mapPosition(uid) {
+  const c = galaxyCoords(uid);
+  return { x: c.x * FLEET_RULES.mapSize, y: c.y * FLEET_RULES.mapSize };
+}
+function distanceBetween(uidA, uidB) {
+  const a = mapPosition(uidA);
+  const b = mapPosition(uidB);
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+function fleetSpeed(units, fleet) {
+  var _a, _b, _c;
+  let slowest = Infinity;
+  for (const [id, qty] of Object.entries(fleet)) {
+    if (!(qty > 0)) continue;
+    const def = findUnit(id);
+    const speed = ((_a = def == null ? void 0 : def.stats.vitesse) != null ? _a : 0) * Math.max(1, (_c = (_b = units[id]) == null ? void 0 : _b.level) != null ? _c : 1);
+    slowest = Math.min(slowest, Math.max(1, speed));
+  }
+  return Number.isFinite(slowest) ? slowest : 1;
+}
+function travelSeconds(distance, speed) {
+  return Math.round((FLEET_RULES.baseMinutes + distance * FLEET_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+}
+function launchFleet(input) {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  const { now, attacker, defender } = input;
+  const check = checkAttackAllowed({
+    now,
+    attackerUid: attacker.uid,
+    attackerXp: (_a = attacker.xp) != null ? _a : 0,
+    defenderUid: defender.uid,
+    defenderXp: (_b = defender.xp) != null ? _b : 0,
+    defenderCreatedAtMs: defender.createdAtMs,
+    defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
+    lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null
+  });
+  if (!check.allowed) throw new GameActionError((_e = check.message) != null ? _e : "Attaque impossible.");
+  const units = {};
+  for (const [unitId, raw] of Object.entries((_f = input.fleet) != null ? _f : {})) {
+    const qty = Math.floor(Number(raw));
+    if (!(qty > 0)) continue;
+    if (!OFFENSIVE_UNITS.includes(unitId)) throw new GameActionError("Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
+    if (((_h = (_g = attacker.units[unitId]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
+    units[unitId] = qty;
+  }
+  if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
+  const speed = fleetSpeed(attacker.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed) * 1e3;
+  for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
+  attacker.lastAttackAtMs = now;
+  const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));
+  const total = Object.values(units).reduce((a, b) => a + b, 0);
+  return {
+    attacker,
+    fleet: {
+      ownerUid: attacker.uid,
+      ownerPseudo: attacker.pseudo,
+      targetUid: defender.uid,
+      targetPseudo: defender.pseudo,
+      mission: "attack",
+      units,
+      departAtMs: now,
+      arriveAtMs,
+      returnAtMs: null,
+      status: "outbound",
+      loot: null,
+      reportId: "",
+      outcome: "",
+      recalled: false
+    },
+    defenderNotifications: [
+      {
+        kind: "fleet",
+        title: "Flotte hostile en approche !",
+        message: `${attacker.pseudo} t'envoie ${formatInt(total)} vaisseaux : impact dans ${minutes} min. Renforce tes d\xE9fenses !`,
+        createdAtMs: now,
+        read: false
+      }
+    ]
+  };
+}
+function recallFleet(fleet, uid, now) {
+  if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
+  if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
+  if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
+  return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
+}
+function completeFleetReturn(owner, fleet, now) {
+  var _a, _b, _c, _d, _e;
+  for (const [unitId, qty] of Object.entries((_a = fleet.units) != null ? _a : {})) {
+    if (!(qty > 0)) continue;
+    const state = (_b = owner.units[unitId]) != null ? _b : { level: 1, count: 0 };
+    owner.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
+  }
+  for (const [res, amount] of Object.entries((_c = fleet.loot) != null ? _c : {})) {
+    owner.resources[res] = ((_d = owner.resources[res]) != null ? _d : 0) + (amount != null ? amount : 0);
+  }
+  const lootTotal = Object.values((_e = fleet.loot) != null ? _e : {}).reduce((a, b) => a + (b != null ? b : 0), 0);
+  return {
+    owner,
+    notifications: [
+      {
+        kind: "fleet",
+        title: fleet.recalled ? "Flotte rappel\xE9e rentr\xE9e" : "Flotte rentr\xE9e \xE0 la base",
+        message: fleet.recalled ? `Ta flotte envoy\xE9e vers ${fleet.targetPseudo} est de retour, sans combat.` : `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`,
+        createdAtMs: now,
+        read: false
+      }
+    ]
+  };
+}
+function performLaunch(attackerIn, attackerQueues, defender, rawFleet, lastAttackOnTargetMs, now) {
+  if (attackerIn.uid === defender.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-m\xEAme !");
+  const flushed = flushState(__spreadProps(__spreadValues({}, attackerIn), { buildings: withMissingBuildings(attackerIn.buildings, attackerIn.resources) }), attackerQueues, now);
+  const out = launchFleet({ now, attacker: flushed.player, defender, fleet: rawFleet, lastAttackOnTargetMs });
+  return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
+}
+function performFleetReturn(ownerIn, ownerQueues, fleet, now) {
+  const flushed = flushState(__spreadProps(__spreadValues({}, ownerIn), { buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }), ownerQueues, now);
+  const done = completeFleetReturn(flushed.player, fleet, now);
+  return { owner: done.owner, queues: flushed.queues, notifications: [...flushed.notifications, ...done.notifications] };
+}
+
 // src/game/playerFields.ts
 var GAME_FIELDS = [
   "resources",
@@ -2086,18 +2293,19 @@ var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "rules
 var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
+var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -2107,7 +2315,8 @@ function applyGameContent(overrides) {
     rules: {
       pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_f = (_e = overrides.rules) == null ? void 0 : _e.pvp) != null ? _f : {}),
       combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_h = (_g = overrides.rules) == null ? void 0 : _g.combat) != null ? _h : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_j = (_i = overrides.rules) == null ? void 0 : _i.economy) != null ? _j : {})
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_j = (_i = overrides.rules) == null ? void 0 : _i.economy) != null ? _j : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_l = (_k = overrides.rules) == null ? void 0 : _k.fleets) != null ? _l : {})
     }
   };
   setBuildings(content.buildings);
@@ -2117,6 +2326,7 @@ function applyGameContent(overrides) {
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
+  Object.assign(FLEET_RULES, content.rules.fleets);
   current = content;
   return content;
 }

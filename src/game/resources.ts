@@ -1,4 +1,5 @@
 import type { ResourceId, Resources } from "@/types/game";
+import { formatDecimal, formatInt } from "@/game/format";
 
 export interface ResourceDef {
   id: ResourceId;
@@ -55,9 +56,9 @@ export function formatCost(cost: Partial<Resources>): string {
 
 function compactAmount(value: number): string {
   const abs = Math.abs(value);
-  const fmt = (n: number, unit: string) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: n < 10 ? 2 : 1 })} ${unit}`;
+  const fmt = (n: number, unit: string) => `${formatDecimal(n, n < 10 ? 2 : 1)} ${unit}`;
   if (abs >= 1e9) return fmt(value / 1e9, "Md");
   if (abs >= 1e6) return fmt(value / 1e6, "M");
   if (abs >= 1e4) return fmt(value / 1e3, "k");
-  return Math.round(value).toLocaleString("fr-FR");
+  return formatInt(value);
 }

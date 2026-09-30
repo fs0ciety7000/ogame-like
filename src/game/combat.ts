@@ -1,6 +1,7 @@
-import { DEFENSIVE_UNITS, findUnit, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { techBonus } from "@/game/technologies";
-import type { CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
+import type { Buildings, CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
 
 /** Règles de combat réglables depuis l'administration. */
 export const COMBAT_RULES = {
@@ -8,7 +9,28 @@ export const COMBAT_RULES = {
   lootPercent: 0.08,
   /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
   lootPercentCommon: 0.1,
+  /** Bonus de puissance du défenseur, qui se bat chez lui. */
+  homeDefenseBonus: 0.15,
+  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
+  shieldPerLevel: 0.0075,
+  /** …plafonnée à cette valeur. */
+  shieldMax: 0.15,
+  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
+   *  puissance, et subissent la même part des pertes. Réglé pour viser
+   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
+  homeFleetDefenseFactor: 0.1,
+  /** Part des défenses détruites reconstruites gratuitement après le combat. */
+  defenseRebuildPct: 0.6,
 };
+
+/** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
+export function getShieldPercent(buildings: Buildings): number {
+  let levels = 0;
+  for (const b of BUILDINGS) {
+    if (b.effect?.type === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+  }
+  return Math.min(COMBAT_RULES.shieldMax, levels * COMBAT_RULES.shieldPerLevel);
+}
 const RARE_RESOURCES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 const COMMON_RESOURCES: ResourceId[] = ["scrap", "energy", "nano", "data"];
 
@@ -74,6 +96,7 @@ export function computeFullPower(
 
 export interface CombatResult {
   outcome: CombatOutcome;
+  /** Puissances effectives (bouclier et bonus à domicile compris). */
   attackerPower: number;
   defenderPower: number;
   attackerLossPercent: number;
@@ -85,6 +108,10 @@ export interface CombatResult {
   loot: Partial<Record<ResourceId, number>> | null;
   /** Cargaison disponible de la flotte survivante (limite du butin). */
   cargoCapacity: number;
+  /** Part de l'attaque absorbée par le bouclier du défenseur. */
+  shieldPercent?: number;
+  /** Défenses du défenseur reconstruites gratuitement après le combat. */
+  defenderRebuilt?: Record<string, number>;
 }
 
 export function resolveCombat(params: {
@@ -96,11 +123,19 @@ export function resolveCombat(params: {
   defenderTechLevels: TechLevels;
   defenderRepairPct: number;
   defenderResources: Partial<Record<ResourceId, number>>;
+  /** Bouclier du défenseur (0 → 1), voir getShieldPercent. */
+  defenderShieldPct?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
+  const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
 
-  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]);
-  const defenderPower = computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]);
+  // Le bouclier absorbe une part de l'attaque ; le défenseur, chez lui, se
+  // bat avec ses défenses ET ses vaisseaux à quai (ceux en vol n'y sont plus).
+  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
+  const defenderPower =
+    (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
+      computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) *
+    (1 + COMBAT_RULES.homeDefenseBonus);
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
@@ -144,17 +179,20 @@ export function resolveCombat(params: {
     }
   }
 
+  // Défenseur : les défenses détruites se reconstruisent en partie d'elles-
+  // mêmes, les vaisseaux à quai passent par l'Atelier de réparation.
   const defenderLosses: Record<string, number> = {};
   const defenderRecovered: Record<string, number> = {};
-  DEFENSIVE_UNITS.forEach((unitId) => {
+  const defenderRebuilt: Record<string, number> = {};
+  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
     const count = defenderUnits[unitId]?.count ?? 0;
-    const rawLost = Math.floor(count * defenderLossPct);
-    const recovered = Math.floor(rawLost * defenderRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      defenderLosses[unitId] = effectiveLost;
-      defenderRecovered[unitId] = recovered;
-    }
+    const isDefense = DEFENSIVE_UNITS.includes(unitId);
+    const rawLost = Math.floor(count * defenderLossPct * (isDefense ? 1 : COMBAT_RULES.homeFleetDefenseFactor));
+    if (rawLost <= 0) return;
+    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
+    defenderLosses[unitId] = rawLost - recovered;
+    defenderRecovered[unitId] = recovered;
+    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
   });
 
   // Butin : une part des ressources du défenseur, dans la limite de ce que
@@ -203,5 +241,7 @@ export function resolveCombat(params: {
     defenderRecovered,
     loot,
     cargoCapacity,
+    shieldPercent: shield,
+    defenderRebuilt,
   };
 }

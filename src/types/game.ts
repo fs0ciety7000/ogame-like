@@ -182,6 +182,7 @@ export type NotificationKind =
   | "achievement"
   | "spy-detected"
   | "gift"
+  | "fleet"
   | "system";
 
 export interface GameNotification {

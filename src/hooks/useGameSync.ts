@@ -39,6 +39,7 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   achievement: { icon: "🏆", sound: playUnlock },
   "spy-detected": { icon: "🔍", sound: playAlert },
   gift: { icon: "🎁", sound: playConfirm },
+  fleet: { icon: "🛸", sound: playAlert },
   system: { icon: "✨", sound: playConfirm },
 };
 
