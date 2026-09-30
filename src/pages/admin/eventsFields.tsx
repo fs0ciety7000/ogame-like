@@ -148,6 +148,23 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         </Button>
       </Section>
 
+      <Section title="Alliances">
+        <NumberField label="Membres maximum par alliance" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
+        <NumberField label="Versement : part max du stock (0,2 = 20 %)" value={rules.alliances.distributionMaxPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionMaxPct: v ?? 0 } }))} />
+        <NumberField label="Versements par jour" value={rules.alliances.distributionsPerDay} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionsPerDay: v ?? 0 } }))} />
+        <NumberField label="Recherche niv. 1 : coût commun" value={rules.alliances.researchCommonCost} min={0} step={1000000} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, researchCommonCost: v ?? 0 } }))} />
+        <NumberField label="Recherche niv. 1 : coût rare" value={rules.alliances.researchRareCost} min={0} step={100000} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, researchRareCost: v ?? 0 } }))} />
+        <NumberField label="Recherche : croissance du coût (×)" value={rules.alliances.researchGrowth} min={0} step={0.1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, researchGrowth: v ?? 0 } }))} />
+        <NumberField label="Recherche : heures par niveau" value={rules.alliances.researchHoursPerLevel} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, researchHoursPerLevel: v ?? 0 } }))} />
+        <NumberField label="Garnison : part de puissance (0,5 = 50 %)" value={rules.alliances.garrisonPower} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, garrisonPower: v ?? 0 } }))} />
+        <NumberField label="Garnison : durée min (h)" value={rules.alliances.garrisonMinHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, garrisonMinHours: v ?? 0 } }))} />
+        <NumberField label="Garnison : durée max (h)" value={rules.alliances.garrisonMaxHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, garrisonMaxHours: v ?? 0 } }))} />
+        <NumberField label="Garnisons max par joueur" value={rules.alliances.maxGarrisonsPerHost} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxGarrisonsPerHost: v ?? 0 } }))} />
+        <NumberField label="Renseignement : jours" value={rules.alliances.sharedReportsDays} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, sharedReportsDays: v ?? 0 } }))} />
+        <NumberField label="Saison : meilleurs membres comptés" value={rules.alliances.seasonTopMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonTopMembers: v ?? 0 } }))} />
+        <NumberField label="Saison : heures de production (alliance gagnante)" value={rules.alliances.seasonRewardHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonRewardHours: v ?? 0 } }))} />
+        <TextField label="Saison : titre de l'alliance gagnante" value={rules.alliances.seasonTitle} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonTitle: v } }))} />
+      </Section>
       <Section title="Récompenses de fin de saison">
         {seasons.tiers.map((t, i) => (
           <div key={i} className="grid gap-2 rounded-lg border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">

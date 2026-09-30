@@ -1,6 +1,6 @@
-import { ClientResponseError } from "pocketbase";
 import { isNotFound, pb, subscribeRecords } from "@/lib/pocketbase";
-import type { Alliance, AllianceMessage } from "@/types/game";
+import { callGame, GameActionError } from "@/services/playerService";
+import type { Alliance, AllianceLog, AllianceMessage, BattleReport, ResourceId, SpyReport } from "@/types/game";
 
 export class AllianceError extends Error {}
 
@@ -11,6 +11,9 @@ function allianceFromRecord(record: Record<string, unknown>): Alliance {
     members: alliance.members ?? [],
     memberPseudos: alliance.memberPseudos ?? {},
     roles: alliance.roles ?? {},
+    treasury: alliance.treasury ?? {},
+    research: alliance.research ?? {},
+    activeResearch: alliance.activeResearch ?? null,
   };
 }
 
@@ -46,66 +49,63 @@ export function subscribeAlliance(allianceId: string, cb: (alliance: Alliance | 
   };
 }
 
-export async function createAlliance(uid: string, pseudo: string, name: string, tag: string): Promise<string> {
-  const trimmedName = name.trim();
-  const trimmedTag = tag.trim().toUpperCase();
-  if (trimmedName.length < 3) throw new AllianceError("Le nom doit contenir au moins 3 caractères.");
-  if (trimmedTag.length < 2 || trimmedTag.length > 5) throw new AllianceError("Le tag doit contenir entre 2 et 5 caractères.");
+/* Actions d'alliance : arbitrées par le serveur (/api/cosmic/alliance). */
 
-  let alliance;
+async function allianceAction<T = { allianceId: string }>(body: Record<string, unknown>): Promise<T> {
   try {
-    alliance = await pb.collection("alliances").create({
-      name: trimmedName,
-      tag: trimmedTag,
-      createdBy: uid,
-      createdAtMs: Date.now(),
-      members: [uid],
-      memberPseudos: { [uid]: pseudo },
-      roles: {},
-    });
+    return await callGame<T>("alliance", body);
   } catch (err) {
-    const fields = err instanceof ClientResponseError ? (err.response?.data ?? {}) : {};
-    if ((fields as Record<string, { code?: string }>).tag?.code === "validation_not_unique") {
-      throw new AllianceError("Ce tag est déjà utilisé par une autre alliance.");
-    }
+    if (err instanceof GameActionError) throw new AllianceError(err.message);
     throw err;
   }
-
-  await pb.collection("players").update(uid, { allianceId: alliance.id });
-  return alliance.id;
 }
 
-export async function joinAlliance(uid: string, pseudo: string, allianceId: string) {
-  const alliance = await pb.collection("alliances").getOne(allianceId);
-  if ((alliance.members ?? []).includes(uid)) throw new AllianceError("Tu es déjà membre de cette alliance.");
-
-  const newMembers = [...(alliance.members ?? []), uid];
-  const newPseudos = { ...alliance.memberPseudos, [uid]: pseudo };
-
-  await pb.collection("alliances").update(allianceId, {
-    members: newMembers,
-    memberPseudos: newPseudos,
-  });
-  
-  await pb.collection("players").update(uid, { allianceId });
+export async function createAlliance(_uid: string, _pseudo: string, name: string, tag: string): Promise<string> {
+  return (await allianceAction({ type: "create", name, tag })).allianceId;
 }
 
-export async function leaveAlliance(uid: string, allianceId: string) {
-  try {
-    const alliance = await pb.collection("alliances").getOne(allianceId);
-    const newMembers = (alliance.members ?? []).filter((m: string) => m !== uid);
-    const newPseudos = { ...alliance.memberPseudos };
-    delete newPseudos[uid];
+export async function joinAlliance(_uid: string, _pseudo: string, allianceId: string) {
+  await allianceAction({ type: "join", allianceId });
+}
 
-    await pb.collection("alliances").update(allianceId, {
-      members: newMembers,
-      memberPseudos: newPseudos,
-    });
-  } catch {
-    // L'alliance n'existe peut-être plus
-  }
-  
-  await pb.collection("players").update(uid, { allianceId: "" });
+export async function leaveAlliance(_uid?: string, _allianceId?: string) {
+  await allianceAction({ type: "leave" });
+}
+
+export async function depositToTreasury(resources: Partial<Record<ResourceId, number>>) {
+  await allianceAction({ type: "deposit", resources });
+}
+
+export async function distributeTreasury(targetUid: string, resources: Partial<Record<ResourceId, number>>) {
+  await allianceAction({ type: "distribute", targetUid, resources });
+}
+
+export async function startAllianceResearch(researchId: string) {
+  await allianceAction({ type: "research", researchId });
+}
+
+export function subscribeAllianceLogs(allianceId: string, cb: (logs: AllianceLog[]) => void): () => void {
+  let active = true;
+  const filter = pb.filter("allianceId = {:allianceId}", { allianceId });
+  const refresh = () => {
+    pb.collection("alliance_logs")
+      .getList<AllianceLog>(1, 40, { filter, sort: "-createdAtMs" })
+      .then((res) => active && cb(res.items))
+      .catch((err) => console.error("Lecture du journal d'alliance impossible :", err));
+  };
+  refresh();
+  const unsubscribe = subscribeRecords("alliance_logs", "*", refresh, filter);
+  return () => {
+    active = false;
+    unsubscribe();
+  };
+}
+
+export type IntelItem = (SpyReport & { type: "spy" }) | (BattleReport & { type: "battle" });
+
+/** Rapports d'espionnage et de combat récents des membres de mon alliance. */
+export async function fetchAllianceIntel(): Promise<IntelItem[]> {
+  return (await callGame<{ items: IntelItem[] }>("alliance/intel")).items;
 }
 
 export function subscribeAllianceMessages(allianceId: string, cb: (messages: AllianceMessage[]) => void): () => void {
@@ -143,44 +143,14 @@ export async function markAllianceRead(uid: string) {
   await pb.collection("players").update(uid, { allianceLastReadMs: Date.now() });
 }
 
-export async function promoteToOfficer(actorUid: string, allianceId: string, targetUid: string) {
-  const alliance = await pb.collection("alliances").getOne(allianceId);
-  if (alliance.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut promouvoir un officier.");
-  if (!(alliance.members ?? []).includes(targetUid)) throw new AllianceError("Ce joueur n'est pas membre de l'alliance.");
-  
-  const roles = { ...(alliance.roles ?? {}), [targetUid]: "officer" };
-  await pb.collection("alliances").update(allianceId, { roles });
+export async function promoteToOfficer(_actorUid: string, _allianceId: string, targetUid: string) {
+  await allianceAction({ type: "promote", targetUid });
 }
 
-export async function demoteOfficer(actorUid: string, allianceId: string, targetUid: string) {
-  const alliance = await pb.collection("alliances").getOne(allianceId);
-  if (alliance.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut rétrograder un officier.");
-  
-  const roles = { ...(alliance.roles ?? {}) };
-  delete roles[targetUid];
-  await pb.collection("alliances").update(allianceId, { roles });
+export async function demoteOfficer(_actorUid: string, _allianceId: string, targetUid: string) {
+  await allianceAction({ type: "demote", targetUid });
 }
 
-export async function kickMember(actorUid: string, allianceId: string, targetUid: string) {
-  if (targetUid === actorUid) throw new AllianceError("Tu ne peux pas t'exclure toi-même.");
-  
-  const alliance = await pb.collection("alliances").getOne(allianceId);
-  if (alliance.createdBy !== actorUid) throw new AllianceError("Seul le fondateur peut exclure un membre.");
-  if (!(alliance.members ?? []).includes(targetUid)) throw new AllianceError("Ce joueur n'est pas membre de l'alliance.");
-
-  const newMembers = (alliance.members ?? []).filter((m: string) => m !== targetUid);
-  const newPseudos = { ...alliance.memberPseudos };
-  delete newPseudos[targetUid];
-  const roles = { ...(alliance.roles ?? {}) };
-  delete roles[targetUid];
-
-  await pb.collection("alliances").update(allianceId, {
-    members: newMembers,
-    memberPseudos: newPseudos,
-    roles,
-  });
-}
-
-export async function clearOwnAllianceId(uid: string) {
-  await pb.collection("players").update(uid, { allianceId: "" });
+export async function kickMember(_actorUid: string, _allianceId: string, targetUid: string) {
+  await allianceAction({ type: "kick", targetUid });
 }

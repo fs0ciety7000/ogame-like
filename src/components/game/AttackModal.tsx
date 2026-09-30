@@ -1,3 +1,4 @@
+import { allianceFlightFactor } from "@/game/alliances";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Rocket } from "lucide-react";
@@ -35,7 +36,7 @@ export function AttackModal({
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, v]) => v > 0));
   const hasShips = Object.keys(selected).length > 0;
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const flight = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected)) : null;
+  const flight = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch)) : null;
 
   const handleConfirm = async () => {
     if (!uid || !player || !target) return;

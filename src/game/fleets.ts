@@ -7,6 +7,7 @@ import { withMissingBuildings } from "@/game/buildings";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { getFleetUpkeep } from "@/game/economy";
+import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
 import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
@@ -34,16 +35,17 @@ export const PATROL_RULES = {
   maxMinutes: 480,
 };
 
-export type FleetStatus = "outbound" | "returning" | "done";
+export type FleetStatus = "outbound" | "stationed" | "returning" | "done";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
   spy: "Espionnage",
   recycle: "Recyclage",
   patrol: "Patrouille",
+  garrison: "Garnison",
 };
 
 export interface Fleet {
@@ -63,6 +65,9 @@ export interface Fleet {
   reportId: string;
   outcome: string;
   recalled: boolean;
+  /** Garnison : durée de stationnement prévue, puis fin du stationnement. */
+  durationMs?: number | null;
+  stationedUntilMs?: number | null;
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -89,8 +94,8 @@ export function fleetSpeed(units: Units, fleet: Record<string, number>): number 
 }
 
 /** Durée du trajet aller, en secondes. */
-export function travelSeconds(distance: number, speed: number): number {
-  return Math.round((FLEET_RULES.baseMinutes + (distance * FLEET_RULES.minutesPerDistance) / Math.max(1, speed)) * 60);
+export function travelSeconds(distance: number, speed: number, factor = 1): number {
+  return Math.round(factor * (FLEET_RULES.baseMinutes + (distance * FLEET_RULES.minutesPerDistance) / Math.max(1, speed)) * 60);
 }
 
 /** Position d'une flotte sur son trajet (0 = départ, 1 = cible). */
@@ -99,9 +104,12 @@ export function fleetProgress(fleet: Pick<Fleet, "status" | "departAtMs" | "arri
     const total = fleet.arriveAtMs - fleet.departAtMs;
     return total > 0 ? Math.min(1, Math.max(0, (now - fleet.departAtMs) / total)) : 1;
   }
+  if (fleet.status === "stationed") return 1;
   if (fleet.status === "returning" && fleet.returnAtMs) {
     // Retour depuis la cible (ou depuis le point de rappel).
-    const turnAt = fleet.recalled ? fleet.returnAtMs - (fleet.returnAtMs - fleet.departAtMs) / 2 : fleet.arriveAtMs;
+    // Demi-tour : au point de rappel, sinon à la cible (après le stationnement
+    // d'une garnison) ; le retour dure autant que l'aller.
+    const turnAt = fleet.recalled ? fleet.returnAtMs - (fleet.returnAtMs - fleet.departAtMs) / 2 : fleet.returnAtMs - (fleet.arriveAtMs - fleet.departAtMs);
     const startProgress = fleet.recalled ? Math.min(1, (turnAt - fleet.departAtMs) / Math.max(1, fleet.arriveAtMs - fleet.departAtMs)) : 1;
     const total = fleet.returnAtMs - turnAt;
     const done = total > 0 ? Math.min(1, Math.max(0, (now - turnAt) / total)) : 1;
@@ -129,6 +137,7 @@ export interface LaunchOutput {
  *  calcule l'heure d'arrivée. `attacker` doit être rattrapé à `now`. */
 export function launchFleet(input: LaunchInput): LaunchOutput {
   const { now, attacker, defender } = input;
+  if (attacker.allianceId && attacker.allianceId === defender.allianceId) throw new GameActionError("Tu ne peux pas attaquer un membre de ton alliance.");
   const check = checkAttackAllowed({
     now,
     attackerUid: attacker.uid,
@@ -153,7 +162,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
   if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
 
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch)) * 1000;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   // Attaquer lève sa propre protection débutant, dès le décollage.
   attacker.lastAttackAtMs = now;
@@ -194,6 +203,10 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
  *  à revenir qu'elle en a passé à l'aller. */
 export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
   if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
+  if (fleet.status === "stationed") {
+    // Garnison : elle quitte l'allié et rentre (durée du trajet aller).
+    return { ...fleet, status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) };
+  }
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus être rappelée.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est déjà au contact.");
   return { ...fleet, status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) };
@@ -218,6 +231,8 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
+    case "garrison":
+      return { title: "Garnison rentrée", message: `Ta garnison stationnée chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
       return { title: "Sondes rentrées", message: `Tes sondes envoyées vers ${fleet.targetPseudo} sont de retour.` };
     case "recycle":
@@ -252,6 +267,9 @@ export interface LaunchRequest {
   lastAttackOnTargetMs?: number | null;
   /** Durée de la patrouille (mode fuite), en minutes. */
   patrolMinutes?: number;
+  /** Garnison : durée en heures et garnisons déjà chez l'hôte. */
+  garrisonHours?: number;
+  garrisonsAtHost?: number;
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
@@ -260,6 +278,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
   if (mission === "attack" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
   if (mission === "spy" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'espionner toi-même.");
+  if (mission === "garrison" && !target) throw new GameActionError("Ce joueur est introuvable.");
   const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
   const owner = flushed.player;
   let out: LaunchOutput;
@@ -267,6 +286,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
+  else if (mission === "garrison") out = launchGarrison(owner, target!, req.fleet, req.garrisonHours ?? 0, req.garrisonsAtHost ?? 0, now);
   else throw new GameActionError("Mission inconnue.");
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
 }
@@ -309,7 +329,7 @@ function newFleet(owner: PlayerState, target: { uid: string; pseudo: string }, m
 export function launchSpy(owner: PlayerState, target: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
   const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed) * 1000;
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1000;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
 }
 
@@ -318,7 +338,7 @@ export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de débris n'existe plus.");
   const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones récupérateurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch)) * 1000;
   return {
     attacker: owner,
     fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
@@ -356,6 +376,53 @@ export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, m
     fleet: newFleet(owner, { uid: owner.uid, pseudo: "Patrouille" }, "patrol", units, now, arriveAtMs),
     defenderNotifications: [],
   };
+}
+
+/** Garnison : la flotte part stationner chez un membre de son alliance et
+ *  combat à ses côtés s'il est attaqué. Entretien payé au départ. */
+export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Record<string, unknown>, hoursIn: number, garrisonsAtHost: number, now: number): LaunchOutput {
+  if (owner.uid === host.uid) throw new GameActionError("Tu ne peux pas stationner chez toi : utilise la patrouille.");
+  if (!owner.allianceId || owner.allianceId !== host.allianceId) throw new GameActionError("Tu ne peux stationner que chez un membre de ton alliance.");
+  const hours = Math.round(Number(hoursIn));
+  if (!(hours >= ALLIANCE_RULES.garrisonMinHours && hours <= ALLIANCE_RULES.garrisonMaxHours)) {
+    throw new GameActionError(`Le stationnement dure entre ${ALLIANCE_RULES.garrisonMinHours} h et ${ALLIANCE_RULES.garrisonMaxHours} h.`);
+  }
+  if (garrisonsAtHost >= ALLIANCE_RULES.maxGarrisonsPerHost) throw new GameActionError(`${host.pseudo} accueille déjà ${ALLIANCE_RULES.maxGarrisonsPerHost} garnisons.`);
+  const requested: Record<string, number> = {};
+  for (const [id, v] of Object.entries(raw ?? {})) {
+    const qty = Math.floor(Number(v));
+    if (qty > 0) requested[id] = qty;
+  }
+  const cost = patrolEnergyCost(owner.units, requested, hours * 60);
+  if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la garnison.`);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
+  owner.resources.energy = (owner.resources.energy ?? 0) - cost;
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1000;
+  const fleet = { ...newFleet(owner, host, "garrison", units, now, arriveAtMs), durationMs: hours * 3600_000, stationedUntilMs: null };
+  return {
+    attacker: owner,
+    fleet,
+    defenderNotifications: [
+      {
+        kind: "fleet",
+        title: "Renforts en approche",
+        message: `${owner.pseudo} t'envoie une garnison de ${formatInt(Object.values(units).reduce((a, b) => a + b, 0))} vaisseaux pour ${hours} h.`,
+        createdAtMs: now,
+        read: false,
+      },
+    ],
+  };
+}
+
+/** Arrivée d'une garnison : elle stationne pour la durée prévue. */
+export function stationGarrison(fleet: Fleet): Fleet {
+  return { ...fleet, status: "stationed", stationedUntilMs: fleet.arriveAtMs + (fleet.durationMs ?? 0) };
+}
+
+/** Fin du stationnement : retour à la base (durée du trajet aller). */
+export function endGarrison(fleet: Fleet, now: number): Fleet {
+  return { ...fleet, status: "returning", returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) };
 }
 
 /** Mi-parcours d'une patrouille : elle entame son retour. */

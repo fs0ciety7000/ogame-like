@@ -69,7 +69,7 @@ function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | nu
 
 /** Appel d'une route du jeu. Une règle non respectée (400) devient une
  *  GameActionError avec le message du serveur, à afficher au joueur. */
-async function callGame<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
+export async function callGame<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
   try {
     return await pb.send<T>(`/api/cosmic/${path}`, { method: "POST", body });
   } catch (err) {
@@ -382,7 +382,7 @@ export function setActiveTitle(title: string) {
 
 /** Palmarès : résultats des saisons terminées (les plus récentes d'abord). */
 export async function fetchSeasonResults(): Promise<SeasonResult[]> {
-  return pb.collection("season_results").getFullList<SeasonResult>({ sort: "-seasonId,rank", filter: "rank <= 10" });
+  return pb.collection("season_results").getFullList<SeasonResult>({ sort: "-seasonId,rank", filter: 'rank <= 10 && (kind != "alliance" || rank = 1)' });
 }
 
 export function rerollContract(contractId: string) {
@@ -445,7 +445,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number } = {},
+  options: { minutes?: number; hours?: number } = {},
 ): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }
@@ -457,7 +457,10 @@ export function recallFleet(fleetId: string): Promise<Fleet> {
 /** Mes flottes et celles qui foncent sur moi (la règle d'accès ne montre
  *  au défenseur que les flottes encore en approche). */
 export function subscribeFleets(uid: string, cb: (fleets: Fleet[]) => void): () => void {
-  const filter = pb.filter('(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && mission = "attack")', { uid });
+  const filter = pb.filter(
+    '(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && mission = "attack") || (targetUid = {:uid} && mission = "garrison" && status != "done")',
+    { uid },
+  );
   return subscribeList(
     "fleets",
     "",

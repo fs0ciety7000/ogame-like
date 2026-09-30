@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Crown, Medal, Timer, Trophy } from "lucide-react";
+import { Crown, Medal, Timer, Trophy, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchSeasonResults, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
@@ -8,7 +8,9 @@ import { currentSeasonId, SEASON_RULES, seasonEndMs, seasonLabel } from "@/game/
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { useAuthStore } from "@/store/authStore";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
-import type { SeasonResult } from "@/types/game";
+import type { Alliance, SeasonResult } from "@/types/game";
+import { subscribeAlliances } from "@/services/allianceService";
+import { ALLIANCE_RULES, allianceStandings } from "@/game/alliances";
 
 const PODIUM_STYLE = [
   { color: "text-gold-glow", ring: "border-gold-glow/60 bg-gold-glow/10", icon: Crown, height: "h-28" },
@@ -60,13 +62,17 @@ export function HallOfFamePage() {
       .catch(() => setResults([]));
   }, []);
   useEffect(() => subscribeLeaderboard(setPlayers), []);
+  const [alliances, setAlliances] = useState<Alliance[]>([]);
+  useEffect(() => subscribeAlliances(setAlliances), []);
 
   const bySeason = useMemo(() => {
     const map = new Map<string, SeasonResult[]>();
-    for (const r of results ?? []) map.set(r.seasonId, [...(map.get(r.seasonId) ?? []), r]);
+    for (const r of results ?? []) if (r.kind !== "alliance") map.set(r.seasonId, [...(map.get(r.seasonId) ?? []), r]);
     return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([id, list]) => [id, list.sort((a, b) => a.rank - b.rank)] as const);
   }, [results]);
 
+  const allianceWinners = new Map((results ?? []).filter((r) => r.kind === "alliance" && r.rank === 1).map((r) => [r.seasonId, r]));
+  const liveAlliances = allianceStandings(players.map((p) => ({ allianceId: p.allianceId, seasonXp: p.seasonId === season ? p.seasonXp : 0 }))).slice(0, 3);
   const live = players
     .map((p) => ({ ...p, sxp: p.seasonId === season ? p.seasonXp : 0 }))
     .filter((p) => p.sxp > 0)
@@ -99,6 +105,27 @@ export function HallOfFamePage() {
             ))}
           </ol>
         )}
+        {liveAlliances.length > 0 && (
+          <div className="rounded-lg border border-cyan-glow/20 p-3 text-sm">
+            <p className="mb-1 flex items-center gap-1.5 text-xs text-cyan-glow">
+              <Users className="h-3.5 w-3.5" /> Alliances (somme des {ALLIANCE_RULES.seasonTopMembers} meilleurs membres)
+            </p>
+            {liveAlliances.map((a) => {
+              const al = alliances.find((x) => x.id === a.allianceId);
+              return (
+                <p key={a.allianceId} className="flex items-center gap-2">
+                  <span className="tabular-mono w-6 text-xs text-slate-500">#{a.rank}</span>
+                  <span className="text-slate-200">{al ? `[${al.tag}] ${al.name}` : "Alliance dissoute"}</span>
+                  <span className="tabular-mono ml-auto text-xs text-slate-400">{formatNumber(a.score)} XP</span>
+                </p>
+              );
+            })}
+            <p className="mt-1 text-[11px] text-slate-500">
+              Alliance championne : +{ALLIANCE_RULES.seasonRewardHours} h de production et le titre « {ALLIANCE_RULES.seasonTitle} » pour chaque membre ayant au moins{" "}
+              {SEASON_RULES.participationXp} XP de saison.
+            </p>
+          </div>
+        )}
         <div className="grid gap-2 rounded-lg bg-black/20 p-3 text-xs text-slate-400 sm:grid-cols-2">
           {[...SEASON_RULES.tiers]
             .sort((a, b) => a.maxRank - b.maxRank)
@@ -125,7 +152,14 @@ export function HallOfFamePage() {
       ) : (
         bySeason.map(([seasonId, list]) => (
           <Card key={seasonId} className="flex flex-col gap-4 p-4">
-            <h2 className="font-display text-base text-white">{seasonLabel(seasonId)}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-base text-white">{seasonLabel(seasonId)}</h2>
+              {allianceWinners.get(seasonId) && (
+                <span className="ml-auto flex items-center gap-1 text-xs text-cyan-glow">
+                  <Users className="h-3.5 w-3.5" /> Alliance championne : {allianceWinners.get(seasonId)!.pseudo} ({formatNumber(allianceWinners.get(seasonId)!.seasonXp)} XP)
+                </span>
+              )}
+            </div>
             <Podium results={list.slice(0, 3)} uid={uid} />
             {list.length > 3 && (
               <ol className="space-y-1 border-t border-white/5 pt-3 text-sm">

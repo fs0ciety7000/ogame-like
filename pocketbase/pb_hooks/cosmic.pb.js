@@ -259,7 +259,18 @@ cronAdd("cosmic_fleets", "* * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
   db.processDueFleets(db.loadGame(), Date.now(), null);
   db.purgeDebris(Date.now());
+  db.processAllianceResearch(db.loadGame(), Date.now());
 });
+
+/**
+ * POST /api/cosmic/alliance  { type, ... } — actions d'alliance (v1.9) :
+ * create {name, tag}, join {allianceId}, leave, kick/promote/demote {targetUid},
+ * deposit {resources}, distribute {targetUid, resources}, research {researchId}.
+ */
+routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.js`).allianceRequest(e), $apis.requireAuth("users"));
+
+/** POST /api/cosmic/alliance/intel — rapports récents des membres. */
+routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
 // Clôture de la saison précédente (sans effet si elle est déjà close).
 cronAdd("cosmic_seasons", "7 * * * *", () => {
@@ -289,6 +300,32 @@ routerAdd(
     return e.json(200, db.closeSeason(game, Date.now(), seasonId || null));
   },
 );
+
+/**
+ * GET /api/cosmic/admin/stats — administrateurs du jeu uniquement.
+ * Statistiques de game design (activité, économie, contenu, combats des
+ * 7 derniers jours), calculées ici : le navigateur ne reçoit que des agrégats.
+ */
+routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+
+  const game = db.loadGame();
+  db.applyContent($app, game);
+
+  const now = Date.now();
+  const players = $app.findAllRecords("players").map((r) => {
+    const p = db.toPlain(r);
+    p.uid = r.id;
+    return p;
+  });
+  const queues = $app.findAllRecords("queues").map((r) => db.toPlain(r));
+  const reports = $app
+    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 5000, 0, { since: now - 7 * 24 * 3600 * 1000 })
+    .map((r) => db.toPlain(r));
+
+  return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
+});
 
 /* ---------- Journal des actions d'administration ---------- */
 
