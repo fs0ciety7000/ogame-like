@@ -1,6 +1,7 @@
+import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Clock, Recycle, Wind } from "lucide-react";
+import { Clock, Recycle, ShieldPlus, Wind } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,7 +133,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   const needed = Math.min(owned, Math.ceil(total / perDrone));
   const count = Math.max(0, Math.min(owned, drones || needed));
   const capacity = player ? recyclerCapacity(player.units, { [droneId]: count }) : 0;
-  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count })) : null;
+  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch)) : null;
 
   const send = async () => {
     if (!field || count <= 0) return;
@@ -181,6 +182,111 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
               </div>
               <Button className="w-full" disabled={count <= 0} onClick={() => void send()}>
                 <Recycle className="mr-1.5 h-4 w-4" /> Envoyer {count} drone{count > 1 ? "s" : ""}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      )}
+    </Dialog>
+  );
+}
+
+/** Garnison : des vaisseaux partent stationner chez un allié et combattent
+ *  à ses côtés s'il est attaqué. */
+export function GarrisonDialog({ target, onClose }: { target: { uid: string; pseudo: string } | null; onClose: () => void }) {
+  const player = usePlayerStore((s) => s.player);
+  const uid = useAuthStore((s) => s.user?.uid);
+  const [hours, setHours] = useState(6);
+  const [fleet, setFleet] = useState<Record<string, number>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const available: Record<string, number> = {};
+  for (const id of OFFENSIVE_UNITS) {
+    const n = player?.units[id]?.count ?? 0;
+    if (n > 0) available[id] = n;
+  }
+  const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
+  const hasShips = Object.keys(selected).length > 0;
+  const cost = player ? patrolEnergyCost(player.units, selected, hours * 60) : 0;
+  const energy = player?.resources.energy ?? 0;
+  const flight =
+    player && uid && target && hasShips
+      ? travelSeconds(distanceBetween(uid, target.uid), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch))
+      : null;
+
+  const close = () => {
+    setFleet({});
+    onClose();
+  };
+
+  const send = async () => {
+    if (!target || !hasShips) return;
+    setSubmitting(true);
+    try {
+      await sendFleet(target.uid, selected, "garrison", { hours });
+      triggerWarpEffect();
+      toast.success(`Garnison en route vers ${target.pseudo}`, { description: `Stationnement de ${hours} h à l'arrivée. Rappel possible à tout moment.` });
+      close();
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Envoi impossible.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={target !== null} onOpenChange={(o) => !o && close()}>
+      {target && (
+        <DialogContent>
+          <DialogTitle>Renforcer {target.pseudo}</DialogTitle>
+          <p className="text-sm text-slate-400">
+            Ta garnison combat avec {target.pseudo} s'il est attaqué, à {Math.round(ALLIANCE_RULES.garrisonPower * 100)} % de sa puissance, et subit sa part des pertes.
+            {` ${ALLIANCE_RULES.maxGarrisonsPerHost} garnisons au plus par joueur.`}
+          </p>
+          {!player || submitting ? (
+            <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
+          ) : (
+            <div className="mt-3 space-y-3">
+              {Object.keys(available).length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau à quai.</p>}
+              {Object.entries(available).map(([unitId, owned]) => (
+                <div key={unitId} className="flex items-center gap-3 text-sm">
+                  <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
+                  <span className="text-xs text-slate-500">À quai : {owned}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={owned}
+                    value={fleet[unitId] ?? 0}
+                    onChange={(e) => setFleet({ ...fleet, [unitId]: Math.max(0, Math.min(owned, parseInt(e.target.value) || 0)) })}
+                    className="w-20"
+                  />
+                </div>
+              ))}
+              <label className="block text-xs text-slate-400">
+                Stationnement : <strong className="text-slate-200">{hours} h</strong>
+                <input
+                  type="range"
+                  className="mt-1 w-full accent-cyan-400"
+                  min={ALLIANCE_RULES.garrisonMinHours}
+                  max={ALLIANCE_RULES.garrisonMaxHours}
+                  step={1}
+                  value={hours}
+                  onChange={(e) => setHours(parseInt(e.target.value))}
+                />
+              </label>
+              <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+                {flight !== null && (
+                  <p>
+                    <Clock className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-cyan-glow" />
+                    Trajet : <strong className="text-slate-200">{formatDuration(flight)}</strong>, puis {hours} h sur place et autant de trajet au retour.
+                  </p>
+                )}
+                <p className={cost > energy ? "text-danger-glow" : undefined}>
+                  ⚡ Entretien payé au départ : <strong className="tabular-mono">{formatNumber(cost)}</strong> énergie (tu en as {formatNumber(Math.floor(energy))}).
+                </p>
+              </div>
+              <Button className="w-full" disabled={!hasShips || cost > energy} onClick={() => void send()}>
+                <ShieldPlus className="mr-1.5 h-4 w-4" /> Envoyer la garnison
               </Button>
             </div>
           )}

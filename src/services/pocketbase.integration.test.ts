@@ -179,6 +179,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const msgs2 = await pb.collection("alliance_messages").getFullList({ filter: `allianceId="${allianceId}"` });
     expect(msgs2.length).toBe(1);
     await expect(pb.collection("alliances").update(allianceId, { name: "Pirates" })).rejects.toBeTruthy();
+    // v1.9 : l'appartenance n'est écrite que par le serveur.
+    await expect(pb.collection("players").update(bId, { allianceId: "autre" })).rejects.toBeTruthy();
+    await expect(pb.collection("alliances").update(allianceId, { members: [bId] })).rejects.toBeTruthy();
+    // B repart : les tests suivants l'opposent à A.
+    await al.leaveAlliance();
+    expect((await snap(bId)).allianceId).toBe("");
+    expect((await pb.collection("alliance_messages").getFullList({ filter: `allianceId="${allianceId}"` })).length).toBe(0);
   });
 
   it("gifts are transferred immediately by the server", async () => {
@@ -333,6 +340,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 30_000);
 
+  it("admin routes exist (statistics, season closing)", async () => {
+    const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
+    expect(stats).toBeTruthy();
+    await expect(pb.send("/api/cosmic/admin/stats", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+  });
+
   it("leaderboard lists players without private fields", async () => {
     const list = await ps.listAllPlayers();
     expect(list.some((p) => p.uid === aId)).toBe(true);
@@ -439,13 +452,16 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(out).toMatchObject({ closed: true, ranked: 2, rewarded: 2 });
       expect((await admin.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: SEASON } })).closed).toBe(false);
 
-      const results = await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}"`, sort: "rank" });
+      const results = await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="player"`, sort: "rank" });
       expect(results.map((r) => [r.uid, r.rank])).toEqual([[aId, 1], [bId, 2]]);
       const aAfter = await snap(aId);
       expect(aAfter.resources.reinforcedSteel).toBeGreaterThanOrEqual(aBefore.resources.reinforcedSteel + 500);
       expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
+      // A reçoit sa récompense individuelle et celle de son alliance championne.
       const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
-      expect(notif.length).toBe(1);
+      expect(notif.length).toBe(2);
+      expect(aAfter.titles.map((t: { label: string }) => t.label)).toContain("Allié champion de Décembre 1999");
+      expect((await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="alliance"` }))[0]?.allianceId).toBe(allianceId);
 
       // B choisit son titre, pas celui d'un autre ; il est public.
       await expect(ps.setActiveTitle("Champion de Décembre 1999")).rejects.toThrow(/gagné/);
@@ -481,6 +497,88 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("game_config").update(rules.id, { data });
     }
   });
+
+  it("v1.9 alliances: treasury, research, garrison, intel", async () => {
+    // Connecté en B ; A (fondateur) agit avec son propre client.
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const asA = (body: Record<string, unknown>) => aClient.send("/api/cosmic/alliance", { method: "POST", body });
+    const cEmail = `c${suffix}@test.dev`;
+    let cId = "";
+    const cleanup: string[] = [];
+    try {
+      await al.joinAlliance(bId, B.pseudo, allianceId);
+      expect((await pb.collection("profiles").getOne(bId)).allianceId).toBe(allianceId);
+
+      // Trésor : dépôt libre, versements par le fondateur limités à 20 %.
+      await admin.collection("players").update(bId, { resources: RICH });
+      await al.depositToTreasury({ scrap: 1000 });
+      expect(((await pb.collection("alliances").getOne(allianceId)).treasury as Record<string, number>).scrap).toBe(1000);
+      await expect(al.distributeTreasury(bId, { scrap: 10 })).rejects.toThrow(/officiers/);
+      await expect(asA({ type: "distribute", targetUid: bId, resources: { scrap: 201 } })).rejects.toMatchObject({ status: 400 });
+      const before = (await snap(bId)).resources.scrap;
+      await asA({ type: "distribute", targetUid: bId, resources: { scrap: 200 } });
+      expect((await snap(bId)).resources.scrap).toBeGreaterThanOrEqual(before + 200);
+      const logs = await pb.collection("alliance_logs").getFullList({ filter: `allianceId="${allianceId}"` });
+      expect(logs.map((l) => l.kind)).toEqual(expect.arrayContaining(["deposit", "distribute", "join"]));
+
+      // Recherche : payée par le trésor, bonus recopié chez les membres.
+      const huge = Object.fromEntries(Object.keys(RICH).map((k) => [k, 500_000_000]));
+      await admin.collection("alliances").update(allianceId, { treasury: huge });
+      await asA({ type: "research", researchId: "industrie" });
+      const running = await admin.collection("alliances").getOne(allianceId);
+      expect(running.activeResearch.id).toBe("industrie");
+      await admin.collection("alliances").update(allianceId, { activeResearch: { ...running.activeResearch, endTime: Date.now() - 1 }, researchEndMs: Date.now() - 1 });
+      await al.depositToTreasury({ scrap: 1 }); // toute action d'alliance termine la recherche due
+      expect((await snap(bId)).allianceResearch).toEqual({ industrie: 1 });
+      expect((await snap(aId)).allianceResearch).toEqual({ industrie: 1 });
+
+      // On n'attaque pas un allié.
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 60 } }, createdAtMs: MONTH_AGO() });
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow(/alliance/);
+
+      // Garnison de B chez A, puis C attaque A : la garnison combat.
+      const g = await ps.sendFleet(aId, { chasseur: 50 }, "garrison", { hours: 1 });
+      cleanup.push(g.id);
+      await wait(Math.max(0, g.arriveAtMs - Date.now()) + 400);
+      await ps.syncPlayer("");
+      expect((await pb.collection("fleets").getOne(g.id)).status).toBe("stationed");
+      expect((await aClient.collection("fleets").getOne(g.id)).mission).toBe("garrison"); // A voit sa garnison
+
+      const cUser = await admin.collection("users").create({ username: `charlie_${suffix}`, name: `Charlie_${suffix}`, email: cEmail, password: "motdepasse3", passwordConfirm: "motdepasse3" });
+      cId = cUser.id;
+      const cClient = new PocketBase(PB_TEST_URL);
+      await cClient.collection("users").authWithPassword(cEmail, "motdepasse3");
+      await cClient.send("/api/cosmic/init", { method: "POST" });
+      await admin.collection("players").update(cId, { createdAtMs: MONTH_AGO(), xp: (await snap(aId)).xp, units: { chasseur: { level: 1, count: 10 } } });
+      await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, units: {} });
+      const attack = (await cClient.send("/api/cosmic/fleet/send", { method: "POST", body: { targetUid: aId, fleet: { chasseur: 10 } } })) as { id: string; arriveAtMs: number };
+      cleanup.push(attack.id);
+      await wait(Math.max(0, attack.arriveAtMs - Date.now()) + 400);
+      await cClient.send("/api/cosmic/action", { method: "POST", body: { type: "sync" } });
+      const landed = await admin.collection("fleets").getOne(attack.id);
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.outcome).toBe("defender_win");
+      expect(report.garrisons).toHaveLength(1);
+      expect(report.garrisons[0].ownerUid).toBe(bId);
+
+      // Renseignement : B voit le combat subi par A.
+      const intel = await al.fetchAllianceIntel();
+      expect(intel.some((i) => i.id === report.id)).toBe(true);
+
+      // Rappel de la garnison.
+      expect((await ps.recallFleet(g.id)).status).toBe("returning");
+    } finally {
+      for (const id of cleanup) await admin.collection("fleets").delete(id).catch(() => {});
+      if (cId) {
+        await admin.collection("players").delete(cId).catch(() => {});
+        await admin.collection("users").delete(cId).catch(() => {});
+      }
+      await al.leaveAlliance().catch(() => {});
+    }
+    expect((await snap(bId)).allianceId).toBe("");
+    expect((await snap(bId)).allianceResearch).toEqual({});
+  }, 60_000);
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

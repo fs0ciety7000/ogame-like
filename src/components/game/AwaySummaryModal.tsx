@@ -17,6 +17,7 @@ const KIND_LABEL: Record<NotificationKind, string> = {
   spy: "Rapport d'espionnage",
   debris: "Champ de débris",
   season: "Fin de saison",
+  alliance: "Alliance",
   event: "Événement",
   gift: "Don reçu",
   fleet: "Flotte",

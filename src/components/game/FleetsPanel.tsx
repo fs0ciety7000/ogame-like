@@ -33,6 +33,12 @@ function fleetLabel(f: Fleet, outbound: boolean): string {
       return outbound
         ? `🛰️ Sondes → ${f.targetPseudo}`
         : `🛰️ ← sondes de ${f.targetPseudo}`;
+    case "garrison":
+      return f.status === "stationed"
+        ? `🛡️ Garnison chez ${f.targetPseudo}`
+        : outbound
+          ? `🛡️ Garnison → ${f.targetPseudo}`
+          : `🛡️ ← retour de chez ${f.targetPseudo}`;
     case "recycle":
       return outbound
         ? `♻️ Débris de ${f.targetPseudo}`
@@ -64,7 +70,20 @@ export function FleetsPanel({
 
   const incoming = fleets.filter((f) => isHostile(f, uid));
   const mine = fleets.filter((f) => f.ownerUid === uid && f.status !== "done");
-  if (hideWhenEmpty && incoming.length === 0 && mine.length === 0) return null;
+  const hosted = fleets.filter(
+    (f) =>
+      f.mission === "garrison" &&
+      f.targetUid === uid &&
+      f.ownerUid !== uid &&
+      f.status !== "done",
+  );
+  if (
+    hideWhenEmpty &&
+    incoming.length === 0 &&
+    mine.length === 0 &&
+    hosted.length === 0
+  )
+    return null;
 
   const recall = async (fleet: Fleet) => {
     setPending(fleet.id);
@@ -134,7 +153,12 @@ export function FleetsPanel({
 
       {mine.map((f) => {
         const outbound = f.status === "outbound";
-        const at = outbound ? f.arriveAtMs : (f.returnAtMs ?? now);
+        const stationed = f.status === "stationed";
+        const at = outbound
+          ? f.arriveAtMs
+          : stationed
+            ? (f.stationedUntilMs ?? now)
+            : (f.returnAtMs ?? now);
         const left = Math.max(0, Math.floor((at - now) / 1000));
         const loot = Object.values(f.loot ?? {}).reduce(
           (a: number, b) => a + (b ?? 0),
@@ -156,13 +180,15 @@ export function FleetsPanel({
                 {fleetLabel(f, outbound)}
               </span>
               <span className="tabular-mono ml-auto text-slate-400">
-                {outbound
-                  ? f.mission === "patrol"
-                    ? "demi-tour"
-                    : f.mission === "attack" || !f.mission
-                      ? "impact"
-                      : "arrivée"
-                  : "retour"}{" "}
+                {stationed
+                  ? "fin"
+                  : outbound
+                    ? f.mission === "patrol"
+                      ? "demi-tour"
+                      : f.mission === "attack" || !f.mission
+                        ? "impact"
+                        : "arrivée"
+                    : "retour"}{" "}
                 dans {formatClock(left)}
               </span>
             </div>
@@ -176,13 +202,17 @@ export function FleetsPanel({
             <div className="mt-1.5 flex items-center gap-2">
               <Progress
                 value={
-                  (outbound
-                    ? fleetProgress(f, now)
-                    : 1 - fleetProgress(f, now)) * 100
+                  (stationed
+                    ? 1 -
+                      Math.max(0, (f.stationedUntilMs ?? now) - now) /
+                        Math.max(1, f.durationMs ?? 1)
+                    : outbound
+                      ? fleetProgress(f, now)
+                      : 1 - fleetProgress(f, now)) * 100
                 }
                 className="flex-1"
               />
-              {outbound && (
+              {(outbound || stationed) && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -197,6 +227,28 @@ export function FleetsPanel({
           </div>
         );
       })}
+
+      {hosted.length > 0 && (
+        <div className="rounded-lg border border-cyan-glow/30 bg-cyan-glow/5 p-2.5 text-xs">
+          <p className="font-semibold text-cyan-glow">
+            🛡️ Garnisons alliées chez toi
+          </p>
+          {hosted.map((f) => (
+            <p key={f.id} className="mt-1 text-slate-300">
+              {f.ownerPseudo} : {fleetSummary(f)}
+              <span className="text-slate-500">
+                {" "}
+                ·{" "}
+                {f.status === "stationed"
+                  ? `jusqu'à ${new Date(f.stationedUntilMs ?? 0).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                  : f.status === "outbound"
+                    ? `arrive dans ${formatClock(Math.max(0, Math.floor((f.arriveAtMs - now) / 1000)))}`
+                    : "repartie"}
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {incoming.length === 0 && mine.length === 0 && (
         <p className="text-xs text-slate-500">

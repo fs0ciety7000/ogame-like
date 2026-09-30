@@ -4,6 +4,7 @@ import type { Fleet } from "@/game/fleets";
 import { galaxyCoords } from "@/game/galaxy";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_TO_TECH } from "@/game/units";
 import { formatInt } from "@/game/format";
+import { allianceCounterSpy } from "@/game/alliances";
 import type { PlayerState, QueuesState, ResourceId, SpyReport, SpyReportData } from "@/types/game";
 
 /* =====================================================
@@ -49,10 +50,10 @@ export function espionageLevel(player: Pick<PlayerState, "techLevels">): number 
   return Math.max(0, Number(player.techLevels?.[tech]) || 0);
 }
 
-export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units">): number {
+export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch">): number {
   const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per);
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch);
 }
 
 export function spyScore(spyLevel: number, counter: number, probes: number): number {
@@ -71,8 +72,8 @@ export function detectionChance(spyLevel: number, counter: number): number {
 }
 
 /** Durée du trajet des sondes, en secondes. */
-export function spyTravelSeconds(distance: number, speed: number): number {
-  return Math.round((SPY_RULES.baseMinutes + (distance * SPY_RULES.minutesPerDistance) / Math.max(1, speed)) * 60);
+export function spyTravelSeconds(distance: number, speed: number, factor = 1): number {
+  return Math.round(factor * (SPY_RULES.baseMinutes + (distance * SPY_RULES.minutesPerDistance) / Math.max(1, speed)) * 60);
 }
 
 /** Secteur affiché d'un joueur (coordonnées arrondies sur la carte). */
@@ -91,7 +92,7 @@ function unitsOf(target: PlayerState, ids: string[]) {
 }
 
 /** Contenu du rapport, limité au palier atteint. */
-export function buildSpyReportData(target: PlayerState, queues: QueuesState, targetFleets: Fleet[], tier: number, now: number): SpyReportData {
+export function buildSpyReportData(target: PlayerState, queues: QueuesState, targetFleets: Fleet[], tier: number, now: number, garrisons: Fleet[] = []): SpyReportData {
   const data: SpyReportData = {};
   if (tier >= 1) {
     data.resources = Object.fromEntries(
@@ -101,6 +102,7 @@ export function buildSpyReportData(target: PlayerState, queues: QueuesState, tar
   if (tier >= 2) {
     data.units = unitsOf(target, OFFENSIVE_UNITS);
     data.defenses = unitsOf(target, DEFENSIVE_UNITS);
+    data.garrisons = garrisons.map((g) => ({ ownerPseudo: g.ownerPseudo, units: g.units }));
   }
   if (tier >= 3) {
     data.buildings = Object.fromEntries(Object.entries(target.buildings ?? {}).map(([id, b]) => [id, b?.unlocked === false ? 0 : b?.level ?? 0]));
@@ -137,6 +139,8 @@ export interface SpyArrivalInput {
   targetQueues: QueuesState;
   /** Flottes de la cible en vol (pour le dernier palier). */
   targetFleets: Fleet[];
+  /** Garnisons alliées stationnées chez la cible (palier flotte et défenses). */
+  targetGarrisons?: Fleet[];
   probes: number;
   random?: () => number;
 }
@@ -173,7 +177,7 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
     score: Math.round(score * 100) / 100,
     tier,
     detected,
-    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now),
+    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []),
   };
 
   const spyNotifications: NewNotification[] = [

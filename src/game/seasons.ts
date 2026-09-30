@@ -145,6 +145,8 @@ export function performSeasonReward(
   standing: { seasonId: string; rank: number; seasonXp: number },
   reward: SeasonReward,
   now: number,
+  /** Titre de la notification (par défaut : le rang individuel). */
+  headline?: string,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; gained: Partial<Record<ResourceId, number>> } {
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
@@ -160,7 +162,7 @@ export function performSeasonReward(
   if (reward.title) {
     titleText = `${reward.title} de ${seasonLabel(standing.seasonId)}`;
     const title: PlayerTitle = { label: titleText, seasonId: standing.seasonId, rank: standing.rank };
-    player.titles = [...(player.titles ?? []).filter((t) => t.seasonId !== standing.seasonId), title];
+    player.titles = [...(player.titles ?? []).filter((t) => t.label !== titleText), title];
     if (!player.activeTitle) player.activeTitle = titleText;
   }
   const total = Object.values(gained).reduce((a: number, b) => a + (b ?? 0), 0);
@@ -172,7 +174,7 @@ export function performSeasonReward(
       ...flushed.notifications,
       {
         kind: "season",
-        title: `Saison ${seasonLabel(standing.seasonId)} terminée : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
+        title: headline ?? `Saison ${seasonLabel(standing.seasonId)} terminée : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
         message: `${formatInt(standing.seasonXp)} XP de saison. Récompense : ${formatInt(total)} ressources${titleText ? ` et le titre « ${titleText} »` : ""}.`,
         createdAtMs: now,
         read: false,

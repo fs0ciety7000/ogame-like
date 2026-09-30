@@ -234,6 +234,13 @@ function resolveFleetArrival(txApp, game, rec, now) {
   const mission = rec.getString("mission") || "attack";
   if (mission === "spy") return resolveSpyArrival(txApp, game, rec, now);
   if (mission === "recycle") return resolveRecycleArrival(txApp, game, rec, now);
+  if (mission === "garrison") {
+    const stationed = game.stationGarrison(fleetFromRecord(rec));
+    rec.set("status", stationed.status);
+    rec.set("stationedUntilMs", stationed.stationedUntilMs);
+    txApp.save(rec);
+    return;
+  }
   if (mission === "patrol") {
     const turned = game.patrolTurnaround(fleetFromRecord(rec));
     rec.set("status", turned.status);
@@ -268,6 +275,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
     target: target.player,
     targetQueues: target.queues,
     targetFleets,
+    targetGarrisons: stationedGarrisons(txApp, fleet.targetUid).map(fleetFromRecord),
     probes,
   });
   const report = new Record(txApp.findCollectionByNameOrId("spy_reports"));
@@ -308,6 +316,11 @@ function resolveRecycleArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
+/** Garnisons alliées stationnées chez un joueur. */
+function stationedGarrisons(txApp, hostUid) {
+  return txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && status = "stationed"', "arriveAtMs", 10, 0, { h: hostUid });
+}
+
 /** Combat à l'arrivée d'une flotte, puis demi-tour avec survivants et butin. */
 function resolveAttackArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
@@ -319,6 +332,13 @@ function resolveAttackArrival(txApp, game, rec, now) {
     txApp.save(rec);
     return;
   }
+  // Garnisons alliées chez le défenseur : elles combattent à ses côtés.
+  const garrisonRecs = defender ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
+  const garrisons = garrisonRecs.map((g) => {
+    const owner = toPlain(txApp.findRecordById("players", g.getString("ownerUid")));
+    const gf = fleetFromRecord(g);
+    return { fleetId: g.id, ownerUid: gf.ownerUid, ownerPseudo: gf.ownerPseudo, units: owner.units || {}, techLevels: owner.techLevels || {}, fleet: gf.units };
+  });
   const result = defender
     ? game.performAttack({
         now,
@@ -332,6 +352,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         lastAttackOnTargetMs: null,
         defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, fleet.targetUid, now),
         inFlight: true,
+        garrisons,
       })
     : { ok: false };
   if (!result.ok) {
@@ -350,6 +371,29 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+
+  garrisonRecs.forEach((g, i) => {
+    const losses = (result.combat.garrisonLosses || [])[i] || {};
+    const units = Object.assign({}, fleetFromRecord(g).units);
+    let lost = 0;
+    Object.keys(losses).forEach((k) => {
+      units[k] = Math.max(0, (units[k] || 0) - losses[k]);
+      lost += losses[k];
+    });
+    const left = Object.keys(units).some((k) => units[k] > 0);
+    g.set("units", units);
+    if (!left) g.set("status", "done");
+    txApp.save(g);
+    notify(txApp, g.getString("ownerUid"), [
+      {
+        kind: "fleet",
+        title: "Ta garnison a combattu",
+        message: `Attaque de ${fleet.ownerPseudo} contre ${fleet.targetPseudo} : ${lost} vaisseau(x) perdu(s)${left ? "" : ", garnison détruite"}.`,
+        createdAtMs: now,
+        read: false,
+      },
+    ]);
+  });
 
   if (game.debrisTotal(result.debris) > 0) {
     const debris = loadDebris(txApp, fleet.targetUid);
@@ -386,7 +430,7 @@ function processDueFleets(game, now, uid) {
   const scope = uid ? " && (ownerUid = {:u} || targetUid = {:u})" : "";
   const due = $app.findRecordsByFilter(
     "fleets",
-    `((status = "outbound" && arriveAtMs <= {:now}) || (status = "returning" && returnAtMs <= {:now}))${scope}`,
+    `((status = "outbound" && arriveAtMs <= {:now}) || (status = "returning" && returnAtMs <= {:now}) || (status = "stationed" && stationedUntilMs <= {:now}))${scope}`,
     "arriveAtMs",
     50,
     0,
@@ -400,6 +444,12 @@ function processDueFleets(game, now, uid) {
         const status = rec.getString("status");
         if (status === "outbound" && rec.getFloat("arriveAtMs") <= now) resolveFleetArrival(txApp, game, rec, now);
         else if (status === "returning" && rec.getFloat("returnAtMs") <= now) resolveFleetReturn(txApp, game, rec, now);
+        else if (status === "stationed" && rec.getFloat("stationedUntilMs") <= now) {
+          const back = game.endGarrison(fleetFromRecord(rec), now);
+          rec.set("status", back.status);
+          rec.set("returnAtMs", back.returnAtMs);
+          txApp.save(rec);
+        }
       });
     } catch (err) {
       console.log(`[cosmic] flotte ${candidate.id} non traitée : ${err}`);
@@ -418,7 +468,7 @@ function launchFleetRequest(e) {
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
   const targetUid = mission === "patrol" ? attackerUid : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -427,7 +477,11 @@ function launchFleetRequest(e) {
     const attacker = db.loadPlayer(txApp, game, attackerUid);
     let target = null;
     let debris = null;
-    if (mission === "attack" || mission === "spy") {
+    let garrisonsAtHost = 0;
+    if (mission === "garrison") {
+      garrisonsAtHost = txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && (status = "outbound" || status = "stationed")', "", 10, 0, { h: targetUid }).length;
+    }
+    if (mission === "attack" || mission === "spy" || mission === "garrison") {
       if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
       target = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
@@ -445,6 +499,8 @@ function launchFleetRequest(e) {
         fleet,
         lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
         patrolMinutes: Number(body.minutes) || 0,
+        garrisonHours: Number(body.hours) || 0,
+        garrisonsAtHost,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -499,6 +555,7 @@ function closeSeason(game, now, seasonIdIn) {
       const rec = new Record(collection);
       rec.load({
         seasonId,
+        kind: "player",
         uid: st.uid,
         pseudo: st.pseudo,
         allianceId: st.allianceId,
@@ -509,9 +566,210 @@ function closeSeason(game, now, seasonIdIn) {
       });
       txApp.save(rec);
     });
-    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded };
+    // Saison d'alliance : somme des meilleures XP de saison des membres.
+    const allianceStanding = game.allianceStandings(entries.map((p) => ({ allianceId: p.allianceId, seasonXp: game.seasonXpFor(p, seasonId) })));
+    allianceStanding.slice(0, 10).forEach((st) => {
+      const a = findOrNull(txApp, "alliances", st.allianceId);
+      if (!a) return;
+      const al = toPlain(a);
+      const rec = new Record(collection);
+      rec.load({ seasonId, kind: "alliance", uid: `alliance_${al.id}`, pseudo: `[${al.tag}] ${al.name}`, allianceId: al.id, rank: st.rank, seasonXp: st.score, reward: null, createdAtMs: now });
+      txApp.save(rec);
+      if (st.rank !== 1) return;
+      const rules = game.ALLIANCE_RULES;
+      entries
+        .filter((p) => p.allianceId === al.id && game.seasonXpFor(p, seasonId) >= game.SEASON_RULES.participationXp)
+        .forEach((p) => {
+          const loaded = loadPlayer(txApp, game, p.uid);
+          const out = game.performSeasonReward(
+            loaded.player,
+            loaded.queues,
+            { seasonId, rank: 1, seasonXp: game.seasonXpFor(p, seasonId) },
+            { hours: rules.seasonRewardHours, rare: 0, title: rules.seasonTitle },
+            now,
+            `Ton alliance [${al.tag}] remporte la saison !`,
+          );
+          savePlayer(txApp, game, loaded, out.player, out.queues);
+          notify(txApp, p.uid, out.notifications);
+        });
+    });
+    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length };
   });
   return summary;
 }
+/* ---------- Alliances (v1.9) ---------- */
 
-module.exports = { closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions"];
+
+function allianceFromRecord(rec) {
+  const a = toPlain(rec);
+  a.members = a.members || [];
+  a.memberPseudos = a.memberPseudos || {};
+  a.roles = a.roles || {};
+  a.treasury = a.treasury || {};
+  a.research = a.research || {};
+  a.activeResearch = a.activeResearch || null;
+  a.distributions = a.distributions || { day: "", count: 0 };
+  return a;
+}
+
+/** Enregistre (ou supprime si null) l'alliance et applique les effets. */
+function applyAllianceOutput(txApp, allianceRec, out, now) {
+  let id = allianceRec ? allianceRec.id : "";
+  if (out.alliance === null) {
+    if (allianceRec) txApp.delete(allianceRec);
+  } else if (out.alliance) {
+    const rec = allianceRec || new Record(txApp.findCollectionByNameOrId("alliances"));
+    ALLIANCE_FIELDS.forEach((f) => rec.set(f, out.alliance[f] === undefined ? null : out.alliance[f]));
+    rec.set("researchEndMs", out.alliance.activeResearch ? out.alliance.activeResearch.endTime : 0);
+    txApp.save(rec);
+    id = rec.id;
+  }
+  Object.keys(out.memberships || {}).forEach((uid) => {
+    const p = findOrNull(txApp, "players", uid);
+    if (!p) return;
+    const m = out.memberships[uid];
+    p.set("allianceId", m.allianceId === undefined ? id : m.allianceId);
+    p.set("allianceResearch", m.allianceResearch || {});
+    txApp.save(p);
+  });
+  const logs = txApp.findCollectionByNameOrId("alliance_logs");
+  (out.logs || []).forEach((l) => {
+    if (!id) return;
+    const rec = new Record(logs);
+    rec.load(Object.assign({}, l, { allianceId: id, resources: l.resources || null }));
+    txApp.save(rec);
+  });
+  Object.keys(out.notifications || {}).forEach((uid) => notify(txApp, uid, out.notifications[uid]));
+  return id;
+}
+
+/** Termine la recherche d'une alliance si son heure est passée. */
+function finishResearchIfDue(txApp, game, rec, now) {
+  const done = game.finishAllianceResearch(allianceFromRecord(rec), now);
+  if (done) applyAllianceOutput(txApp, rec, done, now);
+  return !!done;
+}
+
+/** POST /api/cosmic/alliance { action, ... } */
+function allianceRequest(e) {
+  const db = module.exports;
+  const game = loadGame();
+  const uid = e.auth.id;
+  const action = db.body(e);
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    applyContent(txApp, game);
+    // Recherche arrivée à terme : terminée d'abord (elle réécrit les fiches
+    // des membres, qu'on ne doit charger qu'ensuite).
+    const own = findOrNull(txApp, "players", uid);
+    const ownAllianceId = own ? own.getString("allianceId") : "";
+    [ownAllianceId, action.type === "join" ? String(action.allianceId || "") : ""].forEach((id) => {
+      const rec = id ? findOrNull(txApp, "alliances", id) : null;
+      if (rec) finishResearchIfDue(txApp, game, rec, now);
+    });
+    const actor = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(actor.player, actor.queues, now);
+    // Alliance disparue ou dont on a été retiré : on repart de zéro.
+    const current = actor.player.allianceId ? findOrNull(txApp, "alliances", actor.player.allianceId) : null;
+    if (!current || (toPlain(current).members || []).indexOf(uid) < 0) flushed.player.allianceId = "";
+    const allianceId = action.type === "join" ? String(action.allianceId || "") : String(flushed.player.allianceId || "");
+    let allianceRec = null;
+    if (action.type !== "create" && allianceId) {
+      allianceRec = findOrNull(txApp, "alliances", allianceId);
+    }
+    let target = null;
+    if (action.type === "distribute") {
+      const targetUid = String(action.targetUid || "");
+      if (targetUid === uid) target = { loaded: actor, flushed };
+      else if (findOrNull(txApp, "players", targetUid)) {
+        const loaded = loadPlayer(txApp, game, targetUid);
+        target = { loaded, flushed: game.flushPlayer(loaded.player, loaded.queues, now) };
+      }
+    }
+    let out;
+    try {
+      out = game.performAllianceAction({
+        action,
+        now,
+        actor: flushed.player,
+        alliance: allianceRec ? allianceFromRecord(allianceRec) : null,
+        target: target ? target.flushed.player : null,
+      });
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, actor, out.actor, flushed.queues);
+    notify(txApp, uid, flushed.notifications);
+    if (target && target.loaded !== actor) {
+      savePlayer(txApp, game, target.loaded, out.target, target.flushed.queues);
+      notify(txApp, target.loaded.player.uid, target.flushed.notifications);
+    } else if (target) {
+      // Versement à soi-même : même fiche que l'acteur.
+      savePlayer(txApp, game, actor, out.target, flushed.queues);
+    }
+    if (action.type === "create") {
+      out.memberships = {};
+      out.memberships[uid] = { allianceResearch: {} };
+      out.logs = [{ kind: "join", actorUid: uid, actorPseudo: actor.player.pseudo, text: "(fondation)", createdAtMs: now }];
+      try {
+        const id = applyAllianceOutput(txApp, null, out, now);
+        response = { allianceId: id };
+      } catch (err) {
+        if (String(err).indexOf("tag") >= 0) throw new BadRequestError("Ce tag est déjà utilisé par une autre alliance.");
+        throw err;
+      }
+    } else {
+      const id = applyAllianceOutput(txApp, allianceRec, out, now);
+      response = { allianceId: out.alliance ? id : "" };
+    }
+  });
+  return e.json(200, response);
+}
+
+/** Recherches d'alliance terminées (tâche minute). */
+function processAllianceResearch(game, now) {
+  $app.findRecordsByFilter("alliances", "researchEndMs > 0 && researchEndMs <= {:now}", "", 50, 0, { now }).forEach((candidate) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        finishResearchIfDue(txApp, game, txApp.findRecordById("alliances", candidate.id), now);
+      });
+    } catch (err) {
+      console.log(`[cosmic] recherche d'alliance ${candidate.id} non traitée : ${err}`);
+    }
+  });
+}
+
+/** Rapports d'espionnage et de combat des membres (onglet Renseignement). */
+function allianceIntel(e) {
+  const game = loadGame();
+  applyContent($app, game);
+  const player = findOrNull($app, "players", e.auth.id);
+  const allianceId = player ? player.getString("allianceId") : "";
+  const alliance = allianceId ? findOrNull($app, "alliances", allianceId) : null;
+  if (!alliance) throw new BadRequestError("Tu n'es membre d'aucune alliance.");
+  const members = toPlain(alliance).members || [];
+  if (members.indexOf(e.auth.id) < 0) throw new ForbiddenError("Tu n'es pas membre de cette alliance.");
+  const since = Date.now() - game.ALLIANCE_RULES.sharedReportsDays * 86400000;
+  const max = game.ALLIANCE_RULES.sharedReportsMax;
+  const params = { since };
+  const spyOr = [];
+  const battleOr = [];
+  members.forEach((m, i) => {
+    params["m" + i] = m;
+    spyOr.push(`spyUid = {:m${i}}`);
+    battleOr.push(`attackerUid = {:m${i}} || defenderUid = {:m${i}}`);
+  });
+  const spies = $app
+    .findRecordsByFilter("spy_reports", `timestamp > {:since} && (${spyOr.join(" || ")})`, "-timestamp", max, 0, params)
+    .map((r) => Object.assign({ type: "spy" }, toPlain(r)));
+  const battles = $app
+    .findRecordsByFilter("battle_reports", `timestamp > {:since} && (${battleOr.join(" || ")})`, "-timestamp", max, 0, params)
+    .map((r) => Object.assign({ type: "battle" }, toPlain(r)));
+  const items = spies.concat(battles).sort((a, b) => b.timestamp - a.timestamp).slice(0, max);
+  return e.json(200, { items });
+}
+
+module.exports = { allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

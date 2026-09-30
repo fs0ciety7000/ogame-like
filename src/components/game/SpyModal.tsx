@@ -1,3 +1,4 @@
+import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Clock, Radar, ShieldAlert } from "lucide-react";
@@ -88,6 +89,13 @@ export function SpyReportView({ report }: { report: SpyReport }) {
               ))}
           </Block>
         )}
+        {data.garrisons && data.garrisons.length > 0 && (
+          <Block title="Garnisons alliées">
+            {data.garrisons.map((g, i) => (
+              <Row key={i} label={g.ownerPseudo} value={`${Object.values(g.units).reduce((a, b) => a + b, 0)} vx`} />
+            ))}
+          </Block>
+        )}
         {data.buildings && (
           <Block title="Bâtiments">
             {Object.entries(data.buildings)
@@ -174,7 +182,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
 
   const count = Math.max(0, Math.min(owned, probes));
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const flight = player && count > 0 ? spyTravelSeconds(distance, fleetSpeed(player.units, { [probeId]: count })) : null;
+  const flight = player && count > 0 ? spyTravelSeconds(distance, fleetSpeed(player.units, { [probeId]: count }), allianceFlightFactor(player.allianceResearch)) : null;
   const level = player ? espionageLevel(player) : 0;
 
   const send = async () => {

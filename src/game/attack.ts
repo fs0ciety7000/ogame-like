@@ -1,4 +1,4 @@
-import { getShieldPercent, resolveCombat, type CombatResult } from "@/game/combat";
+import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -6,6 +6,7 @@ import { recordContract } from "@/game/contracts";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { DEBRIS_RULES, debrisFromLosses, type DebrisAmount } from "@/game/debris";
 import { eventDebrisPercent, lootFactor } from "@/game/events";
+import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -35,6 +36,8 @@ export interface AttackInput {
    *  décollage. Les protections ont été vérifiées à ce moment-là ; le butin
    *  et les survivants rentrent avec la flotte au lieu d'être crédités. */
   inFlight?: boolean;
+  /** Garnisons alliées stationnées chez le défenseur (v1.9). */
+  garrisons?: (CombatGarrison & { fleetId: string; ownerUid: string; ownerPseudo: string })[];
 }
 
 export type AttackOutput =
@@ -114,6 +117,8 @@ export function performAttack(input: AttackInput): AttackOutput {
 
   const combat = resolveCombat({
     lootMultiplier: lootFactor(now),
+    garrisons: input.garrisons ?? [],
+    garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
@@ -121,7 +126,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderUnits: def.units ?? {},
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: getRepairPercent(def.buildings),
-    defenderShieldPct: getShieldPercent(def.buildings),
+    defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId))]),
@@ -215,6 +220,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
     defenderApplied: true,
+    garrisons: (input.garrisons ?? []).map((g, i) => ({ ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: combat.garrisonLosses?.[i] ?? {} })),
   };
 
   return {
@@ -229,6 +235,6 @@ export function performAttack(input: AttackInput): AttackOutput {
     combat,
     survivors,
     loot: combat.loot ?? {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses], eventDebrisPercent(now) ?? DEBRIS_RULES.percent),
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(combat.garrisonLosses ?? [])], eventDebrisPercent(now) ?? DEBRIS_RULES.percent),
   };
 }
