@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { computeElapsedProduction, getProductionRatesPerSecond } from "@/game/production";
+import { advanceResources, economySnapshot } from "@/game/economy";
 import type { PlayerState, Resources } from "@/types/game";
 
 /** Ressources affichées côté client, incrémentées en douceur chaque seconde
@@ -13,20 +13,10 @@ export function useLiveResources(player: PlayerState | null): Resources | null {
       return;
     }
 
-    const base = player.resources;
     const baseAt = player.resourcesUpdatedAtMs;
-    const buildings = player.buildings;
-    const techLevels = player.techLevels;
 
-    const tick = () => {
-      const elapsed = (Date.now() - baseAt) / 1000;
-      const gains = computeElapsedProduction(buildings, techLevels, elapsed);
-      const next = { ...base };
-      for (const [res, amount] of Object.entries(gains)) {
-        next[res as keyof Resources] = (next[res as keyof Resources] ?? 0) + (amount ?? 0);
-      }
-      setDisplay(next);
-    };
+    // Même calcul que le serveur : plafond de l'entrepôt, entretien, panne.
+    const tick = () => setDisplay(advanceResources(player, (Date.now() - baseAt) / 1000));
 
     tick();
     const id = setInterval(tick, 1000);
@@ -36,7 +26,8 @@ export function useLiveResources(player: PlayerState | null): Resources | null {
   return display;
 }
 
-export function useProductionRates(player: PlayerState | null) {
+/** Variation nette par seconde (production − entretien, entrepôt plein = 0). */
+export function useProductionRates(player: PlayerState | null, resources?: Resources | null): Partial<Resources> {
   if (!player) return {};
-  return getProductionRatesPerSecond(player.buildings, player.techLevels);
+  return economySnapshot({ ...player, resources: resources ?? player.resources }).net;
 }

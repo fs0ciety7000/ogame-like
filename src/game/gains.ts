@@ -1,4 +1,4 @@
-import { computeElapsedProduction } from "@/game/production";
+import { advanceResources, economySnapshot } from "@/game/economy";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /** Gains « ponctuels » entre deux états du joueur venus du serveur : ce qui
@@ -6,12 +6,12 @@ import type { PlayerState, ResourceId } from "@/types/game";
  *  don, pillage, échange, vente…). Sert aux micro-animations. */
 export function discreteGains(prev: PlayerState, next: PlayerState): Partial<Record<ResourceId, number>> {
   const elapsed = Math.max(0, ((next.resourcesUpdatedAtMs ?? 0) - (prev.resourcesUpdatedAtMs ?? 0)) / 1000);
-  const produced = computeElapsedProduction(prev.buildings, prev.techLevels, elapsed);
-  const prevRate = computeElapsedProduction(prev.buildings, prev.techLevels, 1);
-  const nextRate = computeElapsedProduction(next.buildings, next.techLevels, 1);
+  const expectedAll = advanceResources(prev, elapsed);
+  const prevRate = economySnapshot(prev).gross;
+  const nextRate = economySnapshot(next).gross;
   const gains: Partial<Record<ResourceId, number>> = {};
   for (const res of Object.keys(next.resources ?? {}) as ResourceId[]) {
-    const expected = (prev.resources?.[res] ?? 0) + (produced[res] ?? 0);
+    const expected = expectedAll[res] ?? 0;
     const delta = (next.resources[res] ?? 0) - expected;
     // Marge : arrondis, et production qui a changé en cours d'intervalle
     // (fin d'une construction ou d'une recherche).

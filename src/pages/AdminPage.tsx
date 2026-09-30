@@ -10,6 +10,7 @@ import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
+import { LogsPanel } from "@/pages/admin/LogsPanel";
 
 /** Administration du jeu : contenu (bâtiments, unités, technos, missions),
  *  règles de combat, joueurs et outils. Réservée aux comptes listés dans
@@ -53,9 +54,13 @@ export function AdminPage() {
           <TabsTrigger value="missions">Missions</TabsTrigger>
           <TabsTrigger value="rules">Règles</TabsTrigger>
           <TabsTrigger value="players">Joueurs</TabsTrigger>
+          <TabsTrigger value="logs">Journal</TabsTrigger>
           <TabsTrigger value="tools">Outils</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="logs" className="mt-4">
+          <LogsPanel />
+        </TabsContent>
         <TabsContent value="stats" className="mt-4">
           <StatsPanel />
         </TabsContent>

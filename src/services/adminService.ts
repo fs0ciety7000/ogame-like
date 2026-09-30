@@ -123,3 +123,21 @@ export async function adminFetchStats(): Promise<GameStats> {
     throw new Error((err as { response?: { message?: string } })?.response?.message || (err as Error).message);
   }
 }
+
+export interface AdminLogEntry {
+  id: string;
+  actorId: string;
+  actorName: string;
+  action: "create" | "update" | "delete";
+  targetCollection: string;
+  recordId: string;
+  recordLabel: string;
+  changes: Record<string, unknown>;
+  createdAtMs: number;
+}
+
+/** Journal des actions d'administration (écrit par pb_hooks). */
+export async function adminListLogs(page: number, filter = ""): Promise<{ items: AdminLogEntry[]; totalPages: number }> {
+  const res = await pb.collection("admin_logs").getList<AdminLogEntry>(page, 30, { sort: "-createdAtMs", filter: filter || undefined });
+  return { items: res.items, totalPages: res.totalPages };
+}

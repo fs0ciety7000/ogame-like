@@ -298,12 +298,9 @@ routerAdd(
  * 7 derniers jours), calculées ici : le navigateur ne reçoit que des agrégats.
  */
 routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
-  const isAdmin =
-    e.hasSuperuserAuth() ||
-    (e.auth && $app.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: e.auth.id }).length > 0);
-  if (!isAdmin) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
-
   const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+
   const game = db.loadGame();
   db.applyContent($app, game);
 
@@ -320,3 +317,48 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
 
   return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
 });
+
+/* ---------- Journal des actions d'administration ---------- */
+
+// Chaque modification faite par un administrateur (page Administration ou
+// admin PocketBase) sur ces collections est consignée dans admin_logs.
+onRecordCreateRequest(
+  (e) => {
+    e.next();
+    const db = require(`${__hooks}/cosmic_db.js`);
+    db.logAdminAction(e, "create", null, Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record)));
+  },
+  "players",
+  "queues",
+  "game_config",
+  "game_assets",
+  "admins",
+);
+
+onRecordUpdateRequest(
+  (e) => {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    const before = Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record.original()));
+    e.next();
+    db.logAdminAction(e, "update", before, Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record)));
+  },
+  "players",
+  "queues",
+  "game_config",
+  "game_assets",
+  "admins",
+);
+
+onRecordDeleteRequest(
+  (e) => {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    const before = Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record));
+    e.next();
+    db.logAdminAction(e, "delete", before, null);
+  },
+  "players",
+  "queues",
+  "game_config",
+  "game_assets",
+  "admins",
+);

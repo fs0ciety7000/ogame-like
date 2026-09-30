@@ -477,28 +477,44 @@ function canAffordAll(resources, costs) {
 }
 
 // src/game/buildings.ts
-var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500];
-var EXTRACTOR_UPGRADE = {
+var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
+function tier2(common, commonMax, rare, rareMax) {
+  return {
+    fromLevel: 11,
+    baseCost: __spreadValues(__spreadValues({}, common), rare),
+    maxCost: __spreadValues(__spreadValues({}, commonMax), rareMax),
+    baseSeconds: 3 * 3600,
+    secondsPerLevel: 3600
+  };
+}
+var extractorUpgrade = (rare) => ({
   baseCost: { scrap: 50, energy: 20 },
   maxCost: { scrap: 25e5, energy: 18e5 },
   costFromLevel: 1,
-  secondsPerLevel: 600
-};
-var HANGAR_UPGRADE = {
+  secondsPerLevel: 600,
+  tier2: tier2({ scrap: 5e6, energy: 3e6 }, { scrap: 5e8, energy: 3e8 }, { [rare]: 2e4 }, { [rare]: 2e6 })
+});
+var hangarUpgrade = (rares) => ({
   baseCost: { scrap: 300, energy: 150 },
   maxCost: { scrap: 5e6, energy: 75e5 },
   costFromLevel: 1,
-  secondsPerLevel: 900
-};
+  secondsPerLevel: 900,
+  tier2: tier2(
+    { scrap: 8e6, energy: 8e6 },
+    { scrap: 7e8, energy: 7e8 },
+    { [rares[0]]: 15e3, [rares[1]]: 15e3 },
+    { [rares[0]]: 15e5, [rares[1]]: 15e5 }
+  )
+});
 var DEFAULT_BUILDINGS = [
   {
     id: "extracteur_ferraille",
     name: "Extracteur de ferraille",
     description: "R\xE9cup\xE8re automatiquement de la ferraille dans les d\xE9bris environnants.",
     image: "/assets/buildings/extracteur_ferraille.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     startsUnlocked: true,
-    upgrade: EXTRACTOR_UPGRADE,
+    upgrade: extractorUpgrade("reinforcedSteel"),
     production: { resource: "scrap", perSecond: PRODUCTION_TABLE }
   },
   {
@@ -506,9 +522,9 @@ var DEFAULT_BUILDINGS = [
     name: "R\xE9acteur instable",
     description: "G\xE9n\xE8re de l'\xE9nergie brute, au prix d'une certaine instabilit\xE9.",
     image: "/assets/buildings/reacteur_instable.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockCost: { scrap: 500 },
-    upgrade: EXTRACTOR_UPGRADE,
+    upgrade: extractorUpgrade("cyberModule"),
     production: { resource: "energy", perSecond: PRODUCTION_TABLE }
   },
   {
@@ -516,9 +532,9 @@ var DEFAULT_BUILDINGS = [
     name: "Extracteur de nanocomposants",
     description: "Synth\xE9tise des nanocomposants \xE0 partir de mati\xE8res recycl\xE9es.",
     image: "/assets/buildings/extracteur_nanocomposants.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockCost: { energy: 500 },
-    upgrade: EXTRACTOR_UPGRADE,
+    upgrade: extractorUpgrade("syntheticNanites"),
     production: { resource: "nano", perSecond: PRODUCTION_TABLE }
   },
   {
@@ -526,9 +542,9 @@ var DEFAULT_BUILDINGS = [
     name: "Archives fractur\xE9es",
     description: "Fouille des donn\xE9es anciennes dans des serveurs endommag\xE9s.",
     image: "/assets/buildings/archives_fracturees.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockCost: { nano: 500 },
-    upgrade: EXTRACTOR_UPGRADE,
+    upgrade: extractorUpgrade("aiFragment"),
     production: { resource: "data", perSecond: PRODUCTION_TABLE }
   },
   {
@@ -536,24 +552,31 @@ var DEFAULT_BUILDINGS = [
     name: "Atelier de r\xE9paration",
     description: "R\xE9pare une partie des unit\xE9s perdues apr\xE8s chaque combat.",
     image: "/assets/buildings/atelier_reparation.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
     upgrade: {
       baseCost: { nano: 1e3, data: 1e3 },
       maxCost: { nano: 1e7, data: 95e5 },
       costFromLevel: 2,
-      secondsPerLevel: 1200
+      secondsPerLevel: 1200,
+      tier2: tier2(
+        { nano: 1e7, data: 1e7 },
+        { nano: 8e8, data: 8e8 },
+        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
+        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
+      )
     },
-    effect: { type: "repair", perLevel: 0.05, max: 0.5 }
+    // 5 % par niveau jusqu'au niveau 10 (50 %), puis 2 % par niveau (70 % au niveau 20).
+    effect: { type: "repair", perLevel: 0.05, max: 0.7, bonusFromLevel: 11, bonusPerLevel: 0.02 }
   },
   {
     id: "hangar_attaque",
     name: "Hangar d'attaque",
     description: "Augmente la capacit\xE9 de stockage des unit\xE9s offensives.",
     image: "/assets/buildings/hangar_attaque.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockedByTech: "tech6",
-    upgrade: HANGAR_UPGRADE,
+    upgrade: hangarUpgrade(["reinforcedSteel", "cyberModule"]),
     effect: { type: "hangar", category: "attack", perLevel: 2e3 }
   },
   {
@@ -561,10 +584,26 @@ var DEFAULT_BUILDINGS = [
     name: "Hangar de d\xE9fense",
     description: "Augmente la capacit\xE9 de stockage des unit\xE9s d\xE9fensives.",
     image: "/assets/buildings/hangar_defense.webp",
-    maxLevel: 10,
+    maxLevel: 20,
     unlockedByTech: "tech6",
-    upgrade: HANGAR_UPGRADE,
+    upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
     effect: { type: "hangar", category: "defense", perLevel: 2e3 }
+  },
+  {
+    id: "entrepot",
+    name: "Entrep\xF4t",
+    description: "Stocke les ressources communes. Plein, la production s'arr\xEAte ; une partie du stock est \xE0 l'abri du pillage.",
+    image: "/assets/buildings/entrepot.webp",
+    maxLevel: 20,
+    startsUnlocked: true,
+    upgrade: {
+      baseCost: { scrap: 2e4, energy: 1e4 },
+      maxCost: { scrap: 2e7, energy: 1e7 },
+      costFromLevel: 2,
+      secondsPerLevel: 600,
+      tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
+    },
+    effect: { type: "storage", base: 2e6, growth: 1.6 }
   }
 ];
 var BUILDINGS = [];
@@ -602,17 +641,27 @@ function productionPerSecond(buildingId, level) {
   const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
   return (_d = table[Math.min(level, table.length) - 1]) != null ? _d : 0;
 }
-function getBuildingUpgradeCost(building, nextLevel) {
+function geometricCost(baseCost, maxCost, fromLevel, toLevel, level) {
   var _a;
-  const { baseCost, maxCost, costFromLevel } = building.upgrade;
-  const steps = Math.max(1, building.maxLevel - costFromLevel);
+  const steps = Math.max(1, toLevel - fromLevel);
   const cost = {};
   for (const [res, base] of Object.entries(baseCost)) {
     const target = (_a = maxCost[res]) != null ? _a : base;
     const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
-    cost[res] = Math.floor(base * Math.pow(rate, nextLevel - costFromLevel));
+    cost[res] = Math.floor(base * Math.pow(rate, level - fromLevel));
   }
   return cost;
+}
+function tierFor(building, level) {
+  const t2 = building.upgrade.tier2;
+  return t2 && level >= t2.fromLevel ? t2 : null;
+}
+function getBuildingUpgradeCost(building, nextLevel) {
+  const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
+  const lastLevel = tier22 ? Math.min(building.maxLevel, tier22.fromLevel - 1) : building.maxLevel;
+  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
 }
 function applyBuildingDiscount(cost, discount) {
   if (!discount) return cost;
@@ -626,6 +675,8 @@ function applyBuildingDiscount(cost, discount) {
   return out;
 }
 function getBuildingUpgradeTime(building, nextLevel) {
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
   return (nextLevel - 1) * building.upgrade.secondsPerLevel;
 }
 function getRepairPercent(buildings) {
@@ -633,10 +684,30 @@ function getRepairPercent(buildings) {
   let pct2 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    const level = effectiveBuildingLevel(buildings, b.id);
-    pct2 += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
+    pct2 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
   return pct2;
+}
+function repairPercentAt(effect, level) {
+  var _a;
+  const from = effect.bonusFromLevel;
+  const base = from ? Math.min(level, from - 1) * effect.perLevel : level * effect.perLevel;
+  const bonus = from ? Math.max(0, level - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
+  return Math.max(0, Math.min(effect.max, base + bonus));
+}
+function getStorageCapacity(buildings) {
+  var _a;
+  let capacity = 0;
+  let hasStorage = false;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "storage") continue;
+    hasStorage = true;
+    capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  return hasStorage ? capacity : Infinity;
+}
+function storageCapacityAt(effect, level) {
+  return level > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level)) : 0;
 }
 function getUnitCapacity(buildings, category) {
   var _a, _b, _c;
@@ -655,10 +726,20 @@ function effectiveBuildingLevel(buildings, id) {
 function defaultBuildings() {
   return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
 }
-function withMissingBuildings(buildings) {
+function withMissingBuildings(buildings, resources) {
+  var _a;
   const out = __spreadValues({}, buildings != null ? buildings : {});
   for (const b of BUILDINGS) {
-    if (!out[b.id]) out[b.id] = { level: 1, unlocked: !!b.startsUnlocked };
+    if (out[b.id]) continue;
+    let level = 1;
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
+      const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
+        var _a2;
+        return (_a2 = resources[r.id]) != null ? _a2 : 0;
+      }));
+      while (level < b.maxLevel && storageCapacityAt(b.effect, level) < biggest) level++;
+    }
+    out[b.id] = { level, unlocked: !!b.startsUnlocked };
   }
   return out;
 }
@@ -683,14 +764,250 @@ function getProductionRatesPerSecond(buildings, techLevels) {
   }
   return rates;
 }
-function computeElapsedProduction(buildings, techLevels, elapsedSeconds) {
-  if (elapsedSeconds <= 0) return {};
-  const rates = getProductionRatesPerSecond(buildings, techLevels);
-  const gains = {};
-  for (const [res, rate] of Object.entries(rates)) {
-    if (rate) gains[res] = rate * elapsedSeconds;
+
+// src/game/economy.ts
+var ECONOMY_RULES = {
+  /** Énergie consommée par seconde et par place de hangar occupée. */
+  upkeepPerPlaceAttack: 0.015,
+  upkeepPerPlaceDefense: 75e-4,
+  /** Production des autres ressources pendant une panne d'énergie. */
+  outageProductionFactor: 0.5,
+  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
+  protectedStoragePct: 0.1,
+  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
+  missionProductionMultiplier: 1.5,
+  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
+  missionRareLevelDivisor: 35
+};
+var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+function getFleetUpkeep(units) {
+  let upkeep = 0;
+  for (const [id, state] of Object.entries(units != null ? units : {})) {
+    const def = findUnit(id);
+    if (!def || !(state == null ? void 0 : state.count)) continue;
+    const perPlace = def.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
+    upkeep += state.count * def.hangarSpace * perPlace;
   }
-  return gains;
+  return upkeep;
+}
+function addCapped(stock, gain, cap) {
+  if (gain <= 0) return Math.max(0, stock + gain);
+  if (stock >= cap) return stock;
+  return Math.min(cap, stock + gain);
+}
+function advanceResources(input, elapsedSeconds) {
+  var _a, _b, _c, _d;
+  const out = __spreadValues({}, input.resources);
+  if (elapsedSeconds <= 0) return out;
+  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const upkeep = getFleetUpkeep(input.units);
+  const capacity = getStorageCapacity(input.buildings);
+  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const energyStock = (_b = out.energy) != null ? _b : 0;
+  let normalSeconds = elapsedSeconds;
+  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
+  const outageSeconds = elapsedSeconds - normalSeconds;
+  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
+  if (outageSeconds > 0) out.energy = 0;
+  for (const r of RESOURCE_LIST) {
+    if (r.id === "energy") continue;
+    const rate = (_c = gross[r.id]) != null ? _c : 0;
+    if (!rate) continue;
+    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
+    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
+  }
+  return out;
+}
+function protectedAmount(buildings, res) {
+  if (!COMMON_RESOURCES2.includes(res)) return 0;
+  const capacity = getStorageCapacity(buildings);
+  return Number.isFinite(capacity) ? Math.floor(capacity * ECONOMY_RULES.protectedStoragePct) : 0;
+}
+function missionRewards(mission, player) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const rareScale = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const out = {};
+  for (const [res, fixed] of Object.entries(mission.reward)) {
+    if (res === "xp") out.xp = fixed;
+    else if (COMMON_RESOURCES2.includes(res)) {
+      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
+      out[res] = Math.max(fixed, indexed);
+    } else out[res] = Math.floor(fixed * rareScale);
+  }
+  return out;
+}
+
+// src/game/errors.ts
+var GameActionError = class extends Error {
+};
+
+// src/game/seasons.ts
+function currentSeasonId(now = Date.now()) {
+  const d = new Date(now);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function ensureSeasonRollover(player, now) {
+  const season = currentSeasonId(now);
+  if (player.seasonId !== season) {
+    player.seasonId = season;
+    player.seasonXp = 0;
+  }
+}
+function applyXpDelta(player, delta, now) {
+  var _a, _b;
+  ensureSeasonRollover(player, now);
+  player.xp = Math.max(0, ((_a = player.xp) != null ? _a : 0) + delta);
+  player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
+}
+
+// src/game/contracts.ts
+var CONTRACT_RULES = {
+  perDay: 3,
+  streakBonusPerDay: 0.1,
+  streakBonusMax: 0.5,
+  chestEvery: 7,
+  xpPerContract: 20,
+  rarePerContract: 120,
+  chestRare: 1500,
+  chestXp: 150
+};
+var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
+var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var DAY_MS = 24 * 3600 * 1e3;
+function contractDay(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function previousDay(day) {
+  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
+}
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function targetFor(type, player) {
+  var _a, _b, _c, _d;
+  switch (type) {
+    case "build_units":
+      return 20;
+    case "missions":
+      return 2;
+    case "spend": {
+      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
+      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
+    }
+    default:
+      return 1;
+  }
+}
+function makeContract(type, player, day, index) {
+  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+}
+function ensureContracts(player, now) {
+  var _a, _b;
+  const day = contractDay(now);
+  const current2 = player.contracts;
+  if (current2 && current2.day === day) return current2;
+  const rand = seededRandom(`${player.uid}:${day}`);
+  const pool = [...ALL_TYPES];
+  const items = [];
+  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
+    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    items.push(makeContract(type, player, day, i));
+  }
+  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
+  player.contracts = {
+    day,
+    items,
+    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
+    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
+    rerolled: false
+  };
+  return player.contracts;
+}
+function recordContract(player, type, amount, now) {
+  if (!(amount > 0)) return;
+  const state = ensureContracts(player, now);
+  for (const c of state.items) {
+    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount);
+  }
+}
+function developmentScale(player) {
+  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
+  return 1 + levels / 35;
+}
+function streakBonus(streak) {
+  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
+}
+function contractReward(player, contract) {
+  var _a, _b, _c;
+  const state = player.contracts;
+  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
+  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index + contract.type.length) % RARES.length];
+  return {
+    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
+    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
+  };
+}
+function chestReward(player) {
+  const scale = developmentScale(player);
+  const out = { xp: CONTRACT_RULES.chestXp };
+  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
+  return out;
+}
+function grant(player, reward, now) {
+  var _a;
+  for (const [res, amount] of Object.entries(reward)) {
+    if (res === "xp") applyXpDelta(player, amount, now);
+    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount;
+  }
+}
+function claimContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  const contract = state.items.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
+  const reward = contractReward(player, contract);
+  grant(player, reward, now);
+  contract.claimed = true;
+  let chest = null;
+  const dayCompleted = state.items.every((c) => c.claimed);
+  if (dayCompleted) {
+    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
+    state.lastCompletedDay = state.day;
+    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
+      chest = chestReward(player);
+      grant(player, chest, now);
+    }
+  }
+  return { reward, dayCompleted, chest };
+}
+function rerollContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
+  const index = state.items.findIndex((c) => c.id === contractId);
+  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const used = new Set(state.items.map((c) => c.type));
+  const pool = ALL_TYPES.filter((t) => !used.has(t));
+  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const type = pool[Math.floor(rand() * pool.length)];
+  const next = makeContract(type, player, state.day, index);
+  next.id = `${state.day}-${index}-${type}-r`;
+  state.items[index] = next;
+  state.rerolled = true;
+  return next;
 }
 
 // src/game/missions.ts
@@ -869,25 +1186,6 @@ function checkNewAchievements(player) {
   return ACHIEVEMENTS.filter((a) => !unlocked.has(a.id) && a.condition(player));
 }
 
-// src/game/seasons.ts
-function currentSeasonId(now = Date.now()) {
-  const d = new Date(now);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-function ensureSeasonRollover(player, now) {
-  const season = currentSeasonId(now);
-  if (player.seasonId !== season) {
-    player.seasonId = season;
-    player.seasonXp = 0;
-  }
-}
-function applyXpDelta(player, delta, now) {
-  var _a, _b;
-  ensureSeasonRollover(player, now);
-  player.xp = Math.max(0, ((_a = player.xp) != null ? _a : 0) + delta);
-  player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
-}
-
 // src/game/flush.ts
 function unitForTech(techId) {
   var _a;
@@ -907,15 +1205,13 @@ function recordResourceHistory(player, now) {
   player.resourceHistory = next.length > RESOURCE_HISTORY_MAX_POINTS ? next.slice(next.length - RESOURCE_HISTORY_MAX_POINTS) : next;
 }
 function flushState(playerIn, queuesIn, now) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c;
   const player = structuredClone(playerIn);
   const queues = structuredClone(queuesIn);
   const notifications = [];
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1e3);
-  const gains = computeElapsedProduction(player.buildings, player.techLevels, elapsedSeconds);
-  for (const [res, amount] of Object.entries(gains)) {
-    player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + (amount != null ? amount : 0);
-  }
+  player.resources = advanceResources(player, elapsedSeconds);
+  ensureContracts(player, now);
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
@@ -967,7 +1263,7 @@ function flushState(playerIn, queuesIn, now) {
       stillActiveResearch.push(entry);
       continue;
     }
-    const nextLevel = ((_b = player.techLevels[tech.id]) != null ? _b : 0) + 1;
+    const nextLevel = ((_a = player.techLevels[tech.id]) != null ? _a : 0) + 1;
     if (nextLevel <= tech.maxLevel) {
       player.techLevels[tech.id] = nextLevel;
       applyTechEffect(player, tech.id, nextLevel);
@@ -989,17 +1285,19 @@ function flushState(playerIn, queuesIn, now) {
       stillActiveMissions.push(entry);
       continue;
     }
-    for (const [res, amount] of Object.entries(mission.reward)) {
+    const reward = missionRewards(mission, player);
+    for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         applyXpDelta(player, amount, now);
       } else {
-        player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + amount;
+        player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + amount;
       }
     }
+    recordContract(player, "missions", 1, now);
     notifications.push({
       kind: "mission",
       title: "Mission termin\xE9e",
-      message: `${mission.name} : r\xE9compense obtenue${mission.reward.xp ? ` (+${mission.reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : r\xE9compense obtenue${reward.xp ? ` (+${reward.xp} XP)` : ""}.`,
       createdAtMs: now,
       read: false
     });
@@ -1007,7 +1305,7 @@ function flushState(playerIn, queuesIn, now) {
   queues.activeMissions = stillActiveMissions;
   const newAchievements = checkNewAchievements(player);
   if (newAchievements.length > 0) {
-    player.unlockedAchievements = [...(_d = player.unlockedAchievements) != null ? _d : [], ...newAchievements.map((a) => a.id)];
+    player.unlockedAchievements = [...(_c = player.unlockedAchievements) != null ? _c : [], ...newAchievements.map((a) => a.id)];
     for (const a of newAchievements) {
       notifications.push({
         kind: "achievement",
@@ -1184,7 +1482,7 @@ function performAttack(input) {
   }
   if (Object.keys(fleet).length === 0) return { ok: false, message: "S\xE9lectionne au moins une unit\xE9 \xE0 envoyer." };
   const flushed = flushState(
-    __spreadProps(__spreadValues({}, input.attacker), { buildings: withMissingBuildings(input.attacker.buildings) }),
+    __spreadProps(__spreadValues({}, input.attacker), { buildings: withMissingBuildings(input.attacker.buildings, input.attacker.resources) }),
     input.attackerQueues,
     now
   );
@@ -1194,7 +1492,7 @@ function performAttack(input) {
       return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
     }
   }
-  const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings) }), input.defenderQueues, now);
+  const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings, defender.resources) }), input.defenderQueues, now);
   const def = flushedDefender.player;
   const combat = resolveCombat({
     attackerUnits: attacker.units,
@@ -1204,7 +1502,10 @@ function performAttack(input) {
     defenderUnits: (_i = def.units) != null ? _i : {},
     defenderTechLevels: (_j = def.techLevels) != null ? _j : {},
     defenderRepairPct: getRepairPercent(def.buildings),
-    defenderResources: (_k = def.resources) != null ? _k : {}
+    // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
+    defenderResources: Object.fromEntries(
+      Object.entries((_k = def.resources) != null ? _k : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def.buildings, res))])
+    )
   });
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
@@ -1228,6 +1529,8 @@ function performAttack(input) {
     def.lastDefeatAtMs = now;
   }
   applyXpDelta(def, defenderXpDelta, now);
+  if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
+  if (combat.outcome === "defender_win") recordContract(def, "win_defense", 1, now);
   const outcomeTitle = {
     attacker_win: "Victoire !",
     defender_win: "D\xE9faite\u2026",
@@ -1292,10 +1595,6 @@ function performAttack(input) {
   };
 }
 
-// src/game/errors.ts
-var GameActionError = class extends Error {
-};
-
 // src/game/defaults.ts
 function defaultResources() {
   return {
@@ -1352,12 +1651,17 @@ function positiveInt(value, label) {
   if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label} invalide.`);
   return n;
 }
-function pay(player, cost) {
+function pay(player, cost, now) {
   if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
-  for (const [res, val] of Object.entries(cost)) player.resources[res] -= val != null ? val : 0;
+  let total = 0;
+  for (const [res, val] of Object.entries(cost)) {
+    player.resources[res] -= val != null ? val : 0;
+    total += val != null ? val : 0;
+  }
+  recordContract(player, "spend", total, now);
 }
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const { player, queues, now } = s;
   switch (action == null ? void 0 : action.type) {
     case "sync": {
@@ -1380,7 +1684,7 @@ function applyAction(s, action) {
       const cost = {};
       if ("multi" in info) info.resources.forEach((r) => cost[r.resource] = r.amount);
       else cost[info.resource] = info.amount;
-      pay(player, cost);
+      pay(player, cost, now);
       state.unlocked = true;
       return void 0;
     }
@@ -1392,8 +1696,9 @@ function applyAction(s, action) {
       if (queues.buildingUpgrades[def.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0));
+      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
       queues.buildingUpgrades[def.id] = { endTime: now + getBuildingUpgradeTime(def, nextLevel) * 1e3 };
+      recordContract(player, "upgrade_building", 1, now);
       return void 0;
     }
     case "buildUnits": {
@@ -1413,7 +1718,8 @@ function applyAction(s, action) {
       if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
         throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
       }
-      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty });
+      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
+      recordContract(player, "build_units", qty, now);
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
@@ -1440,8 +1746,9 @@ function applyAction(s, action) {
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
-      pay(player, getTechCost(tech, nextLevel));
+      pay(player, getTechCost(tech, nextLevel), now);
       queues.activeResearches.push({ id: tech.id, endTime: now + getTechTime(tech, nextLevel) * 1e3 });
+      recordContract(player, "research", 1, now);
       return void 0;
     }
     case "mission": {
@@ -1462,12 +1769,16 @@ function applyAction(s, action) {
       player.resources[buyId] = ((_k = player.resources[buyId]) != null ? _k : 0) + gained;
       return gained;
     }
+    case "claimContract":
+      return claimContract(player, String((_l = action.contractId) != null ? _l : ""), now);
+    case "rerollContract":
+      return rerollContract(player, String((_m = action.contractId) != null ? _m : ""), now);
     default:
       throw new GameActionError("Action inconnue.");
   }
 }
 function performPlayerAction(playerIn, queuesIn, action, now) {
-  const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) });
+  const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
     { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now },
@@ -1485,9 +1796,10 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
     if (n > 0) resources[res] = n;
   }
   if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
-  const s = flushState(__spreadProps(__spreadValues({}, sender), { buildings: withMissingBuildings(sender.buildings) }), senderQueues, now);
-  const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings) }), recipientQueues, now);
-  pay(s.player, resources);
+  const s = flushState(__spreadProps(__spreadValues({}, sender), { buildings: withMissingBuildings(sender.buildings, sender.resources) }), senderQueues, now);
+  const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings, recipient.resources) }), recipientQueues, now);
+  pay(s.player, resources, now);
+  recordContract(s.player, "gift", 1, now);
   for (const [res, amt] of Object.entries(resources)) {
     r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + (amt != null ? amt : 0);
   }
@@ -1515,7 +1827,7 @@ function newPlayerProfile(uid, rawPseudo, now) {
 }
 function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
   var _a, _b, _c, _d, _e, _f;
-  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) }), queuesIn, now);
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   for (const [unitId, lost] of Object.entries((_a = report.defenderLosses) != null ? _a : {})) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - (Number(lost) || 0));
   }
@@ -1538,7 +1850,7 @@ function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
 }
 function applyLegacyGift(playerIn, queuesIn, gift, now) {
   var _a, _b;
-  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) }), queuesIn, now);
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
     const n = Math.floor(Number(amt));
     if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
@@ -1764,7 +2076,8 @@ var GAME_FIELDS = [
   "playtimeSeconds",
   "resourcesUpdatedAtMs",
   "resourceHistory",
-  "unlockedAchievements"
+  "unlockedAchievements",
+  "contracts"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
@@ -1772,18 +2085,19 @@ var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activ
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "rules"];
 var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
+var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -1792,7 +2106,8 @@ function applyGameContent(overrides) {
     missions: (_d = overrides.missions) != null ? _d : defaults.missions,
     rules: {
       pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_f = (_e = overrides.rules) == null ? void 0 : _e.pvp) != null ? _f : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_h = (_g = overrides.rules) == null ? void 0 : _g.combat) != null ? _h : {})
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_h = (_g = overrides.rules) == null ? void 0 : _g.combat) != null ? _h : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_j = (_i = overrides.rules) == null ? void 0 : _i.economy) != null ? _j : {})
     }
   };
   setBuildings(content.buildings);
@@ -1801,6 +2116,7 @@ function applyGameContent(overrides) {
   setMissions(content.missions);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
+  Object.assign(ECONOMY_RULES, content.rules.economy);
   current = content;
   return content;
 }

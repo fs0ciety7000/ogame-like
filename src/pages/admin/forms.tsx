@@ -1,5 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { getBuildingUpgradeCost, getBuildingUpgradeTime, type BuildingDef, type BuildingEffect } from "@/game/buildings";
+import {
+  getBuildingUpgradeCost,
+  getBuildingUpgradeTime,
+  storageCapacityAt,
+  VISUAL_TIERS,
+  type BuildingDef,
+  type BuildingEffect,
+} from "@/game/buildings";
 import { getUnitBuildTime, type UnitDef } from "@/game/units";
 import { getTechCost, getTechTime, TECH_EFFECT_DEFAULTS, TECH_EFFECT_LABELS, type TechDef, type TechEffect } from "@/game/technologies";
 import { MISSION_XP_PER_HOUR, type MissionDef } from "@/game/missions";
@@ -117,7 +124,7 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
         />
         <ResourceMapField label="Coût au premier niveau payant" value={b.upgrade.baseCost} onChange={(baseCost) => set({ upgrade: { ...b.upgrade, baseCost } })} />
         <ResourceMapField
-          label="Coût au niveau max"
+          label={b.upgrade.tier2 ? `Coût au niveau ${b.upgrade.tier2.fromLevel - 1} (fin du 1er palier)` : "Coût au niveau max"}
           value={b.upgrade.maxCost}
           hint="Entre les deux, progression géométrique."
           onChange={(maxCost) => set({ upgrade: { ...b.upgrade, maxCost } })}
@@ -130,6 +137,76 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
           hint="Niveau auquel s'applique le coût initial (1 en général)."
           onChange={(v) => set({ upgrade: { ...b.upgrade, costFromLevel: Math.max(1, Math.round(v ?? 1)) } })}
         />
+      </Section>
+
+      <Section title="Second palier (hauts niveaux)">
+        <CheckboxField
+          label="Coûts et durées séparés pour les hauts niveaux"
+          checked={!!b.upgrade.tier2}
+          hint="Permet d'ajouter des niveaux sans changer le coût des niveaux déjà atteints par les joueurs."
+          onChange={(on) =>
+            set({
+              upgrade: {
+                ...b.upgrade,
+                tier2: on
+                  ? { fromLevel: Math.min(b.maxLevel, 11), baseCost: { ...b.upgrade.maxCost }, maxCost: { ...b.upgrade.maxCost }, baseSeconds: 3 * 3600, secondsPerLevel: 3600 }
+                  : undefined,
+              },
+            })
+          }
+        />
+        {b.upgrade.tier2 && (
+          <>
+            <NumberField
+              label="À partir du niveau"
+              value={b.upgrade.tier2.fromLevel}
+              min={2}
+              step={1}
+              onChange={(v) => set({ upgrade: { ...b.upgrade, tier2: { ...b.upgrade.tier2!, fromLevel: Math.max(2, Math.round(v ?? 2)) } } })}
+            />
+            <NumberField
+              label="Durée du premier niveau du palier (s)"
+              value={b.upgrade.tier2.baseSeconds}
+              min={0}
+              hint={formatSeconds(b.upgrade.tier2.baseSeconds)}
+              onChange={(v) => set({ upgrade: { ...b.upgrade, tier2: { ...b.upgrade.tier2!, baseSeconds: v ?? 0 } } })}
+            />
+            <NumberField
+              label="Durée ajoutée par niveau (s)"
+              value={b.upgrade.tier2.secondsPerLevel}
+              min={0}
+              hint={formatSeconds(b.upgrade.tier2.secondsPerLevel)}
+              onChange={(v) => set({ upgrade: { ...b.upgrade, tier2: { ...b.upgrade.tier2!, secondsPerLevel: v ?? 0 } } })}
+            />
+            <ResourceMapField
+              label="Coût au premier niveau du palier"
+              value={b.upgrade.tier2.baseCost}
+              hint="Ajoute des ressources rares pour en faire un puits."
+              onChange={(baseCost) => set({ upgrade: { ...b.upgrade, tier2: { ...b.upgrade.tier2!, baseCost } } })}
+            />
+            <ResourceMapField
+              label="Coût au niveau max"
+              value={b.upgrade.tier2.maxCost}
+              onChange={(maxCost) => set({ upgrade: { ...b.upgrade, tier2: { ...b.upgrade.tier2!, maxCost } } })}
+            />
+          </>
+        )}
+      </Section>
+
+      <Section title="Images par palier (facultatif)">
+        {VISUAL_TIERS.map((tier) => (
+          <ImageField
+            key={tier}
+            label={`À partir du niveau ${tier}`}
+            value={b.tierImages?.[tier] ?? ""}
+            onChange={(img) => {
+              const tierImages = { ...(b.tierImages ?? {}) };
+              if (img) tierImages[tier] = img;
+              else delete tierImages[tier];
+              set({ tierImages: Object.keys(tierImages).length ? tierImages : undefined });
+            }}
+          />
+        ))}
       </Section>
 
       <Section title="Production">
@@ -164,6 +241,7 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
             { value: "", label: "Aucun" },
             { value: "repair", label: "Réparation après combat" },
             { value: "hangar", label: "Capacité de hangar" },
+            { value: "storage", label: "Entrepôt (stockage)" },
           ]}
           onChange={(t) =>
             set({
@@ -172,7 +250,9 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
                   ? { type: "repair", perLevel: 0.05, max: 0.5 }
                   : t === "hangar"
                     ? { type: "hangar", category: "attack", perLevel: 2000 }
-                    : undefined,
+                    : t === "storage"
+                      ? { type: "storage", base: 2_000_000, growth: 1.6 }
+                      : undefined,
             })
           }
         />
@@ -189,6 +269,40 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
               value={b.effect.max}
               step={0.05}
               onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "repair" }>), max: v ?? 0 } })}
+            />
+            <NumberField
+              label="À partir du niveau (réparation réduite)"
+              value={b.effect.bonusFromLevel}
+              optional
+              step={1}
+              hint="Laisser vide : même réparation à tous les niveaux."
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "repair" }>), bonusFromLevel: v } })}
+            />
+            <NumberField
+              label="…réparation par niveau ensuite (0,02 = 2 %)"
+              value={b.effect.bonusPerLevel}
+              optional
+              step={0.01}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "repair" }>), bonusPerLevel: v } })}
+            />
+          </>
+        )}
+        {b.effect?.type === "storage" && (
+          <>
+            <NumberField
+              label="Capacité de base"
+              value={b.effect.base}
+              min={1}
+              step={100000}
+              hint="Capacité = base × croissance^niveau, par ressource commune."
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "storage" }>), base: v ?? 0 } })}
+            />
+            <NumberField
+              label="Croissance par niveau (1,6 = +60 %)"
+              value={b.effect.growth}
+              min={1}
+              step={0.05}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "storage" }>), growth: v ?? 1 } })}
             />
           </>
         )}
@@ -217,12 +331,13 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
       <div>
         <p className="mb-1 text-xs font-semibold text-slate-400">Aperçu par niveau</p>
         <PreviewTable
-          headers={["Niveau", "Coût", "Durée", ...(b.production ? ["Production/s"] : [])]}
+          headers={["Niveau", "Coût", "Durée", ...(b.production ? ["Production/s"] : []), ...(b.effect?.type === "storage" ? ["Capacité"] : [])]}
           rows={Array.from({ length: b.maxLevel }, (_, i) => i + 1).map((lvl) => [
             lvl,
             lvl === 1 ? "—" : formatCost(getBuildingUpgradeCost(b, lvl) as Partial<Resources>) || "gratuit",
             lvl === 1 ? "—" : formatSeconds(getBuildingUpgradeTime(b, lvl)),
             ...(b.production ? [b.production.perSecond[lvl - 1] ?? "?"] : []),
+            ...(b.effect?.type === "storage" ? [formatNumber(storageCapacityAt(b.effect, lvl))] : []),
           ])}
         />
       </div>

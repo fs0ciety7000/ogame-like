@@ -36,7 +36,7 @@ function playerFromRecord(record: PbRecord | null | undefined): PlayerState | nu
   return {
     ...player,
     // Bâtiments ajoutés depuis l'administration après la création du joueur.
-    buildings: withMissingBuildings(player.buildings),
+    buildings: withMissingBuildings(player.buildings, player.resources),
     units: player.units ?? {},
     techLevels: player.techLevels ?? {},
     resourceHistory: player.resourceHistory ?? [],
@@ -376,6 +376,14 @@ export function startResearch(_uid: string, techId: string) {
 
 export function startMission(_uid: string, missionKey: string) {
   return act({ type: "mission", missionKey });
+}
+
+export function claimContract(contractId: string) {
+  return act<import("@/game/contracts").ClaimResult>({ type: "claimContract", contractId });
+}
+
+export function rerollContract(contractId: string) {
+  return act({ type: "rerollContract", contractId });
 }
 
 export function tradeResources(_uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {

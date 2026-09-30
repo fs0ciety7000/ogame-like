@@ -47,19 +47,33 @@ describe("performAttack", () => {
         defender: player("def", {
           xp: 1000,
           units: { roquette: { level: 1, count: 10 } },
-          resources: { ...player("x", {}).resources, scrap: 100000, reinforcedSteel: 500 },
+          resources: { ...player("x", {}).resources, scrap: 5_000_000, reinforcedSteel: 500 },
         }),
       }),
     );
     if (!out.ok) throw new Error(out.message);
     expect(out.defender.units.roquette.count).toBeLessThan(10);
-    expect(out.defender.resources.scrap).toBe(100000 - (out.report.loot?.scrap ?? 0));
+    expect(out.defender.resources.scrap).toBe(5_000_000 - (out.report.loot?.scrap ?? 0));
     expect(out.report.loot?.scrap).toBeGreaterThan(0);
     expect(out.defender.defeats).toBe(1);
     expect(out.defender.lastDefeatAtMs).toBe(NOW);
     expect(out.defender.xp).toBe(1000 + out.report.defenderXpDelta!);
     expect(out.defenderNotifications.some((n) => n.kind === "combat-defender")).toBe(true);
     expect(out.attacker.lastAttackAtMs).toBe(NOW);
+  });
+
+  it("never loots what the warehouse bunker protects", () => {
+    const out = performAttack(
+      input({
+        attacker: player("att", { xp: 1000, units: { chasseur: { level: 1, count: 100 }, cargo: { level: 1, count: 100 } } }),
+        fleet: { chasseur: 50, cargo: 100 },
+        defender: player("def", { xp: 1000, resources: { ...player("x", {}).resources, scrap: 300_000, reinforcedSteel: 500 } }),
+      }),
+    );
+    if (!out.ok) throw new Error(out.message);
+    // Entrepôt niveau 1 : 3,2 M de capacité, dont 10 % (320 k) à l'abri.
+    expect(out.report.loot?.scrap ?? 0).toBe(0);
+    expect(out.report.loot?.reinforcedSteel).toBeGreaterThan(0); // les rares ne sont pas protégées
   });
 
   it("refuses protected targets and sends back the reason", () => {
