@@ -20,6 +20,7 @@ const PlayersPage = lazy(() => import("@/pages/PlayersPage").then((m) => ({ defa
 const AlliancePage = lazy(() => import("@/pages/AlliancePage").then((m) => ({ default: m.AlliancePage })));
 const GalaxyPage = lazy(() => import("@/pages/GalaxyPage").then((m) => ({ default: m.GalaxyPage })));
 const CombatLogPage = lazy(() => import("@/pages/CombatLogPage").then((m) => ({ default: m.CombatLogPage })));
+const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="joueurs" element={<PlayersPage />} />
               <Route path="galaxie" element={<GalaxyPage />} />
               <Route path="combats" element={<CombatLogPage />} />
+              <Route path="palmares" element={<HallOfFamePage />} />
               <Route path="alliance" element={<AlliancePage />} />
               <Route path="profil" element={<ProfilePage />} />
               <Route path="reglages" element={<SettingsPage />} />

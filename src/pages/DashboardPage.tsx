@@ -14,6 +14,7 @@ import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ContractsCard } from "@/components/game/ContractsCard";
+import { EventCard } from "@/components/game/EventBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 
@@ -33,7 +34,7 @@ export function DashboardPage() {
     0,
   );
 
-  const economy = economySnapshot(player);
+  const economy = economySnapshot(player, Date.now());
   const now = Date.now();
 
   const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
@@ -66,6 +67,7 @@ export function DashboardPage() {
 
       <FleetsPanel hideWhenEmpty />
 
+      <EventCard />
       <ContractsCard />
 
       <div className="grid gap-4 lg:grid-cols-3">

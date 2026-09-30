@@ -1,3 +1,4 @@
+import { buildTimeFactor } from "@/game/events";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ export function BuildingsPage() {
           const nextLevel = level + 1;
           const rawCost = getBuildingUpgradeCost(building, nextLevel);
           const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
-          const time = getBuildingUpgradeTime(building, nextLevel);
+          const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * buildTimeFactor(now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
 

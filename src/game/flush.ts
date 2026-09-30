@@ -2,6 +2,7 @@ import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { advanceResources, missionRewards } from "@/game/economy";
 import { ensureContracts, recordContract } from "@/game/contracts";
 import { MISSIONS } from "@/game/missions";
+import { missionRewardFactor } from "@/game/events";
 import { findTech, techBonus, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
 import { checkNewAchievements } from "@/game/achievements";
@@ -51,7 +52,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   // --- Production continue ---
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1000);
   // Production, plafond de l'entrepôt, entretien de flotte et panne d'énergie.
-  player.resources = advanceResources(player, elapsedSeconds);
+  player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1000);
   ensureContracts(player, now);
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
@@ -143,7 +144,9 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       continue;
     }
 
-    const reward = missionRewards(mission, player);
+    // Bonus d'événement : selon l'heure de fin de la mission.
+    const factor = missionRewardFactor(entry.endTime);
+    const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
     for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         applyXpDelta(player, amount, now);

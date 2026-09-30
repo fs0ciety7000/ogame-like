@@ -18,6 +18,10 @@ export const GAME_FIELDS = [
   "resourceHistory",
   "unlockedAchievements",
   "contracts",
+  "lastSeasonId",
+  "lastSeasonXp",
+  "titles",
+  "activeTitle",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

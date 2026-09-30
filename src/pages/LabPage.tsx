@@ -1,3 +1,4 @@
+import { researchTimeFactor } from "@/game/events";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -126,7 +127,7 @@ export function LabPage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500">Temps : {formatDuration(getTechTime(selected, currentLevel + 1))}</p>
+                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * researchTimeFactor(Date.now())))}</p>
               </div>
 
               {(() => {

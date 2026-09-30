@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { useFxStore } from "@/store/fxStore";
 import { economySnapshot } from "@/game/economy";
 import { HostileFleetAlert } from "@/components/game/FleetsPanel";
+import { EventBadge } from "@/components/game/EventBanner";
 import { cn } from "@/lib/utils";
 
 export function ResourceHud() {
@@ -20,7 +21,7 @@ export function ResourceHud() {
   if (!resources || !player) return null;
 
   const history = player.resourceHistory ?? [];
-  const economy = economySnapshot({ ...player, resources });
+  const economy = economySnapshot({ ...player, resources }, Date.now());
 
   const common = RESOURCE_LIST.filter((r) => r.rarity === "common");
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
@@ -71,6 +72,7 @@ export function ResourceHud() {
       })}
 
       <HostileFleetAlert />
+      <EventBadge />
       {economy.outage && (
         <Tooltip>
           <TooltipTrigger asChild>

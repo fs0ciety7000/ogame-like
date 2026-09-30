@@ -261,6 +261,35 @@ cronAdd("cosmic_fleets", "* * * * *", () => {
   db.purgeDebris(Date.now());
 });
 
+// Clôture de la saison précédente (sans effet si elle est déjà close).
+cronAdd("cosmic_seasons", "7 * * * *", () => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  try {
+    const out = db.closeSeason(db.loadGame(), Date.now(), null);
+    if (out.closed) console.log(`[cosmic] saison ${out.seasonId} close : ${out.ranked} classés, ${out.rewarded} récompensés`);
+  } catch (err) {
+    console.log(`[cosmic] clôture de saison impossible : ${err}`);
+  }
+});
+
+/**
+ * POST /api/cosmic/admin/close-season  { seasonId? } — administrateurs.
+ * Clôture immédiate (par défaut : la saison précédente).
+ */
+routerAdd(
+  "POST",
+  "/api/cosmic/admin/close-season",
+  (e) => {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+    const seasonId = String(db.body(e).seasonId || "");
+    if (seasonId && !/^\d{4}-\d{2}$/.test(seasonId)) throw new BadRequestError("Saison invalide (AAAA-MM).");
+    const game = db.loadGame();
+    if (seasonId && seasonId > game.previousSeasonId(Date.now())) throw new BadRequestError("Cette saison n'est pas encore terminée.");
+    return e.json(200, db.closeSeason(game, Date.now(), seasonId || null));
+  },
+);
+
 /* ---------- Journal des actions d'administration ---------- */
 
 // Chaque modification faite par un administrateur (page Administration ou

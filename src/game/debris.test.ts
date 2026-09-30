@@ -6,7 +6,7 @@ const NOW = 1_800_000_000_000;
 describe("debris", () => {
   it("keeps 30 % of destroyed ships, nothing from defenses", () => {
     // Frégate : 1000 ferraille / 500 énergie ; roquette = défense.
-    expect(debrisFromLosses({ fregate: 10 }, { roquette: 50 })).toEqual({ scrap: 3000, energy: 1500 });
+    expect(debrisFromLosses([{ fregate: 10 }, { roquette: 50 }])).toEqual({ scrap: 3000, energy: 1500 });
   });
 
   it("merges into one field per base and restarts its lifetime", () => {

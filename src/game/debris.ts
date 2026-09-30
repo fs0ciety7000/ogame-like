@@ -32,7 +32,7 @@ export interface DebrisField extends DebrisAmount {
 }
 
 /** Débris laissés par des vaisseaux détruits. */
-export function debrisFromLosses(...losses: Record<string, number>[]): DebrisAmount {
+export function debrisFromLosses(losses: Record<string, number>[], percent: number = DEBRIS_RULES.percent): DebrisAmount {
   let scrap = 0;
   let energy = 0;
   for (const map of losses) {
@@ -43,7 +43,7 @@ export function debrisFromLosses(...losses: Record<string, number>[]): DebrisAmo
       energy += (cost.energy ?? 0) * qty;
     }
   }
-  return { scrap: Math.floor(scrap * DEBRIS_RULES.percent), energy: Math.floor(energy * DEBRIS_RULES.percent) };
+  return { scrap: Math.floor(scrap * percent), energy: Math.floor(energy * percent) };
 }
 
 export function debrisTotal(d: DebrisAmount | null | undefined): number {

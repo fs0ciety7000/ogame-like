@@ -16,6 +16,7 @@ import { resetContentSection, saveContentSection } from "@/services/contentServi
 import { checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
+import { getBuildingUpgradeTime, findBuilding } from "@/game/buildings";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -45,6 +46,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       ...((existing?.data as object) ?? {}),
       fleets: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
       spy: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
+      // Pas d'événement du week-end pendant les tests (résultats stables).
+      events: { rotationEnabled: false, scheduled: [] },
     };
     if (existing) {
       savedRules = { id: existing.id, data: existing.data };
@@ -416,6 +419,68 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(back.status).toBe("returning");
     await admin.collection("fleets").delete(sent.id);
   }, 30_000);
+
+  it("v1.8 season closing: archived standings, rewards and titles", async () => {
+    // Connecté en B. Saison fictive pour ne pas dépendre de la date du jour.
+    const SEASON = "1999-12";
+    const clean = async () => {
+      for (const r of await admin.collection("season_results").getFullList({ filter: `seasonId="${SEASON}"` })) await admin.collection("season_results").delete(r.id);
+      for (const p of await admin.collection("players").getFullList({ filter: `seasonId="${SEASON}" || lastSeasonId="${SEASON}"` })) {
+        await admin.collection("players").update(p.id, { seasonId: "", seasonXp: 0, lastSeasonId: "", lastSeasonXp: 0 });
+      }
+    };
+    await clean();
+    try {
+      await admin.collection("players").update(aId, { lastSeasonId: SEASON, lastSeasonXp: 500, titles: [], activeTitle: "" });
+      await admin.collection("players").update(bId, { seasonId: SEASON, seasonXp: 200, titles: [], activeTitle: "" });
+      const aBefore = await snap(aId);
+      await expect(pb.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: SEASON } })).rejects.toMatchObject({ status: 403 });
+      const out = await admin.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: SEASON } });
+      expect(out).toMatchObject({ closed: true, ranked: 2, rewarded: 2 });
+      expect((await admin.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: SEASON } })).closed).toBe(false);
+
+      const results = await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}"`, sort: "rank" });
+      expect(results.map((r) => [r.uid, r.rank])).toEqual([[aId, 1], [bId, 2]]);
+      const aAfter = await snap(aId);
+      expect(aAfter.resources.reinforcedSteel).toBeGreaterThanOrEqual(aBefore.resources.reinforcedSteel + 500);
+      expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
+      const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
+      expect(notif.length).toBe(1);
+
+      // B choisit son titre, pas celui d'un autre ; il est public.
+      await expect(ps.setActiveTitle("Champion de Décembre 1999")).rejects.toThrow(/gagné/);
+      await expect(pb.collection("players").update(bId, { activeTitle: "Tricheur" })).rejects.toBeTruthy();
+      await ps.setActiveTitle("");
+      await ps.setActiveTitle("Podium de Décembre 1999");
+      expect((await pb.collection("profiles").getOne(bId)).activeTitle).toBe("Podium de Décembre 1999");
+      await expect(admin.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: "2999-01" } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      await clean();
+    }
+  });
+
+  it("v1.8 events: a scheduled event is applied by the server", async () => {
+    const rules = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const data = rules.data as Record<string, unknown>;
+    const now = Date.now();
+    await admin.collection("game_config").update(rules.id, {
+      data: { ...data, events: { rotationEnabled: false, scheduled: [{ id: "t", type: "chantiers_acceleres", startMs: now - 3600_000, endMs: now + 3600_000 }] } },
+    });
+    try {
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 10_000_000, energy: 10_000_000, nano: 10_000_000 } });
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      const level = (await snap(bId)).buildings.extracteur_ferraille.level;
+      const before = Date.now();
+      await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
+      const queues = await admin.collection("queues").getOne(bId);
+      const full = getBuildingUpgradeTime(findBuilding("extracteur_ferraille")!, level + 1) * 1000;
+      const took = queues.buildingUpgrades.extracteur_ferraille.endTime - before;
+      expect(took).toBeLessThan(full * 0.75 + 2000);
+      expect(took).toBeGreaterThan(full * 0.75 - 2000);
+    } finally {
+      await admin.collection("game_config").update(rules.id, { data });
+    }
+  });
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

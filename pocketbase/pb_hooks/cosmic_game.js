@@ -51,6 +51,7 @@ __export(hooksEntry_exports, {
   GameActionError: () => GameActionError,
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
+  SEASON_RULES: () => SEASON_RULES,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
@@ -66,9 +67,13 @@ __export(hooksEntry_exports, {
   performGift: () => performGift,
   performLaunch: () => performLaunch,
   performPlayerAction: () => performPlayerAction,
+  performSeasonReward: () => performSeasonReward,
+  previousSeasonId: () => previousSeasonId,
   recallFleet: () => recallFleet,
   recyclerCapacity: () => recyclerCapacity,
-  resolveSpyArrival: () => resolveSpyArrival
+  resolveSpyArrival: () => resolveSpyArrival,
+  seasonRewardFor: () => seasonRewardFor,
+  seasonStandings: () => seasonStandings
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -703,7 +708,7 @@ function computeFullPower(units, techLevels, idList, stats) {
   return total;
 }
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
   const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
@@ -763,8 +768,9 @@ function resolveCombat(params) {
     const wanted = {};
     let total = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
-      const pct2 = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const amount = Math.floor(Math.max(0, (_c = defenderResources[res]) != null ? _c : 0) * pct2);
+      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const pct2 = Math.min(1, base * ((_c = params.lootMultiplier) != null ? _c : 1));
+      const amount = Math.floor(Math.max(0, (_d = defenderResources[res]) != null ? _d : 0) * pct2);
       wanted[res] = amount;
       total += amount;
     }
@@ -779,8 +785,8 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_d = loot[res]) != null ? _d : 0) < ((_e = wanted[res]) != null ? _e : 0)) {
-        loot[res] = ((_f = loot[res]) != null ? _f : 0) + 1;
+      if (((_e = loot[res]) != null ? _e : 0) < ((_f = wanted[res]) != null ? _f : 0)) {
+        loot[res] = ((_g = loot[res]) != null ? _g : 0) + 1;
         left--;
       }
     }
@@ -823,6 +829,141 @@ function getProductionRatesPerSecond(buildings, techLevels) {
   return rates;
 }
 
+// src/game/events.ts
+var EVENT_RULES = {
+  rotationEnabled: true,
+  startHour: 18,
+  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
+  types: [
+    {
+      id: "tempete_ferraille",
+      name: "Temp\xEAte de ferraille",
+      emoji: "\u{1F32A}\uFE0F",
+      description: "+50 % de production de ferraille et de nanocomposants.",
+      effects: { production: { scrap: 1.5, nano: 1.5 } }
+    },
+    {
+      id: "chantiers_acceleres",
+      name: "Chantiers acc\xE9l\xE9r\xE9s",
+      emoji: "\u{1F3D7}\uFE0F",
+      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
+      effects: { buildTime: 0.75 }
+    },
+    {
+      id: "recherche_eclair",
+      name: "Recherche \xE9clair",
+      emoji: "\u{1F52C}",
+      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { researchTime: 0.75 }
+    },
+    {
+      id: "chasse_tresor",
+      name: "Chasse au tr\xE9sor",
+      emoji: "\u{1F48E}",
+      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { missionRewards: 1.5 }
+    },
+    {
+      id: "guerre_ouverte",
+      name: "Guerre ouverte",
+      emoji: "\u2694\uFE0F",
+      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
+      effects: { loot: 1.5, debrisPercent: 0.5 }
+    }
+  ],
+  scheduled: []
+};
+var HOUR = 36e5;
+var DAY = 24 * HOUR;
+var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
+function lastSundayAt1Utc(year, month) {
+  const d = new Date(Date.UTC(year, month + 1, 0, 1));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+function parisOffsetMs(utcMs) {
+  const year = new Date(utcMs).getUTCFullYear();
+  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
+  return (summer ? 2 : 1) * HOUR;
+}
+function parisLocalToUtc(localMs) {
+  return localMs - parisOffsetMs(localMs - 2 * HOUR);
+}
+function findEventType(id) {
+  return EVENT_RULES.types.find((t) => t.id === id);
+}
+function weekendWindow(now, weeksAhead = 0) {
+  const local = now + parisOffsetMs(now);
+  const localMidnight = Math.floor(local / DAY) * DAY;
+  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
+  const friday = localMidnight - daysSinceFriday * DAY + weeksAhead * 7 * DAY;
+  return {
+    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
+    endMs: parisLocalToUtc(friday + 3 * DAY),
+    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY))
+  };
+}
+function rotationEvent(window) {
+  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
+  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
+  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
+}
+function scheduledEvents() {
+  var _a;
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
+    const type = findEventType(s.type);
+    return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
+  }).filter((e) => e !== null);
+}
+function eventAt(now) {
+  const scheduled = scheduledEvents().find((e) => e.startMs <= now && now < e.endMs);
+  if (scheduled) return scheduled;
+  const rotation = rotationEvent(weekendWindow(now));
+  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function eventBoundaries(from, to) {
+  const points = /* @__PURE__ */ new Set();
+  for (const e of scheduledEvents()) {
+    if (e.startMs > from && e.startMs < to) points.add(e.startMs);
+    if (e.endMs > from && e.endMs < to) points.add(e.endMs);
+  }
+  if (EVENT_RULES.rotationEnabled) {
+    for (let w = 0; ; w++) {
+      const win = weekendWindow(from, w);
+      if (win.startMs >= to) break;
+      if (win.startMs > from) points.add(win.startMs);
+      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
+      if (w > 60) break;
+    }
+  }
+  return [...points].sort((a, b) => a - b);
+}
+function productionMultipliers(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
+}
+function buildTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
+}
+function researchTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
+}
+function missionRewardFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
+}
+function lootFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
+}
+function eventDebrisPercent(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
+}
+
 // src/game/economy.ts
 var ECONOMY_RULES = {
   /** Énergie consommée par seconde et par place de hangar occupée. */
@@ -848,16 +989,35 @@ function getFleetUpkeep(units) {
   }
   return upkeep;
 }
+function boostedRates(input, multipliers) {
+  var _a;
+  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  for (const [res, m] of Object.entries(multipliers)) {
+    if (gross[res] && m) gross[res] = ((_a = gross[res]) != null ? _a : 0) * m;
+  }
+  return gross;
+}
 function addCapped(stock, gain, cap) {
   if (gain <= 0) return Math.max(0, stock + gain);
   if (stock >= cap) return stock;
   return Math.min(cap, stock + gain);
 }
-function advanceResources(input, elapsedSeconds) {
+function advanceResources(input, elapsedSeconds, startMs) {
+  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  const endMs = startMs + elapsedSeconds * 1e3;
+  let resources = input.resources;
+  let at = startMs;
+  for (const cut of [...eventBoundaries(startMs, endMs), endMs]) {
+    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at));
+    at = cut;
+  }
+  return resources;
+}
+function advanceSegment(input, elapsedSeconds, multipliers) {
   var _a, _b, _c, _d;
   const out = __spreadValues({}, input.resources);
   if (elapsedSeconds <= 0) return out;
-  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const gross = boostedRates(input, multipliers);
   const upkeep = getFleetUpkeep(input.units);
   const capacity = getStorageCapacity(input.buildings);
   const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
@@ -903,13 +1063,37 @@ var GameActionError = class extends Error {
 };
 
 // src/game/seasons.ts
+var SEASON_MONTHS = [
+  "Janvier",
+  "F\xE9vrier",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Ao\xFBt",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "D\xE9cembre"
+];
 function currentSeasonId(now = Date.now()) {
   const d = new Date(now);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+function seasonLabel(seasonId) {
+  var _a;
+  const [year, month] = seasonId.split("-").map(Number);
+  return `${(_a = SEASON_MONTHS[(month != null ? month : 1) - 1]) != null ? _a : "?"} ${year != null ? year : ""}`.trim();
+}
 function ensureSeasonRollover(player, now) {
+  var _a;
   const season = currentSeasonId(now);
   if (player.seasonId !== season) {
+    if (player.seasonId) {
+      player.lastSeasonId = player.seasonId;
+      player.lastSeasonXp = (_a = player.seasonXp) != null ? _a : 0;
+    }
     player.seasonId = season;
     player.seasonXp = 0;
   }
@@ -919,6 +1103,83 @@ function applyXpDelta(player, delta, now) {
   ensureSeasonRollover(player, now);
   player.xp = Math.max(0, ((_a = player.xp) != null ? _a : 0) + delta);
   player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
+}
+var SEASON_RULES = {
+  tiers: [
+    { maxRank: 1, hours: 24, rare: 500, title: "Champion" },
+    { maxRank: 3, hours: 16, rare: 300, title: "Podium" },
+    { maxRank: 10, hours: 8, rare: 150, title: "\xC9lite" }
+  ],
+  participationXp: 100,
+  participationHours: 2,
+  /** Première saison close automatiquement (les précédentes ne sont pas récompensées). */
+  firstSeasonId: "2026-09"
+};
+function previousSeasonId(now = Date.now()) {
+  const d = new Date(now);
+  return currentSeasonId(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 1);
+}
+function seasonXpFor(entry, seasonId) {
+  var _a, _b;
+  if (entry.seasonId === seasonId) return (_a = entry.seasonXp) != null ? _a : 0;
+  if (entry.lastSeasonId === seasonId) return (_b = entry.lastSeasonXp) != null ? _b : 0;
+  return 0;
+}
+function seasonStandings(entries, seasonId) {
+  return entries.map((e) => ({ e, seasonXp: seasonXpFor(e, seasonId) })).filter((x) => x.seasonXp > 0).sort((a, b) => {
+    var _a, _b;
+    return b.seasonXp - a.seasonXp || ((_a = b.e.xp) != null ? _a : 0) - ((_b = a.e.xp) != null ? _b : 0) || (a.e.pseudo < b.e.pseudo ? -1 : a.e.pseudo > b.e.pseudo ? 1 : 0);
+  }).map((x, i) => {
+    var _a;
+    return { uid: x.e.uid, pseudo: x.e.pseudo, allianceId: (_a = x.e.allianceId) != null ? _a : "", rank: i + 1, seasonXp: x.seasonXp };
+  });
+}
+function seasonRewardFor(rank, seasonXp) {
+  const tier = [...SEASON_RULES.tiers].sort((a, b) => a.maxRank - b.maxRank).find((t) => rank <= t.maxRank);
+  if (tier) return { hours: tier.hours, rare: tier.rare, title: tier.title };
+  if (seasonXp >= SEASON_RULES.participationXp) return { hours: SEASON_RULES.participationHours, rare: 0, title: "" };
+  return null;
+}
+function performSeasonReward(playerIn, queuesIn, standing, reward, now) {
+  var _a, _b, _c;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const gained = {};
+  for (const r of RESOURCE_LIST) {
+    const amount = Math.floor(((_a = rates[r.id]) != null ? _a : 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0);
+    if (amount <= 0) continue;
+    gained[r.id] = amount;
+    player.resources[r.id] = ((_b = player.resources[r.id]) != null ? _b : 0) + amount;
+  }
+  let titleText = "";
+  if (reward.title) {
+    titleText = `${reward.title} de ${seasonLabel(standing.seasonId)}`;
+    const title = { label: titleText, seasonId: standing.seasonId, rank: standing.rank };
+    player.titles = [...((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== standing.seasonId), title];
+    if (!player.activeTitle) player.activeTitle = titleText;
+  }
+  const total = Object.values(gained).reduce((a, b) => a + (b != null ? b : 0), 0);
+  return {
+    player,
+    queues: flushed.queues,
+    gained,
+    notifications: [
+      ...flushed.notifications,
+      {
+        kind: "season",
+        title: `Saison ${seasonLabel(standing.seasonId)} termin\xE9e : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
+        message: `${formatInt(standing.seasonXp)} XP de saison. R\xE9compense : ${formatInt(total)} ressources${titleText ? ` et le titre \xAB ${titleText} \xBB` : ""}.`,
+        createdAtMs: now,
+        read: false
+      }
+    ]
+  };
+}
+function setActiveTitle(player, label) {
+  var _a;
+  if (label && !((_a = player.titles) != null ? _a : []).some((t) => t.label === label)) throw new GameActionError("Tu n'as pas gagn\xE9 ce titre.");
+  player.activeTitle = label;
 }
 
 // src/game/contracts.ts
@@ -1268,7 +1529,7 @@ function flushState(playerIn, queuesIn, now) {
   const queues = structuredClone(queuesIn);
   const notifications = [];
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1e3);
-  player.resources = advanceResources(player, elapsedSeconds);
+  player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1e3);
   ensureContracts(player, now);
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
@@ -1343,7 +1604,8 @@ function flushState(playerIn, queuesIn, now) {
       stillActiveMissions.push(entry);
       continue;
     }
-    const reward = missionRewards(mission, player);
+    const factor = missionRewardFactor(entry.endTime);
+    const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
     for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         applyXpDelta(player, amount, now);
@@ -1426,7 +1688,7 @@ var DEBRIS_RULES = {
   capacityPerLevel: 250,
   recyclerUnitId: "drone_recuperateur"
 };
-function debrisFromLosses(...losses) {
+function debrisFromLosses(losses, percent = DEBRIS_RULES.percent) {
   var _a, _b, _c, _d;
   let scrap = 0;
   let energy = 0;
@@ -1438,7 +1700,7 @@ function debrisFromLosses(...losses) {
       energy += ((_d = cost.energy) != null ? _d : 0) * qty;
     }
   }
-  return { scrap: Math.floor(scrap * DEBRIS_RULES.percent), energy: Math.floor(energy * DEBRIS_RULES.percent) };
+  return { scrap: Math.floor(scrap * percent), energy: Math.floor(energy * percent) };
 }
 function debrisTotal(d) {
   var _a, _b;
@@ -1579,7 +1841,7 @@ function checkAttackAllowed(ctx) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -1621,6 +1883,7 @@ function performAttack(input) {
   const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings, defender.resources) }), input.defenderQueues, now);
   const def = flushedDefender.player;
   const combat = resolveCombat({
+    lootMultiplier: lootFactor(now),
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
@@ -1728,7 +1991,7 @@ function performAttack(input) {
     combat,
     survivors,
     loot: (_w = combat.loot) != null ? _w : {},
-    debris: debrisFromLosses(combat.attackerLosses, combat.defenderLosses)
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses], (_x = eventDebrisPercent(now)) != null ? _x : DEBRIS_RULES.percent)
   };
 }
 
@@ -1798,7 +2061,7 @@ function pay(player, cost, now) {
   recordContract(player, "spend", total, now);
 }
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   const { player, queues, now } = s;
   switch (action == null ? void 0 : action.type) {
     case "sync": {
@@ -1834,7 +2097,7 @@ function applyAction(s, action) {
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
       pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
-      queues.buildingUpgrades[def.id] = { endTime: now + getBuildingUpgradeTime(def, nextLevel) * 1e3 };
+      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * buildTimeFactor(now)) * 1e3 };
       recordContract(player, "upgrade_building", 1, now);
       return void 0;
     }
@@ -1884,7 +2147,7 @@ function applyAction(s, action) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + getTechTime(tech, nextLevel) * 1e3 });
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now)) * 1e3 });
       recordContract(player, "research", 1, now);
       return void 0;
     }
@@ -1910,6 +2173,9 @@ function applyAction(s, action) {
       return claimContract(player, String((_l = action.contractId) != null ? _l : ""), now);
     case "rerollContract":
       return rerollContract(player, String((_m = action.contractId) != null ? _m : ""), now);
+    case "setTitle":
+      setActiveTitle(player, String((_n = action.title) != null ? _n : ""));
+      return player.activeTitle;
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -1997,8 +2263,8 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 }
 
 // src/game/analytics.ts
-var HOUR = 36e5;
-var DAY = 24 * HOUR;
+var HOUR2 = 36e5;
+var DAY2 = 24 * HOUR2;
 function median(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -2092,7 +2358,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY;
+  const since = now - windowDays * DAY2;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -2102,11 +2368,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY;
-    const d = new Date(start + DAY);
+    const start = now - (windowDays - i) * DAY2;
+    const d = new Date(start + DAY2);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY2).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -2117,11 +2383,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY2).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY2).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY2;
       }).length,
       medianPlaytimeHours: round1(median(players.map((p) => {
         var _a;
@@ -2615,7 +2881,11 @@ var GAME_FIELDS = [
   "resourcesUpdatedAtMs",
   "resourceHistory",
   "unlockedAchievements",
-  "contracts"
+  "contracts",
+  "lastSeasonId",
+  "lastSeasonXp",
+  "titles",
+  "activeTitle"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
@@ -2628,18 +2898,20 @@ var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
 var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
 var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
 var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
+var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
+var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -2653,7 +2925,9 @@ function applyGameContent(overrides) {
       fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_l = (_k = overrides.rules) == null ? void 0 : _k.fleets) != null ? _l : {}),
       spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_n = (_m = overrides.rules) == null ? void 0 : _m.spy) != null ? _n : {}),
       debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_p = (_o = overrides.rules) == null ? void 0 : _o.debris) != null ? _p : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_r = (_q = overrides.rules) == null ? void 0 : _q.patrol) != null ? _r : {})
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_r = (_q = overrides.rules) == null ? void 0 : _q.patrol) != null ? _r : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_t = (_s = overrides.rules) == null ? void 0 : _s.events) != null ? _t : {}),
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_v = (_u = overrides.rules) == null ? void 0 : _u.seasons) != null ? _v : {})
     }
   };
   setBuildings(content.buildings);
@@ -2667,6 +2941,8 @@ function applyGameContent(overrides) {
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
+  Object.assign(EVENT_RULES, content.rules.events);
+  Object.assign(SEASON_RULES, content.rules.seasons);
   current = content;
   return content;
 }
