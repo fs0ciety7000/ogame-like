@@ -48,7 +48,13 @@ export function UnitsPage() {
     if (!uid) return;
     setPending(unitId);
     try {
-      await enqueueUnitBuild(uid, unitId, qty(unitId));
+      const n = qty(unitId);
+      const def = findUnit(unitId);
+      const ahead = def ? queues?.unitQueues[def.category].filter((e) => e.unitId !== unitId).length ?? 0 : 0;
+      await enqueueUnitBuild(uid, unitId, n);
+      toast.success(`${n} × ${def?.name ?? unitId} ajouté${n > 1 ? "s" : ""} à la file`, {
+        description: ahead > 0 ? "Les unités d'une même catégorie se construisent l'une après l'autre : elles démarreront après la file en cours." : undefined,
+      });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
     } finally {
@@ -118,6 +124,25 @@ export function UnitsPage() {
             }
             const remaining = Math.max(0, Math.floor(((queue[0].endTime ?? now) - now) / 1000)) + (count - 1) * buildTime;
             queueInfo = { remaining, count };
+          }
+
+          // Unités commandées mais en attente derrière d'autres (file unique
+          // par catégorie) : on affiche ce qui passe avant et le délai.
+          let waitingInfo: { count: number; startsIn: number; before: string } | null = null;
+          if (!isBuildingThis) {
+            const firstIndex = queue.findIndex((e) => e.unitId === unit.id);
+            if (firstIndex > 0) {
+              let startsIn = Math.max(0, Math.floor(((queue[0].endTime ?? now) - now) / 1000));
+              for (const e of queue.slice(1, firstIndex)) {
+                const u = findUnit(e.unitId);
+                startsIn += u ? getUnitBuildTime(u) : 0;
+              }
+              waitingInfo = {
+                count: queue.filter((e) => e.unitId === unit.id).length,
+                startsIn,
+                before: findUnit(queue[0].unitId)?.name ?? queue[0].unitId,
+              };
+            }
           }
 
           return (
@@ -240,6 +265,10 @@ export function UnitsPage() {
                       {queueInfo ? (
                         <p className="text-xs text-mint-glow">
                           ⏱️ {formatDuration(queueInfo.remaining)} ({queueInfo.count} en file)
+                        </p>
+                      ) : waitingInfo ? (
+                        <p className="text-xs text-gold-glow" title="Les unités d'une même catégorie se construisent l'une après l'autre.">
+                          ⏳ {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
                         </p>
                       ) : (
                         <p className="text-xs text-slate-500">
