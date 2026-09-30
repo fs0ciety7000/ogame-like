@@ -340,6 +340,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 30_000);
 
+  it("admin routes exist (statistics, season closing)", async () => {
+    const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
+    expect(stats).toBeTruthy();
+    await expect(pb.send("/api/cosmic/admin/stats", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+  });
+
   it("leaderboard lists players without private fields", async () => {
     const list = await ps.listAllPlayers();
     expect(list.some((p) => p.uid === aId)).toBe(true);
