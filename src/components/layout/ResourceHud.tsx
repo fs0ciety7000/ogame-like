@@ -8,6 +8,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { motion } from "framer-motion";
 import { useFxStore } from "@/store/fxStore";
 import { economySnapshot } from "@/game/economy";
+import { HostileFleetAlert } from "@/components/game/FleetsPanel";
 import { cn } from "@/lib/utils";
 
 export function ResourceHud() {
@@ -69,6 +70,7 @@ export function ResourceHud() {
         );
       })}
 
+      <HostileFleetAlert />
       {economy.outage && (
         <Tooltip>
           <TooltipTrigger asChild>

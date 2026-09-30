@@ -252,6 +252,7 @@ export interface LeaderboardEntry {
   createdAtMs?: number;
   lastDefeatAtMs?: number;
   lastAttackAtMs?: number;
+  allianceId?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -264,10 +265,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     createdAtMs: (data.createdAtMs as number) || undefined,
     lastDefeatAtMs: (data.lastDefeatAtMs as number) || undefined,
     lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
+    allianceId: (data.allianceId as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId";
 
 /** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
  *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à

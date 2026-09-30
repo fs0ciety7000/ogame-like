@@ -85,7 +85,7 @@ export function CombatResultModal() {
       {current && (
         <DialogContent className="relative overflow-visible">
           {isVictory && <ParticleBurst />}
-          <DialogTitle className={OUTCOME_STYLE[current.outcome].color}>
+          <DialogTitle className={current.outcome === "draw" ? "text-gold-glow" : isVictory ? "text-mint-glow" : "text-danger-glow"}>
             {current.perspective === "attacker" ? OUTCOME_STYLE[current.outcome].attacker : OUTCOME_STYLE[current.outcome].defender}
           </DialogTitle>
           <p className="mt-1 text-sm text-slate-400">

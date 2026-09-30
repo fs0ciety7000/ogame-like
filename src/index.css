@@ -244,3 +244,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton-bone { animation: none; }
 }
+
+/* Carte de la galaxie : pointillés des trajectoires de flottes qui défilent. */
+.fleet-route {
+  animation: fleet-route 1.2s linear infinite;
+}
+@keyframes fleet-route {
+  to { stroke-dashoffset: -2.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fleet-route { animation: none; }
+}

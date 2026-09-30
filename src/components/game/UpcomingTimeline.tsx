@@ -1,18 +1,22 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Compass, FlaskConical, Hammer, Rocket, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Compass, FlaskConical, Hammer, Rocket, Send, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { timelineHorizon, timelinePosition, upcomingEvents, type TimelineKind } from "@/game/timeline";
 import { formatClock } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { QueuesState } from "@/types/game";
+import { useFleetStore } from "@/store/fleetStore";
+import { useAuthStore } from "@/store/authStore";
 
 const KIND_STYLE: Record<TimelineKind, { icon: LucideIcon; color: string; dot: string; label: string }> = {
   building: { icon: Hammer, color: "text-gold-glow", dot: "bg-gold-glow", label: "Construction" },
   research: { icon: FlaskConical, color: "text-cyan-glow", dot: "bg-cyan-glow", label: "Recherche" },
   mission: { icon: Compass, color: "text-mint-glow", dot: "bg-mint-glow", label: "Mission" },
-  units: { icon: Rocket, color: "text-danger-glow", dot: "bg-danger-glow", label: "Unités" },
+  units: { icon: Rocket, color: "text-slate-300", dot: "bg-slate-300", label: "Unités" },
+  fleet: { icon: Send, color: "text-cyan-glow", dot: "bg-cyan-glow", label: "Flotte" },
+  hostile: { icon: AlertTriangle, color: "text-danger-glow", dot: "bg-danger-glow", label: "Flotte hostile" },
 };
 
 function horizonLabel(ms: number) {
@@ -22,7 +26,9 @@ function horizonLabel(ms: number) {
 /** Tout ce qui se termine bientôt, sur une frise (échelle compressée pour
  *  que les échéances proches restent lisibles) puis en liste. */
 export function UpcomingTimeline({ queues, now }: { queues: QueuesState | null; now: number }) {
-  const events = upcomingEvents(queues, now);
+  const fleets = useFleetStore((s) => s.fleets);
+  const uid = useAuthStore((s) => s.user?.uid);
+  const events = upcomingEvents(queues, now, fleets, uid);
   const horizon = timelineHorizon(events, now);
 
   return (
