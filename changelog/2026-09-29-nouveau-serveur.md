@@ -1,4 +1,6 @@
 ---
+version: 1.1.0
+iteration: 2
 date: 2026-09-29
 title: Nouveau serveur de jeu
 ---

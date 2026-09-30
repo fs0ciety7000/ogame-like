@@ -10,6 +10,7 @@ export {
   applyLegacyGift,
 } from "@/game/actions";
 export { GameActionError } from "@/game/errors";
+export { computeGameStats } from "@/game/analytics";
 export { defaultQueues } from "@/game/defaults";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";

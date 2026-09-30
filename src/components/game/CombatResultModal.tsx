@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
+import { CombatReplay } from "@/components/game/CombatReplay";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
@@ -94,6 +95,14 @@ export function CombatResultModal() {
             Ta puissance : {formatNumber(current.myPower)} — Puissance adverse : {formatNumber(current.opponentPower)}
           </p>
 
+          <CombatReplay
+            myPower={current.myPower}
+            opponentPower={current.opponentPower}
+            myLossPercent={current.myLossPercent}
+            opponentLossPercent={current.opponentLossPercent}
+            outcome={current.outcome}
+            perspective={current.perspective}
+          />
           <CombatClash myPower={current.myPower} opponentPower={current.opponentPower} />
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

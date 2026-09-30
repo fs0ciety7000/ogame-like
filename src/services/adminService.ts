@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { useAuthStore } from "@/store/authStore";
 import type { PlayerState, QueuesState } from "@/types/game";
+import type { GameStats } from "@/game/analytics";
 
 /* =====================================================
    Administration du jeu.
@@ -109,5 +110,16 @@ export async function adminUpdateHooks(): Promise<HooksUpdateReport> {
     const message = (err as { response?: { message?: string } })?.response?.message;
     if (status === 404) throw new Error("cosmic_updater.pb.js n'est pas installé sur le serveur (voir README).");
     throw new Error(message || (err as Error).message);
+  }
+}
+
+/** Statistiques de game design, calculées par le serveur (pb_hooks). */
+export async function adminFetchStats(): Promise<GameStats> {
+  try {
+    return await pb.send<GameStats>("/api/cosmic/admin/stats", { method: "GET" });
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+    if (status === 404) throw new Error("Route absente : mets à jour les hooks du serveur (onglet Outils).");
+    throw new Error((err as { response?: { message?: string } })?.response?.message || (err as Error).message);
   }
 }

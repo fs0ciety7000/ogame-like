@@ -291,3 +291,32 @@ routerAdd(
   },
   $apis.requireAuth("users"),
 );
+
+/**
+ * GET /api/cosmic/admin/stats — administrateurs du jeu uniquement.
+ * Statistiques de game design (activité, économie, contenu, combats des
+ * 7 derniers jours), calculées ici : le navigateur ne reçoit que des agrégats.
+ */
+routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
+  const isAdmin =
+    e.hasSuperuserAuth() ||
+    (e.auth && $app.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: e.auth.id }).length > 0);
+  if (!isAdmin) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+
+  const db = require(`${__hooks}/cosmic_db.js`);
+  const game = db.loadGame();
+  db.applyContent($app, game);
+
+  const now = Date.now();
+  const players = $app.findAllRecords("players").map((r) => {
+    const p = db.toPlain(r);
+    p.uid = r.id;
+    return p;
+  });
+  const queues = $app.findAllRecords("queues").map((r) => db.toPlain(r));
+  const reports = $app
+    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 5000, 0, { since: now - 7 * 24 * 3600 * 1000 })
+    .map((r) => db.toPlain(r));
+
+  return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
+});

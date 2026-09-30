@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Markdown } from "@/components/ui/markdown";
-import { CHANGELOG, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
+import { CHANGELOG, CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
 
 function formatDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);
@@ -21,7 +21,7 @@ export function ChangelogPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description="Les dernières mises à jour du jeu." />
+      <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description={CURRENT_VERSION ? `Les dernières mises à jour du jeu — version actuelle : v${CURRENT_VERSION}.` : "Les dernières mises à jour du jeu."} />
       {CHANGELOG.length === 0 && <p className="text-sm text-slate-500">Aucune mise à jour publiée pour l'instant.</p>}
       <div className="flex flex-col gap-3">
         {CHANGELOG.map((entry, i) => (
@@ -33,9 +33,17 @@ export function ChangelogPage() {
           >
             <Card className="p-4">
               <div className="mb-2 flex flex-wrap items-center gap-2">
+                {entry.version && (
+                  <span className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-1.5 py-0.5 font-mono text-[11px] text-cyan-glow">
+                    v{entry.version}
+                  </span>
+                )}
                 <h2 className="font-display text-base text-white">{entry.title}</h2>
-                {entry.id > seenAtOpen && <Badge variant="success">Nouveau</Badge>}
-                <span className="ml-auto text-xs text-slate-500">{formatDate(entry.date)}</span>
+                {isUnread(entry.id, seenAtOpen) && <Badge variant="success">Nouveau</Badge>}
+                <span className="ml-auto text-xs text-slate-500">
+                  {entry.iteration !== null && <>Itération {entry.iteration} · </>}
+                  {formatDate(entry.date)}
+                </span>
               </div>
               <Markdown source={entry.body} />
             </Card>
