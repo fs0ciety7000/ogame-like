@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
+import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -133,6 +134,56 @@ function DangerZoneCard() {
   );
 }
 
+function BrowserNotificationsCard() {
+  const { enabled, permission } = useBrowserNotifyStore();
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const result = await setBrowserNotifications(!enabled);
+      if (!enabled && result === "denied") toast.error("Notifications bloquées par le navigateur : autorise-les dans les réglages du site.");
+      else if (!enabled && result === "unsupported") toast.error("Ce navigateur ne gère pas les notifications.");
+      else if (!enabled && result === "granted") toast.success("Notifications activées.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notifications du navigateur</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-slate-400">
+          Flotte hostile en approche, construction terminée, flotte rentrée… Une alerte système s'affiche quand le jeu est ouvert dans un onglet en
+          arrière-plan.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant={enabled ? "outline" : "primary"} disabled={busy || permission === "unsupported"} onClick={() => void toggle()}>
+            {enabled ? <BellOff className="mr-1.5 h-4 w-4" /> : <Bell className="mr-1.5 h-4 w-4" />}
+            {enabled ? "Désactiver" : "Activer les notifications"}
+          </Button>
+          {enabled && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                toast("Passe sur un autre onglet : la notification de test arrive dans 3 s.");
+                setTimeout(() => showBrowserNotification("🛸 Test Cosmic Empires", "Les notifications fonctionnent."), 3000);
+              }}
+            >
+              Tester
+            </Button>
+          )}
+        </div>
+        {permission === "denied" && <p className="text-xs text-danger-glow">Le navigateur bloque les notifications pour ce site.</p>}
+        {permission === "unsupported" && <p className="text-xs text-slate-500">Ce navigateur ne gère pas les notifications.</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
@@ -175,6 +226,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      <BrowserNotificationsCard />
       <ChangePasswordCard />
       <DangerZoneCard />
     </div>

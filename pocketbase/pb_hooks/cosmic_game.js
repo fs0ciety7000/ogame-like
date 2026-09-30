@@ -54,15 +54,21 @@ __export(hooksEntry_exports, {
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
+  collectDebris: () => collectDebris,
   computeGameStats: () => computeGameStats,
+  debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
+  mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
+  patrolTurnaround: () => patrolTurnaround,
   performAttack: () => performAttack,
   performFleetReturn: () => performFleetReturn,
   performGift: () => performGift,
   performLaunch: () => performLaunch,
   performPlayerAction: () => performPlayerAction,
-  recallFleet: () => recallFleet
+  recallFleet: () => recallFleet,
+  recyclerCapacity: () => recyclerCapacity,
+  resolveSpyArrival: () => resolveSpyArrival
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -78,6 +84,18 @@ var DEFAULT_UNITS = [
     stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
     category: "attack",
     unlockTech: "tech9",
+    hangarSpace: 1
+  },
+  {
+    id: "sonde_espionnage",
+    name: "Sonde d'espionnage",
+    image: "/assets/units/sonde_espionnage.webp",
+    maxLevel: 10,
+    description: "Sonde furtive et tr\xE8s rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
+    cost: { scrap: 300, energy: 150 },
+    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech20",
     hangarSpace: 1
   },
   {
@@ -544,6 +562,7 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
   { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
   { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
+  { id: "tech20", nom: "Espionnage", desc: "D\xE9bloque la Sonde d'espionnage, puis l'am\xE9liore : chaque niveau rend tes rapports plus complets et prot\xE8ge mieux ta base des sondes adverses.", maxLevel: 10, baseCost: { scrap: 300, energy: 150, data: 50 }, baseTime: 60, effect: "unlock_next_level", prereq: { tech1: 2, tech3: 2 } },
   { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
   { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
   { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
@@ -1397,6 +1416,68 @@ function applyTechEffect(player, techId, level) {
   }
 }
 
+// src/game/debris.ts
+var DEBRIS_RULES = {
+  /** Part du coût (ferraille, énergie) des vaisseaux détruits. */
+  percent: 0.3,
+  /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
+  lifetimeHours: 48,
+  /** Capacité de ramassage d'un recycleur, par niveau. */
+  capacityPerLevel: 250,
+  recyclerUnitId: "drone_recuperateur"
+};
+function debrisFromLosses(...losses) {
+  var _a, _b, _c, _d;
+  let scrap = 0;
+  let energy = 0;
+  for (const map of losses) {
+    for (const [unitId, qty] of Object.entries(map != null ? map : {})) {
+      if (!(qty > 0) || !OFFENSIVE_UNITS.includes(unitId)) continue;
+      const cost = (_b = (_a = findUnit(unitId)) == null ? void 0 : _a.cost) != null ? _b : {};
+      scrap += ((_c = cost.scrap) != null ? _c : 0) * qty;
+      energy += ((_d = cost.energy) != null ? _d : 0) * qty;
+    }
+  }
+  return { scrap: Math.floor(scrap * DEBRIS_RULES.percent), energy: Math.floor(energy * DEBRIS_RULES.percent) };
+}
+function debrisTotal(d) {
+  var _a, _b;
+  return d ? ((_a = d.scrap) != null ? _a : 0) + ((_b = d.energy) != null ? _b : 0) : 0;
+}
+function mergeDebris(field, add, location, now) {
+  var _a, _b;
+  const alive = field && field.expiresAtMs > now ? field : null;
+  return {
+    id: location.uid,
+    locationPseudo: location.pseudo,
+    scrap: ((_a = alive == null ? void 0 : alive.scrap) != null ? _a : 0) + add.scrap,
+    energy: ((_b = alive == null ? void 0 : alive.energy) != null ? _b : 0) + add.energy,
+    expiresAtMs: now + DEBRIS_RULES.lifetimeHours * 36e5,
+    updatedAtMs: now
+  };
+}
+function recyclerCapacity(units, fleet) {
+  var _a, _b;
+  let capacity = 0;
+  for (const [unitId, qty] of Object.entries(fleet != null ? fleet : {})) {
+    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
+    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, (_b = (_a = units[unitId]) == null ? void 0 : _a.level) != null ? _b : 1);
+  }
+  return capacity;
+}
+function collectDebris(field, capacity) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const total = debrisTotal(field);
+  if (total <= 0 || capacity <= 0) return { taken: { scrap: 0, energy: 0 }, remaining: { scrap: (_a = field.scrap) != null ? _a : 0, energy: (_b = field.energy) != null ? _b : 0 } };
+  const ratio = Math.min(1, capacity / total);
+  const scrap = Math.floor(((_c = field.scrap) != null ? _c : 0) * ratio);
+  const energy = Math.min((_d = field.energy) != null ? _d : 0, Math.floor(capacity - scrap), Math.ceil(((_e = field.energy) != null ? _e : 0) * ratio));
+  return {
+    taken: { scrap, energy },
+    remaining: { scrap: ((_f = field.scrap) != null ? _f : 0) - scrap, energy: ((_g = field.energy) != null ? _g : 0) - energy }
+  };
+}
+
 // src/game/pvp.ts
 var PVP_RULES = {
   /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
@@ -1646,7 +1727,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_w = combat.loot) != null ? _w : {}
+    loot: (_w = combat.loot) != null ? _w : {},
+    debris: debrisFromLosses(combat.attackerLosses, combat.defenderLosses)
   };
 }
 
@@ -2135,6 +2217,153 @@ function galaxyCoords(uid) {
   };
 }
 
+// src/game/espionage.ts
+var SPY_RULES = {
+  /** Unité envoyée en mission d'espionnage. */
+  probeUnitId: "sonde_espionnage",
+  /** Durée fixe du trajet, en minutes. */
+  baseMinutes: 1,
+  /** Minutes par unité de distance, divisées par la vitesse des sondes. */
+  minutesPerDistance: 0.5,
+  /** Sentinelles à quai pour un point de contre-espionnage. */
+  sentinelsPerCounterLevel: 100,
+  sentinelUnitId: "sentinelle",
+  /** Chance de détection : base + parPoint × (contre-espionnage − Espionnage). */
+  detectionBase: 0.1,
+  detectionPerPoint: 0.1,
+  detectionMin: 0.05,
+  detectionMax: 0.9,
+  /** Score minimum de chaque palier du rapport. */
+  tierResources: 0,
+  tierForces: 2,
+  tierInfrastructure: 4,
+  tierActivity: 6
+};
+var SPY_TIER_LABELS = ["Brouill\xE9", "Ressources", "Flotte et d\xE9fenses", "B\xE2timents et technologies", "Files et flottes en vol"];
+function espionageLevel(player) {
+  var _a, _b;
+  const tech = (_a = UNIT_TO_TECH[SPY_RULES.probeUnitId]) != null ? _a : "tech20";
+  return Math.max(0, Number((_b = player.techLevels) == null ? void 0 : _b[tech]) || 0);
+}
+function counterEspionage(target) {
+  var _a, _b, _c;
+  const sentinels = (_c = (_b = (_a = target.units) == null ? void 0 : _a[SPY_RULES.sentinelUnitId]) == null ? void 0 : _b.count) != null ? _c : 0;
+  const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
+  return espionageLevel(target) + Math.floor(sentinels / per);
+}
+function spyScore(spyLevel, counter, probes) {
+  return spyLevel - counter + Math.log2(Math.max(1, probes));
+}
+function spyTier(score) {
+  const thresholds = [SPY_RULES.tierResources, SPY_RULES.tierForces, SPY_RULES.tierInfrastructure, SPY_RULES.tierActivity];
+  return thresholds.filter((t) => score >= t).length;
+}
+function detectionChance(spyLevel, counter) {
+  const raw = SPY_RULES.detectionBase + SPY_RULES.detectionPerPoint * (counter - spyLevel);
+  return Math.min(SPY_RULES.detectionMax, Math.max(SPY_RULES.detectionMin, raw));
+}
+function spyTravelSeconds(distance, speed) {
+  return Math.round((SPY_RULES.baseMinutes + distance * SPY_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+}
+function sectorLabel(uid) {
+  const c = galaxyCoords(uid);
+  return `${Math.round(c.x * 100)}\xB7${Math.round(c.y * 100)}`;
+}
+function unitsOf(target, ids) {
+  var _a;
+  const out = {};
+  for (const id of ids) {
+    const u = (_a = target.units) == null ? void 0 : _a[id];
+    if (u && (u.count > 0 || u.level > 0)) out[id] = { count: u.count, level: u.level };
+  }
+  return out;
+}
+function buildSpyReportData(target, queues, targetFleets, tier, now) {
+  var _a, _b, _c, _d, _e, _f;
+  const data = {};
+  if (tier >= 1) {
+    data.resources = Object.fromEntries(
+      Object.entries((_a = target.resources) != null ? _a : {}).map(([res, amount]) => [res, Math.floor(amount != null ? amount : 0)])
+    );
+  }
+  if (tier >= 2) {
+    data.units = unitsOf(target, OFFENSIVE_UNITS);
+    data.defenses = unitsOf(target, DEFENSIVE_UNITS);
+  }
+  if (tier >= 3) {
+    data.buildings = Object.fromEntries(Object.entries((_b = target.buildings) != null ? _b : {}).map(([id, b]) => {
+      var _a2;
+      return [id, (b == null ? void 0 : b.unlocked) === false ? 0 : (_a2 = b == null ? void 0 : b.level) != null ? _a2 : 0];
+    }));
+    data.techLevels = __spreadValues({}, (_c = target.techLevels) != null ? _c : {});
+  }
+  if (tier >= 4) {
+    data.queues = {
+      buildings: Object.entries((_d = queues.buildingUpgrades) != null ? _d : {}).filter(([, u]) => u && u.endTime > now).map(([id, u]) => ({ id, endTime: u.endTime })),
+      researches: ((_e = queues.activeResearches) != null ? _e : []).map((r) => ({ id: r.id, endTime: r.endTime })),
+      units: Object.values((_f = queues.unitQueues) != null ? _f : {}).flat().map((q) => {
+        var _a2;
+        return { id: q.unitId, endTime: (_a2 = q.endTime) != null ? _a2 : null };
+      })
+    };
+    data.fleets = targetFleets.filter((f) => f.status !== "done").map((f) => {
+      var _a2;
+      return {
+        mission: f.mission,
+        targetPseudo: f.targetPseudo,
+        units: f.units,
+        status: f.status,
+        at: f.status === "outbound" ? f.arriveAtMs : (_a2 = f.returnAtMs) != null ? _a2 : f.arriveAtMs
+      };
+    });
+  }
+  return data;
+}
+function resolveSpyArrival(input) {
+  var _a;
+  const { now, probes } = input;
+  const spy = flushState(__spreadProps(__spreadValues({}, input.spy), { buildings: withMissingBuildings(input.spy.buildings, input.spy.resources) }), input.spyQueues, now).player;
+  const flushed = flushState(__spreadProps(__spreadValues({}, input.target), { buildings: withMissingBuildings(input.target.buildings, input.target.resources) }), input.targetQueues, now);
+  const target = flushed.player;
+  const level = espionageLevel(spy);
+  const counter = counterEspionage(target);
+  const score = spyScore(level, counter, probes);
+  const tier = spyTier(score);
+  const detected = ((_a = input.random) != null ? _a : Math.random)() < detectionChance(level, counter);
+  const report = {
+    spyUid: spy.uid,
+    spyPseudo: spy.pseudo,
+    targetUid: target.uid,
+    targetPseudo: target.pseudo,
+    timestamp: now,
+    targetProcessed: true,
+    probes,
+    score: Math.round(score * 100) / 100,
+    tier,
+    detected,
+    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now)
+  };
+  const spyNotifications = [
+    {
+      kind: "spy",
+      title: detected ? "Sondes rep\xE9r\xE9es et abattues" : "Rapport d'espionnage re\xE7u",
+      message: `${target.pseudo} : ${SPY_TIER_LABELS[tier].toLowerCase()}${detected ? ". Tes sondes n'ont pas surv\xE9cu." : "."}`,
+      createdAtMs: now,
+      read: false
+    }
+  ];
+  const targetNotifications = detected ? [
+    {
+      kind: "spy-detected",
+      title: "Espionnage d\xE9tect\xE9 !",
+      message: `${spy.pseudo} (secteur ${sectorLabel(spy.uid)}) t'a envoy\xE9 ${formatInt(probes)} sonde${probes > 1 ? "s" : ""} : abattue${probes > 1 ? "s" : ""}.`,
+      createdAtMs: now,
+      read: false
+    }
+  ] : [];
+  return { report, detected, spyNotifications, targetNotifications };
+}
+
 // src/game/fleets.ts
 var FLEET_RULES = {
   /** Durée fixe de tout trajet (décollage, approche), en minutes. */
@@ -2143,6 +2372,10 @@ var FLEET_RULES = {
   minutesPerDistance: 3,
   /** Côté de la carte de la galaxie (distance max ≈ 141). */
   mapSize: 100
+};
+var PATROL_RULES = {
+  minMinutes: 30,
+  maxMinutes: 480
 };
 function mapPosition(uid) {
   const c = galaxyCoords(uid);
@@ -2243,24 +2476,122 @@ function completeFleetReturn(owner, fleet, now) {
     owner.resources[res] = ((_d = owner.resources[res]) != null ? _d : 0) + (amount != null ? amount : 0);
   }
   const lootTotal = Object.values((_e = fleet.loot) != null ? _e : {}).reduce((a, b) => a + (b != null ? b : 0), 0);
+  return { owner, notifications: [__spreadProps(__spreadValues({ kind: "fleet" }, returnMessage(fleet, lootTotal)), { createdAtMs: now, read: false })] };
+}
+function returnMessage(fleet, lootTotal) {
+  switch (fleet.mission) {
+    case "patrol":
+      return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
+    case "spy":
+      return { title: "Sondes rentr\xE9es", message: `Tes sondes envoy\xE9es vers ${fleet.targetPseudo} sont de retour.` };
+    case "recycle":
+      return fleet.recalled ? { title: "Recycleurs rentr\xE9s", message: "Tes recycleurs rappel\xE9s sont de retour, soute vide." } : {
+        title: "Recyclage termin\xE9",
+        message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources r\xE9cup\xE9r\xE9es dans les d\xE9bris de ${fleet.targetPseudo}.` : `Le champ de d\xE9bris de ${fleet.targetPseudo} \xE9tait d\xE9j\xE0 vide.`
+      };
+    default:
+      return fleet.recalled ? { title: "Flotte rappel\xE9e rentr\xE9e", message: `Ta flotte envoy\xE9e vers ${fleet.targetPseudo} est de retour, sans combat.` } : {
+        title: "Flotte rentr\xE9e \xE0 la base",
+        message: `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`
+      };
+  }
+}
+function performLaunch(req) {
+  var _a, _b, _c, _d;
+  const mission = (_a = req.mission) != null ? _a : "attack";
+  const { now, target } = req;
+  if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
+  if (mission === "attack" && req.owner.uid === target.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-m\xEAme !");
+  if (mission === "spy" && req.owner.uid === target.uid) throw new GameActionError("Tu ne peux pas t'espionner toi-m\xEAme.");
+  const flushed = flushState(__spreadProps(__spreadValues({}, req.owner), { buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }), req.ownerQueues, now);
+  const owner = flushed.player;
+  let out;
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target, fleet: req.fleet, lastAttackOnTargetMs: (_b = req.lastAttackOnTargetMs) != null ? _b : null });
+  else if (mission === "spy") out = launchSpy(owner, target, req.fleet, now);
+  else if (mission === "recycle") out = launchRecycle(owner, (_c = req.debris) != null ? _c : null, req.fleet, now);
+  else if (mission === "patrol") out = launchPatrol(owner, req.fleet, (_d = req.patrolMinutes) != null ? _d : 0, now);
+  else throw new GameActionError("Mission inconnue.");
+  return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
+}
+function takeUnits(owner, raw, allowed, wrongUnit) {
+  var _a, _b;
+  const units = {};
+  for (const [unitId, value] of Object.entries(raw != null ? raw : {})) {
+    const qty = Math.floor(Number(value));
+    if (!(qty > 0)) continue;
+    if (!allowed(unitId)) throw new GameActionError(wrongUnit);
+    if (((_b = (_a = owner.units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
+    units[unitId] = qty;
+  }
+  if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
+  for (const [unitId, qty] of Object.entries(units)) owner.units[unitId].count -= qty;
+  return units;
+}
+function newFleet(owner, target, mission, units, now, arriveAtMs) {
   return {
-    owner,
-    notifications: [
-      {
-        kind: "fleet",
-        title: fleet.recalled ? "Flotte rappel\xE9e rentr\xE9e" : "Flotte rentr\xE9e \xE0 la base",
-        message: fleet.recalled ? `Ta flotte envoy\xE9e vers ${fleet.targetPseudo} est de retour, sans combat.` : `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`,
-        createdAtMs: now,
-        read: false
-      }
-    ]
+    ownerUid: owner.uid,
+    ownerPseudo: owner.pseudo,
+    targetUid: target.uid,
+    targetPseudo: target.pseudo,
+    mission,
+    units,
+    departAtMs: now,
+    arriveAtMs,
+    returnAtMs: null,
+    status: "outbound",
+    loot: null,
+    reportId: "",
+    outcome: "",
+    recalled: false
   };
 }
-function performLaunch(attackerIn, attackerQueues, defender, rawFleet, lastAttackOnTargetMs, now) {
-  if (attackerIn.uid === defender.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-m\xEAme !");
-  const flushed = flushState(__spreadProps(__spreadValues({}, attackerIn), { buildings: withMissingBuildings(attackerIn.buildings, attackerIn.resources) }), attackerQueues, now);
-  const out = launchFleet({ now, attacker: flushed.player, defender, fleet: rawFleet, lastAttackOnTargetMs });
-  return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
+function launchSpy(owner, target, raw, now) {
+  const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed) * 1e3;
+  return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
+}
+function launchRecycle(owner, field, raw, now) {
+  if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de d\xE9bris n'existe plus.");
+  const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones r\xE9cup\xE9rateurs peuvent recycler.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed) * 1e3;
+  return {
+    attacker: owner,
+    fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
+    defenderNotifications: []
+  };
+}
+function patrolEnergyCost(units, fleet, minutes) {
+  var _a, _b;
+  const selected = {};
+  for (const [id, qty] of Object.entries(fleet)) selected[id] = { level: (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 1, count: qty };
+  return Math.ceil(getFleetUpkeep(selected) * minutes * 60);
+}
+function launchPatrol(owner, raw, minutes, now) {
+  var _a, _b;
+  const duration = Math.round(Number(minutes));
+  if (!(duration >= PATROL_RULES.minMinutes && duration <= PATROL_RULES.maxMinutes)) {
+    throw new GameActionError(`La patrouille dure entre ${PATROL_RULES.minMinutes} min et ${Math.round(PATROL_RULES.maxMinutes / 60)} h.`);
+  }
+  const requested = {};
+  for (const [id, v] of Object.entries(raw != null ? raw : {})) {
+    const qty = Math.floor(Number(v));
+    if (qty > 0) requested[id] = qty;
+  }
+  const cost = patrolEnergyCost(owner.units, requested, duration);
+  if (((_a = owner.resources.energy) != null ? _a : 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} \xE9nergie pour l'entretien de la patrouille.`);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent partir en patrouille.");
+  owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
+  const arriveAtMs = now + duration * 6e4 / 2;
+  return {
+    attacker: owner,
+    fleet: newFleet(owner, { uid: owner.uid, pseudo: "Patrouille" }, "patrol", units, now, arriveAtMs),
+    defenderNotifications: []
+  };
+}
+function patrolTurnaround(fleet) {
+  return __spreadProps(__spreadValues({}, fleet), { status: "returning", returnAtMs: fleet.departAtMs + 2 * (fleet.arriveAtMs - fleet.departAtMs) });
 }
 function performFleetReturn(ownerIn, ownerQueues, fleet, now) {
   const flushed = flushState(__spreadProps(__spreadValues({}, ownerIn), { buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }), ownerQueues, now);
@@ -2294,18 +2625,21 @@ var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
 var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
+var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
+var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
+var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -2316,7 +2650,10 @@ function applyGameContent(overrides) {
       pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_f = (_e = overrides.rules) == null ? void 0 : _e.pvp) != null ? _f : {}),
       combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_h = (_g = overrides.rules) == null ? void 0 : _g.combat) != null ? _h : {}),
       economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_j = (_i = overrides.rules) == null ? void 0 : _i.economy) != null ? _j : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_l = (_k = overrides.rules) == null ? void 0 : _k.fleets) != null ? _l : {})
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_l = (_k = overrides.rules) == null ? void 0 : _k.fleets) != null ? _l : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_n = (_m = overrides.rules) == null ? void 0 : _m.spy) != null ? _n : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_p = (_o = overrides.rules) == null ? void 0 : _o.debris) != null ? _p : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_r = (_q = overrides.rules) == null ? void 0 : _q.patrol) != null ? _r : {})
     }
   };
   setBuildings(content.buildings);
@@ -2327,6 +2664,9 @@ function applyGameContent(overrides) {
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
+  Object.assign(SPY_RULES, content.rules.spy);
+  Object.assign(DEBRIS_RULES, content.rules.debris);
+  Object.assign(PATROL_RULES, content.rules.patrol);
   current = content;
   return content;
 }

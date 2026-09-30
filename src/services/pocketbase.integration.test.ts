@@ -41,7 +41,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     pb.authStore.clear();
     await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN!.email, PB_TEST_ADMIN!.password);
     const existing = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
-    const fast = { ...((existing?.data as object) ?? {}), fleets: { baseMinutes: 0.03, minutesPerDistance: 0.001 } };
+    const fast = {
+      ...((existing?.data as object) ?? {}),
+      fleets: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
+      spy: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
+    };
     if (existing) {
       savedRules = { id: existing.id, data: existing.data };
       await admin.collection("game_config").update(existing.id, { data: fast });
@@ -57,6 +61,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+  /** Fiche complète d'un joueur, lue par le superuser (les joueurs ne
+   *  voient plus que leur propre fiche depuis la v1.7). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- enregistrement brut pour les assertions
+  const snap = async (id: string): Promise<any> =>
+    admin.collection("players").getOne(id).then((r) => ({ ...r, uid: r.id })).catch(() => null);
+
   /** Envoie une flotte, attend son arrivée et renvoie la flotte + le rapport. */
   async function attackAndResolve(targetUid: string, fleet: Record<string, number>) {
     const sent = await ps.sendFleet(targetUid, fleet);
@@ -71,7 +81,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   it("registers two players and the server creates their profiles", async () => {
     aId = (await registerPlayer(A.pseudo, A.email, A.pw)).id;
-    const p = await ps.fetchPlayerSnapshot(aId);
+    const p = await snap(aId);
     expect(p?.pseudo).toBe(A.pseudo);
     expect(p?.uid).toBe(aId);
     expect(p?.buildings.extracteur_ferraille.unlocked).toBe(true);
@@ -116,7 +126,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       ps.tradeResources(aId, "scrap", "energy", 100),
     ]);
     expect(results[3]).toBeGreaterThan(0);
-    const p = await ps.fetchPlayerSnapshot(aId);
+    const p = await snap(aId);
     expect(p?.buildings.reacteur_instable.unlocked).toBe(true);
     expect(p?.playtimeSeconds).toBeGreaterThan(0);
     expect(p?.playtimeSeconds).toBeLessThanOrEqual(5);
@@ -129,9 +139,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   it("generates daily contracts on the server, refuses early claims and forged progress", async () => {
     await ps.syncPlayer(aId);
-    const p = await ps.fetchPlayerSnapshot(aId);
+    const p = await snap(aId);
     expect(p?.contracts?.items).toHaveLength(3);
-    const open = p!.contracts!.items.find((c) => !c.claimed && c.progress < c.target);
+    const open = p!.contracts!.items.find((c: { claimed: boolean; progress: number; target: number; id: string }) => !c.claimed && c.progress < c.target);
     if (open) await expect(ps.claimContract(open.id)).rejects.toThrow(/pas encore/);
     await expect(pb.collection("players").update(aId, { contracts: { ...p!.contracts, items: [] } })).rejects.toBeTruthy();
   });
@@ -140,8 +150,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(pb.collection("players").update(bId, { pseudo: "pirate" })).rejects.toMatchObject({ status: 404 });
     await expect(pb.collection("queues").getOne(bId)).rejects.toMatchObject({ status: 404 });
     await expect(pb.collection("players").create({ id: "aaaaaaaaaaaaaaa", pseudo: "x", resources: {}, buildings: {} })).rejects.toBeTruthy();
-    const other = await ps.fetchPlayerSnapshot(bId); // lecture autorisée (espionnage, classement)
-    expect(other?.pseudo).toBe(B.pseudo);
+    // v1.7 : la fiche complète d'un autre joueur est privée, seule sa fiche
+    // publique (profiles) est lisible.
+    await expect(pb.collection("players").getOne(bId)).rejects.toMatchObject({ status: 404 });
+    expect((await pb.collection("players").getFullList()).map((r) => r.id)).toEqual([aId]);
+    const profile = await pb.collection("profiles").getOne(bId);
+    expect(profile.pseudo).toBe(B.pseudo);
+    expect(profile.resources).toBeUndefined();
+    await expect(pb.collection("profiles").update(bId, { xp: 999999 })).rejects.toBeTruthy();
+    await expect(pb.collection("spy_reports").create({ spyUid: aId, targetUid: bId, targetProcessed: false })).rejects.toBeTruthy();
   });
 
   it("creates an alliance, chat is members-only", async () => {
@@ -149,7 +166,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await al.sendAllianceMessage(allianceId, aId, A.pseudo, "Bienvenue");
     // allianceId renseigné par le joueur, pas écrasé par une action de jeu
     await ps.syncPlayer(aId);
-    expect((await ps.fetchPlayerSnapshot(aId))?.allianceId).toBe(allianceId);
+    expect((await snap(aId))?.allianceId).toBe(allianceId);
     logout();
     await loginPlayer(B.pseudo, B.pw);
     const msgs = await pb.collection("alliance_messages").getFullList({ filter: `allianceId="${allianceId}"` });
@@ -163,11 +180,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   it("gifts are transferred immediately by the server", async () => {
     await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 } });
-    const before = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
+    const before = (await snap(aId))!.resources.scrap;
     await ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 1000 } });
-    const b = (await ps.fetchPlayerSnapshot(bId))!;
+    const b = (await snap(bId))!;
     expect(b.resources.scrap).toBeLessThan(5000 - 999 + 100); // débité (hors production des dernières secondes)
-    const after = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
+    const after = (await snap(aId))!.resources.scrap;
     expect(after - before).toBeGreaterThanOrEqual(1000);
     await expect(
       ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 10_000_000 } }),
@@ -178,10 +195,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const gift = await admin.collection("resource_gifts").create({
       fromUid: aId, fromPseudo: A.pseudo, toUid: bId, toPseudo: B.pseudo, resources: { scrap: 700 }, timestamp: Date.now(), claimed: false,
     });
-    const before = (await ps.fetchPlayerSnapshot(bId))!.resources.scrap;
+    const before = (await snap(bId))!.resources.scrap;
     await Promise.all([ps.claimResourceGift(bId, gift.id), ps.claimResourceGift(bId, gift.id)]);
     await ps.claimResourceGift(bId, gift.id);
-    const after = (await ps.fetchPlayerSnapshot(bId))!.resources.scrap;
+    const after = (await snap(bId))!.resources.scrap;
     expect(after - before).toBeGreaterThanOrEqual(700);
     expect(after - before).toBeLessThan(1400);
   });
@@ -197,7 +214,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     try {
       const sent = await ps.sendFleet(aId, { chasseur: 4 });
       fleetId = sent.id;
-      expect((await ps.fetchPlayerSnapshot(bId))!.units.chasseur.count).toBe(0);
+      expect((await snap(bId))!.units.chasseur.count).toBe(0);
       const back = await ps.recallFleet(sent.id);
       expect(back.status).toBe("returning");
       await expect(ps.recallFleet(sent.id)).rejects.toThrow(/plus être rappelée/);
@@ -227,18 +244,18 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(ps.sendFleet(bId, { chasseur: 5 })).rejects.toThrow(/débute/);
 
     await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO() });
-    const bBefore = (await ps.fetchPlayerSnapshot(bId))!;
+    const bBefore = (await snap(bId))!;
 
     // La flotte part : les vaisseaux quittent la base, B la voit arriver.
     const { sent, landed, report: res } = await attackAndResolve(bId, { chasseur: 5 });
     expect(sent.status).toBe("outbound");
     expect(res.outcome).toBe("attacker_win");
     expect(res.attackerXpDelta).toBeGreaterThan(0);
-    expect((await ps.fetchPlayerSnapshot(aId))?.victories).toBe(1);
+    expect((await snap(aId))?.victories).toBe(1);
     expect(landed.status).toBe("returning");
 
     // Le défenseur est mis à jour par le serveur, sans attendre sa connexion.
-    const bAfter = (await ps.fetchPlayerSnapshot(bId))!;
+    const bAfter = (await snap(bId))!;
     expect(bAfter.defeats).toBe(1);
     expect(bAfter.lastDefeatAtMs).toBeGreaterThan(0);
     // Butin limité par la cargaison des 5 chasseurs, retiré au défenseur.
@@ -250,10 +267,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(ps.sendFleet(bId, { chasseur: 1 })).rejects.toThrow(/bouclier|récemment/);
 
     // Retour : survivants et butin rejoignent A.
-    const scrapBefore = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
+    const scrapBefore = (await snap(aId))!.resources.scrap;
     await wait(Math.max(0, landed.returnAtMs - Date.now()) + 400);
     await ps.syncPlayer("");
-    const aBack = (await ps.fetchPlayerSnapshot(aId))!;
+    const aBack = (await snap(aId))!;
     expect(aBack.units.chasseur.count).toBe(5 + landed.units.chasseur);
     expect(aBack.resources.scrap).toBeGreaterThanOrEqual(scrapBefore + ((res.loot as Record<string, number>)?.scrap ?? 0));
     expect((await ps.fetchMyRecentAttacks(aId, Date.now() - 3600 * 1000))[bId]).toBeGreaterThan(0);
@@ -270,7 +287,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const r = await Promise.all([ps.processBattleReportForDefender(bId, rep.id), ps.processBattleReportForDefender(bId, rep.id)]);
     expect(r.filter(Boolean).length).toBe(1);
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
-    expect((await ps.fetchPlayerSnapshot(bId))!.defeats).toBe(1);
+    expect((await snap(bId))!.defeats).toBe(1);
     const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="combat-defender"` });
     expect(notifs.length).toBe(1);
   }, 30_000);
@@ -280,10 +297,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now() - 5000,
       outcome: "defender_win", defenderLosses: {}, loot: null, defenderProcessed: false, defenderXpDelta: 3,
     });
-    const before = (await ps.fetchPlayerSnapshot(bId))!;
+    const before = (await snap(bId))!;
     const seen = await ps.processBattleReportForDefender(bId, rep.id);
     expect(seen?.id).toBe(rep.id);
-    const after = (await ps.fetchPlayerSnapshot(bId))!;
+    const after = (await snap(bId))!;
     expect(after.victories).toBe(before.victories + 1);
     expect(after.xp).toBe(before.xp + 3);
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
@@ -317,6 +334,88 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const list = await ps.listAllPlayers();
     expect(list.some((p) => p.uid === aId)).toBe(true);
   });
+
+  it("v1.7 spy mission: tiered report, hidden from the target", async () => {
+    // Connecté en B.
+    await admin.collection("players").update(bId, { units: { sonde_espionnage: { level: 5, count: 4 } }, techLevels: { tech20: 5 } });
+    await admin.collection("players").update(aId, { units: {}, techLevels: {} });
+    await expect(ps.sendFleet(aId, { chasseur: 1 }, "spy")).rejects.toThrow(/sondes|assez/);
+    const sent = await ps.sendFleet(aId, { sonde_espionnage: 4 }, "spy");
+    expect(sent.mission).toBe("spy");
+    await wait(Math.max(0, sent.arriveAtMs - Date.now()) + 400);
+    await ps.syncPlayer("");
+    const landed = await pb.collection("fleets").getOne(sent.id);
+    expect(landed.reportId).toBeTruthy();
+    const report = await ps.fetchSpyReport(landed.reportId);
+    // Score = 5 − 0 + log2(4) = 7 : rapport complet.
+    expect(report?.tier).toBe(4);
+    expect(report?.data?.resources).toBeDefined();
+    expect(report?.data?.buildings).toBeDefined();
+    expect(Array.isArray(report?.data?.fleets)).toBe(true);
+    expect((await ps.fetchLatestSpyReport(bId, aId))?.id).toBe(report?.id);
+    // Espionner ne déclenche pas le délai entre deux attaques.
+    expect((await ps.fetchMyRecentAttacks(bId, Date.now() - 60_000))[aId] ?? 0).toBeLessThan(sent.departAtMs);
+    if (!report?.detected) {
+      logout();
+      await loginPlayer(A.pseudo, A.pw);
+      await expect(pb.collection("spy_reports").getOne(report!.id)).rejects.toMatchObject({ status: 404 });
+      await expect(pb.collection("fleets").getOne(sent.id)).rejects.toMatchObject({ status: 404 });
+      logout();
+      await loginPlayer(B.pseudo, B.pw);
+    }
+    await admin.collection("fleets").delete(sent.id);
+  }, 30_000);
+
+  it("v1.7 debris: ships destroyed in combat leave a field, recyclers collect it", async () => {
+    // Connecté en B. On efface le délai B → A laissé par le test précédent.
+    for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}"` })) await admin.collection("battle_reports").delete(r.id);
+    for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+    await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), units: { fregate: { level: 1, count: 200 } } });
+    await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO(), units: { chasseur: { level: 1, count: 40 }, drone_recuperateur: { level: 1, count: 3 } } });
+    const { report } = await attackAndResolve(aId, { chasseur: 40 });
+    const lost = { ...(report.attackerLosses ?? {}), ...(report.defenderLosses ?? {}) };
+    const destroyed = Object.values(lost as Record<string, number>).some((n) => n > 0);
+    const field = await pb.collection("debris_fields").getOne(aId).catch(() => null);
+    if (destroyed) {
+      expect(field?.scrap).toBeGreaterThan(0);
+      expect(field?.expiresAtMs).toBeGreaterThan(Date.now() + 47 * 3600_000);
+    }
+    await expect(pb.collection("debris_fields").update(aId, { scrap: 1 })).rejects.toBeTruthy();
+
+    // Champ connu pour un ramassage déterministe : 2 drones niv. 1 = 500.
+    if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500 });
+    else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
+    await expect(ps.sendFleet(aId, { chasseur: 1 }, "recycle")).rejects.toThrow(/Drones|assez/);
+    const sent = await ps.sendFleet(aId, { drone_recuperateur: 2 }, "recycle");
+    await wait(Math.max(0, sent.arriveAtMs - Date.now()) + 400);
+    await ps.syncPlayer("");
+    const landed = await pb.collection("fleets").getOne(sent.id);
+    expect(landed.loot).toEqual({ scrap: 333, energy: 167 });
+    const left = await admin.collection("debris_fields").getOne(aId);
+    expect([left.scrap, left.energy]).toEqual([667, 333]);
+    const before = (await snap(bId)).resources.scrap;
+    await wait(Math.max(0, landed.returnAtMs - Date.now()) + 400);
+    await ps.syncPlayer("");
+    const back = await snap(bId);
+    expect(back.resources.scrap).toBeGreaterThanOrEqual(before + 333);
+    expect(back.units.drone_recuperateur.count).toBe(3);
+    await admin.collection("debris_fields").delete(aId);
+  }, 30_000);
+
+  it("v1.7 patrol: ships leave the base, upkeep prepaid, recall halfway", async () => {
+    await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } }, resources: RICH });
+    await expect(ps.sendFleet(bId, { chasseur: 10 }, "patrol", { minutes: 10 })).rejects.toThrow(/entre/);
+    const energyBefore = (await snap(bId)).resources.energy;
+    const sent = await ps.sendFleet(aId, { chasseur: 10 }, "patrol", { minutes: 30 }); // la cible est ignorée : patrouille chez soi
+    expect(sent.targetUid).toBe(bId);
+    expect(sent.arriveAtMs - sent.departAtMs).toBe(15 * 60_000);
+    const during = await snap(bId);
+    expect(during.units.chasseur.count).toBe(0);
+    expect(during.resources.energy).toBeLessThan(energyBefore);
+    const back = await ps.recallFleet(sent.id);
+    expect(back.status).toBe("returning");
+    await admin.collection("fleets").delete(sent.id);
+  }, 30_000);
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

@@ -5,7 +5,9 @@ import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions"
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
-import { FLEET_RULES } from "@/game/fleets";
+import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
+import { SPY_RULES } from "@/game/espionage";
+import { DEBRIS_RULES } from "@/game/debris";
 import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
@@ -24,6 +26,9 @@ export interface GameRules {
   combat: typeof COMBAT_RULES;
   economy: typeof ECONOMY_RULES;
   fleets: typeof FLEET_RULES;
+  spy: typeof SPY_RULES;
+  debris: typeof DEBRIS_RULES;
+  patrol: typeof PATROL_RULES;
 }
 
 export interface GameContent {
@@ -41,6 +46,9 @@ const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
+const DEFAULT_SPY_RULES = { ...SPY_RULES };
+const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
+const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -49,7 +57,7 @@ export function defaultGameContent(): GameContent {
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES },
   });
 }
 
@@ -73,6 +81,9 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
       fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
+      spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
+      debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
+      patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -83,6 +94,9 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
+  Object.assign(SPY_RULES, content.rules.spy);
+  Object.assign(DEBRIS_RULES, content.rules.debris);
+  Object.assign(PATROL_RULES, content.rules.patrol);
   current = content;
   return content;
 }

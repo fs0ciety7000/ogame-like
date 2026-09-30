@@ -147,6 +147,116 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, minutesPerDistance: v ?? 0 } }))}
           />
         </Section>
+        <Section title="Espionnage">
+          <NumberField
+            label="Trajet des sondes : durée fixe (min)"
+            value={rules.spy.baseMinutes}
+            min={0}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, baseMinutes: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Trajet des sondes : minutes par distance (÷ vitesse)"
+            value={rules.spy.minutesPerDistance}
+            min={0}
+            step={0.1}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, minutesPerDistance: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Sentinelles à quai pour +1 contre-espionnage"
+            value={rules.spy.sentinelsPerCounterLevel}
+            min={1}
+            step={10}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, sentinelsPerCounterLevel: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Détection de base (0,1 = 10 %)"
+            value={rules.spy.detectionBase}
+            min={0}
+            step={0.05}
+            hint="Score = Espionnage − contre-espionnage + log2(sondes)."
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, detectionBase: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Détection par point de contre-espionnage en plus"
+            value={rules.spy.detectionPerPoint}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, detectionPerPoint: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Détection minimale"
+            value={rules.spy.detectionMin}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, detectionMin: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Détection maximale"
+            value={rules.spy.detectionMax}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, detectionMax: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Score pour voir flotte et défenses"
+            value={rules.spy.tierForces}
+            min={0}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, tierForces: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Score pour voir bâtiments et technologies"
+            value={rules.spy.tierInfrastructure}
+            min={0}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, tierInfrastructure: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Score pour voir files et flottes en vol"
+            value={rules.spy.tierActivity}
+            min={0}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, spy: { ...r.spy, tierActivity: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Débris et patrouille">
+          <NumberField
+            label="Débris : part du coût des vaisseaux détruits (0,3 = 30 %)"
+            value={rules.debris.percent}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, debris: { ...r.debris, percent: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée de vie d'un champ de débris (h)"
+            value={rules.debris.lifetimeHours}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, debris: { ...r.debris, lifetimeHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Capacité d'un Drone récupérateur par niveau"
+            value={rules.debris.capacityPerLevel}
+            min={0}
+            step={10}
+            onChange={(v) => setRules((r) => ({ ...r, debris: { ...r.debris, capacityPerLevel: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Patrouille : durée minimale (min)"
+            value={rules.patrol.minMinutes}
+            min={0}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, patrol: { ...r.patrol, minMinutes: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Patrouille : durée maximale (min)"
+            value={rules.patrol.maxMinutes}
+            min={0}
+            step={30}
+            onChange={(v) => setRules((r) => ({ ...r, patrol: { ...r.patrol, maxMinutes: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Économie">
           <NumberField
             label="Entretien : énergie/s par place de hangar (attaque)"

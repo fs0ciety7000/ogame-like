@@ -27,7 +27,7 @@ export function PlayersPage() {
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<LeaderboardMode>("total");
   const uid = useAuthStore((s) => s.user?.uid);
-  const [spyTarget, setSpyTarget] = useState<string | null>(null);
+  const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
 
@@ -183,7 +183,7 @@ export function PlayersPage() {
                     size="icon"
                     title="Espionner"
                     className="group relative"
-                    onClick={() => setSpyTarget(p.uid)}
+                    onClick={() => setSpyTarget({ uid: p.uid, pseudo: p.pseudo })}
                   >
                     <Eye className="h-4 w-4" />
                     <TargetReticle color="var(--color-cyan-glow)" />
@@ -217,7 +217,7 @@ export function PlayersPage() {
         </Card>
       )}
 
-      <SpyModal uid={spyTarget} onClose={() => setSpyTarget(null)} />
+      <SpyModal target={spyTarget} onClose={() => setSpyTarget(null)} />
       <AttackModal target={attackTarget} onClose={() => setAttackTarget(null)} />
       <TradeModal target={tradeTarget} onClose={() => setTradeTarget(null)} />
     </div>
