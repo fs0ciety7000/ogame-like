@@ -48,10 +48,17 @@ var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
+  GameActionError: () => GameActionError,
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   applyGameContent: () => applyGameContent,
-  performAttack: () => performAttack
+  applyLegacyBattleReport: () => applyLegacyBattleReport,
+  applyLegacyGift: () => applyLegacyGift,
+  defaultQueues: () => defaultQueues,
+  newPlayerProfile: () => newPlayerProfile,
+  performAttack: () => performAttack,
+  performGift: () => performGift,
+  performPlayerAction: () => performPlayerAction
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -226,23 +233,23 @@ var TECH_EFFECT_DEFAULTS = {
 var DEFAULT_TECHNOLOGIES = [
   { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
   { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
-  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
+  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
   { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
   { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
   { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
   { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
-  { id: "tech11", nom: "Cargo", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
-  { id: "tech10", nom: "Fr\xE9gate", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
-  { id: "tech14", nom: "Roquette", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
+  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
+  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
+  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
   { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
   { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
-  { id: "tech12", nom: "Sentinelle", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
-  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
-  { id: "tech13", nom: "Chasseur", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
-  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
-  { id: "tech16", nom: "Canon plasma", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
-  { id: "tech18", nom: "Intercepteur", desc: "Augmente la puissance d'attaque de l'unit\xE9.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  { id: "tech19", nom: "\xC9toile noire", desc: "Arme ultime. Capacit\xE9 de destruction massive.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
+  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
+  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
+  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
+  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
+  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
+  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
 function setTechnologies(defs) {
@@ -257,16 +264,60 @@ function techBonus(techLevels, effect) {
   }
   return total;
 }
+var MAX_CONCURRENT_RESEARCH = 4;
+var COST_GROWTH = 2.7;
+var TIME_GROWTH = 1.67;
 function findTech(id) {
   return TECHNOLOGIES.find((t) => t.id === id);
+}
+function getTechCost(tech, level) {
+  var _a;
+  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
+  const factor = Math.pow(growth, level - 1);
+  const cost = {};
+  for (const [res, amount] of Object.entries(tech.baseCost)) {
+    cost[res] = Math.floor(amount * factor);
+  }
+  return cost;
+}
+function getTechTime(tech, level) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
+}
+function checkPrereqs(tech, levels) {
+  const entries = Object.entries(tech.prereq);
+  if (entries.length === 0) return { valid: true, list: [] };
+  let allValid = true;
+  const list = entries.map(([reqId, reqLevel]) => {
+    var _a, _b;
+    const current2 = (_a = levels[reqId]) != null ? _a : 0;
+    const valide = current2 >= reqLevel;
+    if (!valide) allValid = false;
+    const reqTech = findTech(reqId);
+    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
+  });
+  return { valid: allValid, list };
 }
 
 // src/game/combat.ts
 var COMBAT_RULES = {
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
-  lootPercent: 0.08
+  lootPercent: 0.08,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
+  lootPercentCommon: 0.1
 };
-var LOOT_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
+function fleetCargoCapacity(units, fleet) {
+  var _a, _b, _c;
+  let total = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const def = findUnit(id);
+    const level = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def || qty <= 0 || level <= 0) continue;
+    total += ((_c = def.stats.cargo) != null ? _c : 0) * level * qty;
+  }
+  return total;
+}
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
@@ -303,6 +354,7 @@ function computeFullPower(units, techLevels, idList, stats) {
   return total;
 }
 function resolveCombat(params) {
+  var _a, _b, _c, _d, _e;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]);
   const defenderPower = computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]);
@@ -342,8 +394,8 @@ function resolveCombat(params) {
   const defenderLosses = {};
   const defenderRecovered = {};
   DEFENSIVE_UNITS.forEach((unitId) => {
-    var _a, _b;
-    const count = (_b = (_a = defenderUnits[unitId]) == null ? void 0 : _a.count) != null ? _b : 0;
+    var _a2, _b2;
+    const count = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
     const rawLost = Math.floor(count * defenderLossPct);
     const recovered = Math.floor(rawLost * defenderRepairPct);
     const effectiveLost = rawLost - recovered;
@@ -352,14 +404,35 @@ function resolveCombat(params) {
       defenderRecovered[unitId] = recovered;
     }
   });
+  const survivors = {};
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_a = attackerLosses[unitId]) != null ? _a : 0));
+  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
   let loot = null;
   if (outcome === "attacker_win") {
+    const wanted = {};
+    let total = 0;
+    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
+      const pct = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const amount = Math.floor(Math.max(0, (_b = defenderResources[res]) != null ? _b : 0) * pct);
+      wanted[res] = amount;
+      total += amount;
+    }
+    const ratio = total > cargoCapacity ? cargoCapacity / total : 1;
     loot = {};
-    LOOT_RESOURCES.forEach((res) => {
-      var _a;
-      const available = (_a = defenderResources[res]) != null ? _a : 0;
-      loot[res] = Math.floor(available * COMBAT_RULES.lootPercent);
-    });
+    const entries = Object.entries(wanted);
+    for (const [res, amount] of entries) loot[res] = Math.floor(amount * ratio);
+    let left = Math.min(total, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
+      var _a2;
+      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
+    }, 0);
+    const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
+    for (const { res } of byRemainder) {
+      if (left <= 0) break;
+      if (((_c = loot[res]) != null ? _c : 0) < ((_d = wanted[res]) != null ? _d : 0)) {
+        loot[res] = ((_e = loot[res]) != null ? _e : 0) + 1;
+        left--;
+      }
+    }
   }
   return {
     outcome,
@@ -371,7 +444,8 @@ function resolveCombat(params) {
     attackerRecovered,
     defenderLosses,
     defenderRecovered,
-    loot
+    loot,
+    cargoCapacity
   };
 }
 
@@ -386,6 +460,20 @@ var RESOURCE_LIST = [
   { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
   { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
 ];
+function getTradeRate(sellId, buyId) {
+  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
+  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
+  if (!sell || !buy) return 1;
+  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
+  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
+  return 1;
+}
+function canAffordAll(resources, costs) {
+  return Object.entries(costs).every(([res, val]) => {
+    var _a;
+    return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
+  });
+}
 
 // src/game/buildings.ts
 var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500];
@@ -513,15 +601,58 @@ function productionPerSecond(buildingId, level) {
   const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
   return (_d = table[Math.min(level, table.length) - 1]) != null ? _d : 0;
 }
+function getBuildingUpgradeCost(building, nextLevel) {
+  var _a;
+  const { baseCost, maxCost, costFromLevel } = building.upgrade;
+  const steps = Math.max(1, building.maxLevel - costFromLevel);
+  const cost = {};
+  for (const [res, base] of Object.entries(baseCost)) {
+    const target = (_a = maxCost[res]) != null ? _a : base;
+    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
+    cost[res] = Math.floor(base * Math.pow(rate, nextLevel - costFromLevel));
+  }
+  return cost;
+}
+function applyBuildingDiscount(cost, discount) {
+  if (!discount) return cost;
+  const out = __spreadValues({}, cost);
+  for (const key of Object.keys(out)) {
+    const val = out[key];
+    if (typeof val === "number") {
+      out[key] = Math.max(0, Math.floor(val * (1 - discount)));
+    }
+  }
+  return out;
+}
+function getBuildingUpgradeTime(building, nextLevel) {
+  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
+}
 function getRepairPercent(buildings) {
-  var _a, _b, _c;
+  var _a;
   let pct = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    const level = (_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 1;
+    const level = effectiveBuildingLevel(buildings, b.id);
     pct += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
   }
   return pct;
+}
+function getUnitCapacity(buildings, category) {
+  var _a, _b, _c;
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
+    capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
+  }
+  return capacity;
+}
+function effectiveBuildingLevel(buildings, id) {
+  var _a;
+  const state = buildings[id];
+  return (state == null ? void 0 : state.unlocked) ? (_a = state.level) != null ? _a : 0 : 0;
+}
+function defaultBuildings() {
+  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
 }
 function withMissingBuildings(buildings) {
   const out = __spreadValues({}, buildings != null ? buildings : {});
@@ -602,6 +733,12 @@ var MISSIONS = __spreadValues({}, DEFAULT_MISSIONS);
 function setMissions(defs) {
   for (const key of Object.keys(MISSIONS)) delete MISSIONS[key];
   for (const def of defs) MISSIONS[def.key] = def;
+}
+function hasPrerequisites(mission, units) {
+  return Object.entries(mission.prereq).every(([unitId, req]) => {
+    var _a, _b;
+    return ((_b = (_a = units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) >= req;
+  });
 }
 
 // src/game/ranks.ts
@@ -996,7 +1133,7 @@ function checkAttackAllowed(ctx) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = checkAttackAllowed({
     now,
@@ -1029,27 +1166,40 @@ function performAttack(input) {
       return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
     }
   }
+  const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings) }), input.defenderQueues, now);
+  const def = flushedDefender.player;
   const combat = resolveCombat({
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
     fleet,
-    defenderUnits: (_i = defender.units) != null ? _i : {},
-    defenderTechLevels: (_j = defender.techLevels) != null ? _j : {},
-    defenderRepairPct: getRepairPercent(defender.buildings),
-    defenderResources: (_k = defender.resources) != null ? _k : {}
+    defenderUnits: (_i = def.units) != null ? _i : {},
+    defenderTechLevels: (_j = def.techLevels) != null ? _j : {},
+    defenderRepairPct: getRepairPercent(def.buildings),
+    defenderResources: (_k = def.resources) != null ? _k : {}
   });
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
   for (const [res, amt] of Object.entries((_l = combat.loot) != null ? _l : {})) {
     attacker.resources[res] = ((_m = attacker.resources[res]) != null ? _m : 0) + (amt != null ? amt : 0);
+    def.resources[res] = Math.max(0, ((_n = def.resources[res]) != null ? _n : 0) - (amt != null ? amt : 0));
+  }
+  for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
+    if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
-  if (combat.outcome === "attacker_win") attacker.victories = ((_n = attacker.victories) != null ? _n : 0) + 1;
-  else if (combat.outcome === "defender_win") attacker.defeats = ((_o = attacker.defeats) != null ? _o : 0) + 1;
+  if (combat.outcome === "attacker_win") attacker.victories = ((_o = attacker.victories) != null ? _o : 0) + 1;
+  else if (combat.outcome === "defender_win") attacker.defeats = ((_p = attacker.defeats) != null ? _p : 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
+  attacker.lastAttackAtMs = now;
+  if (combat.outcome === "defender_win") def.victories = ((_q = def.victories) != null ? _q : 0) + 1;
+  else if (combat.outcome === "attacker_win") {
+    def.defeats = ((_r = def.defeats) != null ? _r : 0) + 1;
+    def.lastDefeatAtMs = now;
+  }
+  applyXpDelta(def, defenderXpDelta, now);
   const outcomeTitle = {
     attacker_win: "Victoire !",
     defender_win: "D\xE9faite\u2026",
@@ -1059,8 +1209,23 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_p = outcomeTitle[combat.outcome]) != null ? _p : "Rapport de combat",
+      title: (_s = outcomeTitle[combat.outcome]) != null ? _s : "Rapport de combat",
       message: `Attaque contre ${defender.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      createdAtMs: now,
+      read: false
+    }
+  ];
+  const defenderTitle = {
+    attacker_win: "Tu as perdu ce combat...",
+    defender_win: "Attaque repouss\xE9e !",
+    draw: "Match nul."
+  };
+  const defenderNotifications = [
+    ...flushedDefender.notifications,
+    {
+      kind: "combat-defender",
+      title: (_t = defenderTitle[combat.outcome]) != null ? _t : "Rapport de combat",
+      message: `Attaque de ${input.attacker.pseudo}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
       createdAtMs: now,
       read: false
     }
@@ -1083,9 +1248,275 @@ function performAttack(input) {
     loot: combat.loot,
     defenderProcessed: false,
     attackerXpDelta: xp.attackerXp,
-    defenderXpDelta
+    defenderXpDelta,
+    defenderApplied: true
   };
-  return { ok: true, attacker, attackerQueues: flushed.queues, notifications, report, combat };
+  return {
+    ok: true,
+    attacker,
+    attackerQueues: flushed.queues,
+    notifications,
+    defender: def,
+    defenderQueues: flushedDefender.queues,
+    defenderNotifications,
+    report,
+    combat
+  };
+}
+
+// src/game/errors.ts
+var GameActionError = class extends Error {
+};
+
+// src/game/defaults.ts
+function defaultResources() {
+  return {
+    scrap: 100,
+    energy: 50,
+    nano: 0,
+    data: 0,
+    reinforcedSteel: 0,
+    cyberModule: 0,
+    syntheticNanites: 0,
+    aiFragment: 0
+  };
+}
+function defaultPlayerState(uid, pseudo) {
+  return {
+    uid,
+    pseudo,
+    resources: defaultResources(),
+    buildings: defaultBuildings(),
+    units: {},
+    techLevels: {},
+    bonuses: {
+      energyEfficiency: 0,
+      unitDefenseBonus: 0,
+      unitAttackBonus: 0,
+      buildingUpgradeDiscount: 0,
+      unlockedRecipes: 0
+    },
+    xp: 0,
+    seasonId: currentSeasonId(),
+    seasonXp: 0,
+    victories: 0,
+    defeats: 0,
+    playtimeSeconds: 0,
+    resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
+    unlockedAchievements: []
+  };
+}
+function defaultQueues() {
+  return {
+    buildingUpgrades: {},
+    unitQueues: { attack: [], defense: [] },
+    activeResearches: [],
+    activeMissions: []
+  };
+}
+
+// src/game/actions.ts
+var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
+var MAX_QTY = 1e5;
+function positiveInt(value, label) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label} invalide.`);
+  return n;
+}
+function pay(player, cost) {
+  if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
+  for (const [res, val] of Object.entries(cost)) player.resources[res] -= val != null ? val : 0;
+}
+function applyAction(s, action) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  const { player, queues, now } = s;
+  switch (action == null ? void 0 : action.type) {
+    case "sync": {
+      const elapsedMs = Math.max(0, now - (s.preFlushPlayer.resourcesUpdatedAtMs || now));
+      const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1e3 + 5, 300);
+      player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
+      const resourceGains = {};
+      for (const key of Object.keys(player.resources)) {
+        const delta = ((_a = player.resources[key]) != null ? _a : 0) - ((_b = s.preFlushPlayer.resources[key]) != null ? _b : 0);
+        if (delta > 0) resourceGains[key] = delta;
+      }
+      const summary = { elapsedMs, resourceGains, notifications: s.flushNotifications };
+      return summary;
+    }
+    case "unlockBuilding": {
+      const info = BUILDING_UNLOCK_COST[action.buildingId];
+      const state = player.buildings[action.buildingId];
+      if (!info || !state) throw new GameActionError("Ce b\xE2timent se d\xE9bloque via le Labo.");
+      if (state.unlocked) throw new GameActionError("D\xE9j\xE0 d\xE9bloqu\xE9.");
+      const cost = {};
+      if ("multi" in info) info.resources.forEach((r) => cost[r.resource] = r.amount);
+      else cost[info.resource] = info.amount;
+      pay(player, cost);
+      state.unlocked = true;
+      return void 0;
+    }
+    case "upgradeBuilding": {
+      const def = findBuilding(action.buildingId);
+      const state = player.buildings[action.buildingId];
+      if (!def || !state) throw new GameActionError("B\xE2timent inconnu.");
+      if (!state.unlocked && !def.startsUnlocked) throw new GameActionError("Ce b\xE2timent n'est pas d\xE9bloqu\xE9.");
+      if (queues.buildingUpgrades[def.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
+      if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+      const nextLevel = state.level + 1;
+      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0));
+      queues.buildingUpgrades[def.id] = { endTime: now + getBuildingUpgradeTime(def, nextLevel) * 1e3 };
+      return void 0;
+    }
+    case "buildUnits": {
+      const unit = findUnit(action.unitId);
+      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
+      const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
+      if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
+      const category = unit.category;
+      const built = Object.entries(player.units).reduce((sum, [id, u]) => {
+        const def = findUnit(id);
+        return (def == null ? void 0 : def.category) === category ? sum + u.count * def.hangarSpace : sum;
+      }, 0);
+      const reserved = queues.unitQueues[category].reduce((sum, item) => {
+        var _a2, _b2;
+        return sum + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
+      }, 0);
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+        throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
+      }
+      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty });
+      const queue = queues.unitQueues[category];
+      const wasEmpty = queue.length === 0;
+      for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
+      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit) * 1e3;
+      return void 0;
+    }
+    case "sellUnits": {
+      const unit = findUnit(action.unitId);
+      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
+      const qty = positiveInt(action.qty, "Quantit\xE9");
+      if (((_h = (_g = player.units[unit.id]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
+      player.units[unit.id].count -= qty;
+      player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
+      player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
+      return void 0;
+    }
+    case "research": {
+      const tech = findTech(action.techId);
+      if (!tech) throw new GameActionError("Technologie inconnue.");
+      const nextLevel = ((_i = player.techLevels[tech.id]) != null ? _i : 0) + 1;
+      if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Pr\xE9requis non remplis.");
+      if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
+      if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
+        throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
+      }
+      pay(player, getTechCost(tech, nextLevel));
+      queues.activeResearches.push({ id: tech.id, endTime: now + getTechTime(tech, nextLevel) * 1e3 });
+      return void 0;
+    }
+    case "mission": {
+      const mission = MISSIONS[action.missionKey];
+      if (!mission) throw new GameActionError("Mission inconnue.");
+      if (queues.activeMissions.some((m) => m.key === mission.key)) throw new GameActionError("Mission d\xE9j\xE0 en cours.");
+      if (!hasPrerequisites(mission, player.units)) throw new GameActionError("Pr\xE9requis non remplis.");
+      queues.activeMissions.push({ key: mission.key, endTime: now + mission.duration * 1e3 });
+      return void 0;
+    }
+    case "trade": {
+      const { sellId, buyId } = action;
+      if (!RESOURCE_IDS.has(sellId) || !RESOURCE_IDS.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
+      const amount = positiveInt(action.amount, "Montant");
+      if (((_j = player.resources[sellId]) != null ? _j : 0) < amount) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
+      const gained = Math.floor(amount * getTradeRate(sellId, buyId));
+      player.resources[sellId] -= amount;
+      player.resources[buyId] = ((_k = player.resources[buyId]) != null ? _k : 0) + gained;
+      return gained;
+    }
+    default:
+      throw new GameActionError("Action inconnue.");
+  }
+}
+function performPlayerAction(playerIn, queuesIn, action, now) {
+  const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) });
+  const flushed = flushState(preFlushPlayer, queuesIn, now);
+  const result = applyAction(
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now },
+    action
+  );
+  return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
+}
+function performGift(sender, senderQueues, recipient, recipientQueues, rawResources, now) {
+  var _a;
+  if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources \xE0 toi-m\xEAme !");
+  const resources = {};
+  for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
+    const n = Math.floor(Number(raw));
+    if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
+    if (n > 0) resources[res] = n;
+  }
+  if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
+  const s = flushState(__spreadProps(__spreadValues({}, sender), { buildings: withMissingBuildings(sender.buildings) }), senderQueues, now);
+  const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings) }), recipientQueues, now);
+  pay(s.player, resources);
+  for (const [res, amt] of Object.entries(resources)) {
+    r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + (amt != null ? amt : 0);
+  }
+  r.notifications.push({
+    kind: "gift",
+    title: "Ressources re\xE7ues !",
+    message: `${sender.pseudo} t'a envoy\xE9 des ressources.`,
+    createdAtMs: now,
+    read: false
+  });
+  return {
+    sender: s.player,
+    senderQueues: s.queues,
+    senderNotifications: s.notifications,
+    recipient: r.player,
+    recipientQueues: r.queues,
+    recipientNotifications: r.notifications,
+    resources
+  };
+}
+function newPlayerProfile(uid, rawPseudo, now) {
+  const pseudo = String(rawPseudo != null ? rawPseudo : "").trim().replace(/\s+/g, " ").slice(0, 30) || "Joueur";
+  const player = __spreadProps(__spreadValues({}, defaultPlayerState(uid, pseudo)), { createdAtMs: now, resourcesUpdatedAtMs: now });
+  return { player, queues: defaultQueues() };
+}
+function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
+  var _a, _b, _c, _d, _e, _f;
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) }), queuesIn, now);
+  for (const [unitId, lost] of Object.entries((_a = report.defenderLosses) != null ? _a : {})) {
+    if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - (Number(lost) || 0));
+  }
+  for (const [res, amt] of Object.entries((_b = report.loot) != null ? _b : {})) {
+    const key = res;
+    if (RESOURCE_IDS.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
+  }
+  if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
+  else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
+  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now);
+  const title = { attacker_win: "Tu as perdu ce combat...", defender_win: "Attaque repouss\xE9e !", draw: "Match nul." };
+  notifications.push({
+    kind: "combat-defender",
+    title: (_f = title[report.outcome]) != null ? _f : "Rapport de combat",
+    message: `Attaque de ${report.attackerPseudo}.`,
+    createdAtMs: now,
+    read: false
+  });
+  return { player, queues, notifications };
+}
+function applyLegacyGift(playerIn, queuesIn, gift, now) {
+  var _a, _b;
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings) }), queuesIn, now);
+  for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
+    const n = Math.floor(Number(amt));
+    if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  }
+  notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
+  return { player, queues, notifications };
 }
 
 // src/game/playerFields.ts

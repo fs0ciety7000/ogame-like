@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
+import { CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   adminClearQueues,
   adminListPlayers,
   adminResetAllXp,
+  adminUpdateHooks,
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
@@ -76,11 +77,19 @@ export function RulesPanel() {
         <Section title="XP et butin">
           <NumberField label="Perte d'XP max en défense / 24 h" value={pvp.defenseXpLossCapPer24h} min={0} step={5} onChange={(v) => setPvp({ defenseXpLossCapPer24h: v ?? 0 })} />
           <NumberField
-            label="Butin (part des ressources rares, 0,08 = 8 %)"
+            label="Butin : ressources communes (0,10 = 10 %)"
+            value={rules.combat.lootPercentCommon}
+            min={0}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, lootPercentCommon: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Butin : ressources rares (0,08 = 8 %)"
             value={rules.combat.lootPercent}
             min={0}
             step={0.01}
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, lootPercent: v ?? 0 } }))}
+            hint="Limité par la cargaison (stat CAP) des vaisseaux survivants."
           />
         </Section>
       </Card>
@@ -278,6 +287,21 @@ export function PlayersPanel() {
 export function ToolsPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  const [updatingHooks, setUpdatingHooks] = useState(false);
+
+  const updateHooks = async () => {
+    setUpdatingHooks(true);
+    try {
+      const report = await adminUpdateHooks();
+      if (report.errors.length > 0) toast.error(`Mise à jour annulée : ${report.errors.join(" · ")}`);
+      else if (report.updated.length > 0) toast.success(`Hooks mis à jour (${report.updated.join(", ")}). Le serveur redémarre.`);
+      else toast.success(`Les hooks sont déjà à jour (${report.branch}).`);
+    } catch (err) {
+      toast.error(`Impossible : ${(err as Error).message}`);
+    } finally {
+      setUpdatingHooks(false);
+    }
+  };
 
   const exportContent = () => {
     const blob = new Blob([JSON.stringify(currentGameContent(), null, 2)], { type: "application/json" });
@@ -335,6 +359,17 @@ export function ToolsPanel() {
             }}
           />
         </div>
+      </Card>
+
+      <Card className="flex flex-col gap-2 p-4">
+        <h3 className="font-display text-sm text-white">Code du serveur</h3>
+        <p className="text-xs text-slate-400">
+          Le serveur récupère ses hooks (règles du jeu côté serveur) depuis la branche main du dépôt à chaque démarrage. Ce
+          bouton le fait tout de suite, par exemple juste après un déploiement.
+        </p>
+        <Button variant="outline" size="sm" className="self-start" disabled={updatingHooks} onClick={() => void updateHooks()}>
+          <CloudDownload className="mr-1 h-3.5 w-3.5" /> {updatingHooks ? "Mise à jour…" : "Mettre à jour les hooks"}
+        </Button>
       </Card>
 
       <Card className="flex flex-col gap-2 border-danger-glow/30 p-4">

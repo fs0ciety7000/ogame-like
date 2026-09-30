@@ -92,3 +92,22 @@ export async function adminUploadAsset(file: File): Promise<string> {
   const record = await pb.collection("game_assets").create(form);
   return pb.files.getURL(record, record.file as string);
 }
+
+export interface HooksUpdateReport {
+  branch: string;
+  updated: string[];
+  unchanged: string[];
+  errors: string[];
+}
+
+/** Télécharge les hooks du serveur depuis GitHub (pb_hooks/cosmic_updater.pb.js). */
+export async function adminUpdateHooks(): Promise<HooksUpdateReport> {
+  try {
+    return await pb.send<HooksUpdateReport>("/api/cosmic/admin/update-hooks", { method: "POST" });
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+    const message = (err as { response?: { message?: string } })?.response?.message;
+    if (status === 404) throw new Error("cosmic_updater.pb.js n'est pas installé sur le serveur (voir README).");
+    throw new Error(message || (err as Error).message);
+  }
+}

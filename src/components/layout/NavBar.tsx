@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles } from "lucide-react";
+import { useUnreadChangelogCount } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 
@@ -33,7 +34,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Compte",
-    items: [{ to: "/game/profil", label: "Profil", icon: UserCircle }],
+    items: [
+      { to: "/game/profil", label: "Profil", icon: UserCircle },
+      { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
+    ],
   },
 ];
 
@@ -42,7 +46,9 @@ const ALL_ITEMS = ALL_NAV_ITEMS;
 
 function NavItemLink({ item }: { item: NavItem }) {
   const allianceUnread = useAllianceUnreadStore((s) => s.count);
-  const badgeCount = item.to === "/game/alliance" ? allianceUnread : 0;
+  const changelogUnread = useUnreadChangelogCount();
+  const badgeCount =
+    item.to === "/game/alliance" ? allianceUnread : item.to === "/game/nouveautes" ? changelogUnread : 0;
 
   return (
     <NavLink

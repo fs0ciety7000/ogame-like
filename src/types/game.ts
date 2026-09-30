@@ -115,8 +115,12 @@ export interface BattleReport {
   attackerRecovered: Record<string, number>;
   defenderLosses: Record<string, number>;
   defenderRecovered: Record<string, number>;
-  loot: Partial<Record<RareResourceId, number>> | null;
+  loot: Partial<Record<ResourceId, number>> | null;
+  /** Rapport vu par le défenseur (affiché une fois à sa connexion). */
   defenderProcessed: boolean;
+  /** Pertes du défenseur déjà appliquées par le serveur au moment du combat
+   *  (absent des anciens rapports : le serveur les applique à la lecture). */
+  defenderApplied?: boolean;
   /** XP gagnée/perdue par chaque camp, calculée par le serveur (absente des
    *  anciens rapports, créés avant le combat côté serveur). */
   attackerXpDelta?: number;

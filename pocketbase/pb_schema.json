@@ -25,8 +25,8 @@
     "type": "base",
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
-    "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
-    "updateRule": "(id = @request.auth.id && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
+    "createRule": null,
+    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
@@ -163,9 +163,9 @@
     "type": "base",
     "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
-    "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
-    "updateRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
-    "deleteRule": "id = @request.auth.id",
+    "createRule": null,
+    "updateRule": "@collection.admins.id ?= @request.auth.id",
+    "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
         "name": "buildingUpgrades",
@@ -255,7 +255,7 @@
     "listRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
     "viewRule": "attackerUid = @request.auth.id || defenderUid = @request.auth.id",
     "createRule": null,
-    "updateRule": "defenderUid = @request.auth.id && defenderProcessed = false && @request.body.defenderProcessed = true && @request.body.attackerUid:isset = false && @request.body.defenderUid:isset = false && @request.body.outcome:isset = false && @request.body.loot:isset = false && @request.body.attackerLosses:isset = false && @request.body.defenderLosses:isset = false",
+    "updateRule": null,
     "deleteRule": null,
     "fields": [
       {
@@ -369,6 +369,11 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "defenderApplied",
+        "type": "bool",
+        "required": false
       }
     ],
     "indexes": [
@@ -429,8 +434,8 @@
     "type": "base",
     "listRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
     "viewRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
-    "createRule": "@request.auth.id != \"\" && @request.body.fromUid = @request.auth.id && @request.body.claimed = false",
-    "updateRule": "toUid = @request.auth.id && claimed = false && @request.body.claimed = true && @request.body.resources:isset = false && @request.body.fromUid:isset = false && @request.body.toUid:isset = false",
+    "createRule": null,
+    "updateRule": null,
     "deleteRule": null,
     "fields": [
       {

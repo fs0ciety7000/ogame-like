@@ -18,6 +18,7 @@ function input(patch: Partial<AttackInput> = {}): AttackInput {
     attackerQueues: defaultQueues(),
     defenderUid: "def",
     defender: player("def", { xp: 1000, units: { roquette: { level: 1, count: 10 } } }),
+    defenderQueues: defaultQueues(),
     fleet: { chasseur: 50 },
     lastAttackOnTargetMs: null,
     defenderXpLostLast24h: 0,
@@ -36,6 +37,29 @@ describe("performAttack", () => {
     expect(out.report.defenderProcessed).toBe(false);
     expect(out.attacker.xp).toBe(1000 + out.report.attackerXpDelta!);
     expect(out.notifications.some((n) => n.kind === "combat-attacker")).toBe(true);
+  });
+
+  it("applies the result to the defender too: losses, loot, defeat, XP and shield", () => {
+    const out = performAttack(
+      input({
+        attacker: player("att", { xp: 1000, units: { chasseur: { level: 1, count: 100 }, cargo: { level: 1, count: 100 } } }),
+        fleet: { chasseur: 50, cargo: 100 },
+        defender: player("def", {
+          xp: 1000,
+          units: { roquette: { level: 1, count: 10 } },
+          resources: { ...player("x", {}).resources, scrap: 100000, reinforcedSteel: 500 },
+        }),
+      }),
+    );
+    if (!out.ok) throw new Error(out.message);
+    expect(out.defender.units.roquette.count).toBeLessThan(10);
+    expect(out.defender.resources.scrap).toBe(100000 - (out.report.loot?.scrap ?? 0));
+    expect(out.report.loot?.scrap).toBeGreaterThan(0);
+    expect(out.defender.defeats).toBe(1);
+    expect(out.defender.lastDefeatAtMs).toBe(NOW);
+    expect(out.defender.xp).toBe(1000 + out.report.defenderXpDelta!);
+    expect(out.defenderNotifications.some((n) => n.kind === "combat-defender")).toBe(true);
+    expect(out.attacker.lastAttackAtMs).toBe(NOW);
   });
 
   it("refuses protected targets and sends back the reason", () => {

@@ -69,25 +69,47 @@ l'application dans Settings → Application.
 
 ## Hooks serveur (PocketBase)
 
-Les attaques sont arbitrées par le serveur : protections (délai de 2 h par
-cible, bouclier de 1 h après une défaite, protection débutant de 72 h, écart
-d'XP), combat et XP sont calculés par `pocketbase/pb_hooks/cosmic.pb.js`,
-jamais par le navigateur de l'attaquant.
+Toute la partie est arbitrée par le serveur : production, constructions,
+unités, recherches, missions, échanges, dons et combats passent par les
+routes `/api/cosmic/*` de `pocketbase/pb_hooks/cosmic.pb.js`. Les règles
+d'accès (`pb_schema.json`) interdisent au navigateur d'écrire lui-même ses
+ressources, niveaux, unités ou son XP.
 
-Le dossier `pocketbase/pb_hooks/` doit se retrouver dans le dossier
-`pb_hooks` du serveur PocketBase (à côté de `pb_data`) :
+Fichiers de `pocketbase/pb_hooks/` :
 
-- **Coolify** : dans le service PocketBase → *Storages*, ajoute un volume
-  monté sur `/pb/pb_hooks` (ou le chemin `pb_hooks` de ton image, voir sa
-  doc), puis copies-y `cosmic.pb.js` et `cosmic_game.js` (onglet *Terminal*
-  du conteneur, ou *File mount* avec le contenu des deux fichiers).
-  Redémarre le service.
-- Vérification : `curl -X POST https://ton-pocketbase/api/cosmic/attack`
-  doit répondre **401** (route présente, connexion requise) et non 404.
+| Fichier | Rôle |
+| --- | --- |
+| `cosmic_updater.pb.js` | au démarrage, télécharge les autres fichiers depuis la branche `main` de GitHub |
+| `cosmic.pb.js` | les routes du jeu |
+| `cosmic_db.js` | lecture/écriture des joueurs en base |
+| `cosmic_game.js` | logique de jeu, **générée** depuis `src/game` (`npm run build:hooks`) |
+| `cosmic_sync.js` | la mise à jour depuis GitHub (utilisée par l'updater et l'administration) |
 
-`cosmic_game.js` est généré depuis `src/game` : après toute modification des
-règles de jeu, lance `npm run build:hooks`, commite, et recopie le fichier
-sur le serveur (un test échoue si le fichier est périmé).
+**Installation (une seule fois)** : seul `cosmic_updater.pb.js` est à copier
+dans le dossier `pb_hooks` du serveur (volume Coolify monté sur
+`/pb/pb_hooks`, voir la doc de ton image), puis redémarre PocketBase :
+
+```bash
+# dans le terminal du conteneur PocketBase
+wget -O /pb/pb_hooks/cosmic_updater.pb.js \
+  https://raw.githubusercontent.com/fs0ciety7000/ogame-like/main/pocketbase/pb_hooks/cosmic_updater.pb.js
+```
+
+Ensuite, **à chaque démarrage**, PocketBase récupère la dernière version
+des hooks sur `main` (seulement si tous les fichiers sont téléchargés et
+valides ; sinon il garde ceux en place). Après un déploiement, le bouton
+*Administration → Outils → Mettre à jour les hooks* fait la même chose sans
+redémarrer à la main. Variables d'environnement facultatives :
+`COSMIC_HOOKS_AUTOUPDATE=0` (désactive), `COSMIC_HOOKS_BRANCH=autre-branche`.
+La mise à jour est ignorée quand `pb_hooks` est celui d'une copie du dépôt
+(développement local).
+
+Vérification : `curl -X POST https://ton-pocketbase/api/cosmic/action`
+doit répondre **401** (route présente, connexion requise) et non 404.
+
+Après toute modification des règles dans `src/game`, lance
+`npm run build:hooks` et commite `cosmic_game.js` (un test échoue si le
+fichier est périmé).
 
 Remise à zéro de l'XP de tous les joueurs (ressources et bâtiments conservés) :
 
