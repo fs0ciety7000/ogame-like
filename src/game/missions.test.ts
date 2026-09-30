@@ -18,9 +18,17 @@ describe("hasPrerequisites", () => {
 
   it("requires every unit for multi-prereq missions", () => {
     const elite = MISSIONS.mission_elite;
-    const partial = { fregate: { count: 10 }, sentinelle: { count: 10 }, chasseur: { count: 10 } };
-    expect(hasPrerequisites(elite, partial)).toBe(false); // il manque cargo
-    expect(hasPrerequisites(elite, { ...partial, cargo: { count: 5 } })).toBe(true);
+    const all = Object.fromEntries(Object.entries(elite.prereq).map(([id, n]) => [id, { count: n }]));
+    const [missingId] = Object.keys(elite.prereq);
+    const partial = { ...all, [missingId]: { count: 0 } };
+    expect(hasPrerequisites(elite, partial)).toBe(false);
+    expect(hasPrerequisites(elite, all)).toBe(true);
+  });
+
+  it("gives 60 XP per hour of mission, whatever its length", () => {
+    for (const mission of Object.values(MISSIONS)) {
+      expect(mission.reward.xp, mission.key).toBe(Math.max(1, Math.round((mission.duration / 3600) * 60)));
+    }
   });
 });
 

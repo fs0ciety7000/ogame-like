@@ -74,6 +74,16 @@ export function CombatLogPage() {
                 </div>
                 <p className="tabular-mono text-xs text-slate-500">
                   Puissance {formatNumber(myPower)} contre {formatNumber(opponentPower)}
+                  {(() => {
+                    const xp = isAttacker ? report.attackerXpDelta : report.defenderXpDelta;
+                    if (xp === undefined || xp === 0) return null;
+                    return (
+                      <span className={xp > 0 ? "ml-2 text-mint-glow" : "ml-2 text-danger-glow"}>
+                        {xp > 0 ? "+" : ""}
+                        {xp} XP
+                      </span>
+                    );
+                  })()}
                 </p>
               </div>
 

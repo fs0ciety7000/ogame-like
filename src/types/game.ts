@@ -4,14 +4,9 @@ export type ResourceId = CommonResourceId | RareResourceId;
 
 export type Resources = Record<ResourceId, number>;
 
-export type BuildingId =
-  | "extracteur_ferraille"
-  | "reacteur_instable"
-  | "extracteur_nanocomposants"
-  | "archives_fracturees"
-  | "atelier_reparation"
-  | "hangar_attaque"
-  | "hangar_defense";
+/** Identifiant de bâtiment : libre, les bâtiments étant définis par des
+ *  données (voir src/game/buildings.ts et l'interface d'administration). */
+export type BuildingId = string;
 
 export interface BuildingState {
   level: number;
@@ -88,6 +83,10 @@ export interface PlayerState {
   allianceId?: string | null;
   allianceLastReadMs?: number;
   createdAtMs?: number;
+  /** Dernière défaite en défense (ms) — écrit par le serveur, sert au bouclier. */
+  lastDefeatAtMs?: number;
+  /** Dernière attaque lancée (ms) — écrit par le serveur ; lève la protection débutant. */
+  lastAttackAtMs?: number;
 }
 
 export interface QueuesState {
@@ -118,6 +117,10 @@ export interface BattleReport {
   defenderRecovered: Record<string, number>;
   loot: Partial<Record<RareResourceId, number>> | null;
   defenderProcessed: boolean;
+  /** XP gagnée/perdue par chaque camp, calculée par le serveur (absente des
+   *  anciens rapports, créés avant le combat côté serveur). */
+  attackerXpDelta?: number;
+  defenderXpDelta?: number;
 }
 
 export interface SpyReport {

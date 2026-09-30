@@ -1,7 +1,10 @@
 // Installe (ou met à jour) le schéma du jeu sur un serveur PocketBase.
 //
-//   PB_URL=https://… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… node pocketbase/setup.mjs
+//   PB_URL=https://… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
+//     [GAME_ADMIN_EMAILS=moi@exemple.fr,autre@exemple.fr] node pocketbase/setup.mjs
 //
+// GAME_ADMIN_EMAILS (facultatif) : comptes joueurs à promouvoir
+// administrateurs du jeu (accès à la page Administration).
 // - crée/met à jour les collections décrites dans pocketbase/pb_schema.json
 //   (champs + règles d'accès) ;
 // - ajoute un champ `username` (le pseudo) à la collection `users` et
@@ -65,3 +68,25 @@ await pb.collections.update(users.id, {
   passwordAuth: { ...(users.passwordAuth ?? {}), enabled: true, identityFields: ["email", "username"] },
 });
 console.log("Collection users : connexion par pseudo ou email activée.");
+
+// 3. Administrateurs du jeu
+const adminEmails = (process.env.GAME_ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
+for (const email of adminEmails) {
+  let user;
+  try {
+    user = await pb.collection("users").getFirstListItem(pb.filter("email = {:email}", { email }));
+  } catch {
+    console.error(`Aucun compte avec l'email ${email} : inscris-toi d'abord dans le jeu.`);
+    continue;
+  }
+  try {
+    await pb.collection("admins").getOne(user.id);
+  } catch {
+    await pb.collection("admins").create({ id: user.id, note: email });
+  }
+  console.log(`Administrateur du jeu : ${email}`);
+}
+

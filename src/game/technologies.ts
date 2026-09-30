@@ -5,6 +5,7 @@ export type TechEffect =
   | "unit_attack"
   | "building_discount"
   | "unlock_hangars"
+  | "unlock_buildings"
   | "unlock_next_level"
   | "unlock_defense_units"
   | "unlock_attack_units";
@@ -19,9 +20,35 @@ export interface TechDef {
   effect: TechEffect;
   costGrowth?: number;
   prereq: Record<string, number>;
+  /** Valeur de l'effet par niveau (bonus) ; défaut dans TECH_EFFECT_DEFAULTS. */
+  effectValue?: number;
+  /** Position dans l'arbre du Labo (sinon placée automatiquement). */
+  treePos?: { col: number; row: number };
 }
 
-export const TECHNOLOGIES: TechDef[] = [
+/** Bonus par niveau des effets chiffrés, si la techno n'en précise pas. */
+export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffect, number>> = {
+  energy_efficiency: 0.1,
+  unit_attack: 0.1,
+  unit_defense: 0.1,
+  building_discount: 0.05,
+};
+
+/** Descriptions des effets, pour l'interface d'administration. */
+export const TECH_EFFECT_LABELS: Record<TechEffect, string> = {
+  unlock_recipe: "Débloque des recettes (niveau = nombre de recettes)",
+  energy_efficiency: "Bonus de production de toutes les ressources (% par niveau)",
+  unit_attack: "Bonus d'attaque de toutes les unités (% par niveau)",
+  unit_defense: "Bonus de défense de toutes les unités (% par niveau)",
+  building_discount: "Réduction du coût des bâtiments (% par niveau)",
+  unlock_hangars: "Débloque les bâtiments liés (ancien nom de unlock_buildings)",
+  unlock_buildings: "Débloque les bâtiments dont « Débloqué par » vaut cette techno",
+  unlock_next_level: "Débloque puis améliore l'unité liée (niveau = niveau de l'unité)",
+  unlock_defense_units: "Prérequis pour des unités de défense (aucun effet direct)",
+  unlock_attack_units: "Prérequis pour des unités d'attaque (aucun effet direct)",
+};
+
+export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech1", nom: "Analyse de matériaux", desc: "Débloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
   { id: "tech3", nom: "Amélioration énergétique", desc: "Augmente l'efficacité des générateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
   { id: "tech9", nom: "Drone récupérateur", desc: "Augmente la puissance d'attaque de l'unité.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
@@ -42,6 +69,24 @@ export const TECHNOLOGIES: TechDef[] = [
   { id: "tech18", nom: "Intercepteur", desc: "Augmente la puissance d'attaque de l'unité.", maxLevel: 10, baseCost: { scrap: 1000, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
   { id: "tech19", nom: "Étoile noire", desc: "Arme ultime. Capacité de destruction massive.", maxLevel: 10, baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } },
 ];
+
+/* ---------- registre courant (remplacé par applyGameContent) ---------- */
+
+export const TECHNOLOGIES: TechDef[] = [...DEFAULT_TECHNOLOGIES];
+
+export function setTechnologies(defs: TechDef[]) {
+  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
+}
+
+/** Bonus total d'un effet chiffré (ex. unit_attack) selon les niveaux du joueur. */
+export function techBonus(techLevels: Record<string, number>, effect: TechEffect): number {
+  let total = 0;
+  for (const tech of TECHNOLOGIES) {
+    if (tech.effect !== effect) continue;
+    total += (techLevels[tech.id] ?? 0) * (tech.effectValue ?? TECH_EFFECT_DEFAULTS[effect] ?? 0);
+  }
+  return total;
+}
 
 export const MAX_CONCURRENT_RESEARCH = 4;
 const COST_GROWTH = 2.7;

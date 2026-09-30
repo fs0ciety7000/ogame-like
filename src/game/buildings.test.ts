@@ -69,8 +69,31 @@ describe("getBuildingUpgradeCost / getBuildingUpgradeTime", () => {
 
   it("hangar cost is scrap/energy and scales up", () => {
     const cost = getBuildingUpgradeCost(hangar, 5);
-    expect(cost.scrap).toBeGreaterThan(hangar.cost.scrap!);
-    expect(cost.energy).toBeGreaterThan(hangar.cost.energy!);
+    expect(cost.scrap).toBeGreaterThan(hangar.upgrade.baseCost.scrap!);
+    expect(cost.energy).toBeGreaterThan(hangar.upgrade.baseCost.energy!);
+  });
+
+  it("reproduces exactly the historical per-building formulas", () => {
+    // Anciennes formules codées en dur (avant le passage aux données).
+    const geo = (base: number, target: number, steps: number, exp: number) =>
+      Math.floor(base * Math.pow(Math.pow(target / base, 1 / steps), exp));
+    for (let lvl = 2; lvl <= 10; lvl++) {
+      expect(getBuildingUpgradeCost(extractor, lvl)).toEqual({
+        scrap: geo(50, 2_500_000, 9, lvl - 1),
+        energy: geo(20, 1_800_000, 9, lvl - 1),
+      });
+      expect(getBuildingUpgradeCost(hangar, lvl)).toEqual({
+        scrap: geo(300, 5_000_000, 9, lvl - 1),
+        energy: geo(150, 7_500_000, 9, lvl - 1),
+      });
+      expect(getBuildingUpgradeCost(atelier, lvl)).toEqual({
+        nano: geo(1000, 10_000_000, 8, lvl - 2),
+        data: geo(1000, 9_500_000, 8, lvl - 2),
+      });
+      expect(getBuildingUpgradeTime(extractor, lvl)).toBe((lvl - 1) * 600);
+      expect(getBuildingUpgradeTime(hangar, lvl)).toBe((lvl - 1) * 900);
+      expect(getBuildingUpgradeTime(atelier, lvl)).toBe((lvl - 1) * 1200);
+    }
   });
 });
 

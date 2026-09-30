@@ -1,15 +1,17 @@
-import { findBuilding } from "@/game/buildings";
+import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { computeElapsedProduction } from "@/game/production";
 import { MISSIONS } from "@/game/missions";
-import { findTech, TECHNOLOGIES } from "@/game/technologies";
+import { findTech, techBonus, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
 import { checkNewAchievements } from "@/game/achievements";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
-const TECH_TO_UNIT: Record<string, string> = Object.fromEntries(
-  Object.entries(UNIT_TO_TECH).map(([unit, tech]) => [tech, unit]),
-);
+/** Unité liée à une technologie (effet unlock_next_level), calculée à la
+ *  demande : le contenu du jeu peut être modifié depuis l'administration. */
+function unitForTech(techId: string): string | undefined {
+  return Object.entries(UNIT_TO_TECH).find(([, tech]) => tech === techId)?.[0];
+}
 
 export type NewNotification = Omit<GameNotification, "id">;
 
@@ -180,28 +182,32 @@ function applyTechEffect(player: PlayerState, techId: string, level: number) {
   const tech = TECHNOLOGIES.find((t) => t.id === techId);
   if (!tech) return;
 
+  const levels = { ...player.techLevels, [techId]: level };
   switch (tech.effect) {
     case "energy_efficiency":
-      player.bonuses.energyEfficiency = level * 0.1;
+      player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
       break;
     case "unit_defense":
-      player.bonuses.unitDefenseBonus = level * 0.1;
+      player.bonuses.unitDefenseBonus = techBonus(levels, "unit_defense");
       break;
     case "unit_attack":
-      player.bonuses.unitAttackBonus = level * 0.1;
+      player.bonuses.unitAttackBonus = techBonus(levels, "unit_attack");
       break;
     case "building_discount":
-      player.bonuses.buildingUpgradeDiscount = level * 0.05;
+      player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
       break;
     case "unlock_recipe":
       player.bonuses.unlockedRecipes = level;
       break;
     case "unlock_hangars":
-      player.buildings.hangar_attaque.unlocked = true;
-      player.buildings.hangar_defense.unlocked = true;
+    case "unlock_buildings":
+      for (const building of BUILDINGS) {
+        if (building.unlockedByTech !== techId) continue;
+        player.buildings[building.id] = { level: player.buildings[building.id]?.level ?? 1, unlocked: true };
+      }
       break;
     case "unlock_next_level": {
-      const unitId = TECH_TO_UNIT[techId];
+      const unitId = unitForTech(techId);
       if (!unitId) break;
       if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
       player.units[unitId].level = level;

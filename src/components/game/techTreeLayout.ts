@@ -63,9 +63,58 @@ const LANE_PAD_X = 16;
 const LANE_PAD_TOP = 26;
 const LANE_PAD_BOTTOM = 8;
 
-export function techPosition(id: string): { x: number; y: number } {
-  const cell = TECH_GRID[id] ?? { col: 0, row: 0 };
+/** Rangée de départ des technologies ajoutées depuis l'administration
+ *  sans position : bande « Nouvelles technologies » sous l'arbre. */
+const AUTO_FIRST_ROW = LAST_ROW + 1.4;
+
+type Cell = { col: number; row: number };
+
+/** Position de chaque techno : celle choisie dans l'administration
+ *  (treePos), sinon l'agencement par défaut ci-dessus, sinon placement
+ *  automatique à droite de ses prérequis. */
+export function techCells(): Map<string, Cell> {
+  const cells = new Map<string, Cell>();
+  const pending: string[] = [];
+  for (const tech of TECHNOLOGIES) {
+    const cell = tech.treePos ?? TECH_GRID[tech.id];
+    if (cell) cells.set(tech.id, cell);
+    else pending.push(tech.id);
+  }
+  const known = new Set(TECHNOLOGIES.map((t) => t.id));
+  const usedRows = new Map<number, number>();
+  // Plusieurs passes : une techno auto-placée peut dépendre d'une autre ;
+  // à la dernière passe, on place même si une dépendance manque (cycle).
+  for (let pass = 0; pending.length > 0 && pass <= TECHNOLOGIES.length; pass++) {
+    const lastPass = pass === TECHNOLOGIES.length;
+    for (const id of [...pending]) {
+      const reqs = Object.keys(TECHNOLOGIES.find((t) => t.id === id)?.prereq ?? {}).filter((r) => known.has(r));
+      if (!lastPass && !reqs.every((r) => cells.has(r))) continue;
+      const col = reqs.reduce((max, r) => Math.max(max, (cells.get(r)?.col ?? -1) + 1), 0);
+      const row = AUTO_FIRST_ROW + (usedRows.get(col) ?? 0);
+      usedRows.set(col, (usedRows.get(col) ?? 0) + 1);
+      cells.set(id, { col, row });
+      pending.splice(pending.indexOf(id), 1);
+    }
+  }
+  return cells;
+}
+
+export function techPosition(id: string, cells: Map<string, Cell> = techCells()): { x: number; y: number } {
+  const cell = cells.get(id) ?? { col: 0, row: 0 };
   return { x: cell.col * COL_WIDTH, y: cell.row * ROW_HEIGHT };
+}
+
+/** Bandes affichées, avec une bande supplémentaire si des technos ont été
+ *  placées automatiquement. */
+export function techLanes(cells: Map<string, Cell> = techCells()): TechLane[] {
+  const auto = [...cells.values()].filter((c) => c.row >= AUTO_FIRST_ROW);
+  if (auto.length === 0) return TECH_LANES;
+  const maxCol = Math.max(LAST_COL, ...auto.map((c) => c.col));
+  const maxRow = Math.max(...auto.map((c) => c.row));
+  return [
+    ...TECH_LANES,
+    { id: "lane-new", label: "Nouvelles technologies", fromCol: 0, toCol: maxCol, fromRow: AUTO_FIRST_ROW, toRow: maxRow },
+  ];
 }
 
 export function laneRect(lane: TechLane) {

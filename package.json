@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:hooks": "node pocketbase/build-hooks.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",

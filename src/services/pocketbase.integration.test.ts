@@ -1,18 +1,29 @@
 // Tests de bout en bout contre un VRAI serveur PocketBase de test (jamais
 // celui de production : ils créent des comptes). Ignorés par défaut :
-//   PB_TEST_URL=http://127.0.0.1:8090 npx vitest run src/services/pocketbase.integration.test.ts
-// Le serveur doit avoir le schéma installé (pocketbase/setup.mjs).
+//   PB_TEST_URL=http://127.0.0.1:8090 [PB_TEST_ADMIN_EMAIL=… PB_TEST_ADMIN_PASSWORD=…] \
+//     npx vitest run src/services/pocketbase.integration.test.ts
+// Le serveur doit avoir le schéma (pocketbase/setup.mjs) et les hooks
+// (pocketbase/pb_hooks) installés.
 import { beforeAll, describe, expect, it } from "vitest";
+import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
+import { resetContentSection, saveContentSection } from "@/services/contentService";
+import { checkIsAdmin } from "@/services/adminService";
+import { defaultGameContent } from "@/game/content";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
 const B = { pseudo: `Bravo_${suffix}`, email: `b${suffix}@test.dev`, pw: "motdepasse2" };
 
 const PB_TEST_URL = process.env.PB_TEST_URL;
+// Facultatif : compte superuser du serveur de test, pour les scénarios qui
+// demandent de modifier des champs réservés (ex. ancienneté d'un compte).
+const PB_TEST_ADMIN = process.env.PB_TEST_ADMIN_EMAIL
+  ? { email: process.env.PB_TEST_ADMIN_EMAIL, password: process.env.PB_TEST_ADMIN_PASSWORD ?? "" }
+  : null;
 
 describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
   beforeAll(() => {
@@ -98,20 +109,81 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
     expect((await ps.fetchPlayerSnapshot(aId))!.resources.scrap - after).toBeLessThan(1000);
   });
 
-  it("attack + defender processing happens once", async () => {
+  it("attack is arbitrated by the server: protections, XP, single defender processing", async () => {
+    // Ni l'attaquant ni le défenseur ne peuvent écrire eux-mêmes un rapport
+    // ou les champs JcJ réservés au serveur.
+    await expect(
+      pb.collection("battle_reports").create({ attackerUid: aId, defenderUid: bId, outcome: "attacker_win", defenderProcessed: false }),
+    ).rejects.toBeTruthy();
+    await expect(pb.collection("players").update(aId, { createdAtMs: 1 })).rejects.toBeTruthy();
+
     await pb.collection("players").update(aId, { units: { chasseur: { level: 1, count: 10 } } });
+    // B vient de s'inscrire : protection débutant.
+    await expect(
+      ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } }),
+    ).rejects.toThrow(/débute/);
+
+    if (!PB_TEST_ADMIN) return; // la suite demande de vieillir le compte de B (superuser)
+    const admin = new PocketBase(PB_TEST_URL);
+    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN.email, PB_TEST_ADMIN.password);
+    await admin.collection("players").update(bId, { createdAtMs: Date.now() - 30 * 24 * 3600 * 1000 });
+
     const res = await ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } });
-    expect(res.outcome).toBeTruthy();
-    // un attaquant ne peut pas marquer le rapport comme traité
+    expect(res.outcome).toBe("attacker_win");
+    expect(res.attackerXpDelta).toBeGreaterThan(0);
+    const me = await ps.fetchPlayerSnapshot(aId);
+    expect(me?.victories).toBe(1);
+
+    // Délai de 2 h (et bouclier) sur la même cible.
+    await expect(
+      ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 1 } }),
+    ).rejects.toThrow(/bouclier|récemment/);
+    const recent = await ps.fetchMyRecentAttacks(aId, Date.now() - 3600 * 1000);
+    expect(recent[bId]).toBeGreaterThan(0);
+
     const [rep] = await pb.collection("battle_reports").getFullList({ filter: `attackerUid="${aId}"` });
+    expect(rep.defenderXpDelta).toBeLessThan(0);
     await expect(pb.collection("battle_reports").update(rep.id, { defenderProcessed: true })).rejects.toBeTruthy();
+
     logout();
     await loginPlayer(B.pseudo, B.pw);
+    const xpBefore = (await ps.fetchPlayerSnapshot(bId))!.xp;
     const r = await Promise.all([ps.processBattleReportForDefender(bId, rep.id), ps.processBattleReportForDefender(bId, rep.id)]);
     expect(r.filter(Boolean).length).toBe(1);
-    expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull(); // passage suivant refusé par la règle
+    expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
+    const b = (await ps.fetchPlayerSnapshot(bId))!;
+    expect(b.xp).toBe(Math.max(0, xpBefore + rep.defenderXpDelta));
+    expect(b.defeats).toBe(1);
+    expect(b.lastDefeatAtMs).toBeGreaterThan(0);
     const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="combat-defender"` });
     expect(notifs.length).toBe(1);
+  });
+
+  it("game content: only admins edit it, and the server applies it in combat", async () => {
+    // Connecté en B (test précédent). Un joueur normal ne peut pas modifier le contenu.
+    await expect(pb.collection("game_config").create({ key: "units", data: [] })).rejects.toBeTruthy();
+    expect(await checkIsAdmin(bId)).toBe(false);
+    if (!PB_TEST_ADMIN) return;
+
+    const admin = new PocketBase(PB_TEST_URL);
+    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN.email, PB_TEST_ADMIN.password);
+    await admin.collection("admins").create({ id: bId, note: "test" });
+    expect(await checkIsAdmin(bId)).toBe(true);
+
+    // B (admin) met l'attaque du Chasseur à 0 : une attaque de chasseurs
+    // contre une base sans défense devient une égalité (0 contre 0).
+    const units = defaultGameContent().units.map((u) => (u.id === "chasseur" ? { ...u, stats: { ...u.stats, attaque: 0 } } : u));
+    await saveContentSection("units", units);
+    try {
+      await admin.collection("players").update(aId, { createdAtMs: Date.now() - 30 * 24 * 3600 * 1000 });
+      await pb.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
+      const res = await ps.initiateAttack({ attackerUid: bId, attackerPseudo: B.pseudo, targetUid: aId, targetPseudo: A.pseudo, fleet: { chasseur: 5 } });
+      expect(res.attackerPower).toBe(0);
+      expect(res.outcome).toBe("draw");
+    } finally {
+      await resetContentSection("units");
+      await admin.collection("admins").delete(bId);
+    }
   });
 
   it("leaderboard lists players without private fields", async () => {

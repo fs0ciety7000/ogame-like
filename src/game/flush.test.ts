@@ -1,3 +1,4 @@
+import { MISSIONS } from "@/game/missions";
 import { describe, expect, it } from "vitest";
 import { flushState, RESOURCE_HISTORY_INTERVAL_MS, RESOURCE_HISTORY_MAX_POINTS } from "@/game/flush";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
@@ -222,9 +223,10 @@ describe("flushState — missions", () => {
     const queues = makeQueues({ activeMissions: [{ key: "patrouille_courte", endTime: NOW - 1000 }] });
     const { player: after, queues: afterQueues, notifications } = flushState(player, queues, NOW);
 
-    expect(after.resources.scrap).toBe(player.resources.scrap + 150);
-    expect(after.xp).toBe(10);
-    expect(after.seasonXp).toBe(10);
+    const reward = MISSIONS.patrouille_courte.reward;
+    expect(after.resources.scrap).toBe(player.resources.scrap + reward.scrap);
+    expect(after.xp).toBe(reward.xp);
+    expect(after.seasonXp).toBe(reward.xp);
     expect(afterQueues.activeMissions).toHaveLength(0);
     expect(notifications.some((n) => n.kind === "mission")).toBe(true);
   });

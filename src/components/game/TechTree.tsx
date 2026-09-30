@@ -44,9 +44,10 @@ import {
   laneRect,
   NODE_HEIGHT,
   NODE_WIDTH,
-  TECH_LANES,
   techAncestors,
+  techCells,
   techDependents,
+  techLanes,
   techPosition,
 } from "@/components/game/techTreeLayout";
 
@@ -205,7 +206,8 @@ export function TechTree({
     // Chaîne complète de prérequis de la techno focalisée + ce qu'elle débloque.
     const chain = new Set([focusId, ...ancestors]);
 
-    const laneNodes: LaneFlowNode[] = TECH_LANES.map((lane) => {
+    const cells = techCells();
+    const laneNodes: LaneFlowNode[] = techLanes(cells).map((lane) => {
       const rect = laneRect(lane);
       return {
         id: lane.id,
@@ -228,7 +230,7 @@ export function TechTree({
       return {
         id: tech.id,
         type: "tech",
-        position: techPosition(tech.id),
+        position: techPosition(tech.id, cells),
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
         data: {

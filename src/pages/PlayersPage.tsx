@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Sword, Eye, Search, Gift, Flag } from "lucide-react";
+import { Sword, Eye, Search, Gift, Flag, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TargetReticle } from "@/components/ui/target-reticle";
-import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
+import { fetchMyRecentAttacks, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
+import { checkAttackAllowed, PVP_RULES } from "@/game/pvp";
+import { useNowTicker } from "@/hooks/useNowTicker";
 import { subscribeAlliances } from "@/services/allianceService";
 import { getRankLabel } from "@/game/ranks";
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
@@ -29,7 +31,18 @@ export function PlayersPage() {
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
 
+  useNowTicker();
+  const [myRecentAttacks, setMyRecentAttacks] = useState<Record<string, number>>({});
+
   useEffect(() => subscribeLeaderboard(setPlayers), []);
+  // Mes attaques des 2 dernières heures (délai avant de réattaquer une cible),
+  // rechargées à chaque fermeture de la fenêtre d'attaque.
+  useEffect(() => {
+    if (!uid || attackTarget) return;
+    fetchMyRecentAttacks(uid, Date.now() - PVP_RULES.attackCooldownMs)
+      .then(setMyRecentAttacks)
+      .catch(() => {});
+  }, [uid, attackTarget]);
   useEffect(() => subscribeAlliances(setAlliances), []);
 
   const season = useMemo(() => currentSeasonId(), []);
@@ -127,13 +140,35 @@ export function PlayersPage() {
           )}
           {filtered.map((p) => {
             const isSelf = p.uid === uid;
+            const me = players.find((x) => x.uid === uid);
+            const attackCheck = isSelf
+              ? null
+              : checkAttackAllowed({
+                  now: Date.now(),
+                  attackerUid: uid ?? "",
+                  attackerXp: me?.xp ?? 0,
+                  defenderUid: p.uid,
+                  defenderXp: p.xp,
+                  defenderCreatedAtMs: p.createdAtMs,
+                  defenderHasAttacked: (p.lastAttackAtMs ?? 0) > 0,
+                  lastAttackOnTargetMs: myRecentAttacks[p.uid] ?? null,
+                  lastDefenderDefeatMs: p.lastDefeatAtMs ?? null,
+                });
+            const isProtected = attackCheck?.reason === "newbie" || attackCheck?.reason === "shield";
             const displayXp = mode === "season" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp;
             return (
               <div key={p.uid} className="flex items-center justify-between gap-3 p-3">
                 <div className="flex items-center gap-3">
                   <span className="tabular-mono w-6 text-center text-xs text-slate-500">#{p.rank}</span>
                   <div>
-                    <p className="text-sm font-medium text-slate-100">{p.pseudo}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-100">
+                      {p.pseudo}
+                      {isProtected && (
+                        <span title={attackCheck?.message} className="flex items-center text-mint-glow">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-cyan-glow">
                       {getRankLabel(p.xp)}
                       {mode === "season" && (
@@ -156,8 +191,8 @@ export function PlayersPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="Attaquer"
-                    disabled={isSelf}
+                    title={attackCheck && !attackCheck.allowed ? attackCheck.message : "Attaquer"}
+                    disabled={isSelf || (attackCheck !== null && !attackCheck.allowed)}
                     className="group relative"
                     onClick={() => setAttackTarget({ uid: p.uid, pseudo: p.pseudo })}
                   >
