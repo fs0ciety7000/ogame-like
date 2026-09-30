@@ -145,9 +145,11 @@ body {
 .nebula-blob {
   position: absolute;
   border-radius: 999px;
-  filter: blur(70px);
-  opacity: 0.35;
+  filter: blur(90px);
+  opacity: 0.26;
   animation: var(--animate-drift);
+  /* Fondu de teinte quand on change de page. */
+  transition: background-color 1.6s ease;
 }
 
 /* Quadrillage façon plan technique, très discret, derrière les nébuleuses. */
@@ -182,6 +184,13 @@ body {
   background-size: 40px 40px;
 }
 
+.starfield-layer {
+  position: absolute;
+  inset: -40px;
+  will-change: transform;
+  transition: transform 0.25s ease-out;
+}
+
 .starfield span {
   position: absolute;
   border-radius: 999px;
@@ -206,4 +215,32 @@ body {
   --xy-controls-button-color-hover: var(--color-cyan-glow);
   --xy-controls-button-border-color: color-mix(in srgb, var(--color-cyan-glow) 14%, transparent);
   --xy-controls-box-shadow: none;
+}
+
+/* Palier visuel « Néon » des bâtiments (niveau 20) : liseré qui pulse. */
+.tier-neon {
+  animation: tier-neon 2.6s ease-in-out infinite;
+}
+@keyframes tier-neon {
+  0%, 100% { box-shadow: 0 0 18px rgba(75, 232, 255, 0.45), 0 0 0 2px rgba(75, 232, 255, 0.9); }
+  50% { box-shadow: 0 0 34px rgba(255, 94, 196, 0.55), 0 0 0 2px rgba(255, 94, 196, 0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-neon { animation: none; }
+}
+
+/* Squelettes de chargement : reflet qui balaye des blocs sombres. */
+.skeleton-bone {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.03) 30%,
+    color-mix(in srgb, var(--color-cyan-glow) 10%, transparent) 50%,
+    rgba(255, 255, 255, 0.03) 70%
+  );
+  background-size: 200% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  animation: var(--animate-shimmer);
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bone { animation: none; }
 }

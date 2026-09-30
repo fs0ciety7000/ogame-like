@@ -68,6 +68,6 @@ export function getRewardText(reward: Record<string, number>): string[] {
   };
   const out = Object.entries(reward)
     .filter(([, v]) => v)
-    .map(([k, v]) => `${labels[k] ?? k} ${v}`);
+    .map(([k, v]) => `${labels[k] ?? k} ${Math.round(v).toLocaleString("fr-FR")}`);
   return out.length ? out : ["Aucune récompense directe"];
 }

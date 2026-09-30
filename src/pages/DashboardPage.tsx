@@ -4,7 +4,7 @@ import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { usePlayerStore } from "@/store/playerStore";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
-import { getProductionRatesPerSecond } from "@/game/production";
+import { economySnapshot } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { getRankLabel } from "@/game/ranks";
@@ -13,6 +13,7 @@ import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
+import { ContractsCard } from "@/components/game/ContractsCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 
 export function DashboardPage() {
@@ -31,7 +32,7 @@ export function DashboardPage() {
     0,
   );
 
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const economy = economySnapshot(player);
   const now = Date.now();
 
   const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
@@ -62,19 +63,32 @@ export function DashboardPage() {
 
       <OnboardingChecklist player={player} />
 
+      <ContractsCard />
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Production / seconde</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
-            {RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => (
-              <div key={r.id} className="flex items-center gap-2 text-sm">
-                <span>{r.emoji}</span>
-                <span className="text-slate-300">{r.name}</span>
-                <span className="ml-auto text-mint-glow">+{formatNumber(rates[r.id] ?? 0)}/s</span>
-              </div>
-            ))}
+            {RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
+              const net = economy.net[r.id] ?? 0;
+              const full = economy.full.includes(r.id);
+              return (
+                <div key={r.id} className="flex items-center gap-2 text-sm">
+                  <span>{r.emoji}</span>
+                  <span className="text-slate-300">{r.name}</span>
+                  <span className={full ? "ml-auto text-xs font-semibold uppercase text-ember-glow" : net < 0 ? "ml-auto text-danger-glow" : "ml-auto text-mint-glow"}>
+                    {full ? "entrepôt plein" : `${net >= 0 ? "+" : ""}${formatNumber(Math.round(net))}/s`}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="mt-1 space-y-0.5 border-t border-white/5 pt-2 text-[11px] text-slate-500">
+              {economy.upkeep > 0 && <p>🛠️ Entretien de la flotte : −{formatNumber(Math.round(economy.upkeep))} énergie/s</p>}
+              {Number.isFinite(economy.capacity) && <p>📦 Entrepôt : {formatNumber(economy.capacity)} par ressource</p>}
+              {economy.outage && <p className="font-semibold text-danger-glow">⚡ Panne d'énergie : production à 50 %</p>}
+            </div>
           </CardContent>
         </Card>
 

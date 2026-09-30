@@ -80,6 +80,8 @@ export interface PlayerState {
   resourcesUpdatedAtMs: number;
   resourceHistory?: ResourceHistoryPoint[];
   unlockedAchievements?: string[];
+  /** Contrats quotidiens (voir src/game/contracts.ts). */
+  contracts?: import("@/game/contracts").ContractsState;
   allianceId?: string | null;
   allianceLastReadMs?: number;
   createdAtMs?: number;

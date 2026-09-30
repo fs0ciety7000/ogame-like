@@ -26,7 +26,7 @@
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
     "createRule": null,
-    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
+    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
@@ -151,6 +151,12 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "contracts",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
       }
     ],
     "indexes": [
@@ -660,5 +666,74 @@
       }
     ],
     "indexes": []
+  },
+  {
+    "id": "pbc_ce_admin_logs",
+    "name": "admin_logs",
+    "type": "base",
+    "listRule": "@collection.admins.id ?= @request.auth.id",
+    "viewRule": "@collection.admins.id ?= @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "actorId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "actorName",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "action",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "targetCollection",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "recordId",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "recordLabel",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "changes",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"
+    ]
   }
 ]

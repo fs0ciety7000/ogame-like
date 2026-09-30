@@ -104,6 +104,11 @@ redémarrer à la main. Variables d'environnement facultatives :
 La mise à jour est ignorée quand `pb_hooks` est celui d'une copie du dépôt
 (développement local).
 
+`cosmic.pb.js` consigne aussi chaque modification faite par un
+administrateur dans la collection `admin_logs` (onglet *Journal* de
+l'administration). `node pocketbase/setup.mjs` active en plus une
+sauvegarde automatique quotidienne (3 h UTC, 14 conservées).
+
 Vérification : `curl -X POST https://ton-pocketbase/api/cosmic/action`
 doit répondre **401** (route présente, connexion requise) et non 404.
 
