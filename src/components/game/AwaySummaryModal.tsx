@@ -15,6 +15,7 @@ const KIND_LABEL: Record<NotificationKind, string> = {
   achievement: "Succès débloqué",
   "spy-detected": "Tentative d'espionnage détectée",
   gift: "Don reçu",
+  fleet: "Flotte",
   system: "Évènement",
 };
 
