@@ -10,6 +10,9 @@ import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
+import { resetContentSection, saveContentSection } from "@/services/contentService";
+import { checkIsAdmin } from "@/services/adminService";
+import { defaultGameContent } from "@/game/content";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -154,6 +157,33 @@ describe.skipIf(!PB_TEST_URL)("PocketBase integration", () => {
     expect(b.lastDefeatAtMs).toBeGreaterThan(0);
     const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="combat-defender"` });
     expect(notifs.length).toBe(1);
+  });
+
+  it("game content: only admins edit it, and the server applies it in combat", async () => {
+    // Connecté en B (test précédent). Un joueur normal ne peut pas modifier le contenu.
+    await expect(pb.collection("game_config").create({ key: "units", data: [] })).rejects.toBeTruthy();
+    expect(await checkIsAdmin(bId)).toBe(false);
+    if (!PB_TEST_ADMIN) return;
+
+    const admin = new PocketBase(PB_TEST_URL);
+    await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN.email, PB_TEST_ADMIN.password);
+    await admin.collection("admins").create({ id: bId, note: "test" });
+    expect(await checkIsAdmin(bId)).toBe(true);
+
+    // B (admin) met l'attaque du Chasseur à 0 : une attaque de chasseurs
+    // contre une base sans défense devient une égalité (0 contre 0).
+    const units = defaultGameContent().units.map((u) => (u.id === "chasseur" ? { ...u, stats: { ...u.stats, attaque: 0 } } : u));
+    await saveContentSection("units", units);
+    try {
+      await admin.collection("players").update(aId, { createdAtMs: Date.now() - 30 * 24 * 3600 * 1000 });
+      await pb.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
+      const res = await ps.initiateAttack({ attackerUid: bId, attackerPseudo: B.pseudo, targetUid: aId, targetPseudo: A.pseudo, fleet: { chasseur: 5 } });
+      expect(res.attackerPower).toBe(0);
+      expect(res.outcome).toBe("draw");
+    } finally {
+      await resetContentSection("units");
+      await admin.collection("admins").delete(bId);
+    }
   });
 
   it("leaderboard lists players without private fields", async () => {

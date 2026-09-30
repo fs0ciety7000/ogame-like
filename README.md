@@ -96,6 +96,37 @@ PB_URL=… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… node scripts/reset-xp.mjs --
 PB_URL=… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… node scripts/reset-xp.mjs
 ```
 
+## Administration du jeu
+
+Page **Administration** (icône clé à molette dans l'en-tête, `/game/admin`),
+réservée aux comptes listés dans la collection `admins` :
+
+```bash
+# promouvoir un compte existant (inscris-toi d'abord dans le jeu)
+PB_URL=… PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… GAME_ADMIN_EMAILS=moi@exemple.fr node pocketbase/setup.mjs
+```
+
+(ou dans l'admin PocketBase : collection `admins` → *New record*, id = id du compte).
+
+Ce qu'on y règle, sans toucher au code :
+
+- **Bâtiments, unités, technologies, missions** : créer, dupliquer, modifier,
+  supprimer ; images envoyées dans la collection `game_assets`. Chaque fiche
+  affiche un aperçu (coûts et production par niveau, puissance par place de
+  hangar, rentabilité par heure des missions). Le contenu est validé avant
+  enregistrement (références cassées, doublons, cycles de prérequis).
+- **Règles** : délais et boucliers JcJ, protection débutant, plafond de perte
+  d'XP, taux de butin.
+- **Joueurs** : XP, ressources, niveaux de bâtiments/unités/technos, vider
+  des files d'attente bloquées.
+- **Outils** : export/import JSON de tout le contenu, remise à zéro de l'XP.
+
+Le contenu modifié est stocké dans `game_config` (une entrée par section ;
+« Valeurs par défaut » la supprime et revient au code). Il s'applique en
+direct chez tous les joueurs et **côté serveur** (combat arbitré par les
+hooks). Les nouvelles *mécaniques* (nouveau type de ressource, nouvel effet
+de techno ou de bâtiment) restent du code : `src/game/`.
+
 ## Migrer les données depuis Firebase
 
 1. Console Firebase → Paramètres du projet → Comptes de service →
@@ -138,6 +169,7 @@ src/
 pocketbase/    schéma (pb_schema.json), script d'installation, hooks serveur (pb_hooks/)
 scripts/       migration Firebase -> PocketBase, remise à zéro de l'XP
 src/server/    point d'entrée de la logique compilée pour les hooks
+src/pages/admin/ interface d'administration (éditeurs de contenu, joueurs, outils)
 legacy/        ancien prototype HTML/CSS/JS (référence, non utilisé)
 ```
 

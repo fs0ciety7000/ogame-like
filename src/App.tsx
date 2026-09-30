@@ -21,6 +21,7 @@ const AlliancePage = lazy(() => import("@/pages/AlliancePage").then((m) => ({ de
 const GalaxyPage = lazy(() => import("@/pages/GalaxyPage").then((m) => ({ default: m.GalaxyPage })));
 const CombatLogPage = lazy(() => import("@/pages/CombatLogPage").then((m) => ({ default: m.CombatLogPage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="alliance" element={<AlliancePage />} />
               <Route path="profil" element={<ProfilePage />} />
               <Route path="reglages" element={<SettingsPage />} />
+              <Route path="admin" element={<AdminPage />} />
             </Route>
           </Route>
 

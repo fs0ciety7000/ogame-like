@@ -18,9 +18,13 @@ export interface UnitDef {
   stats: UnitStats;
   category: UnitCategory;
   hangarSpace: number;
+  /** Technologie du Labo qui débloque puis améliore l'unité. */
+  unlockTech: string;
+  /** Temps de construction (s) ; par défaut (ferraille + énergie) / 100. */
+  buildTime?: number;
 }
 
-export const UNITS: UnitDef[] = [
+export const DEFAULT_UNITS: UnitDef[] = [
   {
     id: "drone_recuperateur",
     name: "Drone récupérateur",
@@ -30,6 +34,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 500, energy: 200 },
     stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
     category: "attack",
+    unlockTech: "tech9",
     hangarSpace: 1,
   },
   {
@@ -41,6 +46,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1000, energy: 500 },
     stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
     category: "attack",
+    unlockTech: "tech10",
     hangarSpace: 1,
   },
   {
@@ -52,6 +58,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1200, energy: 300 },
     stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
     category: "attack",
+    unlockTech: "tech11",
     hangarSpace: 1,
   },
   {
@@ -63,6 +70,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 800, energy: 400 },
     stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
     category: "attack",
+    unlockTech: "tech12",
     hangarSpace: 1,
   },
   {
@@ -74,6 +82,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1500, energy: 800 },
     stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
     category: "attack",
+    unlockTech: "tech13",
     hangarSpace: 20,
   },
   {
@@ -85,6 +94,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 50000, energy: 30000 },
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
     category: "attack",
+    unlockTech: "tech19",
     hangarSpace: 200,
   },
   {
@@ -96,6 +106,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 200, energy: 100 },
     stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
     category: "defense",
+    unlockTech: "tech14",
     hangarSpace: 1,
   },
   {
@@ -107,6 +118,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2000, energy: 1200 },
     stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
     category: "defense",
+    unlockTech: "tech15",
     hangarSpace: 1,
   },
   {
@@ -118,6 +130,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2500, energy: 1500 },
     stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
     category: "defense",
+    unlockTech: "tech16",
     hangarSpace: 1,
   },
   {
@@ -129,6 +142,7 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 1800, energy: 900 },
     stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
     category: "defense",
+    unlockTech: "tech17",
     hangarSpace: 1,
   },
   {
@@ -140,46 +154,40 @@ export const UNITS: UnitDef[] = [
     cost: { scrap: 2000, energy: 1200 },
     stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
     category: "defense",
+    unlockTech: "tech18",
     hangarSpace: 20,
   },
 ];
 
-export const UNIT_BASE_STATS: Record<string, { attack: number; defense: number }> = {
-  drone_recuperateur: { attack: 15, defense: 5 },
-  fregate: { attack: 100, defense: 20 },
-  cargo: { attack: 50, defense: 10 },
-  sentinelle: { attack: 120, defense: 30 },
-  chasseur: { attack: 245, defense: 10 },
-  etoile_noire: { attack: 500, defense: 500 },
-  roquette: { attack: 60, defense: 0 },
-  canon_impulsion: { attack: 80, defense: 10 },
-  canon_plasma: { attack: 105, defense: 20 },
-  batterie_aa: { attack: 135, defense: 15 },
-  intercepteur: { attack: 255, defense: 60 },
-};
+/* ---------- registre courant (remplacé par applyGameContent) ---------- */
 
-export const UNIT_TO_TECH: Record<string, string> = {
-  drone_recuperateur: "tech9",
-  fregate: "tech10",
-  cargo: "tech11",
-  sentinelle: "tech12",
-  chasseur: "tech13",
-  roquette: "tech14",
-  canon_impulsion: "tech15",
-  canon_plasma: "tech16",
-  batterie_aa: "tech17",
-  intercepteur: "tech18",
-  etoile_noire: "tech19",
-};
+export const UNITS: UnitDef[] = [];
+/** Stats de combat de base, dérivées des fiches (plus de double saisie). */
+export const UNIT_BASE_STATS: Record<string, { attack: number; defense: number }> = {};
+/** Technologie qui débloque/améliore chaque unité. */
+export const UNIT_TO_TECH: Record<string, string> = {};
+export const OFFENSIVE_UNITS: string[] = [];
+export const DEFENSIVE_UNITS: string[] = [];
 
-export const OFFENSIVE_UNITS = ["drone_recuperateur", "fregate", "sentinelle", "cargo", "chasseur", "etoile_noire"];
-export const DEFENSIVE_UNITS = ["roquette", "canon_impulsion", "canon_plasma", "batterie_aa", "intercepteur"];
+export function setUnits(defs: UnitDef[]) {
+  UNITS.splice(0, UNITS.length, ...defs);
+  for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
+  for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
+  for (const u of defs) {
+    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense };
+    if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
+  }
+  OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
+  DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
+}
+setUnits(DEFAULT_UNITS);
 
 export function findUnit(id: string): UnitDef | undefined {
   return UNITS.find((u) => u.id === id);
 }
 
 export function getUnitBuildTime(unit: UnitDef): number {
+  if (unit.buildTime && unit.buildTime > 0) return unit.buildTime;
   const total = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
   return Math.max(3, Math.ceil(total / 100));
 }

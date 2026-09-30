@@ -1,0 +1,169 @@
+import { DEFAULT_BUILDINGS, setBuildings, type BuildingDef } from "@/game/buildings";
+import { DEFAULT_UNITS, setUnits, type UnitDef } from "@/game/units";
+import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, type TechDef } from "@/game/technologies";
+import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
+import { PVP_RULES } from "@/game/pvp";
+import { COMBAT_RULES } from "@/game/combat";
+import { RESOURCE_LIST } from "@/game/resources";
+
+/* =====================================================
+   Contenu du jeu piloté par les données.
+
+   Le contenu par défaut est défini dans le code (buildings.ts, units.ts,
+   technologies.ts, missions.ts…). L'interface d'administration peut en
+   enregistrer une version modifiée dans la collection PocketBase
+   `game_config` (un enregistrement par section). applyGameContent est
+   appelé au démarrage du client ET par le serveur (pb_hooks) avant chaque
+   action arbitrée : les deux voient toujours les mêmes règles.
+===================================================== */
+
+export interface GameRules {
+  pvp: typeof PVP_RULES;
+  combat: typeof COMBAT_RULES;
+}
+
+export interface GameContent {
+  buildings: BuildingDef[];
+  units: UnitDef[];
+  technologies: TechDef[];
+  missions: MissionDef[];
+  rules: GameRules;
+}
+
+export type ContentSection = keyof GameContent;
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "rules"];
+
+const DEFAULT_PVP_RULES = { ...PVP_RULES };
+const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
+
+/** Copie profonde du contenu par défaut (celui du code). */
+export function defaultGameContent(): GameContent {
+  return structuredClone({
+    buildings: DEFAULT_BUILDINGS,
+    units: DEFAULT_UNITS,
+    technologies: DEFAULT_TECHNOLOGIES,
+    missions: Object.values(DEFAULT_MISSIONS),
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES },
+  });
+}
+
+let current: GameContent = defaultGameContent();
+
+/** Contenu actuellement appliqué (copie). */
+export function currentGameContent(): GameContent {
+  return structuredClone(current);
+}
+
+/** Applique un contenu (sections absentes = valeurs par défaut du code). */
+export function applyGameContent(overrides: Partial<GameContent>): GameContent {
+  const defaults = defaultGameContent();
+  const content: GameContent = {
+    buildings: overrides.buildings ?? defaults.buildings,
+    units: overrides.units ?? defaults.units,
+    technologies: overrides.technologies ?? defaults.technologies,
+    missions: overrides.missions ?? defaults.missions,
+    rules: {
+      pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
+      combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
+    },
+  };
+  setBuildings(content.buildings);
+  setUnits(content.units);
+  setTechnologies(content.technologies);
+  setMissions(content.missions);
+  Object.assign(PVP_RULES, content.rules.pvp);
+  Object.assign(COMBAT_RULES, content.rules.combat);
+  current = content;
+  return content;
+}
+
+/* ---------- validation (interface d'administration) ---------- */
+
+const ID_PATTERN = /^[A-Za-z0-9_]+$/;
+
+/** Liste des erreurs bloquantes : identifiants en double, références vers
+ *  un élément inexistant, valeurs impossibles. Vide = contenu valide. */
+export function validateGameContent(content: GameContent): string[] {
+  const errors: string[] = [];
+  const resources = new Set(RESOURCE_LIST.map((r) => r.id as string));
+  const techIds = new Set(content.technologies.map((t) => t.id));
+  const unitIds = new Set(content.units.map((u) => u.id));
+
+  const checkIds = (label: string, ids: string[]) => {
+    const seen = new Set<string>();
+    for (const id of ids) {
+      if (!id || !ID_PATTERN.test(id)) errors.push(`${label} : identifiant « ${id} » invalide (lettres, chiffres, _).`);
+      if (seen.has(id)) errors.push(`${label} : identifiant « ${id} » en double.`);
+      seen.add(id);
+    }
+  };
+  const checkResources = (label: string, map: Record<string, number> | undefined) => {
+    for (const [res, v] of Object.entries(map ?? {})) {
+      if (!resources.has(res)) errors.push(`${label} : ressource inconnue « ${res} ».`);
+      if (typeof v !== "number" || !Number.isFinite(v) || v < 0) errors.push(`${label} : valeur invalide pour ${res}.`);
+    }
+  };
+
+  checkIds("Bâtiments", content.buildings.map((b) => b.id));
+  for (const b of content.buildings) {
+    const label = `Bâtiment ${b.name || b.id}`;
+    if (!(b.maxLevel >= 1)) errors.push(`${label} : niveau max doit être ≥ 1.`);
+    checkResources(`${label} (déblocage)`, b.unlockCost);
+    checkResources(`${label} (coût initial)`, b.upgrade?.baseCost);
+    checkResources(`${label} (coût max)`, b.upgrade?.maxCost);
+    if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label} : techno « ${b.unlockedByTech} » inexistante.`);
+    if (b.production && !resources.has(b.production.resource)) errors.push(`${label} : ressource produite inconnue.`);
+    if (b.production && b.production.perSecond.length === 0) errors.push(`${label} : table de production vide.`);
+  }
+  if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un bâtiment doit être débloqué dès le départ.");
+
+  checkIds("Unités", content.units.map((u) => u.id));
+  for (const u of content.units) {
+    const label = `Unité ${u.name || u.id}`;
+    if (!techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
+    if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
+    if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
+    checkResources(`${label} (coût)`, u.cost as Record<string, number>);
+  }
+
+  checkIds("Technologies", content.technologies.map((t) => t.id));
+  for (const t of content.technologies) {
+    const label = `Techno ${t.nom || t.id}`;
+    if (!(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
+    checkResources(`${label} (coût)`, t.baseCost);
+    for (const req of Object.keys(t.prereq ?? {})) {
+      if (!techIds.has(req)) errors.push(`${label} : prérequis « ${req} » inexistant.`);
+      if (req === t.id) errors.push(`${label} : ne peut pas être son propre prérequis.`);
+    }
+  }
+  // Cycles de prérequis (A requiert B qui requiert A) : recherche impossible.
+  const byId = new Map(content.technologies.map((t) => [t.id, t]));
+  const visiting = new Set<string>();
+  const done = new Set<string>();
+  const visit = (id: string, path: string[]): void => {
+    if (done.has(id)) return;
+    if (visiting.has(id)) {
+      errors.push(`Technologies : cycle de prérequis ${[...path, id].join(" → ")}.`);
+      return;
+    }
+    visiting.add(id);
+    for (const req of Object.keys(byId.get(id)?.prereq ?? {})) if (byId.has(req)) visit(req, [...path, id]);
+    visiting.delete(id);
+    done.add(id);
+  };
+  for (const t of content.technologies) visit(t.id, []);
+
+  checkIds("Missions", content.missions.map((m) => m.key));
+  for (const m of content.missions) {
+    const label = `Mission ${m.name || m.key}`;
+    if (!(m.duration > 0)) errors.push(`${label} : durée doit être > 0.`);
+    for (const unitId of Object.keys(m.prereq ?? {})) {
+      if (!unitIds.has(unitId)) errors.push(`${label} : unité requise « ${unitId} » inexistante.`);
+    }
+    const res = { ...(m.reward ?? {}) };
+    delete res.xp;
+    checkResources(`${label} (récompense)`, res);
+  }
+
+  return [...new Set(errors)];
+}

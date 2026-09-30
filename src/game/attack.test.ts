@@ -51,6 +51,8 @@ describe("performAttack", () => {
     const out = performAttack(input({ fleet: { chasseur: 500 } }));
     expect(!out.ok && out.message).toMatch(/plus assez/);
     expect(performAttack(input({ fleet: { chasseur: 0 } })).ok).toBe(false);
+    const defensive = performAttack(input({ fleet: { roquette: 5 } }));
+    expect(!defensive.ok && defensive.message).toMatch(/unités d'attaque/);
   });
 
   it("caps the defender's XP loss over 24h", () => {

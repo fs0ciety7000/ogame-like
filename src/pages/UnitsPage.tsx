@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH } from "@/game/units";
-import { findTech } from "@/game/technologies";
+import { findTech, techBonus } from "@/game/technologies";
 import { unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
@@ -175,8 +175,8 @@ export function UnitsPage() {
                       <p className="text-xs text-slate-400">{unit.description}</p>
                       <div className="flex flex-wrap gap-1.5 tabular-mono text-[11px]">
                         {(() => {
-                          const attackTechBonus = (player.techLevels.tech5 ?? 0) * 10;
-                          const defenseTechBonus = (player.techLevels.tech2 ?? 0) * 10;
+                          const attackTechBonus = Math.round(techBonus(player.techLevels, "unit_attack") * 100);
+                          const defenseTechBonus = Math.round(techBonus(player.techLevels, "unit_defense") * 100);
                           return (
                             <>
                               <Tooltip>

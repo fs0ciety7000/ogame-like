@@ -1,0 +1,475 @@
+import { Button } from "@/components/ui/button";
+import { getBuildingUpgradeCost, getBuildingUpgradeTime, type BuildingDef, type BuildingEffect } from "@/game/buildings";
+import { getUnitBuildTime, type UnitDef } from "@/game/units";
+import { getTechCost, getTechTime, TECH_EFFECT_DEFAULTS, TECH_EFFECT_LABELS, type TechDef, type TechEffect } from "@/game/technologies";
+import { MISSION_XP_PER_HOUR, type MissionDef } from "@/game/missions";
+import { currentGameContent } from "@/game/content";
+import { formatCost } from "@/game/resources";
+import { formatNumber } from "@/lib/utils";
+import type { Resources } from "@/types/game";
+import {
+  CheckboxField,
+  formatSeconds,
+  ImageField,
+  KeyNumberMapField,
+  NumberField,
+  NumberListField,
+  RESOURCE_OPTIONS,
+  ResourceMapField,
+  Section,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "@/pages/admin/fields";
+
+const ID_HINT_NEW = "Lettres, chiffres, _ — non modifiable une fois enregistré.";
+const ID_HINT_LOCKED = "Identifiant utilisé dans les données des joueurs : non modifiable.";
+
+function techOptions(withNone = false) {
+  const techs = currentGameContent().technologies.map((t) => ({ value: t.id, label: `${t.nom} (${t.id})` }));
+  return withNone ? [{ value: "", label: "— Aucune —" }, ...techs] : techs;
+}
+
+function unitOptions() {
+  return currentGameContent().units.map((u) => ({ value: u.id, label: u.name }));
+}
+
+function PreviewTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-white/5">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-white/5 text-slate-400">
+          <tr>
+            {headers.map((h) => (
+              <th key={h} className="px-2 py-1 font-medium">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="tabular-mono text-slate-300">
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t border-white/5">
+              {r.map((c, j) => (
+                <td key={j} className="px-2 py-1">
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ---------------- Bâtiments ---------------- */
+
+export function newBuilding(): BuildingDef {
+  return {
+    id: "nouveau_batiment",
+    name: "Nouveau bâtiment",
+    description: "",
+    image: "",
+    maxLevel: 10,
+    unlockCost: { scrap: 500 },
+    upgrade: { baseCost: { scrap: 100, energy: 50 }, maxCost: { scrap: 1_000_000, energy: 500_000 }, costFromLevel: 1, secondsPerLevel: 600 },
+  };
+}
+
+export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef; onChange: (b: BuildingDef) => void; isNew: boolean }) {
+  const set = (patch: Partial<BuildingDef>) => onChange({ ...b, ...patch });
+  const effectType = b.effect?.type ?? "";
+  return (
+    <div className="flex flex-col gap-3">
+      <Section title="Identité">
+        <TextField label="Identifiant" value={b.id} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(id) => set({ id })} />
+        <TextField label="Nom" value={b.name} onChange={(name) => set({ name })} />
+        <TextAreaField label="Description" value={b.description} onChange={(description) => set({ description })} />
+        <ImageField label="Image" value={b.image} onChange={(image) => set({ image })} />
+      </Section>
+
+      <Section title="Déblocage">
+        <CheckboxField label="Débloqué dès l'inscription" checked={!!b.startsUnlocked} onChange={(startsUnlocked) => set({ startsUnlocked })} />
+        <SelectField
+          label="Débloqué par une technologie"
+          value={b.unlockedByTech ?? ""}
+          options={techOptions(true)}
+          hint="La techno doit avoir l'effet « unlock_buildings »."
+          onChange={(t) => set({ unlockedByTech: t || undefined })}
+        />
+        <ResourceMapField
+          label="Coût de déblocage"
+          value={b.unlockCost}
+          hint="Laisser vide si débloqué d'office ou par une technologie."
+          onChange={(unlockCost) => set({ unlockCost: Object.keys(unlockCost).length ? unlockCost : undefined })}
+        />
+      </Section>
+
+      <Section title="Amélioration">
+        <NumberField label="Niveau max" value={b.maxLevel} min={1} step={1} onChange={(v) => set({ maxLevel: Math.max(1, Math.round(v ?? 1)) })} />
+        <NumberField
+          label="Durée par niveau (s)"
+          value={b.upgrade.secondsPerLevel}
+          min={0}
+          hint={`Niveau N : (N−1) × cette durée — ex. niv. 2 = ${formatSeconds(b.upgrade.secondsPerLevel)}`}
+          onChange={(v) => set({ upgrade: { ...b.upgrade, secondsPerLevel: v ?? 0 } })}
+        />
+        <ResourceMapField label="Coût au premier niveau payant" value={b.upgrade.baseCost} onChange={(baseCost) => set({ upgrade: { ...b.upgrade, baseCost } })} />
+        <ResourceMapField
+          label="Coût au niveau max"
+          value={b.upgrade.maxCost}
+          hint="Entre les deux, progression géométrique."
+          onChange={(maxCost) => set({ upgrade: { ...b.upgrade, maxCost } })}
+        />
+        <NumberField
+          label="Premier niveau payant"
+          value={b.upgrade.costFromLevel}
+          min={1}
+          step={1}
+          hint="Niveau auquel s'applique le coût initial (1 en général)."
+          onChange={(v) => set({ upgrade: { ...b.upgrade, costFromLevel: Math.max(1, Math.round(v ?? 1)) } })}
+        />
+      </Section>
+
+      <Section title="Production">
+        <CheckboxField
+          label="Produit une ressource"
+          checked={!!b.production}
+          onChange={(on) => set({ production: on ? { resource: "scrap", perSecond: [2, 4, 7, 13, 23, 42, 75, 135, 259, 500] } : undefined })}
+        />
+        {b.production && (
+          <>
+            <SelectField
+              label="Ressource produite"
+              value={b.production.resource}
+              options={RESOURCE_OPTIONS}
+              onChange={(resource) => set({ production: { ...b.production!, resource: resource as keyof Resources } })}
+            />
+            <NumberListField
+              label="Production par seconde, par niveau"
+              value={b.production.perSecond}
+              hint="Ex. 2, 4, 7… (premier nombre = niveau 1)."
+              onChange={(perSecond) => set({ production: { ...b.production!, perSecond } })}
+            />
+          </>
+        )}
+      </Section>
+
+      <Section title="Effet spécial">
+        <SelectField
+          label="Effet"
+          value={effectType}
+          options={[
+            { value: "", label: "Aucun" },
+            { value: "repair", label: "Réparation après combat" },
+            { value: "hangar", label: "Capacité de hangar" },
+          ]}
+          onChange={(t) =>
+            set({
+              effect:
+                t === "repair"
+                  ? { type: "repair", perLevel: 0.05, max: 0.5 }
+                  : t === "hangar"
+                    ? { type: "hangar", category: "attack", perLevel: 2000 }
+                    : undefined,
+            })
+          }
+        />
+        {b.effect?.type === "repair" && (
+          <>
+            <NumberField
+              label="Réparation par niveau (0,05 = 5 %)"
+              value={b.effect.perLevel}
+              step={0.01}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "repair" }>), perLevel: v ?? 0 } })}
+            />
+            <NumberField
+              label="Réparation maximale (0,5 = 50 %)"
+              value={b.effect.max}
+              step={0.05}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "repair" }>), max: v ?? 0 } })}
+            />
+          </>
+        )}
+        {b.effect?.type === "hangar" && (
+          <>
+            <SelectField
+              label="Unités stockées"
+              value={b.effect.category}
+              options={[
+                { value: "attack", label: "Attaque" },
+                { value: "defense", label: "Défense" },
+              ]}
+              onChange={(category) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "hangar" }>), category } })}
+            />
+            <NumberField
+              label="Places par niveau"
+              value={b.effect.perLevel}
+              min={0}
+              step={1}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "hangar" }>), perLevel: v ?? 0 } })}
+            />
+          </>
+        )}
+      </Section>
+
+      <div>
+        <p className="mb-1 text-xs font-semibold text-slate-400">Aperçu par niveau</p>
+        <PreviewTable
+          headers={["Niveau", "Coût", "Durée", ...(b.production ? ["Production/s"] : [])]}
+          rows={Array.from({ length: b.maxLevel }, (_, i) => i + 1).map((lvl) => [
+            lvl,
+            lvl === 1 ? "—" : formatCost(getBuildingUpgradeCost(b, lvl) as Partial<Resources>) || "gratuit",
+            lvl === 1 ? "—" : formatSeconds(getBuildingUpgradeTime(b, lvl)),
+            ...(b.production ? [b.production.perSecond[lvl - 1] ?? "?"] : []),
+          ])}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Unités ---------------- */
+
+export function newUnit(): UnitDef {
+  return {
+    id: "nouvelle_unite",
+    name: "Nouvelle unité",
+    image: "",
+    maxLevel: 10,
+    description: "",
+    cost: { scrap: 1000, energy: 500 },
+    stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 0 },
+    category: "attack",
+    hangarSpace: 1,
+    unlockTech: currentGameContent().technologies[0]?.id ?? "",
+  };
+}
+
+export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChange: (u: UnitDef) => void; isNew: boolean }) {
+  const set = (patch: Partial<UnitDef>) => onChange({ ...u, ...patch });
+  const setStat = (key: keyof UnitDef["stats"], v: number | undefined) => set({ stats: { ...u.stats, [key]: v ?? 0 } });
+  const power = u.category === "attack" ? u.stats.attaque : u.stats.attaque + u.stats.defense;
+  const price = (u.cost.scrap ?? 0) + (u.cost.energy ?? 0);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Section title="Identité">
+        <TextField label="Identifiant" value={u.id} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(id) => set({ id })} />
+        <TextField label="Nom" value={u.name} onChange={(name) => set({ name })} />
+        <TextAreaField label="Description" value={u.description} onChange={(description) => set({ description })} />
+        <ImageField label="Image" value={u.image} onChange={(image) => set({ image })} />
+      </Section>
+
+      <Section title="Rôle">
+        <SelectField
+          label="Catégorie"
+          value={u.category}
+          options={[
+            { value: "attack", label: "Attaque (envoyée en combat)" },
+            { value: "defense", label: "Défense (protège la base)" },
+          ]}
+          onChange={(category) => set({ category })}
+        />
+        <SelectField label="Technologie de déblocage" value={u.unlockTech} options={techOptions()} onChange={(unlockTech) => set({ unlockTech })} hint="Le niveau de la techno = niveau de l'unité." />
+        <NumberField label="Niveau max" value={u.maxLevel} min={1} step={1} onChange={(v) => set({ maxLevel: Math.max(1, Math.round(v ?? 1)) })} />
+        <NumberField label="Places de hangar" value={u.hangarSpace} min={1} step={1} onChange={(v) => set({ hangarSpace: Math.max(1, Math.round(v ?? 1)) })} />
+      </Section>
+
+      <Section title="Statistiques (niveau 1, +5 par niveau)">
+        <NumberField label="Attaque" value={u.stats.attaque} min={0} onChange={(v) => setStat("attaque", v)} />
+        <NumberField label="Défense" value={u.stats.defense} min={0} onChange={(v) => setStat("defense", v)} hint="Compte en défense uniquement (ATK + DEF)." />
+        <NumberField label="Vitesse" value={u.stats.vitesse} min={0} onChange={(v) => setStat("vitesse", v)} />
+        <NumberField label="Cargaison" value={u.stats.cargo} min={0} onChange={(v) => setStat("cargo", v)} />
+      </Section>
+
+      <Section title="Coût">
+        <NumberField label="Ferraille" value={u.cost.scrap} min={0} onChange={(v) => set({ cost: { ...u.cost, scrap: v ?? 0 } })} />
+        <NumberField label="Énergie" value={u.cost.energy} min={0} onChange={(v) => set({ cost: { ...u.cost, energy: v ?? 0 } })} />
+        <NumberField
+          label="Temps de construction (s)"
+          value={u.buildTime}
+          optional
+          min={0}
+          hint={`Vide = (ferraille + énergie) / 100 → ${formatSeconds(getUnitBuildTime({ ...u, buildTime: undefined }))}`}
+          onChange={(buildTime) => set({ buildTime })}
+        />
+      </Section>
+
+      <div className="grid gap-2 rounded-lg border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
+        <p>
+          Puissance {u.category === "attack" ? "d'attaque" : "de défense"} : <strong className="text-slate-100">{formatNumber(power)}</strong>
+        </p>
+        <p>
+          Par place de hangar : <strong className="text-gold-glow">{formatNumber(Math.round(power / Math.max(1, u.hangarSpace)))}</strong>
+        </p>
+        <p>
+          Par 1 000 ressources : <strong className="text-mint-glow">{price > 0 ? formatNumber(Math.round((power / price) * 1000)) : "∞"}</strong>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Technologies ---------------- */
+
+const EFFECT_OPTIONS = (Object.keys(TECH_EFFECT_LABELS) as TechEffect[])
+  .filter((e) => e !== "unlock_hangars")
+  .map((e) => ({ value: e, label: TECH_EFFECT_LABELS[e] }));
+
+export function newTech(): TechDef {
+  return {
+    id: "nouvelle_techno",
+    nom: "Nouvelle technologie",
+    desc: "",
+    maxLevel: 10,
+    baseCost: { scrap: 500, energy: 200 },
+    baseTime: 60,
+    effect: "unit_attack",
+    prereq: {},
+  };
+}
+
+export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChange: (t: TechDef) => void; isNew: boolean }) {
+  const set = (patch: Partial<TechDef>) => onChange({ ...t, ...patch });
+  const numericEffect = t.effect in TECH_EFFECT_DEFAULTS;
+  const prereqOptions = techOptions().filter((o) => o.value !== t.id);
+  return (
+    <div className="flex flex-col gap-3">
+      <Section title="Identité">
+        <TextField label="Identifiant" value={t.id} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(id) => set({ id })} />
+        <TextField label="Nom" value={t.nom} onChange={(nom) => set({ nom })} />
+        <TextAreaField label="Description" value={t.desc} onChange={(desc) => set({ desc })} />
+      </Section>
+
+      <Section title="Effet">
+        <SelectField
+          label="Effet"
+          value={t.effect === "unlock_hangars" ? "unlock_buildings" : t.effect}
+          options={EFFECT_OPTIONS}
+          onChange={(effect) => set({ effect })}
+        />
+        {numericEffect && (
+          <NumberField
+            label="Valeur par niveau (0,1 = 10 %)"
+            value={t.effectValue}
+            optional
+            step={0.01}
+            hint={`Par défaut : ${TECH_EFFECT_DEFAULTS[t.effect]}`}
+            onChange={(effectValue) => set({ effectValue })}
+          />
+        )}
+        <NumberField label="Niveau max" value={t.maxLevel} min={1} step={1} onChange={(v) => set({ maxLevel: Math.max(1, Math.round(v ?? 1)) })} />
+      </Section>
+
+      <Section title="Coût et durée">
+        <ResourceMapField label="Coût au niveau 1" value={t.baseCost} onChange={(baseCost) => set({ baseCost })} />
+        <NumberField label="Durée au niveau 1 (s)" value={t.baseTime} min={0} onChange={(v) => set({ baseTime: v ?? 0 })} />
+        <NumberField
+          label="Croissance du coût par niveau"
+          value={t.costGrowth}
+          optional
+          step={0.05}
+          hint="Multiplicateur par niveau (vide = 2,7). Durée : ×1,67 par niveau."
+          onChange={(costGrowth) => set({ costGrowth })}
+        />
+      </Section>
+
+      <Section title="Prérequis">
+        <KeyNumberMapField
+          label="Technologies requises (niveau minimal)"
+          value={t.prereq}
+          options={prereqOptions}
+          valueLabel="Niveau"
+          onChange={(prereq) => set({ prereq })}
+        />
+      </Section>
+
+      <Section title="Position dans l'arbre du Labo (facultatif)">
+        <NumberField
+          label="Colonne"
+          value={t.treePos?.col}
+          optional
+          step={1}
+          hint="Vide = placement automatique."
+          onChange={(col) => set({ treePos: col === undefined ? undefined : { col, row: t.treePos?.row ?? 0 } })}
+        />
+        <NumberField
+          label="Ligne"
+          value={t.treePos?.row}
+          optional
+          step={0.25}
+          onChange={(row) => set({ treePos: row === undefined ? undefined : { col: t.treePos?.col ?? 0, row } })}
+        />
+      </Section>
+
+      <div>
+        <p className="mb-1 text-xs font-semibold text-slate-400">Aperçu par niveau</p>
+        <PreviewTable
+          headers={["Niveau", "Coût", "Durée"]}
+          rows={Array.from({ length: Math.min(t.maxLevel, 20) }, (_, i) => i + 1).map((lvl) => [
+            lvl,
+            formatCost(getTechCost(t, lvl) as Partial<Resources>),
+            formatSeconds(getTechTime(t, lvl)),
+          ])}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Missions ---------------- */
+
+export function newMission(): MissionDef {
+  return { key: "nouvelle_mission", name: "Nouvelle mission", duration: 1800, reward: { scrap: 10000, xp: 30 }, prereq: {} };
+}
+
+export function MissionForm({ value: m, onChange, isNew }: { value: MissionDef; onChange: (m: MissionDef) => void; isNew: boolean }) {
+  const set = (patch: Partial<MissionDef>) => onChange({ ...m, ...patch });
+  const { xp = 0, ...resources } = m.reward;
+  const suggestedXp = Math.max(1, Math.round((m.duration / 3600) * MISSION_XP_PER_HOUR));
+  const perHour = (v: number) => formatNumber(Math.round((v * 3600) / Math.max(1, m.duration)));
+  return (
+    <div className="flex flex-col gap-3">
+      <Section title="Identité">
+        <TextField label="Identifiant" value={m.key} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(key) => set({ key })} />
+        <TextField label="Nom" value={m.name} onChange={(name) => set({ name })} />
+        <NumberField
+          label="Durée (s)"
+          value={m.duration}
+          min={1}
+          step={1}
+          hint={formatSeconds(m.duration)}
+          onChange={(v) => set({ duration: Math.max(1, Math.round(v ?? 1)) })}
+        />
+      </Section>
+
+      <Section title="Récompense">
+        <ResourceMapField label="Ressources" value={resources} onChange={(res) => set({ reward: { ...res, xp } })} />
+        <NumberField label="XP" value={xp} min={0} step={1} onChange={(v) => set({ reward: { ...resources, xp: v ?? 0 } })} />
+        <div className="flex items-end">
+          <Button variant="outline" size="sm" type="button" onClick={() => set({ reward: { ...resources, xp: suggestedXp } })}>
+            Appliquer {suggestedXp} XP ({MISSION_XP_PER_HOUR} XP/h)
+          </Button>
+        </div>
+      </Section>
+
+      <Section title="Unités requises">
+        <KeyNumberMapField label="Unités (quantité minimale possédée)" value={m.prereq} options={unitOptions()} onChange={(prereq) => set({ prereq })} />
+      </Section>
+
+      <div className="rounded-lg border border-white/5 bg-black/10 p-3 text-xs text-slate-300">
+        Rentabilité si relancée en boucle :{" "}
+        {Object.entries(resources).map(([res, v]) => (
+          <span key={res} className="mr-3">
+            {RESOURCE_OPTIONS.find((o) => o.value === res)?.label ?? res} <strong>{perHour(v)}</strong>/h
+          </span>
+        ))}
+        <span>
+          XP <strong>{perHour(xp)}</strong>/h
+        </span>
+      </div>
+    </div>
+  );
+}

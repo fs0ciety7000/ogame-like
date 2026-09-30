@@ -1,13 +1,33 @@
 [
   {
+    "id": "pbc_ce_admins",
+    "name": "admins",
+    "type": "base",
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "note",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      }
+    ],
+    "indexes": []
+  },
+  {
     "id": "pbc_ce_players",
     "name": "players",
     "type": "base",
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
     "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
-    "updateRule": "id = @request.auth.id && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false",
-    "deleteRule": "id = @request.auth.id",
+    "updateRule": "(id = @request.auth.id && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
+    "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
         "name": "pseudo",
@@ -141,10 +161,10 @@
     "id": "pbc_ce_queues",
     "name": "queues",
     "type": "base",
-    "listRule": "id = @request.auth.id",
-    "viewRule": "id = @request.auth.id",
+    "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "createRule": "@request.auth.id != \"\" && @request.body.id = @request.auth.id",
-    "updateRule": "id = @request.auth.id",
+    "updateRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id",
     "fields": [
       {
@@ -571,5 +591,69 @@
     "indexes": [
       "CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"
     ]
+  },
+  {
+    "id": "pbc_ce_game_config",
+    "name": "game_config",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@collection.admins.id ?= @request.auth.id",
+    "updateRule": "@collection.admins.id ?= @request.auth.id",
+    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_game_assets",
+    "name": "game_assets",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@collection.admins.id ?= @request.auth.id",
+    "updateRule": "@collection.admins.id ?= @request.auth.id",
+    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "fields": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "file",
+        "type": "file",
+        "required": true,
+        "maxSelect": 1,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg",
+          "image/gif",
+          "image/svg+xml"
+        ],
+        "thumbs": [],
+        "protected": false
+      }
+    ],
+    "indexes": []
   }
 ]

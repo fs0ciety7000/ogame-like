@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX } from "lucide-react";
+import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
+import { useContentStore } from "@/services/contentService";
+import { useIsAdmin } from "@/services/adminService";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
@@ -76,6 +78,9 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
   const loading = usePlayerStore((s) => s.loading);
+  const contentLoaded = useContentStore((s) => s.loaded);
+  const contentVersion = useContentStore((s) => s.version);
+  const isAdmin = useIsAdmin();
   const location = useLocation();
 
   useGameSync(user?.uid ?? null);
@@ -144,6 +149,13 @@ export function AppShell() {
             <SfxToggle />
             <MusicToggle />
             <NotificationBell />
+            {isAdmin && (
+              <Button variant="outline" size="icon" title="Administration" asChild>
+                <Link to="/game/admin">
+                  <Wrench className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" size="icon" title="Réglages" asChild>
               <Link to="/game/reglages">
                 <Settings className="h-4 w-4" />
@@ -156,10 +168,12 @@ export function AppShell() {
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto">
-          {loading ? (
+          {loading || !contentLoaded ? (
             <BootSequence />
           ) : (
-            <Suspense fallback={<PageLoader />}>
+            // Remonté quand l'administration modifie le contenu du jeu, pour
+            // que chaque écran relise les nouvelles définitions.
+            <Suspense key={contentVersion} fallback={<PageLoader />}>
               <PageTransition>
                 <Outlet />
               </PageTransition>

@@ -4,3 +4,4 @@
 export { performAttack } from "@/game/attack";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
+export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";

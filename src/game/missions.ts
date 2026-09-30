@@ -14,7 +14,7 @@ export interface MissionDef {
  *  qu'une mission longue. */
 export const MISSION_XP_PER_HOUR = 60;
 
-export const MISSIONS: Record<string, MissionDef> = {
+export const DEFAULT_MISSIONS: Record<string, MissionDef> = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
   forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35000, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
   collecte_energie: { key: "collecte_energie", name: "Collecte d'énergie", duration: 900, reward: { energy: 4000, xp: 15 }, prereq: { chasseur: 6, fregate: 2 } },
@@ -40,6 +40,15 @@ export const MISSIONS: Record<string, MissionDef> = {
   interception_prioritaire: { key: "interception_prioritaire", name: "Dernier bastion", duration: 3600, reward: { syntheticNanites: 400, aiFragment: 650, xp: 60 }, prereq: { intercepteur: 60, batterie_aa: 70 },
 },
 };
+
+/* ---------- registre courant (remplacé par applyGameContent) ---------- */
+
+export const MISSIONS: Record<string, MissionDef> = { ...DEFAULT_MISSIONS };
+
+export function setMissions(defs: MissionDef[]) {
+  for (const key of Object.keys(MISSIONS)) delete MISSIONS[key];
+  for (const def of defs) MISSIONS[def.key] = def;
+}
 
 export function hasPrerequisites(mission: MissionDef, units: Record<string, { count: number }>): boolean {
   return Object.entries(mission.prereq).every(([unitId, req]) => (units[unitId]?.count ?? 0) >= req);

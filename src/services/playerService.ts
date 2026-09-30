@@ -9,6 +9,7 @@ import {
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
   getUnitCapacity,
+  withMissingBuildings,
 } from "@/game/buildings";
 import { canAffordAll, getTradeRate } from "@/game/resources";
 import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
@@ -45,6 +46,8 @@ function playerFromRecord(record: PbRecord | null | undefined): PlayerState | nu
   const player = { ...record, uid: record.id } as unknown as PlayerState;
   return {
     ...player,
+    // Bâtiments ajoutés depuis l'administration après la création du joueur.
+    buildings: withMissingBuildings(player.buildings),
     units: player.units ?? {},
     techLevels: player.techLevels ?? {},
     resourceHistory: player.resourceHistory ?? [],

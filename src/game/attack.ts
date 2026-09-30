@@ -1,6 +1,7 @@
 import { resolveCombat, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
-import { getRepairPercent } from "@/game/buildings";
+import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
+import { OFFENSIVE_UNITS } from "@/game/units";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -57,12 +58,19 @@ export function performAttack(input: AttackInput): AttackOutput {
   const fleet: Record<string, number> = {};
   for (const [unitId, raw] of Object.entries(input.fleet ?? {})) {
     const qty = Math.floor(Number(raw));
-    if (qty > 0) fleet[unitId] = qty;
+    if (qty <= 0) continue;
+    if (!OFFENSIVE_UNITS.includes(unitId)) return { ok: false, message: "Seules les unités d'attaque peuvent être envoyées." };
+    fleet[unitId] = qty;
   }
   if (Object.keys(fleet).length === 0) return { ok: false, message: "Sélectionne au moins une unité à envoyer." };
 
-  // Production et files de l'attaquant rattrapées jusqu'à maintenant.
-  const flushed = flushState(input.attacker, input.attackerQueues, now);
+  // Production et files de l'attaquant rattrapées jusqu'à maintenant (avec
+  // les bâtiments ajoutés depuis l'administration après sa création).
+  const flushed = flushState(
+    { ...input.attacker, buildings: withMissingBuildings(input.attacker.buildings) },
+    input.attackerQueues,
+    now,
+  );
   const attacker = flushed.player;
 
   for (const [unitId, qty] of Object.entries(fleet)) {

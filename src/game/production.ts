@@ -1,9 +1,10 @@
-import { BUILDINGS, LOCKABLE_BUILDINGS, PRODUCTION_RESOURCE_BY_BUILDING, productionPerSecond } from "@/game/buildings";
+import { BUILDINGS, PRODUCTION_RESOURCE_BY_BUILDING, productionPerSecond } from "@/game/buildings";
+import { techBonus } from "@/game/technologies";
 import type { Buildings, Resources, TechLevels } from "@/types/game";
 
-/** Bonus de production (tech3), recalculé depuis le niveau actuel — jamais figé. */
+/** Bonus de production (effet energy_efficiency), recalculé depuis les niveaux actuels — jamais figé. */
 export function getProductionBonus(techLevels: TechLevels): number {
-  return (techLevels.tech3 ?? 0) * 0.1;
+  return techBonus(techLevels, "energy_efficiency");
 }
 
 export function getProductionRatesPerSecond(buildings: Buildings, techLevels: TechLevels): Partial<Resources> {
@@ -16,7 +17,7 @@ export function getProductionRatesPerSecond(buildings: Buildings, techLevels: Te
 
     const state = buildings[building.id];
     const level = state?.level ?? 0;
-    const unlocked = LOCKABLE_BUILDINGS.includes(building.id) ? state?.unlocked === true : true;
+    const unlocked = building.startsUnlocked || state?.unlocked === true;
     if (level <= 0 || !unlocked) continue;
 
     const base = productionPerSecond(building.id, level);

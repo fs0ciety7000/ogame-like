@@ -4,14 +4,9 @@ export type ResourceId = CommonResourceId | RareResourceId;
 
 export type Resources = Record<ResourceId, number>;
 
-export type BuildingId =
-  | "extracteur_ferraille"
-  | "reacteur_instable"
-  | "extracteur_nanocomposants"
-  | "archives_fracturees"
-  | "atelier_reparation"
-  | "hangar_attaque"
-  | "hangar_defense";
+/** Identifiant de bâtiment : libre, les bâtiments étant définis par des
+ *  données (voir src/game/buildings.ts et l'interface d'administration). */
+export type BuildingId = string;
 
 export interface BuildingState {
   level: number;

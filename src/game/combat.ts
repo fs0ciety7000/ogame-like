@@ -1,7 +1,12 @@
 import { DEFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { techBonus } from "@/game/technologies";
 import type { CombatOutcome, RareResourceId, TechLevels, Units } from "@/types/game";
 
-export const LOOT_PERCENT = 0.08;
+/** Règles de combat réglables depuis l'administration. */
+export const COMBAT_RULES = {
+  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
+  lootPercent: 0.08,
+};
 const LOOT_RESOURCES: RareResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 
 function clamp(v: number, min: number, max: number) {
@@ -14,8 +19,8 @@ export function unitStat(units: Units, techLevels: TechLevels, unitId: string, s
   if (level <= 0) return 0;
 
   let value = base + (level - 1) * 5;
-  if (stat === "attack") value *= 1 + (techLevels.tech5 ?? 0) * 0.1;
-  if (stat === "defense") value *= 1 + (techLevels.tech2 ?? 0) * 0.1;
+  if (stat === "attack") value *= 1 + techBonus(techLevels, "unit_attack");
+  if (stat === "defense") value *= 1 + techBonus(techLevels, "unit_defense");
   return value;
 }
 
@@ -140,7 +145,7 @@ export function resolveCombat(params: {
     loot = {};
     LOOT_RESOURCES.forEach((res) => {
       const available = defenderResources[res] ?? 0;
-      loot![res] = Math.floor(available * LOOT_PERCENT);
+      loot![res] = Math.floor(available * COMBAT_RULES.lootPercent);
     });
   }
 

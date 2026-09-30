@@ -1,26 +1,64 @@
-import type { BuildingId, Buildings } from "@/types/game";
+import { RESOURCE_LIST } from "@/game/resources";
+import type { BuildingId, Buildings, ResourceId } from "@/types/game";
+
+/* =====================================================
+   Bâtiments — définis par des données (voir src/game/content.ts) :
+   les valeurs ci-dessous sont celles par défaut, remplaçables depuis
+   l'interface d'administration sans toucher au code.
+===================================================== */
+
+export type ResourceMap = Partial<Record<ResourceId, number>>;
+
+export type BuildingEffect =
+  /** Répare perLevel × niveau des unités perdues en combat (plafonné à max). */
+  | { type: "repair"; perLevel: number; max: number }
+  /** Capacité du hangar (places) = perLevel × niveau. */
+  | { type: "hangar"; category: "attack" | "defense"; perLevel: number };
 
 export interface BuildingDef {
   id: BuildingId;
   name: string;
   description: string;
-  image: string; // Simplifié : une seule image par bâtiment
+  image: string;
   maxLevel: number;
-  cost: { scrap?: number; energy?: number };
-  production: boolean;
-  scaled: boolean;
+  /** Débloqué dès l'inscription. */
+  startsUnlocked?: boolean;
+  /** Coût de déblocage (bouton « Débloquer »). */
+  unlockCost?: ResourceMap;
+  /** Débloqué par une technologie (effet « unlock_buildings ») plutôt que par un coût. */
+  unlockedByTech?: string;
+  /** Coût d'amélioration : progression géométrique de baseCost (au niveau
+   *  costFromLevel) jusqu'à maxCost (au niveau max). */
+  upgrade: { baseCost: ResourceMap; maxCost: ResourceMap; costFromLevel: number; secondsPerLevel: number };
+  /** Production par seconde, indexée par niveau (niveau 1 = premier élément). */
+  production?: { resource: ResourceId; perSecond: number[] };
+  effect?: BuildingEffect;
 }
 
-export const BUILDINGS: BuildingDef[] = [
+const PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500];
+const EXTRACTOR_UPGRADE = {
+  baseCost: { scrap: 50, energy: 20 },
+  maxCost: { scrap: 2_500_000, energy: 1_800_000 },
+  costFromLevel: 1,
+  secondsPerLevel: 600,
+};
+const HANGAR_UPGRADE = {
+  baseCost: { scrap: 300, energy: 150 },
+  maxCost: { scrap: 5_000_000, energy: 7_500_000 },
+  costFromLevel: 1,
+  secondsPerLevel: 900,
+};
+
+export const DEFAULT_BUILDINGS: BuildingDef[] = [
   {
     id: "extracteur_ferraille",
     name: "Extracteur de ferraille",
     description: "Récupère automatiquement de la ferraille dans les débris environnants.",
     image: "/assets/buildings/extracteur_ferraille.webp",
     maxLevel: 10,
-    cost: { scrap: 50, energy: 20 },
-    production: true,
-    scaled: true,
+    startsUnlocked: true,
+    upgrade: EXTRACTOR_UPGRADE,
+    production: { resource: "scrap", perSecond: PRODUCTION_TABLE },
   },
   {
     id: "reacteur_instable",
@@ -28,9 +66,9 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Génère de l'énergie brute, au prix d'une certaine instabilité.",
     image: "/assets/buildings/reacteur_instable.webp",
     maxLevel: 10,
-    cost: { scrap: 50, energy: 20 },
-    production: true,
-    scaled: true,
+    unlockCost: { scrap: 500 },
+    upgrade: EXTRACTOR_UPGRADE,
+    production: { resource: "energy", perSecond: PRODUCTION_TABLE },
   },
   {
     id: "extracteur_nanocomposants",
@@ -38,9 +76,9 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Synthétise des nanocomposants à partir de matières recyclées.",
     image: "/assets/buildings/extracteur_nanocomposants.webp",
     maxLevel: 10,
-    cost: { scrap: 50, energy: 20 },
-    production: true,
-    scaled: true,
+    unlockCost: { energy: 500 },
+    upgrade: EXTRACTOR_UPGRADE,
+    production: { resource: "nano", perSecond: PRODUCTION_TABLE },
   },
   {
     id: "archives_fracturees",
@@ -48,9 +86,9 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Fouille des données anciennes dans des serveurs endommagés.",
     image: "/assets/buildings/archives_fracturees.webp",
     maxLevel: 10,
-    cost: { scrap: 50, energy: 20 },
-    production: true,
-    scaled: true,
+    unlockCost: { nano: 500 },
+    upgrade: EXTRACTOR_UPGRADE,
+    production: { resource: "data", perSecond: PRODUCTION_TABLE },
   },
   {
     id: "atelier_reparation",
@@ -58,9 +96,14 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Répare une partie des unités perdues après chaque combat.",
     image: "/assets/buildings/atelier_reparation.webp",
     maxLevel: 10,
-    cost: {},
-    production: false,
-    scaled: true,
+    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
+    upgrade: {
+      baseCost: { nano: 1000, data: 1000 },
+      maxCost: { nano: 10_000_000, data: 9_500_000 },
+      costFromLevel: 2,
+      secondsPerLevel: 1200,
+    },
+    effect: { type: "repair", perLevel: 0.05, max: 0.5 },
   },
   {
     id: "hangar_attaque",
@@ -68,9 +111,9 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Augmente la capacité de stockage des unités offensives.",
     image: "/assets/buildings/hangar_attaque.webp",
     maxLevel: 10,
-    cost: { scrap: 300, energy: 150 },
-    production: false,
-    scaled: true,
+    unlockedByTech: "tech6",
+    upgrade: HANGAR_UPGRADE,
+    effect: { type: "hangar", category: "attack", perLevel: 2000 },
   },
   {
     id: "hangar_defense",
@@ -78,131 +121,72 @@ export const BUILDINGS: BuildingDef[] = [
     description: "Augmente la capacité de stockage des unités défensives.",
     image: "/assets/buildings/hangar_defense.webp",
     maxLevel: 10,
-    cost: { scrap: 300, energy: 150 },
-    production: false,
-    scaled: true,
+    unlockedByTech: "tech6",
+    upgrade: HANGAR_UPGRADE,
+    effect: { type: "hangar", category: "defense", perLevel: 2000 },
   },
 ];
 
-export const LOCKABLE_BUILDINGS: BuildingId[] = [
-  "reacteur_instable",
-  "extracteur_nanocomposants",
-  "archives_fracturees",
-];
+/* ---------- registre courant (remplacé par applyGameContent) ---------- */
 
-export const BUILDING_UNLOCK_COST: Partial<
-  Record<
-    BuildingId,
-    | { resource: string; amount: number; label: string }
-    | { multi: true; resources: { resource: string; amount: number; label: string }[] }
-  >
-> = {
-  reacteur_instable: { resource: "scrap", amount: 500, label: "Ferraille" },
-  extracteur_nanocomposants: { resource: "energy", amount: 500, label: "Énergie" },
-  archives_fracturees: { resource: "nano", amount: 500, label: "Nanocomposants" },
-  atelier_reparation: {
-    multi: true,
-    resources: [
-      { resource: "reinforcedSteel", amount: 20, label: "Acier renforcé" },
-      { resource: "cyberModule", amount: 20, label: "Module cybernétique" },
-      { resource: "syntheticNanites", amount: 20, label: "Nanites synthétiques" },
-      { resource: "aiFragment", amount: 20, label: "Fragment d'IA" },
-    ],
-  },
-};
+export const BUILDINGS: BuildingDef[] = [];
+
+type UnlockInfo =
+  | { resource: string; amount: number; label: string }
+  | { multi: true; resources: { resource: string; amount: number; label: string }[] };
+
+/** Bâtiments de production à débloquer (objectif « Premiers pas », succès). */
+export const LOCKABLE_BUILDINGS: BuildingId[] = [];
+export const BUILDING_UNLOCK_COST: Record<BuildingId, UnlockInfo> = {};
+export const PRODUCTION_RESOURCE_BY_BUILDING: Record<BuildingId, string> = {};
+
+export function setBuildings(defs: BuildingDef[]) {
+  BUILDINGS.splice(0, BUILDINGS.length, ...defs);
+  LOCKABLE_BUILDINGS.splice(
+    0,
+    LOCKABLE_BUILDINGS.length,
+    ...defs.filter((b) => b.production && !b.startsUnlocked).map((b) => b.id),
+  );
+  for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
+  for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
+  for (const b of defs) {
+    const entries = Object.entries(b.unlockCost ?? {}).filter(([, v]) => (v ?? 0) > 0) as [string, number][];
+    const items = entries.map(([resource, amount]) => ({ resource, amount, label: RESOURCE_LIST.find((r) => r.id === resource)?.name ?? resource }));
+    if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
+    else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
+    if (b.production) PRODUCTION_RESOURCE_BY_BUILDING[b.id] = b.production.resource;
+  }
+}
+setBuildings(DEFAULT_BUILDINGS);
 
 export function findBuilding(id: string): BuildingDef | undefined {
   return BUILDINGS.find((b) => b.id === id);
 }
 
-/* ============================
-   PRODUCTION (par seconde, niveau 1 -> 10)
-   ============================ */
-const PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500];
+/* ---------- production ---------- */
 
 export function productionPerSecond(buildingId: BuildingId, level: number): number {
   if (level <= 0) return 0;
-  return PRODUCTION_TABLE[level - 1] ?? 0;
+  const table = findBuilding(buildingId)?.production?.perSecond ?? [];
+  return table[Math.min(level, table.length) - 1] ?? 0;
 }
 
-export const PRODUCTION_RESOURCE_BY_BUILDING: Partial<Record<BuildingId, string>> = {
-  extracteur_ferraille: "scrap",
-  reacteur_instable: "energy",
-  extracteur_nanocomposants: "nano",
-  archives_fracturees: "data",
-};
+/* ---------- coûts / temps ---------- */
 
-/* ============================
-   COÛTS / TEMPS ÉCHELONNÉS
-   ============================ */
-const REF_BASE_SCRAP = 50;
-const REF_BASE_ENERGY = 20;
-const REF_TARGET_SCRAP = 2_500_000;
-const REF_TARGET_ENERGY = 1_800_000;
-const REF_STEPS = 9;
-const SCRAP_GROWTH_RATE = Math.pow(REF_TARGET_SCRAP / REF_BASE_SCRAP, 1 / REF_STEPS);
-const ENERGY_GROWTH_RATE = Math.pow(REF_TARGET_ENERGY / REF_BASE_ENERGY, 1 / REF_STEPS);
-
-function scaledCost(level: number) {
-  return {
-    scrap: Math.floor(REF_BASE_SCRAP * Math.pow(SCRAP_GROWTH_RATE, level - 1)),
-    energy: Math.floor(REF_BASE_ENERGY * Math.pow(ENERGY_GROWTH_RATE, level - 1)),
-  };
-}
-function scaledTime(level: number) {
-  return (level - 1) * 600;
-}
-
-const ATELIER_L2_NANO = 1000;
-const ATELIER_TARGET_NANO = 10_000_000;
-const ATELIER_L2_DATA = 1000;
-const ATELIER_TARGET_DATA = 9_500_000;
-const ATELIER_STEPS = 8;
-const ATELIER_NANO_RATE = Math.pow(ATELIER_TARGET_NANO / ATELIER_L2_NANO, 1 / ATELIER_STEPS);
-const ATELIER_DATA_RATE = Math.pow(ATELIER_TARGET_DATA / ATELIER_L2_DATA, 1 / ATELIER_STEPS);
-
-function atelierCost(level: number) {
-  return {
-    nano: Math.floor(ATELIER_L2_NANO * Math.pow(ATELIER_NANO_RATE, level - 2)),
-    data: Math.floor(ATELIER_L2_DATA * Math.pow(ATELIER_DATA_RATE, level - 2)),
-  };
-}
-function atelierTime(level: number) {
-  return (level - 1) * 1200;
-}
-
-const HANGAR_BASE_SCRAP = 300;
-const HANGAR_BASE_ENERGY = 150;
-const HANGAR_TARGET_SCRAP = 5_000_000;
-const HANGAR_TARGET_ENERGY = 7_500_000;
-const HANGAR_STEPS = 9;
-const HANGAR_SCRAP_RATE = Math.pow(HANGAR_TARGET_SCRAP / HANGAR_BASE_SCRAP, 1 / HANGAR_STEPS);
-const HANGAR_ENERGY_RATE = Math.pow(HANGAR_TARGET_ENERGY / HANGAR_BASE_ENERGY, 1 / HANGAR_STEPS);
-
-function hangarCost(level: number) {
-  return {
-    scrap: Math.floor(HANGAR_BASE_SCRAP * Math.pow(HANGAR_SCRAP_RATE, level - 1)),
-    energy: Math.floor(HANGAR_BASE_ENERGY * Math.pow(HANGAR_ENERGY_RATE, level - 1)),
-  };
-}
-function hangarTime(level: number) {
-  return (level - 1) * 900;
-}
-
-export function getBuildingUpgradeCost(
-  building: BuildingDef,
-  nextLevel: number
-): { scrap?: number; energy?: number; nano?: number; data?: number } {
-  if (building.id === "atelier_reparation") return atelierCost(nextLevel);
-  if (building.id === "hangar_attaque" || building.id === "hangar_defense") return hangarCost(nextLevel);
-  return scaledCost(nextLevel);
+export function getBuildingUpgradeCost(building: BuildingDef, nextLevel: number): ResourceMap {
+  const { baseCost, maxCost, costFromLevel } = building.upgrade;
+  const steps = Math.max(1, building.maxLevel - costFromLevel);
+  const cost: ResourceMap = {};
+  for (const [res, base] of Object.entries(baseCost) as [ResourceId, number][]) {
+    const target = maxCost[res] ?? base;
+    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
+    cost[res] = Math.floor(base * Math.pow(rate, nextLevel - costFromLevel));
+  }
+  return cost;
 }
 
 /** tech4 (Optimisation industrielle) réduit le coût des améliorations de bâtiments. */
-export function applyBuildingDiscount<T extends Record<string, number | undefined>>(
-  cost: T,
-  discount: number
-): T {
+export function applyBuildingDiscount<T extends Record<string, number | undefined>>(cost: T, discount: number): T {
   if (!discount) return cost;
   const out = { ...cost };
   for (const key of Object.keys(out) as (keyof T)[]) {
@@ -215,20 +199,28 @@ export function applyBuildingDiscount<T extends Record<string, number | undefine
 }
 
 export function getBuildingUpgradeTime(building: BuildingDef, nextLevel: number): number {
-  if (building.id === "atelier_reparation") return atelierTime(nextLevel);
-  if (building.id === "hangar_attaque" || building.id === "hangar_defense") return hangarTime(nextLevel);
-  return scaledTime(nextLevel);
+  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
 }
 
+/* ---------- effets ---------- */
+
 export function getRepairPercent(buildings: Buildings): number {
-  const level = buildings.atelier_reparation?.level ?? 1;
-  return Math.max(0, Math.min(0.5, level * 0.05));
+  let pct = 0;
+  for (const b of BUILDINGS) {
+    if (b.effect?.type !== "repair") continue;
+    const level = buildings[b.id]?.level ?? 1;
+    pct += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
+  }
+  return pct;
 }
 
 export function getUnitCapacity(buildings: Buildings, category: "attack" | "defense"): number {
-  const level =
-    category === "attack" ? buildings.hangar_attaque?.level ?? 0 : buildings.hangar_defense?.level ?? 0;
-  return level * 2000;
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (b.effect?.type !== "hangar" || b.effect.category !== category) continue;
+    capacity += (buildings[b.id]?.level ?? 0) * b.effect.perLevel;
+  }
+  return capacity;
 }
 
 /** Niveau effectif d'un bâtiment : 0 tant qu'il n'est pas débloqué (tous
@@ -239,13 +231,15 @@ export function effectiveBuildingLevel(buildings: Buildings, id: BuildingId): nu
 }
 
 export function defaultBuildings(): Buildings {
-  return {
-    extracteur_ferraille: { level: 1, unlocked: true },
-    reacteur_instable: { level: 1, unlocked: false },
-    extracteur_nanocomposants: { level: 1, unlocked: false },
-    archives_fracturees: { level: 1, unlocked: false },
-    atelier_reparation: { level: 1, unlocked: false },
-    hangar_attaque: { level: 1, unlocked: false },
-    hangar_defense: { level: 1, unlocked: false },
-  };
+  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
+}
+
+/** Complète l'état d'un joueur avec les bâtiments ajoutés depuis sa
+ *  création (nouveau bâtiment créé dans l'administration). */
+export function withMissingBuildings(buildings: Buildings | undefined): Buildings {
+  const out: Buildings = { ...(buildings ?? {}) };
+  for (const b of BUILDINGS) {
+    if (!out[b.id]) out[b.id] = { level: 1, unlocked: !!b.startsUnlocked };
+  }
+  return out;
 }

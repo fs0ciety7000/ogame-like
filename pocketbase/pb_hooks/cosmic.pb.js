@@ -32,6 +32,15 @@ routerAdd(
     $app.runInTransaction((txApp) => {
       const now = Date.now();
 
+      // Contenu du jeu personnalisé dans l'administration (collection
+      // game_config) : mêmes unités, stats et règles que côté client.
+      const overrides = {};
+      txApp.findAllRecords("game_config").forEach((r) => {
+        const key = r.getString("key");
+        if (game.CONTENT_SECTIONS.indexOf(key) >= 0) overrides[key] = toPlain(r).data;
+      });
+      game.applyGameContent(overrides);
+
       let attackerRec, queuesRec, defenderRec;
       try {
         attackerRec = txApp.findRecordById("players", attackerUid);
