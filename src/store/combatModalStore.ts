@@ -7,6 +7,9 @@ export interface CombatDisplay {
   outcome: CombatOutcome;
   myPower: number;
   opponentPower: number;
+  /** Part des unités engagées perdues (0 → 1), pour le replay. */
+  myLossPercent: number;
+  opponentLossPercent: number;
   myLosses: Record<string, number>;
   myRecovered: Record<string, number>;
   opponentLosses: Record<string, number>;
@@ -34,6 +37,8 @@ export function combatDisplayFromAttackerResult(
     outcome: CombatOutcome;
     attackerPower: number;
     defenderPower: number;
+    attackerLossPercent?: number;
+    defenderLossPercent?: number;
     attackerLosses: Record<string, number>;
     attackerRecovered: Record<string, number>;
     defenderLosses: Record<string, number>;
@@ -47,6 +52,8 @@ export function combatDisplayFromAttackerResult(
     outcome: combat.outcome,
     myPower: combat.attackerPower,
     opponentPower: combat.defenderPower,
+    myLossPercent: combat.attackerLossPercent ?? 0,
+    opponentLossPercent: combat.defenderLossPercent ?? 0,
     myLosses: combat.attackerLosses,
     myRecovered: combat.attackerRecovered,
     opponentLosses: combat.defenderLosses,
@@ -62,6 +69,8 @@ export function combatDisplayFromReport(report: BattleReport): CombatDisplay {
     outcome: report.outcome,
     myPower: report.defenderPower,
     opponentPower: report.attackerPower,
+    myLossPercent: report.defenderLossPercent ?? 0,
+    opponentLossPercent: report.attackerLossPercent ?? 0,
     myLosses: report.defenderLosses,
     myRecovered: report.defenderRecovered,
     opponentLosses: report.attackerLosses,

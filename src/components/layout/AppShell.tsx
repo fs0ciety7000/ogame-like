@@ -24,6 +24,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
 import { RankUpCelebration } from "@/components/game/RankUpCelebration";
+import { FxLayer } from "@/components/game/FxLayer";
 import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { toggleCommandPalette } from "@/store/commandPaletteStore";
@@ -187,6 +188,7 @@ export function AppShell() {
       <RankUpCelebration />
       <AwaySummaryModal />
       <CommandPalette />
+      <FxLayer />
     </div>
   );
 }

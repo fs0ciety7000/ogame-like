@@ -1,65 +1,284 @@
 import { useMemo } from "react";
-import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { useReducedMotion } from "framer-motion";
+import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/buildings";
 import type { Buildings } from "@/types/game";
 
-/** Rendu de la planète-siège du joueur : plus les bâtiments sont
- *  développés, plus la sphère, l'anneau et le halo sont lumineux. */
-export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; size?: number }) {
-  const percent = useMemo(() => {
-    const total = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(buildings, b.id), 0);
-    const max = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
-    return max > 0 ? Math.min(1, total / max) : 0;
-  }, [buildings]);
+/* =====================================================
+   Planète-siège du joueur : chaque bâtiment y laisse sa marque.
+   - extracteur de ferraille → mines à la surface
+   - extracteur de nanocomposants → réseau vert entre les mines
+   - réacteur instable → halo orange qui pulse
+   - archives fracturées → balises qui clignotent
+   - atelier de réparation → drone en orbite basse
+   - hangar d'attaque → vaisseaux en orbite
+   - hangar de défense → bouclier
+   - développement global → lumières des villes, anneau, atmosphère
+===================================================== */
 
-  const glowPct = Math.round(25 + percent * 55);
-  const ringPct = Math.round(15 + percent * 55);
-  const wrapSize = size * 1.9;
+const VIEW = 220;
+const C = VIEW / 2;
+const R = 56;
+const TILE = 240; // largeur d'une « tuile » de surface qui défile
+
+/** Pseudo-aléatoire déterministe : la planète garde le même relief. */
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface Blob {
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+}
+
+function makeRelief() {
+  const rand = rng(1337);
+  const continents: Blob[] = Array.from({ length: 7 }, () => ({
+    x: rand() * TILE,
+    y: C - R * 0.8 + rand() * R * 1.6,
+    rx: 12 + rand() * 18,
+    ry: 6 + rand() * 11,
+  }));
+  // Emplacements (mines, villes) posés sur les continents.
+  const spots = Array.from({ length: 60 }, (_, i) => {
+    const c = continents[i % continents.length];
+    const a = rand() * Math.PI * 2;
+    const d = Math.sqrt(rand()) * 0.8;
+    return { x: c.x + Math.cos(a) * c.rx * d, y: c.y + Math.sin(a) * c.ry * d };
+  });
+  return { continents, spots };
+}
+
+const RELIEF = makeRelief();
+
+function useBuildingRatios(buildings: Buildings) {
+  return useMemo(() => {
+    const level = (id: string) => effectiveBuildingLevel(buildings, id);
+    const ratio = (id: string) => {
+      const def = findBuilding(id);
+      return def && def.maxLevel > 0 ? Math.min(1, level(id) / def.maxLevel) : 0;
+    };
+    const total = BUILDINGS.reduce((sum, b) => sum + level(b.id), 0);
+    const max = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
+    return {
+      overall: max > 0 ? Math.min(1, total / max) : 0,
+      mines: ratio("extracteur_ferraille"),
+      nano: ratio("extracteur_nanocomposants"),
+      reactor: ratio("reacteur_instable"),
+      archives: ratio("archives_fracturees"),
+      repair: level("atelier_reparation") > 0,
+      attackHangar: ratio("hangar_attaque"),
+      defenseHangar: ratio("hangar_defense"),
+    };
+  }, [buildings]);
+}
+
+/** Tuile de surface (dessinée deux fois côte à côte pour défiler sans raccord). */
+function Surface({ mines, nano, lights }: { mines: number; nano: number; lights: number }) {
+  const minePts = RELIEF.spots.slice(0, mines);
+  const nanoPts = RELIEF.spots.slice(10, 10 + nano);
+  const lightPts = RELIEF.spots.slice(20, 20 + lights);
+  return (
+    <g>
+      {RELIEF.continents.map((c, i) => (
+        <ellipse key={i} cx={c.x} cy={c.y} rx={c.rx} ry={c.ry} fill="#27405a" opacity={0.9} />
+      ))}
+      {/* Réseau nano : chaque nœud relié à la mine la plus proche. */}
+      {nanoPts.map((p, i) => {
+        const target = minePts.reduce<{ x: number; y: number } | null>(
+          (best, m) => (!best || Math.hypot(m.x - p.x, m.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y) ? m : best),
+          null,
+        );
+        if (!target || Math.hypot(target.x - p.x, target.y - p.y) > 40) return null;
+        return <line key={`nl${i}`} x1={p.x} y1={p.y} x2={target.x} y2={target.y} stroke="var(--color-mint-glow)" strokeWidth={0.7} strokeOpacity={0.5} />;
+      })}
+      {nanoPts.map((p, i) => (
+        <circle key={`n${i}`} cx={p.x} cy={p.y} r={1.3} fill="var(--color-mint-glow)" />
+      ))}
+      {minePts.map((p, i) => (
+        <rect key={`m${i}`} x={p.x - 1.8} y={p.y - 1.8} width={3.6} height={3.6} rx={0.6} fill="#c9a86a" stroke="#6b5530" strokeWidth={0.5} />
+      ))}
+      {lightPts.map((p, i) => (
+        <circle key={`l${i}`} cx={p.x} cy={p.y} r={0.9} fill="#ffe7a3" opacity={0.85} />
+      ))}
+    </g>
+  );
+}
+
+/** Ellipse d'orbite (même plan incliné que l'anneau). */
+function orbitPath(rx: number, ry: number) {
+  return `M ${C - rx} ${C} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
+}
+
+export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; size?: number }) {
+  const r = useBuildingRatios(buildings);
+  const still = useReducedMotion() ?? false;
+
+  const mines = Math.ceil(r.mines * 8);
+  const nano = Math.ceil(r.nano * 7);
+  const lights = Math.round(r.overall * 36);
+  const beacons = Math.ceil(r.archives * 3);
+  const ships = Math.ceil(r.attackHangar * 6);
+  const glow = 0.25 + r.overall * 0.55;
+  const wrap = size * 1.9;
+
+  const summary = [
+    `Développement : ${Math.round(r.overall * 100)} %`,
+    mines > 0 && `${mines} mine(s)`,
+    r.reactor > 0 && "réacteur actif",
+    beacons > 0 && `${beacons} balise(s) d'archives`,
+    r.repair && "drone de réparation",
+    ships > 0 && `${ships} vaisseau(x) en orbite`,
+    r.defenseHangar > 0 && "bouclier planétaire",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <div className="relative shrink-0" style={{ width: wrapSize, height: wrapSize }}>
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
-        style={{
-          width: size * 1.4,
-          height: size * 1.4,
-          background: `radial-gradient(circle, color-mix(in srgb, var(--color-cyan-glow) ${glowPct}%, transparent) 0%, transparent 72%)`,
-        }}
-        aria-hidden
-      />
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-        style={{
-          width: wrapSize,
-          height: size * 0.42,
-          borderColor: `color-mix(in srgb, var(--color-gold-glow) ${ringPct}%, transparent)`,
-          transform: "translate(-50%, -50%) rotate(-14deg)",
-        }}
-        aria-hidden
-      />
-      <div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin-slow overflow-hidden rounded-full"
-        style={{
-          width: size,
-          height: size,
-          background:
-            "radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--color-cyan-glow) 45%, var(--color-space-600)) 0%, var(--color-space-800) 72%)",
-          boxShadow: `0 0 ${18 + percent * 36}px color-mix(in srgb, var(--color-cyan-glow) ${glowPct}%, transparent)`,
-        }}
-        aria-hidden
-      >
-        <div
-          className="absolute inset-0 opacity-40"
-          style={{
-            background:
-              "repeating-linear-gradient(100deg, transparent 0px, transparent 10px, rgba(0,0,0,0.25) 10px, rgba(0,0,0,0.25) 14px)",
-          }}
-        />
-      </div>
-      {percent > 0.25 && (
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-orbit" style={{ width: wrapSize, height: wrapSize }} aria-hidden>
-          <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-mint-glow shadow-[0_0_6px_var(--color-mint-glow)]" />
-        </div>
+    <svg viewBox={`0 0 ${VIEW} ${VIEW}`} width={wrap} height={wrap} className="shrink-0 overflow-visible" role="img" aria-label={summary}>
+      <title>{summary}</title>
+      <defs>
+        <radialGradient id="hp-ocean" cx="35%" cy="30%" r="80%">
+          <stop offset="0%" style={{ stopColor: "color-mix(in srgb, var(--color-cyan-glow) 45%, var(--color-space-600))" }} />
+          <stop offset="75%" style={{ stopColor: "var(--color-space-800)" }} />
+        </radialGradient>
+        <radialGradient id="hp-shade" cx="30%" cy="28%" r="85%">
+          <stop offset="45%" style={{ stopColor: "#000", stopOpacity: 0 }} />
+          <stop offset="100%" style={{ stopColor: "#000", stopOpacity: 0.75 }} />
+        </radialGradient>
+        <radialGradient id="hp-reactor">
+          <stop offset="55%" style={{ stopColor: "var(--color-ember-glow)", stopOpacity: 0.9 }} />
+          <stop offset="100%" style={{ stopColor: "var(--color-ember-glow)", stopOpacity: 0 }} />
+        </radialGradient>
+        <radialGradient id="hp-halo">
+          <stop offset="40%" style={{ stopColor: "var(--color-cyan-glow)", stopOpacity: glow }} />
+          <stop offset="100%" style={{ stopColor: "var(--color-cyan-glow)", stopOpacity: 0 }} />
+        </radialGradient>
+        <clipPath id="hp-sphere">
+          <circle cx={C} cy={C} r={R} />
+        </clipPath>
+        <clipPath id="hp-back">
+          <rect x={0} y={0} width={VIEW} height={C} />
+        </clipPath>
+        <clipPath id="hp-front">
+          <rect x={0} y={C} width={VIEW} height={C} />
+        </clipPath>
+      </defs>
+
+      {/* Halo d'atmosphère */}
+      <circle cx={C} cy={C} r={R * 1.55} fill="url(#hp-halo)" />
+
+      {/* Réacteur : halo orange qui pulse */}
+      {r.reactor > 0 && (
+        <circle cx={C} cy={C} r={R + 10 + r.reactor * 8} fill="url(#hp-reactor)" opacity={0.2 + r.reactor * 0.5}>
+          {!still && <animate attributeName="opacity" values={`${0.15 + r.reactor * 0.3};${0.3 + r.reactor * 0.6};${0.15 + r.reactor * 0.3}`} dur="3.2s" repeatCount="indefinite" />}
+        </circle>
       )}
-    </div>
+
+      {/* Anneau, moitié arrière */}
+      <g transform={`rotate(-14 ${C} ${C})`}>
+        <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={0.15 + r.overall * 0.5} strokeWidth={1.5} clipPath="url(#hp-back)" />
+      </g>
+
+      {/* Sphère */}
+      <circle cx={C} cy={C} r={R} fill="url(#hp-ocean)" />
+      <g clipPath="url(#hp-sphere)">
+        <g>
+          <g transform={`translate(${C - R} 0)`}>
+            <Surface mines={mines} nano={nano} lights={lights} />
+            <g transform={`translate(${TILE} 0)`}>
+              <Surface mines={mines} nano={nano} lights={lights} />
+            </g>
+          </g>
+          {!still && <animateTransform attributeName="transform" type="translate" from="0 0" to={`${-TILE} 0`} dur="70s" repeatCount="indefinite" />}
+        </g>
+        <circle cx={C} cy={C} r={R} fill="url(#hp-shade)" />
+      </g>
+      <circle cx={C} cy={C} r={R} fill="none" stroke="var(--color-cyan-glow)" strokeOpacity={0.2 + r.overall * 0.4} strokeWidth={1.2} />
+
+      {/* Archives : balises au pôle */}
+      {Array.from({ length: beacons }, (_, i) => {
+        const angle = (-90 + (i - (beacons - 1) / 2) * 22) * (Math.PI / 180);
+        const x = C + Math.cos(angle) * R;
+        const y = C + Math.sin(angle) * R;
+        const tx = C + Math.cos(angle) * (R + 7);
+        const ty = C + Math.sin(angle) * (R + 7);
+        return (
+          <g key={`b${i}`}>
+            <line x1={x} y1={y} x2={tx} y2={ty} stroke="#94a3b8" strokeWidth={0.8} />
+            <circle cx={tx} cy={ty} r={1.8} fill="var(--color-cyan-glow)">
+              {!still && <animate attributeName="opacity" values="0.2;1;0.2" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />}
+            </circle>
+          </g>
+        );
+      })}
+
+      {/* Hangar de défense : bouclier */}
+      {r.defenseHangar > 0 && (
+        <circle
+          cx={C}
+          cy={C}
+          r={R + 13}
+          fill="var(--color-cyan-glow)"
+          fillOpacity={0.03 + r.defenseHangar * 0.06}
+          stroke="var(--color-cyan-glow)"
+          strokeOpacity={0.2 + r.defenseHangar * 0.5}
+          strokeWidth={1}
+          strokeDasharray="6 4"
+        >
+          {!still && <animateTransform attributeName="transform" type="rotate" from={`0 ${C} ${C}`} to={`360 ${C} ${C}`} dur="40s" repeatCount="indefinite" />}
+        </circle>
+      )}
+
+      {/* Anneau, moitié avant */}
+      <g transform={`rotate(-14 ${C} ${C})`}>
+        <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={0.15 + r.overall * 0.5} strokeWidth={1.5} clipPath="url(#hp-front)" />
+
+        {/* Hangar d'attaque : vaisseaux en orbite */}
+        {Array.from({ length: ships }, (_, i) => (
+          <path key={`s${i}`} d="M 3 0 L -2.5 -2 L -1.2 0 L -2.5 2 Z" fill="var(--color-danger-glow)" transform={still ? `translate(${C - 86 + i * 12} ${C})` : undefined}>
+            {!still && <animateMotion path={orbitPath(86, 30)} dur="16s" begin={`${(-16 * i) / ships}s`} rotate="auto" repeatCount="indefinite" />}
+          </path>
+        ))}
+      </g>
+
+      {/* Atelier de réparation : drone en orbite basse */}
+      {r.repair && (
+        <circle r={2} fill="var(--color-mint-glow)" cx={still ? C + R + 6 : 0} cy={still ? C : 0}>
+          {!still && <animateMotion path={orbitPath(R + 6, R + 6)} dur="7s" repeatCount="indefinite" />}
+        </circle>
+      )}
+    </svg>
+  );
+}
+
+/** Légende de la planète : ce que chaque bâtiment y a ajouté. */
+export function HomePlanetLegend({ buildings }: { buildings: Buildings }) {
+  const r = useBuildingRatios(buildings);
+  const items = [
+    { on: r.mines > 0, color: "#c9a86a", label: `Mines (${Math.ceil(r.mines * 8)})`, from: "Extracteur de ferraille" },
+    { on: r.nano > 0, color: "var(--color-mint-glow)", label: "Réseau nano", from: "Extracteur de nanocomposants" },
+    { on: r.reactor > 0, color: "var(--color-ember-glow)", label: "Halo du réacteur", from: "Réacteur instable" },
+    { on: r.archives > 0, color: "var(--color-cyan-glow)", label: `Balises (${Math.ceil(r.archives * 3)})`, from: "Archives fracturées" },
+    { on: r.repair, color: "var(--color-mint-glow)", label: "Drone de réparation", from: "Atelier de réparation" },
+    { on: r.attackHangar > 0, color: "var(--color-danger-glow)", label: `Vaisseaux en orbite (${Math.ceil(r.attackHangar * 6)})`, from: "Hangar d'attaque" },
+    { on: r.defenseHangar > 0, color: "var(--color-cyan-glow)", label: "Bouclier planétaire", from: "Hangar de défense" },
+  ];
+  return (
+    <ul className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+      {items.map((it) => (
+        <li key={it.label} className={it.on ? "flex items-center gap-2 text-slate-300" : "flex items-center gap-2 text-slate-600"} title={it.from}>
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: it.on ? it.color : "#334155" }} />
+          {it.on ? it.label : `${it.from} : à développer`}
+        </li>
+      ))}
+    </ul>
   );
 }

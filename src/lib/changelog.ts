@@ -5,16 +5,25 @@ import { create } from "zustand";
    /changelog, nommé AAAA-MM-JJ-sujet.md, avec un en-tête :
 
      ---
+     version: 1.4.0
+     iteration: 5
      date: 2026-09-30
      title: Titre affiché
      ---
      Texte en Markdown (titres ##, listes -, **gras**, `code`).
+
+   - iteration : numéro du lot livré, +1 à chaque mise à jour publiée.
+   - version : MAJEURE.MINEURE.CORRECTIF — mineure pour une mise à jour
+     avec des nouveautés, correctif pour une livraison de corrections
+     seules, majeure pour une refonte (nouvelle saison, remise à zéro…).
 
    Les fichiers sont intégrés au build : ajouter un fichier suffit.
 ===================================================== */
 
 export interface ChangelogEntry {
   id: string;
+  version: string | null;
+  iteration: number | null;
   date: string;
   title: string;
   body: string;
@@ -34,8 +43,11 @@ export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
       if (i > 0) meta[line.slice(0, i).trim()] = line.slice(i + 1).trim();
     }
   }
+  const iteration = Number.parseInt(meta.iteration ?? "", 10);
   return {
     id,
+    version: meta.version || null,
+    iteration: Number.isFinite(iteration) ? iteration : null,
     date: meta.date ?? id.slice(0, 10),
     title: meta.title ?? id,
     body: (match ? match[2] : raw).trim(),
@@ -44,7 +56,11 @@ export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = Object.entries(files)
   .map(([path, raw]) => parseChangelogFile(path.split("/").pop()!.replace(/\.md$/, ""), raw))
-  .sort((a, b) => b.id.localeCompare(a.id));
+  // Plus récente d'abord : par itération, puis par nom de fichier.
+  .sort((a, b) => (b.iteration ?? 0) - (a.iteration ?? 0) || b.id.localeCompare(a.id));
+
+/** Version actuelle du jeu (celle de la dernière entrée du journal). */
+export const CURRENT_VERSION = CHANGELOG.find((e) => e.version)?.version ?? null;
 
 /* ---------- lu / non lu (par appareil) ---------- */
 
@@ -63,7 +79,20 @@ export const useChangelogStore = create<{ seen: string }>(() => ({ seen: readSee
 /** Nombre d'entrées publiées depuis la dernière visite de la page Nouveautés. */
 export function useUnreadChangelogCount(): number {
   const seen = useChangelogStore((s) => s.seen);
-  return CHANGELOG.filter((e) => e.id > seen).length;
+  return countUnread(seen);
+}
+
+/** Entrées publiées après `seen` (id de la dernière entrée vue). */
+export function isUnread(entryId: string, seen: string): boolean {
+  if (!seen) return true;
+  const seenIndex = CHANGELOG.findIndex((e) => e.id === seen);
+  // Entrée vue inconnue (fichier renommé) : on retombe sur l'ordre des noms.
+  if (seenIndex < 0) return entryId > seen;
+  return CHANGELOG.findIndex((e) => e.id === entryId) < seenIndex;
+}
+
+function countUnread(seen: string): number {
+  return CHANGELOG.filter((e) => isUnread(e.id, seen)).length;
 }
 
 export function markChangelogSeen() {

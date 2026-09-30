@@ -1,0 +1,196 @@
+import { useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { RotateCcw } from "lucide-react";
+import type { CombatOutcome } from "@/types/game";
+
+/* =====================================================
+   Replay animé d'un combat : les deux flottes entrent en scène, échangent
+   des tirs (le camp le plus puissant tire davantage), puis les unités
+   détruites explosent selon le pourcentage de pertes réel.
+===================================================== */
+
+const W = 320;
+const H = 132;
+const ENTER = 0.6; // arrivée des flottes
+const FIRE = 1.6; // durée des échanges de tirs
+const BOOM = ENTER + FIRE; // explosions
+
+interface Ship {
+  x: number;
+  y: number;
+  destroyed: boolean;
+  boomDelay: number;
+}
+
+function rng(seed: number) {
+  return () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+}
+
+/** Nombre de vaisseaux dessinés : croît avec la puissance, sans excès. */
+function shipCount(power: number) {
+  if (power <= 0) return 0;
+  return Math.max(3, Math.min(22, Math.round(3 + Math.log10(power + 1) * 3.5)));
+}
+
+function makeFleet(count: number, side: "left" | "right", lossPct: number, rand: () => number): Ship[] {
+  const destroyed = Math.round(count * Math.min(1, Math.max(0, lossPct)));
+  const ships = Array.from({ length: count }, (_, i) => {
+    const col = Math.floor(i / 6);
+    const row = i % 6;
+    const xFromEdge = 24 + col * 16 + (rand() - 0.5) * 6;
+    return {
+      x: side === "left" ? xFromEdge : W - xFromEdge,
+      y: 16 + row * 19 + (col % 2) * 8 + (rand() - 0.5) * 4,
+      destroyed: false,
+      boomDelay: BOOM + rand() * 0.5,
+    };
+  });
+  // Les pertes touchent surtout le front (colonnes les plus proches de l'ennemi).
+  const order = [...ships.keys()].sort((a, b) => Math.floor(b / 6) - Math.floor(a / 6) || rand() - 0.5);
+  order.slice(0, destroyed).forEach((i) => (ships[i].destroyed = true));
+  return ships;
+}
+
+export function CombatReplay({
+  myPower,
+  opponentPower,
+  myLossPercent,
+  opponentLossPercent,
+  outcome,
+  perspective,
+}: {
+  myPower: number;
+  opponentPower: number;
+  myLossPercent: number;
+  opponentLossPercent: number;
+  outcome: CombatOutcome;
+  perspective: "attacker" | "defender";
+}) {
+  const [run, setRun] = useState(0);
+  const still = useReducedMotion() ?? false;
+
+  const scene = useMemo(() => {
+    const rand = rng(1234 + run * 97);
+    const mine = makeFleet(shipCount(myPower), "left", myLossPercent, rand);
+    const theirs = makeFleet(shipCount(opponentPower), "right", opponentLossPercent, rand);
+    const total = Math.max(1, myPower + opponentPower);
+    const shots = Array.from({ length: 26 }, () => {
+      const fromMe = rand() < myPower / total;
+      const shooters = fromMe ? mine : theirs;
+      const targets = fromMe ? theirs : mine;
+      if (shooters.length === 0 || targets.length === 0) return null;
+      const s = shooters[Math.floor(rand() * shooters.length)];
+      const t = targets[Math.floor(rand() * targets.length)];
+      return { from: s, to: t, fromMe, delay: ENTER + rand() * FIRE };
+    }).filter((s): s is NonNullable<typeof s> => s !== null);
+    return { mine, theirs, shots };
+  }, [run, myPower, opponentPower, myLossPercent, opponentLossPercent]);
+
+  const iWon = (perspective === "attacker" && outcome === "attacker_win") || (perspective === "defender" && outcome === "defender_win");
+  const banner = outcome === "draw" ? "Égalité" : iWon ? "Victoire" : "Défaite";
+  const bannerColor = outcome === "draw" ? "var(--color-gold-glow)" : iWon ? "var(--color-mint-glow)" : "var(--color-danger-glow)";
+
+  const renderShip = (ship: Ship, i: number, side: "left" | "right") => {
+    const color = side === "left" ? "var(--color-cyan-glow)" : "var(--color-danger-glow)";
+    const dir = side === "left" ? 1 : -1;
+    const body = `M ${4 * dir} 0 L ${-3 * dir} -3 L ${-1.5 * dir} 0 L ${-3 * dir} 3 Z`;
+    if (still) return <path key={`${side}${i}`} d={body} fill={color} opacity={ship.destroyed ? 0.2 : 1} transform={`translate(${ship.x} ${ship.y})`} />;
+    return (
+      <g key={`${side}${i}-${run}`}>
+        <motion.path
+          d={body}
+          fill={color}
+          initial={{ x: ship.x - dir * 60, y: ship.y, opacity: 0 }}
+          animate={ship.destroyed ? { x: ship.x, y: ship.y, opacity: [0, 1, 1, 0] } : { x: ship.x, y: ship.y, opacity: 1 }}
+          transition={
+            ship.destroyed
+              ? { x: { duration: ENTER, ease: "easeOut" }, opacity: { duration: ship.boomDelay + 0.15, times: [0, 0.2, 0.97, 1] } }
+              : { duration: ENTER, ease: "easeOut" }
+          }
+        />
+        {ship.destroyed && (
+          <motion.circle
+            cx={ship.x}
+            cy={ship.y}
+            fill="none"
+            stroke="var(--color-ember-glow)"
+            strokeWidth={1.5}
+            initial={{ r: 0, opacity: 0 }}
+            animate={{ r: [0, 9], opacity: [1, 0] }}
+            transition={{ delay: ship.boomDelay, duration: 0.5, ease: "easeOut" }}
+          />
+        )}
+      </g>
+    );
+  };
+
+  return (
+    <div className="relative mt-3 overflow-hidden rounded-lg border border-white/5 bg-space-900/80">
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`Replay du combat : ${banner}`}>
+        {/* Tirs */}
+        {!still &&
+          scene.shots.map((s, i) => (
+            <motion.line
+              key={`shot${i}-${run}`}
+              x1={s.from.x}
+              y1={s.from.y}
+              x2={s.to.x}
+              y2={s.to.y}
+              stroke={s.fromMe ? "var(--color-cyan-glow)" : "var(--color-danger-glow)"}
+              strokeWidth={1}
+              strokeLinecap="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: [0, 1, 1], opacity: [0.9, 0.9, 0] }}
+              transition={{ delay: s.delay, duration: 0.35, times: [0, 0.5, 1] }}
+            />
+          ))}
+
+        {scene.mine.map((ship, i) => renderShip(ship, i, "left"))}
+        {scene.theirs.map((ship, i) => renderShip(ship, i, "right"))}
+
+        {scene.theirs.length === 0 && (
+          <text x={W - 70} y={H / 2} textAnchor="middle" className="fill-slate-500 text-[9px]">
+            aucune défense
+          </text>
+        )}
+        {scene.mine.length === 0 && (
+          <text x={70} y={H / 2} textAnchor="middle" className="fill-slate-500 text-[9px]">
+            aucune défense
+          </text>
+        )}
+
+        {/* Verdict */}
+        <motion.text
+          key={`banner-${run}`}
+          x={W / 2}
+          y={H / 2 + 5}
+          textAnchor="middle"
+          fill={bannerColor}
+          className="font-display text-[15px] tracking-[0.2em] uppercase"
+          initial={{ opacity: still ? 1 : 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: still ? 0 : BOOM + 0.6, duration: 0.3 }}
+          style={{ transformOrigin: "center", transformBox: "fill-box" }}
+        >
+          {banner}
+        </motion.text>
+      </svg>
+      <div className="absolute inset-x-2 top-1.5 flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+        <span className="text-cyan-glow/80">Toi</span>
+        <span className="text-danger-glow/80">Adversaire</span>
+      </div>
+      {!still && (
+        <button
+          type="button"
+          onClick={() => setRun((n) => n + 1)}
+          className="absolute bottom-1.5 right-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-white/5 hover:text-slate-200"
+        >
+          <RotateCcw className="h-3 w-3" /> Rejouer
+        </button>
+      )}
+    </div>
+  );
+}
