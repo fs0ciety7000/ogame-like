@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
+import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
+import { formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, initiateAttack } from "@/services/playerService";
@@ -89,6 +91,13 @@ export function AttackModal({
                   );
                 })}
               </div>
+
+              <p className="mt-3 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+                📦 Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet))}</strong>{" "}
+                ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources
+                communes et {Math.round(COMBAT_RULES.lootPercent * 100)} % des rares, dans la limite de la cargaison des
+                vaisseaux survivants.
+              </p>
 
               <Button className="mt-4 w-full" variant="danger" onClick={() => void handleConfirm()}>
                 Lancer l'attaque
