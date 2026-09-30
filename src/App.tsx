@@ -69,6 +69,9 @@ export default function App() {
       <Toaster
         theme="dark"
         position="top-right"
+        expand
+        visibleToasts={4}
+        closeButton
         toastOptions={{
           style: {
             background: "rgba(10,14,28,0.92)",
