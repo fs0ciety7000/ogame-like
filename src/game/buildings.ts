@@ -208,7 +208,9 @@ export function getRepairPercent(buildings: Buildings): number {
   let pct = 0;
   for (const b of BUILDINGS) {
     if (b.effect?.type !== "repair") continue;
-    const level = buildings[b.id]?.level ?? 1;
+    // Bâtiment verrouillé = aucun effet (auparavant, l'Atelier réparait 5 %
+    // pour tout le monde, même jamais débloqué).
+    const level = effectiveBuildingLevel(buildings, b.id);
     pct += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
   }
   return pct;

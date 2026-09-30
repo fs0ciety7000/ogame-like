@@ -1,21 +1,9 @@
 import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
-import { defaultPlayerState, defaultQueues } from "@/game/defaults";
-import { flushState, type NewNotification } from "@/game/flush";
-import { applyXpDelta } from "@/game/seasons";
-import {
-  applyBuildingDiscount,
-  BUILDING_UNLOCK_COST,
-  findBuilding,
-  getBuildingUpgradeCost,
-  getBuildingUpgradeTime,
-  getUnitCapacity,
-  withMissingBuildings,
-} from "@/game/buildings";
-import { canAffordAll, getTradeRate } from "@/game/resources";
-import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
-import { findUnit, getUnitBuildTime } from "@/game/units";
-import { hasPrerequisites, MISSIONS } from "@/game/missions";
-import { GAME_FIELDS } from "@/game/playerFields";
+import { defaultQueues } from "@/game/defaults";
+import type { NewNotification } from "@/game/flush";
+import { withMissingBuildings } from "@/game/buildings";
+import { GameActionError } from "@/game/errors";
+import type { AwaySummary, GameAction } from "@/game/actions";
 import type { CombatResult } from "@/game/combat";
 import type {
   BattleReport,
@@ -29,7 +17,8 @@ import type {
   SpyReport,
 } from "@/types/game";
 
-export class GameActionError extends Error {}
+export { GameActionError };
+export type { AwaySummary };
 
 /* =====================================================
    Conversion enregistrements PocketBase <-> état du jeu
@@ -55,12 +44,6 @@ function playerFromRecord(record: PbRecord | null | undefined): PlayerState | nu
   };
 }
 
-function gameFieldsOf(player: PlayerState): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const key of GAME_FIELDS) out[key] = player[key] ?? null;
-  return out;
-}
-
 function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | null {
   if (!record) return null;
   const defaults = defaultQueues();
@@ -73,35 +56,50 @@ function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | nu
 }
 
 /* =====================================================
-   Création / lecture
+   Appels au serveur de jeu
+
+   Toutes les actions sont arbitrées par le serveur
+   (pocketbase/pb_hooks/cosmic.pb.js) : il relit le joueur, applique la
+   production accumulée, vérifie l'action et écrit le résultat dans une
+   transaction. Le navigateur n'écrit plus lui-même ses ressources,
+   bâtiments, unités ni son XP.
 ===================================================== */
 
-async function createIgnoringDuplicate(collection: string, data: Record<string, unknown>) {
+/** Appel d'une route du jeu. Une règle non respectée (400) devient une
+ *  GameActionError avec le message du serveur, à afficher au joueur. */
+async function callGame<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
   try {
-    await pb.collection(collection).create(data);
+    return await pb.send<T>(`/api/cosmic/${path}`, { method: "POST", body });
   } catch (err) {
-    // Création concurrente (inscription + filet de sécurité de useGameSync) :
-    // l'enregistrement existe déjà, c'est le résultat voulu.
-    if ((err as { status?: number })?.status !== 400) throw err;
-    await pb.collection(collection).getOne(data.id as string);
+    const status = (err as { status?: number })?.status;
+    const message = (err as { response?: { message?: string } })?.response?.message;
+    if (status === 404 && !message?.includes("joueur")) {
+      throw new GameActionError("Serveur de jeu indisponible : les hooks ne sont pas installés (voir README).");
+    }
+    if (status === 400 || status === 404) throw new GameActionError(message || "Action impossible.");
+    throw err;
   }
 }
 
-export async function ensurePlayerDoc(uid: string, pseudo: string) {
-  try {
-    await pb.collection("players").getOne(uid, { fields: "id" });
-  } catch (err) {
-    if (!isNotFound(err)) throw err;
-    const state: Partial<PlayerState> = defaultPlayerState(uid, pseudo);
-    delete state.uid;
-    await createIgnoringDuplicate("players", { ...state, id: uid, createdAtMs: Date.now() });
-  }
-  try {
-    await pb.collection("queues").getOne(uid, { fields: "id" });
-  } catch (err) {
-    if (!isNotFound(err)) throw err;
-    await createIgnoringDuplicate("queues", { ...defaultQueues(), id: uid });
-  }
+/** Un seul traitement à la fois par rapport/don dans cet onglet (évite
+ *  d'envoyer deux fois la même requête depuis des abonnements concurrents). */
+const inFlight = new Map<string, Promise<unknown>>();
+
+function once<T>(key: string, task: () => Promise<T>): Promise<T> {
+  const pending = inFlight.get(key) as Promise<T> | undefined;
+  if (pending) return pending.then(() => null as T);
+  const run = task().finally(() => inFlight.delete(key));
+  inFlight.set(key, run);
+  return run;
+}
+
+/* =====================================================
+   Création / lecture
+===================================================== */
+
+/** Crée le profil du joueur connecté (côté serveur) s'il n'existe pas. */
+export async function ensurePlayerDoc(_uid: string, _pseudo: string) {
+  await callGame("init");
 }
 
 export async function setPlayerPseudo(uid: string, pseudo: string) {
@@ -344,286 +342,51 @@ async function acknowledgeSpyReportOnce(uid: string, reportId: string) {
 
 /* =====================================================
    Actions de jeu
-
-   PocketBase n'offre pas de transactions côté client : chaque action lit
-   le joueur, applique la production accumulée (flushState), la modifie
-   puis réécrit. Toutes les actions de cet onglet passent par une file
-   unique pour qu'un heartbeat et un clic ne s'écrasent pas mutuellement.
 ===================================================== */
 
-let actionQueue: Promise<unknown> = Promise.resolve();
-
-/** Un seul traitement à la fois par rapport/don dans cet onglet : deux
- *  requêtes parties au même instant passeraient toutes deux la règle
- *  d'accès (PocketBase ne verrouille pas l'enregistrement entre la
- *  vérification et l'écriture). La règle, elle, bloque les passages
- *  suivants (autre onglet, rechargement). */
-const inFlight = new Map<string, Promise<unknown>>();
-
-function once<T>(key: string, task: () => Promise<T>): Promise<T> {
-  const pending = inFlight.get(key) as Promise<T> | undefined;
-  if (pending) return pending.then(() => null as T);
-  const run = task().finally(() => inFlight.delete(key));
-  inFlight.set(key, run);
-  return run;
+async function act<T = void>(action: GameAction): Promise<T> {
+  const res = await callGame<{ result: T }>("action", action as unknown as Record<string, unknown>);
+  return res.result;
 }
 
-function serialized<T>(task: () => Promise<T>): Promise<T> {
-  const run = actionQueue.then(task, task);
-  actionQueue = run.catch(() => undefined);
-  return run;
+/** Rattrapage de la production (heartbeat, retour sur l'onglet). */
+export function syncPlayer(_uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary> {
+  return act<AwaySummary>({ type: "sync", playtimeDeltaSeconds });
 }
 
-interface MutateOutput<T> {
-  player: PlayerState;
-  queues: QueuesState;
-  notifications?: NewNotification[];
-  result: T;
+export function unlockBuilding(_uid: string, buildingId: BuildingId) {
+  return act({ type: "unlockBuilding", buildingId });
 }
 
-async function loadFlushed(uid: string) {
-  let playerRecord: PbRecord;
-  let queueRecord: PbRecord;
-  try {
-    [playerRecord, queueRecord] = await Promise.all([
-      pb.collection("players").getOne<PbRecord>(uid),
-      pb.collection("queues").getOne<PbRecord>(uid),
-    ]);
-  } catch (err) {
-    if (isNotFound(err)) throw new GameActionError("Profil joueur introuvable.");
-    throw err;
-  }
-  const preFlushPlayer = playerFromRecord(playerRecord);
-  const queues = queuesFromRecord(queueRecord);
-  if (!preFlushPlayer || !queues) throw new GameActionError("Profil joueur introuvable.");
-  return { preFlushPlayer, flushed: flushState(preFlushPlayer, queues, Date.now()) };
+export function startBuildingUpgrade(_uid: string, buildingId: BuildingId) {
+  return act({ type: "upgradeBuilding", buildingId });
 }
 
-async function savePlayerState(uid: string, player: PlayerState, queues: QueuesState) {
-  await pb.collection("players").update(uid, gameFieldsOf(player));
-  await pb.collection("queues").update(uid, { ...queues });
+export function enqueueUnitBuild(_uid: string, unitId: string, qty: number) {
+  return act({ type: "buildUnits", unitId, qty });
 }
 
-function runFlushedAction<T>(
-  uid: string,
-  mutate: (state: {
-    player: PlayerState;
-    queues: QueuesState;
-    preFlushPlayer: PlayerState;
-    flushNotifications: NewNotification[];
-  }) => MutateOutput<T>,
-): Promise<T> {
-  return serialized(async () => {
-    const { preFlushPlayer, flushed } = await loadFlushed(uid);
-    const mutated = mutate({
-      player: flushed.player,
-      queues: flushed.queues,
-      preFlushPlayer,
-      flushNotifications: flushed.notifications,
-    });
-    await savePlayerState(uid, mutated.player, mutated.queues);
-    await createNotifications(uid, [...flushed.notifications, ...(mutated.notifications ?? [])]);
-    return mutated.result;
-  });
+export function sellUnit(_uid: string, unitId: string, qty: number) {
+  return act({ type: "sellUnits", unitId, qty });
 }
 
-export interface AwaySummary {
-  elapsedMs: number;
-  resourceGains: Partial<Record<ResourceId, number>>;
-  notifications: NewNotification[];
+export function startResearch(_uid: string, techId: string) {
+  return act({ type: "research", techId });
 }
 
-export async function syncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary> {
-  return runFlushedAction(uid, ({ player, queues, preFlushPlayer, flushNotifications }) => {
-    player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.max(0, playtimeDeltaSeconds);
-
-    const elapsedMs = Date.now() - (preFlushPlayer.resourcesUpdatedAtMs || Date.now());
-    const resourceGains: Partial<Record<ResourceId, number>> = {};
-    for (const key of Object.keys(player.resources) as ResourceId[]) {
-      const delta = (player.resources[key] ?? 0) - (preFlushPlayer.resources[key] ?? 0);
-      if (delta > 0) resourceGains[key] = delta;
-    }
-
-    return {
-      player,
-      queues,
-      result: { elapsedMs, resourceGains, notifications: flushNotifications },
-    };
-  });
+export function startMission(_uid: string, missionKey: string) {
+  return act({ type: "mission", missionKey });
 }
 
-export async function unlockBuilding(uid: string, buildingId: BuildingId) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const info = BUILDING_UNLOCK_COST[buildingId];
-    if (!info) throw new GameActionError("Ce bâtiment se débloque via le Labo.");
-    if (player.buildings[buildingId].unlocked) throw new GameActionError("Déjà débloqué.");
-
-    if ("multi" in info) {
-      const costMap: Partial<Record<ResourceId, number>> = {};
-      info.resources.forEach((r) => (costMap[r.resource as ResourceId] = r.amount));
-      if (!canAffordAll(player.resources, costMap)) throw new GameActionError("Ressources insuffisantes.");
-      info.resources.forEach((r) => (player.resources[r.resource as ResourceId] -= r.amount));
-    } else {
-      if ((player.resources[info.resource as ResourceId] ?? 0) < info.amount) {
-        throw new GameActionError("Ressources insuffisantes.");
-      }
-      player.resources[info.resource as ResourceId] -= info.amount;
-    }
-
-    player.buildings[buildingId].unlocked = true;
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function startBuildingUpgrade(uid: string, buildingId: BuildingId) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const def = findBuilding(buildingId);
-    if (!def) throw new GameActionError("Bâtiment inconnu.");
-
-    const state = player.buildings[buildingId];
-    if (!state.unlocked) throw new GameActionError("Ce bâtiment n'est pas débloqué.");
-    if (queues.buildingUpgrades[buildingId]) throw new GameActionError("Amélioration déjà en cours.");
-    if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-
-    const nextLevel = state.level + 1;
-    const rawCost = getBuildingUpgradeCost(def, nextLevel);
-    const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
-
-    if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
-    for (const [res, val] of Object.entries(cost)) {
-      player.resources[res as ResourceId] -= val ?? 0;
-    }
-
-    const time = getBuildingUpgradeTime(def, nextLevel);
-    queues.buildingUpgrades[buildingId] = { endTime: Date.now() + time * 1000 };
-
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function enqueueUnitBuild(uid: string, unitId: string, qty: number) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const unit = findUnit(unitId);
-    if (!unit || qty <= 0) throw new GameActionError("Unité invalide.");
-
-    const level = player.units[unitId]?.level ?? 0;
-    if (level <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
-
-    const category = unit.category;
-    const capacity = getUnitCapacity(player.buildings, category);
-
-    const built = Object.entries(player.units).reduce((sum, [id, u]) => {
-      const def = findUnit(id);
-      if (def?.category !== category) return sum;
-      return sum + u.count * def.hangarSpace;
-    }, 0);
-
-    const reserved = queues.unitQueues[category].reduce((sum, item) => {
-      const def = findUnit(item.unitId);
-      return sum + (def?.hangarSpace ?? 1);
-    }, 0);
-
-    const requested = qty * unit.hangarSpace;
-
-    if (built + reserved + requested > capacity) {
-      throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
-    }
-
-    const totalCost = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
-    if (!canAffordAll(player.resources, totalCost)) throw new GameActionError("Ressources insuffisantes.");
-    player.resources.scrap -= totalCost.scrap;
-    player.resources.energy -= totalCost.energy;
-
-    const queue = queues.unitQueues[category];
-    const wasEmpty = queue.length === 0;
-    for (let i = 0; i < qty; i++) queue.push({ unitId, endTime: null });
-    if (wasEmpty) queue[0].endTime = Date.now() + getUnitBuildTime(unit) * 1000;
-
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function sellUnit(uid: string, unitId: string, qty: number) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const unit = findUnit(unitId);
-    if (!unit || qty <= 0) throw new GameActionError("Unité invalide.");
-
-    const owned = player.units[unitId]?.count ?? 0;
-    if (owned < qty) throw new GameActionError("Tu n'as pas assez d'unités à vendre.");
-
-    player.units[unitId].count -= qty;
-    player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
-    player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
-
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function startResearch(uid: string, techId: string) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const tech = findTech(techId);
-    if (!tech) throw new GameActionError("Technologie inconnue.");
-
-    const currentLevel = player.techLevels[techId] ?? 0;
-    const nextLevel = currentLevel + 1;
-    if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-
-    const check = checkPrereqs(tech, player.techLevels);
-    if (!check.valid) throw new GameActionError("Prérequis non remplis.");
-
-    if (queues.activeResearches.some((r) => r.id === techId)) {
-      throw new GameActionError("Cette technologie est déjà en cours de recherche.");
-    }
-    if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
-      throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
-    }
-
-    const cost = getTechCost(tech, nextLevel);
-    if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
-    for (const [res, val] of Object.entries(cost)) {
-      player.resources[res as ResourceId] -= val;
-    }
-
-    const time = getTechTime(tech, nextLevel);
-    queues.activeResearches.push({ id: techId, endTime: Date.now() + time * 1000 });
-
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function startMission(uid: string, missionKey: string) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    const mission = MISSIONS[missionKey];
-    if (!mission) throw new GameActionError("Mission inconnue.");
-    if (queues.activeMissions.some((m) => m.key === missionKey)) {
-      throw new GameActionError("Mission déjà en cours.");
-    }
-    if (!hasPrerequisites(mission, player.units)) throw new GameActionError("Prérequis non remplis.");
-
-    queues.activeMissions.push({ key: missionKey, endTime: Date.now() + mission.duration * 1000 });
-    return { player, queues, result: undefined };
-  });
-}
-
-export async function tradeResources(uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {
-  return runFlushedAction(uid, ({ player, queues }) => {
-    if (amount <= 0 || sellId === buyId) throw new GameActionError("Échange invalide.");
-    if ((player.resources[sellId] ?? 0) < amount) throw new GameActionError("Pas assez de ressources à échanger.");
-
-    const rate = getTradeRate(sellId, buyId);
-    const gained = Math.floor(amount * rate);
-
-    player.resources[sellId] -= amount;
-    player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
-
-    return { player, queues, result: gained };
-  });
+export function tradeResources(_uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {
+  return act<number>({ type: "trade", sellId, buyId, amount });
 }
 
 /* =====================================================
    Échanges entre joueurs
 ===================================================== */
 
+/** Transfert immédiat : le destinataire est crédité par le serveur. */
 export async function sendResourceGift(params: {
   fromUid: string;
   fromPseudo: string;
@@ -631,31 +394,14 @@ export async function sendResourceGift(params: {
   toPseudo: string;
   resources: Partial<Resources>;
 }) {
-  const { fromUid, fromPseudo, toUid, toPseudo, resources } = params;
+  const { fromUid, toUid, resources } = params;
   if (fromUid === toUid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
-
-  const entries = (Object.entries(resources) as [ResourceId, number | undefined][]).filter(([, v]) => (v ?? 0) > 0);
-  if (entries.length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
-
-  await runFlushedAction(fromUid, ({ player, queues }) => {
-    for (const [res, amt] of entries) {
-      if ((player.resources[res] ?? 0) < (amt ?? 0)) throw new GameActionError("Ressources insuffisantes.");
-      player.resources[res] -= amt ?? 0;
-    }
-    return { player, queues, result: undefined };
-  });
-
-  await pb.collection("resource_gifts").create({
-    fromUid,
-    fromPseudo,
-    toUid,
-    toPseudo,
-    resources: Object.fromEntries(entries),
-    timestamp: Date.now(),
-    claimed: false,
-  });
+  const positive = Object.fromEntries(Object.entries(resources).filter(([, v]) => (v ?? 0) > 0));
+  if (Object.keys(positive).length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
+  await callGame("gift", { toUid, resources: positive });
 }
 
+/** Dons envoyés avec l'ancien système (débités à l'envoi, pas encore crédités). */
 export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): () => void {
   const filter = pb.filter("toUid = {:uid} && claimed = false", { uid });
   return subscribeList(
@@ -666,43 +412,8 @@ export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) =
   );
 }
 
-export function claimResourceGift(uid: string, giftId: string) {
-  return once(`gift:${giftId}`, () => claimResourceGiftOnce(uid, giftId));
-}
-
-async function claimResourceGiftOnce(uid: string, giftId: string) {
-  let gift: ResourceGift;
-  try {
-    // Marqué comme réclamé AVANT de créditer : la règle d'accès refuse un
-    // second passage (claimed doit encore valoir false), donc un don ne
-    // peut jamais être crédité deux fois, même depuis deux onglets.
-    gift = await pb.collection("resource_gifts").update<ResourceGift>(giftId, { claimed: true });
-  } catch (err) {
-    if (isNotFound(err)) return;
-    throw err;
-  }
-  if (gift.toUid !== uid) return;
-
-  await runFlushedAction(uid, ({ player, queues }) => {
-    for (const [res, amt] of Object.entries(gift.resources ?? {})) {
-      const key = res as ResourceId;
-      player.resources[key] = (player.resources[key] ?? 0) + ((amt as number) ?? 0);
-    }
-    return {
-      player,
-      queues,
-      notifications: [
-        {
-          kind: "gift",
-          title: "Ressources reçues !",
-          message: `${gift.fromPseudo} t'a envoyé des ressources.`,
-          createdAtMs: Date.now(),
-          read: false,
-        },
-      ],
-      result: undefined,
-    };
-  });
+export function claimResourceGift(_uid: string, giftId: string) {
+  return once(`gift:${giftId}`, () => callGame("gift/claim", { giftId }));
 }
 
 /* =====================================================
@@ -717,29 +428,15 @@ export interface AttackParams {
   fleet: Record<string, number>;
 }
 
-/** L'attaque est arbitrée par le serveur (pocketbase/pb_hooks/cosmic.pb.js) :
- *  protections, combat, XP et écriture du rapport dans une transaction. */
-export function initiateAttack(params: AttackParams): Promise<CombatResult & { defenderPseudo: string; attackerXpDelta: number }> {
+/** Protections, combat, pertes des deux camps, pillage, XP et rapport :
+ *  tout est fait par le serveur dans une transaction. */
+export async function initiateAttack(
+  params: AttackParams,
+): Promise<CombatResult & { defenderPseudo: string; attackerXpDelta: number }> {
   const { attackerUid, targetUid, targetPseudo, fleet } = params;
-  if (attackerUid === targetUid) return Promise.reject(new GameActionError("Tu ne peux pas t'attaquer toi-même !"));
-
-  return serialized(async () => {
-    try {
-      const res = await pb.send<BattleReport & { combat: CombatResult }>("/api/cosmic/attack", {
-        method: "POST",
-        body: { targetUid, fleet },
-      });
-      return { ...res.combat, defenderPseudo: targetPseudo, attackerXpDelta: res.attackerXpDelta ?? 0 };
-    } catch (err) {
-      const status = (err as { status?: number })?.status;
-      if (status === 404 && !(err as { response?: { message?: string } })?.response?.message?.includes("joueur")) {
-        throw new GameActionError("Attaques indisponibles : le serveur n'a pas encore les hooks du jeu (voir README).");
-      }
-      const message = (err as { response?: { message?: string } })?.response?.message;
-      if (status === 400 || status === 404) throw new GameActionError(message || "Attaque impossible.");
-      throw err;
-    }
-  });
+  if (attackerUid === targetUid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
+  const res = await callGame<BattleReport & { combat: CombatResult }>("attack", { targetUid, fleet });
+  return { ...res.combat, defenderPseudo: targetPseudo, attackerXpDelta: res.attackerXpDelta ?? 0 };
 }
 
 /** Mes attaques récentes (pour afficher le délai avant de pouvoir
@@ -754,6 +451,7 @@ export async function fetchMyRecentAttacks(uid: string, sinceMs: number): Promis
   return last;
 }
 
+/** Rapports de combat que le défenseur n'a pas encore vus. */
 export function subscribePendingBattleReports(uid: string, cb: (reports: BattleReport[]) => void): () => void {
   const filter = pb.filter("defenderUid = {:uid} && defenderProcessed = false", { uid });
   return subscribeList(
@@ -777,63 +475,13 @@ export function subscribeBattleLog(uid: string, cb: (reports: BattleReport[]) =>
   );
 }
 
-export function processBattleReportForDefender(uid: string, reportId: string): Promise<BattleReport | null> {
-  return once(`battle:${reportId}`, () => processBattleReportOnce(uid, reportId));
-}
-
-async function processBattleReportOnce(uid: string, reportId: string): Promise<BattleReport | null> {
-  let report: BattleReport;
-  try {
-    // Passage unique garanti par la règle d'accès (defenderProcessed doit
-    // encore valoir false) : les pertes ne sont jamais appliquées deux fois.
-    report = await pb.collection("battle_reports").update<BattleReport>(reportId, { defenderProcessed: true });
-  } catch (err) {
-    if (isNotFound(err)) return null;
-    throw err;
-  }
-  if (report.defenderUid !== uid) return null;
-
-  const outcomeLabel: Record<string, string> = {
-    attacker_win: "Tu as perdu ce combat...",
-    defender_win: "Attaque repoussée !",
-    draw: "Match nul.",
-  };
-
-  await runFlushedAction(uid, ({ player, queues }) => {
-    for (const [unitId, lost] of Object.entries(report.defenderLosses ?? {})) {
-      if (player.units[unitId]) {
-        player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
-      }
-    }
-
-    const now = Date.now();
-    if (report.outcome === "defender_win") player.victories += 1;
-    else if (report.outcome === "attacker_win") player.defeats += 1;
-    // XP calculée et plafonnée par le serveur (voir src/game/pvp.ts).
-    applyXpDelta(player, report.defenderXpDelta ?? 0, now);
-
-    for (const [res, amt] of Object.entries(report.loot ?? {})) {
-      const key = res as ResourceId;
-      player.resources[key] = Math.max(0, (player.resources[key] ?? 0) - (amt ?? 0));
-    }
-
-    return {
-      player,
-      queues,
-      notifications: [
-        {
-          kind: "combat-defender",
-          title: outcomeLabel[report.outcome] ?? "Rapport de combat",
-          message: `Attaque de ${report.attackerPseudo}${report.defenderXpDelta ? ` (${report.defenderXpDelta > 0 ? "+" : ""}${report.defenderXpDelta} XP)` : ""}.`,
-          createdAtMs: Date.now(),
-          read: false,
-        },
-      ],
-      result: undefined,
-    };
+/** Marque le rapport comme vu (une seule fois) et le renvoie pour
+ *  l'afficher. Les pertes ont déjà été appliquées par le serveur. */
+export function processBattleReportForDefender(_uid: string, reportId: string): Promise<BattleReport | null> {
+  return once(`battle:${reportId}`, async () => {
+    const res = await callGame<{ report: BattleReport | null }>("report/seen", { reportId });
+    return res.report;
   });
-
-  return report;
 }
 
 /* =====================================================

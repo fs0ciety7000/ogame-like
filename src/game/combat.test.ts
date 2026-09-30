@@ -67,12 +67,37 @@ describe("resolveCombat", () => {
     expect(result.loot).toBeNull();
   });
 
-  it("grants loot only when the attacker wins outright", () => {
+  it("grants loot only when the attacker wins outright (8 % rares, 10 % communes)", () => {
     const params = baseCombatParams();
-    params.defenderResources = { reinforcedSteel: 1000 };
+    params.attackerUnits = unitsWith({ chasseur: { level: 1, count: 100 }, cargo: { level: 1, count: 1000 } });
+    params.fleet = { chasseur: 10, cargo: 1000 };
+    params.defenderResources = { reinforcedSteel: 1000, scrap: 5000 };
     const result = resolveCombat(params);
     expect(result.outcome).toBe("attacker_win");
-    expect(result.loot?.reinforcedSteel).toBe(80); // 8% de 1000
+    expect(result.loot?.reinforcedSteel).toBe(80);
+    expect(result.loot?.scrap).toBe(500);
+  });
+
+  it("limits the loot to the cargo capacity of the surviving fleet", () => {
+    const params = baseCombatParams(); // 10 chasseurs niveau 1, cargaison 5 chacun
+    params.defenderResources = { scrap: 1_000_000, reinforcedSteel: 1000 };
+    const result = resolveCombat(params);
+    const total = Object.values(result.loot ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    expect(result.cargoCapacity).toBeGreaterThan(0);
+    expect(total).toBeLessThanOrEqual(result.cargoCapacity);
+    // Réduction proportionnelle : les deux ressources sont pillées.
+    expect(result.loot?.scrap).toBeGreaterThan(result.loot?.reinforcedSteel ?? 0);
+  });
+
+  it("fills a small cargo hold completely despite rounding across many resources", () => {
+    const params = baseCombatParams();
+    params.fleet = { chasseur: 1 };
+    params.defenderUnits = {};
+    params.defenderResources = { scrap: 90000, energy: 90000, nano: 90000, data: 90000, reinforcedSteel: 500, cyberModule: 500, syntheticNanites: 500, aiFragment: 500 };
+    const result = resolveCombat(params);
+    const total = Object.values(result.loot ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    expect(result.cargoCapacity).toBeGreaterThan(0);
+    expect(total).toBe(result.cargoCapacity);
   });
 
   it("repair percentage reduces effective (permanent) losses without changing the raw loss rate", () => {

@@ -1,13 +1,28 @@
-import { DEFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, UNIT_BASE_STATS } from "@/game/units";
 import { techBonus } from "@/game/technologies";
-import type { CombatOutcome, RareResourceId, TechLevels, Units } from "@/types/game";
+import type { CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
 
 /** Règles de combat réglables depuis l'administration. */
 export const COMBAT_RULES = {
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
+  lootPercentCommon: 0.1,
 };
-const LOOT_RESOURCES: RareResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+const RARE_RESOURCES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+const COMMON_RESOURCES: ResourceId[] = ["scrap", "energy", "nano", "data"];
+
+/** Capacité de cargaison d'une flotte : cargaison de base × niveau × quantité. */
+export function fleetCargoCapacity(units: Units, fleet: Record<string, number>): number {
+  let total = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const def = findUnit(id);
+    const level = units[id]?.level ?? 0;
+    if (!def || qty <= 0 || level <= 0) continue;
+    total += (def.stats.cargo ?? 0) * level * qty;
+  }
+  return total;
+}
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -67,7 +82,9 @@ export interface CombatResult {
   attackerRecovered: Record<string, number>;
   defenderLosses: Record<string, number>;
   defenderRecovered: Record<string, number>;
-  loot: Partial<Record<RareResourceId, number>> | null;
+  loot: Partial<Record<ResourceId, number>> | null;
+  /** Cargaison disponible de la flotte survivante (limite du butin). */
+  cargoCapacity: number;
 }
 
 export function resolveCombat(params: {
@@ -78,7 +95,7 @@ export function resolveCombat(params: {
   defenderUnits: Units;
   defenderTechLevels: TechLevels;
   defenderRepairPct: number;
-  defenderResources: Partial<Record<RareResourceId, number>>;
+  defenderResources: Partial<Record<ResourceId, number>>;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
 
@@ -140,13 +157,38 @@ export function resolveCombat(params: {
     }
   });
 
-  let loot: Partial<Record<RareResourceId, number>> | null = null;
+  // Butin : une part des ressources du défenseur, dans la limite de ce que
+  // la flotte survivante peut transporter (réduit proportionnellement).
+  const survivors: Record<string, number> = {};
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0));
+  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
+  let loot: Partial<Record<ResourceId, number>> | null = null;
   if (outcome === "attacker_win") {
+    const wanted: Partial<Record<ResourceId, number>> = {};
+    let total = 0;
+    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
+      const pct = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const amount = Math.floor(Math.max(0, defenderResources[res] ?? 0) * pct);
+      wanted[res] = amount;
+      total += amount;
+    }
+    const ratio = total > cargoCapacity ? cargoCapacity / total : 1;
     loot = {};
-    LOOT_RESOURCES.forEach((res) => {
-      const available = defenderResources[res] ?? 0;
-      loot![res] = Math.floor(available * COMBAT_RULES.lootPercent);
-    });
+    const entries = Object.entries(wanted) as [ResourceId, number][];
+    for (const [res, amount] of entries) loot[res] = Math.floor(amount * ratio);
+    // Arrondis : le reste de la cale va aux ressources les plus proches de
+    // l'unité suivante, pour qu'une petite flotte ne reparte pas à vide.
+    let left = Math.min(total, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => s + (loot![res] ?? 0), 0);
+    const byRemainder = entries
+      .map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) }))
+      .sort((a, b) => b.frac - a.frac);
+    for (const { res } of byRemainder) {
+      if (left <= 0) break;
+      if ((loot[res] ?? 0) < (wanted[res] ?? 0)) {
+        loot[res] = (loot[res] ?? 0) + 1;
+        left--;
+      }
+    }
   }
 
   return {
@@ -160,5 +202,6 @@ export function resolveCombat(params: {
     defenderLosses,
     defenderRecovered,
     loot,
+    cargoCapacity,
   };
 }
