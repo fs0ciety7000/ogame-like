@@ -1,5 +1,6 @@
 import { BUILDINGS, findBuilding } from "@/game/buildings";
-import { computeElapsedProduction } from "@/game/production";
+import { advanceResources, missionRewards } from "@/game/economy";
+import { ensureContracts, recordContract } from "@/game/contracts";
 import { MISSIONS } from "@/game/missions";
 import { findTech, techBonus, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
@@ -49,10 +50,9 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
 
   // --- Production continue ---
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1000);
-  const gains = computeElapsedProduction(player.buildings, player.techLevels, elapsedSeconds);
-  for (const [res, amount] of Object.entries(gains)) {
-    player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + (amount ?? 0);
-  }
+  // Production, plafond de l'entrepôt, entretien de flotte et panne d'énergie.
+  player.resources = advanceResources(player, elapsedSeconds);
+  ensureContracts(player, now);
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
@@ -143,17 +143,19 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       continue;
     }
 
-    for (const [res, amount] of Object.entries(mission.reward)) {
+    const reward = missionRewards(mission, player);
+    for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         applyXpDelta(player, amount, now);
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
       }
     }
+    recordContract(player, "missions", 1, now);
     notifications.push({
       kind: "mission",
       title: "Mission terminée",
-      message: `${mission.name} : récompense obtenue${mission.reward.xp ? ` (+${mission.reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : récompense obtenue${reward.xp ? ` (+${reward.xp} XP)` : ""}.`,
       createdAtMs: now,
       read: false,
     });

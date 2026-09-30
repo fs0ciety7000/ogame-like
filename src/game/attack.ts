@@ -1,6 +1,8 @@
 import { resolveCombat, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
+import { protectedAmount } from "@/game/economy";
+import { recordContract } from "@/game/contracts";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
@@ -73,7 +75,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   // Production et files de l'attaquant rattrapées jusqu'à maintenant (avec
   // les bâtiments ajoutés depuis l'administration après sa création).
   const flushed = flushState(
-    { ...input.attacker, buildings: withMissingBuildings(input.attacker.buildings) },
+    { ...input.attacker, buildings: withMissingBuildings(input.attacker.buildings, input.attacker.resources) },
     input.attackerQueues,
     now,
   );
@@ -86,7 +88,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   }
 
   // Défenseur rattrapé lui aussi (production, unités terminées) avant le combat.
-  const flushedDefender = flushState({ ...defender, buildings: withMissingBuildings(defender.buildings) }, input.defenderQueues, now);
+  const flushedDefender = flushState({ ...defender, buildings: withMissingBuildings(defender.buildings, defender.resources) }, input.defenderQueues, now);
   const def = flushedDefender.player;
 
   const combat = resolveCombat({
@@ -97,7 +99,10 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderUnits: def.units ?? {},
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: getRepairPercent(def.buildings),
-    defenderResources: def.resources ?? {},
+    // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
+    defenderResources: Object.fromEntries(
+      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId))]),
+    ),
   });
 
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
@@ -124,6 +129,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     def.lastDefeatAtMs = now;
   }
   applyXpDelta(def, defenderXpDelta, now);
+  if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
+  if (combat.outcome === "defender_win") recordContract(def, "win_defense", 1, now);
 
   const outcomeTitle: Record<string, string> = {
     attacker_win: "Victoire !",

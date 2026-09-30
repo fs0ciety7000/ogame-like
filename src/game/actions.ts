@@ -13,6 +13,7 @@ import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEAR
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
+import { claimContract, recordContract, rerollContract } from "@/game/contracts";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { applyXpDelta } from "@/game/seasons";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
@@ -34,7 +35,9 @@ export type GameAction =
   | { type: "sellUnits"; unitId: string; qty: number }
   | { type: "research"; techId: string }
   | { type: "mission"; missionKey: string }
-  | { type: "trade"; sellId: ResourceId; buyId: ResourceId; amount: number };
+  | { type: "trade"; sellId: ResourceId; buyId: ResourceId; amount: number }
+  | { type: "claimContract"; contractId: string }
+  | { type: "rerollContract"; contractId: string };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -52,9 +55,14 @@ function positiveInt(value: unknown, label: string): number {
   return n;
 }
 
-function pay(player: PlayerState, cost: Partial<Record<string, number>>) {
+function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: number) {
   if (!canAffordAll(player.resources, cost as Partial<Resources>)) throw new GameActionError("Ressources insuffisantes.");
-  for (const [res, val] of Object.entries(cost)) player.resources[res as ResourceId] -= val ?? 0;
+  let total = 0;
+  for (const [res, val] of Object.entries(cost)) {
+    player.resources[res as ResourceId] -= val ?? 0;
+    total += val ?? 0;
+  }
+  recordContract(player, "spend", total, now);
 }
 
 interface ActionState {
@@ -90,7 +98,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const cost: Record<string, number> = {};
       if ("multi" in info) info.resources.forEach((r) => (cost[r.resource] = r.amount));
       else cost[info.resource] = info.amount;
-      pay(player, cost);
+      pay(player, cost, now);
       state.unlocked = true;
       return undefined;
     }
@@ -103,8 +111,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (queues.buildingUpgrades[def.id]) throw new GameActionError("Amélioration déjà en cours.");
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0));
+      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0), now);
       queues.buildingUpgrades[def.id] = { endTime: now + getBuildingUpgradeTime(def, nextLevel) * 1000 };
+      recordContract(player, "upgrade_building", 1, now);
       return undefined;
     }
 
@@ -124,7 +133,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
       }
 
-      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty });
+      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
+      recordContract(player, "build_units", qty, now);
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
@@ -153,8 +163,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
-      pay(player, getTechCost(tech, nextLevel));
+      pay(player, getTechCost(tech, nextLevel), now);
       queues.activeResearches.push({ id: tech.id, endTime: now + getTechTime(tech, nextLevel) * 1000 });
+      recordContract(player, "research", 1, now);
       return undefined;
     }
 
@@ -178,6 +189,12 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       return gained;
     }
 
+    case "claimContract":
+      return claimContract(player, String(action.contractId ?? ""), now);
+
+    case "rerollContract":
+      return rerollContract(player, String(action.contractId ?? ""), now);
+
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -190,7 +207,7 @@ export function performPlayerAction(
   action: GameAction,
   now: number,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; result: unknown } {
-  const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings) };
+  const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) };
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
     { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now },
@@ -230,9 +247,10 @@ export function performGift(
   }
   if (Object.keys(resources).length === 0) throw new GameActionError("Sélectionne au moins une ressource à envoyer.");
 
-  const s = flushState({ ...sender, buildings: withMissingBuildings(sender.buildings) }, senderQueues, now);
-  const r = flushState({ ...recipient, buildings: withMissingBuildings(recipient.buildings) }, recipientQueues, now);
-  pay(s.player, resources);
+  const s = flushState({ ...sender, buildings: withMissingBuildings(sender.buildings, sender.resources) }, senderQueues, now);
+  const r = flushState({ ...recipient, buildings: withMissingBuildings(recipient.buildings, recipient.resources) }, recipientQueues, now);
+  pay(s.player, resources, now);
+  recordContract(s.player, "gift", 1, now);
   for (const [res, amt] of Object.entries(resources)) {
     r.player.resources[res as ResourceId] = (r.player.resources[res as ResourceId] ?? 0) + (amt ?? 0);
   }
@@ -276,7 +294,7 @@ export function applyLegacyBattleReport(
   report: Pick<BattleReport, "outcome" | "defenderLosses" | "loot" | "defenderXpDelta" | "attackerPseudo">,
   now: number,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[] } {
-  const { player, queues, notifications } = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings) }, queuesIn, now);
+  const { player, queues, notifications } = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   for (const [unitId, lost] of Object.entries(report.defenderLosses ?? {})) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - (Number(lost) || 0));
   }
@@ -305,7 +323,7 @@ export function applyLegacyGift(
   gift: { fromPseudo: string; resources: Record<string, unknown> | null },
   now: number,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[] } {
-  const { player, queues, notifications } = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings) }, queuesIn, now);
+  const { player, queues, notifications } = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   for (const [res, amt] of Object.entries(gift.resources ?? {})) {
     const n = Math.floor(Number(amt));
     if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + n;

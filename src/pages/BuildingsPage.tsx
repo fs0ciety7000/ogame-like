@@ -14,12 +14,17 @@ import {
   applyBuildingDiscount,
   BUILDING_UNLOCK_COST,
   BUILDINGS,
+  buildingImage,
   getBuildingUpgradeCost,
+  repairPercentAt,
+  storageCapacityAt,
+  visualTier,
   getBuildingUpgradeTime,
   productionPerSecond,
   PRODUCTION_RESOURCE_BY_BUILDING,
 } from "@/game/buildings";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { formatCost, resourceEmoji } from "@/game/resources";
 import type { BuildingId } from "@/types/game";
@@ -94,9 +99,9 @@ export function BuildingsPage() {
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
                 <div className="relative flex justify-center pt-3">
                   <LevelUpBurst level={level} />
-                  <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
+                  <div className={cn("relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800", TIER_FRAME[visualTier(level)])}>
                     <img
-                      src={building.image}
+                      src={buildingImage(building, level)}
                       alt={building.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {
@@ -109,6 +114,7 @@ export function BuildingsPage() {
                       </div>
                     )}
                     {activeUpgrade && <ConstructionOverlay />}
+                    {!isLocked && <TierBadge level={level} />}
                   </div>
                 </div>
 
@@ -147,6 +153,18 @@ export function BuildingsPage() {
                     <p className="text-xs text-mint-glow">
                       {resourceEmoji(productionResource)} Production : {productionPerSecond(building.id, level)}/s
                     </p>
+                  )}
+                  {!isLocked && building.effect?.type === "storage" && (
+                    <p className="text-xs text-cyan-glow">
+                      📦 Capacité : {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · 🛡️{" "}
+                      {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage
+                    </p>
+                  )}
+                  {!isLocked && building.effect?.type === "repair" && (
+                    <p className="text-xs text-cyan-glow">🔧 Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus</p>
+                  )}
+                  {!isLocked && building.effect?.type === "hangar" && (
+                    <p className="text-xs text-cyan-glow">🛰️ {formatCompact(building.effect.perLevel * level)} places de hangar</p>
                   )}
 
                   <div className="mt-auto pt-2">
@@ -248,5 +266,33 @@ function ConstructionOverlay() {
         <Wrench className="h-4 w-4" />
       </motion.div>
     </div>
+  );
+}
+
+/* ---------- paliers visuels (niveaux 5, 10, 15, 20) ---------- */
+
+const TIER_FRAME: Record<number, string> = {
+  0: "",
+  5: "ring-2 ring-[#cd7f32]/70 shadow-[0_0_14px_rgba(205,127,50,0.35)]",
+  10: "ring-2 ring-slate-200/70 shadow-[0_0_16px_rgba(203,213,225,0.35)]",
+  15: "ring-2 ring-gold-glow/80 shadow-[0_0_20px_rgba(255,209,102,0.45)]",
+  20: "ring-2 ring-cyan-glow shadow-[0_0_26px_rgba(75,232,255,0.6)] tier-neon",
+};
+
+const TIER_LABEL: Record<number, { label: string; className: string }> = {
+  5: { label: "Bronze", className: "bg-[#cd7f32]/90 text-space-950" },
+  10: { label: "Argent", className: "bg-slate-200/90 text-space-950" },
+  15: { label: "Or", className: "bg-gold-glow/90 text-space-950" },
+  20: { label: "Néon", className: "bg-cyan-glow text-space-950" },
+};
+
+function TierBadge({ level }: { level: number }) {
+  const tier = visualTier(level);
+  if (!tier) return null;
+  const { label, className } = TIER_LABEL[tier];
+  return (
+    <span className={cn("absolute left-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", className)}>
+      ★ {label}
+    </span>
   );
 }

@@ -92,6 +92,36 @@ export function RulesPanel() {
             hint="Limité par la cargaison (stat CAP) des vaisseaux survivants."
           />
         </Section>
+        <Section title="Économie">
+          <NumberField
+            label="Entretien : énergie/s par place de hangar (attaque)"
+            value={rules.economy.upkeepPerPlaceAttack}
+            min={0}
+            step={0.001}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, upkeepPerPlaceAttack: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Entretien : énergie/s par place (défense)"
+            value={rules.economy.upkeepPerPlaceDefense}
+            min={0}
+            step={0.001}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, upkeepPerPlaceDefense: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Production pendant une panne d'énergie (0,5 = 50 %)"
+            value={rules.economy.outageProductionFactor}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, outageProductionFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Part de l'entrepôt à l'abri du pillage (0,1 = 10 %)"
+            value={rules.economy.protectedStoragePct}
+            min={0}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedStoragePct: v ?? 0 } }))}
+          />
+        </Section>
       </Card>
     </div>
   );

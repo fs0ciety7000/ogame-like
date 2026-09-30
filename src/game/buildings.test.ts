@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   applyBuildingDiscount,
+  buildingImage,
+  getStorageCapacity,
+  visualTier,
+  withMissingBuildings,
   BUILDINGS,
   defaultBuildings,
   effectiveBuildingLevel,
@@ -120,7 +124,7 @@ describe("effectiveBuildingLevel", () => {
   it("counts locked buildings as level 0", () => {
     const buildings = defaultBuildings();
     const total = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(buildings, b.id), 0);
-    expect(total).toBe(1); // seul l'extracteur de ferraille est débloqué
+    expect(total).toBe(2); // l'extracteur de ferraille et l'entrepôt sont débloqués d'office
     buildings.atelier_reparation = { level: 3, unlocked: true };
     expect(effectiveBuildingLevel(buildings, "atelier_reparation")).toBe(3);
   });
@@ -131,14 +135,17 @@ describe("getRepairPercent", () => {
     expect(getRepairPercent(defaultBuildings())).toBe(0);
   });
 
-  it("is clamped between 0 and 50%", () => {
-    const unlocked = defaultBuildings();
-    unlocked.atelier_reparation.unlocked = true;
-    expect(getRepairPercent(unlocked)).toBeCloseTo(0.05);
-    const maxed = defaultBuildings();
-    maxed.atelier_reparation.unlocked = true;
-    maxed.atelier_reparation.level = 20; // au-delà du niveau max théorique
-    expect(getRepairPercent(maxed)).toBe(0.5);
+  it("gives 5 % per level up to 50 % at level 10, then 2 % per level up to 70 %", () => {
+    const at = (level: number) => {
+      const b = defaultBuildings();
+      b.atelier_reparation = { level, unlocked: true };
+      return getRepairPercent(b);
+    };
+    expect(at(1)).toBeCloseTo(0.05);
+    expect(at(10)).toBeCloseTo(0.5);
+    expect(at(15)).toBeCloseTo(0.6);
+    expect(at(20)).toBeCloseTo(0.7);
+    expect(at(40)).toBeCloseTo(0.7); // plafonné
   });
 });
 
@@ -153,5 +160,52 @@ describe("getUnitCapacity", () => {
     const buildings = defaultBuildings();
     buildings.hangar_defense.level = 3;
     expect(getUnitCapacity(buildings, "defense")).toBe(6000);
+  });
+});
+
+describe("levels 11 to 20", () => {
+  const extractor = () => findBuilding("extracteur_ferraille")!;
+
+  it("keeps the historical costs and times of levels 1 to 10", () => {
+    // Même formule qu'avant (arrondi inférieur de 2,5 M et 1,8 M).
+    expect(getBuildingUpgradeCost(extractor(), 10)).toEqual({ scrap: 2_499_999, energy: 1_799_999 });
+    expect(getBuildingUpgradeCost(extractor(), 2)).toEqual({ scrap: 166, energy: 71 });
+    expect(getBuildingUpgradeTime(extractor(), 10)).toBe(9 * 600);
+  });
+
+  it("uses the second tier from level 11: rare resources, 3 h to 12 h", () => {
+    expect(getBuildingUpgradeCost(extractor(), 11)).toEqual({ scrap: 5_000_000, energy: 3_000_000, reinforcedSteel: 20_000 });
+    const top = getBuildingUpgradeCost(extractor(), 20);
+    expect(top.scrap).toBeCloseTo(500_000_000, -3);
+    expect(top.reinforcedSteel).toBeCloseTo(2_000_000, -2);
+    expect(getBuildingUpgradeTime(extractor(), 11)).toBe(3 * 3600);
+    expect(getBuildingUpgradeTime(extractor(), 20)).toBe(12 * 3600);
+    expect(productionPerSecond("extracteur_ferraille", 10)).toBe(500);
+    expect(productionPerSecond("extracteur_ferraille", 20)).toBe(4657);
+  });
+
+  it("picks visual tiers and tier images", () => {
+    expect([1, 5, 9, 10, 15, 20].map(visualTier)).toEqual([0, 5, 5, 10, 15, 20]);
+    const b = { ...extractor(), tierImages: { 10: "/x10.webp" } };
+    expect(buildingImage(b, 9)).toBe(b.image);
+    expect(buildingImage(b, 17)).toBe("/x10.webp");
+  });
+});
+
+describe("storage", () => {
+  it("grows 1.6× per level from 2 M", () => {
+    const b = defaultBuildings();
+    expect(getStorageCapacity(b)).toBe(3_200_000);
+    b.entrepot.level = 10;
+    expect(getStorageCapacity(b)).toBe(Math.floor(2_000_000 * 1.6 ** 10));
+  });
+
+  it("starts a newly added warehouse at the level that already holds the biggest stock", () => {
+    const b = defaultBuildings();
+    delete (b as Record<string, unknown>).entrepot;
+    const filled = withMissingBuildings(b, { scrap: 150_000_000, energy: 10 });
+    expect(getStorageCapacity(filled)).toBeGreaterThanOrEqual(150_000_000);
+    expect(filled.entrepot.level).toBe(10);
+    expect(withMissingBuildings(b).entrepot.level).toBe(1);
   });
 });

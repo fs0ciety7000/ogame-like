@@ -9,6 +9,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getRewardText, hasPrerequisites, MISSIONS } from "@/game/missions";
 import { findUnit } from "@/game/units";
+import { missionRewards } from "@/game/economy";
+import { ContractsCard } from "@/components/game/ContractsCard";
 import { formatClock } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
@@ -42,6 +44,8 @@ export function MissionsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" description="Envoie ta flotte en exploration ou en patrouille." />
 
+      <ContractsCard />
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {Object.values(MISSIONS).map((mission) => {
           const active = queues.activeMissions.find((m) => m.key === mission.key);
@@ -63,7 +67,7 @@ export function MissionsPage() {
                 ))}
               </p>
 
-              <p className="text-xs text-mint-glow">{getRewardText(mission.reward).join(" · ")}</p>
+              <p className="text-xs text-mint-glow">{getRewardText(missionRewards(mission, player)).join(" · ")}</p>
 
               <div className="mt-auto pt-2">
                 {active ? (

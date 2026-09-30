@@ -4,6 +4,7 @@ import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, type TechDef
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
+import { ECONOMY_RULES } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
@@ -20,6 +21,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 export interface GameRules {
   pvp: typeof PVP_RULES;
   combat: typeof COMBAT_RULES;
+  economy: typeof ECONOMY_RULES;
 }
 
 export interface GameContent {
@@ -35,6 +37,7 @@ export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "techno
 
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
+const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -43,7 +46,7 @@ export function defaultGameContent(): GameContent {
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES },
   });
 }
 
@@ -65,6 +68,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     rules: {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
+      economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -73,6 +77,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setMissions(content.missions);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
+  Object.assign(ECONOMY_RULES, content.rules.economy);
   current = content;
   return content;
 }
@@ -114,6 +119,14 @@ export function validateGameContent(content: GameContent): string[] {
     if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label} : techno « ${b.unlockedByTech} » inexistante.`);
     if (b.production && !resources.has(b.production.resource)) errors.push(`${label} : ressource produite inconnue.`);
     if (b.production && b.production.perSecond.length === 0) errors.push(`${label} : table de production vide.`);
+    const t2 = b.upgrade?.tier2;
+    if (t2) {
+      if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
+      checkResources(`${label} (second palier, coût initial)`, t2.baseCost);
+      checkResources(`${label} (second palier, coût max)`, t2.maxCost);
+      if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label} : durées du second palier invalides.`);
+    }
+    if (b.effect?.type === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label} : capacité d'entrepôt invalide.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un bâtiment doit être débloqué dès le départ.");
 

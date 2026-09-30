@@ -97,6 +97,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(ps.enqueueUnitBuild(aId, "chasseur", 1)).rejects.toThrow(/Labo/);
   });
 
+  it("generates daily contracts on the server, refuses early claims and forged progress", async () => {
+    await ps.syncPlayer(aId);
+    const p = await ps.fetchPlayerSnapshot(aId);
+    expect(p?.contracts?.items).toHaveLength(3);
+    const open = p!.contracts!.items.find((c) => !c.claimed && c.progress < c.target);
+    if (open) await expect(ps.claimContract(open.id)).rejects.toThrow(/pas encore/);
+    await expect(pb.collection("players").update(aId, { contracts: { ...p!.contracts, items: [] } })).rejects.toBeTruthy();
+  });
+
   it("forbids writing another player's data", async () => {
     await expect(pb.collection("players").update(bId, { pseudo: "pirate" })).rejects.toMatchObject({ status: 404 });
     await expect(pb.collection("queues").getOne(bId)).rejects.toMatchObject({ status: 404 });

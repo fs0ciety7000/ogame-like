@@ -207,3 +207,15 @@ body {
   --xy-controls-button-border-color: color-mix(in srgb, var(--color-cyan-glow) 14%, transparent);
   --xy-controls-box-shadow: none;
 }
+
+/* Palier visuel « Néon » des bâtiments (niveau 20) : liseré qui pulse. */
+.tier-neon {
+  animation: tier-neon 2.6s ease-in-out infinite;
+}
+@keyframes tier-neon {
+  0%, 100% { box-shadow: 0 0 18px rgba(75, 232, 255, 0.45), 0 0 0 2px rgba(75, 232, 255, 0.9); }
+  50% { box-shadow: 0 0 34px rgba(255, 94, 196, 0.55), 0 0 0 2px rgba(255, 94, 196, 0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-neon { animation: none; }
+}
