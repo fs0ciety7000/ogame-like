@@ -1,4 +1,6 @@
 ---
+version: 1.4.0
+iteration: 5
 date: 2026-09-30
 title: Un empire plus vivant
 ---
@@ -13,6 +15,7 @@ title: Un empire plus vivant
 - Les ressources gagnées d'un coup (mission, don, pillage, échange, vente) **s'envolent vers l'en-tête**.
 - **Gerbe de particules** quand un bâtiment ou une unité monte de niveau.
 - Ces animations sont désactivées si ton système demande de réduire les animations.
+- Chaque mise à jour a désormais un **numéro de version** et d'itération ; la version actuelle s'affiche en bas du menu.
 
 ## Administration
 - Nouvel onglet **Statistiques** : joueurs actifs, répartition des rangs, économie médiane, niveau moyen des bâtiments, technologies et unités les plus utilisées, missions en cours, combats des 7 derniers jours, et des **pistes d'équilibrage** repérées automatiquement.

@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles } from "lucide-react";
-import { useUnreadChangelogCount } from "@/lib/changelog";
+import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 
@@ -97,6 +97,12 @@ export function NavBar() {
           </div>
         ))}
       </div>
+
+      {CURRENT_VERSION && (
+        <NavLink to="/game/nouveautes" className="mt-auto hidden px-3 pt-4 font-mono text-[10px] text-slate-600 hover:text-cyan-glow md:block">
+          Cosmic Empires v{CURRENT_VERSION}
+        </NavLink>
+      )}
     </nav>
   );
 }

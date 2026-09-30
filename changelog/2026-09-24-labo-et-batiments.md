@@ -1,4 +1,6 @@
 ---
+version: 1.0.0
+iteration: 1
 date: 2026-09-24
 title: Nouveau Laboratoire et bâtiments repensés
 ---

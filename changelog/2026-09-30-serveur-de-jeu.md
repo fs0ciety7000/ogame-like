@@ -1,4 +1,6 @@
 ---
+version: 1.3.0
+iteration: 4
 date: 2026-09-30
 title: Le serveur arbitre toute la partie
 ---

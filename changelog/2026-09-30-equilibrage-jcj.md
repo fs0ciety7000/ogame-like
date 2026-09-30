@@ -1,4 +1,6 @@
 ---
+version: 1.2.0
+iteration: 3
 date: 2026-09-30
 title: Équilibrage des combats et des missions
 ---
