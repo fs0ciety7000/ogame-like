@@ -4,7 +4,7 @@ import type { NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import type { AwaySummary, GameAction } from "@/game/actions";
-import type { CombatResult } from "@/game/combat";
+import type { Fleet } from "@/game/fleets";
 import type {
   BattleReport,
   BuildingId,
@@ -252,6 +252,7 @@ export interface LeaderboardEntry {
   createdAtMs?: number;
   lastDefeatAtMs?: number;
   lastAttackAtMs?: number;
+  allianceId?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -264,10 +265,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     createdAtMs: (data.createdAtMs as number) || undefined,
     lastDefeatAtMs: (data.lastDefeatAtMs as number) || undefined,
     lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
+    allianceId: (data.allianceId as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId";
 
 /** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
  *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à
@@ -436,26 +438,52 @@ export interface AttackParams {
   fleet: Record<string, number>;
 }
 
-/** Protections, combat, pertes des deux camps, pillage, XP et rapport :
- *  tout est fait par le serveur dans une transaction. */
-export async function initiateAttack(
-  params: AttackParams,
-): Promise<CombatResult & { defenderPseudo: string; attackerXpDelta: number }> {
-  const { attackerUid, targetUid, targetPseudo, fleet } = params;
-  if (attackerUid === targetUid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
-  const res = await callGame<BattleReport & { combat: CombatResult }>("attack", { targetUid, fleet });
-  return { ...res.combat, defenderPseudo: targetPseudo, attackerXpDelta: res.attackerXpDelta ?? 0 };
+/** Décollage d'une flotte d'attaque : le combat a lieu à son arrivée,
+ *  résolu par le serveur (voir src/game/fleets.ts). */
+export async function sendFleet(targetUid: string, fleet: Record<string, number>): Promise<Fleet> {
+  return callGame<Fleet>("fleet/send", { targetUid, fleet });
+}
+
+export function recallFleet(fleetId: string): Promise<Fleet> {
+  return callGame<Fleet>("fleet/recall", { fleetId });
+}
+
+/** Mes flottes et celles qui foncent sur moi (la règle d'accès ne montre
+ *  au défenseur que les flottes encore en approche). */
+export function subscribeFleets(uid: string, cb: (fleets: Fleet[]) => void): () => void {
+  const filter = pb.filter('(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound")', { uid });
+  return subscribeList(
+    "fleets",
+    "",
+    () => pb.collection("fleets").getFullList<Fleet>({ filter, sort: "arriveAtMs" }),
+    cb,
+  );
+}
+
+export async function fetchBattleReport(id: string): Promise<BattleReport | null> {
+  try {
+    return await pb.collection("battle_reports").getOne<BattleReport>(id);
+  } catch {
+    return null;
+  }
 }
 
 /** Mes attaques récentes (pour afficher le délai avant de pouvoir
- *  réattaquer une même cible). */
+ *  réattaquer une même cible) : combats et départs de flottes. */
 export async function fetchMyRecentAttacks(uid: string, sinceMs: number): Promise<Record<string, number>> {
-  const res = await pb.collection("battle_reports").getFullList<BattleReport>({
-    filter: pb.filter("attackerUid = {:uid} && timestamp > {:since}", { uid, since: sinceMs }),
-    fields: "defenderUid,timestamp",
-  });
+  const [reports, fleets] = await Promise.all([
+    pb.collection("battle_reports").getFullList<BattleReport>({
+      filter: pb.filter("attackerUid = {:uid} && timestamp > {:since}", { uid, since: sinceMs }),
+      fields: "defenderUid,timestamp",
+    }),
+    pb
+      .collection("fleets")
+      .getFullList<Fleet>({ filter: pb.filter("ownerUid = {:uid} && departAtMs > {:since}", { uid, since: sinceMs }), fields: "targetUid,departAtMs" })
+      .catch(() => [] as Fleet[]),
+  ]);
   const last: Record<string, number> = {};
-  for (const r of res) last[r.defenderUid] = Math.max(last[r.defenderUid] ?? 0, r.timestamp);
+  for (const r of reports) last[r.defenderUid] = Math.max(last[r.defenderUid] ?? 0, r.timestamp);
+  for (const f of fleets) last[f.targetUid] = Math.max(last[f.targetUid] ?? 0, f.departAtMs);
   return last;
 }
 

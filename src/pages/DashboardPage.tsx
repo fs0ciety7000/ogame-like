@@ -14,6 +14,7 @@ import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ContractsCard } from "@/components/game/ContractsCard";
+import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 
 export function DashboardPage() {
@@ -62,6 +63,8 @@ export function DashboardPage() {
       </Card>
 
       <OnboardingChecklist player={player} />
+
+      <FleetsPanel hideWhenEmpty />
 
       <ContractsCard />
 

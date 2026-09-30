@@ -1,3 +1,4 @@
+import { formatInt } from "@/game/format";
 export interface MissionDef {
   key: string;
   name: string;
@@ -68,6 +69,6 @@ export function getRewardText(reward: Record<string, number>): string[] {
   };
   const out = Object.entries(reward)
     .filter(([, v]) => v)
-    .map(([k, v]) => `${labels[k] ?? k} ${Math.round(v).toLocaleString("fr-FR")}`);
+    .map(([k, v]) => `${labels[k] ?? k} ${formatInt(v)}`);
   return out.length ? out : ["Aucune récompense directe"];
 }

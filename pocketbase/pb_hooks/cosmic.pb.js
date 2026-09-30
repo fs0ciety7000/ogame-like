@@ -68,6 +68,10 @@ routerAdd(
     const action = db.body(e);
     let response = null;
 
+    // Flottes arrivées ou rentrées qui concernent ce joueur (la tâche
+    // minute s'occupe des autres).
+    db.processDueFleets(game, Date.now(), uid);
+
     $app.runInTransaction((txApp) => {
       db.applyContent(txApp, game);
       const loaded = db.loadPlayer(txApp, game, uid);
@@ -208,114 +212,51 @@ routerAdd(
 );
 
 /**
- * POST /api/cosmic/attack  { targetUid, fleet: { unitId: quantité } }
+ * POST /api/cosmic/fleet/send  { targetUid, fleet: { unitId: quantité } }
+ * (et POST /api/cosmic/attack, ancien nom)
  *
- * Vérifie les protections (délai entre attaques, bouclier, débutant, écart
- * de force), résout le combat et l'applique aux deux joueurs (pertes,
- * pillage, XP), puis crée le rapport — le tout dans une transaction.
+ * Décollage d'une flotte d'attaque : protections vérifiées maintenant,
+ * vaisseaux retirés de la base, combat résolu à l'arrivée (tâche minute).
+ */
+routerAdd("POST", "/api/cosmic/fleet/send", (e) => require(`${__hooks}/cosmic_db.js`).launchFleetRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/attack", (e) => require(`${__hooks}/cosmic_db.js`).launchFleetRequest(e), $apis.requireAuth("users"));
+
+/**
+ * POST /api/cosmic/fleet/recall  { fleetId }
+ * Demi-tour avant l'impact.
  */
 routerAdd(
   "POST",
-  "/api/cosmic/attack",
+  "/api/cosmic/fleet/recall",
   (e) => {
     const db = require(`${__hooks}/cosmic_db.js`);
     const game = db.loadGame();
-
-    const attackerUid = e.auth.id;
-    const body = db.body(e);
-    const targetUid = String(body.targetUid || "");
-    const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
-    if (!targetUid) throw new BadRequestError("Cible manquante.");
-    if (targetUid === attackerUid) throw new BadRequestError("Tu ne peux pas t'attaquer toi-même !");
-
+    const fleetId = String(db.body(e).fleetId || "");
     let response = null;
-
     $app.runInTransaction((txApp) => {
-      const now = Date.now();
-      db.applyContent(txApp, game);
-
-      const attacker = db.loadPlayer(txApp, game, attackerUid);
-      if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
-      const defender = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.");
-
-      const lastOnTarget = txApp.findRecordsByFilter(
-        "battle_reports",
-        "attackerUid = {:a} && defenderUid = {:d}",
-        "-timestamp",
-        1,
-        0,
-        { a: attackerUid, d: targetUid },
-      );
-
-      let defenderXpLostLast24h = 0;
-      txApp
-        .findRecordsByFilter(
-          "battle_reports",
-          "defenderUid = {:d} && timestamp > {:t} && defenderXpDelta < 0",
-          "",
-          200,
-          0,
-          { d: targetUid, t: now - game.PVP_RULES.defenseXpLossWindowMs },
-        )
-        .forEach((r) => {
-          defenderXpLostLast24h += -r.getFloat("defenderXpDelta");
-        });
-
-      const result = game.performAttack({
-        now,
-        attackerUid,
-        attacker: attacker.player,
-        attackerQueues: attacker.queues,
-        defenderUid: targetUid,
-        defender: defender.player,
-        defenderQueues: defender.queues,
-        fleet,
-        lastAttackOnTargetMs: lastOnTarget.length > 0 ? lastOnTarget[0].getFloat("timestamp") : null,
-        defenderXpLostLast24h,
-      });
-      if (!result.ok) throw new BadRequestError(result.message);
-
-      db.savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
-      db.savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
-      db.notify(txApp, attackerUid, result.notifications);
-      db.notify(txApp, targetUid, result.defenderNotifications);
-
-      const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
-      report.load(result.report);
-      txApp.save(report);
-
-      response = Object.assign({ id: report.id }, result.report, { combat: result.combat });
+      const rec = db.findOrNull(txApp, "fleets", fleetId);
+      if (!rec) throw new NotFoundError("Flotte introuvable.");
+      let next;
+      try {
+        next = game.recallFleet(db.toPlain(rec), e.auth.id, Date.now());
+      } catch (err) {
+        throw db.asHttpError(game, err);
+      }
+      rec.set("status", next.status);
+      rec.set("recalled", true);
+      rec.set("returnAtMs", next.returnAtMs);
+      txApp.save(rec);
+      response = db.toPlain(rec);
     });
-
     return e.json(200, response);
   },
   $apis.requireAuth("users"),
 );
 
-/**
- * GET /api/cosmic/admin/stats — administrateurs du jeu uniquement.
- * Statistiques de game design (activité, économie, contenu, combats des
- * 7 derniers jours), calculées ici : le navigateur ne reçoit que des agrégats.
- */
-routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
+// Arrivées et retours de flottes : vérifiés chaque minute.
+cronAdd("cosmic_fleets", "* * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
-  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
-
-  const game = db.loadGame();
-  db.applyContent($app, game);
-
-  const now = Date.now();
-  const players = $app.findAllRecords("players").map((r) => {
-    const p = db.toPlain(r);
-    p.uid = r.id;
-    return p;
-  });
-  const queues = $app.findAllRecords("queues").map((r) => db.toPlain(r));
-  const reports = $app
-    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 5000, 0, { since: now - 7 * 24 * 3600 * 1000 })
-    .map((r) => db.toPlain(r));
-
-  return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
+  db.processDueFleets(db.loadGame(), Date.now(), null);
 });
 
 /* ---------- Journal des actions d'administration ---------- */

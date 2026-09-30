@@ -13,6 +13,7 @@ const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }
   achievement: { level: "UNLOCK", className: "text-gold-glow" },
   "spy-detected": { level: "ALERT", className: "text-ember-glow" },
   gift: { level: "INFO", className: "text-mint-glow" },
+  fleet: { level: "ALERTE", className: "text-danger-glow" },
   system: { level: "INFO", className: "text-cyan-glow" },
 };
 

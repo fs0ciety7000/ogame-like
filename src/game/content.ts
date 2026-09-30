@@ -5,6 +5,7 @@ import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions"
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
+import { FLEET_RULES } from "@/game/fleets";
 import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
@@ -22,6 +23,7 @@ export interface GameRules {
   pvp: typeof PVP_RULES;
   combat: typeof COMBAT_RULES;
   economy: typeof ECONOMY_RULES;
+  fleets: typeof FLEET_RULES;
 }
 
 export interface GameContent {
@@ -38,6 +40,7 @@ export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "techno
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
+const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -46,7 +49,7 @@ export function defaultGameContent(): GameContent {
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES },
   });
 }
 
@@ -69,6 +72,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
+      fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -78,6 +82,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
+  Object.assign(FLEET_RULES, content.rules.fleets);
   current = content;
   return content;
 }

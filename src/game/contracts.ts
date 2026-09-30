@@ -3,6 +3,7 @@ import { getProductionRatesPerSecond } from "@/game/production";
 import { GameActionError } from "@/game/errors";
 import { applyXpDelta } from "@/game/seasons";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { formatInt } from "@/game/format";
 
 /* =====================================================
    Contrats quotidiens : 3 objectifs par jour (minuit UTC), tirés au sort
@@ -57,7 +58,7 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
   win_defense: (n) => `Repousser ${n} attaque${n > 1 ? "s" : ""}`,
   missions: (n) => `Terminer ${n} missions`,
   gift: (n) => `Envoyer ${n} don${n > 1 ? "s" : ""} de ressources`,
-  spend: (n) => `Dépenser ${Math.round(n).toLocaleString("fr-FR")} ressources`,
+  spend: (n) => `Dépenser ${formatInt(n)} ressources`,
 };
 
 const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];

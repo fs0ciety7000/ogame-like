@@ -6,7 +6,7 @@
 // (pocketbase/pb_hooks) installés. Le compte superuser sert à préparer les
 // scénarios (donner des ressources, vieillir un compte) : les joueurs ne
 // peuvent plus modifier eux-mêmes ces champs.
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
@@ -15,6 +15,7 @@ import * as al from "@/services/allianceService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
+import { fleetCargoCapacity } from "@/game/combat";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -31,11 +32,40 @@ const MONTH_AGO = () => Date.now() - 30 * 24 * 3600 * 1000;
 describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => {
   const admin = new PocketBase(PB_TEST_URL);
 
+  // Vols de quelques secondes pendant les tests (règles restaurées à la fin).
+  let savedRules: { id: string; data: unknown } | null = null;
+  let createdRulesId: string | null = null;
+
   beforeAll(async () => {
     pb.baseURL = PB_TEST_URL!;
     pb.authStore.clear();
     await admin.collection("_superusers").authWithPassword(PB_TEST_ADMIN!.email, PB_TEST_ADMIN!.password);
+    const existing = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+    const fast = { ...((existing?.data as object) ?? {}), fleets: { baseMinutes: 0.03, minutesPerDistance: 0.001 } };
+    if (existing) {
+      savedRules = { id: existing.id, data: existing.data };
+      await admin.collection("game_config").update(existing.id, { data: fast });
+    } else {
+      createdRulesId = (await admin.collection("game_config").create({ key: "rules", data: fast })).id;
+    }
   });
+
+  afterAll(async () => {
+    if (savedRules) await admin.collection("game_config").update(savedRules.id, { data: savedRules.data });
+    if (createdRulesId) await admin.collection("game_config").delete(createdRulesId);
+  });
+
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  /** Envoie une flotte, attend son arrivée et renvoie la flotte + le rapport. */
+  async function attackAndResolve(targetUid: string, fleet: Record<string, number>) {
+    const sent = await ps.sendFleet(targetUid, fleet);
+    await wait(Math.max(0, sent.arriveAtMs - Date.now()) + 400);
+    await ps.syncPlayer(""); // traite les flottes arrivées de ce joueur
+    const landed = await pb.collection("fleets").getOne(sent.id);
+    const report = await pb.collection("battle_reports").getOne(landed.reportId);
+    return { sent, landed, report };
+  }
 
   let aId = "", bId = "", allianceId = "";
 
@@ -156,6 +186,32 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(after - before).toBeLessThan(1400);
   });
 
+  it("fleet recall: the ships turn around before impact", async () => {
+    await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO(), units: { chasseur: { level: 1, count: 4 } } });
+    // Connecté en B, qui vise A (encore protégé débutant ? on le vieillit).
+    await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO() });
+    await admin.collection("game_config")
+      .getFirstListItem('key="rules"')
+      .then((r) => admin.collection("game_config").update(r.id, { data: { ...(r.data as object), fleets: { baseMinutes: 1, minutesPerDistance: 0 } } }));
+    let fleetId = "";
+    try {
+      const sent = await ps.sendFleet(aId, { chasseur: 4 });
+      fleetId = sent.id;
+      expect((await ps.fetchPlayerSnapshot(bId))!.units.chasseur.count).toBe(0);
+      const back = await ps.recallFleet(sent.id);
+      expect(back.status).toBe("returning");
+      await expect(ps.recallFleet(sent.id)).rejects.toThrow(/plus être rappelée/);
+    } finally {
+      await admin.collection("game_config")
+        .getFirstListItem('key="rules"')
+        .then((r) => admin.collection("game_config").update(r.id, { data: { ...(r.data as object), fleets: { baseMinutes: 0.03, minutesPerDistance: 0.001 } } }));
+      // Remise à l'état initial : pas de délai entre B et A pour la suite.
+      if (fleetId) await admin.collection("fleets").delete(fleetId);
+      await admin.collection("players").update(bId, { createdAtMs: Date.now(), units: {}, lastAttackAtMs: 0 });
+      await admin.collection("players").update(aId, { createdAtMs: Date.now() });
+    }
+  });
+
   it("attack is arbitrated by the server and applied to both players", async () => {
     // B est connecté. Ni l'attaquant ni le défenseur ne peuvent écrire un
     // rapport ou les champs JcJ réservés au serveur.
@@ -168,31 +224,38 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await loginPlayer(A.pseudo, A.pw);
     await admin.collection("players").update(aId, { units: { chasseur: { level: 1, count: 10 } } });
     // B vient de s'inscrire : protection débutant.
-    await expect(
-      ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } }),
-    ).rejects.toThrow(/débute/);
+    await expect(ps.sendFleet(bId, { chasseur: 5 })).rejects.toThrow(/débute/);
 
     await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO() });
     const bBefore = (await ps.fetchPlayerSnapshot(bId))!;
 
-    const res = await ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 5 } });
+    // La flotte part : les vaisseaux quittent la base, B la voit arriver.
+    const { sent, landed, report: res } = await attackAndResolve(bId, { chasseur: 5 });
+    expect(sent.status).toBe("outbound");
     expect(res.outcome).toBe("attacker_win");
     expect(res.attackerXpDelta).toBeGreaterThan(0);
     expect((await ps.fetchPlayerSnapshot(aId))?.victories).toBe(1);
+    expect(landed.status).toBe("returning");
 
     // Le défenseur est mis à jour par le serveur, sans attendre sa connexion.
     const bAfter = (await ps.fetchPlayerSnapshot(bId))!;
     expect(bAfter.defeats).toBe(1);
     expect(bAfter.lastDefeatAtMs).toBeGreaterThan(0);
     // Butin limité par la cargaison des 5 chasseurs, retiré au défenseur.
-    const looted = Object.values(res.loot ?? {}).reduce((a, b) => a + (b ?? 0), 0);
-    expect(looted).toBe(res.cargoCapacity);
+    const looted = Object.values((res.loot ?? {}) as Record<string, number>).reduce((a, b) => a + (b ?? 0), 0);
+    expect(looted).toBe(fleetCargoCapacity({ chasseur: { level: 1, count: 0 } }, landed.units));
     expect(bAfter.resources.reinforcedSteel).toBe(bBefore.resources.reinforcedSteel - (res.loot?.reinforcedSteel ?? 0));
 
     // Délai de 2 h (et bouclier) sur la même cible.
-    await expect(
-      ps.initiateAttack({ attackerUid: aId, attackerPseudo: A.pseudo, targetUid: bId, targetPseudo: B.pseudo, fleet: { chasseur: 1 } }),
-    ).rejects.toThrow(/bouclier|récemment/);
+    await expect(ps.sendFleet(bId, { chasseur: 1 })).rejects.toThrow(/bouclier|récemment/);
+
+    // Retour : survivants et butin rejoignent A.
+    const scrapBefore = (await ps.fetchPlayerSnapshot(aId))!.resources.scrap;
+    await wait(Math.max(0, landed.returnAtMs - Date.now()) + 400);
+    await ps.syncPlayer("");
+    const aBack = (await ps.fetchPlayerSnapshot(aId))!;
+    expect(aBack.units.chasseur.count).toBe(5 + landed.units.chasseur);
+    expect(aBack.resources.scrap).toBeGreaterThanOrEqual(scrapBefore + ((res.loot as Record<string, number>)?.scrap ?? 0));
     expect((await ps.fetchMyRecentAttacks(aId, Date.now() - 3600 * 1000))[bId]).toBeGreaterThan(0);
 
     const [rep] = await pb.collection("battle_reports").getFullList({ filter: `attackerUid="${aId}"` });
@@ -210,7 +273,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect((await ps.fetchPlayerSnapshot(bId))!.defeats).toBe(1);
     const notifs = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="combat-defender"` });
     expect(notifs.length).toBe(1);
-  });
+  }, 30_000);
 
   it("legacy battle reports (old system) are applied when seen", async () => {
     const rep = await admin.collection("battle_reports").create({
@@ -241,14 +304,14 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     try {
       await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), units: {} });
       await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
-      const res = await ps.initiateAttack({ attackerUid: bId, attackerPseudo: B.pseudo, targetUid: aId, targetPseudo: A.pseudo, fleet: { chasseur: 5 } });
+      const { report: res } = await attackAndResolve(aId, { chasseur: 5 });
       expect(res.attackerPower).toBe(0);
       expect(res.outcome).toBe("draw");
     } finally {
       await resetContentSection("units");
       await admin.collection("admins").delete(bId);
     }
-  });
+  }, 30_000);
 
   it("leaderboard lists players without private fields", async () => {
     const list = await ps.listAllPlayers();

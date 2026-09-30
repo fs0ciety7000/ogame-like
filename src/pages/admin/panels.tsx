@@ -92,6 +92,61 @@ export function RulesPanel() {
             hint="Limité par la cargaison (stat CAP) des vaisseaux survivants."
           />
         </Section>
+        <Section title="Équilibre attaque / défense">
+          <NumberField
+            label="Bonus à domicile du défenseur (0,15 = +15 %)"
+            value={rules.combat.homeDefenseBonus}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, homeDefenseBonus: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Vaisseaux à quai : part de leur puissance en défense"
+            value={rules.combat.homeFleetDefenseFactor}
+            min={0}
+            step={0.05}
+            hint="Ils subissent la même part des pertes. 0 = seules les défenses combattent."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, homeFleetDefenseFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Bouclier par niveau de Hangar de défense (0,0075 = 0,75 %)"
+            value={rules.combat.shieldPerLevel}
+            min={0}
+            step={0.0025}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, shieldPerLevel: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Bouclier maximal (0,15 = 15 %)"
+            value={rules.combat.shieldMax}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, shieldMax: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Défenses reconstruites après un combat (0,6 = 60 %)"
+            value={rules.combat.defenseRebuildPct}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, defenseRebuildPct: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Flottes en vol">
+          <NumberField
+            label="Durée fixe de tout trajet (min)"
+            value={rules.fleets.baseMinutes}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, baseMinutes: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Minutes par unité de distance (÷ vitesse)"
+            value={rules.fleets.minutesPerDistance}
+            min={0}
+            step={0.5}
+            hint="Temps de vol = durée fixe + distance × cette valeur ÷ vitesse du vaisseau le plus lent. Carte de 100 × 100."
+            onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, minutesPerDistance: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Économie">
           <NumberField
             label="Entretien : énergie/s par place de hangar (attaque)"

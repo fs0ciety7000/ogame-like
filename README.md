@@ -104,6 +104,10 @@ redémarrer à la main. Variables d'environnement facultatives :
 La mise à jour est ignorée quand `pb_hooks` est celui d'une copie du dépôt
 (développement local).
 
+`cosmic.pb.js` résout aussi les flottes en vol (arrivée, combat, retour)
+grâce à une tâche planifiée qui tourne chaque minute (`cronAdd`), et à
+chaque action du joueur concerné.
+
 `cosmic.pb.js` consigne aussi chaque modification faite par un
 administrateur dans la collection `admin_logs` (onglet *Journal* de
 l'administration). `node pocketbase/setup.mjs` active en plus une

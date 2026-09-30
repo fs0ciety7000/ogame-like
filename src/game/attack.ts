@@ -1,4 +1,4 @@
-import { resolveCombat, type CombatResult } from "@/game/combat";
+import { getShieldPercent, resolveCombat, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -29,6 +29,10 @@ export interface AttackInput {
   lastAttackOnTargetMs: number | null;
   /** XP déjà perdue par le défenseur en défense sur 24 h (valeur positive). */
   defenderXpLostLast24h: number;
+  /** Flotte en vol (v1.6) : ses unités ont déjà quitté l'attaquant au
+   *  décollage. Les protections ont été vérifiées à ce moment-là ; le butin
+   *  et les survivants rentrent avec la flotte au lieu d'être crédités. */
+  inFlight?: boolean;
 }
 
 export type AttackOutput =
@@ -45,12 +49,17 @@ export type AttackOutput =
       defenderNotifications: NewNotification[];
       report: Omit<BattleReport, "id">;
       combat: CombatResult;
+      /** Flotte en vol : unités qui rentrent et butin qu'elles rapportent. */
+      survivors: Record<string, number>;
+      loot: Partial<Record<ResourceId, number>>;
     };
 
 export function performAttack(input: AttackInput): AttackOutput {
   const { now, attackerUid, defenderUid, defender } = input;
 
-  const check = checkAttackAllowed({
+  const check = input.inFlight
+    ? { allowed: true as const, message: undefined }
+    : checkAttackAllowed({
     now,
     attackerUid,
     attackerXp: input.attacker.xp ?? 0,
@@ -81,6 +90,14 @@ export function performAttack(input: AttackInput): AttackOutput {
   );
   const attacker = flushed.player;
 
+  // Flotte en vol : on la remet provisoirement « à bord » pour le combat.
+  if (input.inFlight) {
+    for (const [unitId, qty] of Object.entries(fleet)) {
+      const state = attacker.units[unitId] ?? { level: 1, count: 0 };
+      attacker.units[unitId] = { ...state, count: state.count + qty };
+    }
+  }
+
   for (const [unitId, qty] of Object.entries(fleet)) {
     if ((attacker.units[unitId]?.count ?? 0) < qty) {
       return { ok: false, message: "Tu ne possèdes plus assez d'unités pour cette flotte." };
@@ -99,6 +116,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderUnits: def.units ?? {},
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: getRepairPercent(def.buildings),
+    defenderShieldPct: getShieldPercent(def.buildings),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId))]),
@@ -108,8 +126,16 @@ export function performAttack(input: AttackInput): AttackOutput {
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
+  const survivors: Record<string, number> = {};
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - (combat.attackerLosses[unitId] ?? 0));
+  if (input.inFlight) {
+    // Les survivants repartent avec la flotte : ils quittent à nouveau la base.
+    for (const [unitId, qty] of Object.entries(survivors)) {
+      if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
+    }
+  }
   for (const [res, amt] of Object.entries(combat.loot ?? {})) {
-    attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+    if (!input.inFlight) attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
     def.resources[res as ResourceId] = Math.max(0, (def.resources[res as ResourceId] ?? 0) - (amt ?? 0));
   }
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
@@ -196,5 +222,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderNotifications,
     report,
     combat,
+    survivors,
+    loot: combat.loot ?? {},
   };
 }

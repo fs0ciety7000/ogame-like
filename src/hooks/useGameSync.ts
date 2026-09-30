@@ -12,6 +12,8 @@ import {
   subscribePendingSpyReports,
   subscribePlayer,
   subscribeQueues,
+  subscribeFleets,
+  fetchBattleReport,
   syncPlayer,
   type AwaySummary,
 } from "@/services/playerService";
@@ -19,7 +21,8 @@ import { pb } from "@/lib/pocketbase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
-import { combatDisplayFromReport, showCombatResult } from "@/store/combatModalStore";
+import { combatDisplayFromReport, combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
+import { setFleets } from "@/store/fleetStore";
 import { showAwaySummary } from "@/store/awaySummaryStore";
 import { playAlert, playConfirm, playUnlock } from "@/lib/sfx";
 import type { NotificationKind } from "@/types/game";
@@ -39,6 +42,7 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   achievement: { icon: "🏆", sound: playUnlock },
   "spy-detected": { icon: "🔍", sound: playAlert },
   gift: { icon: "🎁", sound: playConfirm },
+  fleet: { icon: "🛸", sound: playAlert },
   system: { icon: "✨", sound: playConfirm },
 };
 
@@ -152,6 +156,23 @@ export function useGameSync(uid: string | null) {
       });
     });
 
+    // Flottes : à l'arrivée d'une de mes flottes, le serveur y attache le
+    // rapport de combat ; on l'affiche une fois (pas au premier chargement).
+    const shownReports = new Set<string>();
+    let fleetsLoaded = false;
+    const unsubFleets = subscribeFleets(uid, (fleets) => {
+      setFleets(fleets);
+      for (const f of fleets) {
+        if (f.ownerUid !== uid || !f.reportId || shownReports.has(f.reportId)) continue;
+        shownReports.add(f.reportId);
+        if (!fleetsLoaded) continue;
+        void fetchBattleReport(f.reportId).then((report) => {
+          if (report) showCombatResult(combatDisplayFromReportForViewer(report, uid));
+        });
+      }
+      fleetsLoaded = true;
+    });
+
     const heartbeat = setInterval(() => {
       const now = Date.now();
       const deltaSeconds = Math.round((now - lastHeartbeatAt.current) / 1000);
@@ -171,6 +192,8 @@ export function useGameSync(uid: string | null) {
       unsubBattleReports();
       unsubSpyReports();
       unsubGifts();
+      unsubFleets();
+      setFleets([]);
       clearInterval(heartbeat);
       document.removeEventListener("visibilitychange", flushOnHide);
       seenNotificationIds.current = null;

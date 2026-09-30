@@ -3,6 +3,7 @@ import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import type { QueuesState } from "@/types/game";
+import type { Fleet } from "@/game/fleets";
 
 /* =====================================================
    Frise « Prochaines fins » du tableau de bord : tout ce qui se termine
@@ -10,7 +11,7 @@ import type { QueuesState } from "@/types/game";
    date de fin.
 ===================================================== */
 
-export type TimelineKind = "building" | "research" | "mission" | "units";
+export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile";
 
 export interface TimelineEvent {
   id: string;
@@ -21,9 +22,18 @@ export interface TimelineEvent {
   to: string;
 }
 
-export function upcomingEvents(queues: QueuesState | null, now: number): TimelineEvent[] {
-  if (!queues) return [];
+export function upcomingEvents(queues: QueuesState | null, now: number, fleets: Fleet[] = [], uid?: string): TimelineEvent[] {
   const events: TimelineEvent[] = [];
+  for (const f of fleets) {
+    if (f.status === "outbound" && f.targetUid === uid) {
+      events.push({ id: `h:${f.id}`, kind: "hostile", label: `Attaque de ${f.ownerPseudo}`, endTime: f.arriveAtMs, to: "/game/galaxie" });
+    } else if (f.ownerUid === uid && f.status === "outbound") {
+      events.push({ id: `f:${f.id}`, kind: "fleet", label: `Impact sur ${f.targetPseudo}`, endTime: f.arriveAtMs, to: "/game/galaxie" });
+    } else if (f.ownerUid === uid && f.status === "returning" && f.returnAtMs) {
+      events.push({ id: `f:${f.id}`, kind: "fleet", label: `Retour de ${f.targetPseudo}`, endTime: f.returnAtMs, to: "/game/galaxie" });
+    }
+  }
+  if (!queues) return events.sort((a, b) => a.endTime - b.endTime);
 
   for (const [id, upgrade] of Object.entries(queues.buildingUpgrades ?? {})) {
     if (!upgrade) continue;
