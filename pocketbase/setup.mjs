@@ -7,6 +7,7 @@
 // administrateurs du jeu (accès à la page Administration).
 // - crée/met à jour les collections décrites dans pocketbase/pb_schema.json
 //   (champs + règles d'accès) ;
+// - active une sauvegarde automatique quotidienne (3 h, 14 conservées) ;
 // - ajoute un champ `username` (le pseudo) à la collection `users` et
 //   autorise la connexion par pseudo OU par email.
 //
@@ -45,6 +46,11 @@ for (const wanted of schema) {
 }
 await pb.collections.import(schema, false);
 console.log(`Collections du jeu à jour : ${schema.map((c) => c.name).join(", ")}.`);
+
+// Sauvegardes automatiques : tous les jours à 3 h (UTC), 14 conservées.
+const settings = await pb.settings.getAll();
+await pb.settings.update({ backups: { ...settings.backups, cron: "0 3 * * *", cronMaxKeep: 14 } });
+console.log("Sauvegardes automatiques : tous les jours à 3 h, 14 conservées.");
 
 // 2. Connexion par pseudo : champ `username` unique sur `users`
 const users = await pb.collections.getOne("users");

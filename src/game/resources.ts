@@ -46,8 +46,18 @@ export function canAffordAll(resources: Resources, costs: Partial<Resources>): b
   return Object.entries(costs).every(([res, val]) => (resources[res as ResourceId] ?? 0) >= (val ?? 0));
 }
 
+/** « 64,6 M ferraille, 258 k module cybernétique » : lisible même pour les hauts niveaux. */
 export function formatCost(cost: Partial<Resources>): string {
   return Object.entries(cost)
-    .map(([res, val]) => `${val} ${RESOURCE_LABELS[res] ?? res}`)
+    .map(([res, val]) => `${compactAmount(val ?? 0)} ${RESOURCE_LABELS[res] ?? res}`)
     .join(", ");
+}
+
+function compactAmount(value: number): string {
+  const abs = Math.abs(value);
+  const fmt = (n: number, unit: string) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: n < 10 ? 2 : 1 })} ${unit}`;
+  if (abs >= 1e9) return fmt(value / 1e9, "Md");
+  if (abs >= 1e6) return fmt(value / 1e6, "M");
+  if (abs >= 1e4) return fmt(value / 1e3, "k");
+  return Math.round(value).toLocaleString("fr-FR");
 }
