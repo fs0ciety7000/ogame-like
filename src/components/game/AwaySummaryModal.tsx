@@ -14,6 +14,8 @@ const KIND_LABEL: Record<NotificationKind, string> = {
   "combat-defender": "Attaque subie",
   achievement: "Succès débloqué",
   "spy-detected": "Tentative d'espionnage détectée",
+  spy: "Rapport d'espionnage",
+  debris: "Champ de débris",
   gift: "Don reçu",
   fleet: "Flotte",
   system: "Évènement",

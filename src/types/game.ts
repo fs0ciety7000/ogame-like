@@ -134,9 +134,31 @@ export interface SpyReport {
   spyUid: string;
   spyPseudo: string;
   targetUid: string;
+  targetPseudo?: string;
   /** Horodatage en millisecondes. */
   timestamp: number;
   targetProcessed: boolean;
+  /** v1.7 : rapports produits par le serveur à l'arrivée des sondes. */
+  probes?: number;
+  score?: number;
+  /** 0 = brouillé, 1 à 4 = paliers atteints (voir src/game/espionage.ts). */
+  tier?: number;
+  detected?: boolean;
+  data?: SpyReportData;
+}
+
+export interface SpyReportData {
+  resources?: Partial<Record<ResourceId, number>>;
+  units?: Record<string, { count: number; level: number }>;
+  defenses?: Record<string, { count: number; level: number }>;
+  buildings?: Record<string, number>;
+  techLevels?: Record<string, number>;
+  queues?: {
+    buildings: { id: string; endTime: number }[];
+    researches: { id: string; endTime: number }[];
+    units: { id: string; endTime: number | null }[];
+  };
+  fleets?: { mission: string; targetPseudo: string; units: Record<string, number>; status: string; at: number }[];
 }
 
 export interface ResourceGift {
@@ -181,6 +203,8 @@ export type NotificationKind =
   | "combat-defender"
   | "achievement"
   | "spy-detected"
+  | "spy"
+  | "debris"
   | "gift"
   | "fleet"
   | "system";

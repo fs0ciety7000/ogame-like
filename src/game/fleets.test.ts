@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { completeFleetReturn, distanceBetween, fleetProgress, fleetSpeed, launchFleet, recallFleet, travelSeconds, type Fleet } from "@/game/fleets";
+import {
+  completeFleetReturn,
+  distanceBetween,
+  fleetProgress,
+  fleetSpeed,
+  launchFleet,
+  patrolEnergyCost,
+  patrolTurnaround,
+  performLaunch,
+  recallFleet,
+  travelSeconds,
+  type Fleet,
+} from "@/game/fleets";
 import { performAttack } from "@/game/attack";
+import { findUnit } from "@/game/units";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
 
@@ -76,5 +89,42 @@ describe("launch, arrival, return", () => {
     expect(fleetProgress(recalled, recalled.returnAtMs!)).toBe(0);
     expect(() => recallFleet(fleet, "intrus", mid)).toThrow(/appartient/);
     expect(() => recallFleet(fleet, "att", fleet.arriveAtMs + 1)).toThrow(/Trop tard/);
+  });
+});
+
+describe("spy, recycle and patrol missions", () => {
+  it("sends probes only, without warning the target", () => {
+    const owner = player("att", { units: { sonde_espionnage: { level: 2, count: 5 }, chasseur: { level: 1, count: 5 } } });
+    const out = performLaunch({ mission: "spy", now: NOW, owner, ownerQueues: defaultQueues(), target: player("def"), fleet: { sonde_espionnage: 3 } });
+    expect(out.fleet.mission).toBe("spy");
+    expect(out.attacker.units.sonde_espionnage.count).toBe(2);
+    expect(out.defenderNotifications).toHaveLength(0);
+    expect(out.attacker.lastAttackAtMs ?? 0).toBe(0); // espionner ne lève pas la protection
+    expect(() => performLaunch({ mission: "spy", now: NOW, owner, ownerQueues: defaultQueues(), target: player("def"), fleet: { chasseur: 1 } })).toThrow(/sondes/);
+  });
+
+  it("recycles only an existing field, with recyclers", () => {
+    const owner = player("att", { units: { drone_recuperateur: { level: 1, count: 5 } } });
+    const field = { id: "def", locationPseudo: "DEF", scrap: 100, energy: 0, expiresAtMs: NOW + 1000, updatedAtMs: NOW };
+    const out = performLaunch({ mission: "recycle", now: NOW, owner, ownerQueues: defaultQueues(), debris: field, fleet: { drone_recuperateur: 2 } });
+    expect(out.fleet.targetUid).toBe("def");
+    expect(() => performLaunch({ mission: "recycle", now: NOW, owner: player("att", { units: { drone_recuperateur: { level: 1, count: 5 } } }), ownerQueues: defaultQueues(), debris: { ...field, expiresAtMs: NOW }, fleet: { drone_recuperateur: 1 } })).toThrow(/n'existe plus/);
+  });
+
+  it("patrols: prepaid upkeep, recall before the midpoint, back at the end", () => {
+    const owner = player("att", { units: { chasseur: { level: 1, count: 100 } }, resources: { ...player("x").resources, energy: 10_000_000 } });
+    const cost = patrolEnergyCost(owner.units, { chasseur: 100 }, 60);
+    expect(cost).toBe(Math.ceil(100 * findUnit("chasseur")!.hangarSpace * 0.015 * 3600));
+    const out = performLaunch({ mission: "patrol", now: NOW, owner, ownerQueues: defaultQueues(), fleet: { chasseur: 100 }, patrolMinutes: 60 });
+    expect(out.attacker.units.chasseur.count).toBe(0);
+    expect(out.attacker.resources.energy).toBeCloseTo(10_000_000 - cost, 0);
+    expect(out.fleet.arriveAtMs).toBe(NOW + 30 * 60_000);
+    const turned = patrolTurnaround({ ...out.fleet, id: "f" });
+    expect(turned.returnAtMs).toBe(NOW + 60 * 60_000);
+    const recalled = recallFleet({ ...out.fleet, id: "f" }, "att", NOW + 10 * 60_000);
+    expect(recalled.returnAtMs).toBe(NOW + 20 * 60_000);
+    expect(() => performLaunch({ mission: "patrol", now: NOW, owner, ownerQueues: defaultQueues(), fleet: { chasseur: 1 }, patrolMinutes: 10 })).toThrow(/entre/);
+    const poor = player("att", { units: { chasseur: { level: 1, count: 100 } }, resources: { ...player("x").resources, energy: 10 } });
+    expect(() => performLaunch({ mission: "patrol", now: NOW, owner: poor, ownerQueues: defaultQueues(), fleet: { chasseur: 100 }, patrolMinutes: 60 })).toThrow(/énergie/);
   });
 });

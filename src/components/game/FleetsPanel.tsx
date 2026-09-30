@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CornerUpLeft, Rocket } from "lucide-react";
+import { AlertTriangle, CornerUpLeft, Rocket, Wind } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,38 @@ import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { fleetProgress, type Fleet } from "@/game/fleets";
+import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { findUnit } from "@/game/units";
 import { formatClock, formatCompact } from "@/lib/utils";
 import { GameActionError, recallFleet } from "@/services/playerService";
+
+/** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
+export function isHostile(f: Fleet, uid: string | undefined): boolean {
+  return (
+    !!uid &&
+    f.targetUid === uid &&
+    f.ownerUid !== uid &&
+    f.status === "outbound" &&
+    (f.mission ?? "attack") === "attack"
+  );
+}
+
+function fleetLabel(f: Fleet, outbound: boolean): string {
+  switch (f.mission) {
+    case "patrol":
+      return outbound ? "🌀 Patrouille (aller)" : "🌀 Patrouille (retour)";
+    case "spy":
+      return outbound
+        ? `🛰️ Sondes → ${f.targetPseudo}`
+        : `🛰️ ← sondes de ${f.targetPseudo}`;
+    case "recycle":
+      return outbound
+        ? `♻️ Débris de ${f.targetPseudo}`
+        : `♻️ ← retour des débris de ${f.targetPseudo}`;
+    default:
+      return outbound ? `→ ${f.targetPseudo}` : `← retour de ${f.targetPseudo}`;
+  }
+}
 
 function fleetSummary(fleet: Fleet): string {
   return Object.entries(fleet.units ?? {})
@@ -21,14 +50,19 @@ function fleetSummary(fleet: Fleet): string {
 }
 
 /** Flottes du joueur (aller, retour) et flottes hostiles en approche. */
-export function FleetsPanel({ hideWhenEmpty = false }: { hideWhenEmpty?: boolean }) {
+export function FleetsPanel({
+  hideWhenEmpty = false,
+}: {
+  hideWhenEmpty?: boolean;
+}) {
   useNowTicker();
   const fleets = useFleetStore((s) => s.fleets);
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
+  const [patrolOpen, setPatrolOpen] = useState(false);
   const now = Date.now();
 
-  const incoming = fleets.filter((f) => f.targetUid === uid && f.status === "outbound");
+  const incoming = fleets.filter((f) => isHostile(f, uid));
   const mine = fleets.filter((f) => f.ownerUid === uid && f.status !== "done");
   if (hideWhenEmpty && incoming.length === 0 && mine.length === 0) return null;
 
@@ -38,7 +72,9 @@ export function FleetsPanel({ hideWhenEmpty = false }: { hideWhenEmpty?: boolean
       await recallFleet(fleet.id);
       toast.success("Flotte rappelée : demi-tour !");
     } catch (err) {
-      toast.error(err instanceof GameActionError ? err.message : "Rappel impossible.");
+      toast.error(
+        err instanceof GameActionError ? err.message : "Rappel impossible.",
+      );
     } finally {
       setPending(null);
     }
@@ -49,7 +85,19 @@ export function FleetsPanel({ hideWhenEmpty = false }: { hideWhenEmpty?: boolean
       <div className="flex items-center gap-2">
         <Rocket className="h-4 w-4 text-cyan-glow" />
         <h3 className="font-display text-sm text-white">Flottes</h3>
-        <Link to="/game/galaxie" className="ml-auto text-xs text-cyan-glow hover:underline">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-auto h-7 px-2 text-xs"
+          onClick={() => setPatrolOpen(true)}
+          title="Mettre la flotte à l'abri"
+        >
+          <Wind className="mr-1 h-3.5 w-3.5" /> Patrouille
+        </Button>
+        <Link
+          to="/game/galaxie"
+          className="text-xs text-cyan-glow hover:underline"
+        >
           Voir sur la carte →
         </Link>
       </div>
@@ -57,38 +105,91 @@ export function FleetsPanel({ hideWhenEmpty = false }: { hideWhenEmpty?: boolean
       {incoming.map((f) => {
         const left = Math.max(0, Math.floor((f.arriveAtMs - now) / 1000));
         return (
-          <div key={f.id} className="animate-pulse-alert rounded-lg border border-danger-glow/50 bg-danger-glow/10 p-2.5">
+          <div
+            key={f.id}
+            className="animate-pulse-alert rounded-lg border border-danger-glow/50 bg-danger-glow/10 p-2.5"
+          >
             <p className="flex items-center gap-1.5 text-xs font-semibold text-danger-glow">
-              <AlertTriangle className="h-3.5 w-3.5" /> Attaque de {f.ownerPseudo} — impact dans {formatClock(left)}
+              <AlertTriangle className="h-3.5 w-3.5" /> Attaque de{" "}
+              {f.ownerPseudo} — impact dans {formatClock(left)}
             </p>
             <p className="mt-1 text-[11px] text-slate-400">{fleetSummary(f)}</p>
-            <Progress value={fleetProgress(f, now) * 100} className="mt-1.5" />
+            <div className="mt-1.5 flex items-center gap-2">
+              <Progress
+                value={fleetProgress(f, now) * 100}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs text-danger-glow"
+                onClick={() => setPatrolOpen(true)}
+              >
+                <Wind className="mr-1 h-3.5 w-3.5" /> Mode fuite
+              </Button>
+            </div>
           </div>
         );
       })}
 
       {mine.map((f) => {
         const outbound = f.status === "outbound";
-        const at = outbound ? f.arriveAtMs : f.returnAtMs ?? now;
+        const at = outbound ? f.arriveAtMs : (f.returnAtMs ?? now);
         const left = Math.max(0, Math.floor((at - now) / 1000));
-        const loot = Object.values(f.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
+        const loot = Object.values(f.loot ?? {}).reduce(
+          (a: number, b) => a + (b ?? 0),
+          0,
+        );
         return (
-          <div key={f.id} className="rounded-lg border border-white/5 bg-black/20 p-2.5">
+          <div
+            key={f.id}
+            className="rounded-lg border border-white/5 bg-black/20 p-2.5"
+          >
             <div className="flex items-center gap-2 text-xs">
-              <span className={outbound ? "font-semibold text-gold-glow" : "font-semibold text-mint-glow"}>
-                {outbound ? `→ ${f.targetPseudo}` : `← retour de ${f.targetPseudo}`}
+              <span
+                className={
+                  outbound
+                    ? "font-semibold text-gold-glow"
+                    : "font-semibold text-mint-glow"
+                }
+              >
+                {fleetLabel(f, outbound)}
               </span>
-              <span className="tabular-mono ml-auto text-slate-400">{outbound ? "impact" : "arrivée"} dans {formatClock(left)}</span>
+              <span className="tabular-mono ml-auto text-slate-400">
+                {outbound
+                  ? f.mission === "patrol"
+                    ? "demi-tour"
+                    : f.mission === "attack" || !f.mission
+                      ? "impact"
+                      : "arrivée"
+                  : "retour"}{" "}
+                dans {formatClock(left)}
+              </span>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">
               {fleetSummary(f) || "Aucun survivant"}
-              {!outbound && loot > 0 && ` · butin ${formatCompact(loot)}`}
+              {!outbound &&
+                loot > 0 &&
+                ` · ${f.mission === "recycle" ? "débris" : "butin"} ${formatCompact(loot)}`}
               {f.recalled && " · rappelée"}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
-              <Progress value={(outbound ? fleetProgress(f, now) : 1 - fleetProgress(f, now)) * 100} className="flex-1" />
+              <Progress
+                value={
+                  (outbound
+                    ? fleetProgress(f, now)
+                    : 1 - fleetProgress(f, now)) * 100
+                }
+                className="flex-1"
+              />
               {outbound && (
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={pending === f.id} onClick={() => void recall(f)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  disabled={pending === f.id}
+                  onClick={() => void recall(f)}
+                >
                   <CornerUpLeft className="mr-1 h-3.5 w-3.5" /> Rappeler
                 </Button>
               )}
@@ -98,8 +199,12 @@ export function FleetsPanel({ hideWhenEmpty = false }: { hideWhenEmpty?: boolean
       })}
 
       {incoming.length === 0 && mine.length === 0 && (
-        <p className="text-xs text-slate-500">Aucune flotte en vol. Lance une attaque depuis la carte ou la liste des joueurs.</p>
+        <p className="text-xs text-slate-500">
+          Aucune flotte en vol. Lance une attaque depuis la carte ou la liste
+          des joueurs.
+        </p>
       )}
+      <PatrolDialog open={patrolOpen} onClose={() => setPatrolOpen(false)} />
     </Card>
   );
 }
@@ -109,17 +214,32 @@ export function HostileFleetAlert() {
   useNowTicker();
   const fleets = useFleetStore((s) => s.fleets);
   const uid = useAuthStore((s) => s.user?.uid);
-  const incoming = fleets.filter((f) => f.targetUid === uid && f.status === "outbound");
+  const [patrolOpen, setPatrolOpen] = useState(false);
+  const incoming = fleets.filter((f) => isHostile(f, uid));
   if (incoming.length === 0) return null;
   const next = Math.min(...incoming.map((f) => f.arriveAtMs));
   return (
-    <Link
-      to="/game/galaxie"
-      className="animate-pulse-alert flex items-center gap-1.5 rounded-lg border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 text-[11px] font-semibold text-danger-glow"
-      title="Flottes hostiles en approche"
-    >
-      <AlertTriangle className="h-3.5 w-3.5" />
-      {incoming.length > 1 ? `${incoming.length} flottes hostiles` : "Flotte hostile"} · {formatClock(Math.max(0, Math.floor((next - Date.now()) / 1000)))}
-    </Link>
+    <div className="flex items-center gap-1">
+      <Link
+        to="/game/galaxie"
+        className="animate-pulse-alert flex items-center gap-1.5 rounded-lg border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 text-[11px] font-semibold text-danger-glow"
+        title="Flottes hostiles en approche"
+      >
+        <AlertTriangle className="h-3.5 w-3.5" />
+        {incoming.length > 1
+          ? `${incoming.length} flottes hostiles`
+          : "Flotte hostile"}{" "}
+        · {formatClock(Math.max(0, Math.floor((next - Date.now()) / 1000)))}
+      </Link>
+      <button
+        type="button"
+        onClick={() => setPatrolOpen(true)}
+        className="flex items-center gap-1 rounded-lg border border-danger-glow/60 px-2 py-1 text-[11px] font-semibold text-danger-glow hover:bg-danger-glow/15"
+        title="Mode fuite : mettre la flotte à l'abri en patrouille"
+      >
+        <Wind className="h-3.5 w-3.5" /> Fuir
+      </button>
+      <PatrolDialog open={patrolOpen} onClose={() => setPatrolOpen(false)} />
+    </div>
   );
 }

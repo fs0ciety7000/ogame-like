@@ -4,7 +4,8 @@ import type { NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import type { AwaySummary, GameAction } from "@/game/actions";
-import type { Fleet } from "@/game/fleets";
+import type { Fleet, FleetMission } from "@/game/fleets";
+import type { DebrisField } from "@/game/debris";
 import type {
   BattleReport,
   BuildingId,
@@ -104,14 +105,6 @@ export async function ensurePlayerDoc(_uid: string, _pseudo: string) {
 
 export async function setPlayerPseudo(uid: string, pseudo: string) {
   await pb.collection("players").update(uid, { pseudo });
-}
-
-export async function fetchPlayerSnapshot(uid: string): Promise<PlayerState | null> {
-  try {
-    return playerFromRecord(await pb.collection("players").getOne<PbRecord>(uid));
-  } catch {
-    return null;
-  }
 }
 
 /* =====================================================
@@ -271,15 +264,16 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
 
 const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId";
 
-/** Classement "total", trié côté serveur par XP. Chaque joueur écrit son
- *  profil toutes les ~20 s (heartbeat) : le rechargement est donc limité à
- *  une fois toutes les 10 s pour ne pas saturer le serveur. */
+/** Classement "total", trié côté serveur par XP, lu dans les fiches
+ *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
+ *  complète d'un autre joueur n'est pas lisible. Rechargement limité à une
+ *  fois toutes les 10 s. */
 export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void): () => void {
   return subscribeList(
-    "players",
+    "profiles",
     "",
     async () => {
-      const res = await pb.collection("players").getList<PbRecord>(1, 100, { sort: "-xp", fields: LEADERBOARD_FIELDS });
+      const res = await pb.collection("profiles").getList<PbRecord>(1, 100, { sort: "-xp", fields: LEADERBOARD_FIELDS });
       return res.items.map(leaderboardEntryFromRecord);
     },
     cb,
@@ -288,58 +282,53 @@ export function subscribeLeaderboard(cb: (players: LeaderboardEntry[]) => void):
 }
 
 export async function listAllPlayers(): Promise<LeaderboardEntry[]> {
-  const res = await pb.collection("players").getFullList<PbRecord>({ sort: "-xp", fields: LEADERBOARD_FIELDS });
+  const res = await pb.collection("profiles").getFullList<PbRecord>({ sort: "-xp", fields: LEADERBOARD_FIELDS });
   return res.map(leaderboardEntryFromRecord);
 }
 
 /* =====================================================
-   Contre-espionnage
+   Espionnage et débris (v1.7)
 ===================================================== */
 
-export async function createSpyReport(spyUid: string, spyPseudo: string, targetUid: string) {
-  await pb.collection("spy_reports").create({
-    spyUid,
-    spyPseudo,
-    targetUid,
-    timestamp: Date.now(),
-    targetProcessed: false,
+/** Dernier rapport d'espionnage que j'ai obtenu sur ce joueur. */
+export async function fetchLatestSpyReport(spyUid: string, targetUid: string): Promise<SpyReport | null> {
+  const res = await pb.collection("spy_reports").getList<SpyReport>(1, 1, {
+    filter: pb.filter("spyUid = {:spyUid} && targetUid = {:targetUid}", { spyUid, targetUid }),
+    sort: "-timestamp",
   });
+  return res.items[0] ?? null;
 }
 
-export function subscribePendingSpyReports(uid: string, cb: (reports: SpyReport[]) => void): () => void {
-  const filter = pb.filter("targetUid = {:uid} && targetProcessed = false", { uid });
+export async function fetchSpyReport(id: string): Promise<SpyReport | null> {
+  try {
+    return await pb.collection("spy_reports").getOne<SpyReport>(id);
+  } catch {
+    return null;
+  }
+}
+
+/** Mes rapports d'espionnage et les tentatives détectées contre moi. */
+export function subscribeSpyLog(uid: string, cb: (reports: SpyReport[]) => void): () => void {
   return subscribeList(
     "spy_reports",
-    pb.filter("targetUid = {:uid}", { uid }),
-    () => pb.collection("spy_reports").getFullList<SpyReport>({ filter }),
+    "",
+    () =>
+      pb
+        .collection("spy_reports")
+        .getList<SpyReport>(1, 30, { filter: pb.filter("spyUid = {:uid} || (targetUid = {:uid} && detected = true)", { uid }), sort: "-timestamp" })
+        .then((res) => res.items),
     cb,
   );
 }
 
-export function acknowledgeSpyReport(uid: string, reportId: string) {
-  return once(`spy:${reportId}`, () => acknowledgeSpyReportOnce(uid, reportId));
-}
-
-async function acknowledgeSpyReportOnce(uid: string, reportId: string) {
-  let report: SpyReport;
-  try {
-    // La règle d'accès n'autorise ce passage qu'une seule fois
-    // (targetProcessed doit encore valoir false) : un second onglet qui
-    // traiterait le même rapport reçoit une 404 et s'arrête là.
-    report = await pb.collection("spy_reports").update<SpyReport>(reportId, { targetProcessed: true });
-  } catch (err) {
-    if (isNotFound(err)) return;
-    throw err;
-  }
-  await createNotifications(uid, [
-    {
-      kind: "spy-detected",
-      title: "Espionnage détecté !",
-      message: `${report.spyPseudo} a tenté de t'espionner.`,
-      createdAtMs: Date.now(),
-      read: false,
-    },
-  ]);
+/** Champs de débris encore présents dans la galaxie. */
+export function subscribeDebrisFields(cb: (fields: DebrisField[]) => void): () => void {
+  return subscribeList(
+    "debris_fields",
+    "",
+    () => pb.collection("debris_fields").getFullList<DebrisField>({ filter: pb.filter("expiresAtMs > {:now}", { now: Date.now() }) }),
+    cb,
+  );
 }
 
 /* =====================================================
@@ -440,8 +429,13 @@ export interface AttackParams {
 
 /** Décollage d'une flotte d'attaque : le combat a lieu à son arrivée,
  *  résolu par le serveur (voir src/game/fleets.ts). */
-export async function sendFleet(targetUid: string, fleet: Record<string, number>): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { targetUid, fleet });
+export async function sendFleet(
+  targetUid: string,
+  fleet: Record<string, number>,
+  mission: FleetMission = "attack",
+  options: { minutes?: number } = {},
+): Promise<Fleet> {
+  return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }
 
 export function recallFleet(fleetId: string): Promise<Fleet> {
@@ -451,7 +445,7 @@ export function recallFleet(fleetId: string): Promise<Fleet> {
 /** Mes flottes et celles qui foncent sur moi (la règle d'accès ne montre
  *  au défenseur que les flottes encore en approche). */
 export function subscribeFleets(uid: string, cb: (fleets: Fleet[]) => void): () => void {
-  const filter = pb.filter('(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound")', { uid });
+  const filter = pb.filter('(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && mission = "attack")', { uid });
   return subscribeList(
     "fleets",
     "",
@@ -478,7 +472,10 @@ export async function fetchMyRecentAttacks(uid: string, sinceMs: number): Promis
     }),
     pb
       .collection("fleets")
-      .getFullList<Fleet>({ filter: pb.filter("ownerUid = {:uid} && departAtMs > {:since}", { uid, since: sinceMs }), fields: "targetUid,departAtMs" })
+      .getFullList<Fleet>({
+        filter: pb.filter('ownerUid = {:uid} && departAtMs > {:since} && mission = "attack"', { uid, since: sinceMs }),
+        fields: "targetUid,departAtMs",
+      })
       .catch(() => [] as Fleet[]),
   ]);
   const last: Record<string, number> = {};

@@ -21,6 +21,7 @@ export const TECH_GRID: Record<string, { col: number; row: number }> = {
   tech6: { col: 2, row: 0 },
   // Logistique
   tech9: { col: 1, row: 1 },
+  tech20: { col: 2, row: 1 },
   tech11: { col: 3, row: 1 },
   // Défense
   tech14: { col: 1, row: 2 },

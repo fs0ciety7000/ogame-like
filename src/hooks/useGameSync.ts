@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
-  acknowledgeSpyReport,
   claimResourceGift,
   ensurePlayerDoc,
   GameActionError,
@@ -9,7 +8,6 @@ import {
   subscribeNotifications,
   subscribePendingBattleReports,
   subscribePendingGifts,
-  subscribePendingSpyReports,
   subscribePlayer,
   subscribeQueues,
   subscribeFleets,
@@ -20,6 +18,7 @@ import {
 import { pb } from "@/lib/pocketbase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setNotifications } from "@/store/notificationStore";
+import { showBrowserNotification } from "@/store/browserNotifyStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
 import { setFleets } from "@/store/fleetStore";
@@ -41,6 +40,8 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   "combat-defender": { icon: "🛡️", sound: playAlert },
   achievement: { icon: "🏆", sound: playUnlock },
   "spy-detected": { icon: "🔍", sound: playAlert },
+  spy: { icon: "🛰️", sound: playConfirm },
+  debris: { icon: "♻️", sound: playConfirm },
   gift: { icon: "🎁", sound: playConfirm },
   fleet: { icon: "🛸", sound: playAlert },
   system: { icon: "✨", sound: playConfirm },
@@ -74,7 +75,6 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<Aw
  *  de combat reçus. */
 export function useGameSync(uid: string | null) {
   const processingReports = useRef<Set<string>>(new Set());
-  const processingSpyReports = useRef<Set<string>>(new Set());
   const processingGifts = useRef<Set<string>>(new Set());
   const lastHeartbeatAt = useRef<number>(Date.now());
   const seenNotificationIds = useRef<Set<string> | null>(null);
@@ -108,6 +108,7 @@ export function useGameSync(uid: string | null) {
         if (!seenNotificationIds.current.has(item.id)) {
           seenNotificationIds.current.add(item.id);
           NOTIFICATION_STYLE[item.kind]?.sound();
+          showBrowserNotification(`${NOTIFICATION_STYLE[item.kind]?.icon ?? ""} ${item.title}`.trim(), item.message, item.id);
           const isAchievement = item.kind === "achievement";
           if (isAchievement) {
             toast.success(item.title, { description: item.message, icon: NOTIFICATION_STYLE[item.kind]?.icon, duration: 6000 });
@@ -134,17 +135,6 @@ export function useGameSync(uid: string | null) {
       });
     });
 
-    const unsubSpyReports = subscribePendingSpyReports(uid, (reports) => {
-      reports.forEach((report) => {
-        if (processingSpyReports.current.has(report.id)) return;
-        processingSpyReports.current.add(report.id);
-
-        acknowledgeSpyReport(uid, report.id)
-          .catch((err) => console.error("Erreur de traitement du rapport d'espionnage :", err))
-          .finally(() => processingSpyReports.current.delete(report.id));
-      });
-    });
-
     const unsubGifts = subscribePendingGifts(uid, (gifts) => {
       gifts.forEach((gift) => {
         if (processingGifts.current.has(gift.id)) return;
@@ -163,7 +153,7 @@ export function useGameSync(uid: string | null) {
     const unsubFleets = subscribeFleets(uid, (fleets) => {
       setFleets(fleets);
       for (const f of fleets) {
-        if (f.ownerUid !== uid || !f.reportId || shownReports.has(f.reportId)) continue;
+        if (f.ownerUid !== uid || !f.reportId || (f.mission ?? "attack") !== "attack" || shownReports.has(f.reportId)) continue;
         shownReports.add(f.reportId);
         if (!fleetsLoaded) continue;
         void fetchBattleReport(f.reportId).then((report) => {
@@ -190,7 +180,6 @@ export function useGameSync(uid: string | null) {
       unsubQueues();
       unsubNotifications();
       unsubBattleReports();
-      unsubSpyReports();
       unsubGifts();
       unsubFleets();
       setFleets([]);

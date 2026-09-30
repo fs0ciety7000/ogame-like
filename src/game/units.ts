@@ -38,6 +38,18 @@ export const DEFAULT_UNITS: UnitDef[] = [
     hangarSpace: 1,
   },
   {
+    id: "sonde_espionnage",
+    name: "Sonde d'espionnage",
+    image: "/assets/units/sonde_espionnage.webp",
+    maxLevel: 10,
+    description: "Sonde furtive et très rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
+    cost: { scrap: 300, energy: 150 },
+    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech20",
+    hangarSpace: 1,
+  },
+  {
     id: "fregate",
     name: "Frégate",
     image: "/assets/units/fregate.webp",
