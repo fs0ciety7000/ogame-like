@@ -170,6 +170,7 @@ export function PlayersPage() {
                       )}
                     </p>
                     <p className="text-xs text-cyan-glow">
+                      {p.activeTitle && <span className="mr-2 text-gold-glow">🏆 {p.activeTitle}</span>}
                       {getRankLabel(p.xp)}
                       {mode === "season" && (
                         <span className="tabular-mono ml-2 text-slate-500">{formatNumber(displayXp)} XP</span>

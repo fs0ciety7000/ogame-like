@@ -13,6 +13,7 @@ export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";
 export { performLaunch, performFleetReturn, recallFleet, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
+export { performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";

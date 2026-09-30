@@ -1,3 +1,5 @@
+import { setActiveTitle } from "@/game/seasons";
+import { buildTimeFactor, researchTimeFactor } from "@/game/events";
 import {
   applyBuildingDiscount,
   BUILDING_UNLOCK_COST,
@@ -37,7 +39,8 @@ export type GameAction =
   | { type: "mission"; missionKey: string }
   | { type: "trade"; sellId: ResourceId; buyId: ResourceId; amount: number }
   | { type: "claimContract"; contractId: string }
-  | { type: "rerollContract"; contractId: string };
+  | { type: "rerollContract"; contractId: string }
+  | { type: "setTitle"; title: string };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -112,7 +115,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
       pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0), now);
-      queues.buildingUpgrades[def.id] = { endTime: now + getBuildingUpgradeTime(def, nextLevel) * 1000 };
+      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * buildTimeFactor(now)) * 1000 };
       recordContract(player, "upgrade_building", 1, now);
       return undefined;
     }
@@ -164,7 +167,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + getTechTime(tech, nextLevel) * 1000 });
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now)) * 1000 });
       recordContract(player, "research", 1, now);
       return undefined;
     }
@@ -194,6 +197,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "rerollContract":
       return rerollContract(player, String(action.contractId ?? ""), now);
+
+    case "setTitle":
+      setActiveTitle(player, String(action.title ?? ""));
+      return player.activeTitle;
 
     default:
       throw new GameActionError("Action inconnue.");

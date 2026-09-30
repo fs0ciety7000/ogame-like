@@ -4,7 +4,8 @@ import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { recordContract } from "@/game/contracts";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { debrisFromLosses, type DebrisAmount } from "@/game/debris";
+import { DEBRIS_RULES, debrisFromLosses, type DebrisAmount } from "@/game/debris";
+import { eventDebrisPercent, lootFactor } from "@/game/events";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -112,6 +113,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   const def = flushedDefender.player;
 
   const combat = resolveCombat({
+    lootMultiplier: lootFactor(now),
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
@@ -227,6 +229,6 @@ export function performAttack(input: AttackInput): AttackOutput {
     combat,
     survivors,
     loot: combat.loot ?? {},
-    debris: debrisFromLosses(combat.attackerLosses, combat.defenderLosses),
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses], eventDebrisPercent(now) ?? DEBRIS_RULES.percent),
   };
 }

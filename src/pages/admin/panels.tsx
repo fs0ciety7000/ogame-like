@@ -18,6 +18,7 @@ import {
   type AdminPlayer,
 } from "@/services/adminService";
 import { NumberField, Section } from "@/pages/admin/fields";
+import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -287,6 +288,7 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedStoragePct: v ?? 0 } }))}
           />
         </Section>
+        <EventsAndSeasonsSections rules={rules} setRules={setRules} />
       </Card>
     </div>
   );

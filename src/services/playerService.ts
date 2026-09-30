@@ -16,6 +16,7 @@ import type {
   ResourceId,
   Resources,
   SpyReport,
+  SeasonResult,
 } from "@/types/game";
 
 export { GameActionError };
@@ -246,6 +247,7 @@ export interface LeaderboardEntry {
   lastDefeatAtMs?: number;
   lastAttackAtMs?: number;
   allianceId?: string;
+  activeTitle?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -259,10 +261,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     lastDefeatAtMs: (data.lastDefeatAtMs as number) || undefined,
     lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
     allianceId: (data.allianceId as string) || undefined,
+    activeTitle: (data.activeTitle as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -371,6 +374,15 @@ export function startMission(_uid: string, missionKey: string) {
 
 export function claimContract(contractId: string) {
   return act<import("@/game/contracts").ClaimResult>({ type: "claimContract", contractId });
+}
+
+export function setActiveTitle(title: string) {
+  return act({ type: "setTitle", title });
+}
+
+/** Palmarès : résultats des saisons terminées (les plus récentes d'abord). */
+export async function fetchSeasonResults(): Promise<SeasonResult[]> {
+  return pb.collection("season_results").getFullList<SeasonResult>({ sort: "-seasonId,rank", filter: "rank <= 10" });
 }
 
 export function rerollContract(contractId: string) {

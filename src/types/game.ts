@@ -89,6 +89,30 @@ export interface PlayerState {
   lastDefeatAtMs?: number;
   /** Dernière attaque lancée (ms) — écrit par le serveur ; lève la protection débutant. */
   lastAttackAtMs?: number;
+  /** Score final de la saison précédente (gardé au changement de saison). */
+  lastSeasonId?: string;
+  lastSeasonXp?: number;
+  /** Titres gagnés en fin de saison, et celui affiché. */
+  titles?: PlayerTitle[];
+  activeTitle?: string;
+}
+
+export interface SeasonResult {
+  id: string;
+  seasonId: string;
+  uid: string;
+  pseudo: string;
+  allianceId: string;
+  rank: number;
+  seasonXp: number;
+  reward: { hours: number; rare: number; title: string; gained?: Record<string, number> } | null;
+  createdAtMs: number;
+}
+
+export interface PlayerTitle {
+  label: string;
+  seasonId: string;
+  rank: number;
 }
 
 export interface QueuesState {
@@ -205,6 +229,8 @@ export type NotificationKind =
   | "spy-detected"
   | "spy"
   | "debris"
+  | "season"
+  | "event"
   | "gift"
   | "fleet"
   | "system";

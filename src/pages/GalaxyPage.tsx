@@ -364,6 +364,7 @@ export function GalaxyPage() {
                   {selected.pseudo}
                   {selected.uid === uid && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
                 </p>
+                {selected.activeTitle && <p className="text-xs text-gold-glow">🏆 {selected.activeTitle}</p>}
                 <p className="tabular-mono text-xs text-slate-500">
                   Secteur {formatCoords(selected.coords)} · {getRankLabel(selected.xp)}
                   {selected.allianceId && allianceById.get(selected.allianceId) && ` · [${allianceById.get(selected.allianceId)!.tag}]`}
