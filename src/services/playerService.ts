@@ -220,7 +220,7 @@ export function subscribeNotifications(uid: string, cb: (items: GameNotification
     "notifications",
     filter,
     async () => {
-      const res = await pb.collection("notifications").getList<GameNotification>(1, 30, { filter, sort: "-createdAtMs" });
+      const res = await pb.collection("notifications").getList<GameNotification>(1, 60, { filter, sort: "-createdAtMs" });
       return res.items;
     },
     cb,
