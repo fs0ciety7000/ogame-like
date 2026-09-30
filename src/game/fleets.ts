@@ -6,6 +6,9 @@ import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
+import { getFleetUpkeep } from "@/game/economy";
+import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
+import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
 /* =====================================================
    Flottes en vol : une attaque met du temps à arriver. Le défenseur voit
@@ -25,7 +28,23 @@ export const FLEET_RULES = {
   mapSize: 100,
 };
 
+/** Mode fuite : durée d'une patrouille, en minutes. */
+export const PATROL_RULES = {
+  minMinutes: 30,
+  maxMinutes: 480,
+};
+
 export type FleetStatus = "outbound" | "returning" | "done";
+/** attack : combat ; spy : sondes ; recycle : champ de débris ;
+ *  patrol : mode fuite (la flotte quitte la base puis revient). */
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol";
+
+export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
+  attack: "Attaque",
+  spy: "Espionnage",
+  recycle: "Recyclage",
+  patrol: "Patrouille",
+};
 
 export interface Fleet {
   id: string;
@@ -33,7 +52,7 @@ export interface Fleet {
   ownerPseudo: string;
   targetUid: string;
   targetPseudo: string;
-  mission: "attack";
+  mission: FleetMission;
   units: Record<string, number>;
   departAtMs: number;
   arriveAtMs: number;
@@ -192,36 +211,156 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   const lootTotal = Object.values(fleet.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
-  return {
-    owner,
-    notifications: [
-      {
-        kind: "fleet",
-        title: fleet.recalled ? "Flotte rappelée rentrée" : "Flotte rentrée à la base",
-        message: fleet.recalled
-          ? `Ta flotte envoyée vers ${fleet.targetPseudo} est de retour, sans combat.`
-          : `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`,
-        createdAtMs: now,
-        read: false,
-      },
-    ],
-  };
+  return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false }] };
+}
+
+function returnMessage(fleet: Fleet, lootTotal: number): { title: string; message: string } {
+  switch (fleet.mission) {
+    case "patrol":
+      return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
+    case "spy":
+      return { title: "Sondes rentrées", message: `Tes sondes envoyées vers ${fleet.targetPseudo} sont de retour.` };
+    case "recycle":
+      return fleet.recalled
+        ? { title: "Recycleurs rentrés", message: "Tes recycleurs rappelés sont de retour, soute vide." }
+        : {
+            title: "Recyclage terminé",
+            message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources récupérées dans les débris de ${fleet.targetPseudo}.` : `Le champ de débris de ${fleet.targetPseudo} était déjà vide.`,
+          };
+    default:
+      return fleet.recalled
+        ? { title: "Flotte rappelée rentrée", message: `Ta flotte envoyée vers ${fleet.targetPseudo} est de retour, sans combat.` }
+        : {
+            title: "Flotte rentrée à la base",
+            message: `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`,
+          };
+  }
 }
 
 /* ---------- points d'entrée serveur (production rattrapée avant) ---------- */
 
-export function performLaunch(
-  attackerIn: PlayerState,
-  attackerQueues: QueuesState,
-  defender: PlayerState,
-  rawFleet: Record<string, unknown>,
-  lastAttackOnTargetMs: number | null,
-  now: number,
-): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
-  if (attackerIn.uid === defender.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
-  const flushed = flushState({ ...attackerIn, buildings: withMissingBuildings(attackerIn.buildings, attackerIn.resources) }, attackerQueues, now);
-  const out = launchFleet({ now, attacker: flushed.player, defender, fleet: rawFleet, lastAttackOnTargetMs });
+export interface LaunchRequest {
+  mission?: FleetMission;
+  now: number;
+  owner: PlayerState;
+  ownerQueues: QueuesState;
+  /** Joueur visé (attaque, espionnage). */
+  target?: PlayerState | null;
+  /** Champ de débris visé (recyclage). */
+  debris?: DebrisField | null;
+  fleet: Record<string, unknown>;
+  lastAttackOnTargetMs?: number | null;
+  /** Durée de la patrouille (mode fuite), en minutes. */
+  patrolMinutes?: number;
+}
+
+export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
+  const mission = req.mission ?? "attack";
+  const { now, target } = req;
+  if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
+  if (mission === "attack" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
+  if (mission === "spy" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'espionner toi-même.");
+  const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
+  const owner = flushed.player;
+  let out: LaunchOutput;
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null });
+  else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
+  else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
+  else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
+  else throw new GameActionError("Mission inconnue.");
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+}
+
+/** Vaisseaux choisis pour une mission, retirés de la base. */
+function takeUnits(owner: PlayerState, raw: Record<string, unknown>, allowed: (unitId: string) => boolean, wrongUnit: string): Record<string, number> {
+  const units: Record<string, number> = {};
+  for (const [unitId, value] of Object.entries(raw ?? {})) {
+    const qty = Math.floor(Number(value));
+    if (!(qty > 0)) continue;
+    if (!allowed(unitId)) throw new GameActionError(wrongUnit);
+    if ((owner.units[unitId]?.count ?? 0) < qty) throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
+    units[unitId] = qty;
+  }
+  if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
+  for (const [unitId, qty] of Object.entries(units)) owner.units[unitId].count -= qty;
+  return units;
+}
+
+function newFleet(owner: PlayerState, target: { uid: string; pseudo: string }, mission: FleetMission, units: Record<string, number>, now: number, arriveAtMs: number): Omit<Fleet, "id"> {
+  return {
+    ownerUid: owner.uid,
+    ownerPseudo: owner.pseudo,
+    targetUid: target.uid,
+    targetPseudo: target.pseudo,
+    mission,
+    units,
+    departAtMs: now,
+    arriveAtMs,
+    returnAtMs: null,
+    status: "outbound",
+    loot: null,
+    reportId: "",
+    outcome: "",
+    recalled: false,
+  };
+}
+
+/** Espionnage : sondes uniquement, trajet rapide, la cible ne voit rien venir. */
+export function launchSpy(owner: PlayerState, target: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
+  const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed) * 1000;
+  return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
+}
+
+/** Recyclage : Drones récupérateurs vers un champ de débris encore présent. */
+export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw: Record<string, unknown>, now: number): LaunchOutput {
+  if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de débris n'existe plus.");
+  const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones récupérateurs peuvent recycler.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed) * 1000;
+  return {
+    attacker: owner,
+    fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
+    defenderNotifications: [],
+  };
+}
+
+/** Énergie payée au départ d'une patrouille : l'entretien de la flotte
+ *  pour toute la durée. */
+export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<string, number>, minutes: number): number {
+  const selected: PlayerState["units"] = {};
+  for (const [id, qty] of Object.entries(fleet)) selected[id] = { level: units[id]?.level ?? 1, count: qty };
+  return Math.ceil(getFleetUpkeep(selected) * minutes * 60);
+}
+
+/** Mode fuite : la flotte quitte la base (elle ne défend plus) et revient
+ *  au bout de la durée choisie. Rappel possible jusqu'à mi-parcours. */
+export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, minutes: number, now: number): LaunchOutput {
+  const duration = Math.round(Number(minutes));
+  if (!(duration >= PATROL_RULES.minMinutes && duration <= PATROL_RULES.maxMinutes)) {
+    throw new GameActionError(`La patrouille dure entre ${PATROL_RULES.minMinutes} min et ${Math.round(PATROL_RULES.maxMinutes / 60)} h.`);
+  }
+  const requested: Record<string, number> = {};
+  for (const [id, v] of Object.entries(raw ?? {})) {
+    const qty = Math.floor(Number(v));
+    if (qty > 0) requested[id] = qty;
+  }
+  const cost = patrolEnergyCost(owner.units, requested, duration);
+  if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la patrouille.`);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent partir en patrouille.");
+  owner.resources.energy = (owner.resources.energy ?? 0) - cost;
+  const arriveAtMs = now + (duration * 60_000) / 2;
+  return {
+    attacker: owner,
+    fleet: newFleet(owner, { uid: owner.uid, pseudo: "Patrouille" }, "patrol", units, now, arriveAtMs),
+    defenderNotifications: [],
+  };
+}
+
+/** Mi-parcours d'une patrouille : elle entame son retour. */
+export function patrolTurnaround(fleet: Fleet): Fleet {
+  return { ...fleet, status: "returning", returnAtMs: fleet.departAtMs + 2 * (fleet.arriveAtMs - fleet.departAtMs) };
 }
 
 export function performFleetReturn(

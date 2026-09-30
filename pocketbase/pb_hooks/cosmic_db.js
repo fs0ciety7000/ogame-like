@@ -134,6 +134,39 @@ function logAdminAction(e, action, before, after) {
   }
 }
 
+/* ---------- Fiche publique (collection profiles) ---------- */
+
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId"];
+
+/** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
+ *  complète (ressources, flotte…) n'est plus lisible par les autres. */
+function syncProfile(app, player) {
+  let profile;
+  try {
+    profile = app.findRecordById("profiles", player.id);
+  } catch (_) {
+    profile = new Record(app.findCollectionByNameOrId("profiles"));
+    profile.set("id", player.id);
+  }
+  let changed = profile.isNew();
+  PROFILE_FIELDS.forEach((f) => {
+    const value = player.get(f);
+    if (JSON.stringify(profile.get(f)) !== JSON.stringify(value)) {
+      profile.set(f, value);
+      changed = true;
+    }
+  });
+  if (changed) app.save(profile);
+}
+
+function deleteProfile(app, playerId) {
+  try {
+    app.delete(app.findRecordById("profiles", playerId));
+  } catch (_) {
+    /* déjà absente */
+  }
+}
+
 /* ---------- Flottes en vol ---------- */
 
 /** Dernière attaque (combat ou départ de flotte) de a vers d (ms), ou null. */
@@ -141,7 +174,7 @@ function lastAttackOnTarget(txApp, a, d) {
   let last = null;
   const reports = txApp.findRecordsByFilter("battle_reports", "attackerUid = {:a} && defenderUid = {:d}", "-timestamp", 1, 0, { a, d });
   if (reports.length > 0) last = reports[0].getFloat("timestamp");
-  const fleets = txApp.findRecordsByFilter("fleets", "ownerUid = {:a} && targetUid = {:d}", "-departAtMs", 1, 0, { a, d });
+  const fleets = txApp.findRecordsByFilter("fleets", "ownerUid = {:a} && targetUid = {:d} && mission = 'attack'", "-departAtMs", 1, 0, { a, d });
   if (fleets.length > 0) last = Math.max(last || 0, fleets[0].getFloat("departAtMs"));
   return last;
 }
@@ -168,8 +201,115 @@ function fleetFromRecord(rec) {
   return f;
 }
 
-/** Combat à l'arrivée d'une flotte, puis demi-tour avec survivants et butin. */
+/* ---------- Champs de débris ---------- */
+
+function loadDebris(txApp, id) {
+  const rec = findOrNull(txApp, "debris_fields", id);
+  return rec ? { rec, field: toPlain(rec) } : { rec: null, field: null };
+}
+
+function saveDebris(txApp, loaded, field) {
+  let rec = loaded.rec;
+  if (!rec) {
+    rec = new Record(txApp.findCollectionByNameOrId("debris_fields"));
+    rec.set("id", field.id);
+  }
+  ["locationPseudo", "scrap", "energy", "expiresAtMs", "updatedAtMs"].forEach((f) => rec.set(f, field[f]));
+  txApp.save(rec);
+}
+
+/** Supprime les champs de débris expirés ou vides. */
+function purgeDebris(now) {
+  $app.findRecordsByFilter("debris_fields", "expiresAtMs <= {:now} || (scrap <= 0 && energy <= 0)", "", 200, 0, { now }).forEach((r) => {
+    try {
+      $app.delete(r);
+    } catch (err) {
+      console.log(`[cosmic] champ de débris ${r.id} non supprimé : ${err}`);
+    }
+  });
+}
+
+/** Arrivée d'une flotte : selon la mission. */
 function resolveFleetArrival(txApp, game, rec, now) {
+  const mission = rec.getString("mission") || "attack";
+  if (mission === "spy") return resolveSpyArrival(txApp, game, rec, now);
+  if (mission === "recycle") return resolveRecycleArrival(txApp, game, rec, now);
+  if (mission === "patrol") {
+    const turned = game.patrolTurnaround(fleetFromRecord(rec));
+    rec.set("status", turned.status);
+    rec.set("returnAtMs", turned.returnAtMs);
+    txApp.save(rec);
+    return;
+  }
+  return resolveAttackArrival(txApp, game, rec, now);
+}
+
+/** Sondes : rapport à la mesure du score, sondes abattues si repérées. */
+function resolveSpyArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  const spy = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
+  const target = findOrNull(txApp, "players", fleet.targetUid) ? loadPlayer(txApp, game, fleet.targetUid) : null;
+  if (!spy || !target) {
+    rec.set("status", spy ? "returning" : "done");
+    rec.set("returnAtMs", spy ? now + tripMs : null);
+    rec.set("outcome", "none");
+    txApp.save(rec);
+    return;
+  }
+  const targetFleets = txApp
+    .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: fleet.targetUid })
+    .map(fleetFromRecord);
+  const probes = Object.keys(fleet.units).reduce((sum, k) => sum + (fleet.units[k] || 0), 0);
+  const out = game.resolveSpyArrival({
+    now,
+    spy: spy.player,
+    spyQueues: spy.queues,
+    target: target.player,
+    targetQueues: target.queues,
+    targetFleets,
+    probes,
+  });
+  const report = new Record(txApp.findCollectionByNameOrId("spy_reports"));
+  report.load(out.report);
+  txApp.save(report);
+  notify(txApp, fleet.ownerUid, out.spyNotifications);
+  notify(txApp, fleet.targetUid, out.targetNotifications);
+  rec.set("reportId", report.id);
+  rec.set("outcome", out.detected ? "detected" : "success");
+  if (out.detected) {
+    rec.set("units", {});
+    rec.set("status", "done");
+    rec.set("returnAtMs", null);
+  } else {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", now + tripMs);
+  }
+  txApp.save(rec);
+}
+
+/** Recycleurs : ramassent ce qui reste du champ, premier arrivé servi. */
+function resolveRecycleArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  const owner = findOrNull(txApp, "players", fleet.ownerUid);
+  const debris = loadDebris(txApp, fleet.targetUid);
+  let taken = { scrap: 0, energy: 0 };
+  if (owner && debris.field && debris.field.expiresAtMs > now) {
+    const units = toPlain(owner).units || {};
+    const out = game.collectDebris(debris.field, game.recyclerCapacity(units, fleet.units));
+    taken = out.taken;
+    saveDebris(txApp, debris, Object.assign({}, debris.field, out.remaining, { updatedAtMs: now }));
+  }
+  rec.set("loot", taken);
+  rec.set("outcome", game.debrisTotal(taken) > 0 ? "collected" : "empty");
+  rec.set("status", owner ? "returning" : "done");
+  rec.set("returnAtMs", owner ? now + tripMs : null);
+  txApp.save(rec);
+}
+
+/** Combat à l'arrivée d'une flotte, puis demi-tour avec survivants et butin. */
+function resolveAttackArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
   const attacker = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
@@ -210,6 +350,12 @@ function resolveFleetArrival(txApp, game, rec, now) {
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+
+  if (game.debrisTotal(result.debris) > 0) {
+    const debris = loadDebris(txApp, fleet.targetUid);
+    const field = game.mergeDebris(debris.field, result.debris, { uid: fleet.targetUid, pseudo: fleet.targetPseudo }, now);
+    saveDebris(txApp, debris, field);
+  }
 
   const survivors = result.survivors || {};
   const anyLeft = Object.keys(survivors).some((k) => survivors[k] > 0);
@@ -268,26 +414,44 @@ function launchFleetRequest(e) {
   const game = loadGame();
   const attackerUid = e.auth.id;
   const body = db.body(e);
-  const targetUid = String(body.targetUid || "");
+  const mission = String(body.mission || "attack");
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
+  const targetUid = mission === "patrol" ? attackerUid : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
+  if (["attack", "spy", "recycle", "patrol"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
     const now = Date.now();
     db.applyContent(txApp, game);
     const attacker = db.loadPlayer(txApp, game, attackerUid);
-    if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
-    const defender = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.");
+    let target = null;
+    let debris = null;
+    if (mission === "attack" || mission === "spy") {
+      if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
+      target = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.").player;
+    } else if (mission === "recycle") {
+      debris = loadDebris(txApp, targetUid).field;
+    }
     let out;
     try {
-      out = game.performLaunch(attacker.player, attacker.queues, defender.player, fleet, db.lastAttackOnTarget(txApp, attackerUid, targetUid), now);
+      out = game.performLaunch({
+        mission,
+        now,
+        owner: attacker.player,
+        ownerQueues: attacker.queues,
+        target,
+        debris,
+        fleet,
+        lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
+        patrolMinutes: Number(body.minutes) || 0,
+      });
     } catch (err) {
       throw db.asHttpError(game, err);
     }
     db.savePlayer(txApp, game, attacker, out.attacker, out.attackerQueues);
     db.notify(txApp, attackerUid, out.attackerNotifications);
-    db.notify(txApp, targetUid, out.defenderNotifications);
+    if (out.defenderNotifications.length > 0) db.notify(txApp, targetUid, out.defenderNotifications);
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
     rec.load(out.fleet);
     txApp.save(rec);
@@ -298,4 +462,4 @@ function launchFleetRequest(e) {
 }
 
 
-module.exports = { launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

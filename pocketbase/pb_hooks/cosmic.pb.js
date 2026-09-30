@@ -213,6 +213,7 @@ routerAdd(
 
 /**
  * POST /api/cosmic/fleet/send  { targetUid, fleet: { unitId: quantité } }
+ *   + mission : "attack" (défaut), "spy", "recycle" (targetUid = champ de débris) ou "patrol" (minutes)
  * (et POST /api/cosmic/attack, ancien nom)
  *
  * Décollage d'une flotte d'attaque : protections vérifiées maintenant,
@@ -257,6 +258,7 @@ routerAdd(
 cronAdd("cosmic_fleets", "* * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
   db.processDueFleets(db.loadGame(), Date.now(), null);
+  db.purgeDebris(Date.now());
 });
 
 /* ---------- Journal des actions d'administration ---------- */
@@ -303,3 +305,22 @@ onRecordDeleteRequest(
   "game_assets",
   "admins",
 );
+
+/* ---------- Fiche publique des joueurs ---------- */
+
+// Chaque enregistrement d'un joueur met à jour sa fiche publique (classement,
+// carte, alliances) : les autres joueurs ne lisent plus que celle-ci.
+onRecordAfterCreateSuccess((e) => {
+  require(`${__hooks}/cosmic_db.js`).syncProfile(e.app, e.record);
+  e.next();
+}, "players");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(`${__hooks}/cosmic_db.js`).syncProfile(e.app, e.record);
+  e.next();
+}, "players");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(`${__hooks}/cosmic_db.js`).deleteProfile(e.app, e.record.id);
+  e.next();
+}, "players");

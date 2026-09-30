@@ -23,8 +23,8 @@
     "id": "pbc_ce_players",
     "name": "players",
     "type": "base",
-    "listRule": "@request.auth.id != \"\"",
-    "viewRule": "@request.auth.id != \"\"",
+    "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "createRule": null,
     "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
@@ -391,10 +391,10 @@
     "id": "pbc_ce_spy_reports",
     "name": "spy_reports",
     "type": "base",
-    "listRule": "spyUid = @request.auth.id || targetUid = @request.auth.id",
-    "viewRule": "spyUid = @request.auth.id || targetUid = @request.auth.id",
-    "createRule": "@request.auth.id != \"\" && @request.body.spyUid = @request.auth.id && @request.body.targetProcessed = false",
-    "updateRule": "targetUid = @request.auth.id && targetProcessed = false && @request.body.targetProcessed = true && @request.body.spyUid:isset = false && @request.body.targetUid:isset = false",
+    "listRule": "spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)",
+    "viewRule": "spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)",
+    "createRule": null,
+    "updateRule": null,
     "deleteRule": null,
     "fields": [
       {
@@ -428,6 +428,42 @@
         "name": "targetProcessed",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "targetPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "probes",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "score",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "tier",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "detected",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
       }
     ],
     "indexes": [
@@ -740,8 +776,8 @@
     "id": "pbc_ce_fleets",
     "name": "fleets",
     "type": "base",
-    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\")",
-    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\")",
+    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
+    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
     "createRule": null,
     "updateRule": null,
     "deleteRule": null,
@@ -843,5 +879,115 @@
       "CREATE INDEX idx_fleets_owner ON fleets (ownerUid)",
       "CREATE INDEX idx_fleets_target ON fleets (targetUid)"
     ]
+  },
+  {
+    "id": "pbc_ce_profiles",
+    "name": "profiles",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "xp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "seasonId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "seasonXp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "lastDefeatAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "lastAttackAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "allianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_profiles_xp ON profiles (xp)"
+    ]
+  },
+  {
+    "id": "pbc_ce_debris_fields",
+    "name": "debris_fields",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "locationPseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "scrap",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "energy",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "expiresAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "updatedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": []
   }
 ]

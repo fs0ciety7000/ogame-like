@@ -47,6 +47,18 @@ for (const wanted of schema) {
 await pb.collections.import(schema, false);
 console.log(`Collections du jeu à jour : ${schema.map((c) => c.name).join(", ")}.`);
 
+// Fiches publiques : créées pour les joueurs existants (les hooks les
+// tiennent ensuite à jour à chaque modification d'un joueur).
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId"];
+const allPlayers = await pb.collection("players").getFullList({ fields: ["id", ...PROFILE_FIELDS].join(",") });
+const existingProfiles = new Set((await pb.collection("profiles").getFullList({ fields: "id" })).map((r) => r.id));
+for (const player of allPlayers) {
+  const data = Object.fromEntries(PROFILE_FIELDS.map((f) => [f, player[f] ?? null]));
+  if (existingProfiles.has(player.id)) await pb.collection("profiles").update(player.id, data);
+  else await pb.collection("profiles").create({ id: player.id, ...data });
+}
+console.log(`Fiches publiques : ${allPlayers.length} joueur(s) synchronisé(s).`);
+
 // Sauvegardes automatiques : tous les jours à 3 h (UTC), 14 conservées.
 const settings = await pb.settings.getAll();
 await pb.settings.update({ backups: { ...settings.backups, cron: "0 3 * * *", cronMaxKeep: 14 } });

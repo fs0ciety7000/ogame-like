@@ -25,12 +25,16 @@ export interface TimelineEvent {
 export function upcomingEvents(queues: QueuesState | null, now: number, fleets: Fleet[] = [], uid?: string): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   for (const f of fleets) {
-    if (f.status === "outbound" && f.targetUid === uid) {
+    const mission = f.mission ?? "attack";
+    if (f.status === "outbound" && f.targetUid === uid && f.ownerUid !== uid && mission === "attack") {
       events.push({ id: `h:${f.id}`, kind: "hostile", label: `Attaque de ${f.ownerPseudo}`, endTime: f.arriveAtMs, to: "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "outbound") {
-      events.push({ id: `f:${f.id}`, kind: "fleet", label: `Impact sur ${f.targetPseudo}`, endTime: f.arriveAtMs, to: "/game/galaxie" });
+      const label =
+        mission === "patrol" ? "Demi-tour de la patrouille" : mission === "spy" ? `Sondes sur ${f.targetPseudo}` : mission === "recycle" ? `Débris de ${f.targetPseudo}` : `Impact sur ${f.targetPseudo}`;
+      events.push({ id: `f:${f.id}`, kind: "fleet", label, endTime: f.arriveAtMs, to: "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "returning" && f.returnAtMs) {
-      events.push({ id: `f:${f.id}`, kind: "fleet", label: `Retour de ${f.targetPseudo}`, endTime: f.returnAtMs, to: "/game/galaxie" });
+      const label = mission === "patrol" ? "Retour de patrouille" : `Retour de ${f.targetPseudo}`;
+      events.push({ id: `f:${f.id}`, kind: "fleet", label, endTime: f.returnAtMs, to: "/game/galaxie" });
     }
   }
   if (!queues) return events.sort((a, b) => a.endTime - b.endTime);
