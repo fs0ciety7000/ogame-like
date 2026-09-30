@@ -13,3 +13,6 @@ title: Un empire plus vivant
 - Les ressources gagnées d'un coup (mission, don, pillage, échange, vente) **s'envolent vers l'en-tête**.
 - **Gerbe de particules** quand un bâtiment ou une unité monte de niveau.
 - Ces animations sont désactivées si ton système demande de réduire les animations.
+
+## Administration
+- Nouvel onglet **Statistiques** : joueurs actifs, répartition des rangs, économie médiane, niveau moyen des bâtiments, technologies et unités les plus utilisées, missions en cours, combats des 7 derniers jours, et des **pistes d'équilibrage** repérées automatiquement.

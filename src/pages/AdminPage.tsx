@@ -9,6 +9,7 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
+import { StatsPanel } from "@/pages/admin/StatsPanel";
 
 /** Administration du jeu : contenu (bâtiments, unités, technos, missions),
  *  règles de combat, joueurs et outils. Réservée aux comptes listés dans
@@ -45,6 +46,7 @@ export function AdminPage() {
       />
       <Tabs value={tab} onValueChange={(v) => setParams({ onglet: v }, { replace: true })}>
         <TabsList className="flex-wrap">
+          <TabsTrigger value="stats">Statistiques</TabsTrigger>
           <TabsTrigger value="buildings">Bâtiments</TabsTrigger>
           <TabsTrigger value="units">Unités</TabsTrigger>
           <TabsTrigger value="technologies">Technologies</TabsTrigger>
@@ -54,6 +56,9 @@ export function AdminPage() {
           <TabsTrigger value="tools">Outils</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="stats" className="mt-4">
+          <StatsPanel />
+        </TabsContent>
         <TabsContent value="buildings" className="mt-4">
           <ContentEditor
             section="buildings"

@@ -54,6 +54,7 @@ __export(hooksEntry_exports, {
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
+  computeGameStats: () => computeGameStats,
   defaultQueues: () => defaultQueues,
   newPlayerProfile: () => newPlayerProfile,
   performAttack: () => performAttack,
@@ -412,8 +413,8 @@ function resolveCombat(params) {
     const wanted = {};
     let total = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
-      const pct = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const amount = Math.floor(Math.max(0, (_b = defenderResources[res]) != null ? _b : 0) * pct);
+      const pct2 = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const amount = Math.floor(Math.max(0, (_b = defenderResources[res]) != null ? _b : 0) * pct2);
       wanted[res] = amount;
       total += amount;
     }
@@ -629,13 +630,13 @@ function getBuildingUpgradeTime(building, nextLevel) {
 }
 function getRepairPercent(buildings) {
   var _a;
-  let pct = 0;
+  let pct2 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
     const level = effectiveBuildingLevel(buildings, b.id);
-    pct += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
+    pct2 += Math.max(0, Math.min(b.effect.max, level * b.effect.perLevel));
   }
-  return pct;
+  return pct2;
 }
 function getUnitCapacity(buildings, category) {
   var _a, _b, _c;
@@ -742,6 +743,29 @@ function hasPrerequisites(mission, units) {
 }
 
 // src/game/ranks.ts
+var RANK_NAMES = [
+  "Non-class\xE9",
+  "Fer III",
+  "Fer II",
+  "Fer I",
+  "Bronze III",
+  "Bronze II",
+  "Bronze I",
+  "Argent III",
+  "Argent II",
+  "Argent I",
+  "Or III",
+  "Or II",
+  "Or I",
+  "Platine III",
+  "Platine II",
+  "Platine I",
+  "\xC9meraude",
+  "Diamant",
+  "Master",
+  "Challenger",
+  "Elite"
+];
 var RANK_THRESHOLDS = [
   0,
   100,
@@ -771,6 +795,10 @@ function getRankIndex(xp) {
     if (xp >= RANK_THRESHOLDS[i]) index = i;
   }
   return index;
+}
+function getRankLabel(xp) {
+  var _a;
+  return (_a = RANK_NAMES[getRankIndex(xp)]) != null ? _a : "Non-class\xE9";
 }
 
 // src/game/achievements.ts
@@ -1517,6 +1545,208 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
   }
   notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
   return { player, queues, notifications };
+}
+
+// src/game/analytics.ts
+var HOUR = 36e5;
+var DAY = 24 * HOUR;
+function median(values) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+var pct = (n, total) => total > 0 ? Math.round(n / total * 1e3) / 10 : 0;
+var round1 = (n) => Math.round(n * 10) / 10;
+function topCounts(values, limit) {
+  const counts = /* @__PURE__ */ new Map();
+  values.forEach((v) => {
+    var _a;
+    return counts.set(v, ((_a = counts.get(v)) != null ? _a : 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count]) => ({ pseudo, count }));
+}
+function computeGameStats(players, queues, reports, now, windowDays = 7) {
+  const n = players.length;
+  const lastSeen = (p) => {
+    var _a;
+    return (_a = p.resourcesUpdatedAtMs) != null ? _a : 0;
+  };
+  const families = /* @__PURE__ */ new Map();
+  players.forEach((p) => {
+    var _a, _b;
+    const family = getRankLabel((_a = p.xp) != null ? _a : 0).split(" ")[0];
+    families.set(family, ((_b = families.get(family)) != null ? _b : 0) + 1);
+  });
+  const rates = players.map((p) => {
+    var _a, _b;
+    return getProductionRatesPerSecond((_a = p.buildings) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {});
+  });
+  const buildings = BUILDINGS.map((b) => {
+    const levels = players.map((p) => {
+      var _a;
+      return effectiveBuildingLevel((_a = p.buildings) != null ? _a : {}, b.id);
+    });
+    return {
+      id: b.id,
+      name: b.name,
+      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
+      maxLevel: b.maxLevel,
+      unlockedPct: pct(levels.filter((l) => l > 0).length, n),
+      maxedPct: pct(levels.filter((l) => l >= b.maxLevel).length, n)
+    };
+  });
+  const technologies = TECHNOLOGIES.map((t) => {
+    const levels = players.map((p) => {
+      var _a, _b;
+      return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
+    });
+    return {
+      id: t.id,
+      name: t.nom,
+      researchedPct: pct(levels.filter((l) => l > 0).length, n),
+      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
+      maxLevel: t.maxLevel
+    };
+  });
+  const units = UNITS.map((u) => {
+    const owned = players.map((p) => {
+      var _a;
+      return (_a = p.units) == null ? void 0 : _a[u.id];
+    });
+    return {
+      id: u.id,
+      name: u.name,
+      total: owned.reduce((a, s) => {
+        var _a;
+        return a + ((_a = s == null ? void 0 : s.count) != null ? _a : 0);
+      }, 0),
+      ownersPct: pct(owned.filter((s) => {
+        var _a;
+        return ((_a = s == null ? void 0 : s.count) != null ? _a : 0) > 0;
+      }).length, n),
+      unlockedPct: pct(owned.filter((s) => {
+        var _a;
+        return ((_a = s == null ? void 0 : s.level) != null ? _a : 0) > 0;
+      }).length, n)
+    };
+  });
+  const missionCounts = /* @__PURE__ */ new Map();
+  queues.forEach((q) => {
+    var _a;
+    return ((_a = q.activeMissions) != null ? _a : []).forEach((m) => {
+      var _a2;
+      return missionCounts.set(m.key, ((_a2 = missionCounts.get(m.key)) != null ? _a2 : 0) + 1);
+    });
+  });
+  const missions = Object.values(MISSIONS).map((m) => {
+    var _a;
+    return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
+  }).sort((a, b) => b.running - a.running);
+  const since = now - windowDays * DAY;
+  const recent = reports.filter((r) => {
+    var _a;
+    return ((_a = r.timestamp) != null ? _a : 0) >= since;
+  });
+  const outcomes = { attacker_win: 0, defender_win: 0, draw: 0 };
+  recent.forEach((r) => {
+    if (r.outcome in outcomes) outcomes[r.outcome]++;
+  });
+  const perDay = Array.from({ length: windowDays }, (_, i) => {
+    const start = now - (windowDays - i) * DAY;
+    const d = new Date(start + DAY);
+    return {
+      day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY).length
+    };
+  });
+  const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
+    var _a;
+    return Object.values((_a = r.loot) != null ? _a : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
+  });
+  const stats = {
+    generatedAt: now,
+    players: {
+      total: n,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY).length,
+      new7d: players.filter((p) => {
+        var _a;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY;
+      }).length,
+      medianPlaytimeHours: round1(median(players.map((p) => {
+        var _a;
+        return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
+      }))),
+      ranks: [...families.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => RANK_NAMES.findIndex((r) => r.startsWith(a.label)) - RANK_NAMES.findIndex((r) => r.startsWith(b.label))),
+      medianXp: median(players.map((p) => {
+        var _a;
+        return (_a = p.xp) != null ? _a : 0;
+      })),
+      topXp: [...players].sort((a, b) => {
+        var _a, _b;
+        return ((_a = b.xp) != null ? _a : 0) - ((_b = a.xp) != null ? _b : 0);
+      }).slice(0, 5).map((p) => {
+        var _a;
+        return { pseudo: p.pseudo, xp: (_a = p.xp) != null ? _a : 0 };
+      })
+    },
+    economy: {
+      resources: RESOURCE_LIST.map((r) => {
+        const amounts = players.map((p) => {
+          var _a, _b;
+          return (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
+        });
+        return {
+          id: r.id,
+          name: r.name,
+          median: Math.floor(median(amounts)),
+          total: Math.floor(amounts.reduce((a, v) => a + v, 0)),
+          medianRate: round1(median(rates.map((rt) => {
+            var _a;
+            return (_a = rt[r.id]) != null ? _a : 0;
+          })))
+        };
+      })
+    },
+    buildings,
+    technologies,
+    units,
+    missions,
+    combat: {
+      windowDays,
+      attacks: recent.length,
+      outcomes,
+      perDay,
+      avgLoot: lootTotals.length ? Math.round(lootTotals.reduce((a, v) => a + v, 0) / lootTotals.length) : 0,
+      topAttackers: topCounts(recent.map((r) => r.attackerPseudo), 5),
+      mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
+    },
+    insights: []
+  };
+  stats.insights = computeInsights(stats);
+  return stats;
+}
+function computeInsights(s) {
+  const out = [];
+  if (s.players.total === 0) return out;
+  const shortList = (names) => names.length > 4 ? `${names.slice(0, 4).join(", ")} et ${names.length - 4} autre(s)` : names.join(", ");
+  const neverResearched = s.technologies.filter((t) => t.researchedPct === 0).map((t) => t.name);
+  if (neverResearched.length > 0) out.push(`Technologies que personne n'a recherch\xE9es : ${shortList(neverResearched)}.`);
+  for (const u of s.units) {
+    if (u.unlockedPct >= 30 && u.ownersPct === 0) out.push(`Unit\xE9 \xAB ${u.name} \xBB : d\xE9bloqu\xE9e par ${u.unlockedPct} % des joueurs mais jamais construite.`);
+  }
+  for (const b of s.buildings) {
+    if (b.maxedPct >= 50) out.push(`B\xE2timent \xAB ${b.name} \xBB : au niveau max chez ${b.maxedPct} % des joueurs \u2014 ajouter des niveaux ?`);
+  }
+  const idle = s.missions.filter((m) => m.running === 0).map((m) => m.name);
+  if (idle.length > 0 && idle.length < s.missions.length) out.push(`Missions lanc\xE9es par personne en ce moment : ${shortList(idle)}.`);
+  const { attacks, outcomes } = s.combat;
+  if (attacks >= 5 && outcomes.defender_win / attacks > 0.7) out.push("Les d\xE9fenseurs gagnent plus de 70 % des combats : l'attaque est peut-\xEAtre trop faible.");
+  if (attacks >= 5 && outcomes.attacker_win / attacks > 0.85) out.push("Les attaquants gagnent plus de 85 % des combats : la d\xE9fense est peut-\xEAtre trop faible.");
+  if (s.players.active7d > 0 && attacks === 0) out.push(`Aucun combat depuis ${s.combat.windowDays} jours.`);
+  if (s.players.total >= 5 && s.players.active7d / s.players.total < 0.4) out.push("Moins de 40 % des joueurs sont venus cette semaine.");
+  return out;
 }
 
 // src/game/playerFields.ts
