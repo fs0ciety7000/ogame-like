@@ -16,7 +16,7 @@ export function useLiveResources(player: PlayerState | null): Resources | null {
     const baseAt = player.resourcesUpdatedAtMs;
 
     // Même calcul que le serveur : plafond de l'entrepôt, entretien, panne.
-    const tick = () => setDisplay(advanceResources(player, (Date.now() - baseAt) / 1000));
+    const tick = () => setDisplay(advanceResources(player, (Date.now() - baseAt) / 1000, baseAt));
 
     tick();
     const id = setInterval(tick, 1000);
@@ -29,5 +29,5 @@ export function useLiveResources(player: PlayerState | null): Resources | null {
 /** Variation nette par seconde (production − entretien, entrepôt plein = 0). */
 export function useProductionRates(player: PlayerState | null, resources?: Resources | null): Partial<Resources> {
   if (!player) return {};
-  return economySnapshot({ ...player, resources: resources ?? player.resources }).net;
+  return economySnapshot({ ...player, resources: resources ?? player.resources }, Date.now()).net;
 }

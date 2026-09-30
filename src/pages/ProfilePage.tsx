@@ -1,4 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { GameActionError, setActiveTitle } from "@/services/playerService";
+import type { PlayerTitle } from "@/types/game";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { RadialGauge } from "@/components/ui/radial-gauge";
@@ -59,6 +62,8 @@ export function ProfilePage() {
           <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
         </div>
       </Card>
+
+      <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -156,5 +161,52 @@ export function ProfilePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Titres gagnés en fin de saison : le joueur choisit celui qui s'affiche. */
+function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string }) {
+  const [pending, setPending] = useState(false);
+  if (titles.length === 0) {
+    return (
+      <Card className="p-4 text-sm text-slate-500">
+        🏆 Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
+      </Card>
+    );
+  }
+  const choose = async (label: string) => {
+    setPending(true);
+    try {
+      await setActiveTitle(label);
+      toast.success(label ? `Titre affiché : ${label}` : "Titre masqué");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Changement impossible.");
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Titres</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {[...titles].reverse().map((t) => (
+          <button
+            key={t.seasonId}
+            type="button"
+            disabled={pending}
+            onClick={() => void choose(t.label === active ? "" : t.label)}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-xs transition-colors",
+              t.label === active ? "border-gold-glow/70 bg-gold-glow/15 text-gold-glow" : "border-white/10 text-slate-300 hover:border-gold-glow/40",
+            )}
+          >
+            🏆 {t.label}
+          </button>
+        ))}
+        <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>
+      </CardContent>
+    </Card>
   );
 }

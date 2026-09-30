@@ -94,6 +94,16 @@ export async function adminUploadAsset(file: File): Promise<string> {
   return pb.files.getURL(record, record.file as string);
 }
 
+/** Clôture manuelle d'une saison terminée (sinon faite par le serveur chaque heure). */
+export async function adminCloseSeason(seasonId: string): Promise<{ seasonId: string; closed: boolean; ranked: number; rewarded: number }> {
+  try {
+    return await pb.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId } });
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Clôture impossible.");
+  }
+}
+
 export interface HooksUpdateReport {
   branch: string;
   updated: string[];

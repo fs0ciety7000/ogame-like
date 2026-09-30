@@ -125,6 +125,8 @@ export function resolveCombat(params: {
   defenderResources: Partial<Record<ResourceId, number>>;
   /** Bouclier du défenseur (0 → 1), voir getShieldPercent. */
   defenderShieldPct?: number;
+  /** Multiplicateur du butin (événement « Guerre ouverte »). */
+  lootMultiplier?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
@@ -205,7 +207,8 @@ export function resolveCombat(params: {
     const wanted: Partial<Record<ResourceId, number>> = {};
     let total = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
-      const pct = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const pct = Math.min(1, base * (params.lootMultiplier ?? 1));
       const amount = Math.floor(Math.max(0, defenderResources[res] ?? 0) * pct);
       wanted[res] = amount;
       total += amount;

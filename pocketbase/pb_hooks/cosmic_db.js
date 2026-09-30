@@ -136,7 +136,7 @@ function logAdminAction(e, action, before, after) {
 
 /* ---------- Fiche publique (collection profiles) ---------- */
 
-const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId"];
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle"];
 
 /** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
  *  complète (ressources, flotte…) n'est plus lisible par les autres. */
@@ -461,5 +461,57 @@ function launchFleetRequest(e) {
   return e.json(200, response);
 }
 
+/* ---------- Clôture des saisons ---------- */
 
-module.exports = { purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/** Fige le classement de la saison terminée, l'archive (season_results) et
+ *  verse les récompenses. Ne fait rien si elle est déjà close. */
+function closeSeason(game, now, seasonIdIn) {
+  const seasonId = seasonIdIn || game.previousSeasonId(now);
+  let summary = { seasonId, closed: false, ranked: 0, rewarded: 0 };
+  // Tâche automatique : rien avant la première saison récompensée.
+  if (!seasonIdIn) {
+    applyContent($app, game);
+    if (seasonId < game.SEASON_RULES.firstSeasonId) return summary;
+  }
+  $app.runInTransaction((txApp) => {
+    if (txApp.findRecordsByFilter("season_results", "seasonId = {:s}", "", 1, 0, { s: seasonId }).length > 0) return;
+    applyContent(txApp, game);
+    const entries = txApp
+      .findRecordsByFilter("players", "seasonId = {:s} || lastSeasonId = {:s}", "", 0, 0, { s: seasonId })
+      .map((r) => {
+        const p = toPlain(r);
+        p.uid = r.id;
+        return p;
+      });
+    const standings = game.seasonStandings(entries, seasonId);
+    const collection = txApp.findCollectionByNameOrId("season_results");
+    standings.forEach((st) => {
+      const reward = game.seasonRewardFor(st.rank, st.seasonXp);
+      let gained = null;
+      if (reward) {
+        const loaded = loadPlayer(txApp, game, st.uid);
+        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: st.rank, seasonXp: st.seasonXp }, reward, now);
+        savePlayer(txApp, game, loaded, out.player, out.queues);
+        notify(txApp, st.uid, out.notifications);
+        gained = out.gained;
+        summary.rewarded++;
+      }
+      const rec = new Record(collection);
+      rec.load({
+        seasonId,
+        uid: st.uid,
+        pseudo: st.pseudo,
+        allianceId: st.allianceId,
+        rank: st.rank,
+        seasonXp: st.seasonXp,
+        reward: reward ? Object.assign({}, reward, { gained }) : null,
+        createdAtMs: now,
+      });
+      txApp.save(rec);
+    });
+    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded };
+  });
+  return summary;
+}
+
+module.exports = { closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -3,6 +3,7 @@ import type { MissionDef } from "@/game/missions";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit } from "@/game/units";
+import { eventBoundaries, productionMultipliers } from "@/game/events";
 import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 
 /* =====================================================
@@ -61,8 +62,18 @@ export interface EconomySnapshot {
   full: ResourceId[];
 }
 
-export function economySnapshot(input: EconomyInput): EconomySnapshot {
+/** Production brute, avec les bonus d'événement donnés. */
+function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>): Partial<Resources> {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  for (const [res, m] of Object.entries(multipliers)) {
+    if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
+  }
+  return gross;
+}
+
+/** `now` : applique les bonus de l'événement en cours à cet instant. */
+export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
+  const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now));
   const upkeep = getFleetUpkeep(input.units);
   const capacity = getStorageCapacity(input.buildings);
   const energyNet = (gross.energy ?? 0) - upkeep;
@@ -91,11 +102,24 @@ function addCapped(stock: number, gain: number, cap: number): number {
 }
 
 /** Ressources après `elapsedSeconds` de production continue. */
-export function advanceResources(input: EconomyInput, elapsedSeconds: number): Resources {
+export function advanceResources(input: EconomyInput, elapsedSeconds: number, startMs?: number): Resources {
+  // Avec `startMs`, les bonus d'événements s'appliquent sur leur seule durée.
+  if (startMs === undefined || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  const endMs = startMs + elapsedSeconds * 1000;
+  let resources = input.resources;
+  let at = startMs;
+  for (const cut of [...eventBoundaries(startMs, endMs), endMs]) {
+    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at));
+    at = cut;
+  }
+  return resources as Resources;
+}
+
+function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>): Resources {
   const out = { ...input.resources } as Resources;
   if (elapsedSeconds <= 0) return out;
 
-  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const gross = boostedRates(input, multipliers);
   const upkeep = getFleetUpkeep(input.units);
   const capacity = getStorageCapacity(input.buildings);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);

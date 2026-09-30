@@ -8,6 +8,8 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
 import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
+import { EVENT_RULES } from "@/game/events";
+import { SEASON_RULES } from "@/game/seasons";
 import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
@@ -29,6 +31,8 @@ export interface GameRules {
   spy: typeof SPY_RULES;
   debris: typeof DEBRIS_RULES;
   patrol: typeof PATROL_RULES;
+  events: typeof EVENT_RULES;
+  seasons: typeof SEASON_RULES;
 }
 
 export interface GameContent {
@@ -49,6 +53,8 @@ const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
 const DEFAULT_SPY_RULES = { ...SPY_RULES };
 const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
+const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
+const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -57,7 +63,7 @@ export function defaultGameContent(): GameContent {
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES },
   });
 }
 
@@ -84,6 +90,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
       debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
+      events: { ...defaults.rules.events, ...(overrides.rules?.events ?? {}) },
+      seasons: { ...defaults.rules.seasons, ...(overrides.rules?.seasons ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -97,6 +105,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
+  Object.assign(EVENT_RULES, content.rules.events);
+  Object.assign(SEASON_RULES, content.rules.seasons);
   current = content;
   return content;
 }

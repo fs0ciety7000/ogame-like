@@ -42,6 +42,8 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   "spy-detected": { icon: "🔍", sound: playAlert },
   spy: { icon: "🛰️", sound: playConfirm },
   debris: { icon: "♻️", sound: playConfirm },
+  season: { icon: "🏆", sound: playUnlock },
+  event: { icon: "🎉", sound: playConfirm },
   gift: { icon: "🎁", sound: playConfirm },
   fleet: { icon: "🛸", sound: playAlert },
   system: { icon: "✨", sound: playConfirm },

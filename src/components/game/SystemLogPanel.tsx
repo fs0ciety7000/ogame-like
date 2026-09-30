@@ -14,6 +14,8 @@ const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }
   "spy-detected": { level: "ALERT", className: "text-ember-glow" },
   spy: { level: "INTEL", className: "text-cyan-glow" },
   debris: { level: "INFO", className: "text-slate-300" },
+  season: { level: "SAISON", className: "text-gold-glow" },
+  event: { level: "EVENT", className: "text-gold-glow" },
   gift: { level: "INFO", className: "text-mint-glow" },
   fleet: { level: "ALERTE", className: "text-danger-glow" },
   system: { level: "INFO", className: "text-cyan-glow" },

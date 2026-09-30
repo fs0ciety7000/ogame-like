@@ -26,7 +26,7 @@
     "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "createRule": null,
-    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false) || @collection.admins.id ?= @request.auth.id",
+    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false) || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
@@ -157,6 +157,32 @@
         "type": "json",
         "required": false,
         "maxSize": 2000000
+      },
+      {
+        "name": "lastSeasonId",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "lastSeasonXp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "titles",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "activeTitle",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -940,6 +966,13 @@
         "required": false,
         "max": 40,
         "presentable": false
+      },
+      {
+        "name": "activeTitle",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -989,5 +1022,72 @@
       }
     ],
     "indexes": []
+  },
+  {
+    "id": "pbc_ce_season_results",
+    "name": "season_results",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "seasonId",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "uid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "allianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "rank",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "seasonXp",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "reward",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"
+    ]
   }
 ]
