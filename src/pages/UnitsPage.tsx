@@ -17,6 +17,7 @@ import { findTech, techBonus } from "@/game/technologies";
 import { unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
+import { LevelUpBurst } from "@/components/ui/level-up-burst";
 
 export function UnitsPage() {
   useNowTicker();
@@ -128,7 +129,8 @@ export function UnitsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className="flex h-full flex-col overflow-hidden">
-                <div className="flex justify-center pt-3">
+                <div className="relative flex justify-center pt-3">
+                  <LevelUpBurst level={data.level} colorVar="var(--color-cyan-glow)" />
                   <div className="relative h-[180px] w-[180px] shrink-0 overflow-hidden rounded-lg bg-space-800">
                     <img
                       src={unit.image}

@@ -23,6 +23,7 @@ import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { formatCost, resourceEmoji } from "@/game/resources";
 import type { BuildingId } from "@/types/game";
+import { LevelUpBurst } from "@/components/ui/level-up-burst";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -91,7 +92,8 @@ export function BuildingsPage() {
               whileHover={{ y: -3 }}
             >
               <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="flex justify-center pt-3">
+                <div className="relative flex justify-center pt-3">
+                  <LevelUpBurst level={level} />
                   <div className="relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800">
                     <img
                       src={building.image}
