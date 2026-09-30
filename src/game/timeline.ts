@@ -30,8 +30,10 @@ export function upcomingEvents(queues: QueuesState | null, now: number, fleets: 
       events.push({ id: `h:${f.id}`, kind: "hostile", label: `Attaque de ${f.ownerPseudo}`, endTime: f.arriveAtMs, to: "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "outbound") {
       const label =
-        mission === "patrol" ? "Demi-tour de la patrouille" : mission === "spy" ? `Sondes sur ${f.targetPseudo}` : mission === "recycle" ? `Débris de ${f.targetPseudo}` : `Impact sur ${f.targetPseudo}`;
+        mission === "patrol" ? "Demi-tour de la patrouille" : mission === "spy" ? `Sondes sur ${f.targetPseudo}` : mission === "recycle" ? `Débris de ${f.targetPseudo}` : mission === "garrison" ? `Garnison chez ${f.targetPseudo}` : `Impact sur ${f.targetPseudo}`;
       events.push({ id: `f:${f.id}`, kind: "fleet", label, endTime: f.arriveAtMs, to: "/game/galaxie" });
+    } else if (f.ownerUid === uid && f.status === "stationed" && f.stationedUntilMs) {
+      events.push({ id: `f:${f.id}`, kind: "fleet", label: `Fin de garnison chez ${f.targetPseudo}`, endTime: f.stationedUntilMs, to: "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "returning" && f.returnAtMs) {
       const label = mission === "patrol" ? "Retour de patrouille" : `Retour de ${f.targetPseudo}`;
       events.push({ id: `f:${f.id}`, kind: "fleet", label, endTime: f.returnAtMs, to: "/game/galaxie" });

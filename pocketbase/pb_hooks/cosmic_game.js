@@ -46,12 +46,14 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/server/hooksEntry.ts
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
+  ALLIANCE_RULES: () => ALLIANCE_RULES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
+  allianceStandings: () => allianceStandings,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
@@ -59,9 +61,13 @@ __export(hooksEntry_exports, {
   computeGameStats: () => computeGameStats,
   debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
+  endGarrison: () => endGarrison,
+  finishAllianceResearch: () => finishAllianceResearch,
+  flushPlayer: () => flushPlayer,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   patrolTurnaround: () => patrolTurnaround,
+  performAllianceAction: () => performAllianceAction,
   performAttack: () => performAttack,
   performFleetReturn: () => performFleetReturn,
   performGift: () => performGift,
@@ -73,7 +79,9 @@ __export(hooksEntry_exports, {
   recyclerCapacity: () => recyclerCapacity,
   resolveSpyArrival: () => resolveSpyArrival,
   seasonRewardFor: () => seasonRewardFor,
-  seasonStandings: () => seasonStandings
+  seasonStandings: () => seasonStandings,
+  seasonXpFor: () => seasonXpFor,
+  stationGarrison: () => stationGarrison
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -447,26 +455,26 @@ setBuildings(DEFAULT_BUILDINGS);
 function findBuilding(id) {
   return BUILDINGS.find((b) => b.id === id);
 }
-function productionPerSecond(buildingId, level) {
+function productionPerSecond(buildingId, level2) {
   var _a, _b, _c, _d;
-  if (level <= 0) return 0;
+  if (level2 <= 0) return 0;
   const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
-  return (_d = table[Math.min(level, table.length) - 1]) != null ? _d : 0;
+  return (_d = table[Math.min(level2, table.length) - 1]) != null ? _d : 0;
 }
-function geometricCost(baseCost, maxCost, fromLevel, toLevel, level) {
+function geometricCost(baseCost, maxCost, fromLevel, toLevel, level2) {
   var _a;
   const steps = Math.max(1, toLevel - fromLevel);
   const cost = {};
   for (const [res, base] of Object.entries(baseCost)) {
     const target = (_a = maxCost[res]) != null ? _a : base;
     const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
-    cost[res] = Math.floor(base * Math.pow(rate, level - fromLevel));
+    cost[res] = Math.floor(base * Math.pow(rate, level2 - fromLevel));
   }
   return cost;
 }
-function tierFor(building, level) {
+function tierFor(building, level2) {
   const t2 = building.upgrade.tier2;
-  return t2 && level >= t2.fromLevel ? t2 : null;
+  return t2 && level2 >= t2.fromLevel ? t2 : null;
 }
 function getBuildingUpgradeCost(building, nextLevel) {
   const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
@@ -500,11 +508,11 @@ function getRepairPercent(buildings) {
   }
   return pct2;
 }
-function repairPercentAt(effect, level) {
+function repairPercentAt(effect, level2) {
   var _a;
   const from = effect.bonusFromLevel;
-  const base = from ? Math.min(level, from - 1) * effect.perLevel : level * effect.perLevel;
-  const bonus = from ? Math.max(0, level - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
+  const base = from ? Math.min(level2, from - 1) * effect.perLevel : level2 * effect.perLevel;
+  const bonus = from ? Math.max(0, level2 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
   return Math.max(0, Math.min(effect.max, base + bonus));
 }
 function getStorageCapacity(buildings) {
@@ -518,8 +526,8 @@ function getStorageCapacity(buildings) {
   }
   return hasStorage ? capacity : Infinity;
 }
-function storageCapacityAt(effect, level) {
-  return level > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level)) : 0;
+function storageCapacityAt(effect, level2) {
+  return level2 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level2)) : 0;
 }
 function getUnitCapacity(buildings, category) {
   var _a, _b, _c;
@@ -543,15 +551,15 @@ function withMissingBuildings(buildings, resources) {
   const out = __spreadValues({}, buildings != null ? buildings : {});
   for (const b of BUILDINGS) {
     if (out[b.id]) continue;
-    let level = 1;
+    let level2 = 1;
     if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
       const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
         var _a2;
         return (_a2 = resources[r.id]) != null ? _a2 : 0;
       }));
-      while (level < b.maxLevel && storageCapacityAt(b.effect, level) < biggest) level++;
+      while (level2 < b.maxLevel && storageCapacityAt(b.effect, level2) < biggest) level2++;
     }
-    out[b.id] = { level, unlocked: !!b.startsUnlocked };
+    out[b.id] = { level: level2, unlocked: !!b.startsUnlocked };
   }
   return out;
 }
@@ -604,18 +612,18 @@ var TIME_GROWTH = 1.67;
 function findTech(id) {
   return TECHNOLOGIES.find((t) => t.id === id);
 }
-function getTechCost(tech, level) {
+function getTechCost(tech, level2) {
   var _a;
   const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
-  const factor = Math.pow(growth, level - 1);
+  const factor = Math.pow(growth, level2 - 1);
   const cost = {};
   for (const [res, amount] of Object.entries(tech.baseCost)) {
     cost[res] = Math.floor(amount * factor);
   }
   return cost;
 }
-function getTechTime(tech, level) {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
+function getTechTime(tech, level2) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level2 - 1));
 }
 function checkPrereqs(tech, levels) {
   const entries = Object.entries(tech.prereq);
@@ -651,13 +659,13 @@ var COMBAT_RULES = {
   /** Part des défenses détruites reconstruites gratuitement après le combat. */
   defenseRebuildPct: 0.6
 };
-function getShieldPercent(buildings) {
+function getShieldPercent(buildings, allianceBonus = 0) {
   var _a;
   let levels = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
   }
-  return Math.min(COMBAT_RULES.shieldMax, levels * COMBAT_RULES.shieldPerLevel);
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus);
 }
 var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
@@ -666,9 +674,9 @@ function fleetCargoCapacity(units, fleet) {
   let total = 0;
   for (const [id, qty] of Object.entries(fleet)) {
     const def = findUnit(id);
-    const level = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def || qty <= 0 || level <= 0) continue;
-    total += ((_c = def.stats.cargo) != null ? _c : 0) * level * qty;
+    const level2 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def || qty <= 0 || level2 <= 0) continue;
+    total += ((_c = def.stats.cargo) != null ? _c : 0) * level2 * qty;
   }
   return total;
 }
@@ -678,9 +686,9 @@ function clamp(v, min, max) {
 function unitStat(units, techLevels, unitId, stat) {
   var _a, _b, _c, _d;
   const base = (_b = (_a = UNIT_BASE_STATS[unitId]) == null ? void 0 : _a[stat]) != null ? _b : 0;
-  const level = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
-  if (level <= 0) return 0;
-  let value = base + (level - 1) * 5;
+  const level2 = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
+  if (level2 <= 0) return 0;
+  let value = base + (level2 - 1) * 5;
   if (stat === "attack") value *= 1 + techBonus(techLevels, "unit_attack");
   if (stat === "defense") value *= 1 + techBonus(techLevels, "unit_defense");
   return value;
@@ -708,11 +716,14 @@ function computeFullPower(units, techLevels, idList, stats) {
   return total;
 }
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
   const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
-  const defenderPower = (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) + computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
+  const garrisons = (_b = params.garrisons) != null ? _b : [];
+  const garrisonFactor = (_c = params.garrisonFactor) != null ? _c : 0.5;
+  const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
+  const defenderPower = (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) + computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) * (1 + COMBAT_RULES.homeDefenseBonus) + garrisonPower;
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
   let outcome;
@@ -760,8 +771,16 @@ function resolveCombat(params) {
     defenderRecovered[unitId] = recovered;
     if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
   });
+  const garrisonLosses = garrisons.map((g) => {
+    const lost = {};
+    for (const [unitId, qty] of Object.entries(g.fleet)) {
+      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
+      if (n > 0) lost[unitId] = Math.min(qty, n);
+    }
+    return lost;
+  });
   const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_b = attackerLosses[unitId]) != null ? _b : 0));
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_d = attackerLosses[unitId]) != null ? _d : 0));
   const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
   let loot = null;
   if (outcome === "attacker_win") {
@@ -769,8 +788,8 @@ function resolveCombat(params) {
     let total = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct2 = Math.min(1, base * ((_c = params.lootMultiplier) != null ? _c : 1));
-      const amount = Math.floor(Math.max(0, (_d = defenderResources[res]) != null ? _d : 0) * pct2);
+      const pct2 = Math.min(1, base * ((_e = params.lootMultiplier) != null ? _e : 1));
+      const amount = Math.floor(Math.max(0, (_f = defenderResources[res]) != null ? _f : 0) * pct2);
       wanted[res] = amount;
       total += amount;
     }
@@ -785,8 +804,8 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_e = loot[res]) != null ? _e : 0) < ((_f = wanted[res]) != null ? _f : 0)) {
-        loot[res] = ((_g = loot[res]) != null ? _g : 0) + 1;
+      if (((_g = loot[res]) != null ? _g : 0) < ((_h = wanted[res]) != null ? _h : 0)) {
+        loot[res] = ((_i = loot[res]) != null ? _i : 0) + 1;
         left--;
       }
     }
@@ -804,7 +823,9 @@ function resolveCombat(params) {
     loot,
     cargoCapacity,
     shieldPercent: shield,
-    defenderRebuilt
+    defenderRebuilt,
+    garrisonLosses,
+    garrisonPower
   };
 }
 
@@ -820,10 +841,10 @@ function getProductionRatesPerSecond(buildings, techLevels) {
     const resource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
     if (!resource) continue;
     const state = buildings[building.id];
-    const level = (_a = state == null ? void 0 : state.level) != null ? _a : 0;
+    const level2 = (_a = state == null ? void 0 : state.level) != null ? _a : 0;
     const unlocked = building.startsUnlocked || (state == null ? void 0 : state.unlocked) === true;
-    if (level <= 0 || !unlocked) continue;
-    const base = productionPerSecond(building.id, level);
+    if (level2 <= 0 || !unlocked) continue;
+    const base = productionPerSecond(building.id, level2);
     rates[resource] = Math.floor(base * (1 + bonus));
   }
   return rates;
@@ -964,6 +985,320 @@ function eventDebrisPercent(now) {
   return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
 }
 
+// src/game/errors.ts
+var GameActionError = class extends Error {
+};
+
+// src/game/alliances.ts
+var ALLIANCE_RULES = {
+  maxMembers: 6,
+  /** Versement : au plus cette part du stock d'une ressource du trésor. */
+  distributionMaxPct: 0.2,
+  /** Versements par jour (UTC) pour toute l'alliance. */
+  distributionsPerDay: 10,
+  /** Coût du niveau n : base × croissance^(n−1). */
+  researchCommonCost: 5e7,
+  researchRareCost: 1e6,
+  researchGrowth: 2,
+  researchHoursPerLevel: 12,
+  /** Garnison : part de la puissance d'attaque engagée en défense. */
+  garrisonPower: 0.5,
+  garrisonMinHours: 1,
+  garrisonMaxHours: 24,
+  maxGarrisonsPerHost: 3,
+  /** Onglet Renseignement : rapports des membres sur cette période. */
+  sharedReportsDays: 7,
+  sharedReportsMax: 50,
+  /** Saison : somme des XP de saison des N meilleurs membres. */
+  seasonTopMembers: 5,
+  seasonRewardHours: 8,
+  seasonTitle: "Alli\xE9 champion",
+  researches: [
+    { id: "logistique", name: "Logistique f\xE9d\xE9r\xE9e", emoji: "\u{1F6F0}\uFE0F", description: "R\xE9duit le temps de vol de toutes les flottes des membres.", perLevel: 0.05, maxLevel: 5 },
+    { id: "industrie", name: "Industrie coop\xE9rative", emoji: "\u{1F3ED}", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5 },
+    { id: "brouillage", name: "R\xE9seau de brouillage", emoji: "\u{1F4E1}", description: "Ajoute des points de contre-espionnage \xE0 chaque membre.", perLevel: 1, maxLevel: 5 },
+    { id: "bouclier", name: "Bouclier f\xE9d\xE9ral", emoji: "\u{1F6E1}\uFE0F", description: "Renforce le bouclier des bases des membres, au-del\xE0 du plafond habituel.", perLevel: 0.01, maxLevel: 5 }
+  ]
+};
+var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
+function findAllianceResearch(id) {
+  return ALLIANCE_RULES.researches.find((r) => r.id === id);
+}
+function allianceRole(alliance, uid) {
+  var _a, _b;
+  if (!((_a = alliance.members) == null ? void 0 : _a.includes(uid))) return null;
+  if (alliance.createdBy === uid) return "founder";
+  return ((_b = alliance.roles) == null ? void 0 : _b[uid]) === "officer" ? "officer" : "member";
+}
+function level(levels, id) {
+  var _a;
+  const def = findAllianceResearch(id);
+  return Math.max(0, Math.min((_a = def == null ? void 0 : def.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
+}
+function allianceFlightFactor(levels) {
+  var _a, _b;
+  return Math.max(0.1, 1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0));
+}
+function allianceProductionFactor(levels) {
+  var _a, _b;
+  return 1 + level(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function allianceCounterSpy(levels) {
+  var _a, _b;
+  return level(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function allianceShieldBonus(levels) {
+  var _a, _b;
+  return level(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function newAlliance(founder, nameIn, tagIn, now) {
+  const name = String(nameIn != null ? nameIn : "").trim();
+  const tag = String(tagIn != null ? tagIn : "").trim().toUpperCase();
+  if (name.length < 3 || name.length > 40) throw new GameActionError("Le nom doit contenir entre 3 et 40 caract\xE8res.");
+  if (!/^[A-Z0-9]{2,5}$/.test(tag)) throw new GameActionError("Le tag doit contenir 2 \xE0 5 lettres ou chiffres.");
+  return {
+    name,
+    tag,
+    createdBy: founder.uid,
+    createdAtMs: now,
+    members: [founder.uid],
+    memberPseudos: { [founder.uid]: founder.pseudo },
+    roles: {},
+    treasury: {},
+    research: {},
+    activeResearch: null,
+    distributions: { day: "", count: 0 }
+  };
+}
+function addMember(alliance, player) {
+  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu es d\xE9j\xE0 membre de cette alliance.");
+  if (alliance.members.length >= ALLIANCE_RULES.maxMembers) throw new GameActionError(`Cette alliance est compl\xE8te (${ALLIANCE_RULES.maxMembers} membres).`);
+  return __spreadProps(__spreadValues({}, alliance), { members: [...alliance.members, player.uid], memberPseudos: __spreadProps(__spreadValues({}, alliance.memberPseudos), { [player.uid]: player.pseudo }) });
+}
+function removeMember(alliance, uid) {
+  var _a, _b;
+  if (!alliance.members.includes(uid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
+  const members = alliance.members.filter((m) => m !== uid);
+  if (members.length === 0) return null;
+  const memberPseudos = __spreadValues({}, alliance.memberPseudos);
+  delete memberPseudos[uid];
+  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
+  delete roles[uid];
+  let createdBy = alliance.createdBy;
+  if (createdBy === uid) {
+    createdBy = (_b = members.find((m) => roles[m] === "officer")) != null ? _b : members[0];
+    delete roles[createdBy];
+  }
+  return __spreadProps(__spreadValues({}, alliance), { members, memberPseudos, roles, createdBy });
+}
+function kickMember(alliance, actorUid, targetUid) {
+  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur peut exclure un membre.");
+  if (actorUid === targetUid) throw new GameActionError("Tu ne peux pas t'exclure toi-m\xEAme.");
+  return removeMember(alliance, targetUid);
+}
+function setOfficer(alliance, actorUid, targetUid, officer) {
+  var _a;
+  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les officiers.");
+  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de r\xF4le.");
+  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
+  if (officer) roles[targetUid] = "officer";
+  else delete roles[targetUid];
+  return __spreadProps(__spreadValues({}, alliance), { roles });
+}
+function parseAmounts(raw) {
+  const out = {};
+  for (const [res, value] of Object.entries(raw != null ? raw : {})) {
+    const n = Math.floor(Number(value));
+    if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n <= 0) continue;
+    out[res] = n;
+  }
+  if (Object.keys(out).length === 0) throw new GameActionError("Indique au moins un montant.");
+  return out;
+}
+function deposit(alliance, player, amounts) {
+  var _a, _b, _c, _d;
+  if (!alliance.members.includes(player.uid)) throw new GameActionError("Tu n'es pas membre de cette alliance.");
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, amount] of Object.entries(amounts)) {
+    if (((_b = player.resources[res]) != null ? _b : 0) < amount) throw new GameActionError("Ressources insuffisantes pour ce d\xE9p\xF4t.");
+  }
+  for (const [res, amount] of Object.entries(amounts)) {
+    player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - amount;
+    treasury[res] = ((_d = treasury[res]) != null ? _d : 0) + amount;
+  }
+  return __spreadProps(__spreadValues({}, alliance), { treasury });
+}
+function utcDay(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function distribute(alliance, actorUid, targetUid, amounts, now) {
+  var _a, _b, _c, _d;
+  const role = allianceRole(alliance, actorUid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent verser le tr\xE9sor.");
+  if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
+  const day = utcDay(now);
+  const count = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
+  if (count >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
+  const treasury = __spreadValues({}, (_b = alliance.treasury) != null ? _b : {});
+  for (const [res, amount] of Object.entries(amounts)) {
+    const max = Math.floor(((_c = treasury[res]) != null ? _c : 0) * ALLIANCE_RULES.distributionMaxPct);
+    if (amount > max) {
+      throw new GameActionError(`Un versement est limit\xE9 \xE0 ${Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock du tr\xE9sor (${max} pour cette ressource).`);
+    }
+  }
+  for (const [res, amount] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount;
+  return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count + 1 } });
+}
+function allianceResearchCost(nextLevel) {
+  const factor = Math.pow(ALLIANCE_RULES.researchGrowth, Math.max(0, nextLevel - 1));
+  const cost = {};
+  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.researchRareCost : ALLIANCE_RULES.researchCommonCost) * factor);
+  return cost;
+}
+function allianceResearchSeconds(nextLevel) {
+  return Math.round(ALLIANCE_RULES.researchHoursPerLevel * nextLevel * 3600);
+}
+function startAllianceResearch(alliance, actorUid, researchId, now) {
+  var _a, _b, _c;
+  const role = allianceRole(alliance, actorUid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers lancent les recherches.");
+  const def = findAllianceResearch(researchId);
+  if (!def) throw new GameActionError("Recherche inconnue.");
+  if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
+  const next = level(alliance.research, def.id) + 1;
+  if (next > def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+  const cost = allianceResearchCost(next);
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, amount] of Object.entries(cost)) {
+    if (((_b = treasury[res]) != null ? _b : 0) < amount) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
+  }
+  for (const [res, amount] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount;
+  return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
+}
+function completeAllianceResearch(alliance, now) {
+  var _a;
+  const active = alliance.activeResearch;
+  if (!active || active.endTime > now) return { alliance, completed: null };
+  return {
+    alliance: __spreadProps(__spreadValues({}, alliance), { research: __spreadProps(__spreadValues({}, (_a = alliance.research) != null ? _a : {}), { [active.id]: active.level }), activeResearch: null }),
+    completed: { id: active.id, level: active.level }
+  };
+}
+function allianceStandings(members) {
+  var _a;
+  const byAlliance = /* @__PURE__ */ new Map();
+  for (const m of members) {
+    if (!m.allianceId || !(m.seasonXp > 0)) continue;
+    byAlliance.set(m.allianceId, [...(_a = byAlliance.get(m.allianceId)) != null ? _a : [], m.seasonXp]);
+  }
+  return [...byAlliance.entries()].map(([allianceId, xps]) => ({
+    allianceId,
+    score: xps.sort((a, b) => b - a).slice(0, ALLIANCE_RULES.seasonTopMembers).reduce((a, b) => a + b, 0)
+  })).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
+}
+function note(title, message, now) {
+  return { kind: "alliance", title, message, createdAtMs: now, read: false };
+}
+function performAllianceAction(input) {
+  var _a, _b, _c, _d, _e, _f;
+  const { action, now, actor } = input;
+  const alliance = input.alliance;
+  const out = { alliance, actor, target: (_a = input.target) != null ? _a : null, memberships: {}, logs: [], notifications: {} };
+  const log = (entry) => out.logs.push(__spreadValues({ actorUid: actor.uid, actorPseudo: actor.pseudo, createdAtMs: now }, entry));
+  const research = (a) => {
+    var _a2;
+    return __spreadValues({}, (_a2 = a == null ? void 0 : a.research) != null ? _a2 : {});
+  };
+  switch (action == null ? void 0 : action.type) {
+    case "create": {
+      if (actor.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      out.alliance = newAlliance({ uid: actor.uid, pseudo: actor.pseudo }, action.name, action.tag, now);
+      return out;
+    }
+    case "join": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      if (actor.allianceId && actor.allianceId !== alliance.id) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      out.alliance = addMember(alliance, { uid: actor.uid, pseudo: actor.pseudo });
+      out.memberships[actor.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
+      log({ kind: "join" });
+      return out;
+    }
+    case "leave": {
+      if (!alliance || !alliance.members.includes(actor.uid)) {
+        out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
+        out.alliance = alliance;
+        return out;
+      }
+      out.alliance = removeMember(alliance, actor.uid);
+      out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
+      log({ kind: "leave" });
+      return out;
+    }
+    case "kick": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const targetPseudo = (_b = alliance.memberPseudos[action.targetUid]) != null ? _b : "?";
+      out.alliance = kickMember(alliance, actor.uid, String((_c = action.targetUid) != null ? _c : ""));
+      out.memberships[action.targetUid] = { allianceId: "", allianceResearch: {} };
+      out.notifications[action.targetUid] = [note("Exclu de l'alliance", `${actor.pseudo} t'a exclu de [${alliance.tag}] ${alliance.name}.`, now)];
+      log({ kind: "kick", targetUid: action.targetUid, targetPseudo });
+      return out;
+    }
+    case "promote":
+    case "demote": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setOfficer(alliance, actor.uid, String((_d = action.targetUid) != null ? _d : ""), action.type === "promote");
+      return out;
+    }
+    case "deposit": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const amounts = parseAmounts(action.resources);
+      out.alliance = deposit(alliance, actor, amounts);
+      log({ kind: "deposit", resources: amounts });
+      return out;
+    }
+    case "distribute": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const target = input.target;
+      if (!target || target.uid !== action.targetUid) throw new GameActionError("Ce joueur est introuvable.");
+      const amounts = parseAmounts(action.resources);
+      out.alliance = distribute(alliance, actor.uid, target.uid, amounts, now);
+      for (const [res, amount] of Object.entries(amounts)) target.resources[res] = ((_e = target.resources[res]) != null ? _e : 0) + amount;
+      out.notifications[target.uid] = [note("Versement du tr\xE9sor", `${actor.pseudo} t'a vers\xE9 des ressources du tr\xE9sor de l'alliance.`, now)];
+      log({ kind: "distribute", targetUid: target.uid, targetPseudo: target.pseudo, resources: amounts });
+      return out;
+    }
+    case "research": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const started = startAllianceResearch(alliance, actor.uid, String((_f = action.researchId) != null ? _f : ""), now);
+      out.alliance = started;
+      const def = findAllianceResearch(started.activeResearch.id);
+      log({ kind: "research", text: `${def.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
+      return out;
+    }
+    default:
+      throw new GameActionError("Action d'alliance inconnue.");
+  }
+}
+function finishAllianceResearch(alliance, now) {
+  var _a, _b, _c;
+  const done = completeAllianceResearch(alliance, now);
+  if (!done.completed) return null;
+  const def = findAllianceResearch(done.completed.id);
+  const label = `${(_a = def == null ? void 0 : def.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
+  const memberships = {};
+  const notifications = {};
+  for (const uid of done.alliance.members) {
+    memberships[uid] = { allianceId: alliance.id, allianceResearch: __spreadValues({}, (_b = done.alliance.research) != null ? _b : {}) };
+    notifications[uid] = [note("Recherche d'alliance termin\xE9e", `${(_c = def == null ? void 0 : def.emoji) != null ? _c : ""} ${label} : le bonus s'applique \xE0 tous les membres.`.trim(), now)];
+  }
+  return {
+    alliance: done.alliance,
+    memberships,
+    notifications,
+    logs: [{ kind: "research-done", actorUid: "", actorPseudo: "", text: label, createdAtMs: now }]
+  };
+}
+
 // src/game/economy.ts
 var ECONOMY_RULES = {
   /** Énergie consommée par seconde et par place de hangar occupée. */
@@ -990,10 +1325,12 @@ function getFleetUpkeep(units) {
   return upkeep;
 }
 function boostedRates(input, multipliers) {
-  var _a;
+  var _a, _b;
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const alliance = allianceProductionFactor(input.allianceResearch);
+  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
   for (const [res, m] of Object.entries(multipliers)) {
-    if (gross[res] && m) gross[res] = ((_a = gross[res]) != null ? _a : 0) * m;
+    if (gross[res] && m) gross[res] = ((_b = gross[res]) != null ? _b : 0) * m;
   }
   return gross;
 }
@@ -1057,10 +1394,6 @@ function missionRewards(mission, player) {
   }
   return out;
 }
-
-// src/game/errors.ts
-var GameActionError = class extends Error {
-};
 
 // src/game/seasons.ts
 var SEASON_MONTHS = [
@@ -1140,7 +1473,7 @@ function seasonRewardFor(rank, seasonXp) {
   if (seasonXp >= SEASON_RULES.participationXp) return { hours: SEASON_RULES.participationHours, rare: 0, title: "" };
   return null;
 }
-function performSeasonReward(playerIn, queuesIn, standing, reward, now) {
+function performSeasonReward(playerIn, queuesIn, standing, reward, now, headline) {
   var _a, _b, _c;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
@@ -1156,7 +1489,7 @@ function performSeasonReward(playerIn, queuesIn, standing, reward, now) {
   if (reward.title) {
     titleText = `${reward.title} de ${seasonLabel(standing.seasonId)}`;
     const title = { label: titleText, seasonId: standing.seasonId, rank: standing.rank };
-    player.titles = [...((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== standing.seasonId), title];
+    player.titles = [...((_c = player.titles) != null ? _c : []).filter((t) => t.label !== titleText), title];
     if (!player.activeTitle) player.activeTitle = titleText;
   }
   const total = Object.values(gained).reduce((a, b) => a + (b != null ? b : 0), 0);
@@ -1168,7 +1501,7 @@ function performSeasonReward(playerIn, queuesIn, standing, reward, now) {
       ...flushed.notifications,
       {
         kind: "season",
-        title: `Saison ${seasonLabel(standing.seasonId)} termin\xE9e : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
+        title: headline != null ? headline : `Saison ${seasonLabel(standing.seasonId)} termin\xE9e : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
         message: `${formatInt(standing.seasonXp)} XP de saison. R\xE9compense : ${formatInt(total)} ressources${titleText ? ` et le titre \xAB ${titleText} \xBB` : ""}.`,
         createdAtMs: now,
         read: false
@@ -1638,11 +1971,11 @@ function flushState(playerIn, queuesIn, now) {
   }
   return { player, queues, notifications };
 }
-function applyTechEffect(player, techId, level) {
+function applyTechEffect(player, techId, level2) {
   var _a, _b;
   const tech = TECHNOLOGIES.find((t) => t.id === techId);
   if (!tech) return;
-  const levels = __spreadProps(__spreadValues({}, player.techLevels), { [techId]: level });
+  const levels = __spreadProps(__spreadValues({}, player.techLevels), { [techId]: level2 });
   switch (tech.effect) {
     case "energy_efficiency":
       player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
@@ -1657,7 +1990,7 @@ function applyTechEffect(player, techId, level) {
       player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
       break;
     case "unlock_recipe":
-      player.bonuses.unlockedRecipes = level;
+      player.bonuses.unlockedRecipes = level2;
       break;
     case "unlock_hangars":
     case "unlock_buildings":
@@ -1670,7 +2003,7 @@ function applyTechEffect(player, techId, level) {
       const unitId = unitForTech(techId);
       if (!unitId) break;
       if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
-      player.units[unitId].level = level;
+      player.units[unitId].level = level2;
       break;
     }
     default:
@@ -1841,7 +2174,7 @@ function checkAttackAllowed(ctx) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -1884,45 +2217,47 @@ function performAttack(input) {
   const def = flushedDefender.player;
   const combat = resolveCombat({
     lootMultiplier: lootFactor(now),
+    garrisons: (_j = input.garrisons) != null ? _j : [],
+    garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
     fleet,
-    defenderUnits: (_j = def.units) != null ? _j : {},
-    defenderTechLevels: (_k = def.techLevels) != null ? _k : {},
+    defenderUnits: (_k = def.units) != null ? _k : {},
+    defenderTechLevels: (_l = def.techLevels) != null ? _l : {},
     defenderRepairPct: getRepairPercent(def.buildings),
-    defenderShieldPct: getShieldPercent(def.buildings),
+    defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_l = def.resources) != null ? _l : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def.buildings, res))])
+      Object.entries((_m = def.resources) != null ? _m : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def.buildings, res))])
     )
   });
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
   const survivors = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_m = combat.attackerLosses[unitId]) != null ? _m : 0));
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_n = combat.attackerLosses[unitId]) != null ? _n : 0));
   if (input.inFlight) {
     for (const [unitId, qty] of Object.entries(survivors)) {
       if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
     }
   }
-  for (const [res, amt] of Object.entries((_n = combat.loot) != null ? _n : {})) {
-    if (!input.inFlight) attacker.resources[res] = ((_o = attacker.resources[res]) != null ? _o : 0) + (amt != null ? amt : 0);
-    def.resources[res] = Math.max(0, ((_p = def.resources[res]) != null ? _p : 0) - (amt != null ? amt : 0));
+  for (const [res, amt] of Object.entries((_o = combat.loot) != null ? _o : {})) {
+    if (!input.inFlight) attacker.resources[res] = ((_p = attacker.resources[res]) != null ? _p : 0) + (amt != null ? amt : 0);
+    def.resources[res] = Math.max(0, ((_q = def.resources[res]) != null ? _q : 0) - (amt != null ? amt : 0));
   }
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
-  if (combat.outcome === "attacker_win") attacker.victories = ((_q = attacker.victories) != null ? _q : 0) + 1;
-  else if (combat.outcome === "defender_win") attacker.defeats = ((_r = attacker.defeats) != null ? _r : 0) + 1;
+  if (combat.outcome === "attacker_win") attacker.victories = ((_r = attacker.victories) != null ? _r : 0) + 1;
+  else if (combat.outcome === "defender_win") attacker.defeats = ((_s = attacker.defeats) != null ? _s : 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
   attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") def.victories = ((_s = def.victories) != null ? _s : 0) + 1;
+  if (combat.outcome === "defender_win") def.victories = ((_t = def.victories) != null ? _t : 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    def.defeats = ((_t = def.defeats) != null ? _t : 0) + 1;
+    def.defeats = ((_u = def.defeats) != null ? _u : 0) + 1;
     def.lastDefeatAtMs = now;
   }
   applyXpDelta(def, defenderXpDelta, now);
@@ -1937,7 +2272,7 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_u = outcomeTitle[combat.outcome]) != null ? _u : "Rapport de combat",
+      title: (_v = outcomeTitle[combat.outcome]) != null ? _v : "Rapport de combat",
       message: `Attaque contre ${defender.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
       createdAtMs: now,
       read: false
@@ -1952,7 +2287,7 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_v = defenderTitle[combat.outcome]) != null ? _v : "Rapport de combat",
+      title: (_w = defenderTitle[combat.outcome]) != null ? _w : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
       createdAtMs: now,
       read: false
@@ -1977,7 +2312,11 @@ function performAttack(input) {
     defenderProcessed: false,
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
-    defenderApplied: true
+    defenderApplied: true,
+    garrisons: ((_x = input.garrisons) != null ? _x : []).map((g, i) => {
+      var _a2, _b2;
+      return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
+    })
   };
   return {
     ok: true,
@@ -1990,8 +2329,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_w = combat.loot) != null ? _w : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses], (_x = eventDebrisPercent(now)) != null ? _x : DEBRIS_RULES.percent)
+    loot: (_y = combat.loot) != null ? _y : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_z = combat.garrisonLosses) != null ? _z : []], (_A = eventDebrisPercent(now)) != null ? _A : DEBRIS_RULES.percent)
   };
 }
 
@@ -2044,7 +2383,7 @@ function defaultQueues() {
 }
 
 // src/game/actions.ts
-var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
+var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
 function positiveInt(value, label) {
   const n = Math.floor(Number(value));
@@ -2161,7 +2500,7 @@ function applyAction(s, action) {
     }
     case "trade": {
       const { sellId, buyId } = action;
-      if (!RESOURCE_IDS.has(sellId) || !RESOURCE_IDS.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
+      if (!RESOURCE_IDS2.has(sellId) || !RESOURCE_IDS2.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
       const amount = positiveInt(action.amount, "Montant");
       if (((_j = player.resources[sellId]) != null ? _j : 0) < amount) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
       const gained = Math.floor(amount * getTradeRate(sellId, buyId));
@@ -2195,7 +2534,7 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   const resources = {};
   for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
     const n = Math.floor(Number(raw));
-    if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
+    if (!RESOURCE_IDS2.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
     if (n > 0) resources[res] = n;
   }
   if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
@@ -2236,7 +2575,7 @@ function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
   }
   for (const [res, amt] of Object.entries((_b = report.loot) != null ? _b : {})) {
     const key = res;
-    if (RESOURCE_IDS.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
+    if (RESOURCE_IDS2.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
   }
   if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
   else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
@@ -2256,7 +2595,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
   const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
     const n = Math.floor(Number(amt));
-    if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+    if (RESOURCE_IDS2.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
   }
   notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
   return { player, queues, notifications };
@@ -2515,7 +2854,7 @@ function counterEspionage(target) {
   var _a, _b, _c;
   const sentinels = (_c = (_b = (_a = target.units) == null ? void 0 : _a[SPY_RULES.sentinelUnitId]) == null ? void 0 : _b.count) != null ? _c : 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per);
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch);
 }
 function spyScore(spyLevel, counter, probes) {
   return spyLevel - counter + Math.log2(Math.max(1, probes));
@@ -2528,8 +2867,8 @@ function detectionChance(spyLevel, counter) {
   const raw = SPY_RULES.detectionBase + SPY_RULES.detectionPerPoint * (counter - spyLevel);
   return Math.min(SPY_RULES.detectionMax, Math.max(SPY_RULES.detectionMin, raw));
 }
-function spyTravelSeconds(distance, speed) {
-  return Math.round((SPY_RULES.baseMinutes + distance * SPY_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+function spyTravelSeconds(distance, speed, factor = 1) {
+  return Math.round(factor * (SPY_RULES.baseMinutes + distance * SPY_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
 }
 function sectorLabel(uid) {
   const c = galaxyCoords(uid);
@@ -2544,7 +2883,7 @@ function unitsOf(target, ids) {
   }
   return out;
 }
-function buildSpyReportData(target, queues, targetFleets, tier, now) {
+function buildSpyReportData(target, queues, targetFleets, tier, now, garrisons = []) {
   var _a, _b, _c, _d, _e, _f;
   const data = {};
   if (tier >= 1) {
@@ -2555,6 +2894,7 @@ function buildSpyReportData(target, queues, targetFleets, tier, now) {
   if (tier >= 2) {
     data.units = unitsOf(target, OFFENSIVE_UNITS);
     data.defenses = unitsOf(target, DEFENSIVE_UNITS);
+    data.garrisons = garrisons.map((g) => ({ ownerPseudo: g.ownerPseudo, units: g.units }));
   }
   if (tier >= 3) {
     data.buildings = Object.fromEntries(Object.entries((_b = target.buildings) != null ? _b : {}).map(([id, b]) => {
@@ -2586,16 +2926,16 @@ function buildSpyReportData(target, queues, targetFleets, tier, now) {
   return data;
 }
 function resolveSpyArrival(input) {
-  var _a;
+  var _a, _b;
   const { now, probes } = input;
   const spy = flushState(__spreadProps(__spreadValues({}, input.spy), { buildings: withMissingBuildings(input.spy.buildings, input.spy.resources) }), input.spyQueues, now).player;
   const flushed = flushState(__spreadProps(__spreadValues({}, input.target), { buildings: withMissingBuildings(input.target.buildings, input.target.resources) }), input.targetQueues, now);
   const target = flushed.player;
-  const level = espionageLevel(spy);
+  const level2 = espionageLevel(spy);
   const counter = counterEspionage(target);
-  const score = spyScore(level, counter, probes);
+  const score = spyScore(level2, counter, probes);
   const tier = spyTier(score);
-  const detected = ((_a = input.random) != null ? _a : Math.random)() < detectionChance(level, counter);
+  const detected = ((_a = input.random) != null ? _a : Math.random)() < detectionChance(level2, counter);
   const report = {
     spyUid: spy.uid,
     spyPseudo: spy.pseudo,
@@ -2607,7 +2947,7 @@ function resolveSpyArrival(input) {
     score: Math.round(score * 100) / 100,
     tier,
     detected,
-    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now)
+    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, (_b = input.targetGarrisons) != null ? _b : [])
   };
   const spyNotifications = [
     {
@@ -2663,12 +3003,13 @@ function fleetSpeed(units, fleet) {
   }
   return Number.isFinite(slowest) ? slowest : 1;
 }
-function travelSeconds(distance, speed) {
-  return Math.round((FLEET_RULES.baseMinutes + distance * FLEET_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+function travelSeconds(distance, speed, factor = 1) {
+  return Math.round(factor * (FLEET_RULES.baseMinutes + distance * FLEET_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
 }
 function launchFleet(input) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
   const { now, attacker, defender } = input;
+  if (attacker.allianceId && attacker.allianceId === defender.allianceId) throw new GameActionError("Tu ne peux pas attaquer un membre de ton alliance.");
   const check = checkAttackAllowed({
     now,
     attackerUid: attacker.uid,
@@ -2691,7 +3032,7 @@ function launchFleet(input) {
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));
@@ -2727,6 +3068,9 @@ function launchFleet(input) {
 }
 function recallFleet(fleet, uid, now) {
   if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
+  if (fleet.status === "stationed") {
+    return __spreadProps(__spreadValues({}, fleet), { status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) });
+  }
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
@@ -2748,6 +3092,8 @@ function returnMessage(fleet, lootTotal) {
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
+    case "garrison":
+      return { title: "Garnison rentr\xE9e", message: `Ta garnison stationn\xE9e chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
       return { title: "Sondes rentr\xE9es", message: `Tes sondes envoy\xE9es vers ${fleet.targetPseudo} sont de retour.` };
     case "recycle":
@@ -2763,12 +3109,13 @@ function returnMessage(fleet, lootTotal) {
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e, _f;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
   if (mission === "attack" && req.owner.uid === target.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-m\xEAme !");
   if (mission === "spy" && req.owner.uid === target.uid) throw new GameActionError("Tu ne peux pas t'espionner toi-m\xEAme.");
+  if (mission === "garrison" && !target) throw new GameActionError("Ce joueur est introuvable.");
   const flushed = flushState(__spreadProps(__spreadValues({}, req.owner), { buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }), req.ownerQueues, now);
   const owner = flushed.player;
   let out;
@@ -2776,6 +3123,7 @@ function performLaunch(req) {
   else if (mission === "spy") out = launchSpy(owner, target, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, (_c = req.debris) != null ? _c : null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, (_d = req.patrolMinutes) != null ? _d : 0, now);
+  else if (mission === "garrison") out = launchGarrison(owner, target, req.fleet, (_e = req.garrisonHours) != null ? _e : 0, (_f = req.garrisonsAtHost) != null ? _f : 0, now);
   else throw new GameActionError("Mission inconnue.");
   return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
 }
@@ -2814,14 +3162,14 @@ function newFleet(owner, target, mission, units, now, arriveAtMs) {
 function launchSpy(owner, target, raw, now) {
   const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed) * 1e3;
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
 }
 function launchRecycle(owner, field, raw, now) {
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de d\xE9bris n'existe plus.");
   const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones r\xE9cup\xE9rateurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
   return {
     attacker: owner,
     fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
@@ -2855,6 +3203,48 @@ function launchPatrol(owner, raw, minutes, now) {
     fleet: newFleet(owner, { uid: owner.uid, pseudo: "Patrouille" }, "patrol", units, now, arriveAtMs),
     defenderNotifications: []
   };
+}
+function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
+  var _a, _b;
+  if (owner.uid === host.uid) throw new GameActionError("Tu ne peux pas stationner chez toi : utilise la patrouille.");
+  if (!owner.allianceId || owner.allianceId !== host.allianceId) throw new GameActionError("Tu ne peux stationner que chez un membre de ton alliance.");
+  const hours = Math.round(Number(hoursIn));
+  if (!(hours >= ALLIANCE_RULES.garrisonMinHours && hours <= ALLIANCE_RULES.garrisonMaxHours)) {
+    throw new GameActionError(`Le stationnement dure entre ${ALLIANCE_RULES.garrisonMinHours} h et ${ALLIANCE_RULES.garrisonMaxHours} h.`);
+  }
+  if (garrisonsAtHost >= ALLIANCE_RULES.maxGarrisonsPerHost) throw new GameActionError(`${host.pseudo} accueille d\xE9j\xE0 ${ALLIANCE_RULES.maxGarrisonsPerHost} garnisons.`);
+  const requested = {};
+  for (const [id, v] of Object.entries(raw != null ? raw : {})) {
+    const qty = Math.floor(Number(v));
+    if (qty > 0) requested[id] = qty;
+  }
+  const cost = patrolEnergyCost(owner.units, requested, hours * 60);
+  if (((_a = owner.resources.energy) != null ? _a : 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} \xE9nergie pour l'entretien de la garnison.`);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
+  owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours * 36e5, stationedUntilMs: null });
+  return {
+    attacker: owner,
+    fleet,
+    defenderNotifications: [
+      {
+        kind: "fleet",
+        title: "Renforts en approche",
+        message: `${owner.pseudo} t'envoie une garnison de ${formatInt(Object.values(units).reduce((a, b) => a + b, 0))} vaisseaux pour ${hours} h.`,
+        createdAtMs: now,
+        read: false
+      }
+    ]
+  };
+}
+function stationGarrison(fleet) {
+  var _a;
+  return __spreadProps(__spreadValues({}, fleet), { status: "stationed", stationedUntilMs: fleet.arriveAtMs + ((_a = fleet.durationMs) != null ? _a : 0) });
+}
+function endGarrison(fleet, now) {
+  return __spreadProps(__spreadValues({}, fleet), { status: "returning", returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) });
 }
 function patrolTurnaround(fleet) {
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", returnAtMs: fleet.departAtMs + 2 * (fleet.arriveAtMs - fleet.departAtMs) });
@@ -2900,18 +3290,19 @@ var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
 var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -2927,7 +3318,8 @@ function applyGameContent(overrides) {
       debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_p = (_o = overrides.rules) == null ? void 0 : _o.debris) != null ? _p : {}),
       patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_r = (_q = overrides.rules) == null ? void 0 : _q.patrol) != null ? _r : {}),
       events: __spreadValues(__spreadValues({}, defaults.rules.events), (_t = (_s = overrides.rules) == null ? void 0 : _s.events) != null ? _t : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_v = (_u = overrides.rules) == null ? void 0 : _u.seasons) != null ? _v : {})
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_v = (_u = overrides.rules) == null ? void 0 : _u.seasons) != null ? _v : {}),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_x = (_w = overrides.rules) == null ? void 0 : _w.alliances) != null ? _x : {})
     }
   };
   setBuildings(content.buildings);
@@ -2943,6 +3335,12 @@ function applyGameContent(overrides) {
   Object.assign(PATROL_RULES, content.rules.patrol);
   Object.assign(EVENT_RULES, content.rules.events);
   Object.assign(SEASON_RULES, content.rules.seasons);
+  Object.assign(ALLIANCE_RULES, content.rules.alliances);
   current = content;
   return content;
+}
+
+// src/server/hooksEntry.ts
+function flushPlayer(player, queues, now) {
+  return flushState(__spreadProps(__spreadValues({}, player), { buildings: withMissingBuildings(player.buildings, player.resources) }), queues, now);
 }

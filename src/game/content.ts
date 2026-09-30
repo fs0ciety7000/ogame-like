@@ -10,6 +10,7 @@ import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
+import { ALLIANCE_RULES } from "@/game/alliances";
 import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
@@ -33,6 +34,7 @@ export interface GameRules {
   patrol: typeof PATROL_RULES;
   events: typeof EVENT_RULES;
   seasons: typeof SEASON_RULES;
+  alliances: typeof ALLIANCE_RULES;
 }
 
 export interface GameContent {
@@ -55,6 +57,7 @@ const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
 const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -63,7 +66,7 @@ export function defaultGameContent(): GameContent {
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES },
   });
 }
 
@@ -92,6 +95,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
       events: { ...defaults.rules.events, ...(overrides.rules?.events ?? {}) },
       seasons: { ...defaults.rules.seasons, ...(overrides.rules?.seasons ?? {}) },
+      alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -107,6 +111,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(PATROL_RULES, content.rules.patrol);
   Object.assign(EVENT_RULES, content.rules.events);
   Object.assign(SEASON_RULES, content.rules.seasons);
+  Object.assign(ALLIANCE_RULES, content.rules.alliances);
   current = content;
   return content;
 }

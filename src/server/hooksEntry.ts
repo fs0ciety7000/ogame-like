@@ -13,9 +13,20 @@ export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";
 export { performLaunch, performFleetReturn, recallFleet, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
-export { performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, SEASON_RULES } from "@/game/seasons";
+export { ALLIANCE_RULES, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
+export { stationGarrison, endGarrison } from "@/game/fleets";
+export { performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
+
+import { flushState } from "@/game/flush";
+import { withMissingBuildings } from "@/game/buildings";
+import type { PlayerState, QueuesState } from "@/types/game";
+
+/** Production et files rattrapées (avant une écriture hors action de jeu). */
+export function flushPlayer(player: PlayerState, queues: QueuesState, now: number) {
+  return flushState({ ...player, buildings: withMissingBuildings(player.buildings, player.resources) }, queues, now);
+}

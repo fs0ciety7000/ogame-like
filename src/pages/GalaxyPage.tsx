@@ -1,12 +1,13 @@
+import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { Eye, Gift, LocateFixed, Minus, Plus, Recycle, Search, Sword } from "lucide-react";
+import { Eye, Gift, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeDebrisFields, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { debrisTotal, type DebrisField } from "@/game/debris";
-import { RecycleDialog } from "@/components/game/MissionDialogs";
+import { GarrisonDialog, RecycleDialog } from "@/components/game/MissionDialogs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { formatCoords, galaxyCoords } from "@/game/galaxy";
 import { distanceBetween, FLEET_RULES, fleetProgress, mapPosition, travelSeconds } from "@/game/fleets";
@@ -72,6 +73,7 @@ export function GalaxyPage() {
   const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [debrisFields, setDebrisFields] = useState<DebrisField[]>([]);
   const [recycleField, setRecycleField] = useState<DebrisField | null>(null);
+  const [garrisonTarget, setGarrisonTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x: number; y: number; view: View; moved: boolean } | null>(null);
 
@@ -156,7 +158,8 @@ export function GalaxyPage() {
     );
     if (speeds.length === 0) return { distance: distanceBetween(uid, selected.uid), fast: null, slow: null };
     const distance = distanceBetween(uid, selected.uid);
-    return { distance, fast: travelSeconds(distance, Math.max(...speeds)), slow: travelSeconds(distance, Math.max(1, Math.min(...speeds))) };
+    const f = allianceFlightFactor(me.allianceResearch);
+    return { distance, fast: travelSeconds(distance, Math.max(...speeds), f), slow: travelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
   }, [uid, me, selected]);
 
   const k = view.k;
@@ -397,9 +400,15 @@ export function GalaxyPage() {
               )}
               {selected.uid !== uid && (
                 <div className="flex gap-2">
-                  <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
-                    <Sword className="mr-1 h-4 w-4" /> Attaquer
-                  </Button>
+                  {me?.allianceId && selected.allianceId === me.allianceId ? (
+                    <Button size="sm" className="flex-1" onClick={() => setGarrisonTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                      <ShieldPlus className="mr-1 h-4 w-4" /> Renforcer
+                    </Button>
+                  ) : (
+                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                      <Sword className="mr-1 h-4 w-4" /> Attaquer
+                    </Button>
+                  )}
                   <Button variant="outline" size="icon" title="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -443,6 +452,7 @@ export function GalaxyPage() {
       <AttackModal target={attackTarget} onClose={() => setAttackTarget(null)} />
       <TradeModal target={tradeTarget} onClose={() => setTradeTarget(null)} />
       <RecycleDialog field={recycleField} onClose={() => setRecycleField(null)} />
+      <GarrisonDialog target={garrisonTarget} onClose={() => setGarrisonTarget(null)} />
     </div>
   );
 }

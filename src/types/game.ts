@@ -95,11 +95,15 @@ export interface PlayerState {
   /** Titres gagnés en fin de saison, et celui affiché. */
   titles?: PlayerTitle[];
   activeTitle?: string;
+  /** Niveaux des recherches de son alliance (écrit par le serveur). */
+  allianceResearch?: Record<string, number>;
 }
 
 export interface SeasonResult {
   id: string;
   seasonId: string;
+  /** "player" (individuel) ou "alliance" (v1.9). */
+  kind?: string;
   uid: string;
   pseudo: string;
   allianceId: string;
@@ -151,6 +155,8 @@ export interface BattleReport {
    *  anciens rapports, créés avant le combat côté serveur). */
   attackerXpDelta?: number;
   defenderXpDelta?: number;
+  /** Garnisons alliées engagées en défense (v1.9). */
+  garrisons?: { ownerUid: string; ownerPseudo: string; units: Record<string, number>; losses: Record<string, number> }[];
 }
 
 export interface SpyReport {
@@ -175,6 +181,7 @@ export interface SpyReportData {
   resources?: Partial<Record<ResourceId, number>>;
   units?: Record<string, { count: number; level: number }>;
   defenses?: Record<string, { count: number; level: number }>;
+  garrisons?: { ownerPseudo: string; units: Record<string, number> }[];
   buildings?: Record<string, number>;
   techLevels?: Record<string, number>;
   queues?: {
@@ -208,6 +215,24 @@ export interface Alliance {
   /** Officiers explicitement promus ; le fondateur (createdBy) n'y figure
    *  pas et quiconque d'autre est un simple membre par défaut. */
   roles?: Record<string, "officer">;
+  /** v1.9 : trésor commun, recherches et limite de versements du jour. */
+  treasury?: Partial<Record<ResourceId, number>>;
+  research?: Record<string, number>;
+  activeResearch?: { id: string; level: number; endTime: number } | null;
+  distributions?: { day: string; count: number };
+}
+
+export interface AllianceLog {
+  id: string;
+  allianceId: string;
+  kind: "deposit" | "distribute" | "research" | "research-done" | "join" | "leave" | "kick";
+  actorUid: string;
+  actorPseudo: string;
+  targetUid?: string;
+  targetPseudo?: string;
+  resources?: Partial<Record<ResourceId, number>> | null;
+  text?: string;
+  createdAtMs: number;
 }
 
 export interface AllianceMessage {
@@ -230,6 +255,7 @@ export type NotificationKind =
   | "spy"
   | "debris"
   | "season"
+  | "alliance"
   | "event"
   | "gift"
   | "fleet"

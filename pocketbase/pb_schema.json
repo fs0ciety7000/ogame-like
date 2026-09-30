@@ -26,7 +26,7 @@
     "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "createRule": null,
-    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false) || @collection.admins.id ?= @request.auth.id",
+    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false) || @collection.admins.id ?= @request.auth.id",
     "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
     "fields": [
       {
@@ -183,6 +183,12 @@
         "required": false,
         "max": 200,
         "presentable": false
+      },
+      {
+        "name": "allianceResearch",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [
@@ -406,6 +412,12 @@
         "name": "defenderApplied",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "garrisons",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [
@@ -562,9 +574,9 @@
     "type": "base",
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
-    "createRule": "@request.auth.id != \"\" && @request.body.createdBy = @request.auth.id",
-    "updateRule": "@request.auth.id != \"\" && (createdBy = @request.auth.id || (@request.body.name:isset = false && @request.body.tag:isset = false && @request.body.createdBy:isset = false && @request.body.roles:isset = false))",
-    "deleteRule": "createdBy = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
     "fields": [
       {
         "name": "name",
@@ -610,6 +622,36 @@
         "type": "json",
         "required": false,
         "maxSize": 2000000
+      },
+      {
+        "name": "treasury",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "research",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "activeResearch",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "researchEndMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "distributions",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [
@@ -620,9 +662,9 @@
     "id": "pbc_ce_alliance_messages",
     "name": "alliance_messages",
     "type": "base",
-    "listRule": "@collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= allianceId",
-    "viewRule": "@collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= allianceId",
-    "createRule": "@request.body.authorUid = @request.auth.id && @collection.players.id ?= @request.auth.id && @collection.players.allianceId ?= @request.body.allianceId",
+    "listRule": "@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId",
+    "viewRule": "@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId",
+    "createRule": "@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId",
     "updateRule": null,
     "deleteRule": null,
     "fields": [
@@ -802,8 +844,8 @@
     "id": "pbc_ce_fleets",
     "name": "fleets",
     "type": "base",
-    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
-    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
+    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\") || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\")",
+    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && mission = \"attack\") || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\")",
     "createRule": null,
     "updateRule": null,
     "deleteRule": null,
@@ -898,6 +940,18 @@
         "name": "recalled",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "durationMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "stationedUntilMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
@@ -1084,10 +1138,93 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
       }
     ],
     "indexes": [
       "CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_alliance_logs",
+    "name": "alliance_logs",
+    "type": "base",
+    "listRule": "@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId",
+    "viewRule": "@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "allianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "actorUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "actorPseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "targetUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "targetPseudo",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "resources",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"
     ]
   }
 ]

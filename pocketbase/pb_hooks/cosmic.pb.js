@@ -259,7 +259,18 @@ cronAdd("cosmic_fleets", "* * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
   db.processDueFleets(db.loadGame(), Date.now(), null);
   db.purgeDebris(Date.now());
+  db.processAllianceResearch(db.loadGame(), Date.now());
 });
+
+/**
+ * POST /api/cosmic/alliance  { type, ... } — actions d'alliance (v1.9) :
+ * create {name, tag}, join {allianceId}, leave, kick/promote/demote {targetUid},
+ * deposit {resources}, distribute {targetUid, resources}, research {researchId}.
+ */
+routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.js`).allianceRequest(e), $apis.requireAuth("users"));
+
+/** POST /api/cosmic/alliance/intel — rapports récents des membres. */
+routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
 // Clôture de la saison précédente (sans effet si elle est déjà close).
 cronAdd("cosmic_seasons", "7 * * * *", () => {

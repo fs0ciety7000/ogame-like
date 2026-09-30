@@ -24,12 +24,13 @@ export const COMBAT_RULES = {
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
-export function getShieldPercent(buildings: Buildings): number {
+export function getShieldPercent(buildings: Buildings, allianceBonus = 0): number {
   let levels = 0;
   for (const b of BUILDINGS) {
     if (b.effect?.type === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
   }
-  return Math.min(COMBAT_RULES.shieldMax, levels * COMBAT_RULES.shieldPerLevel);
+  // Le Bouclier fédéral (alliance) s'ajoute et repousse d'autant le plafond.
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus);
 }
 const RARE_RESOURCES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 const COMMON_RESOURCES: ResourceId[] = ["scrap", "energy", "nano", "data"];
@@ -112,6 +113,18 @@ export interface CombatResult {
   shieldPercent?: number;
   /** Défenses du défenseur reconstruites gratuitement après le combat. */
   defenderRebuilt?: Record<string, number>;
+  /** Pertes de chaque garnison alliée (même ordre qu'en entrée). */
+  garrisonLosses?: Record<string, number>[];
+  /** Puissance apportée par les garnisons (comprise dans defenderPower). */
+  garrisonPower?: number;
+}
+
+/** Garnison alliée stationnée chez le défenseur (v1.9). */
+export interface CombatGarrison {
+  /** Unités du propriétaire (pour les niveaux) et ses technologies. */
+  units: Units;
+  techLevels: TechLevels;
+  fleet: Record<string, number>;
 }
 
 export function resolveCombat(params: {
@@ -127,6 +140,9 @@ export function resolveCombat(params: {
   defenderShieldPct?: number;
   /** Multiplicateur du butin (événement « Guerre ouverte »). */
   lootMultiplier?: number;
+  /** Garnisons alliées et part de leur puissance engagée. */
+  garrisons?: CombatGarrison[];
+  garrisonFactor?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
@@ -134,10 +150,14 @@ export function resolveCombat(params: {
   // Le bouclier absorbe une part de l'attaque ; le défenseur, chez lui, se
   // bat avec ses défenses ET ses vaisseaux à quai (ceux en vol n'y sont plus).
   const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
+  const garrisons = params.garrisons ?? [];
+  const garrisonFactor = params.garrisonFactor ?? 0.5;
+  const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
   const defenderPower =
     (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
       computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) *
-    (1 + COMBAT_RULES.homeDefenseBonus);
+      (1 + COMBAT_RULES.homeDefenseBonus) +
+    garrisonPower;
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
@@ -197,6 +217,16 @@ export function resolveCombat(params: {
     if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
   });
 
+  // Garnisons : même part de pertes que leur engagement, sans réparation.
+  const garrisonLosses = garrisons.map((g) => {
+    const lost: Record<string, number> = {};
+    for (const [unitId, qty] of Object.entries(g.fleet)) {
+      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
+      if (n > 0) lost[unitId] = Math.min(qty, n);
+    }
+    return lost;
+  });
+
   // Butin : une part des ressources du défenseur, dans la limite de ce que
   // la flotte survivante peut transporter (réduit proportionnellement).
   const survivors: Record<string, number> = {};
@@ -246,5 +276,7 @@ export function resolveCombat(params: {
     cargoCapacity,
     shieldPercent: shield,
     defenderRebuilt,
+    garrisonLosses,
+    garrisonPower,
   };
 }

@@ -4,6 +4,7 @@ import { getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
+import { allianceProductionFactor } from "@/game/alliances";
 import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 
 /* =====================================================
@@ -34,6 +35,8 @@ export interface EconomyInput {
   techLevels: TechLevels;
   units?: Units;
   resources: Partial<Resources>;
+  /** Recherches de l'alliance du joueur (Industrie coopérative). */
+  allianceResearch?: Record<string, number>;
 }
 
 /** Énergie consommée par seconde par les unités construites. */
@@ -65,6 +68,8 @@ export interface EconomySnapshot {
 /** Production brute, avec les bonus d'événement donnés. */
 function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>): Partial<Resources> {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const alliance = allianceProductionFactor(input.allianceResearch);
+  if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
   }
