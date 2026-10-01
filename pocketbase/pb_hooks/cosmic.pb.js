@@ -432,6 +432,17 @@ cronAdd("cosmic_market", "*/5 * * * *", () => {
   }
 });
 
+// Alertes de ressources anormales (v3.3) : analyse horaire des stocks (ou à la demande).
+routerAdd("POST", "/api/cosmic/admin/anomalies", (e) => require(`${__hooks}/cosmic_db.js`).adminScanAnomalies(e), $apis.requireAuth("users", "_superusers"));
+cronAdd("cosmic_anomalies", "13 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).scanAnomalies(Date.now());
+    if (n > 0) console.log(`[cosmic] ${n} alerte(s) de ressources anormales`);
+  } catch (err) {
+    console.log(`[cosmic] analyse des stocks : ${err}`);
+  }
+});
+
 // Sauvegardes : PocketBase en crée une chaque nuit (setup.mjs) ; on vérifie
 // chaque matin qu'elle existe bien, sinon l'équipe est prévenue.
 cronAdd("cosmic_backup_check", "20 5 * * *", () => {

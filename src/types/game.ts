@@ -105,6 +105,12 @@ export interface PlayerState {
   onboarding?: { claimed: string[]; hidden?: boolean };
   /** v3.0 : posture de la base face aux attaques. */
   posture?: { id: "standard" | "bunker" | "riposte"; changedAtMs: number };
+  /** v3.4 : nombre d'ascensions et date de la dernière. */
+  ascensions?: number;
+  ascendedAtMs?: number;
+  /** v3.5 : colonies (stocks séparés) et vaisseau colonial en route. */
+  colonies?: import("@/game/colonies").Colony[];
+  colonizing?: import("@/game/colonies").Colonizing | null;
 }
 
 export interface SeasonResult {
@@ -167,6 +173,8 @@ export interface BattleReport {
   garrisons?: { ownerUid: string; ownerPseudo: string; units: Record<string, number>; losses: Record<string, number> }[];
   /** v2.8 : flotte envoyée par l'attaquant (statistiques d'équilibrage). */
   attackerFleet?: Record<string, number>;
+  /** v3.5 : colonie attaquée (vide : planète mère). */
+  planetId?: string;
 }
 
 export interface SpyReport {
@@ -232,12 +240,16 @@ export interface Alliance {
   research?: Record<string, number>;
   activeResearch?: { id: string; level: number; endTime: number } | null;
   distributions?: { day: string; count: number };
+  /** v3.3 : projets (niveau, financement en cours, fin de construction) et
+   *  contributions personnelles des membres (valeur, une rare = 100). */
+  projects?: Record<string, { level: number; funded: Partial<Record<ResourceId, number>>; buildEndMs: number }>;
+  projectContributors?: Record<string, number>;
 }
 
 export interface AllianceLog {
   id: string;
   allianceId: string;
-  kind: "deposit" | "distribute" | "research" | "research-done" | "join" | "leave" | "kick";
+  kind: "deposit" | "distribute" | "research" | "research-done" | "project" | "project-done" | "join" | "leave" | "kick";
   actorUid: string;
   actorPseudo: string;
   targetUid?: string;

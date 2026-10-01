@@ -125,3 +125,8 @@ export function setMyReportsForBadge(list: GameReport[]) {
 export function setAllReportsForBadge(list: GameReport[]) {
   useReportBadges.setState({ pendingNew: list.filter((r) => r.status === "new").length });
 }
+
+/** Analyse immédiate des stocks (alertes de ressources anormales, v3.3). */
+export function adminScanAnomalies() {
+  return pb.send<{ alerts: number }>("/api/cosmic/admin/anomalies", { method: "POST" });
+}

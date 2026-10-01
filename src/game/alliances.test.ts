@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   addMember,
   ALLIANCE_RULES,
+  allianceBastionBonus,
+  allianceForgeFactor,
+  allianceNextDueMs,
+  allianceProjectCost,
+  allianceSiegeFactor,
+  finishAllianceResearch,
+  fundAllianceProject,
   allianceCounterSpy,
   allianceFlightFactor,
   allianceProductionFactor,
@@ -20,6 +27,7 @@ import {
   startAllianceResearch,
 } from "@/game/alliances";
 import { defaultPlayerState } from "@/game/defaults";
+import { playerBuildTimeFactor } from "@/game/bonuses";
 import { advanceResources } from "@/game/economy";
 import { resolveCombat } from "@/game/combat";
 import type { Alliance, PlayerState } from "@/types/game";
@@ -144,5 +152,60 @@ describe("garrisons and alliance season", () => {
       { allianceId: "b", score: 250, rank: 1 },
       { allianceId: "a", score: 200, rank: 2 },
     ]);
+  });
+});
+
+describe("alliance projects (v3.3)", () => {
+  const rich = () => {
+    const p = player("m1");
+    for (const k of Object.keys(p.resources)) (p.resources as Record<string, number>)[k] = 10_000_000_000;
+    return p;
+  };
+  const withMember = () => {
+    const a = addMember(make(), { uid: "m1", pseudo: "M1" });
+    return { ...a, treasury: { scrap: 2_000_000_000, energy: 2_000_000_000, nano: 2_000_000_000, data: 2_000_000_000, reinforcedSteel: 1e8, cyberModule: 1e8, syntheticNanites: 1e8, aiFragment: 1e8 } };
+  };
+
+  it("doubles the cost of each tier", () => {
+    expect(allianceProjectCost(1)).toMatchObject({ scrap: 500_000_000, aiFragment: 5_000_000 });
+    expect(allianceProjectCost(5)).toMatchObject({ scrap: 8_000_000_000, aiFragment: 80_000_000 });
+  });
+
+  it("caps funding at what is missing, counts personal contributions and starts the build once funded", () => {
+    const a = withMember();
+    const m = rich();
+    const part = fundAllianceProject(a, m, "forge", "self", { scrap: 900_000_000 }, NOW);
+    expect(part.used).toEqual({ scrap: 500_000_000 });
+    expect(m.resources.scrap).toBe(9_500_000_000);
+    expect(part.alliance.projectContributors).toEqual({ m1: 500_000_000 });
+    expect(part.started).toBeNull();
+    expect(() => fundAllianceProject(part.alliance, m, "forge", "self", { scrap: 1 }, NOW)).toThrow(/déjà réunies/);
+    expect(() => fundAllianceProject(part.alliance, m, "forge", "treasury", { energy: 1 }, NOW)).toThrow(/trésor/);
+    const f = player("f");
+    const rest = allianceProjectCost(1);
+    delete rest.scrap;
+    const done = fundAllianceProject(part.alliance, f, "forge", "treasury", rest, NOW);
+    expect(done.started).toBe(NOW + 24 * 3600_000);
+    expect(done.alliance.treasury!.energy).toBe(1_500_000_000);
+    expect(() => fundAllianceProject(done.alliance, m, "forge", "self", { scrap: 1 }, NOW)).toThrow(/construction/);
+    expect(allianceNextDueMs(done.alliance)).toBe(NOW + 24 * 3600_000);
+  });
+
+  it("completes the tier and gives the bonuses to every member", () => {
+    const a = { ...withMember(), projects: { forge: { level: 1, funded: {}, buildEndMs: NOW + 1000 }, siege: { level: 2, funded: {}, buildEndMs: 0 }, bastion: { level: 5, funded: {}, buildEndMs: 0 } } };
+    expect(finishAllianceResearch(a, NOW)).toBeNull();
+    const out = finishAllianceResearch(a, NOW + 2000)!;
+    expect(out.alliance!.projects!.forge).toEqual({ level: 2, funded: {}, buildEndMs: 0 });
+    const levels = out.memberships.m1.allianceResearch;
+    expect(levels).toMatchObject({ projet_forge: 2, projet_siege: 2, projet_bastion: 5 });
+    expect(allianceForgeFactor(levels)).toBeCloseTo(0.96);
+    expect(allianceSiegeFactor(levels)).toBeCloseTo(1.08);
+    expect(allianceBastionBonus(levels)).toBeCloseTo(0.1);
+    expect(out.logs[0].kind).toBe("project-done");
+  });
+
+  it("shortens build times with the Anneau-forge", () => {
+    const p = player("m1", { allianceResearch: { projet_forge: 5 } });
+    expect(playerBuildTimeFactor(p, NOW) / playerBuildTimeFactor(player("x"), NOW)).toBeCloseTo(0.9);
   });
 });

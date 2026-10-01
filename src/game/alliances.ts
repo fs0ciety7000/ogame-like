@@ -23,6 +23,15 @@ export interface AllianceResearchDef {
   maxLevel: number;
 }
 
+export interface AllianceProjectDef {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  perLevel: number;
+  maxLevel: number;
+}
+
 export const ALLIANCE_RULES = {
   maxMembers: 6,
   /** Versement : au plus cette part du stock d'une ressource du trésor. */
@@ -52,6 +61,17 @@ export const ALLIANCE_RULES = {
     { id: "brouillage", name: "Réseau de brouillage", emoji: "📡", description: "Ajoute des points de contre-espionnage à chaque membre.", perLevel: 1, maxLevel: 5 },
     { id: "bouclier", name: "Bouclier fédéral", emoji: "🛡️", description: "Renforce le bouclier des bases des membres, au-delà du plafond habituel.", perLevel: 0.01, maxLevel: 5 },
   ] as AllianceResearchDef[],
+  /** v3.3 : projets (méga-structures). Coût du palier n : base × croissance^(n−1). */
+  projectCommonCost: 500_000_000,
+  projectRareCost: 5_000_000,
+  projectGrowth: 2,
+  /** Construction du palier n : n × ce nombre d'heures, une fois financé. */
+  projectHoursPerLevel: 24,
+  projects: [
+    { id: "forge", name: "Anneau-forge", emoji: "🔨", description: "Réduit la durée des constructions et des recherches des membres.", perLevel: 0.02, maxLevel: 5 },
+    { id: "siege", name: "Batterie de siège", emoji: "🎯", description: "Augmente l'attaque des membres contre le Léviathan et les repaires pirates.", perLevel: 0.04, maxLevel: 5 },
+    { id: "bastion", name: "Bastion fédéral", emoji: "🏰", description: "Met à l'abri du pillage une part supplémentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5 },
+  ] as AllianceProjectDef[],
 };
 
 export type AllianceRole = "founder" | "officer" | "member";
@@ -94,6 +114,40 @@ export function allianceCounterSpy(levels: AllianceLevels | undefined | null): n
 /** Bouclier supplémentaire (0,05 = +5 points), qui repousse aussi le plafond. */
 export function allianceShieldBonus(levels: AllianceLevels | undefined | null): number {
   return level(levels, "bouclier") * (findAllianceResearch("bouclier")?.perLevel ?? 0);
+}
+
+/* ---------- bonus des projets (v3.3, appliqués aux membres) ---------- */
+
+/** Clé du niveau d'un projet dans les niveaux recopiés chez les membres. */
+export const projectKey = (id: string) => `projet_${id}`;
+
+export function findAllianceProject(id: string): AllianceProjectDef | undefined {
+  return ALLIANCE_RULES.projects.find((p) => p.id === id);
+}
+
+/** Niveau d'un projet d'après les niveaux d'un membre (allianceResearch). */
+export function memberProjectLevel(levels: AllianceLevels | undefined | null, id: string): number {
+  const def = findAllianceProject(id);
+  return Math.max(0, Math.min(def?.maxLevel ?? 0, Math.floor(Number(levels?.[projectKey(id)]) || 0)));
+}
+
+function projectEffect(levels: AllianceLevels | undefined | null, id: string): number {
+  return memberProjectLevel(levels, id) * (findAllianceProject(id)?.perLevel ?? 0);
+}
+
+/** Multiplicateur des durées de construction et de recherche (0,9 = −10 %). */
+export function allianceForgeFactor(levels: AllianceLevels | undefined | null): number {
+  return Math.max(0.5, 1 - projectEffect(levels, "forge"));
+}
+
+/** Multiplicateur d'attaque contre le Léviathan et les repaires (1,2 = +20 %). */
+export function allianceSiegeFactor(levels: AllianceLevels | undefined | null): number {
+  return 1 + projectEffect(levels, "siege");
+}
+
+/** Part supplémentaire des stocks à l'abri du pillage (0,1 = +10 points). */
+export function allianceBastionBonus(levels: AllianceLevels | undefined | null): number {
+  return projectEffect(levels, "bastion");
 }
 
 /* ---------- création et membres ---------- */
@@ -254,6 +308,119 @@ export function completeAllianceResearch(alliance: Alliance, now: number): { all
   };
 }
 
+/* ---------- projets d'alliance (v3.3) ---------- */
+
+export interface AllianceProjectState {
+  level: number;
+  /** Ressources déjà versées pour le palier suivant. */
+  funded: Partial<Record<ResourceId, number>>;
+  /** Fin de construction du palier suivant (0 = pas en construction). */
+  buildEndMs: number;
+}
+
+export function allianceProjectCost(nextLevel: number): Partial<Record<ResourceId, number>> {
+  const factor = Math.pow(ALLIANCE_RULES.projectGrowth, Math.max(0, nextLevel - 1));
+  const cost: Partial<Record<ResourceId, number>> = {};
+  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.projectRareCost : ALLIANCE_RULES.projectCommonCost) * factor);
+  return cost;
+}
+
+export function allianceProjectSeconds(nextLevel: number): number {
+  return Math.round(ALLIANCE_RULES.projectHoursPerLevel * nextLevel * 3600);
+}
+
+export function projectState(alliance: Pick<Alliance, "projects">, id: string): AllianceProjectState {
+  const raw = alliance.projects?.[id];
+  return { level: Math.max(0, Math.floor(Number(raw?.level) || 0)), funded: { ...(raw?.funded ?? {}) }, buildEndMs: Number(raw?.buildEndMs) || 0 };
+}
+
+/** Niveaux recopiés chez chaque membre : recherches et projets. */
+export function memberLevels(alliance: Pick<Alliance, "research" | "projects"> | null): AllianceLevels {
+  const out: AllianceLevels = { ...(alliance?.research ?? {}) };
+  for (const def of ALLIANCE_RULES.projects) {
+    const level = alliance ? projectState(alliance, def.id).level : 0;
+    if (level > 0) out[projectKey(def.id)] = level;
+  }
+  return out;
+}
+
+/** Valeur d'un versement (une rare vaut 100 communes), pour le classement des contributeurs. */
+function contributionValue(amounts: Partial<Record<ResourceId, number>>): number {
+  return Object.entries(amounts).reduce((a, [res, n]) => a + (n ?? 0) * (RESOURCE_LIST.find((r) => r.id === res)?.rarity === "rare" ? 100 : 1), 0);
+}
+
+/** Financement d'un projet, depuis le trésor (fondateur, officiers) ou le
+ *  stock du joueur (tout membre). Chaque montant est plafonné à ce qui manque ;
+ *  le palier financé lance la construction. */
+export function fundAllianceProject(
+  alliance: Alliance,
+  actor: PlayerState,
+  projectId: string,
+  source: "treasury" | "self",
+  amounts: Partial<Record<ResourceId, number>>,
+  now: number,
+): { alliance: Alliance; used: Partial<Record<ResourceId, number>>; started: number | null } {
+  const def = findAllianceProject(projectId);
+  if (!def) throw new GameActionError("Projet inconnu.");
+  const role = allianceRole(alliance, actor.uid);
+  if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
+  if (source === "treasury" && role === "member") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le trésor.");
+  const state = projectState(alliance, def.id);
+  if (state.buildEndMs > 0) throw new GameActionError("Ce palier est déjà en construction.");
+  const next = state.level + 1;
+  if (next > def.maxLevel) throw new GameActionError("Ce projet est achevé.");
+  const cost = allianceProjectCost(next);
+  const pool = source === "treasury" ? { ...(alliance.treasury ?? {}) } : actor.resources;
+  const used: Partial<Record<ResourceId, number>> = {};
+  for (const [res, amount] of Object.entries(amounts) as [ResourceId, number][]) {
+    const missing = Math.max(0, (cost[res] ?? 0) - (state.funded[res] ?? 0));
+    const n = Math.min(amount, missing);
+    if (n <= 0) continue;
+    if ((pool[res] ?? 0) < n) throw new GameActionError(source === "treasury" ? "Le trésor ne suffit pas pour ce versement." : "Ressources insuffisantes pour ce versement.");
+    used[res] = n;
+  }
+  if (Object.keys(used).length === 0) throw new GameActionError("Ces ressources sont déjà réunies pour ce palier.");
+  for (const [res, n] of Object.entries(used) as [ResourceId, number][]) {
+    pool[res] = (pool[res] ?? 0) - n;
+    state.funded[res] = (state.funded[res] ?? 0) + n;
+  }
+  const complete = (Object.entries(cost) as [ResourceId, number][]).every(([res, n]) => (state.funded[res] ?? 0) >= n);
+  const started = complete ? now + allianceProjectSeconds(next) * 1000 : null;
+  const nextState: AllianceProjectState = complete ? { level: state.level, funded: {}, buildEndMs: started! } : state;
+  const contributors = { ...(alliance.projectContributors ?? {}) };
+  if (source === "self") contributors[actor.uid] = (contributors[actor.uid] ?? 0) + contributionValue(used);
+  return {
+    alliance: {
+      ...alliance,
+      treasury: source === "treasury" ? (pool as Alliance["treasury"]) : alliance.treasury,
+      projects: { ...(alliance.projects ?? {}), [def.id]: nextState },
+      projectContributors: contributors,
+    },
+    used,
+    started,
+  };
+}
+
+/** Paliers dont la construction est terminée. */
+export function completeAllianceProjects(alliance: Alliance, now: number): { alliance: Alliance; completed: { id: string; level: number }[] } {
+  const completed: { id: string; level: number }[] = [];
+  const projects = { ...(alliance.projects ?? {}) };
+  for (const def of ALLIANCE_RULES.projects) {
+    const state = projectState(alliance, def.id);
+    if (state.buildEndMs > 0 && state.buildEndMs <= now) {
+      projects[def.id] = { level: state.level + 1, funded: {}, buildEndMs: 0 };
+      completed.push({ id: def.id, level: state.level + 1 });
+    }
+  }
+  return { alliance: completed.length ? { ...alliance, projects } : alliance, completed };
+}
+
+/** Prochaine échéance (recherche ou construction d'un projet), 0 sinon. */
+export function allianceNextDueMs(alliance: Pick<Alliance, "activeResearch" | "projects">): number {
+  const dues = [alliance.activeResearch?.endTime ?? 0, ...ALLIANCE_RULES.projects.map((p) => projectState(alliance, p.id).buildEndMs)].filter((t) => t > 0);
+  return dues.length ? Math.min(...dues) : 0;
+}
+
 /* ---------- saison d'alliance ---------- */
 
 export interface AllianceStanding {
@@ -295,7 +462,8 @@ export type AllianceAction =
   | { type: "demote"; targetUid: string }
   | { type: "deposit"; resources: Record<string, unknown> }
   | { type: "distribute"; targetUid: string; resources: Record<string, unknown> }
-  | { type: "research"; researchId: string };
+  | { type: "research"; researchId: string }
+  | { type: "project"; projectId: string; source: "treasury" | "self"; resources: Record<string, unknown> };
 
 export interface AllianceLogEntry {
   kind: AllianceLog["kind"];
@@ -340,7 +508,7 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
   const out: AllianceActionOutput = { alliance, actor, target: input.target ?? null, memberships: {}, logs: [], notifications: {} };
   const log = (entry: Omit<AllianceLogEntry, "actorUid" | "actorPseudo" | "createdAtMs">) =>
     out.logs.push({ actorUid: actor.uid, actorPseudo: actor.pseudo, createdAtMs: now, ...entry });
-  const research = (a: Pick<Alliance, "research"> | null) => ({ ...(a?.research ?? {}) });
+  const research = (a: Pick<Alliance, "research" | "projects"> | null) => memberLevels(a);
 
   switch (action?.type) {
     case "create": {
@@ -410,27 +578,53 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
       log({ kind: "research", text: `${def.name} niveau ${started.activeResearch!.level}`, resources: allianceResearchCost(started.activeResearch!.level) });
       return out;
     }
+    case "project": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const source = action.source === "treasury" ? "treasury" : "self";
+      const res = fundAllianceProject(alliance, actor, String(action.projectId ?? ""), source, parseAmounts(action.resources), now);
+      out.alliance = res.alliance;
+      const def = findAllianceProject(String(action.projectId))!;
+      const next = projectState(alliance, def.id).level + 1;
+      if (source === "self") bumpStat(actor, "donated", Object.values(res.used).reduce((a: number, b) => a + (b ?? 0), 0));
+      log({ kind: "project", text: `${def.name} niveau ${next}${source === "treasury" ? " (trésor)" : ""}${res.started ? " : financé, construction lancée" : ""}`, resources: res.used });
+      if (res.started) {
+        for (const uid of alliance.members) {
+          out.notifications[uid] = [note("Projet d'alliance financé", `${def.emoji} ${def.name} niveau ${next} : construction lancée.`, now)];
+        }
+      }
+      return out;
+    }
     default:
       throw new GameActionError("Action d'alliance inconnue.");
   }
 }
 
-/** Fin d'une recherche : bonus recopiés chez tous les membres, qui sont prévenus. */
+/** Fin d'une recherche ou de la construction d'un projet : bonus recopiés
+ *  chez tous les membres, qui sont prévenus. */
 export function finishAllianceResearch(alliance: Alliance, now: number): Omit<AllianceActionOutput, "actor" | "target"> | null {
   const done = completeAllianceResearch(alliance, now);
-  if (!done.completed) return null;
-  const def = findAllianceResearch(done.completed.id);
-  const label = `${def?.name ?? done.completed.id} niveau ${done.completed.level}`;
+  const built = completeAllianceProjects(done.alliance, now);
+  if (!done.completed && built.completed.length === 0) return null;
+  const labels: string[] = [];
+  const logs: AllianceLogEntry[] = [];
+  if (done.completed) {
+    const def = findAllianceResearch(done.completed.id);
+    const label = `${def?.name ?? done.completed.id} niveau ${done.completed.level}`;
+    labels.push(`${def?.emoji ?? ""} ${label}`.trim());
+    logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label, createdAtMs: now });
+  }
+  for (const c of built.completed) {
+    const def = findAllianceProject(c.id);
+    const label = `${def?.name ?? c.id} niveau ${c.level}`;
+    labels.push(`${def?.emoji ?? ""} ${label}`.trim());
+    logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label, createdAtMs: now });
+  }
   const memberships: AllianceActionOutput["memberships"] = {};
   const notifications: AllianceActionOutput["notifications"] = {};
-  for (const uid of done.alliance.members) {
-    memberships[uid] = { allianceId: alliance.id, allianceResearch: { ...(done.alliance.research ?? {}) } };
-    notifications[uid] = [note("Recherche d'alliance terminée", `${def?.emoji ?? ""} ${label} : le bonus s'applique à tous les membres.`.trim(), now)];
+  const title = done.completed && built.completed.length === 0 ? "Recherche d'alliance terminée" : built.completed.length && !done.completed ? "Projet d'alliance achevé" : "Alliance : travaux terminés";
+  for (const uid of built.alliance.members) {
+    memberships[uid] = { allianceId: alliance.id, allianceResearch: memberLevels(built.alliance) };
+    notifications[uid] = [note(title, `${labels.join(" · ")} : le bonus s'applique à tous les membres.`, now)];
   }
-  return {
-    alliance: done.alliance,
-    memberships,
-    notifications,
-    logs: [{ kind: "research-done", actorUid: "", actorPseudo: "", text: label, createdAtMs: now }],
-  };
+  return { alliance: built.alliance, memberships, notifications, logs };
 }

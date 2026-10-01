@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Eye, FlaskConical, Landmark, ShieldAlert, Swords } from "lucide-react";
+import { Building2, Eye, FlaskConical, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { RESOURCE_LIST } from "@/game/resources";
-import { ALLIANCE_RULES, allianceResearchCost, allianceResearchSeconds } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceProjectCost, allianceProjectSeconds, allianceResearchCost, allianceResearchSeconds, projectState } from "@/game/alliances";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -16,6 +16,7 @@ import {
   depositToTreasury,
   distributeTreasury,
   fetchAllianceIntel,
+  fundAllianceProject,
   startAllianceResearch,
   subscribeAllianceLogs,
   type IntelItem,
@@ -56,6 +57,8 @@ const LOG_LABEL: Record<AllianceLog["kind"], string> = {
   distribute: "a versé à",
   research: "a lancé la recherche",
   "research-done": "Recherche terminée :",
+  project: "a financé",
+  "project-done": "Projet achevé :",
   join: "a rejoint l'alliance",
   leave: "a quitté l'alliance",
   kick: "a exclu",
@@ -235,6 +238,130 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
       <p className="text-xs text-slate-500 md:col-span-2">
         Les bonus s'appliquent à tous les membres et se perdent en quittant l'alliance. Seuls le fondateur et les officiers lancent les recherches.
       </p>
+    </div>
+  );
+}
+
+/** Projets d'alliance (v3.3) : méga-structures financées par le trésor ou
+ *  par les dons directs des membres. */
+export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; canUseTreasury: boolean }) {
+  useNowTicker();
+  const player = usePlayerStore((s) => s.player);
+  const [open, setOpen] = useState<string | null>(null);
+  const [amounts, setAmounts] = useState<Amounts>({});
+  const [busy, setBusy] = useState(false);
+  const treasury = alliance.treasury ?? {};
+  const contributors = Object.entries(alliance.projectContributors ?? {})
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  const fund = async (projectId: string, source: "treasury" | "self", values: Amounts) => {
+    setBusy(true);
+    try {
+      await fundAllianceProject(projectId, source, clean(values));
+      toast.success(source === "treasury" ? "Trésor versé au projet." : "Merci pour ta contribution !");
+      setAmounts({});
+    } catch (err) {
+      toast.error(err instanceof AllianceError ? err.message : "Versement impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+      <div className="flex flex-col gap-4">
+        {ALLIANCE_RULES.projects.map((p) => {
+          const st = projectState(alliance, p.id);
+          const next = st.level + 1;
+          const maxed = st.level >= p.maxLevel;
+          const cost = allianceProjectCost(next);
+          const missing = Object.fromEntries((Object.entries(cost) as [ResourceId, number][]).map(([r, n]) => [r, Math.max(0, n - (st.funded[r] ?? 0))])) as Amounts;
+          const totalCost = Object.values(cost).reduce((a: number, b) => a + (b ?? 0), 0);
+          const totalFunded = (Object.entries(cost) as [ResourceId, number][]).reduce((a, [r, n]) => a + Math.min(n, st.funded[r] ?? 0), 0);
+          const fromTreasury = Object.fromEntries((Object.entries(missing) as [ResourceId, number][]).map(([r, n]) => [r, Math.min(n, Math.floor(treasury[r] ?? 0))])) as Amounts;
+          const pct = Math.round(p.perLevel * 100);
+          return (
+            <Card key={p.id} className={cn("flex flex-col gap-3 p-4", st.buildEndMs > 0 && "border-cyan-glow/50")}>
+              <div className="flex items-center gap-2">
+                <EmojiIcon emoji={p.emoji} className="h-8 w-8" />
+                <div className="flex-1">
+                  <h3 className="font-display text-sm text-white">{p.name}</h3>
+                  <p className="text-xs text-slate-400">
+                    {p.description} ({p.id === "forge" ? "−" : "+"}
+                    {pct} % par palier, {p.id === "forge" ? "−" : "+"}
+                    {pct * st.level} % aujourd'hui)
+                  </p>
+                </div>
+                <span className="tabular-mono text-xs text-slate-400">
+                  palier {st.level} / {p.maxLevel}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: p.maxLevel }, (_, i) => (
+                  <i key={i} className={cn("h-1.5 flex-1", i < st.level ? "bg-gold-glow" : i === st.level && st.buildEndMs > 0 ? "animate-pulse bg-cyan-glow" : "bg-white/10")} />
+                ))}
+              </div>
+              {maxed ? (
+                <p className="text-xs text-mint-glow">Projet achevé : le bonus maximal s'applique à tous les membres.</p>
+              ) : st.buildEndMs > 0 ? (
+                <div>
+                  <p className="text-xs text-cyan-glow">Palier {next} en construction — fin dans {formatDuration(Math.max(0, (st.buildEndMs - Date.now()) / 1000))}</p>
+                  <Progress value={100 - ((st.buildEndMs - Date.now()) / (allianceProjectSeconds(next) * 1000)) * 100} className="mt-1" />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400">
+                      <span>Palier {next} : financement · construction {formatDuration(allianceProjectSeconds(next))}</span>
+                      <span className="tabular-mono">{Math.floor((totalFunded / Math.max(1, totalCost)) * 100)} %</span>
+                    </div>
+                    <Progress value={(totalFunded / Math.max(1, totalCost)) * 100} className="mt-1" />
+                    <p className="mt-1 text-[11px] text-slate-500">Reste : {amountsText(missing)}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setOpen(open === p.id ? null : p.id)}>
+                      <Building2 className="mr-1 h-3.5 w-3.5" /> Contribuer
+                    </Button>
+                    {canUseTreasury && (
+                      <Button size="sm" variant="outline" disabled={busy || Object.keys(clean(fromTreasury)).length === 0} onClick={() => void fund(p.id, "treasury", fromTreasury)}>
+                        <Landmark className="mr-1 h-3.5 w-3.5" /> Verser depuis le trésor
+                      </Button>
+                    )}
+                  </div>
+                  {open === p.id && (
+                    <div className="border-t border-white/5 pt-3">
+                      <AmountsForm value={amounts} onChange={setAmounts} max={(res) => Math.min(missing[res] ?? 0, Math.floor(player?.resources[res] ?? 0))} />
+                      <Button className="mt-2" size="sm" disabled={busy || Object.keys(clean(amounts)).length === 0} onClick={() => void fund(p.id, "self", amounts)}>
+                        Verser depuis mes stocks
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          );
+        })}
+        <p className="text-xs text-slate-500">
+          Chaque palier financé se construit en {ALLIANCE_RULES.projectHoursPerLevel} h × son numéro. Les bonus s'appliquent à tous les membres et se perdent en quittant l'alliance. Tout membre
+          peut contribuer depuis ses stocks ; seuls le fondateur et les officiers puisent dans le trésor.
+        </p>
+      </div>
+      <Card className="flex h-fit flex-col gap-2 p-4">
+        <h3 className="font-display text-sm text-white">Bâtisseurs</h3>
+        {contributors.length === 0 && <p className="text-xs text-slate-500">Aucune contribution personnelle pour l'instant.</p>}
+        <ol className="space-y-1 text-sm">
+          {contributors.map(([uid, value], i) => (
+            <li key={uid} className="flex justify-between gap-2">
+              <span className="truncate text-slate-200">
+                <span className="text-slate-500">#{i + 1}</span> {alliance.memberPseudos[uid] ?? "Ancien membre"}
+              </span>
+              <span className="tabular-mono text-xs text-slate-400">{formatCompact(value)}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="text-[11px] text-slate-500">Valeur versée (une ressource rare compte pour 100).</p>
+      </Card>
     </div>
   );
 }

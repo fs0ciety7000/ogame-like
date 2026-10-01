@@ -15,6 +15,8 @@ export const PVP_RULES = {
   shieldAfterDefeatMs: 60 * 60 * 1000,
   /** Protection débutant (levée dès que le joueur attaque lui-même). */
   newbieProtectionMs: 72 * 60 * 60 * 1000,
+  /** v3.4 : bouclier après une ascension. */
+  ascensionShieldMs: 72 * 60 * 60 * 1000,
   /** Impossible d'attaquer un joueur N fois moins expérimenté… */
   maxXpRatio: 3,
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
@@ -85,6 +87,8 @@ export interface AttackContext {
   lastAttackOnTargetMs: number | null;
   /** Dernière défaite du défenseur en défense (ms), s'il y en a une. */
   lastDefenderDefeatMs: number | null;
+  /** v3.4 : dernière ascension du défenseur (bouclier de 72 h). */
+  defenderAscendedAtMs?: number;
   /** v3.2 : délai entre deux attaques sur la même cible (guerre d'alliance) ; défaut : règle JcJ. */
   attackCooldownMs?: number;
 }
@@ -135,6 +139,13 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
         until,
         message: `Ce joueur vient d'être battu : bouclier actif encore ${formatWait(until - now)}.`,
       };
+    }
+  }
+
+  if (ctx.defenderAscendedAtMs) {
+    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
+    if (now < until) {
+      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'élever : bouclier d'ascension encore ${formatWait(until - now)}.` };
     }
   }
 

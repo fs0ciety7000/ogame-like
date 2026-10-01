@@ -20,6 +20,6 @@ export function sendLeviathanAssault(fleet: Record<string, number>, formation: s
   return callGame("fleet/send", { targetUid: "leviathan", fleet, mission: "leviathan", formation });
 }
 
-export function adminLeviathan(action: "start" | "stop") {
-  return pb.send<LeviathanState>("/api/cosmic/admin/leviathan", { method: "POST", body: { action } });
+export function adminLeviathan(action: "start" | "stop" | "resize", maxHp?: number) {
+  return pb.send<LeviathanState>("/api/cosmic/admin/leviathan", { method: "POST", body: { action, maxHp } });
 }

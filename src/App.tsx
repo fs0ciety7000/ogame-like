@@ -36,6 +36,7 @@ function BibleRedirect() {
 
 const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ default: m.SimulatorPage })));
 const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
+const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
 const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
@@ -71,6 +72,7 @@ export default function App() {
                 <Route path="simulateur" element={<SimulatorPage />} />
                 <Route path="marche" element={<MarketPage />} />
                 <Route path="leviathan" element={<LeviathanPage />} />
+                <Route path="colonies" element={<ColoniesPage />} />
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />
                 <Route path="succes" element={<AchievementsPage />} />

@@ -1,0 +1,89 @@
+import { BUILDINGS } from "@/game/buildings";
+import { defaultResources } from "@/game/defaults";
+import { GameActionError } from "@/game/errors";
+import { bumpStat } from "@/game/stats";
+import type { PlayerState, QueuesState } from "@/types/game";
+
+/* =====================================================
+   Ascension (v3.4) : un joueur dont tous les bâtiments sont au niveau
+   maximal peut tout reconstruire contre un bonus permanent. Bâtiments
+   remis au niveau 1 et stock de départ ; technologies, flotte, défenses,
+   succès, titres, XP et rang conservés. Bouclier de 72 h et entretien de
+   flotte suspendu 7 jours pour reconstruire en paix.
+===================================================== */
+
+export const ASCENSION_RULES = {
+  productionPerAscension: 0.1,
+  buildTimePerAscension: 0.05,
+  maxAscensions: 5,
+  cooldownDays: 7,
+  shieldHours: 72,
+  upkeepFreeDays: 7,
+};
+
+const DAY = 24 * 3600_000;
+
+type AscPlayer = Pick<PlayerState, "ascensions" | "ascendedAtMs">;
+
+export function ascensionCount(player: Partial<AscPlayer> | null | undefined): number {
+  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player?.ascensions) || 0)));
+}
+
+/** Multiplicateur de production (1,3 = +30 %). */
+export function ascensionProductionFactor(player: Partial<AscPlayer> | null | undefined): number {
+  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
+}
+
+/** Multiplicateur des durées de construction (0,85 = −15 %). */
+export function ascensionBuildTimeFactor(player: Partial<AscPlayer> | null | undefined): number {
+  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
+}
+
+/** Fin du bouclier d'ascension (0 si aucun). */
+export function ascensionShieldUntil(player: Partial<AscPlayer> | null | undefined): number {
+  const at = Number(player?.ascendedAtMs) || 0;
+  return at > 0 ? at + ASCENSION_RULES.shieldHours * 3600_000 : 0;
+}
+
+/** Fin de la suspension de l'entretien de flotte (0 si aucune). */
+export function upkeepFreeUntil(player: Partial<AscPlayer> | null | undefined): number {
+  const at = Number(player?.ascendedAtMs) || 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY : 0;
+}
+
+export interface AscensionCheck {
+  ok: boolean;
+  reason?: string;
+  /** Bâtiments qui ne sont pas encore au niveau maximal. */
+  missing: { id: string; name: string; level: number; maxLevel: number }[];
+}
+
+export function canAscend(player: PlayerState, queues: Pick<QueuesState, "buildingUpgrades"> | null, now: number): AscensionCheck {
+  const missing = BUILDINGS.filter((b) => (player.buildings[b.id]?.level ?? 0) < b.maxLevel).map((b) => ({
+    id: b.id,
+    name: b.name,
+    level: player.buildings[b.id]?.level ?? 0,
+    maxLevel: b.maxLevel,
+  }));
+  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
+  if (missing.length > 0) return { ok: false, reason: "Tous tes bâtiments doivent être au niveau maximal.", missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY)} jour(s).`, missing };
+  if (queues && Object.keys(queues.buildingUpgrades ?? {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
+  return { ok: true, missing };
+}
+
+/** Ascension : bâtiments au niveau 1 (déblocages conservés), stock de départ. */
+export function ascend(player: PlayerState, queues: QueuesState, now: number): void {
+  const check = canAscend(player, queues, now);
+  if (!check.ok) throw new GameActionError(check.reason ?? "Ascension impossible.");
+  for (const b of BUILDINGS) {
+    const cur = player.buildings[b.id];
+    player.buildings[b.id] = { ...(cur ?? { unlocked: !!b.startsUnlocked }), level: 1 };
+  }
+  player.resources = defaultResources();
+  player.resourceHistory = [];
+  player.ascensions = ascensionCount(player) + 1;
+  player.ascendedAtMs = now;
+  bumpStat(player, "ascensions");
+}

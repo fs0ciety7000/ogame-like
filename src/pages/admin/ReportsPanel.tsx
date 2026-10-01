@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ExternalLink, Github, Mail, Save, Send, Trash2 } from "lucide-react";
+import { ExternalLink, Github, Mail, Radar, Save, Send, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { REPORT_CATEGORIES, REPORT_RULES, REPORT_STATUSES, type GameReport, type
 import {
   adminCreateGithubIssue,
   adminDeleteReport,
+  adminScanAnomalies,
   adminReportConfig,
   adminUpdateReport,
   reportScreenshotUrl,
@@ -80,6 +81,18 @@ export function ReportsPanel() {
           );
         })}
         <Input value={query} placeholder="Rechercher…" onChange={(e) => setQuery(e.target.value)} className="ml-auto h-8 w-48" />
+        <Button
+          variant="outline"
+          size="sm"
+          title="Recherche les bonds de stock anormaux depuis la dernière analyse (faite automatiquement chaque heure)."
+          onClick={() =>
+            void adminScanAnomalies()
+              .then((r) => (r.alerts > 0 ? toast.warning(`${r.alerts} alerte(s) de ressources anormales.`) : toast.success("Aucun stock anormal.")))
+              .catch(() => toast.error("Analyse impossible."))
+          }
+        >
+          <Radar className="mr-1 h-3.5 w-3.5" /> Analyser les stocks
+        </Button>
       </div>
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
         <span className="flex items-center gap-1">

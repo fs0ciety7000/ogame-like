@@ -1,3 +1,4 @@
+import { colonyOf, colonyView } from "@/game/colonies";
 import { bumpStat, setStat } from "@/game/stats";
 import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -40,6 +41,8 @@ export interface AttackInput {
   inFlight?: boolean;
   /** v3.0 : formation de l'attaquant (la posture du défenseur est lue sur son profil). */
   formation?: string;
+  /** v3.5 : colonie visée (sinon la planète mère). */
+  colonyId?: string;
   /** Garnisons alliées stationnées chez le défenseur (v1.9). */
   garrisons?: (CombatGarrison & { fleetId: string; ownerUid: string; ownerPseudo: string })[];
 }
@@ -79,6 +82,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
@@ -117,7 +121,12 @@ export function performAttack(input: AttackInput): AttackOutput {
 
   // Défenseur rattrapé lui aussi (production, unités terminées) avant le combat.
   const flushedDefender = flushState({ ...defender, buildings: withMissingBuildings(defender.buildings, defender.resources) }, input.defenderQueues, now);
-  const def = flushedDefender.player;
+  const owner = flushedDefender.player;
+  // v3.5 : sur une colonie, on combat ses défenses et on pille son stock
+  // (la vue partage ses objets : les pertes et le pillage s'y appliquent).
+  const colony = input.colonyId ? colonyOf(owner, input.colonyId) : undefined;
+  if (input.colonyId && !colony) return { ok: false, message: "Cette colonie n'existe plus." };
+  const def = colony ? colonyView(owner, colony) : owner;
 
   const posture = postureEffects(def.posture?.id);
   const combat = resolveCombat({
@@ -137,7 +146,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels))]),
+      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch))]),
     ),
   });
 
@@ -173,14 +182,15 @@ export function performAttack(input: AttackInput): AttackOutput {
   applyXpDelta(attacker, xp.attackerXp, now);
   attacker.lastAttackAtMs = now;
 
-  if (combat.outcome === "defender_win") def.victories = (def.victories ?? 0) + 1;
+  if (combat.outcome === "defender_win") owner.victories = (owner.victories ?? 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    def.defeats = (def.defeats ?? 0) + 1;
-    def.lastDefeatAtMs = now;
+    owner.defeats = (owner.defeats ?? 0) + 1;
+    if (colony) colony.lastDefeatAtMs = now;
+    else owner.lastDefeatAtMs = now;
   }
-  applyXpDelta(def, defenderXpDelta, now);
+  applyXpDelta(owner, defenderXpDelta, now);
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
-  if (combat.outcome === "defender_win") recordContract(def, "win_defense", 1, now);
+  if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
 
   const outcomeTitle: Record<string, string> = {
     attacker_win: "Victoire !",
@@ -192,7 +202,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-attacker",
       title: outcomeTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque contre ${defender.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
       createdAtMs: now,
       read: false,
     },
@@ -208,7 +218,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-defender",
       title: defenderTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
       createdAtMs: now,
       read: false,
     },
@@ -218,7 +228,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerUid,
     attackerPseudo: input.attacker.pseudo,
     defenderUid,
-    defenderPseudo: defender.pseudo,
+    defenderPseudo: def.pseudo,
     timestamp: now,
     outcome: combat.outcome,
     attackerPower: combat.attackerPower,
@@ -236,6 +246,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderApplied: true,
     garrisons: (input.garrisons ?? []).map((g, i) => ({ ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: combat.garrisonLosses?.[i] ?? {} })),
     attackerFleet: fleet,
+    planetId: colony ? colony.id : "",
   };
 
   return {
@@ -243,7 +254,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attacker,
     attackerQueues: flushed.queues,
     notifications,
-    defender: def,
+    defender: owner,
     defenderQueues: flushedDefender.queues,
     defenderNotifications,
     report,

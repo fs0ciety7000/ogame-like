@@ -1,3 +1,4 @@
+import { targetsPlayer } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { Eye, Gift, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
@@ -85,6 +86,14 @@ export function GalaxyPage() {
 
   const allianceById = useMemo(() => new Map(alliances.map((a) => [a.id, a])), [alliances]);
   const blips = useMemo(() => players.map((p) => ({ ...p, pos: mapPosition(p.uid), coords: galaxyCoords(p.uid) })), [players]);
+  // v3.5 : colonies, rattachées à leur empire.
+  const colonyBlips = useMemo(
+    () =>
+      players.flatMap((p) =>
+        (p.planets ?? []).map((c) => ({ ...p, uid: c.id, ownerUid: p.uid, colonyName: c.name, ownerPos: mapPosition(p.uid), pos: mapPosition(c.id), coords: galaxyCoords(c.id) })),
+      ),
+    [players],
+  );
   const myPos = uid ? mapPosition(uid) : null;
 
   useEffect(() => {
@@ -92,7 +101,9 @@ export function GalaxyPage() {
   }, [uid, selectedUid, blips]);
 
   const query = search.trim().toLowerCase();
-  const selected = blips.find((b) => b.uid === selectedUid) ?? null;
+  const selectedColony = colonyBlips.find((b) => b.uid === selectedUid) ?? null;
+  const selected = blips.find((b) => b.uid === selectedUid) ?? selectedColony;
+  const selectedIsMine = !!selected && (selected.uid === uid || selectedColony?.ownerUid === uid);
 
   /* ---------- zoom / déplacement ---------- */
 
@@ -154,7 +165,7 @@ export function GalaxyPage() {
   /* ---------- temps de vol vers la cible sélectionnée ---------- */
 
   const travel = useMemo(() => {
-    if (!uid || !me || !selected || selected.uid === uid) return null;
+    if (!uid || !me || !selected || selectedIsMine) return null;
     const speeds = OFFENSIVE_UNITS.filter((id) => (me.units[id]?.count ?? 0) > 0).map(
       (id) => (findUnit(id)?.stats.vitesse ?? 1) * Math.max(1, me.units[id]?.level ?? 1),
     );
@@ -162,7 +173,7 @@ export function GalaxyPage() {
     const distance = distanceBetween(uid, selected.uid);
     const f = allianceFlightFactor(me.allianceResearch, me.techLevels);
     return { distance, fast: travelSeconds(distance, Math.max(...speeds), f), slow: travelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
-  }, [uid, me, selected]);
+  }, [uid, me, selected, selectedIsMine]);
 
   const k = view.k;
   const activeFleets = fleets.filter((f) => f.status === "outbound" || f.status === "returning");
@@ -247,7 +258,7 @@ export function GalaxyPage() {
               {visibleFleets.map((f) => {
                 const from = mapPosition(f.ownerUid);
                 const to = mapPosition(f.targetUid);
-                const hostile = f.targetUid === uid && f.ownerUid !== uid && ((f.mission ?? "attack") === "attack" || f.mission === "pirate");
+                const hostile = targetsPlayer(f, uid ?? undefined) && f.ownerUid !== uid && ((f.mission ?? "attack") === "attack" || f.mission === "pirate");
                 const color = hostile ? "var(--color-danger-glow)" : f.mission === "recycle" ? "var(--color-mint-glow)" : "var(--color-cyan-glow)";
                 const t = fleetProgress(f, now);
                 const px = from.x + (to.x - from.x) * t;
@@ -298,6 +309,29 @@ export function GalaxyPage() {
                         transform={`rotate(${a} ${Math.cos((a * Math.PI) / 180) * r} ${Math.sin((a * Math.PI) / 180) * r})`}
                       />
                     ))}
+                  </g>
+                );
+              })}
+
+              {/* Colonies (v3.5) : petit carré relié à la planète mère */}
+              {colonyBlips.map((c) => {
+                const mine = c.ownerUid === uid;
+                const color = mine ? "var(--color-gold-glow)" : allianceColor(c.allianceId);
+                const isSelected = c.uid === selectedUid;
+                const dim = query.length > 0 && !c.pseudo.toLowerCase().includes(query) && !c.colonyName.toLowerCase().includes(query);
+                return (
+                  <g key={c.uid} opacity={dim ? 0.15 : 0.9}>
+                    <line x1={c.ownerPos.x} y1={c.ownerPos.y} x2={c.pos.x} y2={c.pos.y} stroke={color} strokeOpacity={0.12} strokeWidth={0.2 / k} />
+                    <g transform={`translate(${c.pos.x} ${c.pos.y})`} className="cursor-pointer" onClick={() => clickPlayer(c.uid)}>
+                      <circle r={2.6 / k} fill="transparent" />
+                      {isSelected && <circle r={1.8 / k} fill="none" stroke="white" strokeOpacity={0.9} strokeWidth={0.3 / k} />}
+                      <rect x={-0.7 / k} y={-0.7 / k} width={1.4 / k} height={1.4 / k} fill={color} transform="rotate(45)" />
+                      {(k >= 2.4 || isSelected) && (
+                        <text y={-1.9 / k} textAnchor="middle" fontSize={1.5 / k} fill="#94a3b8">
+                          {c.colonyName}
+                        </text>
+                      )}
+                    </g>
                   </g>
                 );
               })}
@@ -355,6 +389,9 @@ export function GalaxyPage() {
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 bg-mint-glow" /> Débris
             </span>
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
+            </span>
           </div>
           <p className="pointer-events-none absolute right-2 top-2 rounded-md bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
@@ -366,8 +403,16 @@ export function GalaxyPage() {
             <Card className="flex flex-col gap-3 p-4">
               <div>
                 <p className="text-sm font-medium text-slate-100">
-                  {selected.pseudo} <StaffBadge uid={selected.uid} className="ml-1 align-middle" />
-                  {selected.uid === uid && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
+                  {selectedColony ? (
+                    <>
+                      {selectedColony.colonyName} <span className="text-xs text-slate-400">· colonie de {selectedColony.pseudo}</span>
+                    </>
+                  ) : (
+                    <>
+                      {selected.pseudo} <StaffBadge uid={selected.uid} className="ml-1 align-middle" />
+                    </>
+                  )}
+                  {selectedIsMine && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
                 </p>
                 {selected.activeTitle && <p className="text-xs text-gold-glow">🏆 {selected.activeTitle}</p>}
                 <p className="tabular-mono text-xs text-slate-500">
@@ -400,7 +445,21 @@ export function GalaxyPage() {
                   </Button>
                 </div>
               )}
-              {selected.uid !== uid && (
+              {selectedColony && !selectedIsMine && (
+                <div className="flex gap-2">
+                  {me?.allianceId && selected.allianceId === me.allianceId ? (
+                    <p className="flex-1 text-xs text-slate-500">Colonie d'un allié.</p>
+                  ) : (
+                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
+                      <Sword className="mr-1 h-4 w-4" /> Attaquer la colonie
+                    </Button>
+                  )}
+                  <Button variant="outline" size="icon" title="Espionner la colonie" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {!selectedColony && selected.uid !== uid && (
                 <div className="flex gap-2">
                   {me?.allianceId && selected.allianceId === me.allianceId ? (
                     <Button size="sm" className="flex-1" onClick={() => setGarrisonTarget({ uid: selected.uid, pseudo: selected.pseudo })}>

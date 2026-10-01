@@ -136,7 +136,7 @@ function logAdminAction(e, action, before, after) {
 
 /* ---------- Fiche publique (collection profiles) ---------- */
 
-const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle"];
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs"];
 
 /** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
  *  complète (ressources, flotte…) n'est plus lisible par les autres. */
@@ -156,6 +156,24 @@ function syncProfile(app, player) {
       changed = true;
     }
   });
+  // v3.5 : colonies publiques (identifiant et nom seulement).
+  let colonies = [];
+  try {
+    const raw = JSON.parse(player.getString("colonies") || "[]");
+    colonies = (Array.isArray(raw) ? raw : []).map((c) => ({ id: c.id, name: c.name }));
+  } catch (_) {
+    colonies = [];
+  }
+  let current = "[]";
+  try {
+    current = JSON.stringify(JSON.parse(profile.getString("planets") || "[]"));
+  } catch (_) {
+    current = "";
+  }
+  if (current !== JSON.stringify(colonies)) {
+    profile.set("planets", colonies);
+    changed = true;
+  }
   if (changed) app.save(profile);
 }
 
@@ -172,7 +190,16 @@ function deleteProfile(app, playerId) {
 /** Dernière attaque (combat ou départ de flotte) de a vers d (ms), ou null. */
 function lastAttackOnTarget(txApp, a, d) {
   let last = null;
-  const reports = txApp.findRecordsByFilter("battle_reports", "attackerUid = {:a} && defenderUid = {:d}", "-timestamp", 1, 0, { a, d });
+  // v3.5 : délai propre à chaque planète (planète mère ou colonie).
+  const onColony = !!loadGame().colonyOwnerUid(d);
+  const reports = txApp.findRecordsByFilter(
+    "battle_reports",
+    onColony ? "attackerUid = {:a} && planetId = {:d}" : "attackerUid = {:a} && defenderUid = {:d} && planetId = ''",
+    "-timestamp",
+    1,
+    0,
+    { a, d },
+  );
   if (reports.length > 0) last = reports[0].getFloat("timestamp");
   const fleets = txApp.findRecordsByFilter("fleets", "ownerUid = {:a} && targetUid = {:d} && mission = 'attack'", "-departAtMs", 1, 0, { a, d });
   if (fleets.length > 0) last = Math.max(last || 0, fleets[0].getFloat("departAtMs"));
@@ -198,6 +225,7 @@ function fleetFromRecord(rec) {
   f.units = f.units || {};
   f.loot = f.loot || null;
   f.returnAtMs = f.returnAtMs || null;
+  f.transport = f.transport || null;
   return f;
 }
 
@@ -238,6 +266,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "lair") return resolveLairArrival(txApp, game, rec, now);
   if (mission === "expedition") return expeditionStep(txApp, game, rec, now, 1);
   if (mission === "leviathan") return leviathanArrival(txApp, game, rec, now);
+  if (mission === "transport") return transportArrival(txApp, game, rec, now);
   if (mission === "garrison") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
@@ -260,7 +289,10 @@ function resolveSpyArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
   const spy = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
-  const target = findOrNull(txApp, "players", fleet.targetUid) ? loadPlayer(txApp, game, fleet.targetUid) : null;
+  // v3.5 : sondes envoyées sur une colonie (identifiant <uid>-c<n>).
+  const colonyOwner = game.colonyOwnerUid(fleet.targetUid);
+  const targetUid = colonyOwner || fleet.targetUid;
+  const target = findOrNull(txApp, "players", targetUid) ? loadPlayer(txApp, game, targetUid) : null;
   if (!spy || !target) {
     rec.set("status", spy ? "returning" : "done");
     rec.set("returnAtMs", spy ? now + tripMs : null);
@@ -269,7 +301,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
     return;
   }
   const targetFleets = txApp
-    .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: fleet.targetUid })
+    .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: targetUid })
     .map(fleetFromRecord);
   const probes = Object.keys(fleet.units).reduce((sum, k) => sum + (fleet.units[k] || 0), 0);
   const out = game.resolveSpyArrival({
@@ -279,14 +311,15 @@ function resolveSpyArrival(txApp, game, rec, now) {
     target: target.player,
     targetQueues: target.queues,
     targetFleets,
-    targetGarrisons: stationedGarrisons(txApp, fleet.targetUid).map(fleetFromRecord),
+    targetGarrisons: colonyOwner ? [] : stationedGarrisons(txApp, fleet.targetUid).map(fleetFromRecord),
     probes,
+    colonyId: colonyOwner ? fleet.targetUid : undefined,
   });
   const report = new Record(txApp.findCollectionByNameOrId("spy_reports"));
   report.load(out.report);
   txApp.save(report);
   notify(txApp, fleet.ownerUid, out.spyNotifications);
-  notify(txApp, fleet.targetUid, out.targetNotifications);
+  notify(txApp, targetUid, out.targetNotifications);
   rec.set("reportId", report.id);
   rec.set("outcome", out.detected ? "detected" : "success");
   if (out.detected) {
@@ -317,6 +350,26 @@ function resolveRecycleArrival(txApp, game, rec, now) {
   rec.set("outcome", game.debrisTotal(taken) > 0 ? "collected" : "empty");
   rec.set("status", owner ? "returning" : "done");
   rec.set("returnAtMs", owner ? now + tripMs : null);
+  txApp.save(rec);
+}
+
+/** Transport (v3.5) : livraison à la colonie ou chargement, puis retour. */
+function transportArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  const out = game.performTransportArrival(owner.player, owner.queues, fleet, now);
+  savePlayer(txApp, game, owner, out.owner, out.queues);
+  notify(txApp, fleet.ownerUid, out.notifications);
+  rec.set("loot", out.loot);
+  rec.set("outcome", out.outcome);
+  rec.set("status", "returning");
+  rec.set("returnAtMs", now + tripMs);
   txApp.save(rec);
 }
 
@@ -511,14 +564,17 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
   const attacker = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
-  const defender = findOrNull(txApp, "players", fleet.targetUid) ? loadPlayer(txApp, game, fleet.targetUid) : null;
+  // v3.5 : attaque d'une colonie (identifiant <uid>-c<n>) : son propriétaire défend.
+  const colonyOwner = game.colonyOwnerUid(fleet.targetUid);
+  const defenderUid = colonyOwner || fleet.targetUid;
+  const defender = findOrNull(txApp, "players", defenderUid) ? loadPlayer(txApp, game, defenderUid) : null;
   if (!attacker) {
     rec.set("status", "done");
     txApp.save(rec);
     return;
   }
   // Garnisons alliées chez le défenseur : elles combattent à ses côtés.
-  const garrisonRecs = defender ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
+  const garrisonRecs = defender && !colonyOwner ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
   const garrisons = garrisonRecs.map((g) => {
     const owner = toPlain(txApp.findRecordById("players", g.getString("ownerUid")));
     const gf = fleetFromRecord(g);
@@ -530,12 +586,13 @@ function resolveAttackArrival(txApp, game, rec, now) {
         attackerUid: fleet.ownerUid,
         attacker: attacker.player,
         attackerQueues: attacker.queues,
-        defenderUid: fleet.targetUid,
+        defenderUid,
         defender: defender.player,
         defenderQueues: defender.queues,
         fleet: fleet.units,
         lastAttackOnTargetMs: null,
-        defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, fleet.targetUid, now),
+        defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, defenderUid, now),
+        colonyId: colonyOwner ? fleet.targetUid : undefined,
         inFlight: true,
         garrisons,
         formation: rec.getString("formation"),
@@ -552,7 +609,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   notify(txApp, fleet.ownerUid, result.notifications);
-  notify(txApp, fleet.targetUid, result.defenderNotifications);
+  notify(txApp, defenderUid, result.defenderNotifications);
 
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
@@ -656,9 +713,9 @@ function launchFleetRequest(e) {
   const body = db.body(e);
   const mission = String(body.mission || "attack");
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
-  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : String(body.targetUid || "");
+  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : mission === "transport" ? String(body.colonyId || "") : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -671,9 +728,11 @@ function launchFleetRequest(e) {
     if (mission === "garrison") {
       garrisonsAtHost = txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && (status = "outbound" || status = "stationed")', "", 10, 0, { h: targetUid }).length;
     }
+    // v3.5 : une attaque ou un espionnage peut viser une colonie (<uid>-c<n>).
+    const colonyOwner = mission === "attack" || mission === "spy" ? game.colonyOwnerUid(targetUid) : null;
     if (mission === "attack" || mission === "spy" || mission === "garrison") {
-      if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
-      target = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.").player;
+      if (!db.findOrNull(txApp, "players", colonyOwner || targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
+      target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
     }
@@ -702,6 +761,7 @@ function launchFleetRequest(e) {
         debris,
         fleet,
         lairTarget: mission === "lair" ? targetUid : undefined,
+        targetColonyId: colonyOwner ? targetUid : undefined,
         lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,
@@ -711,15 +771,18 @@ function launchFleetRequest(e) {
         expeditionsActive,
         expeditionsToday,
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
+        transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
     }
     db.savePlayer(txApp, game, attacker, out.attacker, out.attackerQueues);
     db.notify(txApp, attackerUid, out.attackerNotifications);
-    if (out.defenderNotifications.length > 0) db.notify(txApp, targetUid, out.defenderNotifications);
+    if (out.defenderNotifications.length > 0) db.notify(txApp, target ? target.uid : targetUid, out.defenderNotifications);
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
     rec.load(out.fleet);
+    // v3.5 : propriétaire de la colonie visée (il voit l'attaque approcher).
+    if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
     if (mission === "attack" || mission === "lair" || mission === "expedition" || mission === "leviathan") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     txApp.save(rec);
@@ -815,7 +878,7 @@ function closeSeason(game, now, seasonIdIn) {
 }
 /* ---------- Alliances (v1.9) ---------- */
 
-const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions"];
+const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors"];
 
 function allianceFromRecord(rec) {
   const a = toPlain(rec);
@@ -826,6 +889,8 @@ function allianceFromRecord(rec) {
   a.research = a.research || {};
   a.activeResearch = a.activeResearch || null;
   a.distributions = a.distributions || { day: "", count: 0 };
+  a.projects = a.projects || {};
+  a.projectContributors = a.projectContributors || {};
   return a;
 }
 
@@ -837,7 +902,8 @@ function applyAllianceOutput(txApp, allianceRec, out, now) {
   } else if (out.alliance) {
     const rec = allianceRec || new Record(txApp.findCollectionByNameOrId("alliances"));
     ALLIANCE_FIELDS.forEach((f) => rec.set(f, out.alliance[f] === undefined ? null : out.alliance[f]));
-    rec.set("researchEndMs", out.alliance.activeResearch ? out.alliance.activeResearch.endTime : 0);
+    // Prochaine échéance : recherche ou construction d'un projet (v3.3).
+    rec.set("researchEndMs", loadGame().allianceNextDueMs(out.alliance));
     txApp.save(rec);
     id = rec.id;
   }
@@ -1051,6 +1117,8 @@ function adminReset(e) {
         a.set("activeResearch", null);
         a.set("researchEndMs", 0);
         a.set("distributions", { day: "", count: 0 });
+        a.set("projects", {});
+        a.set("projectContributors", {});
         txApp.save(a);
         summary.alliances++;
       });
@@ -1745,12 +1813,19 @@ function leviathanTick(now) {
         }
       });
     }
+    if (state) {
+      const sampled = game.recordLeviathanTimeline(state, now);
+      if (sampled !== state) {
+        state = sampled;
+        changed = true;
+      }
+    }
     if (changed && state) writeLeviathan(txApp, state);
   });
   return changed;
 }
 
-/** POST /api/cosmic/admin/leviathan { action: "start" | "stop" } */
+/** POST /api/cosmic/admin/leviathan { action: "start" | "stop" | "resize", maxHp? } */
 function adminLeviathan(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
@@ -1767,6 +1842,25 @@ function adminLeviathan(e) {
     } else if (action === "stop") {
       if (!state || state.status !== "active") throw new BadRequestError("Aucun Léviathan en cours.");
       state = distributeLeviathan(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
+    } else if (action === "resize") {
+      const before = state ? state.maxHp : 0;
+      try {
+        state = game.resizeLeviathan(state, Number(body(e).maxHp), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+      log.load({
+        actorId: e.auth ? e.auth.id : "superuser",
+        actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+        action: "update",
+        targetCollection: "game_config",
+        recordId: "leviathan",
+        recordLabel: "Léviathan : structure ajustée",
+        changes: { maxHp: { avant: before, après: state.maxHp } },
+        createdAtMs: now,
+      });
+      txApp.save(log);
     } else throw new BadRequestError("Action inconnue.");
     writeLeviathan(txApp, state);
     out = state;
@@ -2330,4 +2424,95 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Alertes de ressources anormales (v3.3) ---------- */
+
+/** Tâche horaire : compare les relevés de stocks de chaque joueur depuis la
+ *  dernière analyse ; un bond anormal devient un signalement « Compte »
+ *  réservé à l'équipe (un par joueur, complété ou rouvert ensuite). */
+function scanAnomalies(now) {
+  const game = loadGame();
+  const key = game.ANOMALY_RULES.scanKey;
+  let scanRec;
+  try {
+    scanRec = $app.findFirstRecordByData("game_config", "key", key);
+  } catch (_) {
+    scanRec = new Record($app.findCollectionByNameOrId("game_config"));
+    scanRec.set("key", key);
+  }
+  const data = toPlain(scanRec).data || {};
+  const since = Number(data.lastScanMs) || now - 2 * 3600000;
+  applyContent($app, game);
+  const flagged = [];
+  for (let page = 0; page < 20; page++) {
+    const recs = $app.findRecordsByFilter("players", "id != ''", "id", 200, page * 200);
+    recs.forEach((r) => {
+      const p = toPlain(r);
+      const list = game.detectResourceAnomalies(p, since);
+      if (list.length > 0) flagged.push({ uid: r.id, pseudo: p.pseudo || r.id, list });
+    });
+    if (recs.length < 200) break;
+  }
+  const alerts = [];
+  flagged.forEach((f) => {
+    const text = game.describeAnomalies(f.list);
+    $app.runInTransaction((txApp) => {
+      const autoKey = `anomaly:${f.uid}`;
+      const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: autoKey })[0];
+      if (existing) {
+        const r = reportJson(existing);
+        const closed = r.status === "resolved" || r.status === "rejected";
+        const history = (r.history || []).slice();
+        if (closed) history.push({ kind: "status", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, status: "new", text: "Nouveau bond détecté après la clôture." });
+        history.push({ kind: "comment", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text });
+        existing.set("history", history);
+        existing.set("status", closed ? "new" : r.status);
+        existing.set("occurrences", (r.occurrences || 1) + 1);
+        existing.set("updatedAtMs", now);
+        txApp.save(existing);
+        alerts.push({ id: existing.id, title: existing.getString("title"), text });
+        return;
+      }
+      const rec = new Record(txApp.findCollectionByNameOrId("reports"));
+      rec.set("reporterId", game.AUTO_REPORTER_ID);
+      rec.set("reporterPseudo", "Système");
+      rec.set("category", "account");
+      rec.set("title", `Ressources anormales : ${f.pseudo}`);
+      rec.set("description", `Bonds de stock qu'aucune action normale n'explique. Vérifier le journal admin et le marché.\n\n${text}`);
+      rec.set("context", { version: "", page: "", theme: "", userAgent: "", screen: "" });
+      rec.set("status", "new");
+      rec.set("resolution", "");
+      rec.set("githubUrl", "");
+      rec.set("history", [{ kind: "created", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text: "Détecté par l'analyse horaire des stocks." }]);
+      rec.set("autoKey", autoKey);
+      rec.set("occurrences", 1);
+      rec.set("affected", [f.pseudo]);
+      rec.set("createdAtMs", now);
+      rec.set("updatedAtMs", now);
+      rec.set("reporterSeenAtMs", now);
+      txApp.save(rec);
+      alerts.push({ id: rec.id, title: rec.getString("title"), text });
+    });
+  });
+  scanRec.set("data", { lastScanMs: now });
+  $app.save(scanRec);
+  alerts.forEach((a) => {
+    const link = appUrl(`/game/admin?onglet=reports&signalement=${a.id}`);
+    adminIds().forEach((id) => {
+      try {
+        notify($app, id, [{ kind: "report", title: "Ressources anormales", message: a.title, createdAtMs: now, read: false }]);
+      } catch (_) {
+        /* facultatif */
+      }
+      sendMail(userEmail(id), `[Cosmic Empires] ${a.title}`, a.text.split("\n"), link);
+    });
+  });
+  return alerts.length;
+}
+
+/** POST /api/cosmic/admin/anomalies — analyse immédiate (administrateurs). */
+function adminScanAnomalies(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { alerts: scanAnomalies(Date.now()) });
+}
+
+module.exports = { scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -1,3 +1,4 @@
+import { targetsPlayer } from "@/game/fleets";
 import { findBuilding } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
@@ -26,7 +27,7 @@ export function upcomingEvents(queues: QueuesState | null, now: number, fleets: 
   const events: TimelineEvent[] = [];
   for (const f of fleets) {
     const mission = f.mission ?? "attack";
-    if (f.status === "outbound" && f.targetUid === uid && f.ownerUid !== uid && (mission === "attack" || mission === "pirate")) {
+    if (f.status === "outbound" && targetsPlayer(f, uid) && f.ownerUid !== uid && (mission === "attack" || mission === "pirate")) {
       const label = mission === "pirate" ? `Raid du ${f.ownerPseudo}` : `Attaque de ${f.ownerPseudo}`;
       events.push({ id: `h:${f.id}`, kind: "hostile", label, endTime: f.arriveAtMs, to: mission === "pirate" ? "/game/menaces" : "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "outbound") {
