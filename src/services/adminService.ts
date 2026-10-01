@@ -169,7 +169,7 @@ export interface AdminLogEntry {
   id: string;
   actorId: string;
   actorName: string;
-  action: "create" | "update" | "delete";
+  action: "create" | "update" | "delete" | "reset" | "maintenance";
   targetCollection: string;
   recordId: string;
   recordLabel: string;

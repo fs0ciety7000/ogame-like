@@ -534,7 +534,7 @@ export function ToolsPanel() {
   return (
     <div className="grid gap-3 md:grid-cols-2">
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="font-display text-sm text-white">Sauvegarde du contenu</h3>
+        <h3 className="hud-title text-sm text-white">Sauvegarde du contenu</h3>
         <p className="text-xs text-slate-400">
           Exporte bâtiments, unités, technos, missions et règles en JSON (à garder avant de gros changements), ou réimporte
           un fichier exporté.
@@ -561,7 +561,7 @@ export function ToolsPanel() {
       </Card>
 
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="font-display text-sm text-white">Code du serveur</h3>
+        <h3 className="hud-title text-sm text-white">Code du serveur</h3>
         <p className="text-xs text-slate-400">
           Le serveur récupère ses hooks (règles du jeu côté serveur) depuis la branche main du dépôt à chaque démarrage. Ce
           bouton le fait tout de suite, par exemple juste après un déploiement.
@@ -575,7 +575,7 @@ export function ToolsPanel() {
       <HardResetCard />
 
       <Card className="flex flex-col gap-2 border-danger-glow/30 p-4">
-        <h3 className="font-display text-sm text-danger-glow">Remise à zéro de l'XP</h3>
+        <h3 className="hud-title text-sm text-danger-glow">Remise à zéro de l'XP</h3>
         <p className="text-xs text-slate-400">
           Remet l'XP totale et de saison de tous les joueurs à 0 (ressources, bâtiments et unités conservés). Irréversible.
         </p>

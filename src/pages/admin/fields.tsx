@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
   return (
     <label className={cn("flex flex-col gap-1", className)}>
-      <span className="text-xs font-medium text-slate-300">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
       {children}
       {hint && <span className="text-[11px] text-slate-500">{hint}</span>}
     </label>
@@ -22,8 +22,8 @@ export function Field({ label, hint, children, className }: { label: string; hin
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="rounded-xl border border-white/5 bg-black/10 p-3">
-      <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-cyan-glow/80">{title}</legend>
+    <fieldset className="hud-cut-sm border border-cyan-glow/10 bg-black/20 p-3">
+      <legend className="hud-eyebrow px-1.5 text-[10px] text-cyan-glow/80">{title}</legend>
       <div className="grid gap-3 sm:grid-cols-2">{children}</div>
     </fieldset>
   );
@@ -58,7 +58,7 @@ export function TextAreaField({ label, value, onChange, rows = 2 }: { label: str
         value={value}
         rows={rows}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-white/10 bg-space-800/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/50"
+        className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/60"
       />
     </Field>
   );
@@ -117,7 +117,7 @@ export function SelectField<T extends string>({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="h-10 rounded-lg border border-white/10 bg-space-800/70 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/50"
+        className="h-10 border border-cyan-glow/15 bg-space-900/80 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/50"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -170,7 +170,7 @@ export function KeyNumberMapField({
             <select
               value={key}
               onChange={(e) => set(entries.map((en, j) => (j === i ? [e.target.value, en[1]] : en)))}
-              className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
+              className="h-9 min-w-0 flex-1 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100"
             >
               {[options.find((o) => o.value === key) ?? { value: key, label: `${key} (inconnu)` }, ...unused].map((o) => (
                 <option key={o.value} value={o.value}>

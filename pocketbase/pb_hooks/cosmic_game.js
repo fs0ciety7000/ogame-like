@@ -51,6 +51,7 @@ __export(hooksEntry_exports, {
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
+  MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
   PVP_RULES: () => PVP_RULES,
@@ -66,12 +67,15 @@ __export(hooksEntry_exports, {
   debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
   endGarrison: () => endGarrison,
+  extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
   finishAllianceResearch: () => finishAllianceResearch,
   flushPlayer: () => flushPlayer,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
+  nextMaintenance: () => nextMaintenance,
+  normalizeMaintenance: () => normalizeMaintenance,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -4286,6 +4290,51 @@ function applyGameContent(overrides) {
   Object.assign(PIRATE_RULES, content.rules.pirates);
   current = content;
   return content;
+}
+
+// src/game/maintenance.ts
+var MAINTENANCE_KEY = "maintenance";
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null };
+var MAX_MESSAGE = 600;
+var MAX_VERSION = 20;
+function normalizeMaintenance(raw) {
+  if (!raw || typeof raw !== "object") return __spreadValues({}, MAINTENANCE_OFF);
+  const r = raw;
+  const endsAt = Number(r.endsAtMs);
+  return {
+    enabled: r.enabled === true,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
+    startedAtMs: Number(r.startedAtMs) || 0,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null
+  };
+}
+function nextMaintenance(previous, request, now) {
+  const enabled = request.enabled === true;
+  if (!enabled) return __spreadProps(__spreadValues({}, previous), { enabled: false, endsAtMs: null });
+  const endsAt = Number(request.endsAtMs);
+  return {
+    enabled: true,
+    message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
+    version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
+    startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null
+  };
+}
+function extendUltimatums(pirates, startedAtMs, now) {
+  const pausedMs = now - startedAtMs;
+  if (!pirates || typeof pirates !== "object" || startedAtMs <= 0 || pausedMs <= 0) return null;
+  const shift = (state) => {
+    const u = state.ultimatum;
+    if (!u || typeof u.expiresAtMs !== "number" || u.expiresAtMs <= startedAtMs) return false;
+    state.ultimatum = __spreadProps(__spreadValues({}, u), { expiresAtMs: u.expiresAtMs + pausedMs });
+    return true;
+  };
+  const copy = JSON.parse(JSON.stringify(pirates));
+  let changed = false;
+  if ("notoriety" in copy || "nextListAtMs" in copy) changed = shift(copy);
+  else for (const state of Object.values(copy)) if (state && typeof state === "object" && shift(state)) changed = true;
+  return changed ? copy : null;
 }
 
 // src/server/hooksEntry.ts

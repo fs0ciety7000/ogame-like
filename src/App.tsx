@@ -6,6 +6,7 @@ import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { LoginPage } from "@/pages/LoginPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { AppShell } from "@/components/layout/AppShell";
+import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
 // pour ne pas alourdir le bundle initial (écran de connexion) avec des
@@ -32,42 +33,44 @@ export default function App() {
   return (
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <GuestRoute>
-                <LoginPage />
-              </GuestRoute>
-            }
-          />
-          {/* Lien de l'email « mot de passe oublié » : accessible connecté ou non. */}
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <MaintenanceGate>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <GuestRoute>
+                  <LoginPage />
+                </GuestRoute>
+              }
+            />
+            {/* Lien de l'email « mot de passe oublié » : accessible connecté ou non. */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/game" element={<AppShell />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="ressources" element={<ResourcesPage />} />
-              <Route path="batiments" element={<BuildingsPage />} />
-              <Route path="unites" element={<UnitsPage />} />
-              <Route path="labo" element={<LabPage />} />
-              <Route path="missions" element={<MissionsPage />} />
-              <Route path="joueurs" element={<PlayersPage />} />
-              <Route path="galaxie" element={<GalaxyPage />} />
-              <Route path="combats" element={<CombatLogPage />} />
-              <Route path="palmares" element={<HallOfFamePage />} />
-              <Route path="menaces" element={<ThreatsPage />} />
-              <Route path="succes" element={<AchievementsPage />} />
-              <Route path="alliance" element={<AlliancePage />} />
-              <Route path="profil" element={<ProfilePage />} />
-              <Route path="reglages" element={<SettingsPage />} />
-              <Route path="admin" element={<AdminPage />} />
-              <Route path="nouveautes" element={<ChangelogPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/game" element={<AppShell />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="ressources" element={<ResourcesPage />} />
+                <Route path="batiments" element={<BuildingsPage />} />
+                <Route path="unites" element={<UnitsPage />} />
+                <Route path="labo" element={<LabPage />} />
+                <Route path="missions" element={<MissionsPage />} />
+                <Route path="joueurs" element={<PlayersPage />} />
+                <Route path="galaxie" element={<GalaxyPage />} />
+                <Route path="combats" element={<CombatLogPage />} />
+                <Route path="palmares" element={<HallOfFamePage />} />
+                <Route path="menaces" element={<ThreatsPage />} />
+                <Route path="succes" element={<AchievementsPage />} />
+                <Route path="alliance" element={<AlliancePage />} />
+                <Route path="profil" element={<ProfilePage />} />
+                <Route path="reglages" element={<SettingsPage />} />
+                <Route path="admin" element={<AdminPage />} />
+                <Route path="nouveautes" element={<ChangelogPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </MaintenanceGate>
       </BrowserRouter>
 
       <Toaster

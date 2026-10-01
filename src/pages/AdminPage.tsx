@@ -1,8 +1,25 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ShieldAlert } from "lucide-react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import {
+  Award,
+  BarChart3,
+  Building2,
+  Compass,
+  Construction,
+  FlaskConical,
+  Medal,
+  Rocket,
+  Scale,
+  ScrollText,
+  ShieldAlert,
+  Skull,
+  Users,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { checkIsAdmin } from "@/services/adminService";
@@ -14,6 +31,40 @@ import { newRank, RankForm } from "@/pages/admin/RankForm";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
+import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
+import { AdminStatusStrip } from "@/pages/admin/AdminStatusStrip";
+import { useMaintenance } from "@/services/maintenanceService";
+import { useContentStore } from "@/services/contentService";
+import type { ContentSection } from "@/game/content";
+import { cn } from "@/lib/utils";
+
+type NavEntry = { id: string; label: string; icon: LucideIcon; hint: string };
+
+const NAV: { label: string; items: NavEntry[] }[] = [
+  {
+    label: "Pilotage",
+    items: [
+      { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
+      { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
+      { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
+    ],
+  },
+  {
+    label: "Contenu",
+    items: [
+      { id: "buildings", label: "Bâtiments", icon: Building2, hint: "Coûts, production, paliers et déblocages." },
+      { id: "units", label: "Unités", icon: Rocket, hint: "Statistiques, coûts et temps de construction." },
+      { id: "technologies", label: "Technologies", icon: FlaskConical, hint: "Arbre du Labo : effets et prérequis." },
+      { id: "missions", label: "Missions", icon: Compass, hint: "Durées, prérequis et récompenses." },
+      { id: "factions", label: "Factions", icon: Skull, hint: "Déclencheurs, tributs, raids et repaires." },
+      { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
+      { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
+      { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
+    ],
+  },
+  { label: "Communauté", items: [{ id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." }] },
+  { label: "Système", items: [{ id: "tools", label: "Outils", icon: Wrench, hint: "Sauvegardes, hooks, ultimatums et remise à zéro." }] },
+];
 
 /** Administration du jeu : contenu (bâtiments, unités, technos, missions),
  *  règles de combat, joueurs et outils. Réservée aux comptes listés dans
@@ -25,7 +76,9 @@ export function AdminPage() {
   // Onglet dans l'URL : il survit au rechargement de l'écran qui suit
   // chaque enregistrement de contenu (voir AppShell).
   const [params, setParams] = useSearchParams();
-  const tab = params.get("onglet") ?? "buildings";
+  const tab = params.get("onglet") ?? "stats";
+  const maintenance = useMaintenance();
+  const customized = useContentStore((s) => s.customized);
 
   useEffect(() => {
     if (uid) void checkIsAdmin(uid).then(setAllowed);
@@ -41,36 +94,62 @@ export function AdminPage() {
     );
   }
 
+  const active = NAV.flatMap((g) => g.items).find((i) => i.id === tab);
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         eyebrow="Cosmic Empires / Administration"
-        title="Administration"
-        description="Contenu du jeu, règles, joueurs. Chaque enregistrement s'applique immédiatement à tous les joueurs."
+        title="Console d'administration"
+        description="Contenu du jeu, règles, joueurs et maintenance. Chaque enregistrement s'applique immédiatement à tous les joueurs."
       />
-      <Tabs value={tab} onValueChange={(v) => setParams({ onglet: v }, { replace: true })}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="stats">Statistiques</TabsTrigger>
-          <TabsTrigger value="buildings">Bâtiments</TabsTrigger>
-          <TabsTrigger value="units">Unités</TabsTrigger>
-          <TabsTrigger value="technologies">Technologies</TabsTrigger>
-          <TabsTrigger value="missions">Missions</TabsTrigger>
-          <TabsTrigger value="factions">Factions</TabsTrigger>
-          <TabsTrigger value="ranks">Rangs</TabsTrigger>
-          <TabsTrigger value="achievements">Succès</TabsTrigger>
-          <TabsTrigger value="rules">Règles</TabsTrigger>
-          <TabsTrigger value="players">Joueurs</TabsTrigger>
-          <TabsTrigger value="logs">Journal</TabsTrigger>
-          <TabsTrigger value="tools">Outils</TabsTrigger>
-        </TabsList>
+      <AdminStatusStrip onOpen={(id) => setParams({ onglet: id }, { replace: true })} />
+      <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid gap-4 lg:grid-cols-[13.5rem_1fr]">
+        <TabsPrimitive.List aria-label="Sections de l'administration" className="hud-cut-sm -mx-1 flex gap-1 overflow-x-auto border border-cyan-glow/10 bg-space-950/60 p-1.5 lg:sticky lg:top-0 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:p-2">
+          {NAV.map((group) => (
+            <div key={group.label} className="contents lg:block">
+              <p className="hud-eyebrow hidden px-2 pb-1 pt-2 text-[9px] text-slate-600 first:pt-0 lg:block">{group.label}</p>
+              {group.items.map((item) => (
+                <TabsPrimitive.Trigger
+                  key={item.id}
+                  value={item.id}
+                  className={cn(
+                    "group relative flex shrink-0 items-center gap-2.5 px-2.5 py-2 text-left font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-400 transition-colors lg:w-full",
+                    "hover:bg-white/[0.04] hover:text-slate-200",
+                    "data-[state=active]:bg-cyan-glow/[0.1] data-[state=active]:text-cyan-glow",
+                  )}
+                >
+                  <span aria-hidden className="absolute inset-y-1 left-0 hidden w-0.5 bg-cyan-glow shadow-[0_0_8px_var(--color-cyan-glow)] group-data-[state=active]:block" />
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">{item.label}</span>
+                  {item.id === "maintenance" && maintenance.enabled && <span className="ml-auto h-2 w-2 animate-pulse rounded-full bg-gold-glow shadow-[0_0_6px_var(--color-gold-glow)]" />}
+                  {customized.includes(item.id as ContentSection) && (
+                    <span title="Personnalisé (différent du code)" className="ml-auto h-1.5 w-1.5 rounded-full bg-violet-glow" />
+                  )}
+                </TabsPrimitive.Trigger>
+              ))}
+            </div>
+          ))}
+        </TabsPrimitive.List>
 
-        <TabsContent value="logs" className="mt-4">
+        <div className="min-w-0">
+          {active && (
+            <div className="mb-3 flex items-baseline gap-3 border-b border-white/5 pb-2">
+              <active.icon className="h-4 w-4 self-center text-cyan-glow" />
+              <h2 className="hud-title text-lg text-white">{active.label}</h2>
+              <p className="truncate text-xs text-slate-500">{active.hint}</p>
+            </div>
+          )}
+        <TabsContent value="maintenance">
+          <MaintenancePanel />
+        </TabsContent>
+        <TabsContent value="logs">
           <LogsPanel />
         </TabsContent>
-        <TabsContent value="stats" className="mt-4">
+        <TabsContent value="stats">
           <StatsPanel />
         </TabsContent>
-        <TabsContent value="buildings" className="mt-4">
+        <TabsContent value="buildings">
           <ContentEditor
             section="buildings"
             title="Bâtiments"
@@ -81,7 +160,7 @@ export function AdminPage() {
             renderForm={(b, onChange, isNew) => <BuildingForm value={b} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="units" className="mt-4">
+        <TabsContent value="units">
           <ContentEditor
             section="units"
             title="Unités"
@@ -92,7 +171,7 @@ export function AdminPage() {
             renderForm={(u, onChange, isNew) => <UnitForm value={u} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="technologies" className="mt-4">
+        <TabsContent value="technologies">
           <ContentEditor
             section="technologies"
             title="Technologies"
@@ -103,7 +182,7 @@ export function AdminPage() {
             renderForm={(t, onChange, isNew) => <TechForm value={t} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="missions" className="mt-4">
+        <TabsContent value="missions">
           <ContentEditor
             section="missions"
             title="Missions"
@@ -114,7 +193,7 @@ export function AdminPage() {
             renderForm={(m, onChange, isNew) => <MissionForm value={m} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="factions" className="mt-4">
+        <TabsContent value="factions">
           <ContentEditor
             section="factions"
             title="Factions"
@@ -125,7 +204,7 @@ export function AdminPage() {
             renderForm={(f, onChange, isNew) => <FactionForm value={f} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="ranks" className="mt-4">
+        <TabsContent value="ranks">
           <ContentEditor
             section="ranks"
             title="Rangs"
@@ -136,7 +215,7 @@ export function AdminPage() {
             renderForm={(r, onChange, isNew) => <RankForm value={r} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="achievements" className="mt-4">
+        <TabsContent value="achievements">
           <ContentEditor
             section="achievements"
             title="Succès"
@@ -147,15 +226,16 @@ export function AdminPage() {
             renderForm={(a, onChange, isNew) => <AchievementForm value={a} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="rules" className="mt-4">
+        <TabsContent value="rules">
           <RulesPanel />
         </TabsContent>
-        <TabsContent value="players" className="mt-4">
+        <TabsContent value="players">
           <PlayersPanel />
         </TabsContent>
-        <TabsContent value="tools" className="mt-4">
+        <TabsContent value="tools">
           <ToolsPanel />
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

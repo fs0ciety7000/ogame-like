@@ -10,6 +10,8 @@ const ACTION_LABEL: Record<AdminLogEntry["action"], { label: string; variant: "s
   create: { label: "Création", variant: "success" },
   update: { label: "Modification", variant: "warning" },
   delete: { label: "Suppression", variant: "alert" },
+  reset: { label: "Remise à zéro", variant: "alert" },
+  maintenance: { label: "Maintenance", variant: "warning" },
 };
 
 const COLLECTION_LABEL: Record<string, string> = {

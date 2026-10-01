@@ -23,6 +23,7 @@ export { answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
+export { extendUltimatums, MAINTENANCE_KEY, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
