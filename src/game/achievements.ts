@@ -1,5 +1,5 @@
 import { LOCKABLE_BUILDINGS } from "@/game/buildings";
-import { getRankIndex } from "@/game/ranks";
+import { familyIndex, getRankIndex } from "@/game/ranks";
 import type { PlayerState } from "@/types/game";
 
 export interface Achievement {
@@ -51,7 +51,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: "Commandant",
     description: "Atteins le rang Bronze III.",
     emoji: "🏅",
-    condition: (p) => getRankIndex(p.xp) >= 4,
+    condition: (p) => getRankIndex(p.xp) >= Math.max(1, familyIndex("Bronze")),
   },
   {
     id: "fleet",

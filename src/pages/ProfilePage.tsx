@@ -8,7 +8,7 @@ import { RadialGauge } from "@/components/ui/radial-gauge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { getRankIcon, getRankIndex, getRankLabel, getRankProgress, RANK_NAMES } from "@/game/ranks";
+import { getRankIcon, getRankIndex, getRankLabel, getRankProgress, RANKS } from "@/game/ranks";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { UNITS } from "@/game/units";
 import { ACHIEVEMENTS } from "@/game/achievements";
@@ -56,12 +56,14 @@ export function ProfilePage() {
         <div className="flex-1">
           <p className="font-display text-xl text-white">{getRankLabel(player.xp)}</p>
           <p className="text-xs text-slate-500">
-            {rankIndex > 0 ? `Rang précédent : ${RANK_NAMES[rankIndex - 1]}` : "Aucun rang précédent"}
+            {rankIndex > 0 ? `Rang précédent : ${RANKS[rankIndex - 1]?.name}` : "Aucun rang précédent"}
           </p>
-          <p className="text-xs text-slate-500">{progress.next ? `Rang suivant : ${progress.next}` : "Rang maximum atteint"}</p>
+          <p className="text-xs text-slate-500">{progress.next ? `Rang suivant : ${progress.next} (${formatNumber(progress.nextXp ?? 0)} XP)` : "Rang maximum atteint"}</p>
           <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
         </div>
       </Card>
+
+      <RankLadder xp={player.xp} />
 
       <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
 
@@ -165,6 +167,45 @@ export function ProfilePage() {
 }
 
 /** Titres gagnés en fin de saison : le joueur choisit celui qui s'affiche. */
+/** Échelle complète des rangs : atteints, actuel, à venir. */
+function RankLadder({ xp }: { xp: number }) {
+  const [open, setOpen] = useState(false);
+  const current = getRankIndex(xp);
+  const shown = open ? RANKS : RANKS.slice(Math.max(0, current - 2), current + 4);
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2">
+        <h3 className="font-display text-sm text-white">Échelle des rangs</h3>
+        <span className="text-xs text-slate-500">
+          {current + 1} / {RANKS.length}
+        </span>
+        <button type="button" className="ml-auto text-xs text-cyan-glow hover:underline" onClick={() => setOpen((o) => !o)}>
+          {open ? "Réduire" : "Voir les " + RANKS.length + " rangs"}
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-7">
+        {shown.map((r) => {
+          const i = RANKS.indexOf(r);
+          return (
+            <div
+              key={r.id}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border p-2 text-center",
+                i === current ? "border-cyan-glow/50 bg-cyan-glow/10" : "border-white/5 bg-black/20",
+                i > current && "opacity-45 grayscale",
+              )}
+            >
+              <img src={r.image} alt="" className="h-14 w-14 object-contain" loading="lazy" />
+              <p className={cn("text-[11px] font-semibold", i === current ? "text-cyan-glow" : "text-slate-200")}>{r.name}</p>
+              <p className="tabular-mono text-[10px] text-slate-500">{formatNumber(r.xp)} XP</p>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string }) {
   const [pending, setPending] = useState(false);
   if (titles.length === 0) {

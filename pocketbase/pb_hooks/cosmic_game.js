@@ -1482,8 +1482,8 @@ function seasonStandings(entries, seasonId) {
     return { uid: x.e.uid, pseudo: x.e.pseudo, allianceId: (_a = x.e.allianceId) != null ? _a : "", rank: i + 1, seasonXp: x.seasonXp };
   });
 }
-function seasonRewardFor(rank, seasonXp) {
-  const tier = [...SEASON_RULES.tiers].sort((a, b) => a.maxRank - b.maxRank).find((t) => rank <= t.maxRank);
+function seasonRewardFor(rank2, seasonXp) {
+  const tier = [...SEASON_RULES.tiers].sort((a, b) => a.maxRank - b.maxRank).find((t) => rank2 <= t.maxRank);
   if (tier) return { hours: tier.hours, rare: tier.rare, title: tier.title };
   if (seasonXp >= SEASON_RULES.participationXp) return { hours: SEASON_RULES.participationHours, rare: 0, title: "" };
   return null;
@@ -1727,62 +1727,44 @@ function hasPrerequisites(mission, units) {
 }
 
 // src/game/ranks.ts
-var RANK_NAMES = [
-  "Non-class\xE9",
-  "Fer III",
-  "Fer II",
-  "Fer I",
-  "Bronze III",
-  "Bronze II",
-  "Bronze I",
-  "Argent III",
-  "Argent II",
-  "Argent I",
-  "Or III",
-  "Or II",
-  "Or I",
-  "Platine III",
-  "Platine II",
-  "Platine I",
-  "\xC9meraude",
-  "Diamant",
-  "Master",
-  "Challenger",
-  "Elite"
+var rank = (id, name, family, xp) => ({ id, name, family, xp, image: `/assets/ranks/${id}.webp` });
+var tiers = (prefix, family, xps) => [
+  rank(`${prefix}3`, `${family} III`, family, xps[0]),
+  rank(`${prefix}2`, `${family} II`, family, xps[1]),
+  rank(`${prefix}1`, `${family} I`, family, xps[2])
 ];
-var RANK_THRESHOLDS = [
-  0,
-  100,
-  300,
-  600,
-  1e3,
-  1500,
-  2e3,
-  2600,
-  3300,
-  4e3,
-  5e3,
-  6500,
-  8e3,
-  1e4,
-  13e3,
-  16e3,
-  2e4,
-  26e3,
-  33e3,
-  42e3,
-  52e3
+var DEFAULT_RANKS = [
+  rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
+  ...tiers("fer", "Fer", [100, 250, 500]),
+  ...tiers("bronze", "Bronze", [900, 1400, 2e3]),
+  ...tiers("argent", "Argent", [3e3, 4200, 5600]),
+  ...tiers("or", "Or", [7500, 1e4, 13e3]),
+  ...tiers("platine", "Platine", [17e3, 22e3, 28e3]),
+  ...tiers("emeraude", "\xC9meraude", [36e3, 45e3, 56e3]),
+  ...tiers("diamant", "Diamant", [7e4, 87e3, 107e3]),
+  ...tiers("maitre", "Ma\xEEtre", [13e4, 16e4, 195e3]),
+  rank("grand_maitre", "Grand Ma\xEEtre", "Grand Ma\xEEtre", 24e4),
+  rank("challenger", "Challenger", "Challenger", 32e4),
+  rank("elite", "\xC9lite", "\xC9lite", 42e4)
 ];
+var RANKS = [];
+function setRanks(defs) {
+  RANKS.splice(0, RANKS.length, ...[...defs].sort((a, b) => a.xp - b.xp));
+}
+setRanks(structuredClone(DEFAULT_RANKS));
 function getRankIndex(xp) {
   let index = 0;
-  for (let i = 0; i < RANK_THRESHOLDS.length; i++) {
-    if (xp >= RANK_THRESHOLDS[i]) index = i;
+  for (let i = 0; i < RANKS.length; i++) {
+    if ((xp != null ? xp : 0) >= RANKS[i].xp) index = i;
   }
   return index;
 }
-function getRankLabel(xp) {
+function getRank(xp) {
   var _a;
-  return (_a = RANK_NAMES[getRankIndex(xp)]) != null ? _a : "Non-class\xE9";
+  return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
+}
+function familyIndex(family) {
+  return RANKS.findIndex((r) => r.family === family);
 }
 
 // src/game/achievements.ts
@@ -1830,7 +1812,7 @@ var ACHIEVEMENTS = [
     name: "Commandant",
     description: "Atteins le rang Bronze III.",
     emoji: "\u{1F3C5}",
-    condition: (p) => getRankIndex(p.xp) >= 4
+    condition: (p) => getRankIndex(p.xp) >= Math.max(1, familyIndex("Bronze"))
   },
   {
     id: "fleet",
@@ -2644,7 +2626,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
   const families = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a, _b;
-    const family = getRankLabel((_a = p.xp) != null ? _a : 0).split(" ")[0];
+    const family = getRank((_a = p.xp) != null ? _a : 0).family;
     families.set(family, ((_b = families.get(family)) != null ? _b : 0) + 1);
   });
   const rates = players.map((p) => {
@@ -2747,7 +2729,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
         var _a;
         return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
       }))),
-      ranks: [...families.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => RANK_NAMES.findIndex((r) => r.startsWith(a.label)) - RANK_NAMES.findIndex((r) => r.startsWith(b.label))),
+      ranks: [...families.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
       medianXp: median(players.map((p) => {
         var _a;
         return (_a = p.xp) != null ? _a : 0;
@@ -3811,7 +3793,7 @@ var GAME_FIELDS = [
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "rules"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "rules"];
 var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
@@ -3830,12 +3812,13 @@ function defaultGameContent() {
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
     factions: DEFAULT_FACTIONS,
+    ranks: DEFAULT_RANKS,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -3843,18 +3826,19 @@ function applyGameContent(overrides) {
     technologies: (_c = overrides.technologies) != null ? _c : defaults.technologies,
     missions: (_d = overrides.missions) != null ? _d : defaults.missions,
     factions: (_e = overrides.factions) != null ? _e : defaults.factions,
+    ranks: (_f = overrides.ranks) != null ? _f : defaults.ranks,
     rules: {
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_g = (_f = overrides.rules) == null ? void 0 : _f.pvp) != null ? _g : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_i = (_h = overrides.rules) == null ? void 0 : _h.combat) != null ? _i : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_k = (_j = overrides.rules) == null ? void 0 : _j.economy) != null ? _k : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_m = (_l = overrides.rules) == null ? void 0 : _l.fleets) != null ? _m : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_o = (_n = overrides.rules) == null ? void 0 : _n.spy) != null ? _o : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_q = (_p = overrides.rules) == null ? void 0 : _p.debris) != null ? _q : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_s = (_r = overrides.rules) == null ? void 0 : _r.patrol) != null ? _s : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_u = (_t = overrides.rules) == null ? void 0 : _t.events) != null ? _u : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_w = (_v = overrides.rules) == null ? void 0 : _v.seasons) != null ? _w : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_y = (_x = overrides.rules) == null ? void 0 : _x.alliances) != null ? _y : {}),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_A = (_z = overrides.rules) == null ? void 0 : _z.pirates) != null ? _A : {})
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_h = (_g = overrides.rules) == null ? void 0 : _g.pvp) != null ? _h : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_j = (_i = overrides.rules) == null ? void 0 : _i.combat) != null ? _j : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_l = (_k = overrides.rules) == null ? void 0 : _k.economy) != null ? _l : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_n = (_m = overrides.rules) == null ? void 0 : _m.fleets) != null ? _n : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_p = (_o = overrides.rules) == null ? void 0 : _o.spy) != null ? _p : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_r = (_q = overrides.rules) == null ? void 0 : _q.debris) != null ? _r : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_t = (_s = overrides.rules) == null ? void 0 : _s.patrol) != null ? _t : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_v = (_u = overrides.rules) == null ? void 0 : _u.events) != null ? _v : {}),
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_x = (_w = overrides.rules) == null ? void 0 : _w.seasons) != null ? _x : {}),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_z = (_y = overrides.rules) == null ? void 0 : _y.alliances) != null ? _z : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_B = (_A = overrides.rules) == null ? void 0 : _A.pirates) != null ? _B : {})
     }
   };
   setBuildings(content.buildings);
@@ -3862,6 +3846,7 @@ function applyGameContent(overrides) {
   setTechnologies(content.technologies);
   setMissions(content.missions);
   setFactions(content.factions);
+  setRanks(content.ranks);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
