@@ -25,6 +25,7 @@ import {
 import { splitMentions } from "@/game/mentions";
 import { allianceRole, ALLIANCE_RULES } from "@/game/alliances";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WarTab } from "@/components/game/WarTab";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import {
   IntelTab,
@@ -241,7 +242,11 @@ function AllianceRoom({
         <TabsTrigger value="tresor">Trésor</TabsTrigger>
         <TabsTrigger value="recherches">Recherches</TabsTrigger>
         <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
+        <TabsTrigger value="guerre">Guerre</TabsTrigger>
       </TabsList>
+      <TabsContent value="guerre">
+        <WarTab alliance={alliance} canLead={role === "founder" || role === "officer"} />
+      </TabsContent>
       <TabsContent value="tresor">
         <TreasuryTab
           alliance={alliance}

@@ -15,7 +15,7 @@ export { performLaunch, performFleetReturn, recallFleet, patrolTurnaround } from
 export { resolveSpyArrival } from "@/game/espionage";
 export { ALLIANCE_RULES, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
 export { stationGarrison, endGarrison } from "@/game/fleets";
-export { performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
+export { currentSeasonId, performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { parseResetOptions, resetPlayerState } from "@/game/reset";
@@ -28,6 +28,7 @@ export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody,
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
 export { acceptOffer, createOffer, describeAmount, MARKET_RULES, refundOffer, utcDayStart } from "@/game/market";
 export { isFormation } from "@/game/formations";
+export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
 export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanWindow, normalizeLeviathan, removeLeviathanTitle, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";

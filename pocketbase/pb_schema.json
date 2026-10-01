@@ -1518,5 +1518,152 @@
       "CREATE INDEX idx_market_seller ON market_offers (sellerId, status)",
       "CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"
     ]
+  },
+  {
+    "id": "pbc_ce_wars",
+    "name": "alliance_wars",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "attackerId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "attackerName",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "attackerTag",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "defenderId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "defenderName",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "defenderTag",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "declaredById",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "declaredByPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "declaredAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "startMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "endMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "scoreAttacker",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "scoreDefender",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "log",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "winnerId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "surrenderedBy",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "endedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "rewarded",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "seasonId",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "titleUntilMs",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_wars_status ON alliance_wars (status)",
+      "CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)",
+      "CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"
+    ]
   }
 ]

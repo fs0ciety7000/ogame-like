@@ -982,6 +982,51 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v3.2 alliance war: declaration paid by the treasury, points in combat, surrender and rewards", async () => {
+    // Connecté en B (fondateur de X) ; A dirige Y.
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const X = await admin.collection("alliances").create({ name: `Xeno ${suffix}`, tag: "XEN", createdBy: bId, members: [bId, "fx1", "fx2"], memberPseudos: {}, treasury: { scrap: 10_000_000, energy: 10_000_000 } });
+    const Y = await admin.collection("alliances").create({ name: `Ypsi ${suffix}`, tag: "YPS", createdBy: aId, members: [aId, "fy1", "fy2"], memberPseudos: {}, treasury: {} });
+    const wars: string[] = [];
+    try {
+      await admin.collection("players").update(bId, { allianceId: X.id, units: { chasseur: { level: 5, count: 100 }, cargo: { level: 5, count: 50 } }, createdAtMs: MONTH_AGO(), titles: [], activeTitle: "" });
+      await admin.collection("players").update(aId, { allianceId: Y.id, units: {}, createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, lastAttackAtMs: Date.now() - 1000, xp: bBefore!.xp, resources: RICH });
+      const war = await pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: Y.id } });
+      wars.push(war.id);
+      expect(war.status).toBe("preparing");
+      expect((await admin.collection("alliances").getOne(X.id)).treasury.scrap).toBe(5_000_000);
+      await expect(pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: Y.id } })).rejects.toMatchObject({ status: 400 });
+      // Les hostilités commencent : une attaque gagnée rapporte 3 points.
+      await admin.collection("alliance_wars").update(war.id, { startMs: Date.now() - 1000 });
+      const { report } = await attackAndResolve(aId, { chasseur: 50, cargo: 10 });
+      expect(report.outcome).toBe("attacker_win");
+      const scored = await pb.collection("alliance_wars").getOne(war.id);
+      expect(scored.scoreAttacker).toBeGreaterThanOrEqual(3);
+      // Pendant la guerre, une nouvelle attaque sur la même cible est possible après 1 h (et non 2 h).
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow(/bouclier|récemment|min/);
+      // B (fondateur de X) se rend : Y gagne trésor et titre.
+      await pb.send("/api/cosmic/war", { method: "POST", body: { action: "surrender", warId: war.id } });
+      const ended = await pb.collection("alliance_wars").getOne(war.id);
+      expect(ended.status).toBe("ended");
+      expect(ended.winnerId).toBe(Y.id);
+      expect(ended.rewarded).toBe(true);
+      expect(ended.seasonId).toBeTruthy();
+      expect((await admin.collection("alliances").getOne(Y.id)).treasury.scrap).toBe(20_000_000);
+      expect((await snap(aId))!.titles.some((t: { label: string }) => t.label === "Vainqueurs")).toBe(true);
+      await expect(aClient.send("/api/cosmic/war", { method: "POST", body: { action: "surrender", warId: war.id } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      for (const id of wars) await admin.collection("alliance_wars").delete(id).catch(() => undefined);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("alliances").delete(X.id);
+      await admin.collection("alliances").delete(Y.id);
+      await admin.collection("players").update(aId, { allianceId: aBefore!.allianceId ?? "", units: aBefore!.units, resources: aBefore!.resources, xp: aBefore!.xp, titles: aBefore!.titles, activeTitle: aBefore!.activeTitle ?? "", lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0 });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId ?? "", units: bBefore!.units, resources: bBefore!.resources, titles: bBefore!.titles, activeTitle: bBefore!.activeTitle ?? "" });
+    }
+  }, 60_000);
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();
