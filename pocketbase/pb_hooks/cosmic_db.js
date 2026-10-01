@@ -1025,9 +1025,13 @@ function adminReset(e) {
       txApp.findAllRecords("alliance_logs").forEach((l) => txApp.delete(l));
     }
 
+    const staffRecord = readStaffRecord(txApp, game);
+    const staffRoles = staffRecord ? game.normalizeStaff(toPlain(staffRecord).data).roles : {};
     targets.forEach((uid) => {
       const loaded = loadPlayer(txApp, game, uid);
       const out = game.resetPlayerState(loaded.player, options, now);
+      // Le titre d'équipe survit à la remise à zéro des titres.
+      if (staffRoles[uid]) game.applyStaffTitle(out.player, staffRoles[uid], false);
       savePlayer(txApp, game, loaded, out.player, out.queues);
       ["createdAtMs", "lastAttackAtMs", "lastDefeatAtMs"].forEach((f) => loaded.rec.set(f, out.player[f]));
       if (scope === "all" && options.alliances) loaded.rec.set("allianceResearch", {});
@@ -1131,9 +1135,47 @@ function adminMaintenance(e) {
   return e.json(200, response);
 }
 
-/* ---------- Administrateurs du jeu (v2.5) ---------- */
+/* ---------- Administrateurs et équipe du jeu (v2.5) ---------- */
 
-function adminEntry(txApp, id, note) {
+function readStaffRecord(txApp, game) {
+  try {
+    return txApp.findFirstRecordByData("game_config", "key", game.STAFF_KEY);
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Titre d'équipe d'un joueur aligné sur son rôle (null = retiré). */
+function setPlayerStaffTitle(txApp, game, uid, role, display) {
+  const rec = findOrNull(txApp, "players", uid);
+  if (!rec) return;
+  const p = toPlain(rec);
+  if (!game.applyStaffTitle(p, role, display)) return;
+  rec.set("titles", p.titles);
+  rec.set("activeTitle", p.activeTitle || "");
+  txApp.save(rec);
+}
+
+/** Rôles de l'équipe ; créés au premier appel à partir des administrateurs
+ *  existants (rôles par défaut selon le pseudo, titre affiché d'emblée). */
+function ensureStaff(txApp, game) {
+  const existing = readStaffRecord(txApp, game);
+  if (existing) return { rec: existing, state: game.normalizeStaff(toPlain(existing).data) };
+  const roles = {};
+  txApp.findAllRecords("admins").forEach((a) => {
+    const player = findOrNull(txApp, "players", a.id);
+    const pseudo = player ? player.getString("pseudo") : "";
+    roles[a.id] = game.DEFAULT_STAFF_BY_PSEUDO[pseudo] || "admin";
+    setPlayerStaffTitle(txApp, game, a.id, roles[a.id], true);
+  });
+  const rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+  rec.set("key", game.STAFF_KEY);
+  rec.set("data", { roles });
+  txApp.save(rec);
+  return { rec, state: { roles } };
+}
+
+function adminEntry(txApp, id, note, roles) {
   const player = findOrNull(txApp, "players", id);
   const user = findOrNull(txApp, "users", id);
   return {
@@ -1141,26 +1183,39 @@ function adminEntry(txApp, id, note) {
     pseudo: player ? player.getString("pseudo") : "",
     email: user ? user.getString("email") : "",
     note: note || "",
+    role: (roles && roles[id]) || "admin",
   };
 }
 
-/** GET /api/cosmic/admin/admins — liste des administrateurs. */
+function adminEntries(txApp, roles) {
+  return txApp.findAllRecords("admins").map((r) => adminEntry(txApp, r.id, r.getString("note"), roles));
+}
+
+/** GET /api/cosmic/admin/admins — liste des administrateurs et de leur rôle. */
 function adminList(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
-  const list = $app.findAllRecords("admins").map((r) => adminEntry($app, r.id, r.getString("note")));
+  const game = loadGame();
+  let list = [];
+  $app.runInTransaction((txApp) => {
+    list = adminEntries(txApp, ensureStaff(txApp, game).state.roles);
+  });
   return e.json(200, { admins: list });
 }
 
-/** POST /api/cosmic/admin/admins { action: "add" | "remove", uid, note? } */
+/** POST /api/cosmic/admin/admins { action: "add" | "remove" | "role", uid, note?, role? } */
 function adminManage(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
   const req = body(e);
   const uid = String(req.uid || "");
   const action = String(req.action || "");
-  if (action !== "add" && action !== "remove") throw new BadRequestError("Action inconnue.");
+  if (["add", "remove", "role"].indexOf(action) < 0) throw new BadRequestError("Action inconnue.");
+  const role = game.isStaffRole(req.role) ? req.role : "admin";
   let response = null;
   $app.runInTransaction((txApp) => {
     if (!findOrNull(txApp, "users", uid)) throw new NotFoundError("Compte introuvable.");
+    const staff = ensureStaff(txApp, game);
+    const roles = staff.state.roles;
     const existing = findOrNull(txApp, "admins", uid);
     let label = "";
     if (action === "add") {
@@ -1169,20 +1224,36 @@ function adminManage(e) {
       rec.set("id", uid);
       rec.set("note", String(req.note || "").slice(0, 200));
       txApp.save(rec);
-      label = "administrateur ajouté";
-    } else {
+      roles[uid] = role;
+      const player = findOrNull(txApp, "players", uid);
+      setPlayerStaffTitle(txApp, game, uid, role, !!player && !player.getString("activeTitle"));
+      label = `nommé ${role === "developer" ? "développeur" : "administrateur"}`;
+    } else if (action === "remove") {
       if (!existing) throw new BadRequestError("Ce joueur n'est pas administrateur.");
       if (e.auth && e.auth.id === uid) throw new BadRequestError("Tu ne peux pas te retirer toi-même.");
       if (txApp.findAllRecords("admins").length <= 1) throw new BadRequestError("Il faut garder au moins un administrateur.");
       txApp.delete(existing);
+      delete roles[uid];
+      setPlayerStaffTitle(txApp, game, uid, null, false);
       label = "administrateur retiré";
+    } else {
+      if (!existing) throw new BadRequestError("Ce joueur n'est pas administrateur.");
+      const player = findOrNull(txApp, "players", uid);
+      const shown = player ? player.getString("activeTitle") : "";
+      const wasStaffShown = shown === "Développeur" || shown === "Administrateur";
+      roles[uid] = role;
+      setPlayerStaffTitle(txApp, game, uid, role, wasStaffShown);
+      label = `rôle : ${role === "developer" ? "développeur" : "administrateur"}`;
     }
-    const entry = adminEntry(txApp, uid, String(req.note || ""));
+    staff.rec.set("data", { roles });
+    txApp.save(staff.rec);
+
+    const entry = adminEntry(txApp, uid, String(req.note || ""), roles);
     const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
     log.load({
       actorId: e.auth ? e.auth.id : "superuser",
       actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
-      action: action === "add" ? "create" : "delete",
+      action: action === "add" ? "create" : action === "remove" ? "delete" : "update",
       targetCollection: "admins",
       recordId: uid,
       recordLabel: `${entry.pseudo || entry.email || uid} : ${label}`,
@@ -1190,7 +1261,7 @@ function adminManage(e) {
       createdAtMs: Date.now(),
     });
     txApp.save(log);
-    response = { ok: true, admins: txApp.findAllRecords("admins").map((r) => adminEntry(txApp, r.id, r.getString("note"))) };
+    response = { ok: true, admins: adminEntries(txApp, roles) };
   });
   return e.json(200, response);
 }

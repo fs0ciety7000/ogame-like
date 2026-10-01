@@ -9,6 +9,8 @@ import {
 } from "@/game/content";
 import { MAINTENANCE_KEY } from "@/game/maintenance";
 import { applyMaintenanceRecord } from "@/services/maintenanceService";
+import { STAFF_KEY } from "@/game/staff";
+import { applyStaffRecord } from "@/services/staffService";
 
 /* =====================================================
    Contenu du jeu (bâtiments, unités, technos, missions, règles) stocké
@@ -31,6 +33,7 @@ type ConfigRecord = { id: string; key: ContentSection; data: unknown };
 
 function applyRecords(records: ConfigRecord[]) {
   applyMaintenanceRecord(records.find((r) => (r.key as string) === MAINTENANCE_KEY)?.data ?? null);
+  applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {

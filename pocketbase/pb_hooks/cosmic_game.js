@@ -48,6 +48,7 @@ var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
+  DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
@@ -57,11 +58,13 @@ __export(hooksEntry_exports, {
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
+  STAFF_KEY: () => STAFF_KEY,
   allianceStandings: () => allianceStandings,
   answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
+  applyStaffTitle: () => applyStaffTitle,
   collectDebris: () => collectDebris,
   computeGameStats: () => computeGameStats,
   debrisTotal: () => debrisTotal,
@@ -72,10 +75,12 @@ __export(hooksEntry_exports, {
   findFaction: () => findFaction,
   finishAllianceResearch: () => finishAllianceResearch,
   flushPlayer: () => flushPlayer,
+  isStaffRole: () => isStaffRole,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
   normalizeMaintenance: () => normalizeMaintenance,
+  normalizeStaff: () => normalizeStaff,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -4290,6 +4295,34 @@ function applyGameContent(overrides) {
   Object.assign(PIRATE_RULES, content.rules.pirates);
   current = content;
   return content;
+}
+
+// src/game/staff.ts
+var STAFF_KEY = "staff";
+var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
+var STAFF_TITLE_SEASON = "staff";
+var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
+function isStaffRole(v) {
+  return v === "developer" || v === "admin";
+}
+function normalizeStaff(raw) {
+  const roles = {};
+  const src = raw && typeof raw === "object" ? raw.roles : null;
+  if (src && typeof src === "object") {
+    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
+  }
+  return { roles };
+}
+function applyStaffTitle(player, role, display = false) {
+  var _a, _b, _c, _d;
+  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
+  const staffLabels = Object.values(STAFF_LABELS);
+  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
+  const label = role ? STAFF_LABELS[role] : null;
+  player.titles = label ? [{ label, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
+  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label) player.activeTitle = "";
+  if (label && display) player.activeTitle = label;
+  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
 }
 
 // src/game/maintenance.ts

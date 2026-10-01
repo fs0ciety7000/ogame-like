@@ -737,13 +737,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await admin.collection("players").update(bId, { pirates: null });
   }, 30_000);
 
-  it("v2.5 admins: only admins manage them, never yourself", async () => {
+  it("v2.5 admins and staff: only admins manage them, role badge and title, never yourself", async () => {
     // Connecté en B (joueur).
     await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
     await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 403 });
-    const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test" } });
+    await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+    const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test", role: "developer" } });
     try {
-      expect(added.admins.some((a: { id: string; note: string }) => a.id === bId && a.note === "test")).toBe(true);
+      expect(added.admins.some((a: { id: string; note: string; role: string }) => a.id === bId && a.note === "test" && a.role === "developer")).toBe(true);
+      // Badge public (game_config « staff ») et titre affiché d'office.
+      const staff = await new PocketBase(PB_TEST_URL!).collection("game_config").getFirstListItem('key="staff"');
+      expect(staff.data.roles[bId]).toBe("developer");
+      let p = await snap(bId);
+      expect(p.activeTitle).toBe("Développeur");
+      await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "role", uid: bId, role: "admin" } });
+      p = await snap(bId);
+      expect(p.activeTitle).toBe("Administrateur");
+      expect(p.titles.map((t: { label: string }) => t.label)).toEqual(["Administrateur"]);
       // B est maintenant admin : il lit la liste mais ne peut pas se retirer lui-même.
       expect((await pb.send("/api/cosmic/admin/admins", { method: "GET" })).admins.length).toBeGreaterThan(0);
       await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } })).rejects.toMatchObject({ status: 400 });
@@ -751,6 +761,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     } finally {
       await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } });
     }
+    const after = await snap(bId);
+    expect(after.titles ?? []).toEqual([]);
+    expect(after.activeTitle ?? "").toBe("");
     await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
   });
 

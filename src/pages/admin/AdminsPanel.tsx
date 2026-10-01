@@ -10,6 +10,8 @@ import { Field } from "@/pages/admin/fields";
 import { useAuthStore } from "@/store/authStore";
 import { adminListAdmins, adminListPlayers, adminManageAdmin, type AdminPlayer, type GameAdmin } from "@/services/adminService";
 import { cn, formatNumber } from "@/lib/utils";
+import { StaffBadge } from "@/components/ui/staff-badge";
+import { STAFF_LABELS, STAFF_ROLES, type StaffRole } from "@/game/staff";
 
 /** Administrateurs du jeu : liste, ajout d'un joueur, retrait. */
 export function AdminsPanel() {
@@ -19,6 +21,7 @@ export function AdminsPanel() {
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<AdminPlayer | null>(null);
   const [note, setNote] = useState("");
+  const [role, setRole] = useState<StaffRole>("admin");
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<GameAdmin | null>(null);
 
@@ -40,11 +43,17 @@ export function AdminsPanel() {
     return players.filter((p) => !adminIds.has(p.uid) && (!q || p.pseudo.toLowerCase().includes(q))).slice(0, 8);
   }, [players, adminIds, query]);
 
-  const run = async (action: "add" | "remove", uid: string, label: string) => {
+  const run = async (action: "add" | "remove" | "role", uid: string, label: string, newRole: StaffRole = role) => {
     setBusy(true);
     try {
-      setAdmins(await adminManageAdmin(action, uid, action === "add" ? note : ""));
-      toast.success(action === "add" ? `${label} est maintenant administrateur.` : `${label} n'est plus administrateur.`);
+      setAdmins(await adminManageAdmin(action, uid, action === "remove" ? {} : { note, role: newRole }));
+      toast.success(
+        action === "add"
+          ? `${label} rejoint l'équipe (${STAFF_LABELS[newRole]}).`
+          : action === "role"
+            ? `${label} : ${STAFF_LABELS[newRole]}.`
+            : `${label} n'est plus administrateur.`,
+      );
       setPicked(null);
       setNote("");
       setQuery("");
@@ -63,8 +72,8 @@ export function AdminsPanel() {
           <ShieldCheck className="h-4 w-4 text-cyan-glow" /> Administrateurs ({admins?.length ?? "…"})
         </h3>
         <p className="text-xs text-slate-500">
-          Accès complet à la console : contenu, joueurs, maintenance et remise à zéro. Tu ne peux pas te retirer toi-même, et il reste toujours au moins un
-          administrateur.
+          Accès complet à la console : contenu, joueurs, maintenance et remise à zéro. Le rôle (Développeur ou Administrateur) s'affiche en badge
+          à côté du pseudo et comme titre sur le profil. Tu ne peux pas te retirer toi-même, et il reste toujours au moins un administrateur.
         </p>
         <ul className="divide-y divide-white/5">
           {(admins ?? []).map((a) => {
@@ -76,13 +85,28 @@ export function AdminsPanel() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate text-sm font-semibold text-slate-100">
-                    {label} {a.id === me && <HudTag tone="mint">Toi</HudTag>}
+                    <span className="truncate">{label}</span>
+                    <StaffBadge uid={a.id} compact />
+                    {a.id === me && <HudTag tone="mint">Toi</HudTag>}
                   </p>
                   <p className="truncate font-mono text-[11px] text-slate-500">
                     {a.email || a.id}
                     {a.note && <span className="text-slate-400"> · {a.note}</span>}
                   </p>
                 </div>
+                <select
+                  value={a.role}
+                  disabled={busy}
+                  title="Rôle affiché (badge et titre)"
+                  onChange={(e) => void run("role", a.id, label, e.target.value as StaffRole)}
+                  className="h-8 border border-cyan-glow/15 bg-space-900/80 px-2 text-xs text-slate-200"
+                >
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {STAFF_LABELS[r]}
+                    </option>
+                  ))}
+                </select>
                 {a.id !== me && (
                   <Button variant="ghost" size="sm" disabled={busy || (admins?.length ?? 0) <= 1} onClick={() => setRemoving(a)}>
                     <UserMinus className="h-4 w-4" /> Retirer
@@ -125,6 +149,23 @@ export function AdminsPanel() {
             ))}
           </ul>
         )}
+        <Field label="Rôle" hint="Badge à côté du pseudo et titre affiché sur le profil.">
+          <div className="flex gap-1.5">
+            {STAFF_ROLES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRole(r)}
+                className={cn(
+                  "flex-1 border px-2.5 py-1.5 font-mono text-xs uppercase tracking-[0.12em] transition-colors",
+                  role === r ? "border-cyan-glow/70 bg-cyan-glow/15 text-cyan-glow" : "border-white/10 text-slate-400 hover:border-cyan-glow/40",
+                )}
+              >
+                {STAFF_LABELS[r]}
+              </button>
+            ))}
+          </div>
+        </Field>
         <Field label="Note (facultatif)" hint="Rôle ou raison, visible des autres administrateurs.">
           <Input value={note} maxLength={200} placeholder="Modération, équilibrage…" onChange={(e) => setNote(e.target.value)} />
         </Field>

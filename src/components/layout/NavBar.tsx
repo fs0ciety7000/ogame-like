@@ -10,6 +10,7 @@ import { LiveClock } from "@/components/layout/LiveClock";
 import { usePlayerStore } from "@/store/playerStore";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 interface NavItem {
   to: string;
@@ -115,7 +116,10 @@ function CommanderCard() {
       <div className="flex items-center gap-3">
         <img src={getRankIcon(player.xp)} alt="" className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_30%,transparent)] transition-transform group-hover:scale-105" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[15px] font-bold tracking-[0.04em] text-white">{player.pseudo}</p>
+          <p className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-[0.04em] text-white">
+            <span className="truncate">{player.pseudo}</span>
+            <StaffBadge uid={player.uid} compact />
+          </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">{getRankLabel(player.xp)}</p>
         </div>
       </div>

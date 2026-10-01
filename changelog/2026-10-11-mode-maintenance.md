@@ -12,8 +12,12 @@ Les mises à jour se font désormais au calme, sans risquer de perdre une action
 - Les **factions hostiles attendent** elles aussi : un ultimatum en cours est prolongé de la durée de la coupure, personne ne subit de raid sans avoir pu répondre.
 - À la réouverture, la page se **recharge toute seule** sur la nouvelle version.
 
+## Badges de l'équipe
+- Les membres de l'équipe portent un **badge** à côté de leur pseudo (classement, carte, alliance, palmarès) : **Développeur** ou **Administrateur**.
+- Ils reçoivent aussi le **titre** correspondant, qu'ils peuvent afficher ou masquer depuis leur profil comme les titres de saison.
+
 ## Pour les administrateurs
 - **Console d'administration** redessinée : navigation par sections (pilotage, contenu, communauté, système), bandeau d'état (jeu ouvert ou non, joueurs, contenu personnalisé, version) et repère sur les sections modifiées.
 - Onglet **Maintenance** : message, version annoncée, durée (raccourcis ou heure précise), aperçu de la page, prolongation en un clic et fin de maintenance. Tout est consigné dans le journal.
-- Onglet **Administrateurs** : nommer un joueur administrateur (avec une note), ou retirer un administrateur. On ne peut pas se retirer soi-même, et il reste toujours au moins un administrateur.
+- Onglet **Administrateurs** : nommer un joueur administrateur (rôle Développeur ou Administrateur, et une note), changer son rôle, ou retirer un administrateur. On ne peut pas se retirer soi-même, et il reste toujours au moins un administrateur.
 - Pendant une maintenance, un **bandeau** le rappelle en haut du jeu ; les administrateurs gardent l'accès complet.
