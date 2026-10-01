@@ -394,6 +394,16 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
   }
 });
 
+/** Guerres d'alliance (v3.2) : déclaration et reddition ; début et fin planifiés. */
+routerAdd("POST", "/api/cosmic/war", (e) => require(`${__hooks}/cosmic_db.js`).warRequest(e), $apis.requireAuth("users"));
+cronAdd("cosmic_wars", "*/5 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).warTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] guerres : ${err}`);
+  }
+});
+
 /** Expéditions (v3.1) : décision face à une faction. */
 routerAdd("POST", "/api/cosmic/expedition/choose", (e) => require(`${__hooks}/cosmic_db.js`).expeditionChoose(e), $apis.requireAuth("users"));
 

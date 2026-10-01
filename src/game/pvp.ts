@@ -85,6 +85,8 @@ export interface AttackContext {
   lastAttackOnTargetMs: number | null;
   /** Dernière défaite du défenseur en défense (ms), s'il y en a une. */
   lastDefenderDefeatMs: number | null;
+  /** v3.2 : délai entre deux attaques sur la même cible (guerre d'alliance) ; défaut : règle JcJ. */
+  attackCooldownMs?: number;
 }
 
 export type AttackBlockReason = "self" | "cooldown" | "shield" | "newbie" | "too_weak";
@@ -137,7 +139,7 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
   }
 
   if (ctx.lastAttackOnTargetMs !== null) {
-    const until = ctx.lastAttackOnTargetMs + PVP_RULES.attackCooldownMs;
+    const until = ctx.lastAttackOnTargetMs + (ctx.attackCooldownMs ?? PVP_RULES.attackCooldownMs);
     if (now < until) {
       return {
         allowed: false,

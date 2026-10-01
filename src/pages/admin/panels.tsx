@@ -349,6 +349,92 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, faction: v ?? 0 } } }))}
           />
         </Section>
+        <Section title="Guerres d'alliance">
+          <NumberField
+            label="Membres minimum de l'alliance visée"
+            value={rules.wars.minMembers}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, minMembers: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Coût : ferraille du trésor"
+            value={rules.wars.costScrap}
+            step={1000000}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, costScrap: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Coût : énergie du trésor"
+            value={rules.wars.costEnergy}
+            step={1000000}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, costEnergy: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Préparation (h)"
+            value={rules.wars.prepHours}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, prepHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée de la guerre (h)"
+            value={rules.wars.durationHours}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, durationHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Délai avant de refaire la guerre au même adversaire (jours)"
+            value={rules.wars.pairCooldownDays}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, pairCooldownDays: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Délai entre deux attaques sur une même cible pendant la guerre (h)"
+            value={rules.wars.attackCooldownHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, attackCooldownHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Points par attaque gagnée"
+            value={rules.wars.pointsAttackWin}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, pointsAttackWin: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Points par défense gagnée"
+            value={rules.wars.pointsDefenseWin}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, pointsDefenseWin: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Butin pour 1 point supplémentaire"
+            value={rules.wars.lootPerPoint}
+            step={1000000}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, lootPerPoint: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Récompense : ferraille au trésor du vainqueur"
+            value={rules.wars.rewardScrap}
+            step={1000000}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, rewardScrap: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Récompense : énergie au trésor du vainqueur"
+            value={rules.wars.rewardEnergy}
+            step={1000000}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, rewardEnergy: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Bonus de score de saison d'alliance (0,1 = +10 %)"
+            value={rules.wars.seasonBonusPct}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, seasonBonusPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée du titre des vainqueurs (jours)"
+            value={rules.wars.titleDays}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, titleDays: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Léviathan">
           <NumberField
             label="Structure : facteur × puissance d'attaque des actifs"

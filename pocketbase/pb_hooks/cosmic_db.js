@@ -557,6 +557,8 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+  // v3.2 : points de guerre si les deux alliances sont en guerre.
+  scoreWarBattle(txApp, game, attacker.rec.getString("allianceId"), defender.rec.getString("allianceId"), attacker.player.pseudo, defender.player.pseudo, result.combat.outcome, result.loot, now);
 
   garrisonRecs.forEach((g, i) => {
     const losses = (result.combat.garrisonLosses || [])[i] || {};
@@ -704,6 +706,7 @@ function launchFleetRequest(e) {
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,
         garrisonsAtHost,
+        atWar: mission === "attack" && !!target && !!activeWarRecord(txApp, game, attacker.rec.getString("allianceId"), target.allianceId, now),
         expeditionHours: Number(body.hours) || 0,
         expeditionsActive,
         expeditionsToday,
@@ -778,7 +781,9 @@ function closeSeason(game, now, seasonIdIn) {
       txApp.save(rec);
     });
     // Saison d'alliance : somme des meilleures XP de saison des membres.
-    const allianceStanding = game.allianceStandings(entries.map((p) => ({ allianceId: p.allianceId, seasonXp: game.seasonXpFor(p, seasonId) })));
+    // v3.2 : +10 % par guerre gagnée pendant la saison.
+    const warBonuses = game.warSeasonBonuses(txApp.findRecordsByFilter("alliance_wars", "seasonId = {:s} && winnerId != ''", "", 500, 0, { s: seasonId }).map(warJson), seasonId);
+    const allianceStanding = game.allianceStandings(entries.map((p) => ({ allianceId: p.allianceId, seasonXp: game.seasonXpFor(p, seasonId) })), warBonuses);
     allianceStanding.slice(0, 10).forEach((st) => {
       const a = findOrNull(txApp, "alliances", st.allianceId);
       if (!a) return;
@@ -1315,6 +1320,191 @@ function adminManage(e) {
     response = { ok: true, admins: adminEntries(txApp, roles) };
   });
   return e.json(200, response);
+}
+
+/* ---------- Guerres d'alliance (v3.2) ---------- */
+
+function warsOf(txApp, ids) {
+  const parts = ids.filter(Boolean).map((_, i) => `attackerId = {:a${i}} || defenderId = {:a${i}}`);
+  if (parts.length === 0) return [];
+  const params = {};
+  ids.filter(Boolean).forEach((id, i) => (params[`a${i}`] = id));
+  return txApp.findRecordsByFilter("alliance_wars", parts.join(" || "), "-declaredAtMs", 200, 0, params);
+}
+
+function warJson(rec) {
+  const w = toPlain(rec);
+  w.log = w.log || [];
+  return w;
+}
+
+function saveWar(txApp, rec, war) {
+  ["status", "scoreAttacker", "scoreDefender", "log", "winnerId", "surrenderedBy", "endedAtMs", "rewarded", "seasonId", "titleUntilMs"].forEach((f) => rec.set(f, war[f]));
+  txApp.save(rec);
+}
+
+function notifyAlliance(txApp, allianceId, title, message, now) {
+  const rec = findOrNull(txApp, "alliances", allianceId);
+  if (!rec) return;
+  (allianceFromRecord(rec).members || []).forEach((uid) => {
+    try {
+      notify(txApp, uid, [{ kind: "alliance", title, message, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+  });
+}
+
+/** Guerre active entre les alliances de deux joueurs (enregistrement), ou null. */
+function activeWarRecord(txApp, game, allianceA, allianceB, now) {
+  if (!allianceA || !allianceB || allianceA === allianceB) return null;
+  const recs = warsOf(txApp, [allianceA]);
+  const plain = recs.map((r) => warJson(r));
+  const w = game.activeWarBetween(plain, allianceA, allianceB, now);
+  return w ? recs[plain.indexOf(w)] : null;
+}
+
+/** Récompenses du vainqueur (une fois) : trésor, titre temporaire, bonus de saison. */
+function rewardWar(txApp, game, war, now) {
+  if (war.status !== "ended" || war.rewarded) return war;
+  const next = Object.assign({}, war, { rewarded: true });
+  const loserId = war.winnerId ? (war.winnerId === war.attackerId ? war.defenderId : war.attackerId) : "";
+  if (war.winnerId) {
+    const rec = findOrNull(txApp, "alliances", war.winnerId);
+    if (rec) {
+      const al = game.warTreasuryReward(allianceFromRecord(rec));
+      rec.set("treasury", al.treasury);
+      txApp.save(rec);
+      (al.members || []).forEach((uid) => {
+        if (!findOrNull(txApp, "players", uid)) return;
+        const loaded = loadPlayer(txApp, game, uid);
+        const p = loaded.player;
+        if (!(p.titles || []).some((t) => t.label === game.WAR_RULES.title)) {
+          p.titles = (p.titles || []).concat([{ label: game.WAR_RULES.title, seasonId: `war:${war.id}`, rank: 1 }]);
+          p.activeTitle = game.WAR_RULES.title;
+        }
+        savePlayer(txApp, game, loaded, p, loaded.queues);
+      });
+    }
+    next.seasonId = game.currentSeasonId(now);
+    next.titleUntilMs = now + game.WAR_RULES.titleDays * 86400000;
+  }
+  const tag = (id) => (id === war.attackerId ? war.attackerTag : war.defenderTag);
+  const summary = war.winnerId
+    ? `Victoire de [${tag(war.winnerId)}] (${war.scoreAttacker} – ${war.scoreDefender})${war.surrenderedBy ? " par reddition" : ""}.`
+    : `Égalité (${war.scoreAttacker} – ${war.scoreDefender}) : pas de vainqueur.`;
+  [war.attackerId, war.defenderId].forEach((id) => {
+    const won = id === war.winnerId;
+    notifyAlliance(
+      txApp,
+      id,
+      won ? "Guerre gagnée !" : id === loserId ? "Guerre perdue" : "Guerre terminée",
+      won ? `${summary} Le trésor reçoit ${game.formatInt(game.WAR_RULES.rewardScrap)} ferraille et ${game.formatInt(game.WAR_RULES.rewardEnergy)} énergie ; titre « ${game.WAR_RULES.title} » pour ${game.WAR_RULES.titleDays} jours.` : summary,
+      now,
+    );
+  });
+  return next;
+}
+
+/** POST /api/cosmic/war { action: "declare", targetAllianceId } | { action: "surrender", warId } */
+function warRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const player = findOrNull(txApp, "players", uid);
+    const allianceId = player ? player.getString("allianceId") : "";
+    if (!allianceId) throw new BadRequestError("Tu n'as pas d'alliance.");
+    const ownRec = findOrNull(txApp, "alliances", allianceId);
+    if (!ownRec) throw new BadRequestError("Alliance introuvable.");
+    const own = allianceFromRecord(ownRec);
+    const pseudo = player.getString("pseudo");
+    if (req.action === "declare") {
+      const targetRec = findOrNull(txApp, "alliances", String(req.targetAllianceId || ""));
+      if (!targetRec) throw new NotFoundError("Alliance introuvable.");
+      const target = allianceFromRecord(targetRec);
+      let res;
+      try {
+        res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now });
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      ownRec.set("treasury", res.own.treasury);
+      txApp.save(ownRec);
+      const rec = new Record(txApp.findCollectionByNameOrId("alliance_wars"));
+      rec.load(res.war);
+      txApp.save(rec);
+      const startText = `Début des hostilités dans ${game.WAR_RULES.prepHours} h, pour ${game.WAR_RULES.durationHours} h.`;
+      notifyAlliance(txApp, own.id, "Guerre déclarée", `${pseudo} a déclaré la guerre à [${target.tag}] ${target.name}. ${startText}`, now);
+      notifyAlliance(txApp, target.id, "Déclaration de guerre !", `[${own.tag}] ${own.name} vous déclare la guerre. ${startText}`, now);
+      out = warJson(rec);
+    } else if (req.action === "surrender") {
+      const rec = findOrNull(txApp, "alliance_wars", String(req.warId || ""));
+      if (!rec) throw new NotFoundError("Guerre introuvable.");
+      let war;
+      try {
+        war = game.surrender(warJson(rec), own, uid, pseudo, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      war = rewardWar(txApp, game, war, now);
+      saveWar(txApp, rec, war);
+      out = war;
+    } else throw new BadRequestError("Action inconnue.");
+  });
+  return e.json(200, out);
+}
+
+/** Points d'un combat entre deux alliances en guerre (appelé à l'arrivée d'une attaque). */
+function scoreWarBattle(txApp, game, attackerAllianceId, defenderAllianceId, attackerPseudo, defenderPseudo, outcome, loot, now) {
+  const rec = activeWarRecord(txApp, game, attackerAllianceId, defenderAllianceId, now);
+  if (!rec) return;
+  const lootTotal = Object.keys(loot || {}).reduce((a, k) => a + (loot[k] || 0), 0);
+  const war = game.scoreBattle(warJson(rec), attackerAllianceId, attackerPseudo, defenderPseudo, outcome, lootTotal, now);
+  saveWar(txApp, rec, war);
+}
+
+/** Tâche planifiée : début des hostilités, fin à l'échéance, fin des titres. */
+function warTick(now) {
+  const game = loadGame();
+  const recs = $app.findRecordsByFilter("alliance_wars", 'status != "ended" || (titleUntilMs > 0 && titleUntilMs <= {:n})', "", 200, 0, { n: now });
+  recs.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = txApp.findRecordById("alliance_wars", r.id);
+        let war = warJson(rec);
+        if (war.status === "preparing" && now >= war.startMs && now < war.endMs) {
+          war.status = "active";
+          war.log = war.log.concat([{ atMs: now, text: "Les hostilités commencent." }]);
+          [war.attackerId, war.defenderId].forEach((id) => notifyAlliance(txApp, id, "La guerre commence !", `[${war.attackerTag}] contre [${war.defenderTag}] : ${game.WAR_RULES.durationHours} h pour marquer des points.`, now));
+        }
+        if (war.status !== "ended" && now >= war.endMs) {
+          war = game.concludeWar(Object.assign({}, war, { status: "active" }), now);
+          war = rewardWar(txApp, game, war, now);
+        }
+        if (war.titleUntilMs > 0 && now >= war.titleUntilMs && war.winnerId) {
+          const al = findOrNull(txApp, "alliances", war.winnerId);
+          (al ? allianceFromRecord(al).members : []).forEach((uid) => {
+            if (!findOrNull(txApp, "players", uid)) return;
+            const loaded = loadPlayer(txApp, game, uid);
+            const p = loaded.player;
+            p.titles = (p.titles || []).filter((t) => t.seasonId !== `war:${war.id}`);
+            if (p.activeTitle === game.WAR_RULES.title && !p.titles.some((t) => t.label === game.WAR_RULES.title)) p.activeTitle = p.titles.length ? p.titles[0].label : "";
+            savePlayer(txApp, game, loaded, p, loaded.queues);
+          });
+          war.titleUntilMs = 0;
+        }
+        saveWar(txApp, rec, war);
+      });
+    } catch (err) {
+      console.log(`[cosmic] guerre ${r.id} : ${err}`);
+    }
+  });
+  return recs.length;
 }
 
 /* ---------- Expéditions (v3.1) ---------- */
@@ -2140,4 +2330,4 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
