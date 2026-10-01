@@ -272,18 +272,19 @@ routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.j
 /** POST /api/cosmic/alliance/intel — rapports récents des membres. */
 routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
-// La Liste de Varan : inscriptions et ultimatums expirés, toutes les 10 min.
+// Factions hostiles : inscriptions et ultimatums expirés, toutes les 10 min.
 cronAdd("cosmic_pirates", "*/10 * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
   db.processPirates(db.loadGame(), Date.now(), null);
 });
 
-/** POST /api/cosmic/pirates { answer: "pay" | "refuse" } — réponse à l'ultimatum de Varan. */
+/** POST /api/cosmic/pirates { answer: "pay" | "refuse" } — réponse à l'ultimatum en cours. */
 routerAdd("POST", "/api/cosmic/pirates", (e) => require(`${__hooks}/cosmic_db.js`).piratesRequest(e), $apis.requireAuth("users"));
 
 /**
- * POST /api/cosmic/admin/pirates  { uid, force? } — administrateurs : passe la
- * Liste pour un joueur ; force = inscription immédiate (test, animation).
+ * POST /api/cosmic/admin/pirates  { uid, factionId?, force? } — administrateurs :
+ * passe les factions pour un joueur ; force = ultimatum immédiat de la faction
+ * `factionId` (Varan par défaut), si aucune autre menace n'est en cours.
  */
 routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);
@@ -292,7 +293,8 @@ routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
   const uid = String(req.uid || "");
   const rec = uid ? db.findOrNull($app, "players", uid) : null;
   if (!rec) throw new NotFoundError("Joueur introuvable.");
-  return e.json(200, { changed: db.processPirates(db.loadGame(), Date.now(), uid, !!req.force) });
+  const factionId = req.force ? String(req.factionId || "varan") : null;
+  return e.json(200, { changed: db.processPirates(db.loadGame(), Date.now(), uid, factionId) });
 });
 
 // Clôture de la saison précédente (sans effet si elle est déjà close).

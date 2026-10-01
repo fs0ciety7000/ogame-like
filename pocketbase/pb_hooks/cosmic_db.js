@@ -323,14 +323,16 @@ function stationedGarrisons(txApp, hostUid) {
   return txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && status = "stationed"', "arriveAtMs", 10, 0, { h: hostUid });
 }
 
-/* ---------- La Liste de Varan (pirates, v2.0) ---------- */
+/* ---------- Factions hostiles (v2.0, génériques en v2.1) ---------- */
 
-/** Crée la flotte du Silencieux vers un joueur. */
+/** Crée la flotte de l'exécuteur d'une faction vers un joueur. */
 function createPirateRaid(txApp, game, player, raid, now) {
+  const faction = game.findFaction(raid.factionId);
   const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
   rec.load({
     ownerUid: game.PIRATE_OWNER_UID,
-    ownerPseudo: game.PIRATE_RAIDER,
+    ownerPseudo: faction ? faction.enforcer : "Pirates",
+    factionId: raid.factionId,
     targetUid: player.uid,
     targetPseudo: player.pseudo,
     mission: "pirate",
@@ -350,8 +352,9 @@ function createPirateRaid(txApp, game, player, raid, now) {
 
 function resolvePirateArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
+  const faction = game.findFaction(fleet.factionId || "varan");
   rec.set("status", "done");
-  if (!findOrNull(txApp, "players", fleet.targetUid)) {
+  if (!faction || !findOrNull(txApp, "players", fleet.targetUid)) {
     txApp.save(rec);
     return;
   }
@@ -362,7 +365,7 @@ function resolvePirateArrival(txApp, game, rec, now) {
     const gf = fleetFromRecord(g);
     return { ownerUid: gf.ownerUid, ownerPseudo: gf.ownerPseudo, units: owner.units || {}, techLevels: owner.techLevels || {}, fleet: gf.units };
   });
-  const out = game.resolvePirateRaid(loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now);
+  const out = game.resolvePirateRaid(faction, loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now);
   savePlayer(txApp, game, loaded, out.player, out.queues);
   notify(txApp, fleet.targetUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
@@ -388,8 +391,16 @@ function resolvePirateArrival(txApp, game, rec, now) {
 function resolveLairArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  const faction = game.findFaction(fleet.factionId || game.factionOfLair(fleet.targetUid));
   if (!findOrNull(txApp, "players", fleet.ownerUid)) {
     rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  if (!faction) {
+    // Faction supprimée entre-temps : la flotte rentre sans combattre.
+    rec.set("status", "returning");
+    rec.set("returnAtMs", now + tripMs);
     txApp.save(rec);
     return;
   }
@@ -400,7 +411,7 @@ function resolveLairArrival(txApp, game, rec, now) {
     const st = player.units[id] || { level: 1, count: 0 };
     player.units[id] = Object.assign({}, st, { count: st.count + fleet.units[id] });
   });
-  const out = game.resolveLairAssault(player, loaded.queues, fleet.units, rec.getFloat("power"), now);
+  const out = game.resolveLairAssault(faction, player, loaded.queues, fleet.units, rec.getFloat("power"), now);
   Object.keys(fleet.units).forEach((id) => {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
@@ -418,7 +429,27 @@ function resolveLairArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
-/** Passage périodique : Liste, ultimatums expirés (raids). `uid` : un seul joueur. */
+/** Victoires contre des joueurs et butin des `windowDays` derniers jours. */
+function aggressionStats(txApp, uid, now, windowDays) {
+  const since = now - windowDays * 24 * 3600 * 1000;
+  const reports = txApp.findRecordsByFilter(
+    "battle_reports",
+    'attackerUid = {:u} && outcome = "attacker_win" && timestamp > {:t} && defenderUid !~ "lair_" && defenderUid != "pirates_lair" && defenderUid != "pirates"',
+    "",
+    0,
+    0,
+    { u: uid, t: since },
+  );
+  const plunder = {};
+  reports.forEach((r) => {
+    const loot = toPlain(r).loot || {};
+    Object.keys(loot).forEach((k) => (plunder[k] = (plunder[k] || 0) + (Number(loot[k]) || 0)));
+  });
+  return { victories: reports.length, plunder };
+}
+
+/** Passage périodique : listes des factions, ultimatums expirés (raids).
+ *  `uid` : un seul joueur ; `force` : identifiant de la faction à forcer. */
 function processPirates(game, now, uid, force) {
   const recs = uid ? [findOrNull($app, "players", uid)].filter(Boolean) : $app.findAllRecords("players");
   let changed = 0;
@@ -429,7 +460,10 @@ function processPirates(game, now, uid, force) {
         const rec = txApp.findRecordById("players", candidate.id);
         const player = toPlain(rec);
         player.uid = rec.id;
-        const out = game.pirateTick(player, now, Math.random, !!force);
+        const hunter = game.FACTIONS.filter((f) => f.enabled && f.trigger.type === "aggression");
+        const windowDays = hunter.reduce((m, f) => Math.max(m, f.trigger.windowDays || 0), 0);
+        const aggression = hunter.length > 0 ? aggressionStats(txApp, rec.id, now, windowDays) : null;
+        const out = game.pirateTick(player, now, { random: Math.random, aggression, force: force || null });
         if (!out.changed) return;
         rec.set("pirates", player.pirates);
         txApp.save(rec);
@@ -644,6 +678,7 @@ function launchFleetRequest(e) {
         target,
         debris,
         fleet,
+        lairTarget: mission === "lair" ? targetUid : undefined,
         lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,

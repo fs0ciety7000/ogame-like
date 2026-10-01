@@ -9,6 +9,7 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
+import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 
@@ -52,6 +53,7 @@ export function AdminPage() {
           <TabsTrigger value="units">Unités</TabsTrigger>
           <TabsTrigger value="technologies">Technologies</TabsTrigger>
           <TabsTrigger value="missions">Missions</TabsTrigger>
+          <TabsTrigger value="factions">Factions</TabsTrigger>
           <TabsTrigger value="rules">Règles</TabsTrigger>
           <TabsTrigger value="players">Joueurs</TabsTrigger>
           <TabsTrigger value="logs">Journal</TabsTrigger>
@@ -106,6 +108,17 @@ export function AdminPage() {
             setId={(m, key) => ({ ...m, key })}
             createItem={newMission}
             renderForm={(m, onChange, isNew) => <MissionForm value={m} onChange={onChange} isNew={isNew} />}
+          />
+        </TabsContent>
+        <TabsContent value="factions" className="mt-4">
+          <ContentEditor
+            section="factions"
+            title="Factions"
+            getId={(f) => f.id}
+            getLabel={(f) => (f.enabled ? f.name : `${f.name} (inactive)`)}
+            setId={(f, id) => ({ ...f, id })}
+            createItem={newFaction}
+            renderForm={(f, onChange, isNew) => <FactionForm value={f} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
         <TabsContent value="rules" className="mt-4">

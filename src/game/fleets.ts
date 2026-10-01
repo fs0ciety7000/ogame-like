@@ -8,7 +8,7 @@ import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
-import { checkLairLaunch, lairPower, PIRATE_LAIR_NAME, PIRATE_LAIR_UID } from "@/game/pirates";
+import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
 import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
@@ -73,6 +73,8 @@ export interface Fleet {
   stationedUntilMs?: number | null;
   /** Raid pirate ou repaire : puissance adverse fixée au départ. */
   power?: number | null;
+  /** Faction du raid ou du repaire visé. */
+  factionId?: string | null;
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -237,7 +239,7 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
     case "patrol":
       return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
     case "lair":
-      return { title: "Retour du repaire", message: `Les survivants de l'assaut sur le ${PIRATE_LAIR_NAME} sont rentrés.` };
+      return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
     case "garrison":
       return { title: "Garnison rentrée", message: `Ta garnison stationnée chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -277,6 +279,8 @@ export interface LaunchRequest {
   /** Garnison : durée en heures et garnisons déjà chez l'hôte. */
   garrisonHours?: number;
   garrisonsAtHost?: number;
+  /** Repaire visé (lair_<faction>). */
+  lairTarget?: string;
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
@@ -293,7 +297,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
-  else if (mission === "lair") out = launchLair(owner, req.fleet, now);
+  else if (mission === "lair") out = launchLair(owner, req.lairTarget ?? "", req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target!, req.fleet, req.garrisonHours ?? 0, req.garrisonsAtHost ?? 0, now);
   else throw new GameActionError("Mission inconnue.");
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
@@ -423,16 +427,17 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
   };
 }
 
-/** Assaut du repaire de Varan (PvE) : sa puissance est fixée au départ. */
-export function launchLair(owner: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
-  checkLairLaunch(owner, raw);
-  const power = lairPower(owner);
+/** Assaut du repaire d'une faction (PvE) : sa puissance est fixée au départ. */
+export function launchLair(owner: PlayerState, target: string, raw: Record<string, unknown>, now: number): LaunchOutput {
+  const faction = findFaction(factionOfLair(target));
+  checkLairLaunch(faction, owner, raw);
+  const power = lairPower(faction!, owner);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unités d'attaque peuvent être envoyées.");
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch)) * 1000;
   return {
     attacker: owner,
-    fleet: { ...newFleet(owner, { uid: PIRATE_LAIR_UID, pseudo: PIRATE_LAIR_NAME }, "lair", units, now, arriveAtMs), power },
+    fleet: { ...newFleet(owner, { uid: lairUid(faction!.id), pseudo: faction!.lair.name }, "lair", units, now, arriveAtMs), power, factionId: faction!.id },
     defenderNotifications: [],
   };
 }

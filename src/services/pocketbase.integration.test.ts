@@ -16,6 +16,7 @@ import { resetContentSection, saveContentSection } from "@/services/contentServi
 import { checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
+import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding } from "@/game/buildings";
 
 const suffix = Math.random().toString(36).slice(2, 7);
@@ -36,6 +37,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   // Vols de quelques secondes pendant les tests (règles restaurées à la fin).
   let savedRules: { id: string; data: unknown } | null = null;
   let createdRulesId: string | null = null;
+  let savedFactions: { id: string; data: unknown } | null = null;
+  let createdFactionsId: string | null = null;
 
   beforeAll(async () => {
     pb.baseURL = PB_TEST_URL!;
@@ -48,7 +51,6 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       spy: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
       // Pas d'événement du week-end pendant les tests (résultats stables).
       events: { rotationEnabled: false, scheduled: [] },
-      pirates: { raidTravelHours: 0.001 },
     };
     if (existing) {
       savedRules = { id: existing.id, data: existing.data };
@@ -56,11 +58,22 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     } else {
       createdRulesId = (await admin.collection("game_config").create({ key: "rules", data: fast })).id;
     }
+    // Raids des factions en quelques secondes.
+    const factions = await admin.collection("game_config").getFirstListItem('key="factions"').catch(() => null);
+    const fastFactions = ((factions?.data as FactionDef[] | undefined) ?? DEFAULT_FACTIONS).map((f) => ({ ...f, raidTravelHours: 0.001 }));
+    if (factions) {
+      savedFactions = { id: factions.id, data: factions.data };
+      await admin.collection("game_config").update(factions.id, { data: fastFactions });
+    } else {
+      createdFactionsId = (await admin.collection("game_config").create({ key: "factions", data: fastFactions })).id;
+    }
   });
 
   afterAll(async () => {
     if (savedRules) await admin.collection("game_config").update(savedRules.id, { data: savedRules.data });
     if (createdRulesId) await admin.collection("game_config").delete(createdRulesId);
+    if (savedFactions) await admin.collection("game_config").update(savedFactions.id, { data: savedFactions.data });
+    if (createdFactionsId) await admin.collection("game_config").delete(createdFactionsId);
   });
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -612,51 +625,103 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(notes.map((n) => n.title)).toEqual(["Nouvelle ère : la galaxie repart de zéro"]);
   }, 60_000);
 
-  it("v2.0 pirates: ultimatum, refused raid repelled, tribute paid, lair assault", async () => {
+  it("v2.0/2.1 factions: Varan ultimatum, refused raid repelled, tribute paid, lair assault", async () => {
     // Connecté en B.
     await expect(pb.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } })).rejects.toMatchObject({ status: 403 });
     await admin.collection("players").update(bId, { pirates: null, resources: RICH, units: { canon_plasma: { level: 1, count: 80 }, chasseur: { level: 3, count: 3000 } } });
-    const pirates = async () => (await snap(bId)).pirates;
+    const varan = async () => (await snap(bId)).pirates.varan;
+    const force = (factionId: string) => admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, factionId, force: true } });
     try {
-      expect((await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } })).changed).toBe(1);
-      const u = (await pirates()).ultimatum;
+      expect((await force("varan")).changed).toBe(1);
+      const u = (await varan()).ultimatum;
       expect(u.expiresAtMs).toBeGreaterThan(Date.now());
-      await expect(pb.collection("players").update(bId, { pirates: { ultimatum: null } })).rejects.toBeTruthy();
+      await expect(pb.collection("players").update(bId, { pirates: { varan: { ultimatum: null } } })).rejects.toBeTruthy();
+      // Une seule menace à la fois.
+      expect((await force("gravhorn")).changed).toBe(0);
 
       // Refus : le Silencieux part, B voit le raid arriver puis le repousse.
       const refused = await ps.answerPirateUltimatum("refuse");
-      expect(refused.raid).not.toBeNull();
+      expect(refused.raid).toMatchObject({ factionId: "varan" });
       const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` }))[0];
-      expect(raid.status).toBe("outbound");
+      expect(raid).toMatchObject({ status: "outbound", factionId: "varan", ownerPseudo: "Le Silencieux" });
       await wait(Math.max(0, refused.raid!.arriveAtMs - Date.now()) + 400);
       await ps.syncPlayer("");
       const report = (await pb.collection("battle_reports").getFullList({ filter: `defenderUid="${bId}" && attackerUid="pirates"` }))[0];
       expect(report.outcome).toBe("defender_win");
-      const afterRaid = await pirates();
+      const afterRaid = await varan();
       expect(afterRaid).toMatchObject({ raidsWon: 1, notoriety: 1, repelled: 1, ultimatum: null });
 
       // Deuxième ultimatum : B paie.
-      await admin.collection("players").update(bId, { pirates: { ...afterRaid, raidUntilMs: 0 } });
-      await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } });
+      await admin.collection("players").update(bId, { pirates: { varan: { ...afterRaid, raidUntilMs: 0 } } });
+      await force("varan");
       const scrapBefore = (await snap(bId)).resources.scrap;
       expect((await ps.answerPirateUltimatum("pay")).raid).toBeNull();
       expect((await snap(bId)).resources.scrap).toBeLessThan(scrapBefore);
-      expect((await pirates()).tributesPaid).toBe(1);
+      expect((await varan()).tributesPaid).toBe(1);
       await expect(ps.answerPirateUltimatum("pay")).rejects.toThrow(/Aucun ultimatum/);
 
       // Repaire : fermé, puis localisé et pris d'assaut.
-      await expect(ps.sendFleet("pirates_lair", { chasseur: 10 }, "lair")).rejects.toThrow(/localisé/);
-      await admin.collection("players").update(bId, { pirates: { ...(await pirates()), lairOpen: true, repelled: 5 } });
-      const assault = await ps.sendFleet("pirates_lair", { chasseur: (await snap(bId)).units.chasseur.count }, "lair");
+      await expect(ps.sendFleet("lair_varan", { chasseur: 10 }, "lair")).rejects.toThrow(/localisé/);
+      await admin.collection("players").update(bId, { pirates: { varan: { ...(await varan()), lairOpen: true, repelled: 5 } } });
+      const assault = await ps.sendFleet("lair_varan", { chasseur: (await snap(bId)).units.chasseur.count }, "lair");
       expect(assault.power).toBeGreaterThan(0);
       await wait(Math.max(0, assault.arriveAtMs - Date.now()) + 400);
       await ps.syncPlayer("");
       const landed = await pb.collection("fleets").getOne(assault.id);
-      expect(landed.outcome).toBe("attacker_win");
+      expect(landed).toMatchObject({ outcome: "attacker_win", factionId: "varan" });
       const final = await snap(bId);
-      expect(final.pirates).toMatchObject({ lairOpen: false, lairsTaken: 1, notoriety: 0 });
+      expect(final.pirates.varan).toMatchObject({ lairOpen: false, lairsTaken: 1, notoriety: 0 });
       expect(final.titles.map((t: { label: string }) => t.label)).toContain("Fléau de la Confrérie");
     } finally {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" || ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(bId, { pirates: null });
+    }
+  }, 60_000);
+
+  it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
+    const H = 3600_000;
+    const now = Date.now();
+    const legacy = { notoriety: 2, repelled: 1, lairOpen: false, nextListAtMs: now + 100 * H, ultimatum: null, raidUntilMs: 0, raidsWon: 1, raidsLost: 0, tributesPaid: 0, lairsTaken: 0 };
+    const reports: string[] = [];
+    // Ancien format v2.0 (état de Varan à plat) + trois victoires récentes de B.
+    await admin.collection("players").update(bId, {
+      pirates: legacy,
+      createdAtMs: now - 30 * 24 * H,
+      resources: RICH,
+      units: { canon_plasma: { level: 1, count: 80 }, chasseur: { level: 3, count: 3000 } },
+    });
+    try {
+      for (let i = 0; i < 3; i++) {
+        const r = await admin.collection("battle_reports").create({ attackerUid: bId, defenderUid: aId, outcome: "attacker_win", timestamp: now - i * H, loot: { scrap: 100_000, energy: 20_000 } });
+        reports.push(r.id);
+      }
+      // Premier passage : migration, puis la date de la première traque est fixée.
+      await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId } });
+      let st = (await snap(bId)).pirates;
+      expect(st.varan).toMatchObject({ notoriety: 2, raidsWon: 1 });
+      expect(st.gravhorn.nextListAtMs).toBeGreaterThan(now);
+      await admin.collection("players").update(bId, { pirates: { ...st, gravhorn: { ...st.gravhorn, nextListAtMs: now - 1 } } });
+      expect((await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId } })).changed).toBe(1);
+      st = (await snap(bId)).pirates;
+      // 50 % du butin des 7 derniers jours (au moins celui des trois rapports ci-dessus).
+      expect(st.gravhorn.ultimatum.tribute.scrap).toBeGreaterThanOrEqual(150_000);
+      expect(st.gravhorn.ultimatum.tribute.energy).toBeGreaterThanOrEqual(30_000);
+
+      // Refus : l'Unité Ambre vise la flotte à quai, B la repousse.
+      const rareBefore = (await snap(bId)).resources.aiFragment;
+      const refused = await ps.answerPirateUltimatum("refuse");
+      expect(refused.raid).toMatchObject({ factionId: "gravhorn" });
+      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` }))[0];
+      expect(raid).toMatchObject({ factionId: "gravhorn", ownerPseudo: "L'Unité Ambre" });
+      await wait(Math.max(0, refused.raid!.arriveAtMs - Date.now()) + 400);
+      await ps.syncPlayer("");
+      const after = await snap(bId);
+      expect(after.pirates.gravhorn).toMatchObject({ raidsWon: 1, notoriety: 1, repelled: 1 });
+      expect(after.resources.aiFragment).toBe(rareBefore + 200);
+      const report = await pb.collection("battle_reports").getOne((await admin.collection("fleets").getOne(raid.id)).reportId);
+      expect(report).toMatchObject({ outcome: "defender_win", attackerPseudo: "L'Unité Ambre (Syndicat Gravhorn)" });
+    } finally {
+      for (const id of reports) await admin.collection("battle_reports").delete(id);
       for (const f of await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" || ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
       await admin.collection("players").update(bId, { pirates: null });
     }

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { currentGameContent, validateGameContent, type GameContent } from "@/game/content";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 
-type ListSection = "buildings" | "units" | "technologies" | "missions";
+type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions";
 type Item<S extends ListSection> = GameContent[S][number];
 
 /** Éditeur d'une liste de définitions (bâtiments, unités…) : liste à
