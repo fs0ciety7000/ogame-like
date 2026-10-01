@@ -108,6 +108,9 @@ export interface PlayerState {
   /** v3.4 : nombre d'ascensions et date de la dernière. */
   ascensions?: number;
   ascendedAtMs?: number;
+  /** v3.5 : colonies (stocks séparés) et vaisseau colonial en route. */
+  colonies?: import("@/game/colonies").Colony[];
+  colonizing?: import("@/game/colonies").Colonizing | null;
 }
 
 export interface SeasonResult {

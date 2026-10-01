@@ -40,6 +40,7 @@ export interface PlayerStats {
   nightResearch?: number;
   allianceFounded?: number;
   ascensions?: number;
+  transports?: number;
   lastResearchAtMs?: number;
 }
 

@@ -11,7 +11,7 @@ export {
 } from "@/game/actions";
 export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";
-export { performLaunch, performFleetReturn, recallFleet, patrolTurnaround } from "@/game/fleets";
+export { performLaunch, performFleetReturn, performTransportArrival, recallFleet, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
 export { ALLIANCE_RULES, allianceNextDueMs, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
 export { stationGarrison, endGarrison } from "@/game/fleets";

@@ -1,5 +1,6 @@
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
+import { buildColonyDefense, renameColony, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
@@ -48,7 +49,11 @@ export type GameAction =
   | { type: "claimOnboarding"; stepId: string }
   | { type: "hideOnboarding"; hidden: boolean }
   | { type: "setPosture"; posture: string }
-  | { type: "ascend" };
+  | { type: "ascend" }
+  | { type: "colonize"; name: string }
+  | { type: "colonyUpgrade"; colonyId: string; buildingId: string }
+  | { type: "colonyDefense"; colonyId: string; unitId: string; qty: number }
+  | { type: "colonyRename"; colonyId: string; name: string };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -230,6 +235,19 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "ascend":
       ascend(player, queues, now);
       return { ascensions: player.ascensions };
+
+    case "colonize":
+      return startColonization(player, action.name, now);
+
+    case "colonyUpgrade":
+      return upgradeColonyBuilding(player, String(action.colonyId ?? ""), String(action.buildingId ?? ""), now);
+
+    case "colonyDefense":
+      return buildColonyDefense(player, String(action.colonyId ?? ""), String(action.unitId ?? ""), action.qty, now);
+
+    case "colonyRename":
+      renameColony(player, String(action.colonyId ?? ""), action.name);
+      return undefined;
 
     default:
       throw new GameActionError("Action inconnue.");

@@ -581,3 +581,25 @@ export async function fetchAchievementRates(): Promise<{ players: number; counts
 export function ascendEmpire() {
   return act<{ ascensions: number }>({ type: "ascend" });
 }
+
+/* v3.5 : colonies */
+
+export function startColonization(name: string) {
+  return act({ type: "colonize", name });
+}
+
+export function upgradeColonyBuilding(colonyId: string, buildingId: string) {
+  return act({ type: "colonyUpgrade", colonyId, buildingId });
+}
+
+export function buildColonyDefense(colonyId: string, unitId: string, qty: number) {
+  return act({ type: "colonyDefense", colonyId, unitId, qty });
+}
+
+export function renameColony(colonyId: string, name: string) {
+  return act({ type: "colonyRename", colonyId, name });
+}
+
+export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
+  return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
+}

@@ -225,6 +225,18 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "colonies",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "colonizing",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [
@@ -1032,6 +1044,12 @@
         "type": "json",
         "required": false,
         "maxSize": 50000
+      },
+      {
+        "name": "transport",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [

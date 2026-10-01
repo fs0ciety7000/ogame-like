@@ -1,3 +1,4 @@
+import { advanceColonies } from "@/game/colonies";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { advanceResources, missionRewards } from "@/game/economy";
 import { ensureContracts, recordContract } from "@/game/contracts";
@@ -60,6 +61,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
+  // v3.5 : colonies (production, constructions, défenses) et colonisation.
+  notifications.push(...advanceColonies(player, now));
 
   // --- Bâtiments en construction ---
   for (const buildingId of Object.keys(queues.buildingUpgrades) as (keyof typeof queues.buildingUpgrades)[]) {

@@ -198,6 +198,7 @@ function fleetFromRecord(rec) {
   f.units = f.units || {};
   f.loot = f.loot || null;
   f.returnAtMs = f.returnAtMs || null;
+  f.transport = f.transport || null;
   return f;
 }
 
@@ -238,6 +239,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "lair") return resolveLairArrival(txApp, game, rec, now);
   if (mission === "expedition") return expeditionStep(txApp, game, rec, now, 1);
   if (mission === "leviathan") return leviathanArrival(txApp, game, rec, now);
+  if (mission === "transport") return transportArrival(txApp, game, rec, now);
   if (mission === "garrison") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
@@ -317,6 +319,26 @@ function resolveRecycleArrival(txApp, game, rec, now) {
   rec.set("outcome", game.debrisTotal(taken) > 0 ? "collected" : "empty");
   rec.set("status", owner ? "returning" : "done");
   rec.set("returnAtMs", owner ? now + tripMs : null);
+  txApp.save(rec);
+}
+
+/** Transport (v3.5) : livraison à la colonie ou chargement, puis retour. */
+function transportArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  const out = game.performTransportArrival(owner.player, owner.queues, fleet, now);
+  savePlayer(txApp, game, owner, out.owner, out.queues);
+  notify(txApp, fleet.ownerUid, out.notifications);
+  rec.set("loot", out.loot);
+  rec.set("outcome", out.outcome);
+  rec.set("status", "returning");
+  rec.set("returnAtMs", now + tripMs);
   txApp.save(rec);
 }
 
@@ -656,9 +678,9 @@ function launchFleetRequest(e) {
   const body = db.body(e);
   const mission = String(body.mission || "attack");
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
-  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : String(body.targetUid || "");
+  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : mission === "transport" ? String(body.colonyId || "") : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -711,6 +733,7 @@ function launchFleetRequest(e) {
         expeditionsActive,
         expeditionsToday,
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
+        transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
