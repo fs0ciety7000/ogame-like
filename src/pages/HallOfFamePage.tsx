@@ -12,6 +12,7 @@ import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import type { Alliance, SeasonResult } from "@/types/game";
 import { subscribeAlliances } from "@/services/allianceService";
 import { ALLIANCE_RULES, allianceStandings } from "@/game/alliances";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 const PODIUM_STYLE = [
   { color: "text-gold-glow", ring: "border-gold-glow/60 bg-gold-glow/10", icon: Crown, height: "h-28" },
@@ -109,6 +110,7 @@ export function HallOfFamePage() {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")}>{p.pseudo}</span>
+                <StaffBadge uid={p.uid} compact />
                 <span className="tabular-mono ml-auto text-xs text-slate-400">{formatNumber(p.sxp)} XP</span>
               </li>
             ))}

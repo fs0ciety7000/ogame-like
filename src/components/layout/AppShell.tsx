@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
+import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
 import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
@@ -86,6 +87,9 @@ function SfxToggle() {
   );
 }
 
+/** Pages hors navigation principale (barre d'outils). */
+const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages" };
+
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
@@ -117,7 +121,9 @@ export function AppShell() {
 
   // Code de secteur (décoratif, stable par joueur).
   const sectorCode = (user?.uid ?? "000000").slice(-6).toUpperCase().replace(/(.{3})/, "$1-");
-  const currentLabel = ALL_NAV_ITEMS.find((item) =>
+  const currentLabel =
+    EXTRA_LABELS[location.pathname] ??
+    ALL_NAV_ITEMS.find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
   )?.label;
 
@@ -129,6 +135,7 @@ export function AppShell() {
       <NavBar />
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
+        <MaintenanceBanner />
         <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
           <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">

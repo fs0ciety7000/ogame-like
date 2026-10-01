@@ -23,6 +23,7 @@ import { TradeModal } from "@/components/game/TradeModal";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import type { Alliance } from "@/types/game";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 const SIZE = FLEET_RULES.mapSize;
 const MIN_ZOOM = 1;
@@ -365,7 +366,7 @@ export function GalaxyPage() {
             <Card className="flex flex-col gap-3 p-4">
               <div>
                 <p className="text-sm font-medium text-slate-100">
-                  {selected.pseudo}
+                  {selected.pseudo} <StaffBadge uid={selected.uid} className="ml-1 align-middle" />
                   {selected.uid === uid && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
                 </p>
                 {selected.activeTitle && <p className="text-xs text-gold-glow">🏆 {selected.activeTitle}</p>}

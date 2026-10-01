@@ -33,6 +33,7 @@ import {
 } from "@/components/game/AllianceTabs";
 import { timeAgo, cn } from "@/lib/utils";
 import type { Alliance, AllianceMessage } from "@/types/game";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
   const [alliances, setAlliances] = useState<Alliance[]>([]);
@@ -279,8 +280,9 @@ function AllianceRoom({
                 return (
                   <li key={m} className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
-                    <span className="flex-1 truncate">
-                      {alliance.memberPseudos[m] ?? "?"}
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="truncate">{alliance.memberPseudos[m] ?? "?"}</span>
+                      <StaffBadge uid={m} compact />
                     </span>
                     {m !== uid && (
                       <Button
@@ -368,7 +370,7 @@ function AllianceRoom({
               )}
               {messages.map((m) => (
                 <div key={m.id} className="text-sm">
-                  <span className="text-cyan-glow">{m.authorPseudo}</span>{" "}
+                  <span className="text-cyan-glow">{m.authorPseudo}</span> <StaffBadge uid={m.authorUid} compact className="align-middle" />{" "}
                   <span className="text-xs text-slate-600">
                     {timeAgo(m.createdAtMs)}
                   </span>

@@ -33,21 +33,21 @@ export function PirateTriggerCard() {
 
   return (
     <Card className="flex flex-col gap-2 p-4">
-      <h3 className="flex items-center gap-2 font-display text-sm text-ember-glow">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-ember-glow">
         <Skull className="h-4 w-4" /> Ultimatum de faction
       </h3>
       <p className="text-xs text-slate-400">
         Inscrit tout de suite un joueur sur la liste d'une faction : il reçoit l'ultimatum (tribut ou raid), sans attendre le déclencheur automatique. Une seule menace à la fois par joueur.
       </p>
       <div className="flex flex-wrap gap-2">
-        <select value={factionId} onChange={(e) => setFactionId(e.target.value)} className="h-9 rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100">
+        <select value={factionId} onChange={(e) => setFactionId(e.target.value)} className="h-9 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100">
           {FACTIONS.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}
             </option>
           ))}
         </select>
-        <select value={uid} onChange={(e) => setUid(e.target.value)} className="h-9 flex-1 rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100">
+        <select value={uid} onChange={(e) => setUid(e.target.value)} className="h-9 flex-1 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100">
           <option value="">— choisir un joueur —</option>
           {players.map((p) => (
             <option key={p.uid} value={p.uid}>

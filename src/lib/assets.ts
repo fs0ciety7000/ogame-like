@@ -1,7 +1,7 @@
 /** Version des images du jeu : à augmenter quand une image est remplacée
  *  sous le même nom, pour que les navigateurs (et le cache de Cloudflare)
  *  la rechargent au lieu de garder l'ancienne pendant des heures. */
-export const ASSET_VERSION = "2.4";
+export const ASSET_VERSION = "2.5";
 
 /** Ajoute la version aux images locales (/assets/…). Les fichiers envoyés
  *  depuis l'administration ont déjà une adresse unique. */

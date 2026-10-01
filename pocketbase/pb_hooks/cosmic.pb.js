@@ -275,6 +275,8 @@ routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmi
 // Factions hostiles : inscriptions et ultimatums expirés, toutes les 10 min.
 cronAdd("cosmic_pirates", "*/10 * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
+  // En maintenance, les factions attendent : les joueurs ne peuvent pas répondre.
+  if (db.readMaintenance($app).enabled) return;
   db.processPirates(db.loadGame(), Date.now(), null);
 });
 
@@ -373,6 +375,22 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
  * tous), précédé d'une sauvegarde complète. Administrateurs uniquement.
  */
 routerAdd("POST", "/api/cosmic/admin/reset", (e) => require(`${__hooks}/cosmic_db.js`).adminReset(e), $apis.requireAuth("users", "_superusers"));
+
+/* ---------- Mode maintenance (v2.5) ---------- */
+
+// Pendant la maintenance, seules les requêtes des administrateurs modifient
+// le jeu ; les joueurs peuvent encore se connecter et lire.
+routerUse((e) => {
+  require(`${__hooks}/cosmic_db.js`).maintenanceGuard(e);
+  return e.next();
+});
+
+/** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
+routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
+
+/** GET /api/cosmic/admin/admins · POST { action: "add" | "remove", uid, note? } — administrateurs. */
+routerAdd("GET", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminList(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminManage(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- Journal des actions d'administration ---------- */
 

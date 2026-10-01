@@ -109,7 +109,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       <Section title="Événements programmés (prioritaires sur la rotation)">
         {events.scheduled.length === 0 && <p className="text-xs text-slate-500 sm:col-span-2">Aucun événement programmé.</p>}
         {events.scheduled.map((s, i) => (
-          <div key={s.id} className="grid gap-2 rounded-lg border border-white/5 p-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <div key={s.id} className="grid gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
             <SelectField
               label="Événement"
               value={s.type}
@@ -171,7 +171,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       </Section>
       <Section title="Récompenses de fin de saison">
         {seasons.tiers.map((t, i) => (
-          <div key={i} className="grid gap-2 rounded-lg border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
+          <div key={i} className="grid gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
             <NumberField label="Jusqu'au rang" value={t.maxRank} min={1} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, maxRank: v ?? 1 } : x)) })} />
             <NumberField label="Heures de production" value={t.hours} min={0} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, hours: v ?? 0 } : x)) })} />
             <NumberField label="Bonus de chaque rare" value={t.rare} min={0} step={50} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, rare: v ?? 0 } : x)) })} />

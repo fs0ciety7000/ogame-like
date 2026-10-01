@@ -43,7 +43,7 @@ function unitOptions() {
 
 function PreviewTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-white/5">
+    <div className="overflow-x-auto border border-white/5">
       <table className="w-full text-left text-xs">
         <thead className="bg-white/5 text-slate-400">
           <tr>
@@ -412,7 +412,7 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
         />
       </Section>
 
-      <div className="grid gap-2 rounded-lg border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
+      <div className="grid gap-2 border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
         <p>
           Puissance {u.category === "attack" ? "d'attaque" : "de défense"} : <strong className="text-slate-100">{formatNumber(power)}</strong>
         </p>
@@ -574,7 +574,7 @@ export function MissionForm({ value: m, onChange, isNew }: { value: MissionDef; 
         <KeyNumberMapField label="Unités (quantité minimale possédée)" value={m.prereq} options={unitOptions()} onChange={(prereq) => set({ prereq })} />
       </Section>
 
-      <div className="rounded-lg border border-white/5 bg-black/10 p-3 text-xs text-slate-300">
+      <div className="border border-white/5 bg-black/10 p-3 text-xs text-slate-300">
         Rentabilité si relancée en boucle :{" "}
         {Object.entries(resources).map(([res, v]) => (
           <span key={res} className="mr-3">

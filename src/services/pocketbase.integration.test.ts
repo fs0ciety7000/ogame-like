@@ -704,6 +704,69 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v2.5 maintenance: players blocked (actions, sign-up), admins pass, ultimatums extended at the end", async () => {
+    // Connecté en B.
+    const now = Date.now();
+    await admin.collection("players").update(bId, {
+      resources: RICH,
+      pirates: { varan: { notoriety: 1, ultimatum: { tribute: { scrap: 10 }, issuedAtMs: now - 1000, expiresAtMs: now + 3_600_000 } } },
+    });
+    const on = await admin.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: true, version: "9.9.9", endsAtMs: now + 600_000 } });
+    try {
+      expect(on).toMatchObject({ enabled: true, version: "9.9.9" });
+      // Un joueur ne peut pas activer la maintenance.
+      await expect(pb.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: false } })).rejects.toMatchObject({ status: 403 });
+      await expect(ps.tradeResources(bId, "scrap", "energy", 100)).rejects.toThrow(/maintenance/);
+      await expect(pb.collection("players").update(bId, { pseudo: "Pendant" })).rejects.toMatchObject({ status: 503 });
+      const anon = new PocketBase(PB_TEST_URL!);
+      await expect(
+        anon.collection("users").create({ email: `mt${now}@test.dev`, password: "motdepasse1", passwordConfirm: "motdepasse1" }),
+      ).rejects.toMatchObject({ status: 503 });
+      // Lecture publique de l'état, écriture d'un administrateur.
+      expect((await anon.collection("game_config").getFirstListItem('key="maintenance"')).data.enabled).toBe(true);
+      await admin.collection("players").update(bId, { resources: RICH });
+      await wait(1100);
+    } finally {
+      const off = await admin.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: false } });
+      expect(off.enabled).toBe(false);
+      expect(off.extended).toBeGreaterThanOrEqual(1);
+    }
+    const p = await snap(bId);
+    expect(p.pirates.varan.ultimatum.expiresAtMs).toBeGreaterThan(now + 3_600_000 + 1000);
+    await ps.tradeResources(bId, "scrap", "energy", 100);
+    await admin.collection("players").update(bId, { pirates: null });
+  }, 30_000);
+
+  it("v2.5 admins and staff: only admins manage them, role badge and title, never yourself", async () => {
+    // Connecté en B (joueur).
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 403 });
+    await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+    const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test", role: "developer" } });
+    try {
+      expect(added.admins.some((a: { id: string; note: string; role: string }) => a.id === bId && a.note === "test" && a.role === "developer")).toBe(true);
+      // Badge public (game_config « staff ») et titre affiché d'office.
+      const staff = await new PocketBase(PB_TEST_URL!).collection("game_config").getFirstListItem('key="staff"');
+      expect(staff.data.roles[bId]).toBe("developer");
+      let p = await snap(bId);
+      expect(p.activeTitle).toBe("Développeur");
+      await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "role", uid: bId, role: "admin" } });
+      p = await snap(bId);
+      expect(p.activeTitle).toBe("Administrateur");
+      expect(p.titles.map((t: { label: string }) => t.label)).toEqual(["Administrateur"]);
+      // B est maintenant admin : il lit la liste mais ne peut pas se retirer lui-même.
+      expect((await pb.send("/api/cosmic/admin/admins", { method: "GET" })).admins.length).toBeGreaterThan(0);
+      await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } })).rejects.toMatchObject({ status: 400 });
+      await expect(admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } });
+    }
+    const after = await snap(bId);
+    expect(after.titles ?? []).toEqual([]);
+    expect(after.activeTitle ?? "").toBe("");
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+  });
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

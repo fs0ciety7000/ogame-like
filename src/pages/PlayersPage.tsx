@@ -32,6 +32,7 @@ import { TradeModal } from "@/components/game/TradeModal";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
 import { GameIcon } from "@/components/ui/game-icon";
+import { StaffBadge } from "@/components/ui/staff-badge";
 
 type LeaderboardMode = "total" | "season" | "alliances";
 
@@ -242,6 +243,7 @@ export function PlayersPage() {
                 <div className="min-w-0">
                   <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
                     <span className="truncate">{p.pseudo}</span>
+                    <StaffBadge uid={p.uid} />
                     {isProtected && (
                       <span title={attackCheck?.message} className="flex items-center text-mint-glow">
                         <ShieldCheck className="h-3.5 w-3.5" />

@@ -55,7 +55,7 @@ export function HardResetCard() {
 
   return (
     <Card className="flex flex-col gap-3 border-danger-glow/40 p-4 md:col-span-2">
-      <h3 className="flex items-center gap-2 font-display text-sm text-danger-glow">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-danger-glow">
         <RotateCcw className="h-4 w-4" /> Hard reset de la progression
       </h3>
       <p className="text-xs text-slate-400">
@@ -75,7 +75,7 @@ export function HardResetCard() {
           value={uid}
           disabled={scope !== "player"}
           onChange={(e) => setUid(e.target.value)}
-          className="h-9 rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100 disabled:opacity-40"
+          className="h-9 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100 disabled:opacity-40"
         >
           <option value="">— choisir —</option>
           {players.map((p) => (

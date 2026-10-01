@@ -22,7 +22,7 @@ function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: 
 function Panel({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
     <Card className={`flex flex-col gap-3 p-4 ${className ?? ""}`}>
-      <h3 className="font-display text-sm text-white">{title}</h3>
+      <h3 className="hud-title text-sm text-white">{title}</h3>
       {children}
     </Card>
   );

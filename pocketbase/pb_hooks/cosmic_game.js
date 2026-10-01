@@ -48,30 +48,39 @@ var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
+  DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
+  MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
+  STAFF_KEY: () => STAFF_KEY,
   allianceStandings: () => allianceStandings,
   answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
+  applyStaffTitle: () => applyStaffTitle,
   collectDebris: () => collectDebris,
   computeGameStats: () => computeGameStats,
   debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
   endGarrison: () => endGarrison,
+  extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
   finishAllianceResearch: () => finishAllianceResearch,
   flushPlayer: () => flushPlayer,
+  isStaffRole: () => isStaffRole,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
+  nextMaintenance: () => nextMaintenance,
+  normalizeMaintenance: () => normalizeMaintenance,
+  normalizeStaff: () => normalizeStaff,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -4286,6 +4295,79 @@ function applyGameContent(overrides) {
   Object.assign(PIRATE_RULES, content.rules.pirates);
   current = content;
   return content;
+}
+
+// src/game/staff.ts
+var STAFF_KEY = "staff";
+var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
+var STAFF_TITLE_SEASON = "staff";
+var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
+function isStaffRole(v) {
+  return v === "developer" || v === "admin";
+}
+function normalizeStaff(raw) {
+  const roles = {};
+  const src = raw && typeof raw === "object" ? raw.roles : null;
+  if (src && typeof src === "object") {
+    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
+  }
+  return { roles };
+}
+function applyStaffTitle(player, role, display = false) {
+  var _a, _b, _c, _d;
+  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
+  const staffLabels = Object.values(STAFF_LABELS);
+  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
+  const label = role ? STAFF_LABELS[role] : null;
+  player.titles = label ? [{ label, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
+  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label) player.activeTitle = "";
+  if (label && display) player.activeTitle = label;
+  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
+}
+
+// src/game/maintenance.ts
+var MAINTENANCE_KEY = "maintenance";
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null };
+var MAX_MESSAGE = 600;
+var MAX_VERSION = 20;
+function normalizeMaintenance(raw) {
+  if (!raw || typeof raw !== "object") return __spreadValues({}, MAINTENANCE_OFF);
+  const r = raw;
+  const endsAt = Number(r.endsAtMs);
+  return {
+    enabled: r.enabled === true,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
+    startedAtMs: Number(r.startedAtMs) || 0,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null
+  };
+}
+function nextMaintenance(previous, request, now) {
+  const enabled = request.enabled === true;
+  if (!enabled) return __spreadProps(__spreadValues({}, previous), { enabled: false, endsAtMs: null });
+  const endsAt = Number(request.endsAtMs);
+  return {
+    enabled: true,
+    message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
+    version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
+    startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null
+  };
+}
+function extendUltimatums(pirates, startedAtMs, now) {
+  const pausedMs = now - startedAtMs;
+  if (!pirates || typeof pirates !== "object" || startedAtMs <= 0 || pausedMs <= 0) return null;
+  const shift = (state) => {
+    const u = state.ultimatum;
+    if (!u || typeof u.expiresAtMs !== "number" || u.expiresAtMs <= startedAtMs) return false;
+    state.ultimatum = __spreadProps(__spreadValues({}, u), { expiresAtMs: u.expiresAtMs + pausedMs });
+    return true;
+  };
+  const copy = JSON.parse(JSON.stringify(pirates));
+  let changed = false;
+  if ("notoriety" in copy || "nextListAtMs" in copy) changed = shift(copy);
+  else for (const state of Object.values(copy)) if (state && typeof state === "object" && shift(state)) changed = true;
+  return changed ? copy : null;
 }
 
 // src/server/hooksEntry.ts

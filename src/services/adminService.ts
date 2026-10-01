@@ -4,6 +4,7 @@ import { pb } from "@/lib/pocketbase";
 import { useAuthStore } from "@/store/authStore";
 import type { PlayerState, QueuesState } from "@/types/game";
 import type { GameStats } from "@/game/analytics";
+import type { StaffRole } from "@/game/staff";
 
 /* =====================================================
    Administration du jeu.
@@ -169,7 +170,7 @@ export interface AdminLogEntry {
   id: string;
   actorId: string;
   actorName: string;
-  action: "create" | "update" | "delete";
+  action: "create" | "update" | "delete" | "reset" | "maintenance";
   targetCollection: string;
   recordId: string;
   recordLabel: string;
@@ -181,4 +182,32 @@ export interface AdminLogEntry {
 export async function adminListLogs(page: number, filter = ""): Promise<{ items: AdminLogEntry[]; totalPages: number }> {
   const res = await pb.collection("admin_logs").getList<AdminLogEntry>(page, 30, { sort: "-createdAtMs", filter: filter || undefined });
   return { items: res.items, totalPages: res.totalPages };
+}
+
+export interface GameAdmin {
+  id: string;
+  pseudo: string;
+  email: string;
+  note: string;
+  role: StaffRole;
+}
+
+/** Administrateurs du jeu (pseudo et email). */
+export async function adminListAdmins(): Promise<GameAdmin[]> {
+  try {
+    return (await pb.send<{ admins: GameAdmin[] }>("/api/cosmic/admin/admins", { method: "GET" })).admins;
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Liste indisponible.");
+  }
+}
+
+/** Ajoute ou retire un administrateur (jamais soi-même, jamais le dernier). */
+export async function adminManageAdmin(action: "add" | "remove" | "role", uid: string, options: { note?: string; role?: StaffRole } = {}): Promise<GameAdmin[]> {
+  try {
+    return (await pb.send<{ admins: GameAdmin[] }>("/api/cosmic/admin/admins", { method: "POST", body: { action, uid, ...options } })).admins;
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Action impossible.");
+  }
 }
