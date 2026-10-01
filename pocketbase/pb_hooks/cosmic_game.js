@@ -1501,7 +1501,9 @@ var ECONOMY_RULES = {
   /** Missions : ressources communes = au moins ce multiple de (durée × production). */
   missionProductionMultiplier: 1.5,
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
-  missionRareLevelDivisor: 35
+  missionRareLevelDivisor: 35,
+  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
+  missionRareProductionRef: 5e5
 };
 var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
 function getFleetUpkeep(units, techLevels2) {
@@ -1570,11 +1572,23 @@ function protectedAmount(buildings, res, techLevels2) {
   const pct4 = Math.min(TECH_REDUCTION_CAP, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage"));
   return Number.isFinite(capacity) ? Math.floor(capacity * pct4) : 0;
 }
+function rareRewardScale(player) {
+  var _a;
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
+    var _a2;
+    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
+  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
+  const ref = ECONOMY_RULES.missionRareProductionRef;
+  const production = ref > 0 ? perHour / ref : 0;
+  return Math.max(development, production);
+}
 function missionRewards(mission, player) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const rareScale = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rareScale = rareRewardScale(player);
   const out = {};
   for (const [res, fixed] of Object.entries(mission.reward)) {
     if (res === "xp") out.xp = fixed;
@@ -1785,8 +1799,7 @@ function recordContract(player, type, amount2, now) {
   }
 }
 function developmentScale(player) {
-  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
-  return 1 + levels / 35;
+  return rareRewardScale(player);
 }
 function streakBonus(streak) {
   return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);

@@ -647,6 +647,13 @@ export function RulesPanel() {
             step={0.01}
             onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedStoragePct: v ?? 0 } }))}
           />
+          <NumberField
+            label="Rares des missions et contrats : production horaire de référence (0 = désactivé)"
+            value={rules.economy.missionRareProductionRef}
+            min={0}
+            step={50_000}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, missionRareProductionRef: v ?? 0 } }))}
+          />
         </Section>
         <EventsAndSeasonsSections rules={rules} setRules={setRules} />
       </Card>
