@@ -14,6 +14,7 @@ import { ALLIANCE_RULES } from "@/game/alliances";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
+import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, type AchievementDef } from "@/game/achievements";
 
 /* =====================================================
    Contenu du jeu piloté par les données.
@@ -47,11 +48,12 @@ export interface GameContent {
   missions: MissionDef[];
   factions: FactionDef[];
   ranks: RankDef[];
+  achievements: AchievementDef[];
   rules: GameRules;
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "rules"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules"];
 
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
@@ -74,6 +76,7 @@ export function defaultGameContent(): GameContent {
     missions: Object.values(DEFAULT_MISSIONS),
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
+    achievements: DEFAULT_ACHIEVEMENTS,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES },
   });
 }
@@ -95,6 +98,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     missions: overrides.missions ?? defaults.missions,
     factions: overrides.factions ?? defaults.factions,
     ranks: overrides.ranks ?? defaults.ranks,
+    achievements: overrides.achievements ?? defaults.achievements,
     rules: {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
@@ -115,6 +119,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
+  setAchievements(content.achievements);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -227,6 +232,7 @@ export function validateGameContent(content: GameContent): string[] {
   }
   errors.push(...validateFactions(content.factions ?? []));
   errors.push(...validateRanks(content.ranks ?? []));
+  errors.push(...validateAchievements(content.achievements ?? []));
 
   return [...new Set(errors)];
 }

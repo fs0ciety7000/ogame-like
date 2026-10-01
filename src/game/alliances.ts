@@ -1,3 +1,4 @@
+import { bumpStat, setStat } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { NewNotification } from "@/game/flush";
@@ -340,6 +341,7 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
     case "create": {
       if (actor.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
       out.alliance = newAlliance({ uid: actor.uid, pseudo: actor.pseudo }, action.name, action.tag, now);
+      setStat(actor, "allianceFounded", 1);
       return out; // le serveur complète memberships une fois l'identifiant connu
     }
     case "join": {
@@ -380,6 +382,7 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
       if (!alliance) throw new GameActionError("Alliance introuvable.");
       const amounts = parseAmounts(action.resources);
       out.alliance = deposit(alliance, actor, amounts);
+      bumpStat(actor, "donated", Object.values(amounts).reduce((a: number, b) => a + (b ?? 0), 0));
       log({ kind: "deposit", resources: amounts });
       return out;
     }

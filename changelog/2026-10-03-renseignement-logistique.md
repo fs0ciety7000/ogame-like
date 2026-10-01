@@ -1,7 +1,7 @@
 ---
 version: 1.7.0
 iteration: 8
-date: 2026-10-03
+date: 2026-09-30
 title: Renseignement et logistique
 ---
 ## Espionnage à niveaux

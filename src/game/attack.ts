@@ -1,3 +1,4 @@
+import { bumpStat, setStat } from "@/game/stats";
 import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
@@ -145,7 +146,10 @@ export function performAttack(input: AttackInput): AttackOutput {
     }
   }
   for (const [res, amt] of Object.entries(combat.loot ?? {})) {
-    if (!input.inFlight) attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+    if (!input.inFlight) {
+      attacker.resources[res as ResourceId] = (attacker.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+      bumpStat(attacker, "loot", amt ?? 0);
+    }
     def.resources[res as ResourceId] = Math.max(0, (def.resources[res as ResourceId] ?? 0) - (amt ?? 0));
   }
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
@@ -154,7 +158,10 @@ export function performAttack(input: AttackInput): AttackOutput {
 
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
-  if (combat.outcome === "attacker_win") attacker.victories = (attacker.victories ?? 0) + 1;
+  if (combat.outcome === "attacker_win") {
+    if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 3600_000) setStat(attacker, "phoenix", 1);
+    attacker.victories = (attacker.victories ?? 0) + 1;
+  }
   else if (combat.outcome === "defender_win") attacker.defeats = (attacker.defeats ?? 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
   attacker.lastAttackAtMs = now;

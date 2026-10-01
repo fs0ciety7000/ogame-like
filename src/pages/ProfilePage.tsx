@@ -1,3 +1,4 @@
+import { assetUrl } from "@/lib/assets";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { GameActionError, setActiveTitle } from "@/services/playerService";
@@ -12,6 +13,8 @@ import { getRankIcon, getRankIndex, getRankLabel, getRankProgress, RANKS } from 
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { UNITS } from "@/game/units";
 import { ACHIEVEMENTS } from "@/game/achievements";
+import { AchievementMedal } from "@/pages/AchievementsPage";
+import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
 
 function usePlaytimeDisplay(baseSeconds: number) {
@@ -137,29 +140,30 @@ export function ProfilePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Succès</CardTitle>
-          <span className="tabular-mono text-xs text-slate-400">
-            {(player.unlockedAchievements ?? []).length} / {ACHIEVEMENTS.length}
-          </span>
+          <Link to="/game/succes" className="text-xs text-cyan-glow hover:underline">
+            {ACHIEVEMENTS.filter((a) => a.enabled && (player.unlockedAchievements ?? []).includes(a.id)).length} / {ACHIEVEMENTS.filter((a) => a.enabled).length} · Tout voir →
+          </Link>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {ACHIEVEMENTS.map((a) => {
-              const unlocked = (player.unlockedAchievements ?? []).includes(a.id);
-              return (
-                <div
-                  key={a.id}
-                  title={a.description}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-xl border p-3 text-center transition",
-                    unlocked ? "border-gold-glow/40 bg-gold-glow/5 shadow-[0_0_16px_-8px_var(--color-gold-glow)]" : "border-white/5 opacity-40 grayscale",
-                  )}
-                >
-                  <span className="text-2xl">{a.emoji}</span>
-                  <span className="text-[11px] text-slate-300">{a.name}</span>
-                </div>
-              );
-            })}
-          </div>
+          {(() => {
+            const recent = (player.unlockedAchievements ?? [])
+              .map((id) => ACHIEVEMENTS.find((a) => a.id === id))
+              .filter((a): a is (typeof ACHIEVEMENTS)[number] => !!a)
+              .slice(-8)
+              .reverse();
+            return recent.length === 0 ? (
+              <p className="text-sm text-slate-500">Aucun succès pour l'instant. Ta première victoire t'en rapportera un !</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {recent.map((a) => (
+                  <div key={a.id} className="flex w-20 flex-col items-center gap-1 text-center" title={a.description}>
+                    <AchievementMedal a={a} unlocked size={64} />
+                    <span className="text-[10px] leading-tight text-slate-300">{a.name}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
@@ -195,7 +199,7 @@ function RankLadder({ xp }: { xp: number }) {
                 i > current && "opacity-45 grayscale",
               )}
             >
-              <img src={r.image} alt="" className="h-14 w-14 object-contain" loading="lazy" />
+              <img src={assetUrl(r.image)} alt="" className="h-14 w-14 object-contain" loading="lazy" />
               <p className={cn("text-[11px] font-semibold", i === current ? "text-cyan-glow" : "text-slate-200")}>{r.name}</p>
               <p className="tabular-mono text-[10px] text-slate-500">{formatNumber(r.xp)} XP</p>
             </div>

@@ -41,4 +41,11 @@ describe("changelog", () => {
       expect(isUnread(previous.id, latest.id)).toBe(false);
     }
   });
+
+  it("dates each entry with its release day, never in the future, in release order", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const e of CHANGELOG) expect(e.date <= today, `${e.id} : date ${e.date} dans le futur`).toBe(true);
+    const dates = CHANGELOG.map((e) => e.date);
+    expect(dates).toEqual([...dates].sort().reverse());
+  });
 });

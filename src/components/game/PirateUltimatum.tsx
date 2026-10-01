@@ -1,3 +1,4 @@
+import { assetUrl } from "@/lib/assets";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Skull, Swords } from "lucide-react";
@@ -92,7 +93,7 @@ export function UltimatumDialog() {
       <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl">
         <div className="grid sm:grid-cols-[minmax(0,15rem)_1fr]">
           <div className="relative min-h-56 overflow-hidden sm:min-h-full">
-            <img src={faction.art} alt={`${faction.leader} et ${faction.enforcer}`} className="absolute inset-0 h-full w-full object-cover object-top" />
+            <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="absolute inset-0 h-full w-full object-cover object-top" />
             <div className="absolute inset-0 bg-gradient-to-t from-space-950/90 via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-space-950/80" />
           </div>
           <div className="flex flex-col gap-3 p-5">
@@ -104,7 +105,9 @@ export function UltimatumDialog() {
               <p className="text-xs text-slate-400">
                 {faction.tribute.basis === "plunder"
                   ? `Prix exigé (${Math.round(faction.tribute.plunderPct * 100)} % de ton butin récent)`
-                  : `Tribut exigé (${faction.tribute.hours} h de ta production)`}
+                  : faction.tribute.basis === "stock"
+                    ? `Intérêts exigés (${Math.round((faction.tribute.stockPct ?? 0) * 100)} % de ton stock)`
+                    : `Tribut exigé (${faction.tribute.hours} h de ta production)`}
               </p>
               <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-100">
                 {RESOURCE_LIST.filter((r) => (ultimatum.tribute[r.id] ?? 0) > 0).map((r) => (

@@ -1,3 +1,4 @@
+import { bumpStat } from "@/game/stats";
 import { galaxyCoords } from "@/game/galaxy";
 import { GameActionError } from "@/game/errors";
 import { checkAttackAllowed } from "@/game/pvp";
@@ -231,6 +232,8 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   const lootTotal = Object.values(fleet.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
+  if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
+  else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
   return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false }] };
 }
 
@@ -300,6 +303,8 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   else if (mission === "lair") out = launchLair(owner, req.lairTarget ?? "", req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target!, req.fleet, req.garrisonHours ?? 0, req.garrisonsAtHost ?? 0, now);
   else throw new GameActionError("Mission inconnue.");
+  const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
+  if (counter) bumpStat(out.attacker, counter);
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
 }
 

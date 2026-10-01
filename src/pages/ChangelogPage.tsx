@@ -1,3 +1,4 @@
+import { assetUrl } from "@/lib/assets";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -45,7 +46,7 @@ export function ChangelogPage() {
                   {formatDate(entry.date)}
                 </span>
               </div>
-              {entry.image && <img src={entry.image} alt="" className="mb-3 max-h-80 w-full rounded-lg object-cover object-top" />}
+              {entry.image && <img src={assetUrl(entry.image)} alt="" className="mb-3 max-h-80 w-full rounded-lg object-cover object-top" />}
               <Markdown source={entry.body} />
             </Card>
           </motion.div>

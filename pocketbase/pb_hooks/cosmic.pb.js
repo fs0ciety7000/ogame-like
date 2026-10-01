@@ -297,6 +297,22 @@ routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
   return e.json(200, { changed: db.processPirates(db.loadGame(), Date.now(), uid, factionId) });
 });
 
+/** GET /api/cosmic/achievements — part des joueurs ayant obtenu chaque succès. */
+routerAdd("GET", "/api/cosmic/achievements", (e) => {
+  const counts = {};
+  const players = $app.findAllRecords("players");
+  players.forEach((rec) => {
+    let list = [];
+    try {
+      list = JSON.parse(rec.getString("unlockedAchievements") || "[]") || [];
+    } catch (_) {
+      list = [];
+    }
+    list.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
+  });
+  return e.json(200, { players: players.length, counts });
+}, $apis.requireAuth("users"));
+
 // Clôture de la saison précédente (sans effet si elle est déjà close).
 cronAdd("cosmic_seasons", "7 * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);

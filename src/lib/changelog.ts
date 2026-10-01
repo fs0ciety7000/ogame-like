@@ -13,6 +13,9 @@ import { create } from "zustand";
      Texte en Markdown (titres ##, listes -, **gras**, `code`).
 
    - iteration : numéro du lot livré, +1 à chaque mise à jour publiée.
+   - date : jour de la mise en ligne (pas un jour par itération).
+     Le nom du fichier sert d'identifiant (pastille « non lu ») : ne pas
+     renommer un fichier déjà publié, même si sa date change.
    - version : MAJEURE.MINEURE.CORRECTIF — mineure pour une mise à jour
      avec des nouveautés, correctif pour une livraison de corrections
      seules, majeure pour une refonte (nouvelle saison, remise à zéro…).

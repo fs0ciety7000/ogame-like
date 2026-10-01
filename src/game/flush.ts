@@ -5,7 +5,10 @@ import { MISSIONS } from "@/game/missions";
 import { missionRewardFactor } from "@/game/events";
 import { findTech, techBonus, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
-import { checkNewAchievements } from "@/game/achievements";
+import { achievementReward, checkNewAchievements } from "@/game/achievements";
+import { bumpStat, recordMission, setStat } from "@/game/stats";
+import { contractDay } from "@/game/contracts";
+import { formatInt } from "@/game/format";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
@@ -94,6 +97,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       if (u) {
         if (!player.units[u.id]) player.units[u.id] = { level: 1, count: 0 };
         player.units[u.id].count += 1;
+        bumpStat(player, "unitsBuilt");
       }
       const completedEndTime = front.endTime;
       queue.shift();
@@ -123,6 +127,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     if (nextLevel <= tech.maxLevel) {
       player.techLevels[tech.id] = nextLevel;
       applyTechEffect(player, tech.id, nextLevel);
+      setStat(player, "lastResearchAtMs", entry.endTime);
       notifications.push({
         kind: "research",
         title: "Recherche terminée",
@@ -155,6 +160,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       }
     }
     recordContract(player, "missions", 1, now);
+    recordMission(player, contractDay(entry.endTime));
     notifications.push({
       kind: "mission",
       title: "Mission terminée",
@@ -169,14 +175,35 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   const newAchievements = checkNewAchievements(player);
   if (newAchievements.length > 0) {
     player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
+    let totalXp = 0;
     for (const a of newAchievements) {
+      const reward = achievementReward(a, player);
+      for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
+      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
+      totalXp += a.rewardXp;
+      if (a.title && !(player.titles ?? []).some((t) => t.label === a.title)) {
+        player.titles = [...(player.titles ?? []), { label: a.title, seasonId: `achievement:${a.id}`, rank: 1 }];
+      }
+    }
+    // Plusieurs succès d'un coup (rattrapage) : une seule notification.
+    if (newAchievements.length > 3) {
       notifications.push({
         kind: "achievement",
-        title: "Succès débloqué !",
-        message: `${a.emoji} ${a.name} — ${a.description}`,
+        title: `${newAchievements.length} succès débloqués !`,
+        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP). Détails sur la page Succès.`,
         createdAtMs: now,
         read: false,
       });
+    } else {
+      for (const a of newAchievements) {
+        notifications.push({
+          kind: "achievement",
+          title: "Succès débloqué !",
+          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${a.title ? ` · titre « ${a.title} »` : ""}`,
+          createdAtMs: now,
+          read: false,
+        });
+      }
     }
   }
 

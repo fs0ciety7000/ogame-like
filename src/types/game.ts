@@ -99,6 +99,8 @@ export interface PlayerState {
   allianceResearch?: Record<string, number>;
   /** Par faction (ancien format v2.0 : état de Varan à plat, migré à la lecture). */
   pirates?: import("@/game/pirates").FactionStates | import("@/game/pirates").PirateState;
+  /** Statistiques cumulées (v2.3), écrites par le serveur. */
+  stats?: import("@/game/stats").PlayerStats;
 }
 
 export interface SeasonResult {
