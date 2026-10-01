@@ -51,12 +51,12 @@ export function TextField({
   );
 }
 
-export function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+export function TextAreaField({ label, value, onChange, rows = 2 }: { label: string; value: string; onChange: (v: string) => void; rows?: number }) {
   return (
     <Field label={label} className="sm:col-span-2">
       <textarea
         value={value}
-        rows={2}
+        rows={rows}
         onChange={(e) => onChange(e.target.value)}
         className="rounded-lg border border-white/10 bg-space-800/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/50"
       />

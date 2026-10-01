@@ -1,62 +1,164 @@
 import { getProductionRatesPerSecond } from "@/game/production";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent } from "@/game/buildings";
-import { getShieldPercent, homeDefensePower, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { computeFullPower, getShieldPercent, homeDefensePower, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
+import { RESOURCE_LIST } from "@/game/resources";
+import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 
 /* =====================================================
-   La Liste de Varan (v2.0) : la Confrérie du Vide, menée par le capitaine
-   Orsk Varan et son exécuteur, le Silencieux, inscrit régulièrement un
-   empire sur sa Liste. Il paie un tribut, ou le Silencieux vient se servir.
-   Les raids repoussés font monter la Notoriété ; au bout de quelques-uns,
-   le repaire de Varan devient attaquable.
+   Factions hostiles (v2.0, généralisé en v2.1) : des factions contrôlées
+   par le jeu inscrivent un empire sur leur liste, exigent un tribut, puis
+   attaquent en cas de refus. Chaque faction est une fiche de données
+   (section de contenu « factions », modifiable dans l'administration) :
+   déclencheur, tribut, cible et force du raid, primes, repaire.
+
+   Une seule menace à la fois par joueur. La Notoriété et le repaire sont
+   propres à chaque faction.
 ===================================================== */
 
-export const PIRATE_RULES = {
-  enabled: true,
-  /** Délai entre deux inscriptions sur la Liste (tirage uniforme), en heures. */
-  minIntervalHours: 72,
-  maxIntervalHours: 96,
-  /** Seuls les joueurs actifs récemment sont visés. */
-  activeWithinHours: 72,
-  /** Tribut : heures de production des ressources communes. */
-  tributeHours: 6,
-  /** Délai de réponse à l'ultimatum. */
-  answerHours: 12,
-  /** Trajet du raid après un refus. */
-  raidTravelHours: 2,
-  /** Force du raid : puissance défensive × (base + parPoint × Notoriété). */
-  basePct: 0.7,
-  perNotorietyPct: 0.1,
-  maxNotoriety: 8,
-  /** Force minimale (bases sans défense) : fixe + par niveau de bâtiment. */
-  floorPower: 300,
-  floorPerBuildingLevel: 40,
-  /** Pillage en cas de défaite : part des ressources communes. */
-  lootPct: 0.1,
-  /** Raid repoussé : prime (heures de production), XP, débris par point de puissance détruit. */
-  bountyHours: 4,
-  bountyXp: 25,
-  debrisPerPower: 1,
-  /** Repaire de Varan. */
-  raidsForLair: 5,
-  lairPct: 1.5,
-  lairRewardHours: 24,
-  lairRare: 300,
-  lairXp: 100,
-  lairTitle: "Fléau de la Confrérie",
-};
+export type FactionTrigger = "wealth" | "aggression";
+export type RaidTarget = "base" | "fleet";
+
+export interface FactionDef {
+  id: string;
+  enabled: boolean;
+  name: string;
+  leader: string;
+  enforcer: string;
+  /** Illustration (chemin public ou URL d'un fichier envoyé). */
+  art: string;
+  /** Couleur d'accent : ember, gold, cyan, mint, danger. */
+  color: string;
+  /** Récit (paragraphes séparés par une ligne vide). */
+  story: string;
+  ultimatum: {
+    title: string;
+    /** Réplique du chef ; {pseudo} est remplacé par le pseudo du joueur. */
+    quote: string;
+    signature: string;
+    payLabel: string;
+  };
+  trigger: {
+    type: FactionTrigger;
+    /** Délai entre deux inscriptions (tirage uniforme), en heures. */
+    minIntervalHours: number;
+    maxIntervalHours: number;
+    /** Richesse : seuls les joueurs actifs récemment sont visés. */
+    activeWithinHours: number;
+    /** Agression : victoires contre des joueurs sur la période. */
+    minVictories: number;
+    windowDays: number;
+  };
+  tribute: {
+    /** production : heures de production ; plunder : part du butin récent. */
+    basis: "production" | "plunder";
+    hours: number;
+    plunderPct: number;
+    /** Plancher en heures de production (base « plunder »). */
+    minHours: number;
+  };
+  answerHours: number;
+  raidTravelHours: number;
+  raid: {
+    /** base : défenses + flotte à quai ; fleet : la flotte à quai seule. */
+    target: RaidTarget;
+    basePct: number;
+    perNotorietyPct: number;
+    maxNotoriety: number;
+    floorPower: number;
+    floorPerBuildingLevel: number;
+    lootPct: number;
+    lootKind: "common" | "rare";
+  };
+  bounty: { hours: number; rare: number; xp: number; debrisPerPower: number };
+  lair: { name: string; raidsNeeded: number; pct: number; rewardHours: number; rare: number; xp: number; title: string };
+}
+
+export const DEFAULT_FACTIONS: FactionDef[] = [
+  {
+    id: "varan",
+    enabled: true,
+    name: "Confrérie du Vide",
+    leader: "Capitaine Orsk Varan",
+    enforcer: "Le Silencieux",
+    art: "/assets/story/varan.webp",
+    color: "ember",
+    story:
+      "Depuis l'effondrement des routes commerciales, une flotte sans bannière rôde aux confins de la galaxie : la Confrérie du Vide.\n\n" +
+      "Son chef, le capitaine Orsk Varan, ancien officier impérial à la barbe grise, tient à jour une tablette lumineuse : la Liste, les empires trop riches pour être prudents. Ses ordres sont exécutés par le Silencieux, un colosse au masque respiratoire dont personne n'a jamais entendu la voix. Quand son doigt se pose sur toi, ton nom vient d'entrer sur la Liste.\n\n" +
+      "Varan laisse toujours un choix : payer le tribut, ou voir le Silencieux venir le chercher lui-même.",
+    ultimatum: {
+      title: "« Ton nom est sur ma Liste. »",
+      quote:
+        "{pseudo}… Ton empire brille un peu trop dans le noir. Le Silencieux t'a désigné, et il ne se trompe jamais. Verse ta part à la Confrérie, et nous t'oublierons. Refuse, et il viendra la prendre lui-même.",
+      signature: "Capitaine Orsk Varan",
+      payLabel: "Payer le tribut",
+    },
+    trigger: { type: "wealth", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 7 },
+    tribute: { basis: "production", hours: 6, plunderPct: 0, minHours: 0 },
+    answerHours: 12,
+    raidTravelHours: 2,
+    raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
+    bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
+    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
+  },
+  {
+    id: "gravhorn",
+    enabled: true,
+    name: "Syndicat Gravhorn",
+    leader: "Oggrath le Pisteur",
+    enforcer: "L'Unité Ambre",
+    art: "/assets/story/gravhorn.webp",
+    color: "gold",
+    story:
+      "On ne fuit pas le Syndicat. On le paie, ou on devient son trophée.\n\n" +
+      "Les Gravhorns sont une espèce de chasseurs à la peau tachetée et cornue, dont les antennes captent la peur à des parsecs de distance. Ils ne pillent pas au hasard : ils exécutent des contrats. Chaque empire que tu dévastes peut, en secret, déposer une prime sur ta tête.\n\n" +
+      "Le contrat est confié à Oggrath le Pisteur, vétéran au regard las qui a déjà tout vu. Il ne se déplace jamais seul : à ses côtés marche l'Unité Ambre, une combinaison orange à visière tactique dont personne ne sait ce qu'elle abrite. Sa visière affiche déjà ta flotte.",
+    ultimatum: {
+      title: "« Il y a un contrat sur ta tête. »",
+      quote:
+        "{pseudo}. Tes victimes ont payé cher pour te voir tomber. Moi, je suis un professionnel : rachète ton contrat, et l'Unité Ambre range ses armes. Sinon, elle vient pour tes vaisseaux. Pas pour tes murs. Pour tes vaisseaux.",
+      signature: "Oggrath le Pisteur",
+      payLabel: "Racheter le contrat",
+    },
+    trigger: { type: "aggression", minIntervalHours: 48, maxIntervalHours: 72, activeWithinHours: 72, minVictories: 3, windowDays: 7 },
+    tribute: { basis: "plunder", hours: 0, plunderPct: 0.5, minHours: 4 },
+    answerHours: 8,
+    raidTravelHours: 1.5,
+    raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
+    bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
+    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
+  },
+];
+
+/** Registre courant (remplacé par applyGameContent). */
+export const FACTIONS: FactionDef[] = [];
+export function setFactions(defs: FactionDef[]) {
+  FACTIONS.splice(0, FACTIONS.length, ...defs);
+}
+setFactions(structuredClone(DEFAULT_FACTIONS));
+
+export function findFaction(id: string): FactionDef | undefined {
+  return FACTIONS.find((f) => f.id === id);
+}
+
+/** Interrupteur général (règles « pirates »). */
+export const PIRATE_RULES = { enabled: true };
 
 export const PIRATE_OWNER_UID = "pirates";
-export const PIRATE_LAIR_UID = "pirates_lair";
-export const PIRATE_RAIDER = "Le Silencieux";
-export const PIRATE_LAIR_NAME = "Repaire de Varan";
+/** Cible d'un assaut de repaire : lair_<faction>. */
+export function lairUid(factionId: string): string {
+  return `lair_${factionId}`;
+}
+export function factionOfLair(uid: string): string {
+  return uid.startsWith("lair_") ? uid.slice(5) : uid === "pirates_lair" ? "varan" : "";
+}
 
 export interface PirateUltimatum {
   tribute: Partial<Record<ResourceId, number>>;
@@ -66,12 +168,10 @@ export interface PirateUltimatum {
 
 export interface PirateState {
   notoriety: number;
-  /** Raids repoussés depuis le dernier assaut du repaire. */
   repelled: number;
   lairOpen: boolean;
   nextListAtMs: number;
   ultimatum: PirateUltimatum | null;
-  /** Un raid est en route (évite d'en lancer un second). */
   raidUntilMs: number;
   raidsWon: number;
   raidsLost: number;
@@ -79,10 +179,13 @@ export interface PirateState {
   lairsTaken: number;
 }
 
-export function pirateState(player: Pick<PlayerState, "pirates">): PirateState {
-  const p = player.pirates;
+/** État de toutes les factions d'un joueur (avec migration de l'ancien
+ *  format v2.0, où l'état de Varan était stocké à plat). */
+export type FactionStates = Record<string, PirateState>;
+
+function normalize(p: Partial<PirateState> | undefined, maxNotoriety = 8): PirateState {
   return {
-    notoriety: Math.max(0, Math.min(PIRATE_RULES.maxNotoriety, p?.notoriety ?? 0)),
+    notoriety: Math.max(0, Math.min(maxNotoriety, p?.notoriety ?? 0)),
     repelled: p?.repelled ?? 0,
     lairOpen: p?.lairOpen ?? false,
     nextListAtMs: p?.nextListAtMs ?? 0,
@@ -95,13 +198,42 @@ export function pirateState(player: Pick<PlayerState, "pirates">): PirateState {
   };
 }
 
+function isLegacy(raw: unknown): boolean {
+  return !!raw && typeof raw === "object" && ("notoriety" in raw || "nextListAtMs" in raw);
+}
+
+export function factionStates(player: Pick<PlayerState, "pirates">): FactionStates {
+  const raw = (player.pirates ?? {}) as Record<string, unknown>;
+  const out: FactionStates = {};
+  if (isLegacy(raw)) out.varan = normalize(raw as Partial<PirateState>);
+  else for (const [id, st] of Object.entries(raw)) out[id] = normalize(st as Partial<PirateState>);
+  return out;
+}
+
+export function pirateState(player: Pick<PlayerState, "pirates">, factionId = "varan"): PirateState {
+  return factionStates(player)[factionId] ?? normalize(undefined);
+}
+
+function setState(player: PlayerState, factionId: string, st: PirateState) {
+  player.pirates = { ...factionStates(player), [factionId]: st };
+}
+
+/** Ultimatum en attente (une seule menace à la fois). */
+export function activeUltimatum(player: Pick<PlayerState, "pirates">, now: number): { faction: FactionDef; ultimatum: PirateUltimatum } | null {
+  for (const [id, st] of Object.entries(factionStates(player))) {
+    const faction = findFaction(id);
+    if (faction && st.ultimatum && st.ultimatum.expiresAtMs > now) return { faction, ultimatum: st.ultimatum };
+  }
+  return null;
+}
+
 function hours(h: number): number {
   return h * 3600_000;
 }
 
-export function nextListDelay(random: () => number): number {
-  const span = Math.max(0, PIRATE_RULES.maxIntervalHours - PIRATE_RULES.minIntervalHours);
-  return hours(PIRATE_RULES.minIntervalHours + random() * span);
+export function nextListDelay(faction: FactionDef, random: () => number): number {
+  const span = Math.max(0, faction.trigger.maxIntervalHours - faction.trigger.minIntervalHours);
+  return hours(faction.trigger.minIntervalHours + random() * span);
 }
 
 /** Heures de production des ressources communes (prime, tribut). */
@@ -115,17 +247,47 @@ export function productionHours(player: Pick<PlayerState, "buildings" | "techLev
   return out;
 }
 
-/** Puissance défensive actuelle d'une base (sans garnisons). */
+function total(r: Partial<Record<ResourceId, number>>): number {
+  return Object.values(r).reduce((a: number, b) => a + (b ?? 0), 0);
+}
+
+/** Puissance défensive d'une base (sans garnisons). */
 export function defensivePower(player: Pick<PlayerState, "units" | "techLevels">): number {
   return homeDefensePower(player.units ?? {}, player.techLevels ?? {});
 }
 
-/** Force du raid du Silencieux contre ce joueur. */
-export function raidPower(player: PlayerState, notoriety: number): number {
+/** Puissance de la flotte à quai engagée à 100 % (cible « flotte »). */
+export function homeFleetPower(player: Pick<PlayerState, "units" | "techLevels">): number {
+  return computeFullPower(player.units ?? {}, player.techLevels ?? {}, OFFENSIVE_UNITS, ["attack", "defense"]);
+}
+
+/** Ce que vise la faction : la base entière ou la flotte à quai. */
+export function targetPower(faction: FactionDef, player: Pick<PlayerState, "units" | "techLevels">): number {
+  return faction.raid.target === "fleet" ? homeFleetPower(player) : defensivePower(player);
+}
+
+export function raidPower(faction: FactionDef, player: PlayerState, notoriety: number): number {
   const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const floor = PIRATE_RULES.floorPower + PIRATE_RULES.floorPerBuildingLevel * levels;
-  const pct = PIRATE_RULES.basePct + PIRATE_RULES.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, defensivePower(player) * pct));
+  const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
+  const pct = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct));
+}
+
+/** Activité guerrière récente d'un joueur (calculée par le serveur). */
+export interface AggressionStats {
+  victories: number;
+  plunder: Partial<Record<ResourceId, number>>;
+}
+
+export function tributeFor(faction: FactionDef, player: PlayerState, aggression: AggressionStats | null): Partial<Record<ResourceId, number>> {
+  if (faction.tribute.basis === "production") return productionHours(player, faction.tribute.hours);
+  const fromPlunder: Partial<Record<ResourceId, number>> = {};
+  for (const [res, v] of Object.entries(aggression?.plunder ?? {}) as [ResourceId, number][]) {
+    const n = Math.floor((v ?? 0) * faction.tribute.plunderPct);
+    if (n > 0) fromPlunder[res] = n;
+  }
+  const floor = productionHours(player, faction.tribute.minHours);
+  return total(fromPlunder) >= total(floor) ? fromPlunder : floor;
 }
 
 function note(kind: NewNotification["kind"], title: string, message: string, now: number): NewNotification {
@@ -134,91 +296,116 @@ function note(kind: NewNotification["kind"], title: string, message: string, now
 
 export interface PirateTickOutput {
   changed: boolean;
-  /** Raid à lancer (refus implicite : l'ultimatum a expiré). */
-  raid: { power: number; arriveAtMs: number } | null;
+  /** Raid à lancer (ultimatum expiré sans réponse). */
+  raid: { factionId: string; power: number; arriveAtMs: number } | null;
   notifications: NewNotification[];
 }
 
-/** Passage périodique du serveur : inscription sur la Liste, expiration de
- *  l'ultimatum (raid lancé). Modifie `player.pirates`. */
-export function pirateTick(player: PlayerState, now: number, random: () => number = Math.random, force = false): PirateTickOutput {
+/** Passage périodique du serveur, toutes factions confondues. Modifie
+ *  `player.pirates`. `force` : inscription immédiate par une faction donnée. */
+export function pirateTick(
+  player: PlayerState,
+  now: number,
+  options: { random?: () => number; aggression?: AggressionStats | null; force?: string | null } = {},
+): PirateTickOutput {
+  const random = options.random ?? Math.random;
   const out: PirateTickOutput = { changed: false, raid: null, notifications: [] };
   if (!PIRATE_RULES.enabled) return out;
-  const st = pirateState(player);
+  const states = factionStates(player);
+  if (isLegacy(player.pirates)) {
+    player.pirates = states;
+    out.changed = true;
+  }
 
-  if (st.ultimatum && now >= st.ultimatum.expiresAtMs) {
-    const raid = launchRaid(player, st, now, random);
-    out.raid = raid;
+  // 1. Ultimatums expirés : le raid part.
+  for (const faction of FACTIONS) {
+    const st = states[faction.id];
+    if (st?.ultimatum && now >= st.ultimatum.expiresAtMs) {
+      out.raid = launchRaid(player, faction, st, now, random);
+      out.changed = true;
+      out.notifications.push(
+        note("fleet", `${faction.enforcer} arrive`, `Tu n'as pas répondu à ${faction.leader} : raid dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min.`, now),
+      );
+      return out;
+    }
+  }
+
+  // 2. Une seule menace à la fois.
+  const busy = Object.values(states).some((st) => (st.ultimatum && st.ultimatum.expiresAtMs > now) || st.raidUntilMs > now);
+  if (busy) return out;
+
+  for (const faction of FACTIONS) {
+    if (!faction.enabled) continue;
+    const forced = options.force === faction.id;
+    if (options.force && !forced) continue;
+    const st = states[faction.id] ?? normalize(undefined);
+    if (!st.nextListAtMs && !forced) {
+      // Premier passage : on fixe la date de la première inscription.
+      st.nextListAtMs = now + (faction.trigger.type === "aggression" ? hours(12) : nextListDelay(faction, random));
+      setState(player, faction.id, st);
+      out.changed = true;
+      continue;
+    }
+    const triggered =
+      faction.trigger.type === "aggression"
+        ? (options.aggression?.victories ?? 0) >= faction.trigger.minVictories
+        : now - (player.resourcesUpdatedAtMs ?? 0) <= hours(faction.trigger.activeWithinHours);
+    const eligible = forced || (now >= st.nextListAtMs && now - (player.createdAtMs ?? 0) >= hours(72) && triggered);
+    if (!eligible) continue;
+    const tribute = tributeFor(faction, player, options.aggression ?? null);
+    st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(faction.answerHours) };
+    setState(player, faction.id, st);
     out.changed = true;
     out.notifications.push(
-      note("fleet", "Le Silencieux arrive", `Tu n'as pas répondu à Varan : un raid pirate frappera ta base dans ${Math.max(1, Math.round(PIRATE_RULES.raidTravelHours * 60))} min.`, now),
+      note(
+        "fleet",
+        faction.ultimatum.title.replace(/[«»"]/g, "").trim(),
+        `${faction.leader} exige ${formatInt(total(tribute))} ressources. Réponds avant ${faction.answerHours} h, ou ${faction.enforcer} viendra se servir.`,
+        now,
+      ),
     );
-    return out;
+    return out; // une seule inscription par passage
   }
-  if (!st.nextListAtMs && !force) {
-    st.nextListAtMs = now + nextListDelay(random);
-    player.pirates = st;
-    out.changed = true;
-    return out;
-  }
-  // force : inscription immédiate demandée par l'administration.
-  const eligible =
-    !st.ultimatum &&
-    st.raidUntilMs <= now &&
-    (force ||
-      (now >= st.nextListAtMs &&
-    now - (player.createdAtMs ?? 0) >= hours(72) &&
-    now - (player.resourcesUpdatedAtMs ?? 0) <= hours(PIRATE_RULES.activeWithinHours)));
-  if (!eligible) return out;
-  const tribute = productionHours(player, PIRATE_RULES.tributeHours);
-  st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(PIRATE_RULES.answerHours) };
-  player.pirates = st;
-  out.changed = true;
-  out.notifications.push(
-    note(
-      "fleet",
-      "Ton nom est sur la Liste",
-      `Le capitaine Varan exige un tribut de ${formatInt(Object.values(tribute).reduce((a, b) => a + (b ?? 0), 0))} ressources. Réponds avant ${PIRATE_RULES.answerHours} h, ou le Silencieux viendra se servir.`,
-      now,
-    ),
-  );
   return out;
 }
 
-function launchRaid(player: PlayerState, st: PirateState, now: number, random: () => number): { power: number; arriveAtMs: number } {
-  const power = raidPower(player, st.notoriety);
-  const arriveAtMs = now + hours(PIRATE_RULES.raidTravelHours);
+function launchRaid(player: PlayerState, faction: FactionDef, st: PirateState, now: number, random: () => number) {
+  const power = raidPower(faction, player, st.notoriety);
+  const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
-  st.nextListAtMs = arriveAtMs + nextListDelay(random);
-  player.pirates = st;
-  return { power, arriveAtMs };
+  st.nextListAtMs = arriveAtMs + nextListDelay(faction, random);
+  setState(player, faction.id, st);
+  return { factionId: faction.id, power, arriveAtMs };
 }
 
-/** Réponse du joueur à l'ultimatum (production rattrapée avant). */
+/** Réponse du joueur à l'ultimatum en cours (production rattrapée avant). */
 export function answerUltimatum(
   player: PlayerState,
   answer: "pay" | "refuse",
   now: number,
   random: () => number = Math.random,
-): { raid: { power: number; arriveAtMs: number } | null; notifications: NewNotification[] } {
-  const st = pirateState(player);
-  if (!st.ultimatum || now >= st.ultimatum.expiresAtMs) throw new GameActionError("Aucun ultimatum en attente.");
+): { raid: { factionId: string; power: number; arriveAtMs: number } | null; notifications: NewNotification[] } {
+  const active = activeUltimatum(player, now);
+  if (!active) throw new GameActionError("Aucun ultimatum en attente.");
+  const { faction } = active;
+  const st = pirateState(player, faction.id);
+  const tribute = active.ultimatum.tribute;
   if (answer === "pay") {
-    for (const [res, amount] of Object.entries(st.ultimatum.tribute) as [ResourceId, number][]) {
-      if ((player.resources[res] ?? 0) < amount) throw new GameActionError("Tu n'as pas de quoi payer le tribut : refuse, ou trouve les ressources à temps.");
+    for (const [res, amount] of Object.entries(tribute) as [ResourceId, number][]) {
+      if ((player.resources[res] ?? 0) < amount) throw new GameActionError("Tu n'as pas de quoi payer : refuse, ou trouve les ressources à temps.");
     }
-    for (const [res, amount] of Object.entries(st.ultimatum.tribute) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - amount;
+    for (const [res, amount] of Object.entries(tribute) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - amount;
     st.ultimatum = null;
     st.tributesPaid += 1;
-    st.nextListAtMs = now + nextListDelay(random);
-    player.pirates = st;
-    return { raid: null, notifications: [note("fleet", "Tribut payé", "Varan raye ton nom de la Liste… pour l'instant.", now)] };
+    st.nextListAtMs = now + nextListDelay(faction, random);
+    setState(player, faction.id, st);
+    return { raid: null, notifications: [note("fleet", "Tribut payé", `${faction.leader} te laisse en paix… pour l'instant.`, now)] };
   }
-  const raid = launchRaid(player, st, now, random);
+  const raid = launchRaid(player, faction, st, now, random);
   return {
     raid,
-    notifications: [note("fleet", "Tu as refusé", `Le Silencieux et ses corsaires sont en route : impact dans ${Math.round(PIRATE_RULES.raidTravelHours * 60)} min. Prépare tes défenses !`, now)],
+    notifications: [note("fleet", "Tu as refusé", `${faction.enforcer} est en route : impact dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min. Prépare-toi !`, now)],
   };
 }
 
@@ -235,7 +422,10 @@ export interface PirateRaidOutput {
   notifications: NewNotification[];
 }
 
+const RARE: ResourceId[] = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
+
 export function resolvePirateRaid(
+  faction: FactionDef,
   playerIn: PlayerState,
   queuesIn: QueuesState,
   power: number,
@@ -244,20 +434,26 @@ export function resolvePirateRaid(
 ): PirateRaidOutput {
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
-  const st = pirateState(player);
+  const st = pirateState(player, faction.id);
+  const fleetOnly = faction.raid.target === "fleet";
+  // Cible « flotte » : les défenses ne combattent pas, les vaisseaux à 100 %.
+  const defenderUnits: Units = fleetOnly
+    ? Object.fromEntries(Object.entries(player.units ?? {}).filter(([id]) => OFFENSIVE_UNITS.includes(id)))
+    : player.units ?? {};
   const combat = resolveCombat({
     attackerUnits: {},
     attackerTechLevels: {},
     attackerRepairPct: 0,
     fleet: {},
     attackerPowerOverride: power,
-    defenderUnits: player.units ?? {},
+    defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: getRepairPercent(player.buildings),
     defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
     defenderResources: {},
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
+    homeFleetFactor: fleetOnly ? 1 : undefined,
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
@@ -270,9 +466,10 @@ export function resolvePirateRaid(
   st.raidUntilMs = 0;
 
   if (combat.outcome === "attacker_win") {
-    for (const res of COMMON_RESOURCES) {
+    const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
+    for (const res of kinds) {
       const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res));
-      const taken = Math.floor(exposed * PIRATE_RULES.lootPct);
+      const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
         player.resources[res] = (player.resources[res] ?? 0) - taken;
@@ -281,34 +478,35 @@ export function resolvePirateRaid(
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
     player.lastDefeatAtMs = now;
-    notifications.push(note("combat-defender", "Pillé par la Confrérie", `Le Silencieux a forcé tes défenses et emporté ${formatInt(Object.values(loot).reduce((a, b) => a + (b ?? 0), 0))} ressources.`, now));
+    notifications.push(note("combat-defender", `Victoire de ${faction.name}`, `${faction.enforcer} a eu le dessus et emporté ${formatInt(total(loot))} ressources.`, now));
   } else {
-    bounty = productionHours(player, PIRATE_RULES.bountyHours);
+    bounty = productionHours(player, faction.bounty.hours);
+    for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = (bounty[r] ?? 0) + faction.bounty.rare;
     for (const [res, amount] of Object.entries(bounty) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
-    applyXpDelta(player, PIRATE_RULES.bountyXp, now);
+    applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
-    debris = { scrap: Math.floor(destroyed * PIRATE_RULES.debrisPerPower), energy: Math.floor((destroyed * PIRATE_RULES.debrisPerPower) / 2) };
+    debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor((destroyed * faction.bounty.debrisPerPower) / 2) };
     st.raidsWon += 1;
     st.repelled += 1;
-    st.notoriety = Math.min(PIRATE_RULES.maxNotoriety, st.notoriety + 1);
+    st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
-    const lairNow = !st.lairOpen && st.repelled >= PIRATE_RULES.raidsForLair;
+    const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     notifications.push(
       note(
         "combat-defender",
-        combat.outcome === "draw" ? "Raid pirate repoussé de justesse" : "Raid pirate repoussé !",
-        `Prime : ${formatInt(Object.values(bounty).reduce((a, b) => a + (b ?? 0), 0))} ressources et +${PIRATE_RULES.bountyXp} XP. Notoriété ${st.notoriety}.`,
+        combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
+        `Prime : ${formatInt(total(bounty))} ressources et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
         now,
       ),
     );
-    if (lairNow) notifications.push(note("fleet", "Le repaire de Varan est localisé", "Après tant d'échecs, la position du repaire a fuité. Lance l'assaut depuis la page Menaces !", now));
+    if (lairNow) notifications.push(note("fleet", `${faction.lair.name} localisé`, "Sa position a fuité : lance l'assaut depuis la page Menaces !", now));
   }
-  player.pirates = st;
+  setState(player, faction.id, st);
 
   const report: Omit<BattleReport, "id"> = {
     attackerUid: PIRATE_OWNER_UID,
-    attackerPseudo: `${PIRATE_RAIDER} (Confrérie du Vide)`,
+    attackerPseudo: `${faction.enforcer} (${faction.name})`,
     defenderUid: player.uid,
     defenderPseudo: player.pseudo,
     timestamp: now,
@@ -325,21 +523,21 @@ export function resolvePirateRaid(
     defenderProcessed: false,
     defenderApplied: true,
     attackerXpDelta: 0,
-    defenderXpDelta: combat.outcome === "attacker_win" ? 0 : PIRATE_RULES.bountyXp,
+    defenderXpDelta: combat.outcome === "attacker_win" ? 0 : faction.bounty.xp,
     garrisons: garrisons.map((g, i) => ({ ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: combat.garrisonLosses?.[i] ?? {} })),
   };
   return { player, queues: flushed.queues, combat, loot, bounty, debris, report, notifications };
 }
 
-/* ---------- repaire de Varan ---------- */
+/* ---------- repaires ---------- */
 
-/** Puissance du repaire, fixée au lancement de l'assaut. */
-export function lairPower(player: PlayerState): number {
-  return Math.round(Math.max(PIRATE_RULES.floorPower * 3, defensivePower(player) * PIRATE_RULES.lairPct));
+export function lairPower(faction: FactionDef, player: PlayerState): number {
+  return Math.round(Math.max(faction.raid.floorPower * 3, targetPower(faction, player) * faction.lair.pct));
 }
 
-export function checkLairLaunch(player: PlayerState, fleet: Record<string, unknown>): Record<string, number> {
-  if (!pirateState(player).lairOpen) throw new GameActionError("Le repaire de Varan n'est pas encore localisé.");
+export function checkLairLaunch(faction: FactionDef | undefined, player: PlayerState, fleet: Record<string, unknown>): Record<string, number> {
+  if (!faction) throw new GameActionError("Repaire inconnu.");
+  if (!pirateState(player, faction.id).lairOpen) throw new GameActionError(`${faction.lair.name} n'est pas encore localisé.`);
   const units: Record<string, number> = {};
   for (const [id, v] of Object.entries(fleet ?? {})) {
     const qty = Math.floor(Number(v));
@@ -360,12 +558,10 @@ export interface LairAssaultOutput {
   notifications: NewNotification[];
 }
 
-/** Assaut du repaire : les unités de la flotte (déjà parties) combattent la
- *  puissance fixée au lancement. Récompense et titre en cas de victoire. */
-export function resolveLairAssault(playerIn: PlayerState, queuesIn: QueuesState, fleet: Record<string, number>, power: number, now: number): LairAssaultOutput {
+export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, queuesIn: QueuesState, fleet: Record<string, number>, power: number, now: number): LairAssaultOutput {
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
-  const st = pirateState(player);
+  const st = pirateState(player, faction.id);
   const combat = resolveCombat({
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
@@ -381,13 +577,13 @@ export function resolveLairAssault(playerIn: PlayerState, queuesIn: QueuesState,
   for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0));
   const notifications: NewNotification[] = [...flushed.notifications];
   if (combat.outcome === "attacker_win") {
-    const reward = productionHours(player, PIRATE_RULES.lairRewardHours);
-    for (const r of ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"] as ResourceId[]) reward[r] = (reward[r] ?? 0) + PIRATE_RULES.lairRare;
+    const reward = productionHours(player, faction.lair.rewardHours);
+    for (const r of RARE) reward[r] = (reward[r] ?? 0) + faction.lair.rare;
     for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
-    applyXpDelta(player, PIRATE_RULES.lairXp, now);
-    const title = PIRATE_RULES.lairTitle;
+    applyXpDelta(player, faction.lair.xp, now);
+    const title = faction.lair.title;
     if (title && !(player.titles ?? []).some((t) => t.label === title)) {
-      player.titles = [...(player.titles ?? []), { label: title, seasonId: "pirates", rank: 1 }];
+      player.titles = [...(player.titles ?? []), { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
       if (!player.activeTitle) player.activeTitle = title;
     }
     st.lairOpen = false;
@@ -398,21 +594,21 @@ export function resolveLairAssault(playerIn: PlayerState, queuesIn: QueuesState,
     notifications.push(
       note(
         "combat-attacker",
-        "Le repaire de Varan est tombé !",
-        `Butin du repaire : ${formatInt(Object.values(reward).reduce((a, b) => a + (b ?? 0), 0))} ressources, +${PIRATE_RULES.lairXp} XP et le titre « ${title} ». Varan s'est enfui… la Liste continue.`,
+        `${faction.lair.name} est tombé !`,
+        `Butin : ${formatInt(total(reward))} ressources, +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.`,
         now,
       ),
     );
   } else {
     player.defeats = (player.defeats ?? 0) + 1;
-    notifications.push(note("combat-attacker", "Assaut repoussé", "Les défenses du repaire ont tenu. Les survivants rentrent ; le repaire reste localisé.", now));
+    notifications.push(note("combat-attacker", "Assaut repoussé", `Les défenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
   }
-  player.pirates = st;
+  setState(player, faction.id, st);
   const report: Omit<BattleReport, "id"> = {
     attackerUid: player.uid,
     attackerPseudo: player.pseudo,
-    defenderUid: PIRATE_LAIR_UID,
-    defenderPseudo: PIRATE_LAIR_NAME,
+    defenderUid: lairUid(faction.id),
+    defenderPseudo: faction.lair.name,
     timestamp: now,
     outcome: combat.outcome,
     attackerPower: combat.attackerPower,
@@ -426,8 +622,24 @@ export function resolveLairAssault(playerIn: PlayerState, queuesIn: QueuesState,
     loot: null,
     defenderProcessed: true,
     defenderApplied: true,
-    attackerXpDelta: combat.outcome === "attacker_win" ? PIRATE_RULES.lairXp : 0,
+    attackerXpDelta: combat.outcome === "attacker_win" ? faction.lair.xp : 0,
     defenderXpDelta: 0,
   };
   return { player, queues: flushed.queues, combat, survivors, report, notifications };
+}
+
+/** Validation des fiches de factions (administration). */
+export function validateFactions(defs: FactionDef[]): string[] {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  for (const f of defs) {
+    const label = `Faction ${f.name || f.id}`;
+    if (!/^[a-z0-9_]+$/.test(f.id ?? "")) errors.push(`${label} : identifiant « ${f.id} » invalide (minuscules, chiffres, _).`);
+    if (seen.has(f.id)) errors.push(`${label} : identifiant en double.`);
+    seen.add(f.id);
+    if (!(f.trigger.maxIntervalHours >= f.trigger.minIntervalHours)) errors.push(`${label} : délai maximal inférieur au délai minimal.`);
+    if (!(f.answerHours > 0)) errors.push(`${label} : délai de réponse invalide.`);
+    if (!(f.lair.raidsNeeded >= 1)) errors.push(`${label} : nombre de raids avant le repaire invalide.`);
+  }
+  return errors;
 }

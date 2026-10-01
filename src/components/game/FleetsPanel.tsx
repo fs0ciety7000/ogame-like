@@ -11,6 +11,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { fleetProgress, type Fleet } from "@/game/fleets";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { findUnit } from "@/game/units";
+import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
 import { GameActionError, recallFleet } from "@/services/playerService";
 
@@ -34,7 +35,9 @@ function fleetLabel(f: Fleet, outbound: boolean): string {
         ? `🛰️ Sondes → ${f.targetPseudo}`
         : `🛰️ ← sondes de ${f.targetPseudo}`;
     case "lair":
-      return outbound ? "☠️ Assaut du repaire de Varan" : "☠️ ← retour du repaire";
+      return outbound
+        ? `☠️ Assaut : ${findFaction(f.factionId ?? factionOfLair(f.targetUid))?.lair.name ?? "repaire"}`
+        : "☠️ ← retour du repaire";
     case "garrison":
       return f.status === "stationed"
         ? `🛡️ Garnison chez ${f.targetPseudo}`
@@ -135,7 +138,9 @@ export function FleetsPanel({
               {f.ownerPseudo} — impact dans {formatClock(left)}
             </p>
             <p className="mt-1 text-[11px] text-slate-400">
-              {f.mission === "pirate" ? `Corsaires de la Confrérie du Vide · puissance ${formatCompact(f.power ?? 0)}` : fleetSummary(f)}
+              {f.mission === "pirate"
+                ? `${findFaction(f.factionId ?? "varan")?.name ?? "Faction hostile"}${findFaction(f.factionId ?? "varan")?.raid.target === "fleet" ? " · vise ta flotte à quai" : ""} · puissance ${formatCompact(f.power ?? 0)}`
+                : fleetSummary(f)}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
               <Progress

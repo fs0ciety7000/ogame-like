@@ -96,10 +96,10 @@ export function computeFullPower(
 }
 
 /** Puissance défensive d'une base (défenses + vaisseaux à quai, bonus à domicile). */
-export function homeDefensePower(units: Units, techLevels: TechLevels): number {
+export function homeDefensePower(units: Units, techLevels: TechLevels, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor): number {
   return (
     (computeFullPower(units, techLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
-      computeFullPower(units, techLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) *
+      computeFullPower(units, techLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) *
     (1 + COMBAT_RULES.homeDefenseBonus)
   );
 }
@@ -155,6 +155,8 @@ export function resolveCombat(params: {
   /** Puissances imposées (pirates : flotte sans unités réelles). */
   attackerPowerOverride?: number;
   defenderPowerOverride?: number;
+  /** Part de la flotte à quai engagée (et touchée) ; défaut : règle de combat. */
+  homeFleetFactor?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
@@ -165,7 +167,8 @@ export function resolveCombat(params: {
   const garrisons = params.garrisons ?? [];
   const garrisonFactor = params.garrisonFactor ?? 0.5;
   const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels) + garrisonPower;
+  const homeFactor = params.homeFleetFactor ?? COMBAT_RULES.homeFleetDefenseFactor;
+  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels, homeFactor) + garrisonPower;
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
@@ -217,7 +220,7 @@ export function resolveCombat(params: {
   [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
     const count = defenderUnits[unitId]?.count ?? 0;
     const isDefense = DEFENSIVE_UNITS.includes(unitId);
-    const rawLost = Math.floor(count * defenderLossPct * (isDefense ? 1 : COMBAT_RULES.homeFleetDefenseFactor));
+    const rawLost = Math.floor(count * defenderLossPct * (isDefense ? 1 : homeFactor));
     if (rawLost <= 0) return;
     const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
     defenderLosses[unitId] = rawLost - recovered;

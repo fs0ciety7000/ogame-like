@@ -97,8 +97,8 @@ export interface PlayerState {
   activeTitle?: string;
   /** Niveaux des recherches de son alliance (écrit par le serveur). */
   allianceResearch?: Record<string, number>;
-  /** La Liste de Varan : ultimatum, Notoriété, repaire (v2.0). */
-  pirates?: import("@/game/pirates").PirateState;
+  /** Par faction (ancien format v2.0 : état de Varan à plat, migré à la lecture). */
+  pirates?: import("@/game/pirates").FactionStates | import("@/game/pirates").PirateState;
 }
 
 export interface SeasonResult {
