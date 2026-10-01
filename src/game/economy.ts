@@ -27,6 +27,8 @@ export const ECONOMY_RULES = {
   missionProductionMultiplier: 1.5,
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
   missionRareLevelDivisor: 35,
+  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
+  missionRareProductionRef: 500_000,
 };
 
 export const COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id) as ResourceId[];
@@ -159,13 +161,25 @@ export function protectedAmount(buildings: Buildings, res: ResourceId, techLevel
   return Number.isFinite(capacity) ? Math.floor(capacity * pct) : 0;
 }
 
+/** Facteur des ressources rares : le plus grand entre le développement
+ *  (niveaux de bâtiments cumulés) et la production horaire moyenne d'une
+ *  ressource commune rapportée à la référence (v3.2.3). */
+export function rareRewardScale(player: { buildings: Buildings; techLevels?: TechLevels }): number {
+  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels ?? {});
+  const perHour = (COMMON_RESOURCES.reduce((a, r) => a + (rates[r] ?? 0), 0) / Math.max(1, COMMON_RESOURCES.length)) * 3600;
+  const ref = ECONOMY_RULES.missionRareProductionRef;
+  const production = ref > 0 ? perHour / ref : 0;
+  return Math.max(development, production);
+}
+
 /** Récompenses réelles d'une mission pour ce joueur : les ressources
  *  communes valent au moins 1,5 × la durée en production, les rares
- *  grandissent avec le développement de l'empire. */
+ *  suivent le développement ou la production de l'empire. */
 export function missionRewards(mission: MissionDef, player: { buildings: Buildings; techLevels: TechLevels }): Record<string, number> {
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const rareScale = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rareScale = rareRewardScale(player);
   const out: Record<string, number> = {};
   for (const [res, fixed] of Object.entries(mission.reward)) {
     if (res === "xp") out.xp = fixed;
