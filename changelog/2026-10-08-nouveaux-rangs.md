@@ -1,7 +1,7 @@
 ---
 version: 2.2.0
 iteration: 13
-date: 2026-10-08
+date: 2026-10-01
 title: Nouvelle échelle des rangs
 image: /assets/ranks/elite.webp
 ---

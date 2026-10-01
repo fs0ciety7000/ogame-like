@@ -1,7 +1,7 @@
 ---
 version: 2.3.0
 iteration: 14
-date: 2026-10-09
+date: 2026-10-01
 title: Succès et trois nouvelles menaces
 image: /assets/story/meute.webp
 ---
@@ -24,4 +24,5 @@ Le **Haut-Juge Séraphin Vol** lit chaque découverte comme une hérésie. Les e
 
 ## Et aussi
 - Administration : nouvel onglet **Succès** (mesure, seuil, palier, récompense, secret) et trois nouveaux déclencheurs dans l'onglet Factions (savoir, thésaurisation, expansion).
+- Une annonce présente les trois nouvelles factions à ta première connexion (une seule fois).
 - Les images remplacées (emblèmes de rang, illustrations) se mettent à jour tout de suite, sans attendre l'expiration du cache du navigateur.

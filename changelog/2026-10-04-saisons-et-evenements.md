@@ -1,7 +1,7 @@
 ---
 version: 1.8.0
 iteration: 9
-date: 2026-10-04
+date: 2026-09-30
 title: Saisons et événements
 ---
 ## Événements du week-end

@@ -1,7 +1,7 @@
 ---
 version: 1.9.0
 iteration: 10
-date: 2026-10-05
+date: 2026-09-30
 title: Alliances
 ---
 ## Alliances renforcées

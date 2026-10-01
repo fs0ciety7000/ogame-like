@@ -1,7 +1,7 @@
 ---
 version: 2.1.0
 iteration: 12
-date: 2026-10-07
+date: 2026-10-01
 title: Le Syndicat Gravhorn
 image: /assets/story/gravhorn.webp
 ---
