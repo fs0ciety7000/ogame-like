@@ -13,6 +13,7 @@ import { SEASON_RULES } from "@/game/seasons";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
+import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
 
 /* =====================================================
    Contenu du jeu piloté par les données.
@@ -45,11 +46,12 @@ export interface GameContent {
   technologies: TechDef[];
   missions: MissionDef[];
   factions: FactionDef[];
+  ranks: RankDef[];
   rules: GameRules;
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "rules"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "rules"];
 
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
@@ -71,6 +73,7 @@ export function defaultGameContent(): GameContent {
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
     factions: DEFAULT_FACTIONS,
+    ranks: DEFAULT_RANKS,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES },
   });
 }
@@ -91,6 +94,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     technologies: overrides.technologies ?? defaults.technologies,
     missions: overrides.missions ?? defaults.missions,
     factions: overrides.factions ?? defaults.factions,
+    ranks: overrides.ranks ?? defaults.ranks,
     rules: {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
@@ -110,6 +114,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setTechnologies(content.technologies);
   setMissions(content.missions);
   setFactions(content.factions);
+  setRanks(content.ranks);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -221,6 +226,7 @@ export function validateGameContent(content: GameContent): string[] {
     checkResources(`${label} (récompense)`, res);
   }
   errors.push(...validateFactions(content.factions ?? []));
+  errors.push(...validateRanks(content.ranks ?? []));
 
   return [...new Set(errors)];
 }

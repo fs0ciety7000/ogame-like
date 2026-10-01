@@ -10,6 +10,7 @@ import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
+import { newRank, RankForm } from "@/pages/admin/RankForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 
@@ -54,6 +55,7 @@ export function AdminPage() {
           <TabsTrigger value="technologies">Technologies</TabsTrigger>
           <TabsTrigger value="missions">Missions</TabsTrigger>
           <TabsTrigger value="factions">Factions</TabsTrigger>
+          <TabsTrigger value="ranks">Rangs</TabsTrigger>
           <TabsTrigger value="rules">Règles</TabsTrigger>
           <TabsTrigger value="players">Joueurs</TabsTrigger>
           <TabsTrigger value="logs">Journal</TabsTrigger>
@@ -119,6 +121,17 @@ export function AdminPage() {
             setId={(f, id) => ({ ...f, id })}
             createItem={newFaction}
             renderForm={(f, onChange, isNew) => <FactionForm value={f} onChange={onChange} isNew={isNew} />}
+          />
+        </TabsContent>
+        <TabsContent value="ranks" className="mt-4">
+          <ContentEditor
+            section="ranks"
+            title="Rangs"
+            getId={(r) => r.id}
+            getLabel={(r) => `${r.name} · ${r.xp.toLocaleString("fr-FR")} XP`}
+            setId={(r, id) => ({ ...r, id })}
+            createItem={newRank}
+            renderForm={(r, onChange, isNew) => <RankForm value={r} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
         <TabsContent value="rules" className="mt-4">

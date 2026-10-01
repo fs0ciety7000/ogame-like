@@ -1,7 +1,7 @@
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { getProductionRatesPerSecond } from "@/game/production";
-import { getRankLabel, RANK_NAMES } from "@/game/ranks";
+import { familyIndex, getRank } from "@/game/ranks";
 import { RESOURCE_LIST } from "@/game/resources";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
@@ -80,7 +80,7 @@ export function computeGameStats(
   // Rangs regroupés par famille (Fer, Bronze, Argent…).
   const families = new Map<string, number>();
   players.forEach((p) => {
-    const family = getRankLabel(p.xp ?? 0).split(" ")[0];
+    const family = getRank(p.xp ?? 0).family;
     families.set(family, (families.get(family) ?? 0) + 1);
   });
 
@@ -154,7 +154,7 @@ export function computeGameStats(
       medianPlaytimeHours: round1(median(players.map((p) => (p.playtimeSeconds ?? 0) / 3600))),
       ranks: [...families.entries()]
         .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => RANK_NAMES.findIndex((r) => r.startsWith(a.label)) - RANK_NAMES.findIndex((r) => r.startsWith(b.label))),
+        .sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
       medianXp: median(players.map((p) => p.xp ?? 0)),
       topXp: [...players]
         .sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0))
