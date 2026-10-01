@@ -1,6 +1,6 @@
 import { DEFAULT_BUILDINGS, setBuildings, type BuildingDef } from "@/game/buildings";
-import { DEFAULT_UNITS, setUnits, type UnitDef } from "@/game/units";
-import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, type TechDef } from "@/game/technologies";
+import { DEFAULT_UNITS, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
+import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
@@ -116,6 +116,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);
+  // Une techno peut désigner elle-même l'unité qu'elle débloque (v2.6).
+  for (const t of content.technologies) for (const e of techEffects(t)) if (e.type === "unlock_next_level" && e.target) UNIT_TO_TECH[e.target] = t.id;
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
@@ -195,7 +197,9 @@ export function validateGameContent(content: GameContent): string[] {
   checkIds("Technologies", content.technologies.map((t) => t.id));
   for (const t of content.technologies) {
     const label = `Techno ${t.nom || t.id}`;
-    if (!(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
+    if (t.effects && t.effects.length > 0) {
+      for (const e of t.effects) errors.push(...validateTechEffect(label, e, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
+    } else if (t.effect !== undefined && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
     checkResources(`${label} (coût)`, t.baseCost);
     for (const req of Object.keys(t.prereq ?? {})) {
       if (!techIds.has(req)) errors.push(`${label} : prérequis « ${req} » inexistant.`);

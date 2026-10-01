@@ -37,7 +37,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
   }
   const current = fleet ?? all;
   const selected = Object.fromEntries(Object.entries(current).filter(([, n]) => n > 0));
-  const cost = player ? patrolEnergyCost(player.units, selected, minutes) : 0;
+  const cost = player ? patrolEnergyCost(player.units, selected, minutes, player.techLevels) : 0;
   const energy = player?.resources.energy ?? 0;
   const hasShips = Object.keys(selected).length > 0;
 
@@ -134,7 +134,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   const needed = Math.min(owned, Math.ceil(total / perDrone));
   const count = Math.max(0, Math.min(owned, drones || needed));
   const capacity = player ? recyclerCapacity(player.units, { [droneId]: count }) : 0;
-  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch)) : null;
+  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
 
   const send = async () => {
     if (!field || count <= 0) return;
@@ -208,11 +208,11 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
   }
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const hasShips = Object.keys(selected).length > 0;
-  const cost = player ? patrolEnergyCost(player.units, selected, hours * 60) : 0;
+  const cost = player ? patrolEnergyCost(player.units, selected, hours * 60, player.techLevels) : 0;
   const energy = player?.resources.energy ?? 0;
   const flight =
     player && uid && target && hasShips
-      ? travelSeconds(distanceBetween(uid, target.uid), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch))
+      ? travelSeconds(distanceBetween(uid, target.uid), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels))
       : null;
 
   const close = () => {

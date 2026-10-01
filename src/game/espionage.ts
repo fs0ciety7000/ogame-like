@@ -6,6 +6,7 @@ import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_TO_TECH } from "@/game/units";
 import { formatInt } from "@/game/format";
 import { allianceCounterSpy } from "@/game/alliances";
 import type { PlayerState, QueuesState, ResourceId, SpyReport, SpyReportData } from "@/types/game";
+import { techBonus } from "@/game/technologies";
 
 /* =====================================================
    Espionnage à niveaux (v1.7) : des sondes partent vers la cible. À
@@ -53,7 +54,7 @@ export function espionageLevel(player: Pick<PlayerState, "techLevels">): number 
 export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch">): number {
   const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch);
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy"));
 }
 
 export function spyScore(spyLevel: number, counter: number, probes: number): number {

@@ -1,4 +1,5 @@
 import type { UnitCategory } from "@/types/game";
+import { techReductionFactor } from "@/game/technologies";
 
 export interface UnitStats {
   attaque: number;
@@ -198,8 +199,9 @@ export function findUnit(id: string): UnitDef | undefined {
   return UNITS.find((u) => u.id === id);
 }
 
-export function getUnitBuildTime(unit: UnitDef): number {
-  if (unit.buildTime && unit.buildTime > 0) return unit.buildTime;
+export function getUnitBuildTime(unit: UnitDef, techLevels?: Record<string, number>): number {
   const total = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
-  return Math.max(3, Math.ceil(total / 100));
+  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total / 100));
+  // v2.6 : réduction des technos « temps de construction des unités ».
+  return techLevels ? Math.max(1, Math.round(base * techReductionFactor(techLevels, "unit_time"))) : base;
 }

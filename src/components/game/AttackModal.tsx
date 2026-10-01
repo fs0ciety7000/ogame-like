@@ -37,7 +37,7 @@ export function AttackModal({
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, v]) => v > 0));
   const hasShips = Object.keys(selected).length > 0;
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const flight = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch)) : null;
+  const flight = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
 
   const handleConfirm = async () => {
     if (!uid || !player || !target) return;
@@ -113,7 +113,7 @@ export function AttackModal({
                   )}
                 </p>
                 <p>
-                  <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet))}</strong>{" "}
+                  <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet, player.techLevels))}</strong>{" "}
                   ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources communes et{" "}
                   {Math.round(COMBAT_RULES.lootPercent * 100)} % des rares, dans la limite de la cargaison des survivants ; le butin
                   arrive au retour de la flotte.

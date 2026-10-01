@@ -160,7 +160,7 @@ export function GalaxyPage() {
     );
     if (speeds.length === 0) return { distance: distanceBetween(uid, selected.uid), fast: null, slow: null };
     const distance = distanceBetween(uid, selected.uid);
-    const f = allianceFlightFactor(me.allianceResearch);
+    const f = allianceFlightFactor(me.allianceResearch, me.techLevels);
     return { distance, fast: travelSeconds(distance, Math.max(...speeds), f), slow: travelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
   }, [uid, me, selected]);
 
