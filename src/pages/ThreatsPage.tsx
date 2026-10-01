@@ -8,8 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
-import { openUltimatum, PIRATE_ART } from "@/components/game/PirateUltimatum";
-import { defensivePower, lairPower, pirateState, PIRATE_LAIR_UID, PIRATE_RULES, raidPower } from "@/game/pirates";
+import { accent, openUltimatum } from "@/components/game/PirateUltimatum";
+import { activeUltimatum, FACTIONS, lairPower, lairUid, pirateState, raidPower, targetPower, type FactionDef } from "@/game/pirates";
 import { fleetSpeed, LAIR_DISTANCE, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { computeFleetPower } from "@/game/combat";
@@ -19,24 +19,25 @@ import { useFleetStore } from "@/store/fleetStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
-import { formatClock, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatClock, formatCompact, formatDuration } from "@/lib/utils";
+import type { PlayerState } from "@/types/game";
 
-function LairDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose: () => void }) {
   const player = usePlayerStore((s) => s.player);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
-  if (!player) return null;
+  if (!player || !faction) return null;
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = computeFleetPower(player.units, player.techLevels, selected, ["attack"]);
-  const lair = lairPower(player);
+  const lair = lairPower(faction, player);
   const flight = Object.keys(selected).length > 0 ? travelSeconds(LAIR_DISTANCE, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch)) : null;
 
   const send = async () => {
     setBusy(true);
     try {
-      await sendFleet(PIRATE_LAIR_UID, selected, "lair");
+      await sendFleet(lairUid(faction.id), selected, "lair");
       triggerWarpEffect();
-      toast.success("Assaut lancé sur le repaire de Varan !");
+      toast.success(`Assaut lancé sur ${faction.lair.name} !`);
       setFleet({});
       onClose();
     } catch (err) {
@@ -47,11 +48,11 @@ function LairDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
-        <DialogTitle>Assaut du repaire de Varan</DialogTitle>
+        <DialogTitle>Assaut : {faction.lair.name}</DialogTitle>
         <p className="text-sm text-slate-400">
-          Défenses du repaire estimées : <strong className="text-ember-glow">{formatCompact(lair)}</strong> (fixées au décollage). Ta flotte sélectionnée :{" "}
+          Défenses estimées : <strong className="text-ember-glow">{formatCompact(lair)}</strong> (fixées au décollage). Ta flotte sélectionnée :{" "}
           <strong className={power > lair ? "text-mint-glow" : "text-slate-200"}>{formatCompact(power)}</strong>.
         </p>
         <div className="mt-3 space-y-2">
@@ -87,103 +88,115 @@ function LairDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/** Page Menaces : la Liste de Varan, la Notoriété et le repaire. */
+function FactionCard({ faction, player, onLair }: { faction: FactionDef; player: PlayerState; onLair: () => void }) {
+  const fleets = useFleetStore((s) => s.fleets);
+  const st = pirateState(player, faction.id);
+  const a = accent(faction);
+  const now = Date.now();
+  const active = activeUltimatum(player, now);
+  const mine = active?.faction.id === faction.id ? active.ultimatum : null;
+  const raid = fleets.find((f) => f.mission === "pirate" && f.status === "outbound" && (f.factionId ?? "varan") === faction.id);
+  const assault = fleets.find((f) => f.mission === "lair" && f.status !== "done" && (f.factionId ?? "varan") === faction.id);
+  const nextIn = st.nextListAtMs > now ? Math.floor((st.nextListAtMs - now) / 1000) : null;
+  const fleetOnly = faction.raid.target === "fleet";
+
+  return (
+    <Card className={cn("overflow-hidden p-0", a.border)}>
+      <div className="grid md:grid-cols-[minmax(0,18rem)_1fr]">
+        <img src={faction.art} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
+        <div className="flex flex-col gap-3 p-5">
+          <div>
+            <p className={cn("hud-eyebrow", a.text)}>{faction.name}</p>
+            <p className="text-xs text-slate-500">
+              {faction.leader} · {faction.enforcer}
+            </p>
+          </div>
+          {faction.story.split(/\n\s*\n/).map((para, i) => (
+            <p key={i} className="text-sm leading-relaxed text-slate-300">
+              {para}
+            </p>
+          ))}
+          <p className="text-xs text-slate-500">
+            {faction.trigger.type === "aggression"
+              ? `Vise les agresseurs : ${faction.trigger.minVictories} victoires ou plus contre des joueurs en ${faction.trigger.windowDays} jours.`
+              : "Vise les empires actifs, au hasard, tous les quelques jours."}{" "}
+            {fleetOnly ? "Ses raids frappent la flotte à quai : les défenses ne combattent pas." : "Ses raids frappent la base entière."}
+          </p>
+
+          <div className="grid gap-3 border-t border-white/5 pt-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+                <Skull className={cn("h-3.5 w-3.5", a.text)} /> Ta situation
+              </p>
+              {mine ? (
+                <Button variant="danger" size="sm" onClick={openUltimatum}>
+                  Ultimatum · {formatDuration(Math.floor((mine.expiresAtMs - now) / 1000))}
+                </Button>
+              ) : raid ? (
+                <p className="text-xs text-danger-glow">{faction.enforcer} arrive : {formatClock(Math.max(0, Math.floor((raid.arriveAtMs - now) / 1000)))}.</p>
+              ) : (
+                <p className="text-xs text-slate-400">{nextIn !== null ? `Prochaine traque possible dans ~${formatDuration(nextIn)}.` : "Rien en vue pour l'instant."}</p>
+              )}
+              <p className="text-[11px] text-slate-500">
+                Force du prochain raid : {formatCompact(raidPower(faction, player, st.notoriety))} ({fleetOnly ? "ta flotte" : "tes défenses"} :{" "}
+                {formatCompact(targetPower(faction, player))}).
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-slate-200">
+                Notoriété : {st.notoriety} / {faction.raid.maxNotoriety}
+              </p>
+              <Progress value={(st.notoriety / Math.max(1, faction.raid.maxNotoriety)) * 100} />
+              <p className="text-[11px] text-slate-500">
+                Repoussés : {st.raidsWon} · subis : {st.raidsLost} · payés : {st.tributesPaid}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+                <Trophy className="h-3.5 w-3.5 text-gold-glow" /> {faction.lair.name}
+              </p>
+              {st.lairOpen ? (
+                assault ? (
+                  <p className="text-xs text-cyan-glow">Assaut en cours.</p>
+                ) : (
+                  <Button variant="danger" size="sm" onClick={onLair}>
+                    <Crosshair className="mr-1 h-3.5 w-3.5" /> Attaquer ({formatCompact(lairPower(faction, player))})
+                  </Button>
+                )
+              ) : (
+                <>
+                  <Progress value={(Math.min(st.repelled, faction.lair.raidsNeeded) / faction.lair.raidsNeeded) * 100} />
+                  <p className="text-[11px] text-slate-500">
+                    {Math.min(st.repelled, faction.lair.raidsNeeded)} / {faction.lair.raidsNeeded} raids repoussés pour le localiser.
+                  </p>
+                </>
+              )}
+              {faction.lair.title && <p className="text-[11px] text-slate-500">Titre : « {faction.lair.title} »</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Page Menaces : toutes les factions hostiles, leur Notoriété et leur repaire. */
 export function ThreatsPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
-  const fleets = useFleetStore((s) => s.fleets);
-  const [lairOpen, setLairOpen] = useState(false);
+  const [lairFaction, setLairFaction] = useState<FactionDef | null>(null);
   if (!player) return null;
-  const st = pirateState(player);
-  const ultimatum = st.ultimatum && st.ultimatum.expiresAtMs > Date.now() ? st.ultimatum : null;
-  const raid = fleets.find((f) => f.mission === "pirate" && f.status === "outbound");
-  const assault = fleets.find((f) => f.mission === "lair" && f.status !== "done");
-  const nextIn = st.nextListAtMs > Date.now() ? Math.floor((st.nextListAtMs - Date.now()) / 1000) : null;
+  const factions = FACTIONS.filter((f) => f.enabled);
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Menaces" title="La Liste de Varan" description="La Confrérie du Vide rôde aux confins de la galaxie." />
-
-      <Card className="overflow-hidden p-0">
-        <div className="grid md:grid-cols-[minmax(0,20rem)_1fr]">
-          <img src={PIRATE_ART} alt="Le capitaine Varan et le Silencieux" className="h-72 w-full object-cover object-top md:h-full" />
-          <div className="flex flex-col gap-3 p-5 text-sm leading-relaxed text-slate-300">
-            <p>
-              Depuis l'effondrement des routes commerciales, une flotte sans bannière rôde aux confins de la galaxie : <strong className="text-white">la Confrérie du Vide</strong>.
-            </p>
-            <p>
-              Son chef, le <strong className="text-white">capitaine Orsk Varan</strong>, ancien officier impérial à la barbe grise, tient à jour une tablette lumineuse :{" "}
-              <em>la Liste</em>, les empires trop riches pour être prudents. Ses ordres sont exécutés par <strong className="text-white">le Silencieux</strong>, un colosse au masque
-              respiratoire dont personne n'a jamais entendu la voix. Quand son doigt se pose sur toi, ton nom vient d'entrer sur la Liste.
-            </p>
-            <p className="text-ember-glow">Varan laisse toujours un choix : payer le tribut, ou voir le Silencieux venir le chercher lui-même.</p>
-            <p className="text-slate-500">On murmure qu'en repoussant assez de raids, on finit par remonter jusqu'à son repaire…</p>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="flex flex-col gap-2 p-4">
-          <h3 className="flex items-center gap-2 font-display text-sm text-white">
-            <Skull className="h-4 w-4 text-ember-glow" /> Ta situation
-          </h3>
-          {ultimatum ? (
-            <Button variant="danger" size="sm" onClick={openUltimatum}>
-              Ultimatum en attente · {formatDuration(Math.floor((ultimatum.expiresAtMs - Date.now()) / 1000))}
-            </Button>
-          ) : raid ? (
-            <p className="text-sm text-danger-glow">Le Silencieux arrive : impact dans {formatClock(Math.max(0, Math.floor((raid.arriveAtMs - Date.now()) / 1000)))}.</p>
-          ) : (
-            <p className="text-xs text-slate-400">{nextIn !== null ? `Prochaine consultation de la Liste dans environ ${formatDuration(nextIn)}.` : "Tu n'es pas sur la Liste pour l'instant."}</p>
-          )}
-          <p className="text-xs text-slate-400">
-            Force estimée du prochain raid : <strong className="text-slate-200">{formatCompact(raidPower(player, st.notoriety))}</strong> (tes défenses :{" "}
-            {formatCompact(defensivePower(player))}, sans garnisons).
-          </p>
-        </Card>
-
-        <Card className="flex flex-col gap-2 p-4">
-          <h3 className="font-display text-sm text-white">Notoriété : {st.notoriety} / {PIRATE_RULES.maxNotoriety}</h3>
-          <Progress value={(st.notoriety / PIRATE_RULES.maxNotoriety) * 100} />
-          <p className="text-xs text-slate-400">
-            Chaque raid repoussé endurcit la Confrérie (+{Math.round(PIRATE_RULES.perNotorietyPct * 100)} % de force) ; chaque raid réussi la rassure (−1).
-          </p>
-          <p className="text-xs text-slate-500">
-            Raids repoussés : {st.raidsWon} · subis : {st.raidsLost} · tributs payés : {st.tributesPaid} · repaires pris : {st.lairsTaken}
-          </p>
-        </Card>
-
-        <Card className="flex flex-col gap-2 p-4">
-          <h3 className="flex items-center gap-2 font-display text-sm text-white">
-            <Trophy className="h-4 w-4 text-gold-glow" /> Le repaire
-          </h3>
-          {st.lairOpen ? (
-            <>
-              <p className="text-sm text-gold-glow">Position localisée ! Défenses estimées : {formatCompact(lairPower(player))}.</p>
-              <p className="text-xs text-slate-400">
-                Victoire : {PIRATE_RULES.lairRewardHours} h de production, +{PIRATE_RULES.lairRare} de chaque rare, +{PIRATE_RULES.lairXp} XP et le titre « {PIRATE_RULES.lairTitle} ».
-              </p>
-              {assault ? (
-                <p className="text-xs text-cyan-glow">Assaut en cours.</p>
-              ) : (
-                <Button variant="danger" size="sm" onClick={() => setLairOpen(true)}>
-                  <Crosshair className="mr-1.5 h-4 w-4" /> Attaquer le repaire
-                </Button>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-xs text-slate-400">
-                Repousse {PIRATE_RULES.raidsForLair} raids pour localiser le repaire de Varan ({Math.min(st.repelled, PIRATE_RULES.raidsForLair)} / {PIRATE_RULES.raidsForLair}).
-              </p>
-              <Progress value={(Math.min(st.repelled, PIRATE_RULES.raidsForLair) / PIRATE_RULES.raidsForLair) * 100} />
-            </>
-          )}
-        </Card>
-      </div>
-
+      <PageHeader eyebrow="Cosmic Empires / Menaces" title="Menaces" description="Les factions qui rôdent aux confins de la galaxie. Une seule à la fois peut te viser." />
+      {factions.length === 0 && <Card className="p-4 text-sm text-slate-500">Aucune faction hostile active pour l'instant.</Card>}
+      {factions.map((f) => (
+        <FactionCard key={f.id} faction={f} player={player} onLair={() => setLairFaction(f)} />
+      ))}
       <FleetsPanel hideWhenEmpty />
-      <LairDialog open={lairOpen} onClose={() => setLairOpen(false)} />
+      <LairDialog faction={lairFaction} onClose={() => setLairFaction(null)} />
     </div>
   );
 }

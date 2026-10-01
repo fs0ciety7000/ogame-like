@@ -964,6 +964,13 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "factionId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
       }
     ],
     "indexes": [

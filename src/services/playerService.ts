@@ -376,7 +376,7 @@ export function claimContract(contractId: string) {
   return act<import("@/game/contracts").ClaimResult>({ type: "claimContract", contractId });
 }
 
-/** Réponse à l'ultimatum de Varan : payer le tribut ou refuser (raid). */
+/** Réponse à l'ultimatum en cours (toutes factions) : payer le tribut ou refuser (raid). */
 export function answerPirateUltimatum(answer: "pay" | "refuse") {
   return callGame<{ answer: string; raid: { power: number; arriveAtMs: number } | null }>("pirates", { answer });
 }
