@@ -228,6 +228,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderXpDelta,
     defenderApplied: true,
     garrisons: (input.garrisons ?? []).map((g, i) => ({ ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: combat.garrisonLosses?.[i] ?? {} })),
+    attackerFleet: fleet,
   };
 
   return {

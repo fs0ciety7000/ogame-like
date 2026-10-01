@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +38,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/galaxie", label: "Galaxie", icon: Orbit },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/combats", label: "Combats", icon: Swords },
+      { to: "/game/simulateur", label: "Simulateur", icon: Calculator },
       { to: "/game/menaces", label: "Menaces", icon: Skull },
       { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/alliance", label: "Alliance", icon: Flag },

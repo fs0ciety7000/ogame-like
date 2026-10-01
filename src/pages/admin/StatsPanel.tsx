@@ -229,6 +229,8 @@ export function StatsPanel() {
           ))}
         </Panel>
 
+        {stats.balance && <BalancePanels balance={stats.balance} />}
+
         <Panel title="Missions en cours" className="lg:col-span-2">
           <div className="grid gap-2 md:grid-cols-2">
             {missions.map((m) => (
@@ -238,5 +240,100 @@ export function StatsPanel() {
         </Panel>
       </div>
     </div>
+  );
+}
+
+function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
+  const { activity, rankAge, dominantUnits, factions, flows, anomalies, windowDays } = balance;
+  return (
+    <>
+      <Panel title={`Équilibrage · activité et décrochage`}>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ["24 h", activity.active1d],
+            ["7 j", activity.active7d],
+            ["30 j", activity.active30d],
+          ].map(([label, n]) => (
+            <div key={label} className="border border-white/5 p-2">
+              <p className="font-display text-xl text-white">{n}</p>
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">actifs {label}</p>
+            </div>
+          ))}
+        </div>
+        {activity.dormant.length > 0 ? (
+          <p className="text-[11px] text-slate-400">
+            En train de décrocher (absents de 3 à 30 j) : {activity.dormant.map((d) => `${d.pseudo} (${d.days} j)`).join(", ")}
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-500">Personne n'a décroché récemment.</p>
+        )}
+        <p className="hud-eyebrow mt-1 text-[10px] text-slate-500">Ancienneté médiane par rang</p>
+        {rankAge.map((r) => (
+          <div key={r.label} className="flex justify-between text-xs text-slate-300">
+            <span>
+              {r.label} <span className="text-slate-500">({r.players})</span>
+            </span>
+            <span className="tabular-mono text-slate-400">{r.medianDays} j</span>
+          </div>
+        ))}
+      </Panel>
+
+      <Panel title={`Équilibrage · combats (${windowDays} j)`}>
+        <p className="hud-eyebrow text-[10px] text-slate-500">Victoires selon l'unité dominante de la flotte</p>
+        {dominantUnits.length === 0 ? (
+          <p className="text-[11px] text-slate-500">Pas encore de données (la composition des flottes est enregistrée depuis la v2.8).</p>
+        ) : (
+          dominantUnits.map((u) => (
+            <Bar key={u.id} label={`${u.name} (${u.attacks})`} value={u.winPct} max={100} display={`${u.winPct} %`} color="var(--color-ember-glow)" />
+          ))
+        )}
+        <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">Factions</p>
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-[10px] uppercase tracking-wide text-slate-500">
+          <span>Faction</span>
+          <span className="text-right">Raids repoussés</span>
+          <span className="text-right">Repaires pris</span>
+        </div>
+        {factions.map((f) => (
+          <div key={f.id} className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-xs text-slate-300">
+            <span className="truncate">{f.name}</span>
+            <span className="tabular-mono text-right">{f.raids ? `${f.repelledPct} % / ${f.raids}` : "—"}</span>
+            <span className="tabular-mono text-right">{f.lairAssaults ? `${f.lairWinPct} % / ${f.lairAssaults}` : "—"}</span>
+          </div>
+        ))}
+      </Panel>
+
+      <Panel title="Équilibrage · flux de ressources">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <span className="text-slate-400">Production des actifs</span>
+          <span className="tabular-mono text-right text-mint-glow">+{formatCompact(flows.productionPerHour)} / h</span>
+          <span className="text-slate-400">Pillé entre joueurs ({windowDays} j)</span>
+          <span className="tabular-mono text-right">{formatCompact(flows.lootWindow)}</span>
+          <span className="text-slate-400">Dépensé (depuis la v2.8)</span>
+          <span className="tabular-mono text-right">{formatCompact(flows.spentTotal)}</span>
+          <span className="text-slate-400">Échangé au comptoir</span>
+          <span className="tabular-mono text-right">{formatCompact(flows.tradedTotal)}</span>
+        </div>
+      </Panel>
+
+      <Panel title="Équilibrage · stocks anormaux">
+        {anomalies.length === 0 ? (
+          <p className="text-[11px] text-slate-500">Aucun stock 20 fois au-dessus des autres joueurs.</p>
+        ) : (
+          <>
+            {anomalies.map((a) => (
+              <div key={`${a.pseudo}-${a.resource}`} className="flex justify-between gap-2 text-xs text-slate-300">
+                <span className="truncate">
+                  {a.pseudo} · {a.resource}
+                </span>
+                <span className="tabular-mono text-danger-glow">
+                  {formatCompact(a.amount)} {a.ratio > 0 ? `(×${a.ratio})` : ""}
+                </span>
+              </div>
+            ))}
+            <p className="text-[11px] text-slate-500">Comparé à la médiane des autres joueurs. Vérifie l'historique de ces comptes (journal, échanges, missions).</p>
+          </>
+        )}
+      </Panel>
+    </>
   );
 }

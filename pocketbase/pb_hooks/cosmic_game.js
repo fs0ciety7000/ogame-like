@@ -47,6 +47,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_RULES: () => ALLIANCE_RULES,
+  AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
+  AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   FACTIONS: () => FACTIONS,
@@ -59,6 +61,7 @@ __export(hooksEntry_exports, {
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
   STAFF_KEY: () => STAFF_KEY,
+  addOccurrence: () => addOccurrence,
   addReportComment: () => addReportComment,
   allianceStandings: () => allianceStandings,
   answerUltimatum: () => answerUltimatum,
@@ -68,11 +71,15 @@ __export(hooksEntry_exports, {
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
   assertReportQuota: () => assertReportQuota,
+  autoReportDescription: () => autoReportDescription,
+  autoReportTitle: () => autoReportTitle,
   collectDebris: () => collectDebris,
   computeGameStats: () => computeGameStats,
   debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
   endGarrison: () => endGarrison,
+  errorKey: () => errorKey,
+  errorQuotaKey: () => errorQuotaKey,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
@@ -104,6 +111,7 @@ __export(hooksEntry_exports, {
   resolveLairAssault: () => resolveLairAssault,
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
+  sanitizeClientError: () => sanitizeClientError,
   sanitizeNewReport: () => sanitizeNewReport,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
@@ -2378,7 +2386,8 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now) {
     defenderProcessed: true,
     defenderApplied: true,
     attackerXpDelta: combat.outcome === "attacker_win" ? faction.lair.xp : 0,
-    defenderXpDelta: 0
+    defenderXpDelta: 0,
+    attackerFleet: fleet
   };
   return { player, queues: flushed.queues, combat, survivors, report, notifications };
 }
@@ -3167,7 +3176,8 @@ function performAttack(input) {
     garrisons: ((_x = input.garrisons) != null ? _x : []).map((g, i) => {
       var _a2, _b2;
       return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
-    })
+    }),
+    attackerFleet: fleet
   };
   return {
     ok: true,
@@ -3249,6 +3259,7 @@ function pay(player, cost, now) {
     total2 += val != null ? val : 0;
   }
   recordContract(player, "spend", total2, now);
+  bumpStat(player, "spent", total2);
 }
 function applyAction(s, action) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
@@ -3518,7 +3529,7 @@ function topCounts(values, limit) {
   });
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count]) => ({ pseudo, count }));
 }
-function computeGameStats(players, queues, reports, now, windowDays = 7) {
+function computeGameStats(players, queues, reports, now, windowDays = 7, balanceDays = 30) {
   const n = players.length;
   const lastSeen = (p) => {
     var _a;
@@ -3674,10 +3685,118 @@ function computeGameStats(players, queues, reports, now, windowDays = 7) {
       topAttackers: topCounts(recent.map((r) => r.attackerPseudo), 5),
       mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
     },
+    balance: computeBalance(players, reports, now, balanceDays),
     insights: []
   };
   stats.insights = computeInsights(stats);
   return stats;
+}
+function dominantUnit(fleet) {
+  var _a, _b;
+  let best = null;
+  let bestPower = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const power = ((_b = (_a = UNIT_BASE_STATS[id]) == null ? void 0 : _a.attack) != null ? _b : 0) * (qty || 0);
+    if (power > bestPower) {
+      best = id;
+      bestPower = power;
+    }
+  }
+  return best;
+}
+var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
+function computeBalance(players, reports, now, windowDays) {
+  var _a, _b;
+  const seen = (p) => {
+    var _a2;
+    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
+  };
+  const days = (ms) => Math.floor(ms / DAY2);
+  const since = now - windowDays * DAY2;
+  const recent = reports.filter((r) => {
+    var _a2;
+    return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
+  });
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY2 && now - seen(p) < 30 * DAY2).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const byFamily = /* @__PURE__ */ new Map();
+  players.forEach((p) => {
+    var _a2, _b2;
+    if (!p.createdAtMs) return;
+    const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY2]);
+  });
+  const rankAge = [...byFamily.entries()].map(([label, ages]) => ({ label, players: ages.length, medianDays: round1(median(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+  const dom = /* @__PURE__ */ new Map();
+  recent.forEach((r) => {
+    var _a2;
+    if (!r.attackerFleet || r.attackerUid === PIRATE_OWNER_UID) return;
+    const id = dominantUnit(r.attackerFleet);
+    if (!id) return;
+    const cur = (_a2 = dom.get(id)) != null ? _a2 : { attacks: 0, wins: 0 };
+    cur.attacks++;
+    if (r.outcome === "attacker_win") cur.wins++;
+    dom.set(id, cur);
+  });
+  const dominantUnits = [...dom.entries()].map(([id, v]) => {
+    var _a2, _b2;
+    return { id, name: (_b2 = (_a2 = UNITS.find((u) => u.id === id)) == null ? void 0 : _a2.name) != null ? _b2 : id, attacks: v.attacks, winPct: pct2(v.wins, v.attacks) };
+  }).sort((a, b) => b.attacks - a.attacks);
+  const factions2 = FACTIONS.map((f) => {
+    const raids = recent.filter((r) => r.attackerUid === PIRATE_OWNER_UID && r.attackerPseudo.includes(f.name));
+    const lairs = recent.filter((r) => r.defenderUid && factionOfLair(r.defenderUid) === f.id);
+    return {
+      id: f.id,
+      name: f.name,
+      raids: raids.length,
+      repelledPct: pct2(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
+      lairAssaults: lairs.length,
+      lairWinPct: pct2(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
+    };
+  });
+  const active = players.filter((p) => now - seen(p) < 7 * DAY2);
+  const productionPerHour = Math.round(active.reduce((a, p) => {
+    var _a2, _b2;
+    return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
+  }, 0));
+  const anomalies = [];
+  for (const r of RESOURCE_LIST) {
+    for (const p of players) {
+      const amount = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
+      if (amount < 1e6) continue;
+      const others = median(players.filter((o) => o !== p).map((o) => {
+        var _a2, _b2;
+        return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
+      }));
+      const ratio = others > 0 ? amount / others : Infinity;
+      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
+    }
+  }
+  anomalies.sort((a, b) => b.amount - a.amount);
+  return {
+    windowDays,
+    activity: {
+      active1d: players.filter((p) => now - seen(p) < DAY2).length,
+      active7d: active.length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY2).length,
+      dormant
+    },
+    rankAge,
+    dominantUnits,
+    factions: factions2,
+    flows: {
+      productionPerHour,
+      spentTotal: players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.spent) != null ? _b2 : 0);
+      }, 0),
+      lootWindow: recent.filter((r) => r.attackerUid !== PIRATE_OWNER_UID).reduce((a, r) => a + sumValues(r.loot), 0),
+      tradedTotal: players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.traded) != null ? _b2 : 0);
+      }, 0)
+    },
+    anomalies: anomalies.slice(0, 10)
+  };
 }
 function computeInsights(s) {
   const out = [];
@@ -3698,6 +3817,15 @@ function computeInsights(s) {
   if (attacks >= 5 && outcomes.attacker_win / attacks > 0.85) out.push("Les attaquants gagnent plus de 85 % des combats : la d\xE9fense est peut-\xEAtre trop faible.");
   if (s.players.active7d > 0 && attacks === 0) out.push(`Aucun combat depuis ${s.combat.windowDays} jours.`);
   if (s.players.total >= 5 && s.players.active7d / s.players.total < 0.4) out.push("Moins de 40 % des joueurs sont venus cette semaine.");
+  for (const u of s.balance.dominantUnits) {
+    if (u.attacks >= 5 && u.winPct >= 85) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : ${u.winPct} % de victoires sur ${u.attacks} attaques \u2014 trop efficace ?`);
+    if (u.attacks >= 5 && u.winPct <= 20) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : seulement ${u.winPct} % de victoires \u2014 trop faible ?`);
+  }
+  for (const f of s.balance.factions) {
+    if (f.raids >= 5 && f.repelledPct >= 90) out.push(`${f.name} : ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop faible ?`);
+    if (f.raids >= 5 && f.repelledPct <= 20) out.push(`${f.name} : seulement ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop forte ?`);
+  }
+  if (s.balance.anomalies.length > 0) out.push(`${s.balance.anomalies.length} stock(s) anormalement \xE9lev\xE9(s) \xE0 v\xE9rifier (section \xC9quilibrage).`);
   return out;
 }
 
@@ -4486,6 +4614,64 @@ function githubIssueBody(report, link) {
     report.screenshot ? `Capture jointe au signalement (voir l'administration).` : "",
     `Suivi dans l'administration : ${link}`
   ].filter((l) => l !== null).join("\n");
+}
+
+// src/game/errorReports.ts
+var AUTO_ERROR_RULES = {
+  /** Erreurs envoyées par joueur sur une journée (UTC). */
+  maxPerDay: 10,
+  messageMax: 300,
+  stackMax: 3e3,
+  /** Joueurs touchés gardés en mémoire sur le signalement. */
+  affectedMax: 30
+};
+var AUTO_REPORTER_ID = "system";
+var IGNORED = [
+  /^Script error\.?$/i,
+  /ResizeObserver loop/i,
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /error loading dynamically imported module/i,
+  /^(TypeError: )?(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i,
+  /The user aborted a request|AbortError|autocancelled/i
+];
+var EXTENSION = /chrome-extension:|moz-extension:|safari-extension:/i;
+var str = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+function sanitizeClientError(input) {
+  const message = str(input.message, AUTO_ERROR_RULES.messageMax);
+  const stack = str(input.stack, AUTO_ERROR_RULES.stackMax);
+  if (!message || isIgnoredError(message, stack)) return null;
+  return { message, stack, page: str(input.page, 200), version: str(input.version, 20) };
+}
+function isIgnoredError(message, stack = "") {
+  return IGNORED.some((re) => re.test(message)) || EXTENSION.test(message) || EXTENSION.test(stack);
+}
+function normalizeStack(stack) {
+  return stack.split("\n").slice(0, 6).map(
+    (l) => l.replace(/https?:\/\/[^/\s)]+/g, "").replace(/-[A-Za-z0-9_-]{6,}\.js/g, ".js").replace(/\?[^\s):]*/g, "").replace(/:\d+:\d+/g, "").replace(/:\d+/g, "").trim()
+  ).filter(Boolean).join("\n");
+}
+function errorKey(message, stack) {
+  const text = `${message.replace(/\d+/g, "#")}
+${normalizeStack(stack)}`;
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = (h << 5) + h + text.charCodeAt(i) | 0;
+  return `e${(h >>> 0).toString(16)}`;
+}
+function autoReportTitle(message) {
+  return `[Auto] ${message}`.slice(0, 120);
+}
+function autoReportDescription(err) {
+  return [err.message, "", err.stack || "(pile indisponible)"].join("\n").slice(0, 4e3);
+}
+function addOccurrence(report, pseudo, now) {
+  const closed = report.status === "resolved" || report.status === "rejected";
+  const affected = report.affected.includes(pseudo) || !pseudo ? report.affected : [...report.affected, pseudo].slice(-AUTO_ERROR_RULES.affectedMax);
+  const history = closed ? [...report.history, { kind: "status", atMs: now, byId: AUTO_REPORTER_ID, byName: "Syst\xE8me", staff: true, status: "new", text: "L'erreur s'est reproduite apr\xE8s la cl\xF4ture." }] : report.history;
+  return { status: closed ? "new" : report.status, history, occurrences: (report.occurrences || 1) + 1, affected, reopened: closed };
+}
+function errorQuotaKey(uid, now) {
+  return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
 }
 
 // src/game/maintenance.ts

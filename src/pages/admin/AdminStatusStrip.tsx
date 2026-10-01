@@ -8,17 +8,28 @@ import { useContentStore } from "@/services/contentService";
 import { useMaintenance } from "@/services/maintenanceService";
 import type { GameIconName } from "@/lib/icons";
 
+function formatAge(ms: number): string {
+  const h = Math.floor(ms / 3600_000);
+  return h >= 48 ? `${Math.floor(h / 24)} j` : h >= 1 ? `${h} h` : `${Math.max(1, Math.floor(ms / 60_000))} min`;
+}
+
 /** Bandeau d'état de la console : jeu ouvert ou non, joueurs, contenu, version. */
 export function AdminStatusStrip({ onOpen }: { onOpen: (tab: string) => void }) {
   const m = useMaintenance();
   const customized = useContentStore((s) => s.customized);
   const [players, setPlayers] = useState<number | null>(null);
+  const [backup, setBackup] = useState<{ latestAtMs: number; count: number; staleAfterMs: number } | null>(null);
   useEffect(() => {
     pb.collection("players")
       .getList(1, 1, { fields: "id" })
       .then((r) => setPlayers(r.totalItems))
       .catch(() => setPlayers(null));
+    pb.send<{ latestAtMs: number; count: number; staleAfterMs: number }>("/api/cosmic/admin/backups", {})
+      .then(setBackup)
+      .catch(() => setBackup(null));
   }, []);
+  const backupAge = backup && backup.latestAtMs > 0 ? Date.now() - backup.latestAtMs : null;
+  const backupOk = backupAge !== null && backup !== null && backupAge <= backup.staleAfterMs;
 
   const tiles: { icon: GameIconName; label: string; value: string; sub: string; tone: string; tab: string; pulse?: boolean }[] = [
     {
@@ -39,11 +50,20 @@ export function AdminStatusStrip({ onOpen }: { onOpen: (tab: string) => void }) 
       tone: "var(--color-violet-glow)",
       tab: customized[0] ?? "buildings",
     },
+    {
+      icon: "storage",
+      label: "Sauvegarde",
+      value: backup === null ? "…" : backupAge === null ? "Aucune" : `il y a ${formatAge(backupAge)}`,
+      sub: backup === null ? "état inconnu" : backupOk ? `${backup.count} conservées` : "à vérifier !",
+      tone: backup === null || backupOk ? "var(--color-mint-glow)" : "var(--color-danger-glow)",
+      tab: "tools",
+      pulse: backup !== null && !backupOk,
+    },
     { icon: "rankup", label: "Version", value: CURRENT_VERSION ? `v${CURRENT_VERSION}` : "—", sub: "client en ligne", tone: "var(--color-ember-glow)", tab: "tools" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
       {tiles.map((t) => (
         <button
           key={t.label}

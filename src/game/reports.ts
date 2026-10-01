@@ -72,6 +72,10 @@ export interface GameReport {
   updatedAtMs: number;
   /** Dernière consultation par le joueur (réponses non lues au-delà). */
   reporterSeenAtMs: number;
+  /** v2.8 : erreur remontée automatiquement (empreinte, occurrences, joueurs touchés). */
+  autoKey?: string;
+  occurrences?: number;
+  affected?: string[];
 }
 
 export function isReportCategory(v: unknown): v is ReportCategory {
