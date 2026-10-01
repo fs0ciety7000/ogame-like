@@ -394,6 +394,21 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
   }
 });
 
+/** Marché entre joueurs (v3.0) : publier, accepter, annuler une offre. */
+routerAdd("POST", "/api/cosmic/market/create", (e) => require(`${__hooks}/cosmic_db.js`).marketCreate(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/market/accept", (e) => require(`${__hooks}/cosmic_db.js`).marketAccept(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic_db.js`).marketCancel(e), $apis.requireAuth("users"));
+
+// Offres expirées rendues à leur vendeur.
+cronAdd("cosmic_market", "*/5 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).expireMarketOffers(Date.now());
+    if (n > 0) console.log(`[cosmic] ${n} offre(s) du marché expirée(s)`);
+  } catch (err) {
+    console.log(`[cosmic] expiration du marché : ${err}`);
+  }
+});
+
 // Sauvegardes : PocketBase en crée une chaque nuit (setup.mjs) ; on vérifie
 // chaque matin qu'elle existe bien, sinon l'équipe est prévenue.
 cronAdd("cosmic_backup_check", "20 5 * * *", () => {

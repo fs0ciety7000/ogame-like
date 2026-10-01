@@ -5,6 +5,7 @@ import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { computeCombatXp } from "@/game/pvp";
 import { lairPower, raidPower, type FactionDef } from "@/game/pirates";
 import { OFFENSIVE_UNITS } from "@/game/units";
+import { formationEffects, postureEffects } from "@/game/formations";
 import type { Buildings, PlayerState, ResourceId, SpyReport, TechLevels, Units } from "@/types/game";
 
 /* =====================================================
@@ -57,8 +58,12 @@ export function cleanFleet(fleet: Record<string, number>): Record<string, number
 }
 
 /** Bac à sable : deux camps saisis librement. */
-export function simulateSandbox(attacker: SimSide, fleet: Record<string, number>, defender: SimSide, lootMultiplier = 1): SimOutcome {
+export function simulateSandbox(attacker: SimSide, fleet: Record<string, number>, defender: SimSide, lootMultiplier = 1, opts: { formation?: string; posture?: string } = {}): SimOutcome {
+  const posture = postureEffects(opts.posture);
   const combat = resolveCombat({
+    ...formationEffects(opts.formation),
+    defenseFactor: posture.defenseFactor,
+    homeFleetFactor: posture.homeFleetFactor,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: attacker.repairPct ?? 0,
@@ -85,6 +90,7 @@ export function simulateAgainstReport(
   fleet: Record<string, number>,
   report: Pick<SpyReport, "tier" | "data">,
   lootMultiplier = 1,
+  formation?: string,
 ): SimOutcome | null {
   const data = report.data;
   if (!data || (report.tier ?? 0) < 2 || (!data.units && !data.defenses)) return null;
@@ -107,7 +113,12 @@ export function simulateAgainstReport(
   } else notes.push("Ressources inconnues : pas d'estimation du butin.");
   notes.push("La cible a pu produire, construire ou déplacer sa flotte depuis le rapport.");
 
+  // Posture relevée par les sondes (une posture changée depuis n'est pas connue).
+  const posture = postureEffects(data.posture);
   const combat = resolveCombat({
+    ...formationEffects(formation),
+    defenseFactor: posture.defenseFactor,
+    homeFleetFactor: posture.homeFleetFactor,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
@@ -125,8 +136,9 @@ export function simulateAgainstReport(
 }
 
 /** Assaut d'un repaire de faction (puissance du repaire calculée comme le serveur). */
-export function simulateLair(player: PlayerState, fleet: Record<string, number>, faction: FactionDef): SimOutcome {
+export function simulateLair(player: PlayerState, fleet: Record<string, number>, faction: FactionDef, formation?: string): SimOutcome {
   const combat = resolveCombat({
+    ...formationEffects(formation),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),
@@ -146,7 +158,9 @@ export function simulateLair(player: PlayerState, fleet: Record<string, number>,
 export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety: number): SimOutcome {
   const fleetOnly = faction.raid.target === "fleet";
   const defenderUnits: Units = fleetOnly ? Object.fromEntries(Object.entries(player.units ?? {}).filter(([id]) => OFFENSIVE_UNITS.includes(id))) : (player.units ?? {});
+  const posture = postureEffects(player.posture?.id, fleetOnly);
   const combat = resolveCombat({
+    defenseFactor: posture.defenseFactor,
     attackerUnits: {},
     attackerTechLevels: {},
     attackerRepairPct: 0,
@@ -157,7 +171,7 @@ export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety
     defenderRepairPct: getRepairPercent(player.buildings),
     defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
     defenderResources: {},
-    homeFleetFactor: fleetOnly ? 1 : undefined,
+    homeFleetFactor: posture.homeFleetFactor,
   });
   const res = outcome(combat, ["Garnisons alliées non comptées : elles renforceraient ta défense."], false);
   res.defenderXp = combat.outcome === "attacker_win" ? 0 : faction.bounty.xp;

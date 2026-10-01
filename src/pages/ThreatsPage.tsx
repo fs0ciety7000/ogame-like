@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
+import { FormationPicker } from "@/components/game/FormationPicker";
+import type { FormationId } from "@/game/formations";
 import { accent, openUltimatum } from "@/components/game/PirateUltimatum";
 import { activeUltimatum, FACTIONS, lairPower, lairUid, pirateState, raidPower, targetPower, type FactionDef } from "@/game/pirates";
 import { fleetSpeed, LAIR_DISTANCE, travelSeconds } from "@/game/fleets";
@@ -28,6 +30,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
   const player = usePlayerStore((s) => s.player);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [formation, setFormation] = useState<FormationId>("balanced");
   if (!player || !faction) return null;
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = computeFleetPower(player.units, player.techLevels, selected, ["attack"]);
@@ -37,7 +40,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
   const send = async () => {
     setBusy(true);
     try {
-      await sendFleet(lairUid(faction.id), selected, "lair");
+      await sendFleet(lairUid(faction.id), selected, "lair", { formation });
       triggerWarpEffect();
       toast.success(`Assaut lancé sur ${faction.lair.name} !`);
       setFleet({});
@@ -82,6 +85,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
             Trajet : {formatDuration(flight)}, puis retour des survivants.
           </p>
         )}
+        <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
         <Button variant="danger" className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer l'assaut
         </Button>

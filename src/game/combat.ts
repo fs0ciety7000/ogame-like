@@ -21,6 +21,23 @@ export const COMBAT_RULES = {
   homeFleetDefenseFactor: 0.1,
   /** Part des défenses détruites reconstruites gratuitement après le combat. */
   defenseRebuildPct: 0.6,
+  /* v3.0 — formations d'attaque (choisies au lancement). */
+  /** Assaut : attaque +10 %, pertes subies +15 %. */
+  assaultAttack: 0.1,
+  assaultLosses: 0.15,
+  /** Prudente : attaque −10 %, pertes subies −25 %. */
+  cautiousAttack: -0.1,
+  cautiousLosses: -0.25,
+  /** Raid : attaque −15 %, cargaison +30 %. */
+  raidAttack: -0.15,
+  raidCargo: 0.3,
+  /* v3.0 — postures de la base (défenseur). */
+  /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
+  bunkerDefense: 0.08,
+  /** Riposte : vaisseaux à quai engagés à 25 %. */
+  riposteHomeFleet: 0.25,
+  /** Délai entre deux changements de posture (h). */
+  postureCooldownHours: 1,
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
@@ -96,9 +113,9 @@ export function computeFullPower(
 }
 
 /** Puissance défensive d'une base (défenses + vaisseaux à quai, bonus à domicile). */
-export function homeDefensePower(units: Units, techLevels: TechLevels, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor): number {
+export function homeDefensePower(units: Units, techLevels: TechLevels, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1): number {
   return (
-    (computeFullPower(units, techLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
+    (computeFullPower(units, techLevels, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor +
       computeFullPower(units, techLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) *
     (1 + COMBAT_RULES.homeDefenseBonus)
   );
@@ -157,18 +174,23 @@ export function resolveCombat(params: {
   defenderPowerOverride?: number;
   /** Part de la flotte à quai engagée (et touchée) ; défaut : règle de combat. */
   homeFleetFactor?: number;
+  /** v3.0 : formation de l'attaquant et posture du défenseur (voir formations.ts). */
+  attackFactor?: number;
+  attackerLossFactor?: number;
+  cargoFactor?: number;
+  defenseFactor?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
 
   // Le bouclier absorbe une part de l'attaque ; le défenseur, chez lui, se
   // bat avec ses défenses ET ses vaisseaux à quai (ceux en vol n'y sont plus).
-  const attackerPower = (params.attackerPowerOverride ?? computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * (1 - shield);
+  const attackerPower = (params.attackerPowerOverride ?? computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * (params.attackFactor ?? 1) * (1 - shield);
   const garrisons = params.garrisons ?? [];
   const garrisonFactor = params.garrisonFactor ?? 0.5;
   const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
   const homeFactor = params.homeFleetFactor ?? COMBAT_RULES.homeFleetDefenseFactor;
-  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels, homeFactor) + garrisonPower;
+  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, params.defenseFactor ?? 1) + garrisonPower;
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
@@ -192,6 +214,8 @@ export function resolveCombat(params: {
     attackerLossPct = 0.3;
     defenderLossPct = 0.3;
   }
+
+  if (params.attackerLossFactor !== undefined) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
 
   // Chaque camp ne peut pas détruire plus que sa propre puissance : sans ce
   // plafond, une attaque à 1 drone faisait perdre 5 % de TOUTE la défense
@@ -242,7 +266,7 @@ export function resolveCombat(params: {
   // la flotte survivante peut transporter (réduit proportionnellement).
   const survivors: Record<string, number> = {};
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0));
-  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels);
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * (params.cargoFactor ?? 1));
   let loot: Partial<Record<ResourceId, number>> | null = null;
   if (outcome === "attacker_win") {
     const wanted: Partial<Record<ResourceId, number>> = {};

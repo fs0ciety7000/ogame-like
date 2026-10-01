@@ -104,6 +104,7 @@ export function buildSpyReportData(target: PlayerState, queues: QueuesState, tar
     data.units = unitsOf(target, OFFENSIVE_UNITS);
     data.defenses = unitsOf(target, DEFENSIVE_UNITS);
     data.garrisons = garrisons.map((g) => ({ ownerPseudo: g.ownerPseudo, units: g.units }));
+    data.posture = target.posture?.id ?? "standard";
   }
   if (tier >= 3) {
     data.buildings = Object.fromEntries(Object.entries(target.buildings ?? {}).map(([id, b]) => [id, b?.unlocked === false ? 0 : b?.level ?? 0]));

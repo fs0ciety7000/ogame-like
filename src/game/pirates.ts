@@ -1,4 +1,5 @@
 import { getProductionRatesPerSecond } from "@/game/production";
+import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent, getStorageCapacity } from "@/game/buildings";
 import { bumpStat, recordThreat } from "@/game/stats";
@@ -588,6 +589,7 @@ export function resolvePirateRaid(
   if (options.evading) bumpStat(player, "evasions");
   const st = pirateState(player, faction.id);
   const fleetOnly = faction.raid.target === "fleet";
+  const posture = postureEffects(player.posture?.id, fleetOnly);
   // Cible « flotte » : les défenses ne combattent pas, les vaisseaux à 100 %.
   const defenderUnits: Units = fleetOnly
     ? Object.fromEntries(Object.entries(player.units ?? {}).filter(([id]) => OFFENSIVE_UNITS.includes(id)))
@@ -605,7 +607,8 @@ export function resolvePirateRaid(
     defenderResources: {},
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
-    homeFleetFactor: fleetOnly ? 1 : undefined,
+    homeFleetFactor: posture.homeFleetFactor,
+    defenseFactor: posture.defenseFactor,
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
@@ -710,11 +713,12 @@ export interface LairAssaultOutput {
   notifications: NewNotification[];
 }
 
-export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, queuesIn: QueuesState, fleet: Record<string, number>, power: number, now: number): LairAssaultOutput {
+export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, queuesIn: QueuesState, fleet: Record<string, number>, power: number, now: number, formation?: string): LairAssaultOutput {
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
   const st = pirateState(player, faction.id);
   const combat = resolveCombat({
+    ...formationEffects(formation),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),
