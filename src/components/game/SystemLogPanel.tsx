@@ -19,6 +19,7 @@ const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }
   event: { level: "EVENT", className: "text-gold-glow" },
   gift: { level: "INFO", className: "text-mint-glow" },
   fleet: { level: "ALERTE", className: "text-danger-glow" },
+  report: { level: "SUPPORT", className: "text-gold-glow" },
   system: { level: "INFO", className: "text-cyan-glow" },
 };
 

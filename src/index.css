@@ -177,6 +177,38 @@
   --th-scan: 0.028;
 }
 
+:root[data-theme="netrunner"] {
+  --th-font-title: "Rajdhani", sans-serif;
+  --th-font-body: "Rajdhani", sans-serif;
+  --th-title-track: 0.08em;
+  --th-cut: 16px;
+  --th-accent: #f3e600;
+  --th-accent2: #ff003c;
+  --th-ok: #55ead4;
+  --th-danger: #ff003c;
+  --th-gold: #f3e600;
+  --th-ember: #ff6b2c;
+  --th-space-950: #050407;
+  --th-space-900: #09080b;
+  --th-space-800: #0f0d11;
+  --th-space-700: #171419;
+  --th-space-600: #221d24;
+  --th-space-500: #312a33;
+  --th-text-100: #f8f5d8;
+  --th-text-200: #ece8c6;
+  --th-text-300: #cfcaa6;
+  --th-text-400: #a39f86;
+  --th-text-500: #7c7965;
+  --th-text-600: #57554a;
+  --th-ink: #f4f1d0;
+  --th-body-glow: #2a0710;
+  --th-panel: linear-gradient(180deg, rgba(20, 18, 16, 0.94), rgba(8, 7, 10, 0.96));
+  --th-edge: color-mix(in srgb, var(--th-accent2) 40%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 85%, transparent);
+  --th-btn-ink: #120f00;
+  --th-scan: 0.03;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -391,8 +423,11 @@ body {
   to { background-position: -250% 0; }
 }
 
-/* Scintillement des panneaux holographiques. */
-:root[data-theme="holo"] .glass-panel {
+/* Scintillement des panneaux holographiques. Jamais sur les fenêtres et
+   menus (éléments à data-state) : leur animation d'ouverture hériterait de
+   la répétition infinie, et Radix attendrait sans fin la fin de l'animation
+   avant de les fermer (fenêtre qui clignote et ne se ferme plus). */
+:root[data-theme="holo"] .glass-panel:not([data-state]) {
   animation: hud-flicker 9s infinite;
 }
 @keyframes hud-flicker {
@@ -563,6 +598,53 @@ body {
 }
 :root[data-theme="holo"] .hud-btn-primary:hover {
   background: color-mix(in srgb, var(--th-accent) 28%, transparent);
+}
+
+/* ---------- Netrunner (esprit Cyberpunk 2077) ---------- */
+/* Barre rouge latérale, titres décalés en rouge, découpes en encoche,
+   glitch chromatique au survol, corps de texte plus appuyé. */
+:root[data-theme="netrunner"] body {
+  font-weight: 500;
+}
+:root[data-theme="netrunner"] .glass-panel {
+  border-left: 3px solid var(--th-accent2);
+}
+:root[data-theme="netrunner"] h1.hud-title {
+  color: var(--th-accent);
+  text-shadow: 3px 3px 0 color-mix(in srgb, var(--th-accent2) 85%, transparent);
+}
+:root[data-theme="netrunner"] .hud-title {
+  font-weight: 700;
+}
+:root[data-theme="netrunner"] .glass-panel:hover .hud-title {
+  animation: nr-glitch 0.45s steps(2) 2;
+}
+:root[data-theme="netrunner"] .hud-cut {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+:root[data-theme="netrunner"] .hud-cut-sm {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+:root[data-theme="netrunner"] .hud-btn-primary {
+  background: var(--th-accent);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  box-shadow: inset -3px 0 0 var(--th-accent2);
+}
+:root[data-theme="netrunner"] .hud-btn-primary:hover {
+  background: color-mix(in srgb, var(--th-accent) 85%, white);
+}
+:root[data-theme="netrunner"] ::selection {
+  background: color-mix(in srgb, var(--th-accent2) 55%, transparent);
+}
+@keyframes nr-glitch {
+  0% { text-shadow: 2px 0 var(--th-accent2), -2px 0 var(--th-ok); transform: translateX(0); }
+  50% { text-shadow: -3px 0 var(--th-accent2), 3px 0 var(--th-ok); transform: translateX(1px); }
+  100% { text-shadow: none; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="netrunner"] .glass-panel:hover .hud-title {
+    animation: none;
+  }
 }
 
 /* ---------- Page de maintenance (v2.5) ---------- */

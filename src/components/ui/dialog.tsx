@@ -21,7 +21,7 @@ export function DialogContent({
           // plus loin dans la feuille de style, elle écraserait sinon le
           // position:fixed de Tailwind, faisant sortir la modale du viewport
           // (seul le fond flou de l'overlay resterait visible).
-          "!fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 glass-panel p-6 shadow-2xl focus:outline-none max-h-[85vh] overflow-y-auto",
+          "!fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 glass-panel p-6 shadow-2xl focus:outline-none max-h-[85vh] overflow-y-auto [animation-iteration-count:1]",
           "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95",
           className,
         )}

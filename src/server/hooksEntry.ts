@@ -24,7 +24,8 @@ export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
 export { applyStaffTitle, DEFAULT_STAFF_BY_PSEUDO, isStaffRole, normalizeStaff, STAFF_KEY } from "@/game/staff";
-export { extendUltimatums, MAINTENANCE_KEY, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
+export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody, reportStatusLabel, sanitizeNewReport } from "@/game/reports";
+export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";

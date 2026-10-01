@@ -385,12 +385,34 @@ routerUse((e) => {
   return e.next();
 });
 
+// Réouverture automatique à l'heure prévue, vérifiée chaque minute.
+cronAdd("cosmic_maintenance", "* * * * *", () => {
+  try {
+    if (require(`${__hooks}/cosmic_db.js`).autoEndMaintenance(Date.now())) console.log("[cosmic] maintenance terminée automatiquement");
+  } catch (err) {
+    console.log(`[cosmic] fin automatique de maintenance : ${err}`);
+  }
+});
+
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
 routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
 
 /** GET /api/cosmic/admin/admins · POST { action: "add" | "remove", uid, note? } — administrateurs. */
 routerAdd("GET", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminList(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminManage(e), $apis.requireAuth("users", "_superusers"));
+
+/* ---------- Signalements de problèmes (v2.7) ---------- */
+
+// Création par un joueur (collection reports) : champs validés et complétés.
+onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).reportCreateRequest(e), "reports");
+
+/** POST /api/cosmic/reports/comment { id, text } · /seen { id } — joueur. */
+routerAdd("POST", "/api/cosmic/reports/comment", (e) => require(`${__hooks}/cosmic_db.js`).reportComment(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/reports/seen", (e) => require(`${__hooks}/cosmic_db.js`).reportSeen(e), $apis.requireAuth("users"));
+/** Administration : mise à jour, options, issue GitHub. */
+routerAdd("POST", "/api/cosmic/admin/reports", (e) => require(`${__hooks}/cosmic_db.js`).adminReportUpdate(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("GET", "/api/cosmic/admin/reports/config", (e) => require(`${__hooks}/cosmic_db.js`).adminReportConfig(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/reports/github", (e) => require(`${__hooks}/cosmic_db.js`).adminReportGithub(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- Journal des actions d'administration ---------- */
 

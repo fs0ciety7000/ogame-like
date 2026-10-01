@@ -14,6 +14,8 @@ export interface MaintenanceState {
   startedAtMs: number;
   /** Fin prévue ; null = durée indéterminée. */
   endsAtMs: number | null;
+  /** Réouverture automatique à l'heure prévue (par défaut). */
+  autoEnd: boolean;
 }
 
 export const MAINTENANCE_KEY = "maintenance";
@@ -21,7 +23,7 @@ export const MAINTENANCE_KEY = "maintenance";
 export const DEFAULT_MAINTENANCE_MESSAGE =
   "Nos techniciens interviennent sur les serveurs de la galaxie. Ta progression est sauvegardée : production, flottes en vol et files d'attente reprendront normalement à la réouverture.";
 
-export const MAINTENANCE_OFF: MaintenanceState = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null };
+export const MAINTENANCE_OFF: MaintenanceState = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
 
 const MAX_MESSAGE = 600;
 const MAX_VERSION = 20;
@@ -37,6 +39,7 @@ export function normalizeMaintenance(raw: unknown): MaintenanceState {
     version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
     startedAtMs: Number(r.startedAtMs) || 0,
     endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
+    autoEnd: r.autoEnd !== false,
   };
 }
 
@@ -44,7 +47,7 @@ export function normalizeMaintenance(raw: unknown): MaintenanceState {
  *  garde son heure de début (le temps de pause compte depuis l'ouverture). */
 export function nextMaintenance(
   previous: MaintenanceState,
-  request: { enabled?: unknown; message?: unknown; version?: unknown; endsAtMs?: unknown },
+  request: { enabled?: unknown; message?: unknown; version?: unknown; endsAtMs?: unknown; autoEnd?: unknown },
   now: number,
 ): MaintenanceState {
   const enabled = request.enabled === true;
@@ -56,7 +59,13 @@ export function nextMaintenance(
     version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
     startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
     endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
+    autoEnd: request.autoEnd !== false,
   };
+}
+
+/** La maintenance doit-elle se terminer d'elle-même maintenant ? */
+export function maintenanceShouldAutoEnd(m: MaintenanceState, now: number): boolean {
+  return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
 }
 
 /** Temps restant avant la fin prévue (0 si dépassée, null si indéterminée). */
