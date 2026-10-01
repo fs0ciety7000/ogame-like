@@ -1,4 +1,5 @@
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
+import { ascend } from "@/game/ascension";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
@@ -46,7 +47,8 @@ export type GameAction =
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
   | { type: "hideOnboarding"; hidden: boolean }
-  | { type: "setPosture"; posture: string };
+  | { type: "setPosture"; posture: string }
+  | { type: "ascend" };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -224,6 +226,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "hideOnboarding":
       setOnboardingHidden(player, action.hidden === true);
       return player.onboarding;
+
+    case "ascend":
+      ascend(player, queues, now);
+      return { ascensions: player.ascensions };
 
     default:
       throw new GameActionError("Action inconnue.");

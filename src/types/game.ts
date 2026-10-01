@@ -105,6 +105,9 @@ export interface PlayerState {
   onboarding?: { claimed: string[]; hidden?: boolean };
   /** v3.0 : posture de la base face aux attaques. */
   posture?: { id: "standard" | "bunker" | "riposte"; changedAtMs: number };
+  /** v3.4 : nombre d'ascensions et date de la dernière. */
+  ascensions?: number;
+  ascendedAtMs?: number;
 }
 
 export interface SeasonResult {

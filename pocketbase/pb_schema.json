@@ -213,6 +213,18 @@
         "type": "json",
         "required": false,
         "maxSize": 2000
+      },
+      {
+        "name": "ascensions",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "ascendedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
@@ -1095,6 +1107,18 @@
         "required": false,
         "max": 200,
         "presentable": false
+      },
+      {
+        "name": "ascensions",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "ascendedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [

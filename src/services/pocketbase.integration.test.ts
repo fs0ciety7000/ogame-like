@@ -1006,6 +1006,27 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v3.4 ascension: resets buildings and resources, keeps the fleet, public stars and shield", async () => {
+    const before = await snap(bId);
+    const maxed = Object.fromEntries(Object.entries(before!.buildings).map(([id, b]) => [id, { ...(b as object), level: findBuilding(id)?.maxLevel ?? 20, unlocked: true }]));
+    try {
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      await admin.collection("players").update(bId, { buildings: maxed, resources: RICH, units: { chasseur: { level: 1, count: 77 } }, ascensions: 0, ascendedAtMs: 0 });
+      await ps.ascendEmpire();
+      const after = await snap(bId);
+      expect(after.ascensions).toBe(1);
+      expect(Object.values(after.buildings).every((b) => (b as { level: number }).level === 1)).toBe(true);
+      expect(after.resources.reinforcedSteel).toBe(0);
+      expect(after.units.chasseur.count).toBe(77);
+      const profile = await pb.collection("profiles").getOne(bId);
+      expect(profile.ascensions).toBe(1);
+      expect(profile.ascendedAtMs).toBeGreaterThan(0);
+      await expect(ps.ascendEmpire()).rejects.toThrow(/niveau maximal|jour/);
+    } finally {
+      await admin.collection("players").update(bId, { buildings: before!.buildings, resources: before!.resources, units: before!.units, ascensions: 0, ascendedAtMs: 0 });
+    }
+  }, 60_000);
+
   it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
     const before = await snap(bId);
     const now = Date.now();

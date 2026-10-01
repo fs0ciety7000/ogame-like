@@ -1641,118 +1641,6 @@ function finishAllianceResearch(alliance, now) {
   return { alliance: built.alliance, memberships, notifications, logs };
 }
 
-// src/game/economy.ts
-var ECONOMY_RULES = {
-  /** Énergie consommée par seconde et par place de hangar occupée. */
-  upkeepPerPlaceAttack: 0.015,
-  upkeepPerPlaceDefense: 75e-4,
-  /** Production des autres ressources pendant une panne d'énergie. */
-  outageProductionFactor: 0.5,
-  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
-  protectedStoragePct: 0.1,
-  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
-  missionProductionMultiplier: 1.5,
-  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
-  missionRareLevelDivisor: 35,
-  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 5e5
-};
-var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
-function getFleetUpkeep(units, techLevels2) {
-  let upkeep = 0;
-  for (const [id, state] of Object.entries(units != null ? units : {})) {
-    const def2 = findUnit(id);
-    if (!def2 || !(state == null ? void 0 : state.count)) continue;
-    const perPlace = def2.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
-    upkeep += state.count * def2.hangarSpace * perPlace;
-  }
-  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
-}
-function boostedRates(input, multipliers) {
-  var _a, _b;
-  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch);
-  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
-  for (const [res, m] of Object.entries(multipliers)) {
-    if (gross[res] && m) gross[res] = ((_b = gross[res]) != null ? _b : 0) * m;
-  }
-  return gross;
-}
-function addCapped(stock, gain, cap) {
-  if (gain <= 0) return Math.max(0, stock + gain);
-  if (stock >= cap) return stock;
-  return Math.min(cap, stock + gain);
-}
-function advanceResources(input, elapsedSeconds, startMs) {
-  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
-  const endMs = startMs + elapsedSeconds * 1e3;
-  let resources = input.resources;
-  let at = startMs;
-  for (const cut of [...eventBoundaries(startMs, endMs), endMs]) {
-    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at));
-    at = cut;
-  }
-  return resources;
-}
-function advanceSegment(input, elapsedSeconds, multipliers) {
-  var _a, _b, _c, _d;
-  const out = __spreadValues({}, input.resources);
-  if (elapsedSeconds <= 0) return out;
-  const gross = boostedRates(input, multipliers);
-  const upkeep = getFleetUpkeep(input.units, input.techLevels);
-  const capacity = getStorageCapacity(input.buildings, input.techLevels);
-  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
-  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
-  const energyStock = (_b = out.energy) != null ? _b : 0;
-  let normalSeconds = elapsedSeconds;
-  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
-  const outageSeconds = elapsedSeconds - normalSeconds;
-  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
-  if (outageSeconds > 0) out.energy = 0;
-  for (const r of RESOURCE_LIST) {
-    if (r.id === "energy") continue;
-    const rate = (_c = gross[r.id]) != null ? _c : 0;
-    if (!rate) continue;
-    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
-    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
-  }
-  return out;
-}
-function protectedAmount(buildings, res, techLevels2, allianceLevels) {
-  if (!COMMON_RESOURCES2.includes(res)) return 0;
-  const capacity = getStorageCapacity(buildings, techLevels2);
-  const bastion = allianceBastionBonus(allianceLevels);
-  const pct4 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct4) : 0;
-}
-function rareRewardScale(player) {
-  var _a;
-  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
-  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
-    var _a2;
-    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
-  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
-  const ref = ECONOMY_RULES.missionRareProductionRef;
-  const production = ref > 0 ? perHour / ref : 0;
-  return Math.max(development, production);
-}
-function missionRewards(mission, player) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const rareScale = rareRewardScale(player);
-  const out = {};
-  for (const [res, fixed] of Object.entries(mission.reward)) {
-    if (res === "xp") out.xp = fixed;
-    else if (COMMON_RESOURCES2.includes(res)) {
-      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
-      out[res] = Math.max(fixed, indexed);
-    } else out[res] = Math.floor(fixed * rareScale);
-  }
-  return out;
-}
-
 // src/game/seasons.ts
 var SEASON_MONTHS = [
   "Janvier",
@@ -1871,6 +1759,228 @@ function setActiveTitle(player, label2) {
   var _a;
   if (label2 && !((_a = player.titles) != null ? _a : []).some((t) => t.label === label2)) throw new GameActionError("Tu n'as pas gagn\xE9 ce titre.");
   player.activeTitle = label2;
+}
+
+// src/game/defaults.ts
+function defaultResources() {
+  return {
+    scrap: 100,
+    energy: 50,
+    nano: 0,
+    data: 0,
+    reinforcedSteel: 0,
+    cyberModule: 0,
+    syntheticNanites: 0,
+    aiFragment: 0
+  };
+}
+function defaultPlayerState(uid, pseudo) {
+  return {
+    uid,
+    pseudo,
+    resources: defaultResources(),
+    buildings: defaultBuildings(),
+    units: {},
+    techLevels: {},
+    bonuses: {
+      energyEfficiency: 0,
+      unitDefenseBonus: 0,
+      unitAttackBonus: 0,
+      buildingUpgradeDiscount: 0,
+      unlockedRecipes: 0
+    },
+    xp: 0,
+    seasonId: currentSeasonId(),
+    seasonXp: 0,
+    victories: 0,
+    defeats: 0,
+    playtimeSeconds: 0,
+    resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
+    unlockedAchievements: []
+  };
+}
+function defaultQueues() {
+  return {
+    buildingUpgrades: {},
+    unitQueues: { attack: [], defense: [] },
+    activeResearches: [],
+    activeMissions: []
+  };
+}
+
+// src/game/ascension.ts
+var ASCENSION_RULES = {
+  productionPerAscension: 0.1,
+  buildTimePerAscension: 0.05,
+  maxAscensions: 5,
+  cooldownDays: 7,
+  shieldHours: 72,
+  upkeepFreeDays: 7
+};
+var DAY2 = 24 * 36e5;
+function ascensionCount(player) {
+  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
+}
+function ascensionProductionFactor(player) {
+  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
+}
+function ascensionBuildTimeFactor(player) {
+  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
+}
+function upkeepFreeUntil(player) {
+  const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY2 : 0;
+}
+function canAscend(player, queues, now) {
+  var _a;
+  const missing = BUILDINGS.filter((b) => {
+    var _a2, _b;
+    return ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
+  }).map((b) => {
+    var _a2, _b;
+    return {
+      id: b.id,
+      name: b.name,
+      level: (_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0,
+      maxLevel: b.maxLevel
+    };
+  });
+  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
+  if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY2 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY2)} jour(s).`, missing };
+  if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
+  return { ok: true, missing };
+}
+function ascend(player, queues, now) {
+  var _a;
+  const check = canAscend(player, queues, now);
+  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
+  for (const b of BUILDINGS) {
+    const cur = player.buildings[b.id];
+    player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
+  }
+  player.resources = defaultResources();
+  player.resourceHistory = [];
+  player.ascensions = ascensionCount(player) + 1;
+  player.ascendedAtMs = now;
+  bumpStat(player, "ascensions");
+}
+
+// src/game/economy.ts
+var ECONOMY_RULES = {
+  /** Énergie consommée par seconde et par place de hangar occupée. */
+  upkeepPerPlaceAttack: 0.015,
+  upkeepPerPlaceDefense: 75e-4,
+  /** Production des autres ressources pendant une panne d'énergie. */
+  outageProductionFactor: 0.5,
+  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
+  protectedStoragePct: 0.1,
+  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
+  missionProductionMultiplier: 1.5,
+  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
+  missionRareLevelDivisor: 35,
+  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
+  missionRareProductionRef: 5e5
+};
+var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+function getFleetUpkeep(units, techLevels2) {
+  let upkeep = 0;
+  for (const [id, state] of Object.entries(units != null ? units : {})) {
+    const def2 = findUnit(id);
+    if (!def2 || !(state == null ? void 0 : state.count)) continue;
+    const perPlace = def2.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
+    upkeep += state.count * def2.hangarSpace * perPlace;
+  }
+  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
+}
+function boostedRates(input, multipliers) {
+  var _a, _b;
+  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input);
+  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
+  for (const [res, m] of Object.entries(multipliers)) {
+    if (gross[res] && m) gross[res] = ((_b = gross[res]) != null ? _b : 0) * m;
+  }
+  return gross;
+}
+function addCapped(stock, gain, cap) {
+  if (gain <= 0) return Math.max(0, stock + gain);
+  if (stock >= cap) return stock;
+  return Math.min(cap, stock + gain);
+}
+function advanceResources(input, elapsedSeconds, startMs) {
+  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  const endMs = startMs + elapsedSeconds * 1e3;
+  let resources = input.resources;
+  let at = startMs;
+  const freeUntil = upkeepFreeUntil(input);
+  const cuts = [...eventBoundaries(startMs, endMs), ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [], endMs].sort((a, b) => a - b);
+  for (const cut of cuts) {
+    if (cut <= at) continue;
+    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil);
+    at = cut;
+  }
+  return resources;
+}
+function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false) {
+  var _a, _b, _c, _d;
+  const out = __spreadValues({}, input.resources);
+  if (elapsedSeconds <= 0) return out;
+  const gross = boostedRates(input, multipliers);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const capacity = getStorageCapacity(input.buildings, input.techLevels);
+  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const energyStock = (_b = out.energy) != null ? _b : 0;
+  let normalSeconds = elapsedSeconds;
+  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
+  const outageSeconds = elapsedSeconds - normalSeconds;
+  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
+  if (outageSeconds > 0) out.energy = 0;
+  for (const r of RESOURCE_LIST) {
+    if (r.id === "energy") continue;
+    const rate = (_c = gross[r.id]) != null ? _c : 0;
+    if (!rate) continue;
+    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
+    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
+  }
+  return out;
+}
+function protectedAmount(buildings, res, techLevels2, allianceLevels) {
+  if (!COMMON_RESOURCES2.includes(res)) return 0;
+  const capacity = getStorageCapacity(buildings, techLevels2);
+  const bastion = allianceBastionBonus(allianceLevels);
+  const pct4 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct4) : 0;
+}
+function rareRewardScale(player) {
+  var _a;
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
+    var _a2;
+    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
+  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
+  const ref = ECONOMY_RULES.missionRareProductionRef;
+  const production = ref > 0 ? perHour / ref : 0;
+  return Math.max(development, production);
+}
+function missionRewards(mission, player) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const rareScale = rareRewardScale(player);
+  const out = {};
+  for (const [res, fixed] of Object.entries(mission.reward)) {
+    if (res === "xp") out.xp = fixed;
+    else if (COMMON_RESOURCES2.includes(res)) {
+      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
+      out[res] = Math.max(fixed, indexed);
+    } else out[res] = Math.floor(fixed * rareScale);
+  }
+  return out;
 }
 
 // src/game/contracts.ts
@@ -3248,6 +3358,8 @@ var PVP_RULES = {
   shieldAfterDefeatMs: 60 * 60 * 1e3,
   /** Protection débutant (levée dès que le joueur attaque lui-même). */
   newbieProtectionMs: 72 * 60 * 60 * 1e3,
+  /** v3.4 : bouclier après une ascension. */
+  ascensionShieldMs: 72 * 60 * 60 * 1e3,
   /** Impossible d'attaquer un joueur N fois moins expérimenté… */
   maxXpRatio: 3,
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
@@ -3319,6 +3431,12 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
+  if (ctx.defenderAscendedAtMs) {
+    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
+    if (now < until) {
+      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
+    }
+  }
   if (ctx.lastAttackOnTargetMs !== null) {
     const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
     if (now < until) {
@@ -3353,6 +3471,7 @@ function performAttack(input) {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null
   });
   if (!check.allowed) return { ok: false, message: (_e = check.message) != null ? _e : "Attaque impossible." };
@@ -3513,7 +3632,7 @@ function performAttack(input) {
 
 // src/game/bonuses.ts
 function playerBuildTimeFactor(player, now) {
-  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch);
+  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player);
 }
 function playerResearchTimeFactor(player, now) {
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch);
@@ -3700,54 +3819,6 @@ function setOnboardingHidden(player, hidden) {
   player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
 }
 
-// src/game/defaults.ts
-function defaultResources() {
-  return {
-    scrap: 100,
-    energy: 50,
-    nano: 0,
-    data: 0,
-    reinforcedSteel: 0,
-    cyberModule: 0,
-    syntheticNanites: 0,
-    aiFragment: 0
-  };
-}
-function defaultPlayerState(uid, pseudo) {
-  return {
-    uid,
-    pseudo,
-    resources: defaultResources(),
-    buildings: defaultBuildings(),
-    units: {},
-    techLevels: {},
-    bonuses: {
-      energyEfficiency: 0,
-      unitDefenseBonus: 0,
-      unitAttackBonus: 0,
-      buildingUpgradeDiscount: 0,
-      unlockedRecipes: 0
-    },
-    xp: 0,
-    seasonId: currentSeasonId(),
-    seasonXp: 0,
-    victories: 0,
-    defeats: 0,
-    playtimeSeconds: 0,
-    resourcesUpdatedAtMs: Date.now(),
-    resourceHistory: [],
-    unlockedAchievements: []
-  };
-}
-function defaultQueues() {
-  return {
-    buildingUpgrades: {},
-    unitQueues: { attack: [], defense: [] },
-    activeResearches: [],
-    activeMissions: []
-  };
-}
-
 // src/game/actions.ts
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
@@ -3895,6 +3966,9 @@ function applyAction(s, action) {
     case "hideOnboarding":
       setOnboardingHidden(player, action.hidden === true);
       return player.onboarding;
+    case "ascend":
+      ascend(player, queues, now);
+      return { ascensions: player.ascensions };
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -3983,7 +4057,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 
 // src/game/analytics.ts
 var HOUR2 = 36e5;
-var DAY2 = 24 * HOUR2;
+var DAY3 = 24 * HOUR2;
 function median(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -4077,7 +4151,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY2;
+  const since = now - windowDays * DAY3;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -4087,11 +4161,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY2;
-    const d = new Date(start + DAY2);
+    const start = now - (windowDays - i) * DAY3;
+    const d = new Date(start + DAY3);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY2).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY3).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -4102,11 +4176,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY2).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY2).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY3).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY3).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY2;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY3;
       }).length,
       medianPlaytimeHours: round1(median(players.map((p) => {
         var _a;
@@ -4182,19 +4256,19 @@ function computeBalance(players, reports, now, windowDays) {
     var _a2;
     return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
   };
-  const days = (ms) => Math.floor(ms / DAY2);
-  const since = now - windowDays * DAY2;
+  const days = (ms) => Math.floor(ms / DAY3);
+  const since = now - windowDays * DAY3;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY2 && now - seen(p) < 30 * DAY2).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY3 && now - seen(p) < 30 * DAY3).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY2]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY3]);
   });
   const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -4224,7 +4298,7 @@ function computeBalance(players, reports, now, windowDays) {
       lairWinPct: pct3(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY2);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY3);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -4246,9 +4320,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY2).length,
+      active1d: players.filter((p) => now - seen(p) < DAY3).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY2).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY3).length,
       dormant
     },
     rankAge,
@@ -5044,6 +5118,7 @@ function launchFleet(input) {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 36e5 : void 0
   });
@@ -5415,7 +5490,9 @@ var GAME_FIELDS = [
   "pirates",
   "stats",
   "onboarding",
-  "posture"
+  "posture",
+  "ascensions",
+  "ascendedAtMs"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 

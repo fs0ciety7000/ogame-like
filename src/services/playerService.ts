@@ -248,6 +248,9 @@ export interface LeaderboardEntry {
   lastAttackAtMs?: number;
   allianceId?: string;
   activeTitle?: string;
+  /** v3.4 */
+  ascensions?: number;
+  ascendedAtMs?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -262,10 +265,12 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
     allianceId: (data.allianceId as string) || undefined,
     activeTitle: (data.activeTitle as string) || undefined,
+    ascensions: (data.ascensions as number) || 0,
+    ascendedAtMs: (data.ascendedAtMs as number) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -570,4 +575,9 @@ export async function fetchAchievementRates(): Promise<{ players: number; counts
   } catch {
     return { players: 0, counts: {} };
   }
+}
+
+/** v3.4 : ascension (bâtiments au niveau 1 contre un bonus permanent). */
+export function ascendEmpire() {
+  return act<{ ascensions: number }>({ type: "ascend" });
 }

@@ -1,3 +1,4 @@
+import { AscensionStars } from "@/components/game/AscensionCard";
 import { useState } from "react";
 import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
@@ -128,6 +129,7 @@ function CommanderCard() {
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-[0.04em] text-white">
             <span className="truncate">{player.pseudo}</span>
+            <AscensionStars count={player.ascensions} />
             <StaffBadge uid={player.uid} compact />
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">{getRankLabel(player.xp)}</p>

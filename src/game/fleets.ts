@@ -163,6 +163,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
   });

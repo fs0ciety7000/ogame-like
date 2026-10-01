@@ -5,6 +5,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
 import { allianceBastionBonus, allianceProductionFactor } from "@/game/alliances";
+import { ascensionProductionFactor, upkeepFreeUntil } from "@/game/ascension";
 import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
@@ -40,6 +41,9 @@ export interface EconomyInput {
   resources: Partial<Resources>;
   /** Recherches de l'alliance du joueur (Industrie coopérative). */
   allianceResearch?: Record<string, number>;
+  /** v3.4 : ascensions (bonus de production) et date de la dernière (entretien suspendu). */
+  ascensions?: number;
+  ascendedAtMs?: number;
 }
 
 /** Énergie consommée par seconde par les unités construites. */
@@ -71,7 +75,7 @@ export interface EconomySnapshot {
 /** Production brute, avec les bonus d'événement donnés. */
 function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>): Partial<Resources> {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input);
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
@@ -82,7 +86,7 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 /** `now` : applique les bonus de l'événement en cours à cet instant. */
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
   const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now));
-  const upkeep = getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const energyNet = (gross.energy ?? 0) - upkeep;
   const outage = energyNet < 0 && (input.resources.energy ?? 0) <= 0;
@@ -116,19 +120,23 @@ export function advanceResources(input: EconomyInput, elapsedSeconds: number, st
   const endMs = startMs + elapsedSeconds * 1000;
   let resources = input.resources;
   let at = startMs;
-  for (const cut of [...eventBoundaries(startMs, endMs), endMs]) {
-    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at));
+  // v3.4 : l'entretien de flotte reprend à la fin de la suspension d'ascension.
+  const freeUntil = upkeepFreeUntil(input);
+  const cuts = [...eventBoundaries(startMs, endMs), ...(freeUntil > startMs && freeUntil < endMs ? [freeUntil] : []), endMs].sort((a, b) => a - b);
+  for (const cut of cuts) {
+    if (cut <= at) continue;
+    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at), at < freeUntil);
     at = cut;
   }
   return resources as Resources;
 }
 
-function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>): Resources {
+function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>, upkeepFree = false): Resources {
   const out = { ...input.resources } as Resources;
   if (elapsedSeconds <= 0) return out;
 
   const gross = boostedRates(input, multipliers);
-  const upkeep = getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
 

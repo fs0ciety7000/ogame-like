@@ -136,7 +136,7 @@ function logAdminAction(e, action, before, after) {
 
 /* ---------- Fiche publique (collection profiles) ---------- */
 
-const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle"];
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs"];
 
 /** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
  *  complète (ressources, flotte…) n'est plus lisible par les autres. */

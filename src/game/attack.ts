@@ -79,6 +79,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
