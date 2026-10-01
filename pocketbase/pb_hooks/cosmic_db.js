@@ -234,6 +234,8 @@ function resolveFleetArrival(txApp, game, rec, now) {
   const mission = rec.getString("mission") || "attack";
   if (mission === "spy") return resolveSpyArrival(txApp, game, rec, now);
   if (mission === "recycle") return resolveRecycleArrival(txApp, game, rec, now);
+  if (mission === "pirate") return resolvePirateArrival(txApp, game, rec, now);
+  if (mission === "lair") return resolveLairArrival(txApp, game, rec, now);
   if (mission === "garrison") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
@@ -319,6 +321,151 @@ function resolveRecycleArrival(txApp, game, rec, now) {
 /** Garnisons alliées stationnées chez un joueur. */
 function stationedGarrisons(txApp, hostUid) {
   return txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && status = "stationed"', "arriveAtMs", 10, 0, { h: hostUid });
+}
+
+/* ---------- La Liste de Varan (pirates, v2.0) ---------- */
+
+/** Crée la flotte du Silencieux vers un joueur. */
+function createPirateRaid(txApp, game, player, raid, now) {
+  const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
+  rec.load({
+    ownerUid: game.PIRATE_OWNER_UID,
+    ownerPseudo: game.PIRATE_RAIDER,
+    targetUid: player.uid,
+    targetPseudo: player.pseudo,
+    mission: "pirate",
+    units: {},
+    power: raid.power,
+    departAtMs: now,
+    arriveAtMs: raid.arriveAtMs,
+    returnAtMs: null,
+    status: "outbound",
+    loot: null,
+    reportId: "",
+    outcome: "",
+    recalled: false,
+  });
+  txApp.save(rec);
+}
+
+function resolvePirateArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  rec.set("status", "done");
+  if (!findOrNull(txApp, "players", fleet.targetUid)) {
+    txApp.save(rec);
+    return;
+  }
+  const loaded = loadPlayer(txApp, game, fleet.targetUid);
+  const garrisonRecs = stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid")));
+  const garrisons = garrisonRecs.map((g) => {
+    const owner = toPlain(txApp.findRecordById("players", g.getString("ownerUid")));
+    const gf = fleetFromRecord(g);
+    return { ownerUid: gf.ownerUid, ownerPseudo: gf.ownerPseudo, units: owner.units || {}, techLevels: owner.techLevels || {}, fleet: gf.units };
+  });
+  const out = game.resolvePirateRaid(loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now);
+  savePlayer(txApp, game, loaded, out.player, out.queues);
+  notify(txApp, fleet.targetUid, out.notifications);
+  const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
+  report.load(out.report);
+  txApp.save(report);
+  garrisonRecs.forEach((g, i) => {
+    const losses = (out.combat.garrisonLosses || [])[i] || {};
+    const units = Object.assign({}, fleetFromRecord(g).units);
+    Object.keys(losses).forEach((k) => (units[k] = Math.max(0, (units[k] || 0) - losses[k])));
+    g.set("units", units);
+    if (!Object.keys(units).some((k) => units[k] > 0)) g.set("status", "done");
+    txApp.save(g);
+  });
+  if (game.debrisTotal(out.debris) > 0) {
+    const debris = loadDebris(txApp, fleet.targetUid);
+    saveDebris(txApp, debris, game.mergeDebris(debris.field, out.debris, { uid: fleet.targetUid, pseudo: fleet.targetPseudo }, now));
+  }
+  rec.set("reportId", report.id);
+  rec.set("outcome", out.combat.outcome);
+  txApp.save(rec);
+}
+
+function resolveLairArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const loaded = loadPlayer(txApp, game, fleet.ownerUid);
+  // Les vaisseaux sont partis : on les remet « à bord » le temps du combat.
+  const player = loaded.player;
+  Object.keys(fleet.units).forEach((id) => {
+    const st = player.units[id] || { level: 1, count: 0 };
+    player.units[id] = Object.assign({}, st, { count: st.count + fleet.units[id] });
+  });
+  const out = game.resolveLairAssault(player, loaded.queues, fleet.units, rec.getFloat("power"), now);
+  Object.keys(fleet.units).forEach((id) => {
+    if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
+  });
+  savePlayer(txApp, game, loaded, out.player, out.queues);
+  notify(txApp, fleet.ownerUid, out.notifications);
+  const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
+  report.load(out.report);
+  txApp.save(report);
+  const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
+  rec.set("units", out.survivors);
+  rec.set("reportId", report.id);
+  rec.set("outcome", out.combat.outcome);
+  rec.set("status", anyLeft ? "returning" : "done");
+  rec.set("returnAtMs", anyLeft ? now + tripMs : null);
+  txApp.save(rec);
+}
+
+/** Passage périodique : Liste, ultimatums expirés (raids). `uid` : un seul joueur. */
+function processPirates(game, now, uid, force) {
+  const recs = uid ? [findOrNull($app, "players", uid)].filter(Boolean) : $app.findAllRecords("players");
+  let changed = 0;
+  recs.forEach((candidate) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = txApp.findRecordById("players", candidate.id);
+        const player = toPlain(rec);
+        player.uid = rec.id;
+        const out = game.pirateTick(player, now, Math.random, !!force);
+        if (!out.changed) return;
+        rec.set("pirates", player.pirates);
+        txApp.save(rec);
+        notify(txApp, rec.id, out.notifications);
+        if (out.raid) createPirateRaid(txApp, game, player, out.raid, now);
+        changed++;
+      });
+    } catch (err) {
+      console.log(`[cosmic] pirates (${candidate.id}) : ${err}`);
+    }
+  });
+  return changed;
+}
+
+/** POST /api/cosmic/pirates { answer: "pay" | "refuse" } */
+function piratesRequest(e) {
+  const game = loadGame();
+  const answer = body(e).answer === "pay" ? "pay" : "refuse";
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, e.auth.id);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    let out;
+    try {
+      out = game.answerUltimatum(flushed.player, answer, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    notify(txApp, e.auth.id, flushed.notifications.concat(out.notifications));
+    if (out.raid) createPirateRaid(txApp, game, flushed.player, out.raid, now);
+    response = { answer, raid: out.raid };
+  });
+  return e.json(200, response);
 }
 
 /** Combat à l'arrivée d'une flotte, puis demi-tour avec survivants et butin. */
@@ -468,7 +615,7 @@ function launchFleetRequest(e) {
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
   const targetUid = mission === "patrol" ? attackerUid : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -868,4 +1015,4 @@ function adminReset(e) {
   return e.json(200, summary);
 }
 
-module.exports = { adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

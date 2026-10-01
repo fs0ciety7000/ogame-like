@@ -125,6 +125,16 @@ export async function adminHardReset(params: { scope: "all" | "player"; uid?: st
   }
 }
 
+/** Passe la Liste de Varan pour un joueur (force : ultimatum immédiat). */
+export async function adminTriggerPirates(uid: string, force = true): Promise<{ changed: number }> {
+  try {
+    return await pb.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid, force } });
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Impossible.");
+  }
+}
+
 export interface HooksUpdateReport {
   branch: string;
   updated: string[];

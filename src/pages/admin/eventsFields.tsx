@@ -148,6 +148,30 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         </Button>
       </Section>
 
+      <Section title="Pirates (La Liste de Varan)">
+        <CheckboxField label="Raids pirates actifs" checked={rules.pirates.enabled} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, enabled: v } }))} />
+        <NumberField label="Liste : délai minimal entre deux inscriptions (h)" value={rules.pirates.minIntervalHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, minIntervalHours: v ?? 0 } }))} />
+        <NumberField label="Liste : délai maximal (h)" value={rules.pirates.maxIntervalHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, maxIntervalHours: v ?? 0 } }))} />
+        <NumberField label="Joueurs visés : actifs dans les dernières (h)" value={rules.pirates.activeWithinHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, activeWithinHours: v ?? 0 } }))} />
+        <NumberField label="Tribut : heures de production" value={rules.pirates.tributeHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, tributeHours: v ?? 0 } }))} />
+        <NumberField label="Délai de réponse à l'ultimatum (h)" value={rules.pirates.answerHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, answerHours: v ?? 0 } }))} />
+        <NumberField label="Trajet du raid après refus (h)" value={rules.pirates.raidTravelHours} min={0} step={0.25} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, raidTravelHours: v ?? 0 } }))} />
+        <NumberField label="Force : part de la puissance défensive (0,7 = 70 %)" value={rules.pirates.basePct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, basePct: v ?? 0 } }))} />
+        <NumberField label="Force : + par point de Notoriété (0,1 = 10 %)" value={rules.pirates.perNotorietyPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, perNotorietyPct: v ?? 0 } }))} />
+        <NumberField label="Notoriété maximale" value={rules.pirates.maxNotoriety} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, maxNotoriety: v ?? 0 } }))} />
+        <NumberField label="Force minimale : fixe" value={rules.pirates.floorPower} min={0} step={50} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, floorPower: v ?? 0 } }))} />
+        <NumberField label="Force minimale : par niveau de bâtiment" value={rules.pirates.floorPerBuildingLevel} min={0} step={5} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, floorPerBuildingLevel: v ?? 0 } }))} />
+        <NumberField label="Pillage en cas de défaite (0,1 = 10 %)" value={rules.pirates.lootPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lootPct: v ?? 0 } }))} />
+        <NumberField label="Raid repoussé : heures de production offertes" value={rules.pirates.bountyHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, bountyHours: v ?? 0 } }))} />
+        <NumberField label="Raid repoussé : XP" value={rules.pirates.bountyXp} min={0} step={5} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, bountyXp: v ?? 0 } }))} />
+        <NumberField label="Débris par point de puissance pirate détruite" value={rules.pirates.debrisPerPower} min={0} step={0.1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, debrisPerPower: v ?? 0 } }))} />
+        <NumberField label="Raids repoussés pour localiser le repaire" value={rules.pirates.raidsForLair} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, raidsForLair: v ?? 0 } }))} />
+        <NumberField label="Repaire : force (× puissance défensive)" value={rules.pirates.lairPct} min={0} step={0.1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairPct: v ?? 0 } }))} />
+        <NumberField label="Repaire : heures de production" value={rules.pirates.lairRewardHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairRewardHours: v ?? 0 } }))} />
+        <NumberField label="Repaire : bonus de chaque rare" value={rules.pirates.lairRare} min={0} step={50} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairRare: v ?? 0 } }))} />
+        <NumberField label="Repaire : XP" value={rules.pirates.lairXp} min={0} step={10} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairXp: v ?? 0 } }))} />
+        <TextField label="Repaire : titre décerné" value={rules.pirates.lairTitle} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairTitle: v } }))} />
+      </Section>
       <Section title="Alliances">
         <NumberField label="Membres maximum par alliance" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
         <NumberField label="Versement : part max du stock (0,2 = 20 %)" value={rules.alliances.distributionMaxPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionMaxPct: v ?? 0 } }))} />

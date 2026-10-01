@@ -10,6 +10,7 @@ import { useFxStore } from "@/store/fxStore";
 import { economySnapshot } from "@/game/economy";
 import { HostileFleetAlert } from "@/components/game/FleetsPanel";
 import { EventBadge } from "@/components/game/EventBanner";
+import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
 
 export function ResourceHud() {
@@ -73,6 +74,7 @@ export function ResourceHud() {
 
       <HostileFleetAlert />
       <EventBadge />
+      <UltimatumBadge />
       {economy.outage && (
         <Tooltip>
           <TooltipTrigger asChild>

@@ -20,6 +20,7 @@ import {
 import { NumberField, Section } from "@/pages/admin/fields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
+import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -570,6 +571,7 @@ export function ToolsPanel() {
         </Button>
       </Card>
 
+      <PirateTriggerCard />
       <HardResetCard />
 
       <Card className="flex flex-col gap-2 border-danger-glow/30 p-4">

@@ -26,6 +26,7 @@ import { WarpOverlay } from "@/components/game/WarpOverlay";
 import { RankUpCelebration } from "@/components/game/RankUpCelebration";
 import { FxLayer } from "@/components/game/FxLayer";
 import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
+import { UltimatumDialog } from "@/components/game/PirateUltimatum";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { toggleCommandPalette } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
@@ -187,6 +188,7 @@ export function AppShell() {
       <WarpOverlay />
       <RankUpCelebration />
       <AwaySummaryModal />
+      <UltimatumDialog />
       <CommandPalette />
       <FxLayer />
     </div>

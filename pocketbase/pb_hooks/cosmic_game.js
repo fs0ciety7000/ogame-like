@@ -50,10 +50,13 @@ __export(hooksEntry_exports, {
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
+  PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
+  PIRATE_RAIDER: () => PIRATE_RAIDER,
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
   allianceStandings: () => allianceStandings,
+  answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
@@ -75,10 +78,13 @@ __export(hooksEntry_exports, {
   performLaunch: () => performLaunch,
   performPlayerAction: () => performPlayerAction,
   performSeasonReward: () => performSeasonReward,
+  pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
   recallFleet: () => recallFleet,
   recyclerCapacity: () => recyclerCapacity,
   resetPlayerState: () => resetPlayerState,
+  resolveLairAssault: () => resolveLairAssault,
+  resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
@@ -717,15 +723,18 @@ function computeFullPower(units, techLevels, idList, stats) {
   });
   return total;
 }
+function homeDefensePower(units, techLevels) {
+  return (computeFullPower(units, techLevels, DEFENSIVE_UNITS, ["attack", "defense"]) + computeFullPower(units, techLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
+}
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
-  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
-  const garrisons = (_b = params.garrisons) != null ? _b : [];
-  const garrisonFactor = (_c = params.garrisonFactor) != null ? _c : 0.5;
+  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * (1 - shield);
+  const garrisons = (_c = params.garrisons) != null ? _c : [];
+  const garrisonFactor = (_d = params.garrisonFactor) != null ? _d : 0.5;
   const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const defenderPower = (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) + computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) * (1 + COMBAT_RULES.homeDefenseBonus) + garrisonPower;
+  const defenderPower = (_e = params.defenderPowerOverride) != null ? _e : homeDefensePower(defenderUnits, defenderTechLevels) + garrisonPower;
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
   let outcome;
@@ -782,7 +791,7 @@ function resolveCombat(params) {
     return lost;
   });
   const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_d = attackerLosses[unitId]) != null ? _d : 0));
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_f = attackerLosses[unitId]) != null ? _f : 0));
   const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
   let loot = null;
   if (outcome === "attacker_win") {
@@ -790,8 +799,8 @@ function resolveCombat(params) {
     let total = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct2 = Math.min(1, base * ((_e = params.lootMultiplier) != null ? _e : 1));
-      const amount = Math.floor(Math.max(0, (_f = defenderResources[res]) != null ? _f : 0) * pct2);
+      const pct2 = Math.min(1, base * ((_g = params.lootMultiplier) != null ? _g : 1));
+      const amount = Math.floor(Math.max(0, (_h = defenderResources[res]) != null ? _h : 0) * pct2);
       wanted[res] = amount;
       total += amount;
     }
@@ -806,8 +815,8 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount]) => ({ res, frac: amount * ratio - Math.floor(amount * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_g = loot[res]) != null ? _g : 0) < ((_h = wanted[res]) != null ? _h : 0)) {
-        loot[res] = ((_i = loot[res]) != null ? _i : 0) + 1;
+      if (((_i = loot[res]) != null ? _i : 0) < ((_j = wanted[res]) != null ? _j : 0)) {
+        loot[res] = ((_k = loot[res]) != null ? _k : 0) + 1;
         left--;
       }
     }
@@ -2122,9 +2131,9 @@ function capDefenderXpLoss(defenderXp, alreadyLost) {
 function formatWait(ms) {
   const minutes = Math.ceil(ms / 6e4);
   if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
+  const hours2 = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+  return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
 }
 function checkAttackAllowed(ctx) {
   const { now } = ctx;
@@ -2824,6 +2833,333 @@ function galaxyCoords(uid) {
   };
 }
 
+// src/game/pirates.ts
+var PIRATE_RULES = {
+  enabled: true,
+  /** Délai entre deux inscriptions sur la Liste (tirage uniforme), en heures. */
+  minIntervalHours: 72,
+  maxIntervalHours: 96,
+  /** Seuls les joueurs actifs récemment sont visés. */
+  activeWithinHours: 72,
+  /** Tribut : heures de production des ressources communes. */
+  tributeHours: 6,
+  /** Délai de réponse à l'ultimatum. */
+  answerHours: 12,
+  /** Trajet du raid après un refus. */
+  raidTravelHours: 2,
+  /** Force du raid : puissance défensive × (base + parPoint × Notoriété). */
+  basePct: 0.7,
+  perNotorietyPct: 0.1,
+  maxNotoriety: 8,
+  /** Force minimale (bases sans défense) : fixe + par niveau de bâtiment. */
+  floorPower: 300,
+  floorPerBuildingLevel: 40,
+  /** Pillage en cas de défaite : part des ressources communes. */
+  lootPct: 0.1,
+  /** Raid repoussé : prime (heures de production), XP, débris par point de puissance détruit. */
+  bountyHours: 4,
+  bountyXp: 25,
+  debrisPerPower: 1,
+  /** Repaire de Varan. */
+  raidsForLair: 5,
+  lairPct: 1.5,
+  lairRewardHours: 24,
+  lairRare: 300,
+  lairXp: 100,
+  lairTitle: "Fl\xE9au de la Confr\xE9rie"
+};
+var PIRATE_OWNER_UID = "pirates";
+var PIRATE_LAIR_UID = "pirates_lair";
+var PIRATE_RAIDER = "Le Silencieux";
+var PIRATE_LAIR_NAME = "Repaire de Varan";
+function pirateState(player) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  const p = player.pirates;
+  return {
+    notoriety: Math.max(0, Math.min(PIRATE_RULES.maxNotoriety, (_a = p == null ? void 0 : p.notoriety) != null ? _a : 0)),
+    repelled: (_b = p == null ? void 0 : p.repelled) != null ? _b : 0,
+    lairOpen: (_c = p == null ? void 0 : p.lairOpen) != null ? _c : false,
+    nextListAtMs: (_d = p == null ? void 0 : p.nextListAtMs) != null ? _d : 0,
+    ultimatum: (_e = p == null ? void 0 : p.ultimatum) != null ? _e : null,
+    raidUntilMs: (_f = p == null ? void 0 : p.raidUntilMs) != null ? _f : 0,
+    raidsWon: (_g = p == null ? void 0 : p.raidsWon) != null ? _g : 0,
+    raidsLost: (_h = p == null ? void 0 : p.raidsLost) != null ? _h : 0,
+    tributesPaid: (_i = p == null ? void 0 : p.tributesPaid) != null ? _i : 0,
+    lairsTaken: (_j = p == null ? void 0 : p.lairsTaken) != null ? _j : 0
+  };
+}
+function hours(h) {
+  return h * 36e5;
+}
+function nextListDelay(random) {
+  const span = Math.max(0, PIRATE_RULES.maxIntervalHours - PIRATE_RULES.minIntervalHours);
+  return hours(PIRATE_RULES.minIntervalHours + random() * span);
+}
+function productionHours(player, h) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const out = {};
+  for (const res of COMMON_RESOURCES2) {
+    const n = Math.floor(((_a = rates[res]) != null ? _a : 0) * h * 3600);
+    if (n > 0) out[res] = n;
+  }
+  return out;
+}
+function defensivePower(player) {
+  var _a, _b;
+  return homeDefensePower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {});
+}
+function raidPower(player, notoriety) {
+  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const floor = PIRATE_RULES.floorPower + PIRATE_RULES.floorPerBuildingLevel * levels;
+  const pct2 = PIRATE_RULES.basePct + PIRATE_RULES.perNotorietyPct * notoriety;
+  return Math.round(Math.max(floor, defensivePower(player) * pct2));
+}
+function note2(kind, title, message, now) {
+  return { kind, title, message, createdAtMs: now, read: false };
+}
+function pirateTick(player, now, random = Math.random, force = false) {
+  var _a, _b;
+  const out = { changed: false, raid: null, notifications: [] };
+  if (!PIRATE_RULES.enabled) return out;
+  const st = pirateState(player);
+  if (st.ultimatum && now >= st.ultimatum.expiresAtMs) {
+    const raid = launchRaid(player, st, now, random);
+    out.raid = raid;
+    out.changed = true;
+    out.notifications.push(
+      note2("fleet", "Le Silencieux arrive", `Tu n'as pas r\xE9pondu \xE0 Varan : un raid pirate frappera ta base dans ${Math.max(1, Math.round(PIRATE_RULES.raidTravelHours * 60))} min.`, now)
+    );
+    return out;
+  }
+  if (!st.nextListAtMs && !force) {
+    st.nextListAtMs = now + nextListDelay(random);
+    player.pirates = st;
+    out.changed = true;
+    return out;
+  }
+  const eligible = !st.ultimatum && st.raidUntilMs <= now && (force || now >= st.nextListAtMs && now - ((_a = player.createdAtMs) != null ? _a : 0) >= hours(72) && now - ((_b = player.resourcesUpdatedAtMs) != null ? _b : 0) <= hours(PIRATE_RULES.activeWithinHours));
+  if (!eligible) return out;
+  const tribute = productionHours(player, PIRATE_RULES.tributeHours);
+  st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(PIRATE_RULES.answerHours) };
+  player.pirates = st;
+  out.changed = true;
+  out.notifications.push(
+    note2(
+      "fleet",
+      "Ton nom est sur la Liste",
+      `Le capitaine Varan exige un tribut de ${formatInt(Object.values(tribute).reduce((a, b) => a + (b != null ? b : 0), 0))} ressources. R\xE9ponds avant ${PIRATE_RULES.answerHours} h, ou le Silencieux viendra se servir.`,
+      now
+    )
+  );
+  return out;
+}
+function launchRaid(player, st, now, random) {
+  const power = raidPower(player, st.notoriety);
+  const arriveAtMs = now + hours(PIRATE_RULES.raidTravelHours);
+  st.ultimatum = null;
+  st.raidUntilMs = arriveAtMs;
+  st.nextListAtMs = arriveAtMs + nextListDelay(random);
+  player.pirates = st;
+  return { power, arriveAtMs };
+}
+function answerUltimatum(player, answer, now, random = Math.random) {
+  var _a, _b;
+  const st = pirateState(player);
+  if (!st.ultimatum || now >= st.ultimatum.expiresAtMs) throw new GameActionError("Aucun ultimatum en attente.");
+  if (answer === "pay") {
+    for (const [res, amount] of Object.entries(st.ultimatum.tribute)) {
+      if (((_a = player.resources[res]) != null ? _a : 0) < amount) throw new GameActionError("Tu n'as pas de quoi payer le tribut : refuse, ou trouve les ressources \xE0 temps.");
+    }
+    for (const [res, amount] of Object.entries(st.ultimatum.tribute)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) - amount;
+    st.ultimatum = null;
+    st.tributesPaid += 1;
+    st.nextListAtMs = now + nextListDelay(random);
+    player.pirates = st;
+    return { raid: null, notifications: [note2("fleet", "Tribut pay\xE9", "Varan raye ton nom de la Liste\u2026 pour l'instant.", now)] };
+  }
+  const raid = launchRaid(player, st, now, random);
+  return {
+    raid,
+    notifications: [note2("fleet", "Tu as refus\xE9", `Le Silencieux et ses corsaires sont en route : impact dans ${Math.round(PIRATE_RULES.raidTravelHours * 60)} min. Pr\xE9pare tes d\xE9fenses !`, now)]
+  };
+}
+function resolvePirateRaid(playerIn, queuesIn, power, garrisons, now) {
+  var _a, _b, _c, _d, _e, _f;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const st = pirateState(player);
+  const combat = resolveCombat({
+    attackerUnits: {},
+    attackerTechLevels: {},
+    attackerRepairPct: 0,
+    fleet: {},
+    attackerPowerOverride: power,
+    defenderUnits: (_a = player.units) != null ? _a : {},
+    defenderTechLevels: (_b = player.techLevels) != null ? _b : {},
+    defenderRepairPct: getRepairPercent(player.buildings),
+    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
+    defenderResources: {},
+    garrisons,
+    garrisonFactor: ALLIANCE_RULES.garrisonPower
+  });
+  for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
+    if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
+  }
+  const loot = {};
+  let bounty = {};
+  let debris = { scrap: 0, energy: 0 };
+  const notifications = [...flushed.notifications];
+  st.raidUntilMs = 0;
+  if (combat.outcome === "attacker_win") {
+    for (const res of COMMON_RESOURCES2) {
+      const exposed = Math.max(0, ((_c = player.resources[res]) != null ? _c : 0) - protectedAmount(player.buildings, res));
+      const taken = Math.floor(exposed * PIRATE_RULES.lootPct);
+      if (taken > 0) {
+        loot[res] = taken;
+        player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) - taken;
+      }
+    }
+    st.raidsLost += 1;
+    st.notoriety = Math.max(0, st.notoriety - 1);
+    player.lastDefeatAtMs = now;
+    notifications.push(note2("combat-defender", "Pill\xE9 par la Confr\xE9rie", `Le Silencieux a forc\xE9 tes d\xE9fenses et emport\xE9 ${formatInt(Object.values(loot).reduce((a, b) => a + (b != null ? b : 0), 0))} ressources.`, now));
+  } else {
+    bounty = productionHours(player, PIRATE_RULES.bountyHours);
+    for (const [res, amount] of Object.entries(bounty)) player.resources[res] = ((_e = player.resources[res]) != null ? _e : 0) + amount;
+    applyXpDelta(player, PIRATE_RULES.bountyXp, now);
+    const destroyed = power * combat.attackerLossPercent;
+    debris = { scrap: Math.floor(destroyed * PIRATE_RULES.debrisPerPower), energy: Math.floor(destroyed * PIRATE_RULES.debrisPerPower / 2) };
+    st.raidsWon += 1;
+    st.repelled += 1;
+    st.notoriety = Math.min(PIRATE_RULES.maxNotoriety, st.notoriety + 1);
+    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
+    const lairNow = !st.lairOpen && st.repelled >= PIRATE_RULES.raidsForLair;
+    if (lairNow) st.lairOpen = true;
+    notifications.push(
+      note2(
+        "combat-defender",
+        combat.outcome === "draw" ? "Raid pirate repouss\xE9 de justesse" : "Raid pirate repouss\xE9 !",
+        `Prime : ${formatInt(Object.values(bounty).reduce((a, b) => a + (b != null ? b : 0), 0))} ressources et +${PIRATE_RULES.bountyXp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
+        now
+      )
+    );
+    if (lairNow) notifications.push(note2("fleet", "Le repaire de Varan est localis\xE9", "Apr\xE8s tant d'\xE9checs, la position du repaire a fuit\xE9. Lance l'assaut depuis la page Menaces !", now));
+  }
+  player.pirates = st;
+  const report = {
+    attackerUid: PIRATE_OWNER_UID,
+    attackerPseudo: `${PIRATE_RAIDER} (Confr\xE9rie du Vide)`,
+    defenderUid: player.uid,
+    defenderPseudo: player.pseudo,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: {},
+    attackerRecovered: {},
+    defenderLosses: combat.defenderLosses,
+    defenderRecovered: combat.defenderRecovered,
+    loot,
+    defenderProcessed: false,
+    defenderApplied: true,
+    attackerXpDelta: 0,
+    defenderXpDelta: combat.outcome === "attacker_win" ? 0 : PIRATE_RULES.bountyXp,
+    garrisons: garrisons.map((g, i) => {
+      var _a2, _b2;
+      return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
+    })
+  };
+  return { player, queues: flushed.queues, combat, loot, bounty, debris, report, notifications };
+}
+function lairPower(player) {
+  return Math.round(Math.max(PIRATE_RULES.floorPower * 3, defensivePower(player) * PIRATE_RULES.lairPct));
+}
+function checkLairLaunch(player, fleet) {
+  if (!pirateState(player).lairOpen) throw new GameActionError("Le repaire de Varan n'est pas encore localis\xE9.");
+  const units = {};
+  for (const [id, v] of Object.entries(fleet != null ? fleet : {})) {
+    const qty = Math.floor(Number(v));
+    if (!(qty > 0)) continue;
+    if (!OFFENSIVE_UNITS.includes(id)) throw new GameActionError("Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
+    units[id] = qty;
+  }
+  if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
+  return units;
+}
+function resolveLairAssault(playerIn, queuesIn, fleet, power, now) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const st = pirateState(player);
+  const combat = resolveCombat({
+    attackerUnits: player.units,
+    attackerTechLevels: player.techLevels,
+    attackerRepairPct: getRepairPercent(player.buildings),
+    fleet,
+    defenderUnits: {},
+    defenderTechLevels: {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderPowerOverride: power
+  });
+  const survivors = {};
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_a = combat.attackerLosses[id]) != null ? _a : 0));
+  const notifications = [...flushed.notifications];
+  if (combat.outcome === "attacker_win") {
+    const reward = productionHours(player, PIRATE_RULES.lairRewardHours);
+    for (const r of ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"]) reward[r] = ((_b = reward[r]) != null ? _b : 0) + PIRATE_RULES.lairRare;
+    for (const [res, amount] of Object.entries(reward)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + amount;
+    applyXpDelta(player, PIRATE_RULES.lairXp, now);
+    const title = PIRATE_RULES.lairTitle;
+    if (title && !((_d = player.titles) != null ? _d : []).some((t) => t.label === title)) {
+      player.titles = [...(_e = player.titles) != null ? _e : [], { label: title, seasonId: "pirates", rank: 1 }];
+      if (!player.activeTitle) player.activeTitle = title;
+    }
+    st.lairOpen = false;
+    st.repelled = 0;
+    st.notoriety = 0;
+    st.lairsTaken += 1;
+    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
+    notifications.push(
+      note2(
+        "combat-attacker",
+        "Le repaire de Varan est tomb\xE9 !",
+        `Butin du repaire : ${formatInt(Object.values(reward).reduce((a, b) => a + (b != null ? b : 0), 0))} ressources, +${PIRATE_RULES.lairXp} XP et le titre \xAB ${title} \xBB. Varan s'est enfui\u2026 la Liste continue.`,
+        now
+      )
+    );
+  } else {
+    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
+    notifications.push(note2("combat-attacker", "Assaut repouss\xE9", "Les d\xE9fenses du repaire ont tenu. Les survivants rentrent ; le repaire reste localis\xE9.", now));
+  }
+  player.pirates = st;
+  const report = {
+    attackerUid: player.uid,
+    attackerPseudo: player.pseudo,
+    defenderUid: PIRATE_LAIR_UID,
+    defenderPseudo: PIRATE_LAIR_NAME,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: combat.attackerLosses,
+    attackerRecovered: combat.attackerRecovered,
+    defenderLosses: {},
+    defenderRecovered: {},
+    loot: null,
+    defenderProcessed: true,
+    defenderApplied: true,
+    attackerXpDelta: combat.outcome === "attacker_win" ? PIRATE_RULES.lairXp : 0,
+    defenderXpDelta: 0
+  };
+  return { player, queues: flushed.queues, combat, survivors, report, notifications };
+}
+
 // src/game/espionage.ts
 var SPY_RULES = {
   /** Unité envoyée en mission d'espionnage. */
@@ -3094,6 +3430,8 @@ function returnMessage(fleet, lootTotal) {
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
+    case "lair":
+      return { title: "Retour du repaire", message: `Les survivants de l'assaut sur le ${PIRATE_LAIR_NAME} sont rentr\xE9s.` };
     case "garrison":
       return { title: "Garnison rentr\xE9e", message: `Ta garnison stationn\xE9e chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -3125,6 +3463,7 @@ function performLaunch(req) {
   else if (mission === "spy") out = launchSpy(owner, target, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, (_c = req.debris) != null ? _c : null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, (_d = req.patrolMinutes) != null ? _d : 0, now);
+  else if (mission === "lair") out = launchLair(owner, req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target, req.fleet, (_e = req.garrisonHours) != null ? _e : 0, (_f = req.garrisonsAtHost) != null ? _f : 0, now);
   else throw new GameActionError("Mission inconnue.");
   return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
@@ -3210,8 +3549,8 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
   var _a, _b;
   if (owner.uid === host.uid) throw new GameActionError("Tu ne peux pas stationner chez toi : utilise la patrouille.");
   if (!owner.allianceId || owner.allianceId !== host.allianceId) throw new GameActionError("Tu ne peux stationner que chez un membre de ton alliance.");
-  const hours = Math.round(Number(hoursIn));
-  if (!(hours >= ALLIANCE_RULES.garrisonMinHours && hours <= ALLIANCE_RULES.garrisonMaxHours)) {
+  const hours2 = Math.round(Number(hoursIn));
+  if (!(hours2 >= ALLIANCE_RULES.garrisonMinHours && hours2 <= ALLIANCE_RULES.garrisonMaxHours)) {
     throw new GameActionError(`Le stationnement dure entre ${ALLIANCE_RULES.garrisonMinHours} h et ${ALLIANCE_RULES.garrisonMaxHours} h.`);
   }
   if (garrisonsAtHost >= ALLIANCE_RULES.maxGarrisonsPerHost) throw new GameActionError(`${host.pseudo} accueille d\xE9j\xE0 ${ALLIANCE_RULES.maxGarrisonsPerHost} garnisons.`);
@@ -3220,13 +3559,13 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, hours * 60);
+  const cost = patrolEnergyCost(owner.units, requested, hours2 * 60);
   if (((_a = owner.resources.energy) != null ? _a : 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} \xE9nergie pour l'entretien de la garnison.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
-  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours * 36e5, stationedUntilMs: null });
+  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null });
   return {
     attacker: owner,
     fleet,
@@ -3234,13 +3573,26 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
       {
         kind: "fleet",
         title: "Renforts en approche",
-        message: `${owner.pseudo} t'envoie une garnison de ${formatInt(Object.values(units).reduce((a, b) => a + b, 0))} vaisseaux pour ${hours} h.`,
+        message: `${owner.pseudo} t'envoie une garnison de ${formatInt(Object.values(units).reduce((a, b) => a + b, 0))} vaisseaux pour ${hours2} h.`,
         createdAtMs: now,
         read: false
       }
     ]
   };
 }
+function launchLair(owner, raw, now) {
+  checkLairLaunch(owner, raw);
+  const power = lairPower(owner);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  return {
+    attacker: owner,
+    fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: PIRATE_LAIR_UID, pseudo: PIRATE_LAIR_NAME }, "lair", units, now, arriveAtMs)), { power }),
+    defenderNotifications: []
+  };
+}
+var LAIR_DISTANCE = 60;
 function stationGarrison(fleet) {
   var _a;
   return __spreadProps(__spreadValues({}, fleet), { status: "stationed", stationedUntilMs: fleet.arriveAtMs + ((_a = fleet.durationMs) != null ? _a : 0) });
@@ -3350,7 +3702,8 @@ var GAME_FIELDS = [
   "lastSeasonId",
   "lastSeasonXp",
   "titles",
-  "activeTitle"
+  "activeTitle",
+  "pirates"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
@@ -3366,18 +3719,19 @@ var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
+var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
     technologies: DEFAULT_TECHNOLOGIES,
     missions: Object.values(DEFAULT_MISSIONS),
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -3394,7 +3748,8 @@ function applyGameContent(overrides) {
       patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_r = (_q = overrides.rules) == null ? void 0 : _q.patrol) != null ? _r : {}),
       events: __spreadValues(__spreadValues({}, defaults.rules.events), (_t = (_s = overrides.rules) == null ? void 0 : _s.events) != null ? _t : {}),
       seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_v = (_u = overrides.rules) == null ? void 0 : _u.seasons) != null ? _v : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_x = (_w = overrides.rules) == null ? void 0 : _w.alliances) != null ? _x : {})
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_x = (_w = overrides.rules) == null ? void 0 : _w.alliances) != null ? _x : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_z = (_y = overrides.rules) == null ? void 0 : _y.pirates) != null ? _z : {})
     }
   };
   setBuildings(content.buildings);
@@ -3411,6 +3766,7 @@ function applyGameContent(overrides) {
   Object.assign(EVENT_RULES, content.rules.events);
   Object.assign(SEASON_RULES, content.rules.seasons);
   Object.assign(ALLIANCE_RULES, content.rules.alliances);
+  Object.assign(PIRATE_RULES, content.rules.pirates);
   current = content;
   return content;
 }
