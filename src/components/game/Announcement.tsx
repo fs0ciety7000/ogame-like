@@ -23,10 +23,33 @@ export interface Announcement {
   text: string;
   /** Factions mises en avant (illustrations en fond). */
   factions: string[];
+  /** Illustration de fond quand l'annonce ne présente pas de factions. */
+  art?: string;
+  artMobile?: string;
+  /** Nouveautés présentées en cartes cliquables. */
+  features?: { title: string; text: string; to: string }[];
   cta: { label: string; to: string };
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "v3.2-le-leviathan-arrive",
+    eyebrow: "Mise à jour 3.2 · Le grand déploiement",
+    title: "Le Léviathan arrive vendredi",
+    text: "Le premier week-end de chaque mois, un monstre colossal menace la galaxie : unissez vos flottes pour l'abattre et partager le butin. Et ce n'est pas tout — expéditions, marché, guerres d'alliance… voici tout ce qui change.",
+    factions: [],
+    art: "/assets/leviathan/leviathan.webp",
+    artMobile: "/assets/leviathan/leviathan-portrait.webp",
+    features: [
+      { title: "Le Léviathan", text: "Vendredi 18 h → lundi 18 h. Un assaut toutes les 4 h, récompenses selon tes dégâts.", to: "/game/leviathan" },
+      { title: "Expéditions", text: "2 à 8 h dans l'inconnu : gisements, épaves, embuscades, rencontres… et des choix.", to: "/game/missions" },
+      { title: "Marché", text: "Échange tes surplus avec les autres commandants, sans passer par le comptoir.", to: "/game/marche" },
+      { title: "Formations et posture", text: "Assaut, Prudente, Raid… et choisis comment ta base encaisse les attaques.", to: "/game/unites" },
+      { title: "Simulateur", text: "Teste un combat sans risque avant d'envoyer ta flotte.", to: "/game/simulateur" },
+      { title: "Guerres d'alliance", text: "Déclare la guerre, marque des points, remporte le trésor et le titre « Vainqueurs ».", to: "/game/alliance" },
+    ],
+    cta: { label: "Voir le Léviathan", to: "/game/leviathan" },
+  },
   {
     id: "v2.3-nouvelles-factions",
     eyebrow: "Nouvelles menaces · Mise à jour 2.3",
@@ -79,7 +102,9 @@ export function AnnouncementDialog() {
     // Pas par-dessus un ultimatum : l'annonce attendra le prochain chargement.
     if (!uid || threatened) return;
     const seen = readSeen();
-    const next = ANNOUNCEMENTS.find((a) => !seen.includes(`${uid}:${a.id}`) && a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled)));
+    const next = ANNOUNCEMENTS.find(
+      (a) => !seen.includes(`${uid}:${a.id}`) && (a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled))),
+    );
     if (!next) return;
     const timer = setTimeout(() => setCurrent(next), 1200);
     return () => clearTimeout(timer);
@@ -96,6 +121,12 @@ export function AnnouncementDialog() {
     <Dialog open onOpenChange={(o) => !o && close()}>
       <DialogContent className="max-h-[94vh] max-w-5xl overflow-hidden overflow-y-auto border-0 p-0 sm:w-[94vw]">
         <div className="relative flex min-h-[78vh] flex-col justify-end overflow-hidden bg-space-950">
+          {current.art && (
+            <motion.picture className="absolute inset-x-0 top-0 h-[70%] sm:h-[62%]" initial={{ opacity: 0, scale: 1.08 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
+              {current.artMobile && <source media="(max-width: 640px)" srcSet={assetUrl(current.artMobile)} />}
+              <img src={assetUrl(current.art)} alt="" className="h-full w-full object-cover object-[center_75%]" />
+            </motion.picture>
+          )}
           {/* Illustrations en bandes obliques */}
           <div className="absolute inset-0 flex">
             {factions.map((f, i) => (
@@ -126,6 +157,27 @@ export function AnnouncementDialog() {
             </p>
             <DialogTitle className="text-3xl leading-tight md:text-5xl">{current.title}</DialogTitle>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-200 md:text-base">{current.text}</p>
+            {current.features && (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {current.features.map((f, i) => (
+                  <motion.button
+                    key={f.title}
+                    type="button"
+                    onClick={() => {
+                      close();
+                      navigate(f.to);
+                    }}
+                    className="rounded-lg border border-cyan-glow/25 bg-space-950/75 p-3 text-left backdrop-blur-sm transition-colors hover:border-cyan-glow/60"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.9 + i * 0.08 }}
+                  >
+                    <p className="font-display text-sm text-cyan-glow">{f.title}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-300">{f.text}</p>
+                  </motion.button>
+                ))}
+              </div>
+            )}
             <div className="grid gap-2 sm:grid-cols-3">
               {factions.map((f, i) => {
                 const a = accent(f);
