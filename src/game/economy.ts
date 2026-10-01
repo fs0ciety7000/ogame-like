@@ -6,6 +6,7 @@ import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
 import { allianceProductionFactor } from "@/game/alliances";
 import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
+import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
 /* =====================================================
    Économie continue : production, plafond de l'entrepôt, entretien de
@@ -40,7 +41,7 @@ export interface EconomyInput {
 }
 
 /** Énergie consommée par seconde par les unités construites. */
-export function getFleetUpkeep(units: Units | undefined): number {
+export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels): number {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units ?? {})) {
     const def = findUnit(id);
@@ -48,7 +49,7 @@ export function getFleetUpkeep(units: Units | undefined): number {
     const perPlace = def.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
     upkeep += state.count * def.hangarSpace * perPlace;
   }
-  return upkeep;
+  return upkeep * techReductionFactor(techLevels, "fleet_upkeep");
 }
 
 export interface EconomySnapshot {
@@ -79,8 +80,8 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 /** `now` : applique les bonus de l'événement en cours à cet instant. */
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
   const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now));
-  const upkeep = getFleetUpkeep(input.units);
-  const capacity = getStorageCapacity(input.buildings);
+  const upkeep = getFleetUpkeep(input.units, input.techLevels);
+  const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const energyNet = (gross.energy ?? 0) - upkeep;
   const outage = energyNet < 0 && (input.resources.energy ?? 0) <= 0;
   const factor = outage ? ECONOMY_RULES.outageProductionFactor : 1;
@@ -125,8 +126,8 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
   if (elapsedSeconds <= 0) return out;
 
   const gross = boostedRates(input, multipliers);
-  const upkeep = getFleetUpkeep(input.units);
-  const capacity = getStorageCapacity(input.buildings);
+  const upkeep = getFleetUpkeep(input.units, input.techLevels);
+  const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
 
   // Énergie : production moins entretien. Si elle baisse, on calcule
@@ -151,10 +152,11 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
 }
 
 /** Quantité d'une ressource à l'abri du pillage (bunker de l'entrepôt). */
-export function protectedAmount(buildings: Buildings, res: ResourceId): number {
+export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels): number {
   if (!COMMON_RESOURCES.includes(res)) return 0;
-  const capacity = getStorageCapacity(buildings);
-  return Number.isFinite(capacity) ? Math.floor(capacity * ECONOMY_RULES.protectedStoragePct) : 0;
+  const capacity = getStorageCapacity(buildings, techLevels);
+  const pct = Math.min(TECH_REDUCTION_CAP, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage"));
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct) : 0;
 }
 
 /** Récompenses réelles d'une mission pour ce joueur : les ressources

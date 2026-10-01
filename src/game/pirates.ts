@@ -375,13 +375,13 @@ export interface AggressionStats {
 /** Ressources communes exposées (hors bunker de l'entrepôt). */
 function exposedStock(player: PlayerState): Partial<Record<ResourceId, number>> {
   const out: Partial<Record<ResourceId, number>> = {};
-  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res));
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels));
   return out;
 }
 
 /** Remplissage des entrepôts (ressource commune la plus pleine), en %. */
 export function storageFillPct(player: PlayerState): number {
-  const cap = getStorageCapacity(player.buildings ?? {});
+  const cap = getStorageCapacity(player.buildings ?? {}, player.techLevels);
   if (!(cap > 0)) return 0;
   return Math.floor((Math.max(...COMMON_RESOURCES.map((r) => player.resources?.[r] ?? 0)) / cap) * 100);
 }
@@ -620,7 +620,7 @@ export function resolvePirateRaid(
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res));
+      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;

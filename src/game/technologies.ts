@@ -1,3 +1,4 @@
+/** Effets historiques (un seul par techno, avant la v2.6). */
 export type TechEffect =
   | "unlock_recipe"
   | "energy_efficiency"
@@ -10,6 +11,31 @@ export type TechEffect =
   | "unlock_defense_units"
   | "unlock_attack_units";
 
+/** Types d'effet (v2.6) : les historiques et les nouveaux. */
+export type TechEffectType =
+  | TechEffect
+  | "resource_production"
+  | "storage_capacity"
+  | "protected_storage"
+  | "fleet_speed"
+  | "cargo_capacity"
+  | "building_time"
+  | "unit_time"
+  | "research_time"
+  | "fleet_upkeep"
+  | "counter_spy";
+
+/** Un effet octroyé par une technologie, multiplié par son niveau. */
+export interface TechEffectDef {
+  type: TechEffectType;
+  /** Valeur par niveau (0,1 = 10 %) ; vide = valeur par défaut du type. */
+  value?: number;
+  /** Ressource visée (resource_production) ou unité (unlock_next_level). */
+  target?: string;
+  /** Bâtiments débloqués (unlock_buildings), en plus de ceux qui citent la techno. */
+  targets?: string[];
+}
+
 export interface TechDef {
   id: string;
   nom: string;
@@ -17,36 +43,67 @@ export interface TechDef {
   maxLevel: number;
   baseCost: Record<string, number>;
   baseTime: number;
-  effect: TechEffect;
+  /** Effets (v2.6). Absent : effet historique `effect` / `effectValue`. */
+  effects?: TechEffectDef[];
+  /** Ancien format : un seul effet. */
+  effect?: TechEffect;
   costGrowth?: number;
   prereq: Record<string, number>;
-  /** Valeur de l'effet par niveau (bonus) ; défaut dans TECH_EFFECT_DEFAULTS. */
+  /** Valeur de l'effet historique par niveau ; défaut dans TECH_EFFECT_DEFAULTS. */
   effectValue?: number;
   /** Position dans l'arbre du Labo (sinon placée automatiquement). */
   treePos?: { col: number; row: number };
 }
 
-/** Bonus par niveau des effets chiffrés, si la techno n'en précise pas. */
-export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffect, number>> = {
+/** Valeur par niveau des effets chiffrés, si la techno n'en précise pas. */
+export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
   energy_efficiency: 0.1,
   unit_attack: 0.1,
   unit_defense: 0.1,
   building_discount: 0.05,
+  resource_production: 0.1,
+  storage_capacity: 0.1,
+  protected_storage: 0.02,
+  fleet_speed: 0.05,
+  cargo_capacity: 0.1,
+  building_time: 0.05,
+  unit_time: 0.05,
+  research_time: 0.05,
+  fleet_upkeep: 0.05,
+  counter_spy: 1,
 };
 
-/** Descriptions des effets, pour l'interface d'administration. */
-export const TECH_EFFECT_LABELS: Record<TechEffect, string> = {
+/** Plafond des réductions cumulées (temps, coûts, entretien) et de la part à l'abri. */
+export const TECH_REDUCTION_CAP = 0.75;
+
+/** Libellés des effets, pour l'administration et le Labo. */
+export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
   unlock_recipe: "Débloque des recettes (niveau = nombre de recettes)",
-  energy_efficiency: "Bonus de production de toutes les ressources (% par niveau)",
-  unit_attack: "Bonus d'attaque de toutes les unités (% par niveau)",
-  unit_defense: "Bonus de défense de toutes les unités (% par niveau)",
-  building_discount: "Réduction du coût des bâtiments (% par niveau)",
+  energy_efficiency: "Production de toutes les ressources (% par niveau)",
+  unit_attack: "Attaque de toutes les unités (% par niveau)",
+  unit_defense: "Défense de toutes les unités (% par niveau)",
+  building_discount: "Coût des bâtiments (−% par niveau)",
   unlock_hangars: "Débloque les bâtiments liés (ancien nom de unlock_buildings)",
-  unlock_buildings: "Débloque les bâtiments dont « Débloqué par » vaut cette techno",
-  unlock_next_level: "Débloque puis améliore l'unité liée (niveau = niveau de l'unité)",
+  unlock_buildings: "Débloque des bâtiments",
+  unlock_next_level: "Débloque puis améliore une unité (niveau = niveau de l'unité)",
   unlock_defense_units: "Prérequis pour des unités de défense (aucun effet direct)",
   unlock_attack_units: "Prérequis pour des unités d'attaque (aucun effet direct)",
+  resource_production: "Production d'une ressource (% par niveau)",
+  storage_capacity: "Capacité des entrepôts (% par niveau)",
+  protected_storage: "Part de l'entrepôt à l'abri du pillage (points de % par niveau)",
+  fleet_speed: "Temps de vol des flottes (−% par niveau)",
+  cargo_capacity: "Cargaison des vaisseaux (% par niveau)",
+  building_time: "Temps de construction des bâtiments (−% par niveau)",
+  unit_time: "Temps de construction des unités (−% par niveau)",
+  research_time: "Temps de recherche (−% par niveau)",
+  fleet_upkeep: "Entretien de la flotte (−% par niveau)",
+  counter_spy: "Contre-espionnage (points par niveau)",
 };
+
+/** Effets chiffrés (une valeur par niveau) ; les autres débloquent. */
+export const NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS) as TechEffectType[];
+/** Effets plafonnés à TECH_REDUCTION_CAP une fois cumulés. */
+export const CAPPED_TECH_EFFECTS: TechEffectType[] = ["building_discount", "fleet_speed", "building_time", "unit_time", "research_time", "fleet_upkeep", "protected_storage"];
 
 export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech1", nom: "Analyse de matériaux", desc: "Débloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
@@ -79,14 +136,47 @@ export function setTechnologies(defs: TechDef[]) {
   TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
 }
 
-/** Bonus total d'un effet chiffré (ex. unit_attack) selon les niveaux du joueur. */
-export function techBonus(techLevels: Record<string, number>, effect: TechEffect): number {
+/** Effets d'une technologie (ancien format converti à la volée). */
+export function techEffects(tech: TechDef): TechEffectDef[] {
+  if (tech.effects && tech.effects.length > 0) return tech.effects;
+  if (!tech.effect) return [];
+  const type: TechEffectType = tech.effect === "unlock_hangars" ? "unlock_buildings" : tech.effect;
+  return [tech.effectValue === undefined ? { type } : { type, value: tech.effectValue }];
+}
+
+/** Valeur par niveau d'un effet (celle de la techno, sinon le défaut du type). */
+export function effectValuePerLevel(effect: TechEffectDef): number {
+  return effect.value ?? TECH_EFFECT_DEFAULTS[effect.type] ?? 0;
+}
+
+/** Bonus total d'un effet chiffré selon les niveaux du joueur (`target` :
+ *  ressource visée pour resource_production). Les réductions sont plafonnées. */
+export function techBonus(techLevels: Record<string, number> | undefined, type: TechEffectType, target?: string): number {
+  if (!techLevels) return 0;
   let total = 0;
   for (const tech of TECHNOLOGIES) {
-    if (tech.effect !== effect) continue;
-    total += (techLevels[tech.id] ?? 0) * (tech.effectValue ?? TECH_EFFECT_DEFAULTS[effect] ?? 0);
+    const level = techLevels[tech.id] ?? 0;
+    if (level <= 0) continue;
+    for (const e of techEffects(tech)) {
+      if (e.type !== type && !(type === "unlock_buildings" && e.type === "unlock_hangars")) continue;
+      if (target !== undefined && e.target !== target) continue;
+      total += level * effectValuePerLevel(e);
+    }
   }
-  return total;
+  return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total)) : total;
+}
+
+/** Multiplicateur d'une réduction (1 − bonus plafonné) : temps, entretien… */
+export function techReductionFactor(techLevels: Record<string, number> | undefined, type: TechEffectType): number {
+  return 1 - techBonus(techLevels, type);
+}
+
+/** Bâtiments débloqués par une techno (ceux qui la citent + ses cibles). */
+export function buildingsUnlockedByTech(techId: string, buildings: { id: string; unlockedByTech?: string }[]): string[] {
+  const tech = findTech(techId);
+  const ids = new Set(buildings.filter((b) => b.unlockedByTech === techId).map((b) => b.id));
+  for (const e of tech ? techEffects(tech) : []) if (e.type === "unlock_buildings" || e.type === "unlock_hangars") for (const id of e.targets ?? []) ids.add(id);
+  return [...ids];
 }
 
 export const MAX_CONCURRENT_RESEARCH = 4;
@@ -130,4 +220,80 @@ export function checkPrereqs(tech: TechDef, levels: Record<string, number>): Pre
   });
 
   return { valid: allValid, list };
+}
+
+/** Bornes de la valeur par niveau, par type d'effet chiffré. */
+const EFFECT_MAX_PER_LEVEL: Partial<Record<TechEffectType, number>> = {
+  building_discount: 0.5,
+  fleet_speed: 0.5,
+  building_time: 0.5,
+  unit_time: 0.5,
+  research_time: 0.5,
+  fleet_upkeep: 0.5,
+  protected_storage: 0.5,
+  counter_spy: 10,
+};
+
+/** Erreurs d'un effet de techno (type, cible, valeur). */
+export function validateTechEffect(
+  label: string,
+  e: TechEffectDef,
+  refs: { resources: Set<string>; unitIds: Set<string>; buildingIds: Set<string> },
+): string[] {
+  const errors: string[] = [];
+  if (!(e.type in TECH_EFFECT_LABELS)) return [`${label} : effet « ${e.type} » inconnu.`];
+  if (e.type === "resource_production" && (!e.target || !refs.resources.has(e.target))) errors.push(`${label} : ressource visée manquante ou inconnue.`);
+  if (e.type === "unlock_next_level" && e.target && !refs.unitIds.has(e.target)) errors.push(`${label} : unité « ${e.target} » inexistante.`);
+  for (const id of e.targets ?? []) if (!refs.buildingIds.has(id)) errors.push(`${label} : bâtiment « ${id} » inexistant.`);
+  if (e.value !== undefined) {
+    const max = EFFECT_MAX_PER_LEVEL[e.type] ?? 5;
+    if (!Number.isFinite(e.value) || e.value < 0 || e.value > max) errors.push(`${label} : valeur par niveau de « ${TECH_EFFECT_LABELS[e.type]} » entre 0 et ${max}.`);
+  }
+  return errors;
+}
+
+/** Résumé lisible d'un effet à un niveau donné (Labo, administration). */
+export function describeTechEffect(e: TechEffectDef, level: number, names: { resource?: (id: string) => string; unit?: (id: string) => string; building?: (id: string) => string } = {}): string {
+  const v = effectValuePerLevel(e) * level;
+  const pct = (x: number) => `${Math.round(x * 1000) / 10} %`;
+  const res = e.target ? (names.resource?.(e.target) ?? e.target) : "";
+  switch (e.type) {
+    case "energy_efficiency":
+      return `+${pct(v)} de production de toutes les ressources`;
+    case "resource_production":
+      return `+${pct(v)} de production de ${res || "?"}`;
+    case "unit_attack":
+      return `+${pct(v)} d'attaque des unités`;
+    case "unit_defense":
+      return `+${pct(v)} de défense des unités`;
+    case "building_discount":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} sur le coût des bâtiments`;
+    case "storage_capacity":
+      return `+${pct(v)} de capacité des entrepôts`;
+    case "protected_storage":
+      return `+${pct(v)} de l'entrepôt à l'abri du pillage`;
+    case "fleet_speed":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de vol`;
+    case "cargo_capacity":
+      return `+${pct(v)} de cargaison`;
+    case "building_time":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de construction des bâtiments`;
+    case "unit_time":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de construction des unités`;
+    case "research_time":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de recherche`;
+    case "fleet_upkeep":
+      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} d'entretien de la flotte`;
+    case "counter_spy":
+      return `+${Math.floor(v)} point(s) de contre-espionnage`;
+    case "unlock_recipe":
+      return `${level} recette(s) débloquée(s)`;
+    case "unlock_buildings":
+    case "unlock_hangars":
+      return `Débloque ${(e.targets ?? []).map((id) => names.building?.(id) ?? id).join(", ") || "les bâtiments liés"}`;
+    case "unlock_next_level":
+      return `${e.target ? (names.unit?.(e.target) ?? e.target) : "Unité liée"} niveau ${level}`;
+    default:
+      return TECH_EFFECT_LABELS[e.type];
+  }
 }

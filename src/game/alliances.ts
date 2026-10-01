@@ -3,6 +3,7 @@ import { GameActionError } from "@/game/errors";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { NewNotification } from "@/game/flush";
 import type { Alliance, AllianceLog, PlayerState, ResourceId } from "@/types/game";
+import { techReductionFactor } from "@/game/technologies";
 
 /* =====================================================
    Alliances (v1.9) : adhésion limitée, trésor commun, recherches qui
@@ -76,8 +77,9 @@ function level(levels: AllianceLevels | undefined | null, id: string): number {
 /* ---------- bonus des recherches (appliqués aux membres) ---------- */
 
 /** Multiplicateur du temps de vol (0,75 = −25 %). */
-export function allianceFlightFactor(levels: AllianceLevels | undefined | null): number {
-  return Math.max(0.1, 1 - level(levels, "logistique") * (findAllianceResearch("logistique")?.perLevel ?? 0));
+export function allianceFlightFactor(levels: AllianceLevels | undefined | null, techLevels?: Record<string, number>): number {
+  // v2.6 : la techno « vitesse des flottes » se cumule à la logistique d'alliance.
+  return Math.max(0.1, (1 - level(levels, "logistique") * (findAllianceResearch("logistique")?.perLevel ?? 0)) * techReductionFactor(techLevels, "fleet_speed"));
 }
 
 /** Multiplicateur de production (1,15 = +15 %). */
