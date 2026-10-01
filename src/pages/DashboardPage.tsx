@@ -50,6 +50,8 @@ export function DashboardPage() {
         description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
       />
 
+      <OnboardingChecklist player={player} />
+
       <Card className="flex flex-wrap items-center gap-6 p-6">
         <HomePlanet buildings={player.buildings} />
         <div>
@@ -63,8 +65,6 @@ export function DashboardPage() {
           </div>
         </div>
       </Card>
-
-      <OnboardingChecklist player={player} />
 
       <FleetsPanel hideWhenEmpty />
 

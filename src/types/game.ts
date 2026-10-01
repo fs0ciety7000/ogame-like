@@ -101,6 +101,8 @@ export interface PlayerState {
   pirates?: import("@/game/pirates").FactionStates | import("@/game/pirates").PirateState;
   /** Statistiques cumulées (v2.3), écrites par le serveur. */
   stats?: import("@/game/stats").PlayerStats;
+  /** v2.9 : objectifs de prise en main réclamés. */
+  onboarding?: { claimed: string[]; hidden?: boolean };
 }
 
 export interface SeasonResult {

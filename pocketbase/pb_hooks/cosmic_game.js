@@ -222,12 +222,12 @@ function techBonus(techLevels2, type, target) {
   if (!techLevels2) return 0;
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
-    const level2 = (_a = techLevels2[tech.id]) != null ? _a : 0;
-    if (level2 <= 0) continue;
+    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
+    if (level3 <= 0) continue;
     for (const e of techEffects(tech)) {
       if (e.type !== type && !(type === "unlock_buildings" && e.type === "unlock_hangars")) continue;
       if (target !== void 0 && e.target !== target) continue;
-      total2 += level2 * effectValuePerLevel(e);
+      total2 += level3 * effectValuePerLevel(e);
     }
   }
   return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total2)) : total2;
@@ -248,18 +248,18 @@ var TIME_GROWTH = 1.67;
 function findTech(id) {
   return TECHNOLOGIES.find((t) => t.id === id);
 }
-function getTechCost(tech, level2) {
+function getTechCost(tech, level3) {
   var _a;
   const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
-  const factor = Math.pow(growth, level2 - 1);
+  const factor = Math.pow(growth, level3 - 1);
   const cost = {};
   for (const [res, amount] of Object.entries(tech.baseCost)) {
     cost[res] = Math.floor(amount * factor);
   }
   return cost;
 }
-function getTechTime(tech, level2) {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level2 - 1));
+function getTechTime(tech, level3) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level3 - 1));
 }
 function checkPrereqs(tech, levels) {
   const entries = Object.entries(tech.prereq);
@@ -646,26 +646,26 @@ setBuildings(DEFAULT_BUILDINGS);
 function findBuilding(id) {
   return BUILDINGS.find((b) => b.id === id);
 }
-function productionPerSecond(buildingId, level2) {
+function productionPerSecond(buildingId, level3) {
   var _a, _b, _c, _d;
-  if (level2 <= 0) return 0;
+  if (level3 <= 0) return 0;
   const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
-  return (_d = table[Math.min(level2, table.length) - 1]) != null ? _d : 0;
+  return (_d = table[Math.min(level3, table.length) - 1]) != null ? _d : 0;
 }
-function geometricCost(baseCost, maxCost, fromLevel, toLevel, level2) {
+function geometricCost(baseCost, maxCost, fromLevel, toLevel, level3) {
   var _a;
   const steps = Math.max(1, toLevel - fromLevel);
   const cost = {};
   for (const [res, base] of Object.entries(baseCost)) {
     const target = (_a = maxCost[res]) != null ? _a : base;
     const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
-    cost[res] = Math.floor(base * Math.pow(rate, level2 - fromLevel));
+    cost[res] = Math.floor(base * Math.pow(rate, level3 - fromLevel));
   }
   return cost;
 }
-function tierFor(building, level2) {
+function tierFor(building, level3) {
   const t2 = building.upgrade.tier2;
-  return t2 && level2 >= t2.fromLevel ? t2 : null;
+  return t2 && level3 >= t2.fromLevel ? t2 : null;
 }
 function getBuildingUpgradeCost(building, nextLevel) {
   const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
@@ -699,11 +699,11 @@ function getRepairPercent(buildings) {
   }
   return pct3;
 }
-function repairPercentAt(effect, level2) {
+function repairPercentAt(effect, level3) {
   var _a;
   const from = effect.bonusFromLevel;
-  const base = from ? Math.min(level2, from - 1) * effect.perLevel : level2 * effect.perLevel;
-  const bonus = from ? Math.max(0, level2 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
+  const base = from ? Math.min(level3, from - 1) * effect.perLevel : level3 * effect.perLevel;
+  const bonus = from ? Math.max(0, level3 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
   return Math.max(0, Math.min(effect.max, base + bonus));
 }
 function getStorageCapacity(buildings, techLevels2) {
@@ -717,8 +717,8 @@ function getStorageCapacity(buildings, techLevels2) {
   }
   return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
 }
-function storageCapacityAt(effect, level2) {
-  return level2 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level2)) : 0;
+function storageCapacityAt(effect, level3) {
+  return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
 }
 function getUnitCapacity(buildings, category) {
   var _a, _b, _c;
@@ -742,15 +742,15 @@ function withMissingBuildings(buildings, resources) {
   const out = __spreadValues({}, buildings != null ? buildings : {});
   for (const b of BUILDINGS) {
     if (out[b.id]) continue;
-    let level2 = 1;
+    let level3 = 1;
     if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
       const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
         var _a2;
         return (_a2 = resources[r.id]) != null ? _a2 : 0;
       }));
-      while (level2 < b.maxLevel && storageCapacityAt(b.effect, level2) < biggest) level2++;
+      while (level3 < b.maxLevel && storageCapacityAt(b.effect, level3) < biggest) level3++;
     }
-    out[b.id] = { level: level2, unlocked: !!b.startsUnlocked };
+    out[b.id] = { level: level3, unlocked: !!b.startsUnlocked };
   }
   return out;
 }
@@ -789,9 +789,9 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
   let total2 = 0;
   for (const [id, qty] of Object.entries(fleet)) {
     const def2 = findUnit(id);
-    const level2 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def2 || qty <= 0 || level2 <= 0) continue;
-    total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level2 * qty;
+    const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def2 || qty <= 0 || level3 <= 0) continue;
+    total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level3 * qty;
   }
   return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
 }
@@ -801,9 +801,9 @@ function clamp(v, min, max) {
 function unitStat(units, techLevels2, unitId, stat) {
   var _a, _b, _c, _d;
   const base = (_b = (_a = UNIT_BASE_STATS[unitId]) == null ? void 0 : _a[stat]) != null ? _b : 0;
-  const level2 = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
-  if (level2 <= 0) return 0;
-  let value = base + (level2 - 1) * 5;
+  const level3 = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
+  if (level3 <= 0) return 0;
+  let value = base + (level3 - 1) * 5;
   if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
   if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
   return value;
@@ -823,10 +823,10 @@ function computeFullPower(units, techLevels2, idList, stats) {
   let total2 = 0;
   idList.forEach((id) => {
     var _a, _b;
-    const count = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
+    const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
     let value = 0;
     stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
-    total2 += value * count;
+    total2 += value * count2;
   });
   return total2;
 }
@@ -881,9 +881,9 @@ function resolveCombat(params) {
   const defenderRebuilt = {};
   [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
     var _a2, _b2;
-    const count = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
+    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
     const isDefense = DEFENSIVE_UNITS.includes(unitId);
-    const rawLost = Math.floor(count * defenderLossPct * (isDefense ? 1 : homeFactor));
+    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
     if (rawLost <= 0) return;
     const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
     defenderLosses[unitId] = rawLost - recovered;
@@ -960,10 +960,10 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
     const resource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
     if (!resource) continue;
     const state = buildings[building.id];
-    const level2 = (_a = state == null ? void 0 : state.level) != null ? _a : 0;
+    const level3 = (_a = state == null ? void 0 : state.level) != null ? _a : 0;
     const unlocked = building.startsUnlocked || (state == null ? void 0 : state.unlocked) === true;
-    if (level2 <= 0 || !unlocked) continue;
-    const base = productionPerSecond(building.id, level2);
+    if (level3 <= 0 || !unlocked) continue;
+    const base = productionPerSecond(building.id, level3);
     rates[resource] = Math.floor(base * (1 + bonus + techBonus(techLevels2, "resource_production", resource)));
   }
   return rates;
@@ -1256,8 +1256,8 @@ function distribute(alliance, actorUid, targetUid, amounts, now) {
   if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent verser le tr\xE9sor.");
   if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
   const day = utcDay(now);
-  const count = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
-  if (count >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
+  const count2 = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
+  if (count2 >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
   const treasury = __spreadValues({}, (_b = alliance.treasury) != null ? _b : {});
   for (const [res, amount] of Object.entries(amounts)) {
     const max = Math.floor(((_c = treasury[res]) != null ? _c : 0) * ALLIANCE_RULES.distributionMaxPct);
@@ -1266,7 +1266,7 @@ function distribute(alliance, actorUid, targetUid, amounts, now) {
     }
   }
   for (const [res, amount] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount;
-  return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count + 1 } });
+  return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count2 + 1 } });
 }
 function allianceResearchCost(nextLevel) {
   const factor = Math.pow(ALLIANCE_RULES.researchGrowth, Math.max(0, nextLevel - 1));
@@ -2551,7 +2551,7 @@ var METRICS = {
   } },
   seasonTitles: { label: "Titres de saison", value: (p) => {
     var _a;
-    return ((_a = p.titles) != null ? _a : []).filter((t) => !/^(faction|achievement):/.test(String(t.seasonId))).length;
+    return ((_a = p.titles) != null ? _a : []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length;
   } },
   playtimeHours: { label: "Heures de jeu", value: (p) => {
     var _a;
@@ -2824,11 +2824,11 @@ function flushState(playerIn, queuesIn, now) {
   }
   return { player, queues, notifications };
 }
-function applyTechEffect(player, techId, level2) {
+function applyTechEffect(player, techId, level3) {
   var _a, _b;
   const tech = TECHNOLOGIES.find((t) => t.id === techId);
   if (!tech) return;
-  const levels = __spreadProps(__spreadValues({}, player.techLevels), { [techId]: level2 });
+  const levels = __spreadProps(__spreadValues({}, player.techLevels), { [techId]: level3 });
   for (const effect of techEffects(tech)) {
     switch (effect.type) {
       case "energy_efficiency":
@@ -2844,7 +2844,7 @@ function applyTechEffect(player, techId, level2) {
         player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
         break;
       case "unlock_recipe":
-        player.bonuses.unlockedRecipes = level2;
+        player.bonuses.unlockedRecipes = level3;
         break;
       case "unlock_hangars":
       case "unlock_buildings":
@@ -2857,7 +2857,7 @@ function applyTechEffect(player, techId, level2) {
         const unitId = effect.target || unitForTech(techId);
         if (!unitId) break;
         if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
-        player.units[unitId].level = level2;
+        player.units[unitId].level = level3;
         break;
       }
       default:
@@ -3195,6 +3195,187 @@ function performAttack(input) {
   };
 }
 
+// src/game/ranks.ts
+var rank = (id, name, family, xp) => ({ id, name, family, xp, image: `/assets/ranks/${id}.webp` });
+var tiers = (prefix, family, xps) => [
+  rank(`${prefix}3`, `${family} III`, family, xps[0]),
+  rank(`${prefix}2`, `${family} II`, family, xps[1]),
+  rank(`${prefix}1`, `${family} I`, family, xps[2])
+];
+var DEFAULT_RANKS = [
+  rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
+  ...tiers("fer", "Fer", [100, 250, 500]),
+  ...tiers("bronze", "Bronze", [900, 1400, 2e3]),
+  ...tiers("argent", "Argent", [3e3, 4200, 5600]),
+  ...tiers("or", "Or", [7500, 1e4, 13e3]),
+  ...tiers("platine", "Platine", [17e3, 22e3, 28e3]),
+  ...tiers("emeraude", "\xC9meraude", [36e3, 45e3, 56e3]),
+  ...tiers("diamant", "Diamant", [7e4, 87e3, 107e3]),
+  ...tiers("maitre", "Ma\xEEtre", [13e4, 16e4, 195e3]),
+  rank("grand_maitre", "Grand Ma\xEEtre", "Grand Ma\xEEtre", 24e4),
+  rank("challenger", "Challenger", "Challenger", 32e4),
+  rank("elite", "\xC9lite", "\xC9lite", 42e4)
+];
+var RANKS = [];
+function setRanks(defs) {
+  RANKS.splice(0, RANKS.length, ...[...defs].sort((a, b) => a.xp - b.xp));
+}
+setRanks(structuredClone(DEFAULT_RANKS));
+function getRankIndex(xp) {
+  let index = 0;
+  for (let i = 0; i < RANKS.length; i++) {
+    if ((xp != null ? xp : 0) >= RANKS[i].xp) index = i;
+  }
+  return index;
+}
+function getRank(xp) {
+  var _a;
+  return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
+}
+function familyIndex(family) {
+  return RANKS.findIndex((r) => r.family === family);
+}
+
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level2 = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level2(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level2(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level2(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  return { claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true };
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  player.onboarding = __spreadProps(__spreadValues({}, st), { claimed: [...st.claimed, step.id] });
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
 // src/game/defaults.ts
 function defaultResources() {
   return {
@@ -3262,7 +3443,7 @@ function pay(player, cost, now) {
   bumpStat(player, "spent", total2);
 }
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const { player, queues, now } = s;
   switch (action == null ? void 0 : action.type) {
     case "sync": {
@@ -3383,6 +3564,11 @@ function applyAction(s, action) {
     case "setTitle":
       setActiveTitle(player, String((_n = action.title) != null ? _n : ""));
       return player.activeTitle;
+    case "claimOnboarding":
+      return claimOnboarding(player, String((_o = action.stepId) != null ? _o : ""));
+    case "hideOnboarding":
+      setOnboardingHidden(player, action.hidden === true);
+      return player.onboarding;
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -3469,47 +3655,6 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
   return { player, queues, notifications };
 }
 
-// src/game/ranks.ts
-var rank = (id, name, family, xp) => ({ id, name, family, xp, image: `/assets/ranks/${id}.webp` });
-var tiers = (prefix, family, xps) => [
-  rank(`${prefix}3`, `${family} III`, family, xps[0]),
-  rank(`${prefix}2`, `${family} II`, family, xps[1]),
-  rank(`${prefix}1`, `${family} I`, family, xps[2])
-];
-var DEFAULT_RANKS = [
-  rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
-  ...tiers("fer", "Fer", [100, 250, 500]),
-  ...tiers("bronze", "Bronze", [900, 1400, 2e3]),
-  ...tiers("argent", "Argent", [3e3, 4200, 5600]),
-  ...tiers("or", "Or", [7500, 1e4, 13e3]),
-  ...tiers("platine", "Platine", [17e3, 22e3, 28e3]),
-  ...tiers("emeraude", "\xC9meraude", [36e3, 45e3, 56e3]),
-  ...tiers("diamant", "Diamant", [7e4, 87e3, 107e3]),
-  ...tiers("maitre", "Ma\xEEtre", [13e4, 16e4, 195e3]),
-  rank("grand_maitre", "Grand Ma\xEEtre", "Grand Ma\xEEtre", 24e4),
-  rank("challenger", "Challenger", "Challenger", 32e4),
-  rank("elite", "\xC9lite", "\xC9lite", 42e4)
-];
-var RANKS = [];
-function setRanks(defs) {
-  RANKS.splice(0, RANKS.length, ...[...defs].sort((a, b) => a.xp - b.xp));
-}
-setRanks(structuredClone(DEFAULT_RANKS));
-function getRankIndex(xp) {
-  let index = 0;
-  for (let i = 0; i < RANKS.length; i++) {
-    if ((xp != null ? xp : 0) >= RANKS[i].xp) index = i;
-  }
-  return index;
-}
-function getRank(xp) {
-  var _a;
-  return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
-}
-function familyIndex(family) {
-  return RANKS.findIndex((r) => r.family === family);
-}
-
 // src/game/analytics.ts
 var HOUR2 = 36e5;
 var DAY2 = 24 * HOUR2;
@@ -3527,7 +3672,7 @@ function topCounts(values, limit) {
     var _a;
     return counts.set(v, ((_a = counts.get(v)) != null ? _a : 0) + 1);
   });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count]) => ({ pseudo, count }));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count2]) => ({ pseudo, count: count2 }));
 }
 function computeGameStats(players, queues, reports, now, windowDays = 7, balanceDays = 30) {
   const n = players.length;
@@ -3641,7 +3786,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         var _a;
         return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
       }))),
-      ranks: [...families.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
+      ranks: [...families.entries()].map(([label, count2]) => ({ label, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
       medianXp: median(players.map((p) => {
         var _a;
         return (_a = p.xp) != null ? _a : 0;
@@ -3957,11 +4102,11 @@ function resolveSpyArrival(input) {
   const spy = flushState(__spreadProps(__spreadValues({}, input.spy), { buildings: withMissingBuildings(input.spy.buildings, input.spy.resources) }), input.spyQueues, now).player;
   const flushed = flushState(__spreadProps(__spreadValues({}, input.target), { buildings: withMissingBuildings(input.target.buildings, input.target.resources) }), input.targetQueues, now);
   const target = flushed.player;
-  const level2 = espionageLevel(spy);
+  const level3 = espionageLevel(spy);
   const counter = counterEspionage(target);
-  const score = spyScore(level2, counter, probes);
+  const score = spyScore(level3, counter, probes);
   const tier = spyTier(score);
-  const detected = ((_a = input.random) != null ? _a : Math.random)() < detectionChance(level2, counter);
+  const detected = ((_a = input.random) != null ? _a : Math.random)() < detectionChance(level3, counter);
   const report = {
     spyUid: spy.uid,
     spyPseudo: spy.pseudo,
@@ -4397,7 +4542,8 @@ var GAME_FIELDS = [
   "titles",
   "activeTitle",
   "pirates",
-  "stats"
+  "stats",
+  "onboarding"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
