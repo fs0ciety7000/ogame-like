@@ -263,6 +263,7 @@ export type NotificationKind =
   | "event"
   | "gift"
   | "fleet"
+  | "report"
   | "system";
 
 export interface GameNotification {

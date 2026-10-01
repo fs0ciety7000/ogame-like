@@ -27,6 +27,7 @@ const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => (
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const ReportsPage = lazy(() => import("@/pages/ReportsPage").then((m) => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -65,6 +66,7 @@ export default function App() {
                 <Route path="reglages" element={<SettingsPage />} />
                 <Route path="admin" element={<AdminPage />} />
                 <Route path="nouveautes" element={<ChangelogPage />} />
+                <Route path="signalements" element={<ReportsPage />} />
               </Route>
             </Route>
 

@@ -49,6 +49,7 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   event: { icon: "🎉", sound: playConfirm },
   gift: { icon: "🎁", sound: playConfirm },
   fleet: { icon: "🛸", sound: playAlert },
+  report: { icon: "🔧", sound: playConfirm },
   system: { icon: "✨", sound: playConfirm },
 };
 

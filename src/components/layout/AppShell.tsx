@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
+import { useReportBadgeSync } from "@/hooks/useReportBadges";
+import { useReportBadges } from "@/services/reportService";
 import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
@@ -36,7 +38,7 @@ import { playClick } from "@/lib/sfx";
 /** Bouton de la barre d'outils du haut. */
 function HeaderButton({ title, onClick, asLink, danger, children }: { title: string; onClick?: () => void; asLink?: string; danger?: boolean; children: ReactNode }) {
   const cls = cn(
-    "grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
+    "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
     danger && "hover:bg-danger-glow/10 hover:text-danger-glow",
   );
   return asLink ? (
@@ -102,6 +104,8 @@ export function AppShell() {
   useGameSync(user?.uid ?? null);
   useRankCelebration(player);
   useAllianceUnread(user?.uid ?? null, player);
+  useReportBadgeSync(user?.uid ?? null, isAdmin);
+  const pendingReports = useReportBadges((s) => s.pendingNew);
 
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
@@ -170,8 +174,13 @@ export function AppShell() {
               </span>
               <NotificationBell />
               {isAdmin && (
-                <HeaderButton title="Administration" asLink="/game/admin">
+                <HeaderButton title="Administration" asLink={pendingReports > 0 ? "/game/admin?onglet=reports" : "/game/admin"}>
                   <Wrench className="h-4 w-4" />
+                  {pendingReports > 0 && (
+                    <span className="absolute right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center bg-danger-glow px-0.5 font-mono text-[9px] font-bold text-space-950">
+                      {pendingReports > 9 ? "9+" : pendingReports}
+                    </span>
+                  )}
                 </HeaderButton>
               )}
               <HeaderButton title="Réglages" asLink="/game/reglages">
