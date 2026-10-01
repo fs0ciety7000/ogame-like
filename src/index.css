@@ -564,3 +564,101 @@ body {
 :root[data-theme="holo"] .hud-btn-primary:hover {
   background: color-mix(in srgb, var(--th-accent) 28%, transparent);
 }
+
+/* ---------- Page de maintenance (v2.5) ---------- */
+@layer components {
+  .mt-hazard {
+    background: repeating-linear-gradient(-45deg, var(--color-gold-glow) 0 14px, #0b0e16 14px 28px);
+    background-size: 40px 40px;
+    animation: mt-hazard 1.6s linear infinite;
+  }
+  .mt-kenburns {
+    animation: mt-kenburns 38s ease-in-out infinite alternate;
+  }
+  .mt-beam {
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-cyan-glow) 18%, transparent), transparent);
+    animation: mt-beam 7s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+  .mt-glitch {
+    position: relative;
+  }
+  .mt-glitch::before,
+  .mt-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .mt-glitch::before {
+    color: var(--color-danger-glow);
+    transform: translate(2px, 0);
+    clip-path: inset(0 0 100% 0);
+    animation: mt-glitch-a 5s steps(1) infinite;
+    mix-blend-mode: screen;
+  }
+  .mt-glitch::after {
+    color: var(--color-cyan-glow);
+    transform: translate(-2px, 0);
+    clip-path: inset(100% 0 0 0);
+    animation: mt-glitch-b 5s steps(1) infinite;
+    mix-blend-mode: screen;
+  }
+  .mt-spark {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--color-gold-glow);
+    box-shadow: 0 0 6px var(--color-gold-glow);
+    animation: mt-spark var(--d, 3s) ease-out infinite;
+    animation-delay: var(--delay, 0s);
+    opacity: 0;
+  }
+  .mt-caret::after {
+    content: "▋";
+    margin-left: 2px;
+    animation: hud-blink 1s steps(1) infinite;
+  }
+}
+@keyframes mt-hazard {
+  to { background-position: 40px 0; }
+}
+@keyframes mt-kenburns {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+}
+@keyframes mt-beam {
+  0% { transform: translateY(-30vh); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+@keyframes mt-glitch-a {
+  0%, 86%, 100% { clip-path: inset(0 0 100% 0); }
+  87% { clip-path: inset(12% 0 62% 0); transform: translate(3px, -1px); }
+  89% { clip-path: inset(58% 0 18% 0); transform: translate(-3px, 1px); }
+  91% { clip-path: inset(30% 0 48% 0); transform: translate(2px, 0); }
+  93% { clip-path: inset(0 0 100% 0); }
+}
+@keyframes mt-glitch-b {
+  0%, 87%, 100% { clip-path: inset(100% 0 0 0); }
+  88% { clip-path: inset(64% 0 10% 0); transform: translate(-3px, 1px); }
+  90% { clip-path: inset(20% 0 66% 0); transform: translate(3px, 0); }
+  92% { clip-path: inset(44% 0 36% 0); transform: translate(-2px, -1px); }
+  94% { clip-path: inset(100% 0 0 0); }
+}
+@keyframes mt-spark {
+  0% { opacity: 0; transform: translate(0, 0) scale(1); }
+  8% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--x, 20px), var(--y, 60px)) scale(0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-hazard,
+  .mt-kenburns,
+  .mt-beam,
+  .mt-spark,
+  .mt-glitch::before,
+  .mt-glitch::after {
+    animation: none;
+  }
+}

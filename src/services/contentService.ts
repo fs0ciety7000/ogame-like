@@ -7,6 +7,10 @@ import {
   type ContentSection,
   type GameContent,
 } from "@/game/content";
+import { MAINTENANCE_KEY } from "@/game/maintenance";
+import { applyMaintenanceRecord } from "@/services/maintenanceService";
+import { STAFF_KEY } from "@/game/staff";
+import { applyStaffRecord } from "@/services/staffService";
 
 /* =====================================================
    Contenu du jeu (bâtiments, unités, technos, missions, règles) stocké
@@ -28,6 +32,8 @@ export const useContentStore = create<ContentState>(() => ({ version: 0, loaded:
 type ConfigRecord = { id: string; key: ContentSection; data: unknown };
 
 function applyRecords(records: ConfigRecord[]) {
+  applyMaintenanceRecord(records.find((r) => (r.key as string) === MAINTENANCE_KEY)?.data ?? null);
+  applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {
@@ -59,6 +65,7 @@ export function startContentSync() {
     .catch((err) => {
       console.warn("Contenu du jeu indisponible, valeurs par défaut utilisées :", err);
       useContentStore.setState({ loaded: true });
+      applyMaintenanceRecord(null);
     });
   subscribeRecords("game_config", "*", () => {
     fetchRecords()

@@ -1025,9 +1025,13 @@ function adminReset(e) {
       txApp.findAllRecords("alliance_logs").forEach((l) => txApp.delete(l));
     }
 
+    const staffRecord = readStaffRecord(txApp, game);
+    const staffRoles = staffRecord ? game.normalizeStaff(toPlain(staffRecord).data).roles : {};
     targets.forEach((uid) => {
       const loaded = loadPlayer(txApp, game, uid);
       const out = game.resetPlayerState(loaded.player, options, now);
+      // Le titre d'équipe survit à la remise à zéro des titres.
+      if (staffRoles[uid]) game.applyStaffTitle(out.player, staffRoles[uid], false);
       savePlayer(txApp, game, loaded, out.player, out.queues);
       ["createdAtMs", "lastAttackAtMs", "lastDefeatAtMs"].forEach((f) => loaded.rec.set(f, out.player[f]));
       if (scope === "all" && options.alliances) loaded.rec.set("allianceResearch", {});
@@ -1052,4 +1056,214 @@ function adminReset(e) {
   return e.json(200, summary);
 }
 
-module.exports = { processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Mode maintenance (v2.5) ---------- */
+
+/** État de la maintenance (clé "maintenance" de game_config). */
+function readMaintenance(txApp, game) {
+  const g = game || loadGame();
+  try {
+    const rec = (txApp || $app).findFirstRecordByData("game_config", "key", g.MAINTENANCE_KEY);
+    return g.normalizeMaintenance(toPlain(rec).data);
+  } catch (_) {
+    return g.normalizeMaintenance(null);
+  }
+}
+
+/** Requêtes d'écriture fermées aux joueurs pendant la maintenance : actions
+ *  de jeu (/api/cosmic/…, hors administration) et écritures directes dans
+ *  les collections (inscription comprise). La connexion reste possible. */
+function closedDuringMaintenance(method, path) {
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
+  if (path.indexOf("/api/cosmic/admin/") === 0) return false;
+  if (path.indexOf("/api/cosmic/") === 0) return true;
+  return /^\/api\/collections\/[^/]+\/records/.test(path);
+}
+
+/** Middleware : refuse l'action d'un joueur pendant la maintenance. */
+function maintenanceGuard(e) {
+  if (!closedDuringMaintenance(e.request.method, e.request.url.path)) return;
+  const m = readMaintenance($app);
+  if (!m.enabled || isGameAdmin(e)) return;
+  throw new ApiError(503, "Le jeu est en maintenance : réessaie à la réouverture.", { maintenance: true });
+}
+
+/** POST /api/cosmic/admin/maintenance { enabled, message, version, endsAtMs } */
+function adminMaintenance(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const now = Date.now();
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    const previous = readMaintenance(txApp, game);
+    const next = game.nextMaintenance(previous, req, now);
+    let extended = 0;
+    // Fin de maintenance : les ultimatums en cours sont prolongés d'autant.
+    if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
+      txApp.findAllRecords("players").forEach((rec) => {
+        const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
+        if (!shifted) return;
+        rec.set("pirates", shifted);
+        txApp.save(rec);
+        extended++;
+      });
+    }
+    let rec = null;
+    try {
+      rec = txApp.findFirstRecordByData("game_config", "key", game.MAINTENANCE_KEY);
+    } catch (_) {
+      rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+      rec.set("key", game.MAINTENANCE_KEY);
+    }
+    rec.set("data", next);
+    txApp.save(rec);
+
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "maintenance",
+      targetCollection: "game_config",
+      recordId: rec.id,
+      recordLabel: next.enabled ? "maintenance activée" : "maintenance terminée",
+      changes: { avant: previous, après: next, ultimatumsProlongés: extended },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+    response = Object.assign({ extended }, next);
+  });
+  return e.json(200, response);
+}
+
+/* ---------- Administrateurs et équipe du jeu (v2.5) ---------- */
+
+function readStaffRecord(txApp, game) {
+  try {
+    return txApp.findFirstRecordByData("game_config", "key", game.STAFF_KEY);
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Titre d'équipe d'un joueur aligné sur son rôle (null = retiré). */
+function setPlayerStaffTitle(txApp, game, uid, role, display) {
+  const rec = findOrNull(txApp, "players", uid);
+  if (!rec) return;
+  const p = toPlain(rec);
+  if (!game.applyStaffTitle(p, role, display)) return;
+  rec.set("titles", p.titles);
+  rec.set("activeTitle", p.activeTitle || "");
+  txApp.save(rec);
+}
+
+/** Rôles de l'équipe ; créés au premier appel à partir des administrateurs
+ *  existants (rôles par défaut selon le pseudo, titre affiché d'emblée). */
+function ensureStaff(txApp, game) {
+  const existing = readStaffRecord(txApp, game);
+  if (existing) return { rec: existing, state: game.normalizeStaff(toPlain(existing).data) };
+  const roles = {};
+  txApp.findAllRecords("admins").forEach((a) => {
+    const player = findOrNull(txApp, "players", a.id);
+    const pseudo = player ? player.getString("pseudo") : "";
+    roles[a.id] = game.DEFAULT_STAFF_BY_PSEUDO[pseudo] || "admin";
+    setPlayerStaffTitle(txApp, game, a.id, roles[a.id], true);
+  });
+  const rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+  rec.set("key", game.STAFF_KEY);
+  rec.set("data", { roles });
+  txApp.save(rec);
+  return { rec, state: { roles } };
+}
+
+function adminEntry(txApp, id, note, roles) {
+  const player = findOrNull(txApp, "players", id);
+  const user = findOrNull(txApp, "users", id);
+  return {
+    id,
+    pseudo: player ? player.getString("pseudo") : "",
+    email: user ? user.getString("email") : "",
+    note: note || "",
+    role: (roles && roles[id]) || "admin",
+  };
+}
+
+function adminEntries(txApp, roles) {
+  return txApp.findAllRecords("admins").map((r) => adminEntry(txApp, r.id, r.getString("note"), roles));
+}
+
+/** GET /api/cosmic/admin/admins — liste des administrateurs et de leur rôle. */
+function adminList(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  let list = [];
+  $app.runInTransaction((txApp) => {
+    list = adminEntries(txApp, ensureStaff(txApp, game).state.roles);
+  });
+  return e.json(200, { admins: list });
+}
+
+/** POST /api/cosmic/admin/admins { action: "add" | "remove" | "role", uid, note?, role? } */
+function adminManage(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const action = String(req.action || "");
+  if (["add", "remove", "role"].indexOf(action) < 0) throw new BadRequestError("Action inconnue.");
+  const role = game.isStaffRole(req.role) ? req.role : "admin";
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    if (!findOrNull(txApp, "users", uid)) throw new NotFoundError("Compte introuvable.");
+    const staff = ensureStaff(txApp, game);
+    const roles = staff.state.roles;
+    const existing = findOrNull(txApp, "admins", uid);
+    let label = "";
+    if (action === "add") {
+      if (existing) throw new BadRequestError("Ce joueur est déjà administrateur.");
+      const rec = new Record(txApp.findCollectionByNameOrId("admins"));
+      rec.set("id", uid);
+      rec.set("note", String(req.note || "").slice(0, 200));
+      txApp.save(rec);
+      roles[uid] = role;
+      const player = findOrNull(txApp, "players", uid);
+      setPlayerStaffTitle(txApp, game, uid, role, !!player && !player.getString("activeTitle"));
+      label = `nommé ${role === "developer" ? "développeur" : "administrateur"}`;
+    } else if (action === "remove") {
+      if (!existing) throw new BadRequestError("Ce joueur n'est pas administrateur.");
+      if (e.auth && e.auth.id === uid) throw new BadRequestError("Tu ne peux pas te retirer toi-même.");
+      if (txApp.findAllRecords("admins").length <= 1) throw new BadRequestError("Il faut garder au moins un administrateur.");
+      txApp.delete(existing);
+      delete roles[uid];
+      setPlayerStaffTitle(txApp, game, uid, null, false);
+      label = "administrateur retiré";
+    } else {
+      if (!existing) throw new BadRequestError("Ce joueur n'est pas administrateur.");
+      const player = findOrNull(txApp, "players", uid);
+      const shown = player ? player.getString("activeTitle") : "";
+      const wasStaffShown = shown === "Développeur" || shown === "Administrateur";
+      roles[uid] = role;
+      setPlayerStaffTitle(txApp, game, uid, role, wasStaffShown);
+      label = `rôle : ${role === "developer" ? "développeur" : "administrateur"}`;
+    }
+    staff.rec.set("data", { roles });
+    txApp.save(staff.rec);
+
+    const entry = adminEntry(txApp, uid, String(req.note || ""), roles);
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: action === "add" ? "create" : action === "remove" ? "delete" : "update",
+      targetCollection: "admins",
+      recordId: uid,
+      recordLabel: `${entry.pseudo || entry.email || uid} : ${label}`,
+      changes: { [label]: entry.pseudo || entry.email || uid },
+      createdAtMs: Date.now(),
+    });
+    txApp.save(log);
+    response = { ok: true, admins: adminEntries(txApp, roles) };
+  });
+  return e.json(200, response);
+}
+
+module.exports = { adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
