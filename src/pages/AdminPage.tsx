@@ -13,6 +13,7 @@ import {
   Scale,
   ScrollText,
   ShieldAlert,
+  Bug,
   ShieldCheck,
   Skull,
   Users,
@@ -34,6 +35,8 @@ import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
 import { AdminsPanel } from "@/pages/admin/AdminsPanel";
+import { ReportsPanel } from "@/pages/admin/ReportsPanel";
+import { useReportBadges } from "@/services/reportService";
 import { AdminStatusStrip } from "@/pages/admin/AdminStatusStrip";
 import { useMaintenance } from "@/services/maintenanceService";
 import { useContentStore } from "@/services/contentService";
@@ -68,6 +71,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
       { id: "admins", label: "Administrateurs", icon: ShieldCheck, hint: "Qui a accès à cette console." },
     ],
   },
@@ -87,6 +91,7 @@ export function AdminPage() {
   const tab = params.get("onglet") ?? "stats";
   const maintenance = useMaintenance();
   const customized = useContentStore((s) => s.customized);
+  const pendingReports = useReportBadges((s) => s.pendingNew);
 
   useEffect(() => {
     if (uid) void checkIsAdmin(uid).then(setAllowed);
@@ -130,6 +135,9 @@ export function AdminPage() {
                   <span aria-hidden className="absolute inset-y-1 left-0 hidden w-0.5 bg-cyan-glow shadow-[0_0_8px_var(--color-cyan-glow)] group-data-[state=active]:block" />
                   <item.icon className="h-4 w-4 shrink-0" />
                   <span className="whitespace-nowrap">{item.label}</span>
+                  {item.id === "reports" && pendingReports > 0 && (
+                    <span className="ml-auto bg-danger-glow px-1 font-mono text-[9px] font-bold text-space-950">{pendingReports}</span>
+                  )}
                   {item.id === "maintenance" && maintenance.enabled && <span className="ml-auto h-2 w-2 animate-pulse rounded-full bg-gold-glow shadow-[0_0_6px_var(--color-gold-glow)]" />}
                   {customized.includes(item.id as ContentSection) && (
                     <span title="Personnalisé (différent du code)" className="ml-auto h-1.5 w-1.5 rounded-full bg-violet-glow" />
@@ -148,6 +156,9 @@ export function AdminPage() {
               <p className="truncate text-xs text-slate-500">{active.hint}</p>
             </div>
           )}
+        <TabsContent value="reports">
+          <ReportsPanel />
+        </TabsContent>
         <TabsContent value="admins">
           <AdminsPanel />
         </TabsContent>

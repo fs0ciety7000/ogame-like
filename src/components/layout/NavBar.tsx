@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +11,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { StaffBadge } from "@/components/ui/staff-badge";
+import { useReportBadges } from "@/services/reportService";
 
 interface NavItem {
   to: string;
@@ -48,6 +49,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/profil", label: "Profil", icon: UserCircle },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
+      { to: "/game/signalements", label: "Signalements", icon: Bug },
     ],
   },
 ];
@@ -58,7 +60,8 @@ const ALL_ITEMS = ALL_NAV_ITEMS;
 function useBadge(to: string): number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count);
   const changelogUnread = useUnreadChangelogCount();
-  return to === "/game/alliance" ? allianceUnread : to === "/game/nouveautes" ? changelogUnread : 0;
+  const reportsUnread = useReportBadges((s) => s.unread);
+  return to === "/game/alliance" ? allianceUnread : to === "/game/nouveautes" ? changelogUnread : to === "/game/signalements" ? reportsUnread : 0;
 }
 
 function Badge({ count }: { count: number }) {
@@ -253,6 +256,7 @@ function MobileTabBar() {
   const location = useLocation();
   const allianceUnread = useAllianceUnreadStore((s) => s.count);
   const changelogUnread = useUnreadChangelogCount();
+  const reportsUnread = useReportBadges((r) => r.unread);
   const tabs = TAB_ITEMS.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter(Boolean);
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
@@ -273,7 +277,7 @@ function MobileTabBar() {
         >
           <span className="relative">
             <LayoutGrid className="h-5 w-5" />
-            <Badge count={allianceUnread + changelogUnread} />
+            <Badge count={allianceUnread + changelogUnread + reportsUnread} />
           </span>
           Menu
         </button>

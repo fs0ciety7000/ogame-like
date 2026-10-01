@@ -59,12 +59,15 @@ __export(hooksEntry_exports, {
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
   STAFF_KEY: () => STAFF_KEY,
+  addReportComment: () => addReportComment,
   allianceStandings: () => allianceStandings,
   answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
   applyStaffTitle: () => applyStaffTitle,
+  applyStaffUpdate: () => applyStaffUpdate,
+  assertReportQuota: () => assertReportQuota,
   collectDebris: () => collectDebris,
   computeGameStats: () => computeGameStats,
   debrisTotal: () => debrisTotal,
@@ -75,7 +78,9 @@ __export(hooksEntry_exports, {
   findFaction: () => findFaction,
   finishAllianceResearch: () => finishAllianceResearch,
   flushPlayer: () => flushPlayer,
+  githubIssueBody: () => githubIssueBody,
   isStaffRole: () => isStaffRole,
+  maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
@@ -94,10 +99,12 @@ __export(hooksEntry_exports, {
   previousSeasonId: () => previousSeasonId,
   recallFleet: () => recallFleet,
   recyclerCapacity: () => recyclerCapacity,
+  reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
   resolveLairAssault: () => resolveLairAssault,
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
+  sanitizeNewReport: () => sanitizeNewReport,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
@@ -4368,9 +4375,122 @@ function applyStaffTitle(player, role, display = false) {
   return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
 }
 
+// src/game/reports.ts
+var REPORT_CATEGORIES = [
+  { id: "bug", label: "Bug", hint: "Quelque chose ne marche pas comme pr\xE9vu" },
+  { id: "display", label: "Affichage", hint: "Page mal affich\xE9e, texte coup\xE9, mobile\u2026" },
+  { id: "balance", label: "\xC9quilibrage", hint: "Co\xFBts, gains, combats, factions\u2026" },
+  { id: "account", label: "Compte", hint: "Connexion, mot de passe, progression perdue" },
+  { id: "idea", label: "Suggestion", hint: "Une id\xE9e pour am\xE9liorer le jeu" },
+  { id: "other", label: "Autre", hint: "Tout le reste" }
+];
+var REPORT_STATUSES = [
+  { id: "new", label: "Nouveau", tone: "accent" },
+  { id: "in_progress", label: "En cours", tone: "gold" },
+  { id: "resolved", label: "R\xE9solu", tone: "mint" },
+  { id: "rejected", label: "Non retenu", tone: "danger" }
+];
+var REPORT_RULES = {
+  titleMax: 120,
+  descriptionMin: 10,
+  descriptionMax: 4e3,
+  commentMax: 2e3,
+  resolutionMax: 2e3,
+  /** Signalements par joueur sur 24 h glissantes. */
+  maxPerDay: 5
+};
+function isReportCategory(v) {
+  return REPORT_CATEGORIES.some((c) => c.id === v);
+}
+function isReportStatus(v) {
+  return REPORT_STATUSES.some((s) => s.id === v);
+}
+function reportStatusLabel(status) {
+  var _a, _b;
+  return (_b = (_a = REPORT_STATUSES.find((s) => s.id === status)) == null ? void 0 : _a.label) != null ? _b : status;
+}
+var clean = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+function sanitizeNewReport(input) {
+  const title = clean(input.title, REPORT_RULES.titleMax);
+  const description = clean(input.description, REPORT_RULES.descriptionMax);
+  if (!title) throw new GameActionError("Donne un titre \xE0 ton signalement.");
+  if (description.length < REPORT_RULES.descriptionMin) throw new GameActionError("D\xE9cris le probl\xE8me en quelques mots de plus.");
+  const raw = input.context && typeof input.context === "object" ? input.context : {};
+  return {
+    category: isReportCategory(input.category) ? input.category : "other",
+    title,
+    description,
+    context: {
+      version: clean(raw.version, 20),
+      page: clean(raw.page, 200),
+      theme: clean(raw.theme, 20),
+      userAgent: clean(raw.userAgent, 300),
+      screen: clean(raw.screen, 40)
+    }
+  };
+}
+function assertReportQuota(previousCreatedAtMs, now) {
+  const recent = previousCreatedAtMs.filter((t) => now - t < 24 * 36e5).length;
+  if (recent >= REPORT_RULES.maxPerDay) throw new GameActionError(`Tu as d\xE9j\xE0 envoy\xE9 ${REPORT_RULES.maxPerDay} signalements aujourd'hui : r\xE9essaie demain ou compl\xE8te un signalement existant.`);
+}
+function addReportComment(history, author, text, now) {
+  const body = clean(text, REPORT_RULES.commentMax);
+  if (!body) throw new GameActionError("Le message est vide.");
+  return [...history, { kind: "comment", atMs: now, byId: author.id, byName: author.name, staff: author.staff, text: body }];
+}
+function applyStaffUpdate(report, author, update, now) {
+  var _a, _b, _c, _d;
+  let history = [...(_a = report.history) != null ? _a : []];
+  let status = report.status;
+  let resolution = (_b = report.resolution) != null ? _b : "";
+  const notes = [];
+  if (update.status !== void 0) {
+    if (!isReportStatus(update.status)) throw new GameActionError("Statut inconnu.");
+    if (update.status !== status) {
+      status = update.status;
+      history.push({ kind: "status", atMs: now, byId: author.id, byName: author.name, staff: true, status });
+      notes.push(`statut : ${reportStatusLabel(status)}`);
+    }
+  }
+  if (update.resolution !== void 0) {
+    const next = clean(update.resolution, REPORT_RULES.resolutionMax);
+    if (next !== resolution) {
+      resolution = next;
+      if (next) notes.push("r\xE9solution renseign\xE9e");
+    }
+  }
+  if (typeof update.comment === "string" && update.comment.trim()) {
+    history = addReportComment(history, { id: author.id, name: author.name, staff: true }, update.comment, now);
+    notes.push("nouvelle r\xE9ponse");
+  }
+  const changed = status !== report.status || resolution !== ((_c = report.resolution) != null ? _c : "") || history.length !== ((_d = report.history) != null ? _d : []).length;
+  return { status, resolution, history, changed, notify: notes.length > 0 ? notes.join(", ") : null };
+}
+function githubIssueBody(report, link) {
+  var _a, _b, _c;
+  const ctx = (_a = report.context) != null ? _a : {};
+  const cat = (_c = (_b = REPORT_CATEGORIES.find((c) => c.id === report.category)) == null ? void 0 : _b.label) != null ? _c : report.category;
+  return [
+    `**Signal\xE9 en jeu** par ${report.reporterPseudo || "un joueur"} \xB7 ${cat}`,
+    "",
+    report.description,
+    "",
+    "| Contexte | |",
+    "|---|---|",
+    `| Version | ${ctx.version || "?"} |`,
+    `| Page | ${ctx.page || "?"} |`,
+    `| Th\xE8me | ${ctx.theme || "?"} |`,
+    `| \xC9cran | ${ctx.screen || "?"} |`,
+    `| Navigateur | ${ctx.userAgent || "?"} |`,
+    "",
+    report.screenshot ? `Capture jointe au signalement (voir l'administration).` : "",
+    `Suivi dans l'administration : ${link}`
+  ].filter((l) => l !== null).join("\n");
+}
+
 // src/game/maintenance.ts
 var MAINTENANCE_KEY = "maintenance";
-var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null };
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
 var MAX_MESSAGE = 600;
 var MAX_VERSION = 20;
 function normalizeMaintenance(raw) {
@@ -4382,7 +4502,8 @@ function normalizeMaintenance(raw) {
     message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
     version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
     startedAtMs: Number(r.startedAtMs) || 0,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null
+    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
+    autoEnd: r.autoEnd !== false
   };
 }
 function nextMaintenance(previous, request, now) {
@@ -4394,8 +4515,12 @@ function nextMaintenance(previous, request, now) {
     message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
     version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
     startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null
+    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
+    autoEnd: request.autoEnd !== false
   };
+}
+function maintenanceShouldAutoEnd(m, now) {
+  return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
 }
 function extendUltimatums(pirates, startedAtMs, now) {
   const pausedMs = now - startedAtMs;

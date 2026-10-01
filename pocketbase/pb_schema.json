@@ -1251,5 +1251,119 @@
     "indexes": [
       "CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"
     ]
+  },
+  {
+    "id": "pbc_ce_reports",
+    "name": "reports",
+    "type": "base",
+    "listRule": "reporterId = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "viewRule": "reporterId = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.reporterId = @request.auth.id",
+    "updateRule": null,
+    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "fields": [
+      {
+        "name": "reporterId",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "reporterPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "category",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "max": 4000,
+        "presentable": false
+      },
+      {
+        "name": "context",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "resolution",
+        "type": "text",
+        "required": false,
+        "max": 2000,
+        "presentable": false
+      },
+      {
+        "name": "githubUrl",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "history",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "screenshot",
+        "type": "file",
+        "required": false,
+        "maxSelect": 1,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg",
+          "image/gif"
+        ],
+        "thumbs": [],
+        "protected": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "updatedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "reporterSeenAtMs",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_reports_reporter ON reports (reporterId)",
+      "CREATE INDEX idx_reports_status ON reports (status)"
+    ]
   }
 ]

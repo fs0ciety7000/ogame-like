@@ -767,6 +767,44 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
   });
 
+  it("v2.7 reports: created by the player, private, quota, staff replies notify the player", async () => {
+    // Connecté en B.
+    const form = new FormData();
+    form.append("reporterId", bId);
+    form.append("category", "display");
+    form.append("title", "Menu bloqué");
+    form.append("description", "Le menu ne se ferme plus sur mobile.");
+    form.append("status", "resolved"); // ignoré par le serveur
+    form.append("context", JSON.stringify({ page: "/game", version: "test" }));
+    const created = await pb.collection("reports").create(form);
+    try {
+      expect(created.status).toBe("new");
+      expect(created.reporterPseudo).toBeTruthy();
+      expect(created.history).toHaveLength(1);
+      // Personne ne crée au nom d'un autre, ni ne modifie directement.
+      const other = new FormData();
+      other.append("reporterId", "someone_else");
+      other.append("title", "x");
+      other.append("description", "abcdefghijkl");
+      await expect(pb.collection("reports").create(other)).rejects.toBeTruthy();
+      await expect(pb.collection("reports").update(created.id, { status: "resolved" })).rejects.toBeTruthy();
+      // Réponse de l'équipe : statut + message, le joueur est notifié.
+      const updated = await admin.send("/api/cosmic/admin/reports", { method: "POST", body: { id: created.id, status: "in_progress", comment: "On regarde" } });
+      expect(updated.status).toBe("in_progress");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id = "${bId}" && kind = "report"` });
+      expect(notes.length).toBeGreaterThan(0);
+      // Le joueur répond et marque comme lu ; un joueur ne peut pas utiliser la route d'équipe.
+      const replied = await pb.send("/api/cosmic/reports/comment", { method: "POST", body: { id: created.id, text: "Merci !" } });
+      expect(replied.history.at(-1).text).toBe("Merci !");
+      await expect(pb.send("/api/cosmic/admin/reports", { method: "POST", body: { id: created.id, status: "resolved" } })).rejects.toMatchObject({ status: 403 });
+      // Invisible pour un client anonyme.
+      await expect(new PocketBase(PB_TEST_URL!).collection("reports").getOne(created.id)).rejects.toBeTruthy();
+    } finally {
+      await admin.collection("reports").delete(created.id);
+      for (const n of await admin.collection("notifications").getFullList({ filter: `player_id = "${bId}" && kind = "report"` })) await admin.collection("notifications").delete(n.id);
+    }
+  });
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

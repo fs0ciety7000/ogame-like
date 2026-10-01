@@ -3,7 +3,7 @@ import { create } from "zustand";
 /* Thèmes d'interface (v2.4) : jetons définis dans src/index.css sous
    html[data-theme]. Le choix est propre à chaque appareil. */
 
-export type ThemeId = "tactique" | "holo" | "cockpit";
+export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner";
 
 export const THEMES: { id: ThemeId; name: string; inspiration: string; description: string; swatches: string[] }[] = [
   {
@@ -26,6 +26,13 @@ export const THEMES: { id: ThemeId; name: string; inspiration: string; descripti
     inspiration: "Esprit Elite Dangerous",
     description: "Tableau de bord orange monochrome, sobre et immersif.",
     swatches: ["#ff8c1e", "#78c8ff", "#ffbe50", "#1b1008"],
+  },
+  {
+    id: "netrunner",
+    name: "Netrunner",
+    inspiration: "Esprit Cyberpunk 2077",
+    description: "Jaune haute tension et rouge néon sur noir profond, découpes en encoche et glitch.",
+    swatches: ["#f3e600", "#ff003c", "#55ead4", "#171419"],
   },
 ];
 

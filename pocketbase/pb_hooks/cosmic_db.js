@@ -1087,52 +1087,76 @@ function maintenanceGuard(e) {
   throw new ApiError(503, "Le jeu est en maintenance : réessaie à la réouverture.", { maintenance: true });
 }
 
-/** POST /api/cosmic/admin/maintenance { enabled, message, version, endsAtMs } */
+/** Enregistre le nouvel état de la maintenance ; à la fin, les ultimatums en
+ *  cours sont prolongés de la durée de la coupure. Consigné dans le journal. */
+function writeMaintenance(txApp, game, previous, next, now, actor) {
+  let extended = 0;
+  if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
+    txApp.findAllRecords("players").forEach((rec) => {
+      const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
+      if (!shifted) return;
+      rec.set("pirates", shifted);
+      txApp.save(rec);
+      extended++;
+    });
+  }
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.MAINTENANCE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.MAINTENANCE_KEY);
+  }
+  rec.set("data", next);
+  txApp.save(rec);
+
+  const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+  log.load({
+    actorId: actor.id,
+    actorName: actor.name,
+    action: "maintenance",
+    targetCollection: "game_config",
+    recordId: rec.id,
+    recordLabel: next.enabled ? "maintenance activée" : actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée",
+    changes: { avant: previous, après: next, ultimatumsProlongés: extended },
+    createdAtMs: now,
+  });
+  txApp.save(log);
+  return extended;
+}
+
+/** POST /api/cosmic/admin/maintenance { enabled, message, version, endsAtMs, autoEnd } */
 function adminMaintenance(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
   const req = body(e);
   const now = Date.now();
+  const actor = {
+    id: e.auth ? e.auth.id : "superuser",
+    name: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+  };
   let response = null;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
     const next = game.nextMaintenance(previous, req, now);
-    let extended = 0;
-    // Fin de maintenance : les ultimatums en cours sont prolongés d'autant.
-    if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
-      txApp.findAllRecords("players").forEach((rec) => {
-        const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
-        if (!shifted) return;
-        rec.set("pirates", shifted);
-        txApp.save(rec);
-        extended++;
-      });
-    }
-    let rec = null;
-    try {
-      rec = txApp.findFirstRecordByData("game_config", "key", game.MAINTENANCE_KEY);
-    } catch (_) {
-      rec = new Record(txApp.findCollectionByNameOrId("game_config"));
-      rec.set("key", game.MAINTENANCE_KEY);
-    }
-    rec.set("data", next);
-    txApp.save(rec);
-
-    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
-    log.load({
-      actorId: e.auth ? e.auth.id : "superuser",
-      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
-      action: "maintenance",
-      targetCollection: "game_config",
-      recordId: rec.id,
-      recordLabel: next.enabled ? "maintenance activée" : "maintenance terminée",
-      changes: { avant: previous, après: next, ultimatumsProlongés: extended },
-      createdAtMs: now,
-    });
-    txApp.save(log);
+    const extended = writeMaintenance(txApp, game, previous, next, now, actor);
     response = Object.assign({ extended }, next);
   });
   return e.json(200, response);
+}
+
+/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active). */
+function autoEndMaintenance(now) {
+  const game = loadGame();
+  let ended = false;
+  $app.runInTransaction((txApp) => {
+    const previous = readMaintenance(txApp, game);
+    if (!game.maintenanceShouldAutoEnd(previous, now)) return;
+    const next = game.nextMaintenance(previous, { enabled: false }, now);
+    writeMaintenance(txApp, game, previous, next, now, { id: "system", name: "Système" });
+    ended = true;
+  });
+  return ended;
 }
 
 /* ---------- Administrateurs et équipe du jeu (v2.5) ---------- */
@@ -1266,4 +1290,270 @@ function adminManage(e) {
   return e.json(200, response);
 }
 
-module.exports = { adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Signalements de problèmes (v2.7) ---------- */
+
+/** Adresse publique du jeu (« Application URL » de PocketBase). */
+function appUrl(path) {
+  let base = "";
+  try {
+    base = String($app.settings().meta.appURL || "").replace(/\/+$/, "");
+  } catch (_) {
+    base = "";
+  }
+  return base + path;
+}
+
+function mailEnabled() {
+  try {
+    return !!$app.settings().smtp.enabled;
+  } catch (_) {
+    return false;
+  }
+}
+
+function escapeHtml(text) {
+  return String(text || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+}
+
+/** E-mail best effort (SMTP configuré dans PocketBase), jamais bloquant. */
+function sendMail(to, subject, lines, link) {
+  if (!to || !mailEnabled()) return false;
+  try {
+    const meta = $app.settings().meta;
+    const html =
+      `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">` +
+      lines.map((l) => `<p>${escapeHtml(l).replace(/\n/g, "<br>")}</p>`).join("") +
+      (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>` : "") +
+      `<p style="color:#888;font-size:12px">Cosmic Empires</p></div>`;
+    const message = new MailerMessage({
+      from: { address: meta.senderAddress, name: meta.senderName || "Cosmic Empires" },
+      to: [{ address: to }],
+      subject,
+      html,
+    });
+    $app.newMailClient().send(message);
+    return true;
+  } catch (err) {
+    console.log(`[cosmic] e-mail non envoyé (${subject}) : ${err}`);
+    return false;
+  }
+}
+
+function userEmail(uid) {
+  const user = findOrNull($app, "users", uid);
+  return user ? user.getString("email") : "";
+}
+
+function adminIds() {
+  return $app.findAllRecords("admins").map((r) => r.id);
+}
+
+function reportJson(rec) {
+  const r = toPlain(rec);
+  r.history = r.history || [];
+  return r;
+}
+
+/** Création par un joueur : champs validés et complétés côté serveur. */
+function reportCreateRequest(e) {
+  const game = loadGame();
+  const rec = e.record;
+  const uid = e.auth ? e.auth.id : "";
+  if (!uid || rec.getString("reporterId") !== uid) throw new ForbiddenError("Signalement refusé.");
+  const now = Date.now();
+  let clean = null;
+  try {
+    const previous = $app.findRecordsByFilter("reports", "reporterId = {:u} && createdAtMs > {:t}", "", 50, 0, { u: uid, t: now - 24 * 3600 * 1000 }).map((r) => r.getInt("createdAtMs"));
+    game.assertReportQuota(previous, now);
+    clean = game.sanitizeNewReport({ category: rec.getString("category"), title: rec.getString("title"), description: rec.getString("description"), context: toPlain(rec).context });
+  } catch (err) {
+    throw asHttpError(game, err);
+  }
+  const player = findOrNull($app, "players", uid);
+  const pseudo = player ? player.getString("pseudo") : "";
+  rec.set("category", clean.category);
+  rec.set("title", clean.title);
+  rec.set("description", clean.description);
+  rec.set("context", clean.context);
+  rec.set("status", "new");
+  rec.set("resolution", "");
+  rec.set("githubUrl", "");
+  rec.set("reporterPseudo", pseudo);
+  rec.set("history", [{ kind: "created", atMs: now, byId: uid, byName: pseudo, staff: false }]);
+  rec.set("createdAtMs", now);
+  rec.set("updatedAtMs", now);
+  rec.set("reporterSeenAtMs", now);
+  e.next();
+
+  // Équipe prévenue : notification en jeu et e-mail.
+  const link = appUrl(`/game/admin?onglet=reports&signalement=${rec.id}`);
+  adminIds().forEach((id) => {
+    if (id === uid) return;
+    try {
+      notify($app, id, [{ kind: "report", title: "Nouveau signalement", message: `${pseudo || "Un joueur"} : ${clean.title}`, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* notification facultative */
+    }
+    sendMail(userEmail(id), `[Cosmic Empires] Signalement : ${clean.title}`, [`${pseudo || "Un joueur"} a signalé un problème.`, clean.title, clean.description], link);
+  });
+}
+
+/** POST /api/cosmic/reports/comment { id, text } — réponse du joueur. */
+function reportComment(e) {
+  const game = loadGame();
+  const req = body(e);
+  const uid = e.auth.id;
+  const now = Date.now();
+  let out = null;
+  let title = "";
+  let pseudo = "";
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "reports", String(req.id || ""));
+    if (!rec || rec.getString("reporterId") !== uid) throw new NotFoundError("Signalement introuvable.");
+    pseudo = rec.getString("reporterPseudo");
+    title = rec.getString("title");
+    let history;
+    try {
+      history = game.addReportComment(reportJson(rec).history, { id: uid, name: pseudo, staff: false }, req.text, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    rec.set("history", history);
+    rec.set("updatedAtMs", now);
+    rec.set("reporterSeenAtMs", now);
+    // Un signalement clos qui reçoit un message repasse « en cours ».
+    if (rec.getString("status") === "resolved" || rec.getString("status") === "rejected") rec.set("status", "in_progress");
+    txApp.save(rec);
+    out = reportJson(rec);
+  });
+  adminIds().forEach((id) => {
+    if (id === uid) return;
+    try {
+      notify($app, id, [{ kind: "report", title: "Signalement : nouveau message", message: `${pseudo} : ${title}`, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/reports/seen { id } — réponses lues par le joueur. */
+function reportSeen(e) {
+  const req = body(e);
+  const rec = findOrNull($app, "reports", String(req.id || ""));
+  if (!rec || rec.getString("reporterId") !== e.auth.id) throw new NotFoundError("Signalement introuvable.");
+  rec.set("reporterSeenAtMs", Date.now());
+  $app.save(rec);
+  return e.json(200, { ok: true });
+}
+
+function actorOf(e) {
+  return {
+    id: e.auth ? e.auth.id : "superuser",
+    name: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "Équipe",
+  };
+}
+
+/** POST /api/cosmic/admin/reports { id, status?, resolution?, comment? } */
+function adminReportUpdate(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const now = Date.now();
+  const actor = actorOf(e);
+  const player = e.auth ? findOrNull($app, "players", e.auth.id) : null;
+  if (player && player.getString("pseudo")) actor.name = player.getString("pseudo");
+  let out = null;
+  let notifyText = null;
+  let reporterId = "";
+  let title = "";
+  let comment = "";
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "reports", String(req.id || ""));
+    if (!rec) throw new NotFoundError("Signalement introuvable.");
+    let res;
+    try {
+      res = game.applyStaffUpdate({ status: rec.getString("status"), resolution: rec.getString("resolution"), history: reportJson(rec).history }, actor, req, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    if (!res.changed) {
+      out = reportJson(rec);
+      return;
+    }
+    rec.set("status", res.status);
+    rec.set("resolution", res.resolution);
+    rec.set("history", res.history);
+    rec.set("updatedAtMs", now);
+    txApp.save(rec);
+    out = reportJson(rec);
+    notifyText = res.notify;
+    reporterId = rec.getString("reporterId");
+    title = rec.getString("title");
+    comment = typeof req.comment === "string" ? req.comment.trim() : "";
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: "update",
+      targetCollection: "reports",
+      recordId: rec.id,
+      recordLabel: `Signalement : ${title}`,
+      changes: { [res.notify || "mise à jour"]: game.reportStatusLabel(res.status) },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+  });
+  if (notifyText && reporterId) {
+    try {
+      notify($app, reporterId, [{ kind: "report", title: "Ton signalement a avancé", message: `${title} — ${notifyText}`, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+    const lines = [`Ton signalement « ${title} » a été mis à jour : ${notifyText}.`];
+    if (comment) lines.push(`Message de l'équipe :\n${comment}`);
+    if (out.resolution) lines.push(`Résolution :\n${out.resolution}`);
+    sendMail(userEmail(reporterId), `[Cosmic Empires] ${title} — ${game.reportStatusLabel(out.status)}`, lines, appUrl(`/game/signalements?id=${out.id}`));
+  }
+  return e.json(200, out);
+}
+
+/** GET /api/cosmic/admin/reports/config — options disponibles (e-mail, GitHub). */
+function adminReportConfig(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { email: mailEnabled(), github: !!($os.getenv("COSMIC_GITHUB_TOKEN") && $os.getenv("COSMIC_GITHUB_REPO")) });
+}
+
+/** POST /api/cosmic/admin/reports/github { id } — crée l'issue GitHub liée. */
+function adminReportGithub(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const token = $os.getenv("COSMIC_GITHUB_TOKEN");
+  const repo = $os.getenv("COSMIC_GITHUB_REPO");
+  if (!token || !repo) throw new BadRequestError("GitHub n'est pas configuré (variables COSMIC_GITHUB_TOKEN et COSMIC_GITHUB_REPO).");
+  const game = loadGame();
+  const req = body(e);
+  const rec = findOrNull($app, "reports", String(req.id || ""));
+  if (!rec) throw new NotFoundError("Signalement introuvable.");
+  if (rec.getString("githubUrl")) return e.json(200, reportJson(rec));
+  const report = reportJson(rec);
+  const labels = { bug: "bug", display: "bug", balance: "equilibrage", account: "compte", idea: "enhancement", other: "signalement" };
+  const res = $http.send({
+    url: `https://api.github.com/repos/${repo}/issues`,
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "cosmic-empires" },
+    body: JSON.stringify({ title: `[Joueur] ${report.title}`, body: game.githubIssueBody(report, appUrl(`/game/admin?onglet=reports&signalement=${rec.id}`)), labels: [labels[report.category] || "signalement"] }),
+    timeout: 20,
+  });
+  if (res.statusCode < 200 || res.statusCode >= 300) throw new BadRequestError(`GitHub a refusé la création (HTTP ${res.statusCode}).`);
+  const url = (res.json && res.json.html_url) || "";
+  const now = Date.now();
+  const actor = actorOf(e);
+  rec.set("githubUrl", url);
+  rec.set("history", report.history.concat([{ kind: "comment", atMs: now, byId: actor.id, byName: actor.name, staff: true, text: "Suivi technique ouvert sur GitHub." }]));
+  rec.set("updatedAtMs", now);
+  if (rec.getString("status") === "new") rec.set("status", "in_progress");
+  $app.save(rec);
+  return e.json(200, reportJson(rec));
+}
+
+module.exports = { reportCreateRequest, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

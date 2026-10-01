@@ -195,7 +195,7 @@ function ThemeCard() {
         <CardTitle>Apparence</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {THEMES.map((t) => (
             <button
               key={t.id}
