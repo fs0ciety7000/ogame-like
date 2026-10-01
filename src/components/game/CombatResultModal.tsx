@@ -4,9 +4,10 @@ import { ParticleBurst } from "@/components/ui/particle-burst";
 import { CombatReplay } from "@/components/game/CombatReplay";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
-import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
+import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import type { CombatOutcome } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 /** Réplique animée du choc des deux flottes : deux barres de puissance
  *  grandissent l'une vers l'autre depuis les bords, se rencontrent au
@@ -127,7 +128,7 @@ export function CombatResultModal() {
                   .map(([res, v]) => (
                     <li key={res} className="flex items-center justify-between text-slate-300">
                       <span>
-                        {resourceEmoji(res)} {RESOURCE_LIST.find((r) => r.id === res)?.name ?? res}
+                        <ResourceIcon id={res} /> {RESOURCE_LIST.find((r) => r.id === res)?.name ?? res}
                       </span>
                       <span className={current.perspective === "attacker" ? "text-mint-glow" : "text-danger-glow"}>
                         {current.perspective === "attacker" ? "+" : "-"}

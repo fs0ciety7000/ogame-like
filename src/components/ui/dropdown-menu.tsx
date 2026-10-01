@@ -11,7 +11,7 @@ export function DropdownMenuContent({ className, sideOffset = 8, ...props }: Rea
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[280px] rounded-xl glass-panel p-2 shadow-2xl",
+          "z-50 min-w-[280px] glass-panel p-2 shadow-2xl",
           "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95",
           className,
         )}

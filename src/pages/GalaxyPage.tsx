@@ -22,6 +22,7 @@ import { AttackModal } from "@/components/game/AttackModal";
 import { TradeModal } from "@/components/game/TradeModal";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import type { Alliance } from "@/types/game";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 const SIZE = FLEET_RULES.mapSize;
 const MIN_ZOOM = 1;
@@ -391,7 +392,7 @@ export function GalaxyPage() {
               {selectedDebris && (
                 <div className="flex items-center gap-2 rounded-lg border border-mint-glow/30 bg-mint-glow/5 px-3 py-2 text-xs text-slate-300">
                   <span className="flex-1">
-                    ♻️ Débris : 🔩 {formatCompact(selectedDebris.scrap)} · ⚡ {formatCompact(selectedDebris.energy)}
+                    <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> {formatCompact(selectedDebris.scrap)} · <ResourceIcon id="energy" /> {formatCompact(selectedDebris.energy)}
                   </span>
                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setRecycleField(selectedDebris)}>
                     <Recycle className="mr-1 h-3.5 w-3.5" /> Recycler

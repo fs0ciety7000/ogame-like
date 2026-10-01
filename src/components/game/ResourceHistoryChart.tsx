@@ -5,6 +5,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { ResourceHistoryPoint, ResourceId } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 const CHART_WIDTH = 600;
 const CHART_HEIGHT = 200;
@@ -53,7 +54,7 @@ export function ResourceHistoryChart({ history }: { history: ResourceHistoryPoin
             <TabsList>
               {RESOURCE_LIST.map((r) => (
                 <TabsTrigger key={r.id} value={r.id} title={r.name}>
-                  {r.emoji}
+                  <ResourceIcon id={r.id} className="h-5 w-5" />
                 </TabsTrigger>
               ))}
             </TabsList>

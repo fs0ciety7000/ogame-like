@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { LevelTicks, StatTile } from "@/components/ui/hud";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { GameActionError, setActiveTitle } from "@/services/playerService";
@@ -16,6 +17,7 @@ import { ACHIEVEMENTS } from "@/game/achievements";
 import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
+import { GameIcon } from "@/components/ui/game-icon";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -43,10 +45,10 @@ export function ProfilePage() {
   const minutes = Math.floor((playtime % 3600) / 60);
 
   const buildingsTotal = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const buildingsPercent = Math.floor((buildingsTotal / (BUILDINGS.length * 10)) * 100);
+  const buildingsPercent = Math.floor((buildingsTotal / Math.max(1, BUILDINGS.reduce((s, b) => s + b.maxLevel, 0))) * 100);
 
   const unitsTotal = UNITS.reduce((sum, u) => sum + (player.units[u.id]?.level ?? 0), 0);
-  const unitsPercent = Math.floor((unitsTotal / (UNITS.length * 10)) * 100);
+  const unitsPercent = Math.floor((unitsTotal / Math.max(1, UNITS.reduce((s, u) => s + u.maxLevel, 0))) * 100);
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,26 +73,9 @@ export function ProfilePage() {
       <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Victoires</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display text-mint-glow">{player.victories}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Défaites</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display text-danger-glow">{player.defeats}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Temps de jeu</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display text-slate-100">
-            {hours}h {minutes.toString().padStart(2, "0")}m
-          </CardContent>
-        </Card>
+        <StatTile label="Victoires" value={formatNumber(player.victories)} tone="var(--color-mint-glow)" sub={`${player.victories + player.defeats > 0 ? Math.round((player.victories / (player.victories + player.defeats)) * 100) : 0} % de réussite`} />
+        <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="var(--color-danger-glow)" />
+        <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="var(--color-cyan-glow)" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -106,9 +91,9 @@ export function ProfilePage() {
                 <div key={b.id}>
                   <div className="flex justify-between text-xs text-slate-400">
                     <span>{b.name}</span>
-                    <span>{level} / 10</span>
+                    <span className="tabular-mono">{level} / {b.maxLevel}</span>
                   </div>
-                  <Progress value={(level / 10) * 100} className="mt-0.5 h-1.5" />
+                  <LevelTicks level={level} max={b.maxLevel} next={false} className="mt-1" />
                 </div>
               );
             })}
@@ -127,9 +112,9 @@ export function ProfilePage() {
                 <div key={u.id}>
                   <div className="flex justify-between text-xs text-slate-400">
                     <span>{u.name}</span>
-                    <span>{level} / 10</span>
+                    <span className="tabular-mono">{level} / {u.maxLevel}</span>
                   </div>
-                  <Progress value={(level / 10) * 100} className="mt-0.5 h-1.5" />
+                  <LevelTicks level={level} max={u.maxLevel} next={false} className="mt-1" />
                 </div>
               );
             })}
@@ -215,7 +200,7 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
   if (titles.length === 0) {
     return (
       <Card className="p-4 text-sm text-slate-500">
-        🏆 Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
+        <GameIcon name="trophy" /> Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
       </Card>
     );
   }
@@ -247,7 +232,7 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
               t.label === active ? "border-gold-glow/70 bg-gold-glow/15 text-gold-glow" : "border-white/10 text-slate-300 hover:border-gold-glow/40",
             )}
           >
-            🏆 {t.label}
+            <GameIcon name="trophy" /> {t.label}
           </button>
         ))}
         <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>

@@ -11,6 +11,7 @@ import { activeUltimatum, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { answerPirateUltimatum, GameActionError } from "@/services/playerService";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 /** Couleurs d'accent des factions (classes Tailwind complètes). */
 export const FACTION_ACCENT: Record<string, { text: string; border: string; bg: string }> = {
@@ -112,7 +113,7 @@ export function UltimatumDialog() {
               <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-100">
                 {RESOURCE_LIST.filter((r) => (ultimatum.tribute[r.id] ?? 0) > 0).map((r) => (
                   <span key={r.id} className="tabular-mono">
-                    {r.emoji} {formatCompact(ultimatum.tribute[r.id] ?? 0)}
+                    <ResourceIcon id={r.id} /> {formatCompact(ultimatum.tribute[r.id] ?? 0)}
                   </span>
                 ))}
                 <span className="text-slate-500">({formatCompact(totalTribute)} au total)</span>

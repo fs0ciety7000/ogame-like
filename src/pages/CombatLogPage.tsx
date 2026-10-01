@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
 import { Eye, Sword, Shield, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -45,7 +46,7 @@ export function CombatLogPage() {
 
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
-          <p className="p-4 text-sm text-slate-500">Aucun combat pour l'instant. Tes attaques lancées et reçues apparaîtront ici.</p>
+          <EmptyState icon="⚔️" title="Aucun combat">Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
         )}
         {reports.map((report, index) => {
           if (!uid) return null;
@@ -101,11 +102,11 @@ export function CombatLogPage() {
         })}
       </Card>
 
-      <h2 className="mt-2 flex items-center gap-2 font-display text-base text-white">
+      <h2 className="hud-title mt-2 flex items-center gap-2 text-base text-white">
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
-        {spyReports.length === 0 && <p className="p-4 text-sm text-slate-500">Aucun rapport. Envoie des sondes depuis la carte ou la liste des joueurs.</p>}
+        {spyReports.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport">Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
         {spyReports.map((r) => {
           const mine = r.spyUid === uid;
           return (

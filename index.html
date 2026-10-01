@@ -2,7 +2,9 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/webp" href="/assets/logo/logo.webp" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon-32.png?v=2.4" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/logo/favicon-64.png?v=2.4" />
+    <link rel="apple-touch-icon" href="/assets/logo/apple-touch-icon.png?v=2.4" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#05070f" />
     <title>Cosmic Empires</title>
@@ -10,9 +12,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Saira:wght@300;400;500;600;700&family=Saira+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Thème d'interface choisi (Réglages), appliqué avant le premier rendu.
+      try {
+        var t = localStorage.getItem("cosmic-empires:theme");
+        if (t) document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

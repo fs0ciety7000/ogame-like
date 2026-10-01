@@ -14,6 +14,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
+import { GameIcon } from "@/components/ui/game-icon";
 
 /** Envoi d'une flotte d'attaque : le combat aura lieu à son arrivée. */
 export function AttackModal({
@@ -112,7 +113,7 @@ export function AttackModal({
                   )}
                 </p>
                 <p>
-                  📦 Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet))}</strong>{" "}
+                  <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet))}</strong>{" "}
                   ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources communes et{" "}
                   {Math.round(COMBAT_RULES.lootPercent * 100)} % des rares, dans la limite de la cargaison des survivants ; le butin
                   arrive au retour de la flotte.

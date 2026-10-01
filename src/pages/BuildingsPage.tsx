@@ -3,7 +3,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Lock, Wrench } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card, HudBrackets } from "@/components/ui/card";
+import { CostPill, HudTag, LevelTicks } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,9 +28,10 @@ import {
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
-import { formatCost, resourceEmoji } from "@/game/resources";
-import type { BuildingId } from "@/types/game";
+import { RESOURCE_LIST } from "@/game/resources";
+import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -71,7 +73,7 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
         {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
           // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
@@ -97,10 +99,11 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className={cn("flex h-full flex-col overflow-hidden", nearlyDone && "animate-pulse-alert")}>
-                <div className="relative flex justify-center pt-3">
-                  <LevelUpBurst level={level} />
-                  <div className={cn("relative h-[180px] w-[180px] overflow-hidden rounded-lg bg-space-800", TIER_FRAME[visualTier(level)])}>
+              <Card className={cn("hud-glitch flex h-full flex-col", nearlyDone && "animate-pulse-alert")}>
+                <HudBrackets className="border-gold-glow/70" />
+                <div className="relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-1">
+                  <div className={cn("hud-cut relative aspect-square overflow-hidden border border-gold-glow/25 bg-space-900", TIER_FRAME[visualTier(level)])}>
+                    <LevelUpBurst level={level} />
                     <img
                       src={buildingImage(building, level)}
                       alt={building.name}
@@ -117,16 +120,15 @@ export function BuildingsPage() {
                     {activeUpgrade && <ConstructionOverlay />}
                     {!isLocked && <TierBadge level={level} />}
                   </div>
-                </div>
-
-                <div className="flex flex-1 flex-col gap-2 p-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display text-sm text-slate-100">{building.name}</h3>
+                  <div className="min-w-0">
+                    <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                    <h3 className="hud-title mt-2 text-[17px] text-white [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="cursor-help text-xs text-slate-400">
-                          Niv. {level} / {building.maxLevel}
-                        </span>
+                        <div className="mt-1 flex cursor-help items-baseline gap-1.5">
+                          <b className="hud-title text-3xl leading-none text-white">{level}</b>
+                          <span className="font-mono text-xs text-slate-500">/ {building.maxLevel}</span>
+                        </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-56">
                         {!isLocked && productionResource ? (
@@ -137,7 +139,7 @@ export function BuildingsPage() {
                               if (lvl > building.maxLevel) return null;
                               return (
                                 <p key={lvl} className="tabular-mono">
-                                  Niv. {lvl} — {resourceEmoji(productionResource)} {productionPerSecond(building.id, lvl)}/s
+                                  Niv. {lvl} — <ResourceIcon id={productionResource} /> {productionPerSecond(building.id, lvl)}/s
                                 </p>
                               );
                             })}
@@ -147,85 +149,100 @@ export function BuildingsPage() {
                         )}
                       </TooltipContent>
                     </Tooltip>
+                    <LevelTicks level={level} max={building.maxLevel} next={!isLocked && level < building.maxLevel} className="mt-2" />
                   </div>
-                  <p className="text-xs text-slate-400">{building.description}</p>
+                </div>
 
-                  {!isLocked && productionResource && (
-                    <p className="text-xs text-mint-glow">
-                      {resourceEmoji(productionResource)} Production : {productionPerSecond(building.id, level)}/s
-                    </p>
-                  )}
+                <div className="relative flex flex-1 flex-col gap-3 px-4 pb-4">
+                  <p className="text-sm leading-snug text-slate-400">{building.description}</p>
+
+                  {!isLocked && productionResource && (() => {
+                    const cur = productionPerSecond(building.id, level);
+                    const nxt = level < building.maxLevel ? productionPerSecond(building.id, nextLevel) : null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-l-2 border-mint-glow bg-mint-glow/[0.06] px-2.5 py-2 font-mono text-[13px]">
+                        <ResourceIcon id={productionResource} className="h-5 w-5" />
+                        <b className="text-mint-glow">{formatCompact(cur)}/s</b>
+                        {nxt !== null && (
+                          <>
+                            <span className="text-slate-500">→</span>
+                            <span className="text-slate-300">
+                              {formatCompact(nxt)}/s <span className="text-slate-500">niv. {nextLevel}</span>
+                            </span>
+                            {cur > 0 && <span className="ml-auto text-mint-glow">+{Math.round(((nxt - cur) / cur) * 100)} %</span>}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {!isLocked && building.effect?.type === "storage" && (
-                    <p className="text-xs text-cyan-glow">
-                      📦 Capacité : {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · 🛡️{" "}
+                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
+                      <GameIcon name="storage" /> {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · <GameIcon name="shield" />{" "}
                       {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage
                     </p>
                   )}
                   {!isLocked && building.effect?.type === "repair" && (
-                    <p className="text-xs text-cyan-glow">🔧 Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus</p>
+                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
+                      <GameIcon name="repair" /> Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus
+                    </p>
                   )}
                   {!isLocked && building.effect?.type === "hangar" && (
-                    <p className="text-xs text-cyan-glow">🛰️ {formatCompact(building.effect.perLevel * level)} places de hangar</p>
+                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300"><GameIcon name="fleet" /> {formatCompact(building.effect.perLevel * level)} places de hangar</p>
                   )}
 
-                  <div className="mt-auto pt-2">
+                  <div className="mt-auto">
                     {isLocked ? (
                       unlockInfo ? (
                         "multi" in unlockInfo ? (
                           <>
-                            <p className="mb-2 text-xs text-slate-500">
-                              Déblocage : {unlockInfo.resources.map((r) => `${r.amount} ${r.label}`).join(", ")}
-                            </p>
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              disabled={pending === building.id}
-                              onClick={() => void handleUnlock(building.id)}
-                            >
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                              {unlockInfo.resources.map((r) => (
+                                <CostPill key={r.label}>
+                                  {formatCompact(r.amount)} {r.label}
+                                </CostPill>
+                              ))}
+                            </div>
+                            <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
                               Débloquer
                             </Button>
                           </>
                         ) : (
-                          <Button
-                            size="sm"
-                            className="w-full"
-                            disabled={pending === building.id}
-                            onClick={() => void handleUnlock(building.id)}
-                          >
-                            Débloquer ({unlockInfo.amount} {unlockInfo.label})
+                          <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
+                            Débloquer · {formatCompact(unlockInfo.amount)} {unlockInfo.label}
                           </Button>
                         )
                       ) : (
-                        <Button size="sm" className="w-full" variant="secondary" disabled>
+                        <Button className="w-full" variant="secondary" disabled>
                           Débloqué via le Labo
                         </Button>
                       )
                     ) : activeUpgrade ? (
                       <div>
-                        <Progress
-                          value={100 - ((activeUpgrade.endTime - now) / (time * 1000)) * 100}
-                          className="mb-2"
-                        />
-                        <p className="text-center text-xs text-slate-400">
-                          Temps restant : {formatDuration((activeUpgrade.endTime - now) / 1000)}
-                        </p>
+                        <div className="mb-1.5 flex items-baseline justify-between font-mono text-[11px] tracking-[0.12em]">
+                          <span className="text-mint-glow">● EN CHANTIER → NIV. {nextLevel}</span>
+                          <span className="text-slate-400">{formatDuration((activeUpgrade.endTime - now) / 1000)}</span>
+                        </div>
+                        <Progress value={100 - ((activeUpgrade.endTime - now) / (time * 1000)) * 100} />
                       </div>
                     ) : level >= building.maxLevel ? (
-                      <Button size="sm" className="w-full" variant="secondary" disabled>
+                      <Button className="w-full" variant="secondary" disabled>
                         Niveau maximum
                       </Button>
                     ) : (
                       <>
-                        <p className="mb-2 text-xs text-slate-500">
-                          Coût : {formatCost(cost)} — {formatDuration(time)}
-                        </p>
-                        <Button
-                          size="sm"
-                          className="w-full"
-                          disabled={pending === building.id}
-                          onClick={() => void handleUpgrade(building.id)}
-                        >
-                          Améliorer
+                        <div className="mb-2.5 flex flex-wrap gap-1.5">
+                          {(Object.entries(cost) as [ResourceId, number][]).map(([res, amount]) => {
+                            const lack = amount - (player.resources[res] ?? 0);
+                            return (
+                              <CostPill key={res} ok={lack <= 0} missing={lack > 0 ? `manque ${formatCompact(lack)}` : undefined}>
+                                <ResourceIcon id={res} /> {formatCompact(amount)}
+                              </CostPill>
+                            );
+                          })}
+                          <CostPill><GameIcon name="duration" /> {formatDuration(time)}</CostPill>
+                        </div>
+                        <Button variant="warn" className="w-full" disabled={pending === building.id} onClick={() => void handleUpgrade(building.id)}>
+                          Améliorer → niv. {nextLevel}
                         </Button>
                       </>
                     )}
@@ -260,7 +277,7 @@ function ConstructionOverlay() {
         transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
       />
       <motion.div
-        className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-gold-glow text-space-950 shadow-[0_0_12px_-2px_var(--color-gold-glow)]"
+        className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center bg-gold-glow text-space-950 shadow-[0_0_12px_-2px_var(--color-gold-glow)]"
         animate={{ rotate: [0, -18, 18, 0] }}
         transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
       >
@@ -270,20 +287,35 @@ function ConstructionOverlay() {
   );
 }
 
+function categoryLabel(building: (typeof BUILDINGS)[number]): string {
+  const res = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
+  if (res) return `Production · ${RESOURCE_LIST.find((r) => r.id === res)?.name ?? res}`;
+  switch (building.effect?.type) {
+    case "storage":
+      return "Logistique · Stockage";
+    case "repair":
+      return "Soutien · Réparation";
+    case "hangar":
+      return "Militaire · Hangar";
+    default:
+      return "Infrastructure";
+  }
+}
+
 /* ---------- paliers visuels (niveaux 5, 10, 15, 20) ---------- */
 
 const TIER_FRAME: Record<number, string> = {
   0: "",
-  5: "ring-2 ring-[#cd7f32]/70 shadow-[0_0_14px_rgba(205,127,50,0.35)]",
-  10: "ring-2 ring-slate-200/70 shadow-[0_0_16px_rgba(203,213,225,0.35)]",
-  15: "ring-2 ring-gold-glow/80 shadow-[0_0_20px_rgba(255,209,102,0.45)]",
-  20: "ring-2 ring-cyan-glow shadow-[0_0_26px_rgba(75,232,255,0.6)] tier-neon",
+  5: "!border-[#cd7f32]/70",
+  10: "!border-slate-200/70",
+  15: "!border-gold-glow/80",
+  20: "!border-cyan-glow tier-neon",
 };
 
 const TIER_LABEL: Record<number, { label: string; className: string }> = {
   5: { label: "Bronze", className: "bg-[#cd7f32]/90 text-space-950" },
   10: { label: "Argent", className: "bg-slate-200/90 text-space-950" },
-  15: { label: "Or", className: "bg-gold-glow/90 text-space-950" },
+  15: { label: "Or", className: "hud-holo" },
   20: { label: "Néon", className: "bg-cyan-glow text-space-950" },
 };
 
@@ -292,8 +324,8 @@ function TierBadge({ level }: { level: number }) {
   if (!tier) return null;
   const { label, className } = TIER_LABEL[tier];
   return (
-    <span className={cn("absolute left-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", className)}>
-      ★ {label}
+    <span className={cn("absolute left-1.5 top-1.5 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em]", className)}>
+      Palier {label}
     </span>
   );
 }
