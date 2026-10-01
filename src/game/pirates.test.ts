@@ -13,6 +13,8 @@ import {
   raidPower,
   resolveLairAssault,
   resolvePirateRaid,
+  storageFillPct,
+  totalBuildingLevels,
   tributeFor,
   validateFactions,
   DEFAULT_FACTIONS,
@@ -20,6 +22,7 @@ import {
 } from "@/game/pirates";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { performLaunch } from "@/game/fleets";
+import { getStorageCapacity } from "@/game/buildings";
 import type { PlayerState } from "@/types/game";
 
 const H = 3600_000;
@@ -34,8 +37,17 @@ const veteran = (patch: Partial<PlayerState> = {}): PlayerState =>
     resources: { ...defaultPlayerState("p", "P").resources, scrap: 1_000_000, energy: 1_000_000, nano: 1_000_000, data: 1_000_000, reinforcedSteel: 50_000, aiFragment: 50_000 },
     ...patch,
   }) as PlayerState;
+const ALL = ["varan", "gravhorn", "inquisition", "cartel", "meute"];
+/** Factions déjà passées (date d'inscription échue) ; les autres sont mises en sommeil. */
 const listed = (ids: string[], extra: Partial<ReturnType<typeof pirateState>> = {}): FactionStates =>
-  Object.fromEntries(ids.map((id) => [id, { ...pirateState({}), nextListAtMs: NOW - 1, ...extra }]));
+  Object.fromEntries(
+    ALL.map((id) => [
+      id,
+      ids.includes(id)
+        ? { ...pirateState({}), nextListAtMs: NOW - 1, mark: { atMs: NOW - 1, value: 10_000 }, ...extra }
+        : { ...pirateState({}), nextListAtMs: NOW + 1000 * H, mark: { atMs: NOW - 1, value: 10_000 } },
+    ]),
+  );
 const AGGRESSIVE = { victories: 3, plunder: { scrap: 400_000, energy: 200_000 } };
 
 describe("Factions hostiles", () => {
@@ -65,9 +77,9 @@ describe("Factions hostiles", () => {
   });
 
   it("skips newcomers and inactive players", () => {
-    const fresh = veteran({ createdAtMs: NOW - H, pirates: listed(["varan", "gravhorn"]) });
+    const fresh = veteran({ createdAtMs: NOW - H, pirates: listed(ALL) });
     expect(pirateTick(fresh, NOW, { aggression: AGGRESSIVE }).changed).toBe(false);
-    const away = veteran({ resourcesUpdatedAtMs: NOW - 10 * 24 * H, pirates: listed(["varan", "gravhorn"]) });
+    const away = veteran({ resourcesUpdatedAtMs: NOW - 10 * 24 * H, pirates: listed(ALL) });
     expect(pirateTick(away, NOW).changed).toBe(false);
   });
 
@@ -176,8 +188,54 @@ describe("Factions hostiles", () => {
     expect(pirateState(out.player, "varan")).toMatchObject({ lairOpen: false, repelled: 0, notoriety: 0, lairsTaken: 1 });
   });
 
+  it("the Inquisition hunts recent researchers with a lot of knowledge", () => {
+    const inquisition = findFaction("inquisition")!;
+    const scholar = veteran({ resourcesUpdatedAtMs: NOW - 10 * 24 * H, pirates: listed(["inquisition"]), techLevels: { a: 20, b: 15 } });
+    expect(pirateTick(scholar, NOW).changed).toBe(false); // aucune recherche récente
+    scholar.stats = { lastResearchAtMs: NOW - 2 * 24 * H };
+    pirateTick(scholar, NOW);
+    expect(activeUltimatum(scholar, NOW)?.faction.id).toBe("inquisition");
+    expect(scholar.stats?.ultimatums).toBe(1);
+    expect(scholar.stats?.threatenedBy).toEqual(["inquisition"]);
+    expect(inquisition.raid.lootKind).toBe("rare");
+  });
+
+  it("the Cartel targets full warehouses and asks a share of the stock", () => {
+    const cartel = findFaction("cartel")!;
+    const poor = veteran({ pirates: listed(["cartel"]), resources: { ...veteran().resources, scrap: 10, energy: 10, nano: 10, data: 10 } });
+    expect(pirateTick(poor, NOW).changed).toBe(false);
+    const rich = veteran({ pirates: listed(["cartel"]) });
+    rich.resources.scrap = getStorageCapacity(rich.buildings); // entrepôt plein
+    expect(storageFillPct(rich)).toBeGreaterThanOrEqual(80);
+    pirateTick(rich, NOW);
+    const tribute = pirateState(rich, "cartel").ultimatum!.tribute;
+    expect(tribute.scrap).toBeGreaterThan(0);
+    expect(tribute.scrap).toBeLessThanOrEqual(Math.ceil(rich.resources.scrap * cartel.tribute.stockPct!));
+  });
+
+  it("the Pack tracks building levels gained over its window", () => {
+    const p = veteran({ pirates: listed(["meute"]) });
+    p.pirates = { ...(p.pirates as FactionStates), meute: { ...pirateState({}), nextListAtMs: NOW - 1, mark: { atMs: NOW - H, value: totalBuildingLevels(p) - 10 } } };
+    expect(pirateTick(p, NOW).changed).toBe(false); // +10 niveaux seulement
+    p.pirates = { ...(p.pirates as FactionStates), meute: { ...pirateState({}), nextListAtMs: NOW - 1, mark: { atMs: NOW - H, value: totalBuildingLevels(p) - 30 } } };
+    pirateTick(p, NOW);
+    expect(activeUltimatum(p, NOW)?.faction.id).toBe("meute");
+    expect(pirateState(p, "meute").mark?.value).toBe(totalBuildingLevels(p));
+    // Repère périmé : il est remis à zéro.
+    const q = veteran({ pirates: listed([]) });
+    q.pirates = { ...(q.pirates as FactionStates), meute: { ...pirateState({}), nextListAtMs: NOW - 1, mark: { atMs: NOW - 30 * 24 * H, value: 0 } } };
+    expect(pirateTick(q, NOW).changed).toBe(true);
+    expect(pirateState(q, "meute")).toMatchObject({ ultimatum: null, mark: { atMs: NOW } });
+  });
+
+  it("counts a raid suffered while the fleet was on patrol", () => {
+    const p = veteran({ pirates: listed(["varan"]) });
+    expect(resolvePirateRaid(varan, p, defaultQueues(), 1000, [], NOW, { evading: true }).player.stats?.evasions).toBe(1);
+  });
+
   it("validates faction definitions", () => {
     expect(validateFactions(DEFAULT_FACTIONS)).toEqual([]);
+    expect(DEFAULT_FACTIONS.map((f) => f.id)).toEqual(ALL);
     const bad = [{ ...DEFAULT_FACTIONS[0], id: "Bad Id" }, DEFAULT_FACTIONS[1], DEFAULT_FACTIONS[1]];
     expect(validateFactions(bad)).toHaveLength(2);
   });

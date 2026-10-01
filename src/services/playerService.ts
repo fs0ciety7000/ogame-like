@@ -550,3 +550,12 @@ export async function deletePlayerAccountData(uid: string, _pseudo: string) {
   await pb.collection("queues").delete(uid).catch(() => {});
   await pb.collection("players").delete(uid).catch(() => {});
 }
+
+/** Part des joueurs ayant obtenu chaque succès (v2.3). */
+export async function fetchAchievementRates(): Promise<{ players: number; counts: Record<string, number> }> {
+  try {
+    return await pb.send("/api/cosmic/achievements", { method: "GET" });
+  } catch {
+    return { players: 0, counts: {} };
+  }
+}

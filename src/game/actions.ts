@@ -1,3 +1,4 @@
+import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
 import { buildTimeFactor, researchTimeFactor } from "@/game/events";
 import {
@@ -169,6 +170,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       pay(player, getTechCost(tech, nextLevel), now);
       queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now)) * 1000 });
       recordContract(player, "research", 1, now);
+      const hour = parisHour(now);
+      if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
       return undefined;
     }
 
@@ -189,11 +192,15 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const gained = Math.floor(amount * getTradeRate(sellId, buyId));
       player.resources[sellId] -= amount;
       player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
+      bumpStat(player, "traded", amount);
       return gained;
     }
 
-    case "claimContract":
-      return claimContract(player, String(action.contractId ?? ""), now);
+    case "claimContract": {
+      const claimed = claimContract(player, String(action.contractId ?? ""), now);
+      bumpStat(player, "contracts");
+      return claimed;
+    }
 
     case "rerollContract":
       return rerollContract(player, String(action.contractId ?? ""), now);

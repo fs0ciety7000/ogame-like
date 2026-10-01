@@ -1,3 +1,4 @@
+import { assetUrl } from "@/lib/assets";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Crosshair, Skull, Trophy } from "lucide-react";
@@ -88,6 +89,22 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
   );
 }
 
+function triggerText(f: FactionDef): string {
+  const t = f.trigger;
+  switch (t.type) {
+    case "aggression":
+      return `Vise les agresseurs : ${t.minVictories} victoires ou plus contre des joueurs en ${t.windowDays} jours.`;
+    case "research":
+      return `Vise les savants : ${t.threshold ?? 0} niveaux de technologies ou plus et une recherche terminée ces ${t.windowDays} derniers jours.`;
+    case "hoard":
+      return `Vise les coffres pleins : entrepôts remplis à ${t.threshold ?? 0} % ou plus.`;
+    case "expansion":
+      return `Vise les empires qui grandissent vite : ${t.threshold ?? 0} niveaux de bâtiments gagnés en ${t.windowDays} jours.`;
+    default:
+      return "Vise les empires actifs, au hasard, tous les quelques jours.";
+  }
+}
+
 function FactionCard({ faction, player, onLair }: { faction: FactionDef; player: PlayerState; onLair: () => void }) {
   const fleets = useFleetStore((s) => s.fleets);
   const st = pirateState(player, faction.id);
@@ -103,7 +120,7 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
   return (
     <Card className={cn("overflow-hidden p-0", a.border)}>
       <div className="grid md:grid-cols-[minmax(0,18rem)_1fr]">
-        <img src={faction.art} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
+        <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
         <div className="flex flex-col gap-3 p-5">
           <div>
             <p className={cn("hud-eyebrow", a.text)}>{faction.name}</p>
@@ -117,9 +134,7 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
             </p>
           ))}
           <p className="text-xs text-slate-500">
-            {faction.trigger.type === "aggression"
-              ? `Vise les agresseurs : ${faction.trigger.minVictories} victoires ou plus contre des joueurs en ${faction.trigger.windowDays} jours.`
-              : "Vise les empires actifs, au hasard, tous les quelques jours."}{" "}
+            {triggerText(faction)}{" "}
             {fleetOnly ? "Ses raids frappent la flotte à quai : les défenses ne combattent pas." : "Ses raids frappent la base entière."}
           </p>
 

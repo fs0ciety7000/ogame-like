@@ -3,6 +3,9 @@
    (section de contenu « ranks »). Triés par XP croissante, le premier à 0.
 ===================================================== */
 
+/** Version des emblèmes (cache des navigateurs). */
+export const RANK_ASSET_VERSION = "2.3";
+
 export interface RankDef {
   id: string;
   name: string;
@@ -60,7 +63,9 @@ export function getRankLabel(xp: number): string {
 }
 
 export function getRankIcon(xp: number): string {
-  return getRank(xp).image;
+  const image = getRank(xp).image;
+  // Même règle que assetUrl (src/lib/assets.ts), sans dépendre du client.
+  return image.startsWith("/assets/") && !image.includes("?") ? `${image}?v=${RANK_ASSET_VERSION}` : image;
 }
 
 /** Indice du premier rang d'une famille (succès, statistiques). */

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
@@ -38,6 +38,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Compte",
     items: [
       { to: "/game/profil", label: "Profil", icon: UserCircle },
+      { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
     ],
   },

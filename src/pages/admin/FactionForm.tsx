@@ -57,6 +57,9 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
           options={[
             { value: "wealth", label: "Richesse : empires actifs, au hasard" },
             { value: "aggression", label: "Agression : joueurs qui gagnent des attaques" },
+            { value: "research", label: "Savoir : niveaux de technos + recherche récente" },
+            { value: "hoard", label: "Thésaurisation : entrepôts remplis" },
+            { value: "expansion", label: "Expansion : niveaux de bâtiments gagnés" },
           ]}
           onChange={(v) => trig({ type: v })}
         />
@@ -64,7 +67,14 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
         <NumberField label="Délai minimal entre deux inscriptions (h)" value={f.trigger.minIntervalHours} min={0} step={1} onChange={(v) => trig({ minIntervalHours: num(v) })} />
         <NumberField label="Délai maximal (h)" value={f.trigger.maxIntervalHours} min={0} step={1} onChange={(v) => trig({ maxIntervalHours: num(v) })} />
         <NumberField label="Agression : victoires contre des joueurs" value={f.trigger.minVictories} min={0} step={1} onChange={(v) => trig({ minVictories: num(v) })} />
-        <NumberField label="Agression : sur les derniers (jours)" value={f.trigger.windowDays} min={0} step={1} onChange={(v) => trig({ windowDays: num(v) })} />
+        <NumberField label="Période (jours) : agression, savoir, expansion" value={f.trigger.windowDays} min={0} step={1} onChange={(v) => trig({ windowDays: num(v) })} />
+        <NumberField
+          label="Seuil : niveaux de technos (savoir), % d'entrepôt (thésaurisation), niveaux gagnés (expansion)"
+          value={f.trigger.threshold ?? 0}
+          min={0}
+          step={1}
+          onChange={(v) => trig({ threshold: num(v) })}
+        />
       </Section>
 
       <Section title="Tribut">
@@ -74,11 +84,13 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
           options={[
             { value: "production", label: "Heures de production" },
             { value: "plunder", label: "Part du butin récent" },
+            { value: "stock", label: "Part du stock (hors bunker)" },
           ]}
           onChange={(v) => trib({ basis: v })}
         />
         <NumberField label="Heures de production" value={f.tribute.hours} min={0} step={1} onChange={(v) => trib({ hours: num(v) })} />
         <NumberField label="Part du butin (0,5 = 50 %)" value={f.tribute.plunderPct} min={0} step={0.05} onChange={(v) => trib({ plunderPct: num(v) })} />
+        <NumberField label="Part du stock (0,15 = 15 %)" value={f.tribute.stockPct ?? 0} min={0} step={0.05} onChange={(v) => trib({ stockPct: num(v) })} />
         <NumberField label="Plancher (heures de production)" value={f.tribute.minHours} min={0} step={1} onChange={(v) => trib({ minHours: num(v) })} />
       </Section>
 
