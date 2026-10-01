@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
+import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
 import { useReportBadges } from "@/services/reportService";
 import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
@@ -203,6 +204,7 @@ export function AppShell() {
             // Remonté quand l'administration modifie le contenu du jeu, pour
             // que chaque écran relise les nouvelles définitions.
             <Suspense key={contentVersion} fallback={<PageLoader />}>
+              <PageTip />
               <PageTransition>
                 <Outlet />
               </PageTransition>

@@ -121,7 +121,7 @@ export const METRICS = {
     },
   },
   xp: { label: "XP totale", value: (p: PlayerState) => p.xp ?? 0 },
-  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => !/^(faction|achievement):/.test(String(t.seasonId))).length },
+  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length },
   playtimeHours: { label: "Heures de jeu", value: (p: PlayerState) => Math.floor((p.playtimeSeconds ?? 0) / 3600) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 

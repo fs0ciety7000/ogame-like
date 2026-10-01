@@ -154,6 +154,21 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(ps.enqueueUnitBuild(aId, "chasseur", 1)).rejects.toThrow(/Labo/);
   });
 
+  it("v2.9 onboarding: rewards paid once by the server, only for reached steps", async () => {
+    const before = await snap(aId);
+    await admin.collection("players").update(aId, { xp: 0, onboarding: null, buildings: { ...before!.buildings, extracteur_ferraille: { level: 3, unlocked: true } } });
+    await expect(ps.claimOnboarding("storage2")).rejects.toThrow(/pas encore/);
+    const scrap = (await snap(aId))!.resources.scrap;
+    await ps.claimOnboarding("scrap3");
+    const after = await snap(aId);
+    expect(after!.onboarding?.claimed).toEqual(["scrap3"]);
+    expect(after!.resources.scrap).toBeGreaterThanOrEqual(scrap + 1000);
+    await expect(ps.claimOnboarding("scrap3")).rejects.toThrow(/déjà/);
+    await ps.hideOnboarding(true);
+    expect((await snap(aId))!.onboarding).toMatchObject({ claimed: ["scrap3"], hidden: true });
+    await admin.collection("players").update(aId, { xp: before!.xp, onboarding: null, buildings: before!.buildings });
+  });
+
   it("generates daily contracts on the server, refuses early claims and forged progress", async () => {
     await ps.syncPlayer(aId);
     const p = await snap(aId);

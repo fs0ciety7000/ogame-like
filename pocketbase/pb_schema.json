@@ -201,6 +201,12 @@
         "type": "json",
         "required": false,
         "maxSize": 50000
+      },
+      {
+        "name": "onboarding",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
       }
     ],
     "indexes": [

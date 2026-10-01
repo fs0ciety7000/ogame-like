@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
+import { onboardingEligible, onboardingState } from "@/game/onboarding";
+import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
+import { GameActionError, hideOnboarding } from "@/services/playerService";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -187,6 +190,47 @@ function BrowserNotificationsCard() {
 }
 
 /** Thème d'interface (propre à cet appareil). */
+function HelpCard() {
+  const player = usePlayerStore((s) => s.player);
+  const [tips, setTips] = useState(tipsEnabled);
+  const hidden = player ? onboardingState(player).hidden === true : false;
+  const eligible = player ? onboardingEligible(player) : false;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Aide et prise en main</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-slate-300">Bulles d'aide sur les pages (débutants)</span>
+          <input
+            type="checkbox"
+            checked={tips}
+            onChange={(e) => {
+              setTipsEnabled(e.target.checked, e.target.checked);
+              setTips(e.target.checked);
+              toast.success(e.target.checked ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
+            }}
+          />
+        </label>
+        {eligible && hidden && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void hideOnboarding(false)
+                .then(() => toast.success("Les objectifs de prise en main sont de retour sur l'accueil."))
+                .catch((err) => toast.error(err instanceof GameActionError ? err.message : "Action impossible."))
+            }
+          >
+            Réafficher les objectifs de prise en main
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ThemeCard() {
   const theme = useThemeStore((s) => s.theme);
   return (
@@ -270,6 +314,7 @@ export function SettingsPage() {
       </Card>
 
       <ThemeCard />
+      <HelpCard />
       <BrowserNotificationsCard />
       <ChangePasswordCard />
       <DangerZoneCard />
