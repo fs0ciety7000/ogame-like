@@ -8,7 +8,8 @@ import {
   type BuildingEffect,
 } from "@/game/buildings";
 import { getUnitBuildTime, type UnitDef } from "@/game/units";
-import { getTechCost, getTechTime, TECH_EFFECT_DEFAULTS, TECH_EFFECT_LABELS, type TechDef, type TechEffect } from "@/game/technologies";
+import { getTechCost, getTechTime, type TechDef } from "@/game/technologies";
+import { TechEffectsEditor } from "@/pages/admin/TechEffectsEditor";
 import { MISSION_XP_PER_HOUR, type MissionDef } from "@/game/missions";
 import { currentGameContent } from "@/game/content";
 import { formatCost } from "@/game/resources";
@@ -429,10 +430,6 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
 
 /* ---------------- Technologies ---------------- */
 
-const EFFECT_OPTIONS = (Object.keys(TECH_EFFECT_LABELS) as TechEffect[])
-  .filter((e) => e !== "unlock_hangars")
-  .map((e) => ({ value: e, label: TECH_EFFECT_LABELS[e] }));
-
 export function newTech(): TechDef {
   return {
     id: "nouvelle_techno",
@@ -441,14 +438,13 @@ export function newTech(): TechDef {
     maxLevel: 10,
     baseCost: { scrap: 500, energy: 200 },
     baseTime: 60,
-    effect: "unit_attack",
+    effects: [{ type: "unit_attack" }],
     prereq: {},
   };
 }
 
 export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChange: (t: TechDef) => void; isNew: boolean }) {
   const set = (patch: Partial<TechDef>) => onChange({ ...t, ...patch });
-  const numericEffect = t.effect in TECH_EFFECT_DEFAULTS;
   const prereqOptions = techOptions().filter((o) => o.value !== t.id);
   return (
     <div className="flex flex-col gap-3">
@@ -458,25 +454,14 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
         <TextAreaField label="Description" value={t.desc} onChange={(desc) => set({ desc })} />
       </Section>
 
-      <Section title="Effet">
-        <SelectField
-          label="Effet"
-          value={t.effect === "unlock_hangars" ? "unlock_buildings" : t.effect}
-          options={EFFECT_OPTIONS}
-          onChange={(effect) => set({ effect })}
-        />
-        {numericEffect && (
-          <NumberField
-            label="Valeur par niveau (0,1 = 10 %)"
-            value={t.effectValue}
-            optional
-            step={0.01}
-            hint={`Par défaut : ${TECH_EFFECT_DEFAULTS[t.effect]}`}
-            onChange={(effectValue) => set({ effectValue })}
-          />
-        )}
+      <Section title="Niveaux">
         <NumberField label="Niveau max" value={t.maxLevel} min={1} step={1} onChange={(v) => set({ maxLevel: Math.max(1, Math.round(v ?? 1)) })} />
       </Section>
+
+      <fieldset className="hud-cut-sm border border-cyan-glow/10 bg-black/20 p-3">
+        <legend className="hud-eyebrow px-1.5 text-[10px] text-cyan-glow/80">Effets octroyés</legend>
+        <TechEffectsEditor tech={t} onChange={onChange} />
+      </fieldset>
 
       <Section title="Coût et durée">
         <ResourceMapField label="Coût au niveau 1" value={t.baseCost} onChange={(baseCost) => set({ baseCost })} />

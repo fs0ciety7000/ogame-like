@@ -32,6 +32,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { techReductionFactor } from "@/game/technologies";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -86,7 +87,7 @@ export function BuildingsPage() {
           const nextLevel = level + 1;
           const rawCost = getBuildingUpgradeCost(building, nextLevel);
           const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
-          const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * buildTimeFactor(now));
+          const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time"));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
 

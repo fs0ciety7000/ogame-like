@@ -21,7 +21,8 @@ export function getProductionRatesPerSecond(buildings: Buildings, techLevels: Te
     if (level <= 0 || !unlocked) continue;
 
     const base = productionPerSecond(building.id, level);
-    rates[resource as keyof Resources] = Math.floor(base * (1 + bonus));
+    // v2.6 : bonus global + bonus propre à la ressource.
+    rates[resource as keyof Resources] = Math.floor(base * (1 + bonus + techBonus(techLevels, "resource_production", resource)));
   }
 
   return rates;

@@ -8,11 +8,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES } from "@/game/technologies";
+import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, techReductionFactor, type TechDef } from "@/game/technologies";
 import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { BUILDINGS, findBuilding } from "@/game/buildings";
+import { findUnit } from "@/game/units";
+import { RESOURCE_LIST } from "@/game/resources";
 
 export function LabPage() {
   useNowTicker();
@@ -94,6 +97,7 @@ export function LabPage() {
         >
           <h2 className="font-display text-base text-white">{selected.nom}</h2>
           <p className="mt-1 text-sm text-slate-400">{selected.desc}</p>
+          <TechEffectsSummary tech={selected} level={currentLevel} />
 
           {currentLevel >= selected.maxLevel ? (
             <p className="mt-4 text-sm text-mint-glow">Niveau maximum atteint.</p>
@@ -127,7 +131,7 @@ export function LabPage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * researchTimeFactor(Date.now())))}</p>
+                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * researchTimeFactor(Date.now()) * techReductionFactor(levels, "research_time")))}</p>
               </div>
 
               {(() => {
@@ -165,5 +169,33 @@ export function LabPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Effets de la techno : valeur actuelle et au niveau suivant (v2.6). */
+function TechEffectsSummary({ tech, level }: { tech: TechDef; level: number }) {
+  const effects = techEffects(tech)
+    .filter((e) => e.type !== "unlock_defense_units" && e.type !== "unlock_attack_units")
+    .map((e) => (e.type === "unlock_buildings" || e.type === "unlock_hangars" ? { ...e, targets: buildingsUnlockedByTech(tech.id, BUILDINGS) } : e));
+  if (effects.length === 0) return null;
+  const names = {
+    resource: (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name.toLowerCase() ?? id,
+    unit: (id: string) => findUnit(id)?.name ?? id,
+    building: (id: string) => findBuilding(id)?.name ?? id,
+  };
+  const next = Math.min(tech.maxLevel, level + 1);
+  return (
+    <ul className="mt-3 space-y-1.5 border-l-2 border-cyan-glow/40 bg-cyan-glow/[0.04] px-3 py-2 text-xs">
+      {effects.map((e, i) => (
+        <li key={i}>
+          {level > 0 && <p className="text-slate-200">{describeTechEffect(e, level, names)}</p>}
+          {level < tech.maxLevel && (
+            <p className="text-mint-glow">
+              <span className="text-slate-500">Niv. {next} :</span> {describeTechEffect(e, next, names)}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }

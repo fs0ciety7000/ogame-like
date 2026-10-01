@@ -1,5 +1,6 @@
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, Buildings, ResourceId } from "@/types/game";
+import { techBonus } from "@/game/technologies";
 
 /* =====================================================
    Bâtiments — définis par des données (voir src/game/content.ts) :
@@ -317,7 +318,7 @@ export function repairPercentAt(effect: Extract<BuildingEffect, { type: "repair"
 }
 
 /** Capacité de stockage par ressource commune (Infinity sans entrepôt). */
-export function getStorageCapacity(buildings: Buildings): number {
+export function getStorageCapacity(buildings: Buildings, techLevels?: Record<string, number>): number {
   let capacity = 0;
   let hasStorage = false;
   for (const b of BUILDINGS) {
@@ -325,7 +326,7 @@ export function getStorageCapacity(buildings: Buildings): number {
     hasStorage = true;
     capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
-  return hasStorage ? capacity : Infinity;
+  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels, "storage_capacity"))) : Infinity;
 }
 
 export function storageCapacityAt(effect: Extract<BuildingEffect, { type: "storage" }>, level: number): number {

@@ -117,7 +117,7 @@ export function UnitsPage() {
         {UNITS.map((unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
-          const buildTime = getUnitBuildTime(unit);
+          const buildTime = getUnitBuildTime(unit, player.techLevels);
           const queue = queues.unitQueues[unit.category];
           const isBuildingThis = queue.length > 0 && queue[0].unitId === unit.id;
           const hangarLabel = unit.category === "attack" ? "d'attaque" : "de défense";
@@ -144,7 +144,7 @@ export function UnitsPage() {
               let startsIn = Math.max(0, Math.floor(((queue[0].endTime ?? now) - now) / 1000));
               for (const e of queue.slice(1, firstIndex)) {
                 const u = findUnit(e.unitId);
-                startsIn += u ? getUnitBuildTime(u) : 0;
+                startsIn += u ? getUnitBuildTime(u, player.techLevels) : 0;
               }
               waitingInfo = {
                 count: queue.filter((e) => e.unitId === unit.id).length,

@@ -36,7 +36,7 @@ const RARE_RESOURCES: ResourceId[] = ["reinforcedSteel", "cyberModule", "synthet
 const COMMON_RESOURCES: ResourceId[] = ["scrap", "energy", "nano", "data"];
 
 /** Capacité de cargaison d'une flotte : cargaison de base × niveau × quantité. */
-export function fleetCargoCapacity(units: Units, fleet: Record<string, number>): number {
+export function fleetCargoCapacity(units: Units, fleet: Record<string, number>, techLevels?: TechLevels): number {
   let total = 0;
   for (const [id, qty] of Object.entries(fleet)) {
     const def = findUnit(id);
@@ -44,7 +44,7 @@ export function fleetCargoCapacity(units: Units, fleet: Record<string, number>):
     if (!def || qty <= 0 || level <= 0) continue;
     total += (def.stats.cargo ?? 0) * level * qty;
   }
-  return total;
+  return Math.floor(total * (1 + techBonus(techLevels, "cargo_capacity")));
 }
 
 function clamp(v: number, min: number, max: number) {
@@ -242,7 +242,7 @@ export function resolveCombat(params: {
   // la flotte survivante peut transporter (réduit proportionnellement).
   const survivors: Record<string, number> = {};
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0));
-  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
+  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels);
   let loot: Partial<Record<ResourceId, number>> | null = null;
   if (outcome === "attacker_win") {
     const wanted: Partial<Record<ResourceId, number>> = {};

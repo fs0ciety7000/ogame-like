@@ -3,7 +3,7 @@ import { advanceResources, missionRewards } from "@/game/economy";
 import { ensureContracts, recordContract } from "@/game/contracts";
 import { MISSIONS } from "@/game/missions";
 import { missionRewardFactor } from "@/game/events";
-import { findTech, techBonus, TECHNOLOGIES } from "@/game/technologies";
+import { buildingsUnlockedByTech, findTech, techBonus, techEffects, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
 import { achievementReward, checkNewAchievements } from "@/game/achievements";
 import { bumpStat, recordMission, setStat } from "@/game/stats";
@@ -88,7 +88,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       const front = queue[0];
       if (front.endTime === null) {
         const u = findUnit(front.unitId);
-        front.endTime = now + (u ? getUnitBuildTime(u) : 0) * 1000;
+        front.endTime = now + (u ? getUnitBuildTime(u, player.techLevels) : 0) * 1000;
         break;
       }
       if (front.endTime > now) break;
@@ -108,7 +108,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         // si le joueur était hors-ligne longtemps, plusieurs unités en file
         // peuvent ainsi se terminer d'affilée dans ce même flush, au lieu de
         // réinitialiser le minuteur sur l'instant présent à chaque appel.
-        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu) : 0) * 1000;
+        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels) : 0) * 1000;
       }
     }
   });
@@ -215,37 +215,40 @@ function applyTechEffect(player: PlayerState, techId: string, level: number) {
   if (!tech) return;
 
   const levels = { ...player.techLevels, [techId]: level };
-  switch (tech.effect) {
-    case "energy_efficiency":
-      player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
-      break;
-    case "unit_defense":
-      player.bonuses.unitDefenseBonus = techBonus(levels, "unit_defense");
-      break;
-    case "unit_attack":
-      player.bonuses.unitAttackBonus = techBonus(levels, "unit_attack");
-      break;
-    case "building_discount":
-      player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
-      break;
-    case "unlock_recipe":
-      player.bonuses.unlockedRecipes = level;
-      break;
-    case "unlock_hangars":
-    case "unlock_buildings":
-      for (const building of BUILDINGS) {
-        if (building.unlockedByTech !== techId) continue;
-        player.buildings[building.id] = { level: player.buildings[building.id]?.level ?? 1, unlocked: true };
+  for (const effect of techEffects(tech)) {
+    switch (effect.type) {
+      case "energy_efficiency":
+        player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
+        break;
+      case "unit_defense":
+        player.bonuses.unitDefenseBonus = techBonus(levels, "unit_defense");
+        break;
+      case "unit_attack":
+        player.bonuses.unitAttackBonus = techBonus(levels, "unit_attack");
+        break;
+      case "building_discount":
+        player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
+        break;
+      case "unlock_recipe":
+        player.bonuses.unlockedRecipes = level;
+        break;
+      case "unlock_hangars":
+      case "unlock_buildings":
+        for (const id of buildingsUnlockedByTech(techId, BUILDINGS)) {
+          if (!BUILDINGS.some((b) => b.id === id)) continue;
+          player.buildings[id] = { level: player.buildings[id]?.level ?? 1, unlocked: true };
+        }
+        break;
+      case "unlock_next_level": {
+        const unitId = effect.target || unitForTech(techId);
+        if (!unitId) break;
+        if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
+        player.units[unitId].level = level;
+        break;
       }
-      break;
-    case "unlock_next_level": {
-      const unitId = unitForTech(techId);
-      if (!unitId) break;
-      if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
-      player.units[unitId].level = level;
-      break;
+      default:
+        // Les autres effets sont calculés à la volée depuis les niveaux.
+        break;
     }
-    default:
-      break;
   }
 }

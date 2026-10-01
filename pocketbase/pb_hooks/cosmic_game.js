@@ -146,6 +146,121 @@ function parisHour(now) {
   return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
 }
 
+// src/game/technologies.ts
+var TECH_EFFECT_DEFAULTS = {
+  energy_efficiency: 0.1,
+  unit_attack: 0.1,
+  unit_defense: 0.1,
+  building_discount: 0.05,
+  resource_production: 0.1,
+  storage_capacity: 0.1,
+  protected_storage: 0.02,
+  fleet_speed: 0.05,
+  cargo_capacity: 0.1,
+  building_time: 0.05,
+  unit_time: 0.05,
+  research_time: 0.05,
+  fleet_upkeep: 0.05,
+  counter_spy: 1
+};
+var TECH_REDUCTION_CAP = 0.75;
+var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
+var CAPPED_TECH_EFFECTS = ["building_discount", "fleet_speed", "building_time", "unit_time", "research_time", "fleet_upkeep", "protected_storage"];
+var DEFAULT_TECHNOLOGIES = [
+  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
+  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
+  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
+  { id: "tech20", nom: "Espionnage", desc: "D\xE9bloque la Sonde d'espionnage, puis l'am\xE9liore : chaque niveau rend tes rapports plus complets et prot\xE8ge mieux ta base des sondes adverses.", maxLevel: 10, baseCost: { scrap: 300, energy: 150, data: 50 }, baseTime: 60, effect: "unlock_next_level", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
+  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
+  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
+  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
+  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
+  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
+  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
+  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
+  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
+  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
+  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
+  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
+  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
+];
+var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
+function setTechnologies(defs) {
+  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
+}
+function techEffects(tech) {
+  if (tech.effects && tech.effects.length > 0) return tech.effects;
+  if (!tech.effect) return [];
+  const type = tech.effect === "unlock_hangars" ? "unlock_buildings" : tech.effect;
+  return [tech.effectValue === void 0 ? { type } : { type, value: tech.effectValue }];
+}
+function effectValuePerLevel(effect) {
+  var _a, _b;
+  return (_b = (_a = effect.value) != null ? _a : TECH_EFFECT_DEFAULTS[effect.type]) != null ? _b : 0;
+}
+function techBonus(techLevels2, type, target) {
+  var _a;
+  if (!techLevels2) return 0;
+  let total2 = 0;
+  for (const tech of TECHNOLOGIES) {
+    const level2 = (_a = techLevels2[tech.id]) != null ? _a : 0;
+    if (level2 <= 0) continue;
+    for (const e of techEffects(tech)) {
+      if (e.type !== type && !(type === "unlock_buildings" && e.type === "unlock_hangars")) continue;
+      if (target !== void 0 && e.target !== target) continue;
+      total2 += level2 * effectValuePerLevel(e);
+    }
+  }
+  return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total2)) : total2;
+}
+function techReductionFactor(techLevels2, type) {
+  return 1 - techBonus(techLevels2, type);
+}
+function buildingsUnlockedByTech(techId, buildings) {
+  var _a;
+  const tech = findTech(techId);
+  const ids = new Set(buildings.filter((b) => b.unlockedByTech === techId).map((b) => b.id));
+  for (const e of tech ? techEffects(tech) : []) if (e.type === "unlock_buildings" || e.type === "unlock_hangars") for (const id of (_a = e.targets) != null ? _a : []) ids.add(id);
+  return [...ids];
+}
+var MAX_CONCURRENT_RESEARCH = 4;
+var COST_GROWTH = 2.7;
+var TIME_GROWTH = 1.67;
+function findTech(id) {
+  return TECHNOLOGIES.find((t) => t.id === id);
+}
+function getTechCost(tech, level2) {
+  var _a;
+  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
+  const factor = Math.pow(growth, level2 - 1);
+  const cost = {};
+  for (const [res, amount] of Object.entries(tech.baseCost)) {
+    cost[res] = Math.floor(amount * factor);
+  }
+  return cost;
+}
+function getTechTime(tech, level2) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level2 - 1));
+}
+function checkPrereqs(tech, levels) {
+  const entries = Object.entries(tech.prereq);
+  if (entries.length === 0) return { valid: true, list: [] };
+  let allValid = true;
+  const list = entries.map(([reqId, reqLevel]) => {
+    var _a, _b;
+    const current2 = (_a = levels[reqId]) != null ? _a : 0;
+    const valide = current2 >= reqLevel;
+    if (!valide) allValid = false;
+    const reqTech = findTech(reqId);
+    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
+  });
+  return { valid: allValid, list };
+}
+
 // src/game/units.ts
 var DEFAULT_UNITS = [
   {
@@ -313,10 +428,10 @@ setUnits(DEFAULT_UNITS);
 function findUnit(id) {
   return UNITS.find((u) => u.id === id);
 }
-function getUnitBuildTime(unit) {
-  if (unit.buildTime && unit.buildTime > 0) return unit.buildTime;
+function getUnitBuildTime(unit, techLevels2) {
   const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
-  return Math.max(3, Math.ceil(total2 / 100));
+  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
+  return techLevels2 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time"))) : base;
 }
 
 // src/game/format.ts
@@ -576,7 +691,7 @@ function repairPercentAt(effect, level2) {
   const bonus = from ? Math.max(0, level2 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
   return Math.max(0, Math.min(effect.max, base + bonus));
 }
-function getStorageCapacity(buildings) {
+function getStorageCapacity(buildings, techLevels2) {
   var _a;
   let capacity = 0;
   let hasStorage = false;
@@ -585,7 +700,7 @@ function getStorageCapacity(buildings) {
     hasStorage = true;
     capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
-  return hasStorage ? capacity : Infinity;
+  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
 }
 function storageCapacityAt(effect, level2) {
   return level2 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level2)) : 0;
@@ -625,82 +740,6 @@ function withMissingBuildings(buildings, resources) {
   return out;
 }
 
-// src/game/technologies.ts
-var TECH_EFFECT_DEFAULTS = {
-  energy_efficiency: 0.1,
-  unit_attack: 0.1,
-  unit_defense: 0.1,
-  building_discount: 0.05
-};
-var DEFAULT_TECHNOLOGIES = [
-  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
-  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
-  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
-  { id: "tech20", nom: "Espionnage", desc: "D\xE9bloque la Sonde d'espionnage, puis l'am\xE9liore : chaque niveau rend tes rapports plus complets et prot\xE8ge mieux ta base des sondes adverses.", maxLevel: 10, baseCost: { scrap: 300, energy: 150, data: 50 }, baseTime: 60, effect: "unlock_next_level", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
-  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
-  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
-  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
-  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
-  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
-  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
-  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
-  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
-  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
-  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
-  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
-  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
-];
-var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
-function setTechnologies(defs) {
-  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
-}
-function techBonus(techLevels2, effect) {
-  var _a, _b, _c;
-  let total2 = 0;
-  for (const tech of TECHNOLOGIES) {
-    if (tech.effect !== effect) continue;
-    total2 += ((_a = techLevels2[tech.id]) != null ? _a : 0) * ((_c = (_b = tech.effectValue) != null ? _b : TECH_EFFECT_DEFAULTS[effect]) != null ? _c : 0);
-  }
-  return total2;
-}
-var MAX_CONCURRENT_RESEARCH = 4;
-var COST_GROWTH = 2.7;
-var TIME_GROWTH = 1.67;
-function findTech(id) {
-  return TECHNOLOGIES.find((t) => t.id === id);
-}
-function getTechCost(tech, level2) {
-  var _a;
-  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
-  const factor = Math.pow(growth, level2 - 1);
-  const cost = {};
-  for (const [res, amount] of Object.entries(tech.baseCost)) {
-    cost[res] = Math.floor(amount * factor);
-  }
-  return cost;
-}
-function getTechTime(tech, level2) {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level2 - 1));
-}
-function checkPrereqs(tech, levels) {
-  const entries = Object.entries(tech.prereq);
-  if (entries.length === 0) return { valid: true, list: [] };
-  let allValid = true;
-  const list = entries.map(([reqId, reqLevel]) => {
-    var _a, _b;
-    const current2 = (_a = levels[reqId]) != null ? _a : 0;
-    const valide = current2 >= reqLevel;
-    if (!valide) allValid = false;
-    const reqTech = findTech(reqId);
-    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
-  });
-  return { valid: allValid, list };
-}
-
 // src/game/combat.ts
 var COMBAT_RULES = {
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
@@ -730,7 +769,7 @@ function getShieldPercent(buildings, allianceBonus = 0) {
 }
 var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
-function fleetCargoCapacity(units, fleet) {
+function fleetCargoCapacity(units, fleet, techLevels2) {
   var _a, _b, _c;
   let total2 = 0;
   for (const [id, qty] of Object.entries(fleet)) {
@@ -739,7 +778,7 @@ function fleetCargoCapacity(units, fleet) {
     if (!def2 || qty <= 0 || level2 <= 0) continue;
     total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level2 * qty;
   }
-  return total2;
+  return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
 }
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
@@ -846,7 +885,7 @@ function resolveCombat(params) {
   });
   const survivors = {};
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_g = attackerLosses[unitId]) != null ? _g : 0));
-  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors);
+  const cargoCapacity = fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels);
   let loot = null;
   if (outcome === "attacker_win") {
     const wanted = {};
@@ -910,7 +949,7 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
     const unlocked = building.startsUnlocked || (state == null ? void 0 : state.unlocked) === true;
     if (level2 <= 0 || !unlocked) continue;
     const base = productionPerSecond(building.id, level2);
-    rates[resource] = Math.floor(base * (1 + bonus));
+    rates[resource] = Math.floor(base * (1 + bonus + techBonus(techLevels2, "resource_production", resource)));
   }
   return rates;
 }
@@ -1100,9 +1139,9 @@ function level(levels, id) {
   const def2 = findAllianceResearch(id);
   return Math.max(0, Math.min((_a = def2 == null ? void 0 : def2.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
 }
-function allianceFlightFactor(levels) {
+function allianceFlightFactor(levels, techLevels2) {
   var _a, _b;
-  return Math.max(0.1, 1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0));
+  return Math.max(0.1, (1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed"));
 }
 function allianceProductionFactor(levels) {
   var _a, _b;
@@ -1381,7 +1420,7 @@ var ECONOMY_RULES = {
   missionRareLevelDivisor: 35
 };
 var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
-function getFleetUpkeep(units) {
+function getFleetUpkeep(units, techLevels2) {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units != null ? units : {})) {
     const def2 = findUnit(id);
@@ -1389,7 +1428,7 @@ function getFleetUpkeep(units) {
     const perPlace = def2.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
     upkeep += state.count * def2.hangarSpace * perPlace;
   }
-  return upkeep;
+  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
 }
 function boostedRates(input, multipliers) {
   var _a, _b;
@@ -1422,8 +1461,8 @@ function advanceSegment(input, elapsedSeconds, multipliers) {
   const out = __spreadValues({}, input.resources);
   if (elapsedSeconds <= 0) return out;
   const gross = boostedRates(input, multipliers);
-  const upkeep = getFleetUpkeep(input.units);
-  const capacity = getStorageCapacity(input.buildings);
+  const upkeep = getFleetUpkeep(input.units, input.techLevels);
+  const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
   const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
   const energyStock = (_b = out.energy) != null ? _b : 0;
@@ -1441,10 +1480,11 @@ function advanceSegment(input, elapsedSeconds, multipliers) {
   }
   return out;
 }
-function protectedAmount(buildings, res) {
+function protectedAmount(buildings, res, techLevels2) {
   if (!COMMON_RESOURCES2.includes(res)) return 0;
-  const capacity = getStorageCapacity(buildings);
-  return Number.isFinite(capacity) ? Math.floor(capacity * ECONOMY_RULES.protectedStoragePct) : 0;
+  const capacity = getStorageCapacity(buildings, techLevels2);
+  const pct3 = Math.min(TECH_REDUCTION_CAP, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage"));
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct3) : 0;
 }
 function missionRewards(mission, player) {
   var _a;
@@ -1993,12 +2033,12 @@ function raidPower(faction, player, notoriety) {
 function exposedStock(player) {
   var _a, _b, _c;
   const out = {};
-  for (const res of COMMON_RESOURCES2) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res));
+  for (const res of COMMON_RESOURCES2) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res, player.techLevels));
   return out;
 }
 function storageFillPct(player) {
   var _a;
-  const cap = getStorageCapacity((_a = player.buildings) != null ? _a : {});
+  const cap = getStorageCapacity((_a = player.buildings) != null ? _a : {}, player.techLevels);
   if (!(cap > 0)) return 0;
   return Math.floor(Math.max(...COMMON_RESOURCES2.map((r) => {
     var _a2, _b;
@@ -2187,7 +2227,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES2;
     for (const res of kinds) {
-      const exposed = Math.max(0, ((_d = player.resources[res]) != null ? _d : 0) - protectedAmount(player.buildings, res));
+      const exposed = Math.max(0, ((_d = player.resources[res]) != null ? _d : 0) - protectedAmount(player.buildings, res, player.techLevels));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
@@ -2664,7 +2704,7 @@ function flushState(playerIn, queuesIn, now) {
       const front = queue[0];
       if (front.endTime === null) {
         const u2 = findUnit(front.unitId);
-        front.endTime = now + (u2 ? getUnitBuildTime(u2) : 0) * 1e3;
+        front.endTime = now + (u2 ? getUnitBuildTime(u2, player.techLevels) : 0) * 1e3;
         break;
       }
       if (front.endTime > now) break;
@@ -2678,7 +2718,7 @@ function flushState(playerIn, queuesIn, now) {
       queue.shift();
       if (queue.length > 0 && queue[0].endTime === null) {
         const nu = findUnit(queue[0].unitId);
-        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu) : 0) * 1e3;
+        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels) : 0) * 1e3;
       }
     }
   });
@@ -2773,38 +2813,40 @@ function applyTechEffect(player, techId, level2) {
   const tech = TECHNOLOGIES.find((t) => t.id === techId);
   if (!tech) return;
   const levels = __spreadProps(__spreadValues({}, player.techLevels), { [techId]: level2 });
-  switch (tech.effect) {
-    case "energy_efficiency":
-      player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
-      break;
-    case "unit_defense":
-      player.bonuses.unitDefenseBonus = techBonus(levels, "unit_defense");
-      break;
-    case "unit_attack":
-      player.bonuses.unitAttackBonus = techBonus(levels, "unit_attack");
-      break;
-    case "building_discount":
-      player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
-      break;
-    case "unlock_recipe":
-      player.bonuses.unlockedRecipes = level2;
-      break;
-    case "unlock_hangars":
-    case "unlock_buildings":
-      for (const building of BUILDINGS) {
-        if (building.unlockedByTech !== techId) continue;
-        player.buildings[building.id] = { level: (_b = (_a = player.buildings[building.id]) == null ? void 0 : _a.level) != null ? _b : 1, unlocked: true };
+  for (const effect of techEffects(tech)) {
+    switch (effect.type) {
+      case "energy_efficiency":
+        player.bonuses.energyEfficiency = techBonus(levels, "energy_efficiency");
+        break;
+      case "unit_defense":
+        player.bonuses.unitDefenseBonus = techBonus(levels, "unit_defense");
+        break;
+      case "unit_attack":
+        player.bonuses.unitAttackBonus = techBonus(levels, "unit_attack");
+        break;
+      case "building_discount":
+        player.bonuses.buildingUpgradeDiscount = techBonus(levels, "building_discount");
+        break;
+      case "unlock_recipe":
+        player.bonuses.unlockedRecipes = level2;
+        break;
+      case "unlock_hangars":
+      case "unlock_buildings":
+        for (const id of buildingsUnlockedByTech(techId, BUILDINGS)) {
+          if (!BUILDINGS.some((b) => b.id === id)) continue;
+          player.buildings[id] = { level: (_b = (_a = player.buildings[id]) == null ? void 0 : _a.level) != null ? _b : 1, unlocked: true };
+        }
+        break;
+      case "unlock_next_level": {
+        const unitId = effect.target || unitForTech(techId);
+        if (!unitId) break;
+        if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
+        player.units[unitId].level = level2;
+        break;
       }
-      break;
-    case "unlock_next_level": {
-      const unitId = unitForTech(techId);
-      if (!unitId) break;
-      if (!player.units[unitId]) player.units[unitId] = { level: 0, count: 0 };
-      player.units[unitId].level = level2;
-      break;
+      default:
+        break;
     }
-    default:
-      break;
   }
 }
 
@@ -3026,7 +3068,7 @@ function performAttack(input) {
     defenderShieldPct: getShieldPercent(def2.buildings, allianceShieldBonus(def2.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_m = def2.resources) != null ? _m : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def2.buildings, res))])
+      Object.entries((_m = def2.resources) != null ? _m : {}).map(([res, amount]) => [res, Math.max(0, (amount != null ? amount : 0) - protectedAmount(def2.buildings, res, def2.techLevels))])
     )
   });
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
@@ -3238,7 +3280,7 @@ function applyAction(s, action) {
       if (state.level >= def2.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
       pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def2, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
-      queues.buildingUpgrades[def2.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def2, nextLevel) * buildTimeFactor(now)) * 1e3 };
+      queues.buildingUpgrades[def2.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def2, nextLevel) * buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time")) * 1e3 };
       recordContract(player, "upgrade_building", 1, now);
       return void 0;
     }
@@ -3264,7 +3306,7 @@ function applyAction(s, action) {
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
-      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit) * 1e3;
+      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels) * 1e3;
       return void 0;
     }
     case "sellUnits": {
@@ -3288,7 +3330,7 @@ function applyAction(s, action) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now)) * 1e3 });
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time")) * 1e3 });
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
@@ -3703,7 +3745,7 @@ function counterEspionage(target) {
   var _a, _b, _c;
   const sentinels = (_c = (_b = (_a = target.units) == null ? void 0 : _a[SPY_RULES.sentinelUnitId]) == null ? void 0 : _b.count) != null ? _c : 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch);
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy"));
 }
 function spyScore(spyLevel, counter, probes) {
   return spyLevel - counter + Math.log2(Math.max(1, probes));
@@ -3881,7 +3923,7 @@ function launchFleet(input) {
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));
@@ -4018,25 +4060,25 @@ function newFleet(owner, target, mission, units, now, arriveAtMs) {
 function launchSpy(owner, target, raw, now) {
   const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
 }
 function launchRecycle(owner, field, raw, now) {
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de d\xE9bris n'existe plus.");
   const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones r\xE9cup\xE9rateurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
   return {
     attacker: owner,
     fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
     defenderNotifications: []
   };
 }
-function patrolEnergyCost(units, fleet, minutes) {
+function patrolEnergyCost(units, fleet, minutes, techLevels2) {
   var _a, _b;
   const selected = {};
   for (const [id, qty] of Object.entries(fleet)) selected[id] = { level: (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 1, count: qty };
-  return Math.ceil(getFleetUpkeep(selected) * minutes * 60);
+  return Math.ceil(getFleetUpkeep(selected, techLevels2) * minutes * 60);
 }
 function launchPatrol(owner, raw, minutes, now) {
   var _a, _b;
@@ -4049,7 +4091,7 @@ function launchPatrol(owner, raw, minutes, now) {
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, duration);
+  const cost = patrolEnergyCost(owner.units, requested, duration, owner.techLevels);
   if (((_a = owner.resources.energy) != null ? _a : 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} \xE9nergie pour l'entretien de la patrouille.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent partir en patrouille.");
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
@@ -4074,12 +4116,12 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, hours2 * 60);
+  const cost = patrolEnergyCost(owner.units, requested, hours2 * 60, owner.techLevels);
   if (((_a = owner.resources.energy) != null ? _a : 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} \xE9nergie pour l'entretien de la garnison.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
   const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null });
   return {
     attacker: owner,
@@ -4101,7 +4143,7 @@ function launchLair(owner, target, raw, now) {
   const power = lairPower(faction, owner);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch)) * 1e3;
+  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
   return {
     attacker: owner,
     fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: lairUid(faction.id), pseudo: faction.lair.name }, "lair", units, now, arriveAtMs)), { power, factionId: faction.id }),
@@ -4278,6 +4320,7 @@ function applyGameContent(overrides) {
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);
+  for (const t of content.technologies) for (const e of techEffects(t)) if (e.type === "unlock_next_level" && e.target) UNIT_TO_TECH[e.target] = t.id;
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
