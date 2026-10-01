@@ -21,6 +21,11 @@ Pars à l'aventure dans l'inconnu, et unis-toi à tout le serveur contre un mons
 - Le premier en dégâts gagne le titre **« Fléau du Léviathan »** pendant 7 jours ; chaque participant à sa chute débloque le succès **« Tueur de Léviathan »**.
 - Suis le combat sur la page **Léviathan** (classement des dégâts) et sur l'accueil.
 
+## Équilibrage : Étoile Noire
+- L'Étoile Noire gagne désormais **+1 700 en attaque et en défense par niveau** (au lieu de +5 comme les autres unités) : **15 800 ATK** au niveau 10.
+- Elle occupe 200 places de hangar et coûte l'entretien de 200 sentinelles : elle reste deux fois moins efficace par place qu'une sentinelle, mais devient l'unité la plus rentable par ressource investie. Merci au joueur qui l'a signalé !
+
 ## Pour les administrateurs
+- Nouveau réglage par unité : **gain par niveau** (attaque et défense), dans Admin → Unités. Vide = +5.
 - Chiffres des expéditions et du Léviathan dans **Règles** ; apparition mensuelle activable dans les événements.
 - Boutons pour lâcher le Léviathan à tout moment ou le faire repartir, sur sa page.

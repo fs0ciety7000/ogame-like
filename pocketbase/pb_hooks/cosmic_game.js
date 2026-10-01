@@ -226,7 +226,7 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
   { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
   { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
+  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
 function setTechnologies(defs) {
@@ -302,6 +302,7 @@ function checkPrereqs(tech, levels) {
 }
 
 // src/game/units.ts
+var UNIT_LEVEL_BONUS_DEFAULT = 5;
 var DEFAULT_UNITS = [
   {
     id: "drone_recuperateur",
@@ -385,7 +386,10 @@ var DEFAULT_UNITS = [
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
     category: "attack",
     unlockTech: "tech19",
-    hangarSpace: 200
+    hangarSpace: 200,
+    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
+    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
+    levelBonus: 1700
   },
   {
     id: "roquette",
@@ -458,13 +462,16 @@ function setUnits(defs) {
   for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
   for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
   for (const u of defs) {
-    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense };
+    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
     if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
   }
   OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
   DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
 }
 setUnits(DEFAULT_UNITS);
+function unitLevelBonus(u) {
+  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
+}
 function findUnit(id) {
   return UNITS.find((u) => u.id === id);
 }
@@ -842,10 +849,11 @@ function clamp(v, min, max) {
 }
 function unitStat(units, techLevels2, unitId, stat) {
   var _a, _b, _c, _d;
-  const base = (_b = (_a = UNIT_BASE_STATS[unitId]) == null ? void 0 : _a[stat]) != null ? _b : 0;
-  const level3 = (_d = (_c = units[unitId]) == null ? void 0 : _c.level) != null ? _d : 0;
+  const def2 = UNIT_BASE_STATS[unitId];
+  const base = (_a = def2 == null ? void 0 : def2[stat]) != null ? _a : 0;
+  const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
-  let value = base + (level3 - 1) * 5;
+  let value = base + (level3 - 1) * ((_d = def2 == null ? void 0 : def2.perLevel) != null ? _d : 5);
   if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
   if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
   return value;

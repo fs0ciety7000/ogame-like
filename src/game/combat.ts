@@ -69,11 +69,12 @@ function clamp(v: number, min: number, max: number) {
 }
 
 export function unitStat(units: Units, techLevels: TechLevels, unitId: string, stat: "attack" | "defense"): number {
-  const base = UNIT_BASE_STATS[unitId]?.[stat] ?? 0;
+  const def = UNIT_BASE_STATS[unitId];
+  const base = def?.[stat] ?? 0;
   const level = units[unitId]?.level ?? 0;
   if (level <= 0) return 0;
 
-  let value = base + (level - 1) * 5;
+  let value = base + (level - 1) * (def?.perLevel ?? 5);
   if (stat === "attack") value *= 1 + techBonus(techLevels, "unit_attack");
   if (stat === "defense") value *= 1 + techBonus(techLevels, "unit_defense");
   return value;

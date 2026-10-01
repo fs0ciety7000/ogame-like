@@ -210,6 +210,7 @@ export function validateGameContent(content: GameContent): string[] {
     if (!techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
     if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
+    if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);
     checkResources(`${label} (coût)`, u.cost as Record<string, number>);
   }
 

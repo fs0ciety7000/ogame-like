@@ -7,7 +7,7 @@ import {
   type BuildingDef,
   type BuildingEffect,
 } from "@/game/buildings";
-import { getUnitBuildTime, type UnitDef } from "@/game/units";
+import { getUnitBuildTime, UNIT_LEVEL_BONUS_DEFAULT, unitLevelBonus, type UnitDef } from "@/game/units";
 import { getTechCost, getTechTime, type TechDef } from "@/game/technologies";
 import { TechEffectsEditor } from "@/pages/admin/TechEffectsEditor";
 import { MISSION_XP_PER_HOUR, type MissionDef } from "@/game/missions";
@@ -366,7 +366,9 @@ export function newUnit(): UnitDef {
 export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChange: (u: UnitDef) => void; isNew: boolean }) {
   const set = (patch: Partial<UnitDef>) => onChange({ ...u, ...patch });
   const setStat = (key: keyof UnitDef["stats"], v: number | undefined) => set({ stats: { ...u.stats, [key]: v ?? 0 } });
-  const power = u.category === "attack" ? u.stats.attaque : u.stats.attaque + u.stats.defense;
+  // Puissance au niveau max (gain par niveau compris), pour comparer les unités.
+  const lv = (u.maxLevel - 1) * unitLevelBonus(u);
+  const power = u.category === "attack" ? u.stats.attaque + lv : u.stats.attaque + u.stats.defense + 2 * lv;
   const price = (u.cost.scrap ?? 0) + (u.cost.energy ?? 0);
 
   return (
@@ -393,7 +395,16 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
         <NumberField label="Places de hangar" value={u.hangarSpace} min={1} step={1} onChange={(v) => set({ hangarSpace: Math.max(1, Math.round(v ?? 1)) })} />
       </Section>
 
-      <Section title="Statistiques (niveau 1, +5 par niveau)">
+      <Section title="Statistiques (niveau 1)">
+        <NumberField
+          label="Gain par niveau (attaque et défense)"
+          value={u.levelBonus}
+          optional
+          min={0}
+          step={5}
+          hint={`Vide = +${UNIT_LEVEL_BONUS_DEFAULT}. Au niveau ${u.maxLevel} : ${formatNumber(u.stats.attaque + (u.maxLevel - 1) * unitLevelBonus(u))} ATK.`}
+          onChange={(levelBonus) => set({ levelBonus })}
+        />
         <NumberField label="Attaque" value={u.stats.attaque} min={0} onChange={(v) => setStat("attaque", v)} />
         <NumberField label="Défense" value={u.stats.defense} min={0} onChange={(v) => setStat("defense", v)} hint="Compte en défense uniquement (ATK + DEF)." />
         <NumberField label="Vitesse" value={u.stats.vitesse} min={0} onChange={(v) => setStat("vitesse", v)} />

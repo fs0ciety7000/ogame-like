@@ -14,7 +14,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
-import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH } from "@/game/units";
+import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
@@ -217,7 +217,7 @@ export function UnitsPage() {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Base {unit.stats.attaque} + {(data.level - 1) * 5} (niveau) {attackTechBonus > 0 && `× ${attackTechBonus}% (tech Puissance d'attaque)`}
+                                Base {unit.stats.attaque} + {(data.level - 1) * unitLevelBonus(unit)} (niveau) {attackTechBonus > 0 && `× ${attackTechBonus}% (tech Puissance d'attaque)`}
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -227,7 +227,7 @@ export function UnitsPage() {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Base {unit.stats.defense} + {(data.level - 1) * 5} (niveau) {defenseTechBonus > 0 && `× ${defenseTechBonus}% (tech Blindage avancé)`}
+                                Base {unit.stats.defense} + {(data.level - 1) * unitLevelBonus(unit)} (niveau) {defenseTechBonus > 0 && `× ${defenseTechBonus}% (tech Blindage avancé)`}
                               </TooltipContent>
                             </Tooltip>
                             <StatBar label="VIT" value={unit.stats.vitesse * data.level} max={statMax.speed} color="var(--color-mint-glow)" />
