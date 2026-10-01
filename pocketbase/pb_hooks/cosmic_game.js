@@ -51,9 +51,12 @@ __export(hooksEntry_exports, {
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
+  EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
   GameActionError: () => GameActionError,
+  LEVIATHAN_KEY: () => LEVIATHAN_KEY,
+  LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
@@ -75,12 +78,16 @@ __export(hooksEntry_exports, {
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  checkLeviathanLaunch: () => checkLeviathanLaunch,
+  closeLeviathan: () => closeLeviathan,
   collectDebris: () => collectDebris,
+  completeFleetReturn: () => completeFleetReturn,
   computeGameStats: () => computeGameStats,
   createOffer: () => createOffer,
   debrisTotal: () => debrisTotal,
   defaultQueues: () => defaultQueues,
   describeAmount: () => describeAmount,
+  describeGain: () => describeGain,
   endGarrison: () => endGarrison,
   errorKey: () => errorKey,
   errorQuotaKey: () => errorQuotaKey,
@@ -88,14 +95,20 @@ __export(hooksEntry_exports, {
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
   finishAllianceResearch: () => finishAllianceResearch,
+  finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
+  formatInt: () => formatInt,
   githubIssueBody: () => githubIssueBody,
+  grantLeviathanReward: () => grantLeviathanReward,
   isFormation: () => isFormation,
   isStaffRole: () => isStaffRole,
+  leviathanRanking: () => leviathanRanking,
+  leviathanWindow: () => leviathanWindow,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
+  normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
   parseResetOptions: () => parseResetOptions,
@@ -112,16 +125,21 @@ __export(hooksEntry_exports, {
   recallFleet: () => recallFleet,
   recyclerCapacity: () => recyclerCapacity,
   refundOffer: () => refundOffer,
+  removeLeviathanTitle: () => removeLeviathanTitle,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
+  resolveExpeditionChoice: () => resolveExpeditionChoice,
   resolveLairAssault: () => resolveLairAssault,
+  resolveLeviathanAssault: () => resolveLeviathanAssault,
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
+  rollExpeditionEvent: () => rollExpeditionEvent,
   sanitizeClientError: () => sanitizeClientError,
   sanitizeNewReport: () => sanitizeNewReport,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
+  spawnLeviathan: () => spawnLeviathan,
   stationGarrison: () => stationGarrison,
   utcDayStart: () => utcDayStart
 });
@@ -864,7 +882,7 @@ function resolveCombat(params) {
   const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
   const garrisons = (_d = params.garrisons) != null ? _d : [];
   const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
-  const garrisonPower = garrisons.reduce((sum2, g) => sum2 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
+  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
   const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
   const defenderPower = (_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower;
   const totalPower = attackerPower + defenderPower;
@@ -997,6 +1015,7 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
 // src/game/events.ts
 var EVENT_RULES = {
   rotationEnabled: true,
+  bossMonthly: true,
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -1065,12 +1084,14 @@ function weekendWindow(now, weeksAhead = 0) {
   return {
     startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
     endMs: parisLocalToUtc(friday + 3 * DAY),
-    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY))
+    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY)),
+    firstOfMonth: new Date(friday).getUTCDate() <= 7
   };
 }
 function rotationEvent(window) {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  if (EVENT_RULES.bossMonthly && window.firstOfMonth) return null;
   const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
@@ -1529,7 +1550,7 @@ function protectedAmount(buildings, res, techLevels2) {
 function missionRewards(mission, player) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const levels = BUILDINGS.reduce((sum2, b) => sum2 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const rareScale = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
   const out = {};
   for (const [res, fixed] of Object.entries(mission.reward)) {
@@ -1741,7 +1762,7 @@ function recordContract(player, type, amount2, now) {
   }
 }
 function developmentScale(player) {
-  const levels = BUILDINGS.reduce((sum2, b) => sum2 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   return 1 + levels / 35;
 }
 function streakBonus(streak) {
@@ -2081,6 +2102,9 @@ function pirateState(player, factionId = "varan") {
   var _a;
   return (_a = factionStates(player)[factionId]) != null ? _a : normalize(void 0);
 }
+function setFactionState(player, factionId, st) {
+  setState(player, factionId, st);
+}
 function setState(player, factionId, st) {
   player.pirates = __spreadProps(__spreadValues({}, factionStates(player)), { [factionId]: st });
 }
@@ -2123,7 +2147,7 @@ function targetPower(faction, player) {
   return faction.raid.target === "fleet" ? homeFleetPower(player) : defensivePower(player);
 }
 function raidPower(faction, player, notoriety) {
-  const levels = BUILDINGS.reduce((sum2, b) => sum2 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
   const pct4 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
   return Math.round(Math.max(floor, targetPower(faction, player) * pct4));
@@ -2148,9 +2172,9 @@ function totalTechLevels(player) {
   return Object.values((_a = player.techLevels) != null ? _a : {}).reduce((a, b) => a + (b != null ? b : 0), 0);
 }
 function totalBuildingLevels(player) {
-  return BUILDINGS.reduce((sum2, b) => {
+  return BUILDINGS.reduce((sum3, b) => {
     var _a, _b, _c;
-    return sum2 + ((_c = (_b = (_a = player.buildings) == null ? void 0 : _a[b.id]) == null ? void 0 : _b.level) != null ? _c : 0);
+    return sum3 + ((_c = (_b = (_a = player.buildings) == null ? void 0 : _a[b.id]) == null ? void 0 : _b.level) != null ? _c : 0);
   }, 0);
 }
 function tributeFor(faction, player, aggression) {
@@ -2587,6 +2611,14 @@ var METRICS = {
     var _a;
     return (_a = playerStats(p).evasions) != null ? _a : 0;
   } },
+  expeditions: { label: "Exp\xE9ditions termin\xE9es", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).expeditions) != null ? _a : 0;
+  } },
+  leviathanKills: { label: "L\xE9viathans abattus (participation)", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).leviathanKills) != null ? _a : 0;
+  } },
   traded: { label: "Ressources \xE9chang\xE9es au march\xE9 (cumul)", value: (p) => {
     var _a;
     return (_a = playerStats(p).traded) != null ? _a : 0;
@@ -2694,6 +2726,9 @@ var DEFAULT_ACHIEVEMENTS = [
   def("man_of_word", "missions", "argent", "contracts", 100, "Homme de parole", "Remplis 100 contrats.", "\u{1F91D}"),
   def("always_there", "missions", "or", "contracts", 300, "Toujours au rendez-vous", "Remplis 300 contrats.", "\u{1F4C5}"),
   def("no_rest", "missions", "bronze", "bestMissionDay", 10, "Sans repos", "Termine 10 missions en une seule journ\xE9e.", "\u{1F624}", { secret: true }),
+  def("deep_space", "missions", "bronze", "expeditions", 1, "Grand large", "Termine ta premi\xE8re exp\xE9dition.", "\u{1F6F8}"),
+  def("pathfinder", "missions", "argent", "expeditions", 25, "Pionnier de l'inconnu", "Termine 25 exp\xE9ditions.", "\u{1F52D}"),
+  def("leviathan_slayer", "menaces", "or", "leviathanKills", 1, "Tueur de L\xE9viathan", "Participe \xE0 la chute du L\xE9viathan.", "\u{1F40B}"),
   // Renseignement et logistique
   def("prying_eye", "logistique", "bronze", "spies", 1, "\u0152il indiscret", "Lance ton premier espionnage.", "\u{1F441}\uFE0F"),
   def("spymaster", "logistique", "argent", "spies", 50, "Ma\xEEtre espion", "Lance 50 espionnages.", "\u{1F575}\uFE0F"),
@@ -3577,13 +3612,13 @@ function applyAction(s, action) {
       const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
       if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
       const category = unit.category;
-      const built = Object.entries(player.units).reduce((sum2, [id, u]) => {
+      const built = Object.entries(player.units).reduce((sum3, [id, u]) => {
         const def2 = findUnit(id);
-        return (def2 == null ? void 0 : def2.category) === category ? sum2 + u.count * def2.hangarSpace : sum2;
+        return (def2 == null ? void 0 : def2.category) === category ? sum3 + u.count * def2.hangarSpace : sum3;
       }, 0);
-      const reserved = queues.unitQueues[category].reduce((sum2, item) => {
+      const reserved = queues.unitQueues[category].reduce((sum3, item) => {
         var _a2, _b2;
-        return sum2 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
+        return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
       }, 0);
       if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
         throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
@@ -4072,6 +4107,375 @@ function computeInsights(s) {
   return out;
 }
 
+// src/game/expeditions.ts
+var EXPEDITION_RULES = {
+  minShips: 10,
+  durations: [2, 4, 8],
+  maxPerDay: 3,
+  choiceMinutes: 30,
+  xpPerHour: 60,
+  /** Probabilités relatives des événements. */
+  weights: { nothing: 15, deposit: 35, rare: 15, wreck: 10, ambush: 15, faction: 10 },
+  /** Gisement : heures de production commune. */
+  depositMinHours: 1,
+  depositMaxHours: 3,
+  /** Trésor : heures de production commune converties en ressources rares (50 pour 1). */
+  rareMinHours: 0.5,
+  rareMaxHours: 1,
+  rareRate: 50,
+  /** Épave : part de la flotte envoyée récupérée en unités gratuites. */
+  wreckMinPct: 0.02,
+  wreckMaxPct: 0.05,
+  /** Embuscade : puissance adverse en part de la puissance de la flotte. */
+  ambushMinPower: 0.4,
+  ambushMaxPower: 0.7,
+  /** Butin d'une embuscade repoussée ou d'un passage forcé (heures de production). */
+  victoryLootHours: 2,
+  /** Passage forcé face à une faction : puissance adverse. */
+  forceMinPower: 0.5,
+  forceMaxPower: 0.8,
+  /** Péage demandé par une faction : heures de production commune. */
+  tollHours: 1
+};
+var between = (min, max, random) => min + (max - min) * random();
+var sum2 = (r) => Object.values(r).reduce((a, b) => a + (b != null ? b : 0), 0);
+function addLoot(fleet, gain) {
+  var _a, _b;
+  const loot = __spreadValues({}, (_a = fleet.loot) != null ? _a : {});
+  for (const [res, n] of Object.entries(gain)) if (n > 0) loot[res] = ((_b = loot[res]) != null ? _b : 0) + Math.floor(n);
+  fleet.loot = loot;
+}
+function describeGain(gain) {
+  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
+    var _a;
+    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
+  });
+  return parts.length ? parts.join(", ") : "rien";
+}
+function fleetShips(units) {
+  return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
+}
+function launchExpedition(owner, raw, hoursIn, active, today, now, formation) {
+  var _a, _b;
+  const hours2 = Number(hoursIn);
+  if (!EXPEDITION_RULES.durations.includes(hours2)) throw new GameActionError(`Dur\xE9e d'exp\xE9dition invalide (${EXPEDITION_RULES.durations.join(", ")} h).`);
+  if (active > 0) throw new GameActionError("Une exp\xE9dition est d\xE9j\xE0 en cours.");
+  if (today >= EXPEDITION_RULES.maxPerDay) throw new GameActionError(`Limite de ${EXPEDITION_RULES.maxPerDay} exp\xE9ditions par jour atteinte.`);
+  const units = {};
+  for (const [id, v] of Object.entries(raw != null ? raw : {})) {
+    const qty = Math.floor(Number(v));
+    if (!(qty > 0)) continue;
+    if (!OFFENSIVE_UNITS.includes(id) || id === "sonde_espionnage") throw new GameActionError("Seuls les vaisseaux de combat et de transport partent en exp\xE9dition.");
+    if (((_b = (_a = owner.units[id]) == null ? void 0 : _a.count) != null ? _b : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
+    units[id] = qty;
+  }
+  if (fleetShips(units) < EXPEDITION_RULES.minShips) throw new GameActionError(`Il faut au moins ${EXPEDITION_RULES.minShips} vaisseaux pour une exp\xE9dition.`);
+  for (const [id, qty] of Object.entries(units)) owner.units[id] = __spreadProps(__spreadValues({}, owner.units[id]), { count: owner.units[id].count - qty });
+  const durationMs = hours2 * 36e5;
+  return {
+    attacker: owner,
+    fleet: {
+      ownerUid: owner.uid,
+      ownerPseudo: owner.pseudo,
+      targetUid: owner.uid,
+      targetPseudo: "Exp\xE9dition",
+      mission: "expedition",
+      units,
+      departAtMs: now,
+      arriveAtMs: now + durationMs / 2,
+      returnAtMs: null,
+      status: "outbound",
+      loot: null,
+      reportId: "",
+      outcome: "",
+      recalled: false,
+      durationMs,
+      expedition: { hours: hours2, log: [], pending: null, formation: formation != null ? formation : "balanced" }
+    }
+  };
+}
+function pickEvent(random) {
+  const entries = Object.entries(EXPEDITION_RULES.weights);
+  const total2 = entries.reduce((a, [, w]) => a + Math.max(0, w), 0);
+  let roll = random() * total2;
+  for (const [k, w] of entries) {
+    roll -= Math.max(0, w);
+    if (roll < 0) return k;
+  }
+  return "nothing";
+}
+function fightFleet(player, fleet, ratio) {
+  var _a;
+  const fleetPower = computeFleetPower(player.units, player.techLevels, fleet.units, ["attack"]);
+  const combat = resolveCombat(__spreadProps(__spreadValues({}, formationEffects(fleet.expedition.formation)), {
+    attackerUnits: player.units,
+    attackerTechLevels: player.techLevels,
+    attackerRepairPct: getRepairPercent(player.buildings),
+    fleet: fleet.units,
+    defenderUnits: {},
+    defenderTechLevels: {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderPowerOverride: Math.max(1, Math.round(fleetPower * ratio))
+  }));
+  let lost = 0;
+  const units = __spreadValues({}, fleet.units);
+  for (const [id, n] of Object.entries(combat.attackerLosses)) {
+    units[id] = Math.max(0, ((_a = units[id]) != null ? _a : 0) - n);
+    lost += n;
+  }
+  fleet.units = units;
+  return { won: combat.outcome === "attacker_win", lost };
+}
+function rollExpeditionEvent(player, fleet, stage, now, random) {
+  const R = EXPEDITION_RULES;
+  const kind = pickEvent(random);
+  let text = "";
+  if (kind === "nothing") {
+    text = "Calme plat : rien d'int\xE9ressant dans ce secteur.";
+  } else if (kind === "deposit") {
+    const gain = productionHours(player, between(R.depositMinHours, R.depositMaxHours, random));
+    addLoot(fleet, gain);
+    text = `Gisement rep\xE9r\xE9 et exploit\xE9 : ${describeGain(gain)}.`;
+  } else if (kind === "rare") {
+    const value = sum2(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
+    const each = Math.max(1, Math.floor(value / Math.max(1, R.rareRate) / 4));
+    const gain = { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each };
+    addLoot(fleet, gain);
+    text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
+  } else if (kind === "wreck") {
+    const pct4 = between(R.wreckMinPct, R.wreckMaxPct, random);
+    const found = {};
+    for (const [id, n] of Object.entries(fleet.units)) {
+      const extra = Math.floor(n * pct4);
+      if (extra > 0) found[id] = extra;
+    }
+    if (Object.keys(found).length === 0) {
+      const first = Object.keys(fleet.units)[0];
+      if (first) found[first] = 1;
+    }
+    fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => {
+      var _a;
+      return [id, n + ((_a = found[id]) != null ? _a : 0)];
+    }));
+    text = `\xC9pave remise en \xE9tat : ${Object.entries(found).map(([id, n]) => {
+      var _a, _b;
+      return `${n} ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
+    }).join(", ")} rejoignent la flotte.`;
+  } else if (kind === "ambush") {
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random));
+    if (won) {
+      const gain = productionHours(player, R.victoryLootHours);
+      addLoot(fleet, gain);
+      text = `Embuscade repouss\xE9e (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}.`;
+    } else {
+      text = `Embuscade ! La flotte a d\xFB fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
+    }
+  } else {
+    const faction = FACTIONS.length > 0 ? FACTIONS[Math.floor(random() * FACTIONS.length) % FACTIONS.length] : null;
+    if (!faction) {
+      text = "Des signaux lointains, puis plus rien.";
+    } else {
+      const toll = productionHours(player, R.tollHours);
+      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll };
+      text = `${faction.name} barre la route et exige un p\xE9age de ${describeGain(toll)}.`;
+      fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
+      return { text, pending: true };
+    }
+  }
+  fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
+  return { text, pending: false };
+}
+function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
+  var _a, _b;
+  const pending = fleet.expedition.pending;
+  if (!pending) throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
+  const choice = choiceIn === "force" ? "force" : "toll";
+  const faction = FACTIONS.find((f) => f.id === pending.factionId);
+  const name = (_a = faction == null ? void 0 : faction.name) != null ? _a : "La faction";
+  let text;
+  const st = faction ? pirateState(player, faction.id) : null;
+  if (choice === "toll") {
+    const paid = {};
+    for (const [res, n] of Object.entries(pending.toll)) {
+      const take = Math.min(n, Math.max(0, Math.floor((_b = player.resources[res]) != null ? _b : 0)));
+      if (take > 0) {
+        player.resources[res] -= take;
+        paid[res] = take;
+      }
+    }
+    if (st) st.notoriety = Math.max(0, st.notoriety - 1);
+    text = `P\xE9age pay\xE9 \xE0 ${name} (${describeGain(paid)}) : la flotte passe, et ta r\xE9putation s'am\xE9liore.`;
+  } else {
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random));
+    if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
+    if (won) {
+      const gain = productionHours(player, EXPEDITION_RULES.victoryLootHours);
+      addLoot(fleet, gain);
+      text = `Passage forc\xE9 face \xE0 ${name} (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}. Ta notori\xE9t\xE9 grimpe.`;
+    } else {
+      text = `${name} a repouss\xE9 la flotte (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Ta notori\xE9t\xE9 grimpe.`;
+    }
+  }
+  if (st && faction) setFactionState(player, faction.id, st);
+  fleet.expedition.log = [...fleet.expedition.log, { stage: pending.stage, atMs: now, kind: "faction", text, choice }];
+  fleet.expedition.pending = null;
+  return text;
+}
+function finishExpedition(player, fleet, now) {
+  var _a;
+  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour);
+  applyXpDelta(player, xp, now);
+  bumpStat(player, "expeditions");
+  return {
+    kind: "fleet",
+    title: "Exp\xE9dition termin\xE9e",
+    message: `Ta flotte est rentr\xE9e : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.`,
+    createdAtMs: now,
+    read: false
+  };
+}
+
+// src/game/leviathan.ts
+var LEVIATHAN_KEY = "leviathan";
+var LEVIATHAN_RULES = {
+  name: "Le L\xE9viathan",
+  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
+  hpFactor: 4,
+  minHp: 1e5,
+  durationHours: 72,
+  /** Un assaut toutes les N heures par joueur. */
+  cooldownHours: 4,
+  /** Trajet aller (et retour), en minutes. */
+  flightMinutes: 30,
+  /** Part de chaque type de vaisseau détruite à chaque assaut (réparable à l'Atelier). */
+  lossPct: 0.08,
+  /** Récompense : base + bonus × (dégâts / dégâts du premier), en heures de production. */
+  baseRewardHours: 2,
+  bonusRewardHours: 10,
+  /** Récompenses si le Léviathan survit. */
+  failedRewardFactor: 0.5,
+  title: "Fl\xE9au du L\xE9viathan",
+  titleDays: 7
+};
+var HOUR3 = 36e5;
+function normalizeLeviathan(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.maxHp) > 0)) return null;
+  return {
+    id: String(r.id),
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs) || 0,
+    maxHp: Number(r.maxHp),
+    hp: Math.max(0, Number(r.hp) || 0),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
+    endedAtMs: Number(r.endedAtMs) || 0,
+    rewarded: r.rewarded === true,
+    titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null
+  };
+}
+function leviathanWindow(now) {
+  if (!EVENT_RULES.bossMonthly) return null;
+  const w = weekendWindow(now);
+  if (!w.firstOfMonth) return null;
+  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR3;
+  if (now < w.startMs || now >= endMs) return null;
+  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
+}
+function isActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+function leviathanHp(activePlayers) {
+  const power = activePlayers.reduce((a, p) => {
+    var _a, _b;
+    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  }, 0);
+  return Math.max(LEVIATHAN_RULES.minHp, Math.round(power * LEVIATHAN_RULES.hpFactor));
+}
+function spawnLeviathan(window, activePlayers, previous) {
+  var _a;
+  const maxHp = leviathanHp(activePlayers);
+  return __spreadProps(__spreadValues({}, window), { maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: (_a = previous == null ? void 0 : previous.titleHolder) != null ? _a : null });
+}
+function checkLeviathanLaunch(state, uid, pseudo, now) {
+  var _a, _b;
+  if (!state || !isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
+  const c = state.contributions[uid];
+  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR3 - now : 0;
+  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
+}
+function resolveLeviathanAssault(state, player, fleet, formation, now) {
+  var _a;
+  const fx = formationEffects(formation);
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor);
+  const active = isActive(state, now);
+  const damage = active ? Math.min(state.hp, power) : 0;
+  const repair = getRepairPercent(player.buildings);
+  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
+  const survivors = {};
+  const lost = {};
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const gone = raw - Math.floor(raw * repair);
+    if (gone > 0) lost[id] = gone;
+    survivors[id] = qty - gone;
+  }
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
+  const hp = state.hp - damage;
+  const killed = active && hp <= 0;
+  return {
+    state: __spreadProps(__spreadValues({}, state), {
+      hp: Math.max(0, hp),
+      status: killed ? "killed" : state.status,
+      endedAtMs: killed ? now : state.endedAtMs,
+      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
+    }),
+    damage,
+    survivors,
+    lost,
+    killed
+  };
+}
+function leviathanRanking(state) {
+  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.damage - a.damage);
+}
+function rewardHours(state, uid) {
+  var _a, _b, _c, _d;
+  const ranking = leviathanRanking(state);
+  const top = (_b = (_a = ranking[0]) == null ? void 0 : _a.damage) != null ? _b : 0;
+  const mine = (_d = (_c = state.contributions[uid]) == null ? void 0 : _c.damage) != null ? _d : 0;
+  if (!(mine > 0) || !(top > 0)) return 0;
+  const hours2 = LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * (mine / top);
+  return state.status === "killed" ? hours2 : hours2 * LEVIATHAN_RULES.failedRewardFactor;
+}
+function grantLeviathanReward(state, player) {
+  var _a, _b, _c;
+  const hours2 = rewardHours(state, player.uid);
+  const gain = hours2 > 0 ? productionHours(player, hours2) : {};
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (state.status === "killed" && hours2 > 0) bumpStat(player, "leviathanKills");
+  const top = leviathanRanking(state)[0];
+  const title = !!top && top.uid === player.uid && state.status === "killed";
+  if (title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === LEVIATHAN_RULES.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: LEVIATHAN_RULES.title, seasonId: `leviathan:${state.id}`, rank: 1 }];
+    player.activeTitle = LEVIATHAN_RULES.title;
+  }
+  return { gain, title };
+}
+function removeLeviathanTitle(player) {
+  var _a, _b;
+  player.titles = ((_a = player.titles) != null ? _a : []).filter((t) => t.label !== LEVIATHAN_RULES.title);
+  if (player.activeTitle === LEVIATHAN_RULES.title) player.activeTitle = (_b = player.titles[0]) == null ? void 0 : _b.label;
+}
+function closeLeviathan(state, now) {
+  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
+  return state;
+}
+
 // src/game/galaxy.ts
 function hashString(input, seed) {
   let h = (2166136261 ^ seed) >>> 0;
@@ -4341,6 +4745,7 @@ function recallFleet(fleet, uid, now) {
   if (fleet.status === "stationed") {
     return __spreadProps(__spreadValues({}, fleet), { status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) });
   }
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
@@ -4364,6 +4769,10 @@ function returnMessage(fleet, lootTotal) {
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
+    case "expedition":
+      return { title: "Exp\xE9dition termin\xE9e", message: "Ta flotte d'exp\xE9dition est rentr\xE9e \xE0 la base." };
+    case "leviathan":
+      return { title: "Retour du L\xE9viathan", message: "Les survivants de l'assaut sur le L\xE9viathan sont rentr\xE9s." };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "garrison":
@@ -4383,7 +4792,7 @@ function returnMessage(fleet, lootTotal) {
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -4399,7 +4808,18 @@ function performLaunch(req) {
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, (_d = req.patrolMinutes) != null ? _d : 0, now);
   else if (mission === "lair") out = launchLair(owner, (_e = req.lairTarget) != null ? _e : "", req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target, req.fleet, (_f = req.garrisonHours) != null ? _f : 0, (_g = req.garrisonsAtHost) != null ? _g : 0, now);
-  else throw new GameActionError("Mission inconnue.");
+  else if (mission === "expedition") {
+    const e = launchExpedition(owner, req.fleet, req.expeditionHours, (_h = req.expeditionsActive) != null ? _h : 0, (_i = req.expeditionsToday) != null ? _i : 0, now, req.formation);
+    out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
+  } else if (mission === "leviathan") {
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le L\xE9viathan.");
+    if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
+    out = {
+      attacker: owner,
+      fleet: newFleet(owner, { uid: "leviathan", pseudo: LEVIATHAN_RULES.name }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
+      defenderNotifications: []
+    };
+  } else throw new GameActionError("Mission inconnue.");
   const counter = { spy: "spies", patrol: "patrols", garrison: "garrisons" }[mission];
   if (counter) bumpStat(out.attacker, counter);
   return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
@@ -4738,6 +5158,8 @@ var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
+var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
+var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
@@ -4747,12 +5169,12 @@ function defaultGameContent() {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -4774,7 +5196,11 @@ function applyGameContent(overrides) {
       seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_y = (_x = overrides.rules) == null ? void 0 : _x.seasons) != null ? _y : {}),
       alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_A = (_z = overrides.rules) == null ? void 0 : _z.alliances) != null ? _A : {}),
       pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_C = (_B = overrides.rules) == null ? void 0 : _B.pirates) != null ? _C : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_E = (_D = overrides.rules) == null ? void 0 : _D.market) != null ? _E : {})
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_E = (_D = overrides.rules) == null ? void 0 : _D.market) != null ? _E : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_G = (_F = overrides.rules) == null ? void 0 : _F.expeditions) != null ? _G : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_J = (_I = (_H = overrides.rules) == null ? void 0 : _H.expeditions) == null ? void 0 : _I.weights) != null ? _J : {})
+      }),
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_L = (_K = overrides.rules) == null ? void 0 : _K.leviathan) != null ? _L : {})
     }
   };
   setBuildings(content.buildings);
@@ -4797,6 +5223,8 @@ function applyGameContent(overrides) {
   Object.assign(ALLIANCE_RULES, content.rules.alliances);
   Object.assign(PIRATE_RULES, content.rules.pirates);
   Object.assign(MARKET_RULES, content.rules.market);
+  Object.assign(EXPEDITION_RULES, content.rules.expeditions);
+  Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
   current = content;
   return content;
 }

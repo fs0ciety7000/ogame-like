@@ -1002,6 +1002,12 @@
         "required": false,
         "max": 20,
         "presentable": false
+      },
+      {
+        "name": "expedition",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
       }
     ],
     "indexes": [

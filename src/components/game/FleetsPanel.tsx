@@ -164,7 +164,11 @@ export function FleetsPanel({
       {mine.map((f) => {
         const outbound = f.status === "outbound";
         const stationed = f.status === "stationed";
-        const at = outbound
+        const decision = f.status === "decision";
+        const recallable = f.mission !== "expedition" && f.mission !== "leviathan";
+        const at = decision
+          ? (f.stationedUntilMs ?? now)
+          : outbound
           ? f.arriveAtMs
           : stationed
             ? (f.stationedUntilMs ?? now)
@@ -190,10 +194,14 @@ export function FleetsPanel({
                 <EmojiText text={fleetLabel(f, outbound)} />
               </span>
               <span className="tabular-mono ml-auto text-slate-400">
-                {stationed
+                {decision
+                  ? "décision"
+                  : stationed
                   ? "fin"
                   : outbound
-                    ? f.mission === "patrol"
+                    ? f.mission === "expedition"
+                      ? "mi-parcours"
+                      : f.mission === "patrol"
                       ? "demi-tour"
                       : f.mission === "attack" || !f.mission
                         ? "impact"
@@ -222,7 +230,7 @@ export function FleetsPanel({
                 }
                 className="flex-1"
               />
-              {(outbound || stationed) && (
+              {(outbound || stationed) && recallable && (
                 <Button
                   size="sm"
                   variant="ghost"

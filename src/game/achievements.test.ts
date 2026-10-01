@@ -22,8 +22,8 @@ const ids = (p: PlayerState) => checkNewAchievements(p).map((a) => a.id);
 describe("succès (v2.3)", () => {
   beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
 
-  it("has 69 valid achievements, keeping the 8 historical ids", () => {
-    expect(ACHIEVEMENTS).toHaveLength(69);
+  it("has 72 valid achievements, keeping the 8 historical ids", () => {
+    expect(ACHIEVEMENTS).toHaveLength(72);
     expect(validateAchievements(DEFAULT_ACHIEVEMENTS)).toEqual([]);
     for (const id of ["first_blood", "veteran", "architect", "expansion", "researcher", "commander", "fleet", "tireless"]) {
       expect(ACHIEVEMENTS.some((a) => a.id === id)).toBe(true);

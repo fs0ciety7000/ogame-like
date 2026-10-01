@@ -227,6 +227,184 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, priceBand: v ?? 0 } }))}
           />
         </Section>
+        <Section title="Expéditions">
+          <NumberField
+            label="Vaisseaux minimum"
+            value={rules.expeditions.minShips}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, minShips: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Expéditions par jour"
+            value={rules.expeditions.maxPerDay}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, maxPerDay: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Délai de décision face à une faction (min)"
+            value={rules.expeditions.choiceMinutes}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, choiceMinutes: v ?? 0 } }))}
+          />
+          <NumberField
+            label="XP par heure d'expédition"
+            value={rules.expeditions.xpPerHour}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, xpPerHour: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Gisement : heures de production min"
+            value={rules.expeditions.depositMinHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, depositMinHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Gisement : heures de production max"
+            value={rules.expeditions.depositMaxHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, depositMaxHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Trésor : heures de production min (converties en rares)"
+            value={rules.expeditions.rareMinHours}
+            step={0.25}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, rareMinHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Trésor : heures de production max"
+            value={rules.expeditions.rareMaxHours}
+            step={0.25}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, rareMaxHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Épave : part de la flotte récupérée min (0,02 = 2 %)"
+            value={rules.expeditions.wreckMinPct}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, wreckMinPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Épave : part max"
+            value={rules.expeditions.wreckMaxPct}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, wreckMaxPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Embuscade : puissance adverse min (part de la flotte)"
+            value={rules.expeditions.ambushMinPower}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, ambushMinPower: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Embuscade : puissance adverse max"
+            value={rules.expeditions.ambushMaxPower}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, ambushMaxPower: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Butin d'une victoire (heures de production)"
+            value={rules.expeditions.victoryLootHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, victoryLootHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Péage d'une faction (heures de production)"
+            value={rules.expeditions.tollHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, tollHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Probabilité relative : rien"
+            value={rules.expeditions.weights.nothing}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, nothing: v ?? 0 } } }))}
+          />
+          <NumberField
+            label="Probabilité relative : gisement"
+            value={rules.expeditions.weights.deposit}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, deposit: v ?? 0 } } }))}
+          />
+          <NumberField
+            label="Probabilité relative : trésor rare"
+            value={rules.expeditions.weights.rare}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, rare: v ?? 0 } } }))}
+          />
+          <NumberField
+            label="Probabilité relative : épave"
+            value={rules.expeditions.weights.wreck}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, wreck: v ?? 0 } } }))}
+          />
+          <NumberField
+            label="Probabilité relative : embuscade"
+            value={rules.expeditions.weights.ambush}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, ambush: v ?? 0 } } }))}
+          />
+          <NumberField
+            label="Probabilité relative : rencontre de faction"
+            value={rules.expeditions.weights.faction}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, weights: { ...r.expeditions.weights, faction: v ?? 0 } } }))}
+          />
+        </Section>
+        <Section title="Léviathan">
+          <NumberField
+            label="Structure : facteur × puissance d'attaque des actifs"
+            value={rules.leviathan.hpFactor}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, hpFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée de présence (h)"
+            value={rules.leviathan.durationHours}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, durationHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Délai entre deux assauts d'un joueur (h)"
+            value={rules.leviathan.cooldownHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, cooldownHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Trajet aller (min)"
+            value={rules.leviathan.flightMinutes}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, flightMinutes: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Pertes par assaut (0,08 = 8 %)"
+            value={rules.leviathan.lossPct}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, lossPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Récompense de base (heures de production)"
+            value={rules.leviathan.baseRewardHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, baseRewardHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Bonus max selon les dégâts (heures)"
+            value={rules.leviathan.bonusRewardHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, bonusRewardHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Récompenses s'il survit (0,5 = moitié)"
+            value={rules.leviathan.failedRewardFactor}
+            step={0.1}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, failedRewardFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée du titre (jours)"
+            value={rules.leviathan.titleDays}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, titleDays: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Flottes en vol">
           <NumberField
             label="Durée fixe de tout trajet (min)"

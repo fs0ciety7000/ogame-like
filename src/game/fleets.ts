@@ -1,4 +1,6 @@
 import { bumpStat } from "@/game/stats";
+import { launchExpedition } from "@/game/expeditions";
+import { LEVIATHAN_RULES } from "@/game/leviathan";
 import { galaxyCoords } from "@/game/galaxy";
 import { GameActionError } from "@/game/errors";
 import { checkAttackAllowed } from "@/game/pvp";
@@ -37,10 +39,10 @@ export const PATROL_RULES = {
   maxMinutes: 480,
 };
 
-export type FleetStatus = "outbound" | "stationed" | "returning" | "done";
+export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -50,6 +52,8 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   garrison: "Garnison",
   pirate: "Raid pirate",
   lair: "Assaut du repaire",
+  expedition: "Expédition",
+  leviathan: "Assaut du Léviathan",
 };
 
 export interface Fleet {
@@ -76,6 +80,8 @@ export interface Fleet {
   power?: number | null;
   /** Faction du raid ou du repaire visé. */
   factionId?: string | null;
+  /** v3.1 : déroulé d'une expédition. */
+  expedition?: import("@/game/expeditions").ExpeditionState | null;
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -215,6 +221,7 @@ export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
     // Garnison : elle quitte l'allié et rentre (durée du trajet aller).
     return { ...fleet, status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) };
   }
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus être rappelée.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est déjà au contact.");
   return { ...fleet, status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) };
@@ -241,6 +248,10 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
+    case "expedition":
+      return { title: "Expédition terminée", message: "Ta flotte d'expédition est rentrée à la base." };
+    case "leviathan":
+      return { title: "Retour du Léviathan", message: "Les survivants de l'assaut sur le Léviathan sont rentrés." };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
     case "garrison":
@@ -284,6 +295,11 @@ export interface LaunchRequest {
   garrisonsAtHost?: number;
   /** Repaire visé (lair_<faction>). */
   lairTarget?: string;
+  /** v3.1 : expédition (durée, expéditions en cours et du jour) et formation. */
+  expeditionHours?: number;
+  expeditionsActive?: number;
+  expeditionsToday?: number;
+  formation?: string;
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
@@ -302,6 +318,18 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
   else if (mission === "lair") out = launchLair(owner, req.lairTarget ?? "", req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target!, req.fleet, req.garrisonHours ?? 0, req.garrisonsAtHost ?? 0, now);
+  else if (mission === "expedition") {
+    const e = launchExpedition(owner, req.fleet, req.expeditionHours, req.expeditionsActive ?? 0, req.expeditionsToday ?? 0, now, req.formation);
+    out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
+  } else if (mission === "leviathan") {
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le Léviathan.");
+    if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
+    out = {
+      attacker: owner,
+      fleet: newFleet(owner, { uid: "leviathan", pseudo: LEVIATHAN_RULES.name }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
+      defenderNotifications: [],
+    };
+  }
   else throw new GameActionError("Mission inconnue.");
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
