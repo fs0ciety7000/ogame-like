@@ -327,6 +327,12 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
   return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
 });
 
+/**
+ * POST /api/cosmic/admin/reset — hard reset de la progression (un joueur ou
+ * tous), précédé d'une sauvegarde complète. Administrateurs uniquement.
+ */
+routerAdd("POST", "/api/cosmic/admin/reset", (e) => require(`${__hooks}/cosmic_db.js`).adminReset(e), $apis.requireAuth("users", "_superusers"));
+
 /* ---------- Journal des actions d'administration ---------- */
 
 // Chaque modification faite par un administrateur (page Administration ou

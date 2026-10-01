@@ -19,6 +19,7 @@ import {
 } from "@/services/adminService";
 import { NumberField, Section } from "@/pages/admin/fields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
+import { HardResetCard } from "@/pages/admin/HardResetCard";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -568,6 +569,8 @@ export function ToolsPanel() {
           <CloudDownload className="mr-1 h-3.5 w-3.5" /> {updatingHooks ? "Mise à jour…" : "Mettre à jour les hooks"}
         </Button>
       </Card>
+
+      <HardResetCard />
 
       <Card className="flex flex-col gap-2 border-danger-glow/30 p-4">
         <h3 className="font-display text-sm text-danger-glow">Remise à zéro de l'XP</h3>

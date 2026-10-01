@@ -772,4 +772,100 @@ function allianceIntel(e) {
   return e.json(200, { items });
 }
 
-module.exports = { allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Hard reset (administration) ---------- */
+
+/** POST /api/cosmic/admin/reset { scope: "all" | "player", uid?, confirm, options } */
+function adminReset(e) {
+  const db = module.exports;
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const scope = req.scope === "player" ? "player" : "all";
+  const options = game.parseResetOptions(req.options);
+  let targets;
+  if (scope === "player") {
+    const rec = findOrNull($app, "players", String(req.uid || ""));
+    if (!rec) throw new NotFoundError("Joueur introuvable.");
+    if (String(req.confirm || "") !== rec.getString("pseudo")) throw new BadRequestError("Confirmation incorrecte : tape le pseudo du joueur.");
+    targets = [rec.id];
+  } else {
+    if (String(req.confirm || "") !== "RESET") throw new BadRequestError("Confirmation incorrecte : tape RESET.");
+    targets = $app.findAllRecords("players").map((r) => r.id);
+  }
+
+  // Sauvegarde complète avant toute modification (annule le reset si elle échoue).
+  const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+  const backup = `avant_reset_${stamp}.zip`;
+  try {
+    $app.createBackup(e.request.context(), backup);
+  } catch (err) {
+    throw new BadRequestError(`Sauvegarde impossible, reset annulé : ${err}`);
+  }
+
+  const now = Date.now();
+  const summary = { scope, players: 0, fleets: 0, debris: 0, reports: 0, alliances: 0, backup };
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const params = {};
+    const inList = (field) =>
+      targets
+        .map((id, i) => {
+          params["t" + i] = id;
+          return `${field} = {:t${i}}`;
+        })
+        .join(" || ");
+    const deleteWhere = (collection, filter) => {
+      const recs = scope === "all" ? txApp.findAllRecords(collection) : txApp.findRecordsByFilter(collection, filter, "", 0, 0, params);
+      recs.forEach((r) => txApp.delete(r));
+      return recs.length;
+    };
+
+    summary.fleets = deleteWhere("fleets", `${inList("ownerUid")} || ${inList("targetUid")}`);
+    summary.debris = deleteWhere("debris_fields", inList("id"));
+    if (options.reports) {
+      summary.reports += deleteWhere("battle_reports", `${inList("attackerUid")} || ${inList("defenderUid")}`);
+      summary.reports += deleteWhere("spy_reports", `${inList("spyUid")} || ${inList("targetUid")}`);
+      deleteWhere("notifications", inList("player_id"));
+    }
+    if (scope === "all" && options.titles) deleteWhere("season_results", "id != ''");
+    if (scope === "all" && options.alliances) {
+      txApp.findAllRecords("alliances").forEach((a) => {
+        a.set("treasury", {});
+        a.set("research", {});
+        a.set("activeResearch", null);
+        a.set("researchEndMs", 0);
+        a.set("distributions", { day: "", count: 0 });
+        txApp.save(a);
+        summary.alliances++;
+      });
+      txApp.findAllRecords("alliance_logs").forEach((l) => txApp.delete(l));
+    }
+
+    targets.forEach((uid) => {
+      const loaded = loadPlayer(txApp, game, uid);
+      const out = game.resetPlayerState(loaded.player, options, now);
+      savePlayer(txApp, game, loaded, out.player, out.queues);
+      ["createdAtMs", "lastAttackAtMs", "lastDefeatAtMs"].forEach((f) => loaded.rec.set(f, out.player[f]));
+      if (scope === "all" && options.alliances) loaded.rec.set("allianceResearch", {});
+      txApp.save(loaded.rec);
+      notify(txApp, uid, out.notifications);
+      summary.players++;
+    });
+
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "reset",
+      targetCollection: "players",
+      recordId: scope === "player" ? targets[0] : "",
+      recordLabel: scope === "player" ? String(req.confirm) : "tous les joueurs",
+      changes: { options, résultat: summary },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+  });
+  return e.json(200, summary);
+}
+
+module.exports = { adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

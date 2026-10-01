@@ -66,6 +66,7 @@ __export(hooksEntry_exports, {
   flushPlayer: () => flushPlayer,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
+  parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
   performAttack: () => performAttack,
@@ -77,6 +78,7 @@ __export(hooksEntry_exports, {
   previousSeasonId: () => previousSeasonId,
   recallFleet: () => recallFleet,
   recyclerCapacity: () => recyclerCapacity,
+  resetPlayerState: () => resetPlayerState,
   resolveSpyArrival: () => resolveSpyArrival,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
@@ -3253,6 +3255,79 @@ function performFleetReturn(ownerIn, ownerQueues, fleet, now) {
   const flushed = flushState(__spreadProps(__spreadValues({}, ownerIn), { buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }), ownerQueues, now);
   const done = completeFleetReturn(flushed.player, fleet, now);
   return { owner: done.owner, queues: flushed.queues, notifications: [...flushed.notifications, ...done.notifications] };
+}
+
+// src/game/reset.ts
+var DEFAULT_RESET_OPTIONS = {
+  xp: true,
+  achievements: true,
+  reports: true,
+  alliances: true,
+  titles: false,
+  starterKit: {
+    scrap: 5e3,
+    energy: 3e3,
+    nano: 2e3,
+    data: 1e3,
+    reinforcedSteel: 50,
+    cyberModule: 50,
+    syntheticNanites: 50,
+    aiFragment: 50
+  }
+};
+function parseResetOptions(raw) {
+  var _a;
+  const r = raw != null ? raw : {};
+  const bool = (k) => typeof r[k] === "boolean" ? r[k] : DEFAULT_RESET_OPTIONS[k];
+  const kit = {};
+  const rawKit = (_a = r.starterKit) != null ? _a : DEFAULT_RESET_OPTIONS.starterKit;
+  for (const res of Object.keys(DEFAULT_RESET_OPTIONS.starterKit)) {
+    const n = Math.floor(Number(rawKit[res]));
+    if (Number.isFinite(n) && n > 0) kit[res] = Math.min(n, 1e9);
+  }
+  return { xp: bool("xp"), achievements: bool("achievements"), reports: bool("reports"), alliances: bool("alliances"), titles: bool("titles"), starterKit: kit };
+}
+function resetPlayerState(player, options, now) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const fresh = defaultPlayerState(player.uid, player.pseudo);
+  const resources = __spreadValues({}, fresh.resources);
+  for (const [res, amount] of Object.entries(options.starterKit)) resources[res] = ((_a = resources[res]) != null ? _a : 0) + amount;
+  const next = __spreadProps(__spreadValues({}, fresh), {
+    uid: player.uid,
+    pseudo: player.pseudo,
+    resources,
+    resourcesUpdatedAtMs: now,
+    resourceHistory: [],
+    playtimeSeconds: (_b = player.playtimeSeconds) != null ? _b : 0,
+    xp: options.xp ? 0 : (_c = player.xp) != null ? _c : 0,
+    seasonId: currentSeasonId(now),
+    seasonXp: options.xp ? 0 : player.seasonId === currentSeasonId(now) ? (_d = player.seasonXp) != null ? _d : 0 : 0,
+    lastSeasonId: options.xp ? "" : player.lastSeasonId,
+    lastSeasonXp: options.xp ? 0 : player.lastSeasonXp,
+    unlockedAchievements: options.achievements ? [] : (_e = player.unlockedAchievements) != null ? _e : [],
+    titles: options.titles ? [] : (_f = player.titles) != null ? _f : [],
+    activeTitle: options.titles ? "" : (_g = player.activeTitle) != null ? _g : "",
+    contracts: void 0,
+    victories: 0,
+    defeats: 0,
+    // Protection débutant offerte à nouveau : personne n'est pillé dès la reprise.
+    createdAtMs: now,
+    lastAttackAtMs: 0,
+    lastDefeatAtMs: 0
+  });
+  return {
+    player: next,
+    queues: defaultQueues(),
+    notifications: [
+      {
+        kind: "system",
+        title: "Nouvelle \xE8re : la galaxie repart de z\xE9ro",
+        message: "Ta progression a \xE9t\xE9 remise \xE0 z\xE9ro par l'administration. Un kit de d\xE9part t'attend dans tes ressources, et ta protection d\xE9butant est r\xE9tablie.",
+        createdAtMs: now,
+        read: false
+      }
+    ]
+  };
 }
 
 // src/game/playerFields.ts

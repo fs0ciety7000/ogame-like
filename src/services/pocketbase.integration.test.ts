@@ -580,6 +580,37 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect((await snap(bId)).allianceResearch).toEqual({});
   }, 60_000);
 
+  it("hard reset of one player, with a backup first", async () => {
+    // Connecté en B (joueur normal) : refusé.
+    await expect(pb.send("/api/cosmic/admin/reset", { method: "POST", body: { scope: "player", uid: bId, confirm: B.pseudo } })).rejects.toMatchObject({ status: 403 });
+    await admin.collection("players").update(bId, { units: { chasseur: { level: 3, count: 99 } }, techLevels: { tech1: 5 }, xp: 777, resources: RICH });
+    await expect(
+      admin.send("/api/cosmic/admin/reset", { method: "POST", body: { scope: "player", uid: bId, confirm: "mauvais" } }),
+    ).rejects.toMatchObject({ status: 400 });
+    const out = await admin.send("/api/cosmic/admin/reset", {
+      method: "POST",
+      body: { scope: "player", uid: bId, confirm: B.pseudo, options: { xp: true, starterKit: { scrap: 5000, reinforcedSteel: 50 } } },
+    });
+    expect(out.players).toBe(1);
+    expect(out.backup).toMatch(/^avant_reset_\d{12}\.zip$/);
+    const backups = await admin.backups.getFullList();
+    expect(backups.some((b) => b.key === out.backup)).toBe(true);
+    await admin.backups.delete(out.backup);
+
+    const b = await snap(bId);
+    expect(b.units).toEqual({});
+    expect(b.techLevels).toEqual({});
+    expect(b.xp).toBe(0);
+    expect(b.resources.scrap).toBeGreaterThanOrEqual(5100);
+    expect(b.resources.scrap).toBeLessThan(5200);
+    expect(b.resources.reinforcedSteel).toBe(50);
+    expect(b.createdAtMs).toBeGreaterThan(Date.now() - 60_000);
+    const a = await snap(aId);
+    expect(a.xp).toBeGreaterThan(0); // les autres joueurs ne bougent pas
+    const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}"` });
+    expect(notes.map((n) => n.title)).toEqual(["Nouvelle ère : la galaxie repart de zéro"]);
+  }, 60_000);
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);
