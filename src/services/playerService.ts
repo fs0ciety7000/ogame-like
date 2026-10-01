@@ -376,6 +376,10 @@ export function claimOnboarding(stepId: string) {
   return act<Partial<Record<import("@/types/game").ResourceId, number>>>({ type: "claimOnboarding", stepId });
 }
 
+export function setBasePosture(posture: string) {
+  return act<string>({ type: "setPosture", posture });
+}
+
 export function hideOnboarding(hidden: boolean) {
   return act({ type: "hideOnboarding", hidden });
 }
@@ -458,7 +462,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number; hours?: number } = {},
+  options: { minutes?: number; hours?: number; formation?: string } = {},
 ): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }

@@ -312,6 +312,10 @@ function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
           <span className="tabular-mono text-right">{formatCompact(flows.spentTotal)}</span>
           <span className="text-slate-400">Échangé au comptoir</span>
           <span className="tabular-mono text-right">{formatCompact(flows.tradedTotal)}</span>
+          <span className="text-slate-400">Échanges au marché</span>
+          <span className="tabular-mono text-right">{flows.marketTrades ?? 0}</span>
+          <span className="text-slate-400">Taxe du marché (retirée du jeu)</span>
+          <span className="tabular-mono text-right text-danger-glow">{formatCompact(flows.marketTax ?? 0)}</span>
         </div>
       </Panel>
 

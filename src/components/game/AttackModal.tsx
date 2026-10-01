@@ -1,4 +1,6 @@
 import { allianceFlightFactor } from "@/game/alliances";
+import { FormationPicker } from "@/components/game/FormationPicker";
+import type { FormationId } from "@/game/formations";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Rocket } from "lucide-react";
@@ -28,6 +30,7 @@ export function AttackModal({
   const uid = useAuthStore((s) => s.user?.uid);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [formation, setFormation] = useState<FormationId>("balanced");
 
   const setQty = (id: string, owned: number, value: number) => {
     const clamped = Math.max(0, Math.min(owned, value));
@@ -47,7 +50,7 @@ export function AttackModal({
     }
     setSubmitting(true);
     try {
-      const sent = await sendFleet(target.uid, selected);
+      const sent = await sendFleet(target.uid, selected, "attack", { formation });
       setFleet({});
       onClose();
       triggerWarpEffect();
@@ -123,6 +126,8 @@ export function AttackModal({
                   une partie de ton attaque.
                 </p>
               </div>
+
+              <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
 
               <Button className="mt-4 w-full" variant="danger" disabled={!hasShips} onClick={() => void handleConfirm()}>
                 <Rocket className="mr-1.5 h-4 w-4" /> Envoyer la flotte

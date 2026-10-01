@@ -103,6 +103,8 @@ export interface PlayerState {
   stats?: import("@/game/stats").PlayerStats;
   /** v2.9 : objectifs de prise en main réclamés. */
   onboarding?: { claimed: string[]; hidden?: boolean };
+  /** v3.0 : posture de la base face aux attaques. */
+  posture?: { id: "standard" | "bunker" | "riposte"; changedAtMs: number };
 }
 
 export interface SeasonResult {
@@ -190,6 +192,8 @@ export interface SpyReportData {
   units?: Record<string, { count: number; level: number }>;
   defenses?: Record<string, { count: number; level: number }>;
   garrisons?: { ownerPseudo: string; units: Record<string, number> }[];
+  /** v3.0 : posture de la base espionnée. */
+  posture?: string;
   buildings?: Record<string, number>;
   techLevels?: Record<string, number>;
   queues?: {

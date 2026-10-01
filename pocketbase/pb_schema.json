@@ -207,6 +207,12 @@
         "type": "json",
         "required": false,
         "maxSize": 5000
+      },
+      {
+        "name": "posture",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
       }
     ],
     "indexes": [
@@ -989,6 +995,13 @@
         "required": false,
         "max": 40,
         "presentable": false
+      },
+      {
+        "name": "formation",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -1395,6 +1408,109 @@
       "CREATE INDEX idx_reports_reporter ON reports (reporterId)",
       "CREATE INDEX idx_reports_status ON reports (status)",
       "CREATE INDEX idx_reports_autokey ON reports (autoKey)"
+    ]
+  },
+  {
+    "id": "pbc_ce_market",
+    "name": "market_offers",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "sellerId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "sellerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "sellerAllianceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "giveRes",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "giveAmount",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "wantRes",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "wantAmount",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "expiresAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "buyerId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "buyerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "filledAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "tax",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)",
+      "CREATE INDEX idx_market_seller ON market_offers (sellerId, status)",
+      "CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"
     ]
   }
 ]

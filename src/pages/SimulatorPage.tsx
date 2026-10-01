@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { FormationPicker, PosturePicker } from "@/components/game/FormationPicker";
+import type { FormationId, PostureId } from "@/game/formations";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { lootFactor } from "@/game/events";
@@ -206,6 +208,8 @@ export function SimulatorPage() {
   const [defUnits, setDefUnits] = useState<Units>({});
   const [shield, setShield] = useState(0);
   const [defScrap, setDefScrap] = useState(0);
+  const [formation, setFormation] = useState<FormationId>("balanced");
+  const [defPosture, setDefPosture] = useState<PostureId>("standard");
 
   useEffect(() => {
     if (!uid) return;
@@ -238,11 +242,11 @@ export function SimulatorPage() {
       return simulateRaid(player, faction, notoriety ?? pirateState(player, faction.id).notoriety);
     }
     if (!hasFleet) return null;
-    if (kind === "player") return report ? simulateAgainstReport(attacker, sent, report, lootFactor(Date.now())) : null;
-    if (kind === "lair") return faction ? simulateLair(attacker, sent, faction) : null;
+    if (kind === "player") return report ? simulateAgainstReport(attacker, sent, report, lootFactor(Date.now()), formation) : null;
+    if (kind === "lair") return faction ? simulateLair(attacker, sent, faction, formation) : null;
     const atk: SimSide = { units: attackerUnits, techLevels: freeFleet ? {} : player.techLevels };
-    return simulateSandbox(atk, sent, { units: defUnits, techLevels: {}, shieldPct: shield / 100, resources: { scrap: defScrap } });
-  }, [player, freeFleet, fleet, kind, faction, notoriety, report, defUnits, shield, defScrap]);
+    return simulateSandbox(atk, sent, { units: defUnits, techLevels: {}, shieldPct: shield / 100, resources: { scrap: defScrap } }, 1, { formation, posture: defPosture });
+  }, [player, freeFleet, fleet, kind, faction, notoriety, report, defUnits, shield, defScrap, formation, defPosture]);
 
   if (!player) return null;
 
@@ -290,6 +294,7 @@ export function SimulatorPage() {
               withLevel={freeFleet}
             />
           )}
+          {kind !== "raid" && <FormationPicker value={formation} onChange={setFormation} />}
         </Card>
 
         <Card className="flex flex-col gap-3 p-4">
@@ -356,6 +361,10 @@ export function SimulatorPage() {
                   Ferraille exposée
                   <Input type="number" min={0} value={defScrap} onChange={(e) => setDefScrap(Math.max(0, parseInt(e.target.value) || 0))} className="mt-1 h-8" />
                 </label>
+              </div>
+              <div>
+                <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Posture du défenseur</p>
+                <PosturePicker value={defPosture} onChange={setDefPosture} />
               </div>
               <p className="text-[11px] text-slate-500">Le défenseur du bac à sable n'a ni technologie ni réparation.</p>
             </TabsContent>

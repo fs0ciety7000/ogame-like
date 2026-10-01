@@ -11,6 +11,7 @@ import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { ALLIANCE_RULES } from "@/game/alliances";
+import { MARKET_RULES } from "@/game/market";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
@@ -39,6 +40,7 @@ export interface GameRules {
   seasons: typeof SEASON_RULES;
   alliances: typeof ALLIANCE_RULES;
   pirates: typeof PIRATE_RULES;
+  market: typeof MARKET_RULES;
 }
 
 export interface GameContent {
@@ -66,6 +68,7 @@ const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
+const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -77,7 +80,7 @@ export function defaultGameContent(): GameContent {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES },
   });
 }
 
@@ -111,6 +114,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       seasons: { ...defaults.rules.seasons, ...(overrides.rules?.seasons ?? {}) },
       alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
       pirates: { ...defaults.rules.pirates, ...(overrides.rules?.pirates ?? {}) },
+      market: { ...defaults.rules.market, ...(overrides.rules?.market ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -133,6 +137,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(SEASON_RULES, content.rules.seasons);
   Object.assign(ALLIANCE_RULES, content.rules.alliances);
   Object.assign(PIRATE_RULES, content.rules.pirates);
+  Object.assign(MARKET_RULES, content.rules.market);
   current = content;
   return content;
 }

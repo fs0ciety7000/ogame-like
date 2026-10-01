@@ -55,7 +55,7 @@ export interface GameStats {
     /** Combats lancés par des joueurs, classés par unité dominante de la flotte. */
     dominantUnits: { id: string; name: string; attacks: number; winPct: number }[];
     factions: { id: string; name: string; raids: number; repelledPct: number; lairAssaults: number; lairWinPct: number }[];
-    flows: { productionPerHour: number; spentTotal: number; lootWindow: number; tradedTotal: number };
+    flows: { productionPerHour: number; spentTotal: number; lootWindow: number; tradedTotal: number; marketTrades: number; marketTax: number };
     /** Stocks très au-dessus des autres joueurs (à vérifier). */
     anomalies: { pseudo: string; resource: string; amount: number; ratio: number }[];
   };
@@ -304,6 +304,8 @@ function computeBalance(players: PlayerState[], reports: Parameters<typeof compu
       spentTotal: players.reduce((a, p) => a + (p.stats?.spent ?? 0), 0),
       lootWindow: recent.filter((r) => r.attackerUid !== PIRATE_OWNER_UID).reduce((a, r) => a + sumValues(r.loot), 0),
       tradedTotal: players.reduce((a, p) => a + (p.stats?.traded ?? 0), 0),
+      marketTrades: Math.round(players.reduce((a, p) => a + (p.stats?.marketTrades ?? 0), 0) / 2),
+      marketTax: players.reduce((a, p) => a + (p.stats?.marketTax ?? 0), 0),
     },
     anomalies: anomalies.slice(0, 10),
   };
