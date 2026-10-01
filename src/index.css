@@ -423,8 +423,11 @@ body {
   to { background-position: -250% 0; }
 }
 
-/* Scintillement des panneaux holographiques. */
-:root[data-theme="holo"] .glass-panel {
+/* Scintillement des panneaux holographiques. Jamais sur les fenêtres et
+   menus (éléments à data-state) : leur animation d'ouverture hériterait de
+   la répétition infinie, et Radix attendrait sans fin la fin de l'animation
+   avant de les fermer (fenêtre qui clignote et ne se ferme plus). */
+:root[data-theme="holo"] .glass-panel:not([data-state]) {
   animation: hud-flicker 9s infinite;
 }
 @keyframes hud-flicker {
