@@ -23,7 +23,12 @@ export interface UnitDef {
   unlockTech: string;
   /** Temps de construction (s) ; par défaut (ferraille + énergie) / 100. */
   buildTime?: number;
+  /** Attaque et défense gagnées par niveau au-delà du premier (défaut : UNIT_LEVEL_BONUS_DEFAULT). */
+  levelBonus?: number;
 }
+
+/** Gain d'attaque et de défense par niveau, pour les unités qui n'en précisent pas. */
+export const UNIT_LEVEL_BONUS_DEFAULT = 5;
 
 export const DEFAULT_UNITS: UnitDef[] = [
   {
@@ -109,6 +114,9 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech19",
     hangarSpace: 200,
+    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
+    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
+    levelBonus: 1700,
   },
   {
     id: "roquette",
@@ -176,7 +184,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
 
 export const UNITS: UnitDef[] = [];
 /** Stats de combat de base, dérivées des fiches (plus de double saisie). */
-export const UNIT_BASE_STATS: Record<string, { attack: number; defense: number }> = {};
+export const UNIT_BASE_STATS: Record<string, { attack: number; defense: number; perLevel: number }> = {};
 /** Technologie qui débloque/améliore chaque unité. */
 export const UNIT_TO_TECH: Record<string, string> = {};
 export const OFFENSIVE_UNITS: string[] = [];
@@ -187,13 +195,17 @@ export function setUnits(defs: UnitDef[]) {
   for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
   for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
   for (const u of defs) {
-    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense };
+    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
     if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
   }
   OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
   DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
 }
 setUnits(DEFAULT_UNITS);
+
+export function unitLevelBonus(u: Pick<UnitDef, "levelBonus">): number {
+  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
+}
 
 export function findUnit(id: string): UnitDef | undefined {
   return UNITS.find((u) => u.id === id);

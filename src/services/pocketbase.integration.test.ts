@@ -909,6 +909,79 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v3.1 expedition: two events, faction choice, ships and XP back", async () => {
+    const before = await snap(bId);
+    await admin.collection("players").update(bId, {
+      units: { chasseur: { level: 1, count: 50 } },
+      resources: RICH,
+      buildings: { ...before!.buildings, extracteur_ferraille: { level: 5, unlocked: true } },
+    });
+    const fleets: string[] = [];
+    try {
+      await expect(ps.sendFleet("", { chasseur: 5 }, "expedition", { hours: 2 })).rejects.toThrow(/au moins/);
+      const sent = await ps.sendFleet("", { chasseur: 20 }, "expedition", { hours: 2 });
+      fleets.push(sent.id);
+      expect((await snap(bId))!.units.chasseur.count).toBe(30);
+      await expect(ps.sendFleet("", { chasseur: 20 }, "expedition", { hours: 2 })).rejects.toThrow(/déjà/);
+      await expect(ps.recallFleet(sent.id)).rejects.toThrow(/rappelée/);
+      const xp = (await snap(bId))!.xp ?? 0;
+      const step = async (field: "arriveAtMs" | "returnAtMs") => {
+        await admin.collection("fleets").update(sent.id, { [field]: Date.now() - 1000 });
+        await ps.syncPlayer("");
+        let f = await pb.collection("fleets").getOne(sent.id);
+        if (f.status === "decision") {
+          f = await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: sent.id, choice: "force" } });
+        }
+        return f;
+      };
+      const mid = await step("arriveAtMs");
+      expect(["returning", "done"]).toContain(mid.status);
+      expect(mid.expedition.log.length).toBeGreaterThanOrEqual(1);
+      const end = mid.status === "done" ? mid : await step("returnAtMs");
+      expect(end.status).toBe("done");
+      const after = await snap(bId);
+      expect(after!.xp).toBeGreaterThanOrEqual(xp + 120); // + XP du succès « Grand large »
+      expect(after!.stats.expeditions).toBe(1);
+      expect(after!.units.chasseur.count).toBeGreaterThan(30);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources, buildings: before!.buildings, xp: before!.xp, stats: before!.stats, pirates: before!.pirates });
+    }
+  }, 60_000);
+
+  it("v3.1 Leviathan: started by the staff, assaults deal damage, rewards when it leaves", async () => {
+    const before = await snap(bId);
+    await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 50 } }, resources: RICH });
+    const fleets: string[] = [];
+    try {
+      await expect(pb.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } })).rejects.toMatchObject({ status: 403 });
+      await expect(ps.sendFleet("", { chasseur: 10 }, "leviathan")).rejects.toThrow(/pas là/);
+      const started = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } });
+      expect(started.status).toBe("active");
+      expect(started.hp).toBe(started.maxHp);
+      const sent = await ps.sendFleet("", { chasseur: 10 }, "leviathan");
+      fleets.push(sent.id);
+      await expect(ps.sendFleet("", { chasseur: 10 }, "leviathan")).rejects.toThrow(/min/);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await pb.collection("fleets").getOne(sent.id);
+      expect(landed.status).toBe("returning");
+      const cfg = await pb.collection("game_config").getFirstListItem('key="leviathan"');
+      expect(cfg.data.hp).toBeLessThan(cfg.data.maxHp);
+      expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
+      const scrap = (await snap(bId))!.resources.scrap;
+      const stopped = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } });
+      expect(stopped.status).toBe("failed");
+      expect(stopped.rewarded).toBe(true);
+      expect((await snap(bId))!.resources.scrap).toBeGreaterThanOrEqual(scrap);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources });
+    }
+  }, 60_000);
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

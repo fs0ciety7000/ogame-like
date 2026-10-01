@@ -12,6 +12,8 @@ import { EVENT_RULES } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
+import { EXPEDITION_RULES } from "@/game/expeditions";
+import { LEVIATHAN_RULES } from "@/game/leviathan";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
@@ -41,6 +43,8 @@ export interface GameRules {
   alliances: typeof ALLIANCE_RULES;
   pirates: typeof PIRATE_RULES;
   market: typeof MARKET_RULES;
+  expeditions: typeof EXPEDITION_RULES;
+  leviathan: typeof LEVIATHAN_RULES;
 }
 
 export interface GameContent {
@@ -69,6 +73,8 @@ const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
+const DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
+const DEFAULT_LEVIATHAN_RULES = { ...LEVIATHAN_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -80,7 +86,7 @@ export function defaultGameContent(): GameContent {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES },
   });
 }
 
@@ -115,6 +121,12 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
       pirates: { ...defaults.rules.pirates, ...(overrides.rules?.pirates ?? {}) },
       market: { ...defaults.rules.market, ...(overrides.rules?.market ?? {}) },
+      expeditions: {
+        ...defaults.rules.expeditions,
+        ...(overrides.rules?.expeditions ?? {}),
+        weights: { ...defaults.rules.expeditions.weights, ...(overrides.rules?.expeditions?.weights ?? {}) },
+      },
+      leviathan: { ...defaults.rules.leviathan, ...(overrides.rules?.leviathan ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -138,6 +150,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(ALLIANCE_RULES, content.rules.alliances);
   Object.assign(PIRATE_RULES, content.rules.pirates);
   Object.assign(MARKET_RULES, content.rules.market);
+  Object.assign(EXPEDITION_RULES, content.rules.expeditions);
+  Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
   current = content;
   return content;
 }
@@ -196,6 +210,7 @@ export function validateGameContent(content: GameContent): string[] {
     if (!techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
     if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
+    if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);
     checkResources(`${label} (coût)`, u.cost as Record<string, number>);
   }
 

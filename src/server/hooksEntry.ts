@@ -28,6 +28,10 @@ export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody,
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
 export { acceptOffer, createOffer, describeAmount, MARKET_RULES, refundOffer, utcDayStart } from "@/game/market";
 export { isFormation } from "@/game/formations";
+export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanWindow, normalizeLeviathan, removeLeviathanTitle, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
+export { completeFleetReturn } from "@/game/fleets";
+export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";

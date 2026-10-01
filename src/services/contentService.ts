@@ -11,6 +11,8 @@ import { MAINTENANCE_KEY } from "@/game/maintenance";
 import { applyMaintenanceRecord } from "@/services/maintenanceService";
 import { STAFF_KEY } from "@/game/staff";
 import { applyStaffRecord } from "@/services/staffService";
+import { LEVIATHAN_KEY } from "@/game/leviathan";
+import { applyLeviathanRecord } from "@/services/leviathanService";
 
 /* =====================================================
    Contenu du jeu (bâtiments, unités, technos, missions, règles) stocké
@@ -31,15 +33,24 @@ export const useContentStore = create<ContentState>(() => ({ version: 0, loaded:
 
 type ConfigRecord = { id: string; key: ContentSection; data: unknown };
 
+/** Empreinte du contenu appliqué : on ne réapplique (et ne remonte les
+ *  écrans) que si une section du contenu a réellement changé — pas à chaque
+ *  mise à jour du Léviathan ou de la maintenance. */
+let lastSignature: string | null = null;
+
 function applyRecords(records: ConfigRecord[]) {
   applyMaintenanceRecord(records.find((r) => (r.key as string) === MAINTENANCE_KEY)?.data ?? null);
   applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
+  applyLeviathanRecord(records.find((r) => (r.key as string) === LEVIATHAN_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {
       (overrides as Record<string, unknown>)[r.key] = r.data;
     }
   }
+  const signature = JSON.stringify(overrides);
+  if (signature === lastSignature) return;
+  lastSignature = signature;
   applyGameContent(overrides);
   useContentStore.setState((s) => ({
     version: s.version + 1,

@@ -49,6 +49,8 @@ export interface GameEvent {
 
 export const EVENT_RULES: {
   rotationEnabled: boolean;
+  /** v3.1 : le premier week-end du mois, le Léviathan remplace l'événement. */
+  bossMonthly: boolean;
   /** Heure de début le vendredi (heure de Paris). */
   startHour: number;
   rotation: string[];
@@ -56,6 +58,7 @@ export const EVENT_RULES: {
   scheduled: ScheduledEvent[];
 } = {
   rotationEnabled: true,
+  bossMonthly: true,
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -127,7 +130,7 @@ export function findEventType(id: string): EventType | undefined {
 }
 
 /** Fenêtre du week-end en cours ou à venir (rotation). */
-function weekendWindow(now: number, weeksAhead = 0): { startMs: number; endMs: number; week: number } {
+export function weekendWindow(now: number, weeksAhead = 0): { startMs: number; endMs: number; week: number; firstOfMonth: boolean } {
   const local = now + parisOffsetMs(now);
   const localMidnight = Math.floor(local / DAY) * DAY;
   const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
@@ -136,12 +139,15 @@ function weekendWindow(now: number, weeksAhead = 0): { startMs: number; endMs: n
     startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
     endMs: parisLocalToUtc(friday + 3 * DAY),
     week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY)),
+    firstOfMonth: new Date(friday).getUTCDate() <= 7,
   };
 }
 
-function rotationEvent(window: { startMs: number; endMs: number; week: number }): GameEvent | null {
+function rotationEvent(window: { startMs: number; endMs: number; week: number; firstOfMonth: boolean }): GameEvent | null {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  // Week-end du Léviathan : pas d'événement de la rotation.
+  if (EVENT_RULES.bossMonthly && window.firstOfMonth) return null;
   const type = findEventType(list[((window.week % list.length) + list.length) % list.length])!;
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
