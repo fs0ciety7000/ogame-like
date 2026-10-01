@@ -41,7 +41,7 @@ export function useAdminStatus(): boolean | null {
 }
 
 /** Active, modifie ou termine la maintenance (administrateurs). */
-export async function setMaintenance(request: { enabled: boolean; message?: string; version?: string; endsAtMs?: number | null }): Promise<MaintenanceState & { extended: number }> {
+export async function setMaintenance(request: { enabled: boolean; message?: string; version?: string; endsAtMs?: number | null; autoEnd?: boolean }): Promise<MaintenanceState & { extended: number }> {
   try {
     const out = await pb.send<MaintenanceState & { extended: number }>("/api/cosmic/admin/maintenance", { method: "POST", body: request });
     applyMaintenanceRecord(out);

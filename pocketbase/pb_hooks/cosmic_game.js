@@ -76,6 +76,7 @@ __export(hooksEntry_exports, {
   finishAllianceResearch: () => finishAllianceResearch,
   flushPlayer: () => flushPlayer,
   isStaffRole: () => isStaffRole,
+  maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
@@ -4370,7 +4371,7 @@ function applyStaffTitle(player, role, display = false) {
 
 // src/game/maintenance.ts
 var MAINTENANCE_KEY = "maintenance";
-var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null };
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
 var MAX_MESSAGE = 600;
 var MAX_VERSION = 20;
 function normalizeMaintenance(raw) {
@@ -4382,7 +4383,8 @@ function normalizeMaintenance(raw) {
     message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
     version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
     startedAtMs: Number(r.startedAtMs) || 0,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null
+    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
+    autoEnd: r.autoEnd !== false
   };
 }
 function nextMaintenance(previous, request, now) {
@@ -4394,8 +4396,12 @@ function nextMaintenance(previous, request, now) {
     message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
     version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
     startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null
+    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
+    autoEnd: request.autoEnd !== false
   };
+}
+function maintenanceShouldAutoEnd(m, now) {
+  return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
 }
 function extendUltimatums(pirates, startedAtMs, now) {
   const pausedMs = now - startedAtMs;

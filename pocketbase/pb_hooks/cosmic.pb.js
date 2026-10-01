@@ -385,6 +385,15 @@ routerUse((e) => {
   return e.next();
 });
 
+// Réouverture automatique à l'heure prévue, vérifiée chaque minute.
+cronAdd("cosmic_maintenance", "* * * * *", () => {
+  try {
+    if (require(`${__hooks}/cosmic_db.js`).autoEndMaintenance(Date.now())) console.log("[cosmic] maintenance terminée automatiquement");
+  } catch (err) {
+    console.log(`[cosmic] fin automatique de maintenance : ${err}`);
+  }
+});
+
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
 routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
 

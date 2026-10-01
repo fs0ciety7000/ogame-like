@@ -45,14 +45,16 @@ export function MaintenancePanel() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<"start" | "stop" | null>(null);
   const [preview, setPreview] = useState(false);
+  const [autoEnd, setAutoEnd] = useState(m.enabled ? m.autoEnd : true);
 
   // Formulaire réaligné quand la maintenance change ailleurs (autre admin).
   useEffect(() => {
     if (m.enabled) {
       setMessage(m.message);
       setVersion(m.version);
+      setAutoEnd(m.autoEnd);
     }
-  }, [m.enabled, m.message, m.version]);
+  }, [m.enabled, m.message, m.version, m.autoEnd]);
 
   const plannedEnd = customEnd ? new Date(customEnd).getTime() : minutes > 0 ? now + minutes * 60_000 : null;
   const draft: MaintenanceState = {
@@ -61,6 +63,7 @@ export function MaintenancePanel() {
     version,
     startedAtMs: m.enabled ? m.startedAtMs : now,
     endsAtMs: plannedEnd,
+    autoEnd,
   };
 
   const send = async (request: Parameters<typeof setMaintenance>[0], success: string) => {
@@ -76,10 +79,10 @@ export function MaintenancePanel() {
     }
   };
 
-  const start = () => void send({ enabled: true, message, version, endsAtMs: plannedEnd }, m.enabled ? "Maintenance mise à jour." : "Maintenance activée : le jeu est fermé aux joueurs.");
+  const start = () => void send({ enabled: true, message, version, endsAtMs: plannedEnd, autoEnd }, m.enabled ? "Maintenance mise à jour." : "Maintenance activée : le jeu est fermé aux joueurs.");
   const stop = () => void send({ enabled: false }, "Maintenance terminée : le jeu est rouvert.");
   const extend = (extra: number) =>
-    void send({ enabled: true, message: m.message, version: m.version, endsAtMs: Math.max(now, m.endsAtMs ?? now) + extra * 60_000 }, `Fin prévue repoussée de ${extra} min.`);
+    void send({ enabled: true, message: m.message, version: m.version, endsAtMs: Math.max(now, m.endsAtMs ?? now) + extra * 60_000, autoEnd: m.autoEnd }, `Fin prévue repoussée de ${extra} min.`);
 
   const remaining = maintenanceRemainingMs(m, now);
   const progress = maintenanceProgress(m, now);
@@ -109,7 +112,7 @@ export function MaintenancePanel() {
             <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
               <Stat label="Depuis" value={formatDuration((now - m.startedAtMs) / 1000)} />
               <Stat label="Reste" value={remaining === null ? "—" : remaining > 0 ? formatDuration(remaining / 1000) : "dépassé"} warn={remaining === 0} />
-              <Stat label="Fin prévue" value={m.endsAtMs ? new Date(m.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "indéterminée"} />
+              <Stat label={m.autoEnd && m.endsAtMs ? "Réouverture auto" : "Fin prévue"} value={m.endsAtMs ? new Date(m.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "indéterminée"} />
             </div>
             {progress !== null && <HudMeter percent={progress * 100} tone="var(--color-gold-glow)" />}
             <div className="flex flex-wrap gap-2">
@@ -188,6 +191,13 @@ export function MaintenancePanel() {
         <p className="text-xs text-slate-500">
           {plannedEnd ? `Réouverture affichée vers ${new Date(plannedEnd).toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" })}.` : "Sans heure de fin : les joueurs voient le temps écoulé."}
         </p>
+        <label className={cn("flex items-start gap-2 text-sm text-slate-200", !plannedEnd && "opacity-50")}>
+          <input type="checkbox" checked={autoEnd} disabled={!plannedEnd} onChange={(e) => setAutoEnd(e.target.checked)} className="mt-1 accent-cyan-400" />
+          <span>
+            Rouvrir automatiquement à l'heure prévue
+            <span className="block text-[11px] text-slate-500">Sinon, la page affiche « finalisation en cours » jusqu'à ce qu'un administrateur termine la maintenance.</span>
+          </span>
+        </label>
         <div className="mt-auto flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => setPreview(true)}>
             <Eye className="h-4 w-4" /> Aperçu

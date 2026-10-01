@@ -1087,52 +1087,76 @@ function maintenanceGuard(e) {
   throw new ApiError(503, "Le jeu est en maintenance : réessaie à la réouverture.", { maintenance: true });
 }
 
-/** POST /api/cosmic/admin/maintenance { enabled, message, version, endsAtMs } */
+/** Enregistre le nouvel état de la maintenance ; à la fin, les ultimatums en
+ *  cours sont prolongés de la durée de la coupure. Consigné dans le journal. */
+function writeMaintenance(txApp, game, previous, next, now, actor) {
+  let extended = 0;
+  if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
+    txApp.findAllRecords("players").forEach((rec) => {
+      const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
+      if (!shifted) return;
+      rec.set("pirates", shifted);
+      txApp.save(rec);
+      extended++;
+    });
+  }
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.MAINTENANCE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.MAINTENANCE_KEY);
+  }
+  rec.set("data", next);
+  txApp.save(rec);
+
+  const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+  log.load({
+    actorId: actor.id,
+    actorName: actor.name,
+    action: "maintenance",
+    targetCollection: "game_config",
+    recordId: rec.id,
+    recordLabel: next.enabled ? "maintenance activée" : actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée",
+    changes: { avant: previous, après: next, ultimatumsProlongés: extended },
+    createdAtMs: now,
+  });
+  txApp.save(log);
+  return extended;
+}
+
+/** POST /api/cosmic/admin/maintenance { enabled, message, version, endsAtMs, autoEnd } */
 function adminMaintenance(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
   const req = body(e);
   const now = Date.now();
+  const actor = {
+    id: e.auth ? e.auth.id : "superuser",
+    name: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+  };
   let response = null;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
     const next = game.nextMaintenance(previous, req, now);
-    let extended = 0;
-    // Fin de maintenance : les ultimatums en cours sont prolongés d'autant.
-    if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
-      txApp.findAllRecords("players").forEach((rec) => {
-        const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
-        if (!shifted) return;
-        rec.set("pirates", shifted);
-        txApp.save(rec);
-        extended++;
-      });
-    }
-    let rec = null;
-    try {
-      rec = txApp.findFirstRecordByData("game_config", "key", game.MAINTENANCE_KEY);
-    } catch (_) {
-      rec = new Record(txApp.findCollectionByNameOrId("game_config"));
-      rec.set("key", game.MAINTENANCE_KEY);
-    }
-    rec.set("data", next);
-    txApp.save(rec);
-
-    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
-    log.load({
-      actorId: e.auth ? e.auth.id : "superuser",
-      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
-      action: "maintenance",
-      targetCollection: "game_config",
-      recordId: rec.id,
-      recordLabel: next.enabled ? "maintenance activée" : "maintenance terminée",
-      changes: { avant: previous, après: next, ultimatumsProlongés: extended },
-      createdAtMs: now,
-    });
-    txApp.save(log);
+    const extended = writeMaintenance(txApp, game, previous, next, now, actor);
     response = Object.assign({ extended }, next);
   });
   return e.json(200, response);
+}
+
+/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active). */
+function autoEndMaintenance(now) {
+  const game = loadGame();
+  let ended = false;
+  $app.runInTransaction((txApp) => {
+    const previous = readMaintenance(txApp, game);
+    if (!game.maintenanceShouldAutoEnd(previous, now)) return;
+    const next = game.nextMaintenance(previous, { enabled: false }, now);
+    writeMaintenance(txApp, game, previous, next, now, { id: "system", name: "Système" });
+    ended = true;
+  });
+  return ended;
 }
 
 /* ---------- Administrateurs et équipe du jeu (v2.5) ---------- */
@@ -1266,4 +1290,4 @@ function adminManage(e) {
   return e.json(200, response);
 }
 
-module.exports = { adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
