@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { chestReward, claimContract, contractDay, ensureContracts, recordContract, rerollContract, streakBonus } from "@/game/contracts";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { performPlayerAction } from "@/game/actions";
-import { missionRewards } from "@/game/economy";
+import { ECONOMY_RULES, missionRewards, rareRewardScale } from "@/game/economy";
 import { MISSIONS } from "@/game/missions";
 import type { PlayerState } from "@/types/game";
 
@@ -93,5 +93,28 @@ describe("indexed mission rewards", () => {
     const acier = MISSIONS.recuperation_acier;
     expect(missionRewards(acier, late).reinforcedSteel).toBeGreaterThan(acier.reward.reinforcedSteel * 2);
     expect(missionRewards(acier, late).xp).toBe(acier.reward.xp);
+  });
+});
+
+describe("rare rewards indexed on production", () => {
+  it("uses production per hour / reference when it beats the development scale, never less", () => {
+    const late = player();
+    for (const id of Object.keys(late.buildings)) late.buildings[id] = { level: 10, unlocked: true };
+    const ref = ECONOMY_RULES.missionRareProductionRef;
+    try {
+      ECONOMY_RULES.missionRareProductionRef = 0;
+      const development = rareRewardScale(late);
+      const acier = MISSIONS.recuperation_acier;
+      const base = missionRewards(acier, late).reinforcedSteel;
+      expect(base).toBe(Math.floor(acier.reward.reinforcedSteel * development));
+      ECONOMY_RULES.missionRareProductionRef = 1000; // 500/s = 1,8 M/h → ×1800
+      expect(rareRewardScale(late)).toBeCloseTo(1800);
+      expect(missionRewards(acier, late).reinforcedSteel).toBe(acier.reward.reinforcedSteel * 1800);
+      expect(chestReward(late).reinforcedSteel).toBe(1500 * 1800);
+      ECONOMY_RULES.missionRareProductionRef = 1e12; // production négligeable : plancher = développement
+      expect(missionRewards(acier, late).reinforcedSteel).toBe(base);
+    } finally {
+      ECONOMY_RULES.missionRareProductionRef = ref;
+    }
   });
 });

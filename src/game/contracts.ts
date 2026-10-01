@@ -1,4 +1,4 @@
-import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { rareRewardScale } from "@/game/economy";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { GameActionError } from "@/game/errors";
 import { applyXpDelta } from "@/game/seasons";
@@ -142,8 +142,7 @@ export function recordContract(player: PlayerState, type: ContractType, amount: 
 
 /** Multiplicateur lié au développement (comme les missions). */
 function developmentScale(player: PlayerState): number {
-  const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
-  return 1 + levels / 35;
+  return rareRewardScale(player);
 }
 
 export function streakBonus(streak: number): number {
