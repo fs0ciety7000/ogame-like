@@ -59,6 +59,8 @@ export interface LeviathanState {
   rewarded: boolean;
   /** Titre temporaire du premier en dégâts. */
   titleHolder: { uid: string; untilMs: number } | null;
+  /** Relevé horaire des points de structure (suivi admin, v3.3). */
+  timeline: { t: number; hp: number }[];
 }
 
 const HOUR = 3600_000;
@@ -78,6 +80,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     endedAtMs: Number(r.endedAtMs) || 0,
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
+    timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : [],
   };
 }
 
@@ -113,7 +116,7 @@ export function leviathanHp(activePlayers: Pick<PlayerState, "units" | "techLeve
 
 export function spawnLeviathan(window: { id: string; startMs: number; endMs: number }, activePlayers: Pick<PlayerState, "units" | "techLevels">[], previous: LeviathanState | null): LeviathanState {
   const maxHp = leviathanHp(activePlayers);
-  return { ...window, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: previous?.titleHolder ?? null };
+  return { ...window, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: previous?.titleHolder ?? null, timeline: [{ t: window.startMs, hp: maxHp }] };
 }
 
 /** Lancement d'un assaut : Léviathan présent et délai respecté. */
@@ -207,4 +210,56 @@ export function removeLeviathanTitle(player: PlayerState): void {
 export function closeLeviathan(state: LeviathanState, now: number): LeviathanState {
   if (state.status === "active" && now >= state.endMs) return { ...state, status: "failed", endedAtMs: now };
   return state;
+}
+
+/* ---------- Suivi en direct (admin, v3.3) ---------- */
+
+const TIMELINE_MAX = 120;
+
+/** Ajoute un relevé des points de structure, au plus un par heure. */
+export function recordLeviathanTimeline(state: LeviathanState, now: number): LeviathanState {
+  if (!isActive(state, now)) return state;
+  const last = state.timeline[state.timeline.length - 1];
+  if (last && now - last.t < HOUR) return state;
+  return { ...state, timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) };
+}
+
+export interface LeviathanPace {
+  elapsedHours: number;
+  remainingHours: number;
+  /** Dégâts infligés depuis l'apparition. */
+  done: number;
+  /** Rythme moyen depuis l'apparition (dégâts par heure). */
+  ratePerHour: number;
+  /** Dégâts de la dernière heure (d'après les relevés). */
+  lastHour: number;
+  /** Points de structure prévus à l'échéance au rythme moyen (0 = abattu). */
+  projectedHp: number;
+  /** Heures avant sa chute au rythme moyen (null si le rythme est nul). */
+  killInHours: number | null;
+  /** Structure qui serait tout juste abattue à l'échéance au rythme moyen. */
+  suggestedMaxHp: number;
+}
+
+export function leviathanPace(state: LeviathanState, now: number): LeviathanPace {
+  const at = Math.min(now, state.endedAtMs || state.endMs);
+  const elapsedHours = Math.max(0, (at - state.startMs) / HOUR);
+  const remainingHours = Math.max(0, (state.endMs - at) / HOUR);
+  const done = Math.max(0, state.maxHp - state.hp);
+  const ratePerHour = elapsedHours > 0 ? done / Math.max(elapsedHours, 0.25) : 0;
+  const before = [...state.timeline].reverse().find((p) => p.t <= now - HOUR) ?? state.timeline[0];
+  const lastHour = before ? Math.max(0, before.hp - state.hp) : 0;
+  const projectedHp = Math.max(0, Math.round(state.hp - ratePerHour * remainingHours));
+  const killInHours = state.hp <= 0 ? 0 : ratePerHour > 0 ? state.hp / ratePerHour : null;
+  const suggestedMaxHp = Math.max(LEVIATHAN_RULES.minHp, Math.round(done + ratePerHour * remainingHours));
+  return { elapsedHours, remainingHours, done, ratePerHour, lastHour, projectedHp, killInHours, suggestedMaxHp };
+}
+
+/** Ajustement à chaud (admin) : nouvelle structure maximale, dégâts déjà infligés conservés. */
+export function resizeLeviathan(state: LeviathanState, maxHp: number, now: number): LeviathanState {
+  if (!isActive(state, now)) throw new GameActionError("Le Léviathan n'est pas là en ce moment.");
+  const next = Math.round(maxHp);
+  const done = state.maxHp - state.hp;
+  if (!(next > done)) throw new GameActionError(`La structure doit dépasser les dégâts déjà infligés (${done}).`);
+  return { ...state, maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) };
 }

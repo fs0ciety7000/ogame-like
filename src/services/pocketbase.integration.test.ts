@@ -969,6 +969,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const cfg = await pb.collection("game_config").getFirstListItem('key="leviathan"');
       expect(cfg.data.hp).toBeLessThan(cfg.data.maxHp);
       expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
+      const done = cfg.data.maxHp - cfg.data.hp;
+      await expect(admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "resize", maxHp: done } })).rejects.toMatchObject({ status: 400 });
+      const resized = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "resize", maxHp: done + 5000 } });
+      expect(resized.maxHp).toBe(done + 5000);
+      expect(resized.hp).toBe(5000);
+      const logged = await admin.collection("admin_logs").getFirstListItem('recordId="leviathan"', { sort: "-createdAtMs" });
+      expect(logged.recordLabel).toMatch(/structure/);
       const scrap = (await snap(bId))!.resources.scrap;
       const stopped = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } });
       expect(stopped.status).toBe("failed");
@@ -979,6 +986,29 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
       if (cfg) await admin.collection("game_config").delete(cfg.id);
       await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources });
+    }
+  }, 60_000);
+
+  it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
+    const before = await snap(bId);
+    const now = Date.now();
+    const scan = await admin.collection("game_config").getFirstListItem('key="anomaly_scan"').catch(() => null);
+    if (scan) await admin.collection("game_config").delete(scan.id);
+    const base = { ...before!.resources };
+    const jumped = { ...base, reinforcedSteel: (base.reinforcedSteel ?? 0) + 900_000_000 };
+    try {
+      await admin.collection("players").update(bId, { resources: jumped, resourcesUpdatedAtMs: now - 60_000, resourceHistory: [{ t: now - 3600_000, r: base }] });
+      await expect(pb.send("/api/cosmic/admin/anomalies", { method: "POST" })).rejects.toMatchObject({ status: 403 });
+      const res = await admin.send("/api/cosmic/admin/anomalies", { method: "POST" });
+      expect(res.alerts).toBeGreaterThanOrEqual(1);
+      const report = await admin.collection("reports").getFirstListItem(`autoKey="anomaly:${bId}"`);
+      expect(report.category).toBe("account");
+      expect(report.description).toMatch(/Acier renforcé \+900/);
+      expect((await admin.send("/api/cosmic/admin/anomalies", { method: "POST" })).alerts).toBe(0); // déjà analysé
+    } finally {
+      const reports = await admin.collection("reports").getFullList({ filter: `autoKey="anomaly:${bId}"` });
+      for (const r of reports) await admin.collection("reports").delete(r.id);
+      await admin.collection("players").update(bId, { resources: before!.resources, resourceHistory: before!.resourceHistory ?? [] });
     }
   }, 60_000);
 

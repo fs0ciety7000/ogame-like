@@ -47,6 +47,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_RULES: () => ALLIANCE_RULES,
+  ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
@@ -92,7 +93,9 @@ __export(hooksEntry_exports, {
   declareWar: () => declareWar,
   defaultQueues: () => defaultQueues,
   describeAmount: () => describeAmount,
+  describeAnomalies: () => describeAnomalies,
   describeGain: () => describeGain,
+  detectResourceAnomalies: () => detectResourceAnomalies,
   endGarrison: () => endGarrison,
   errorKey: () => errorKey,
   errorQuotaKey: () => errorQuotaKey,
@@ -128,11 +131,13 @@ __export(hooksEntry_exports, {
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
   recallFleet: () => recallFleet,
+  recordLeviathanTimeline: () => recordLeviathanTimeline,
   recyclerCapacity: () => recyclerCapacity,
   refundOffer: () => refundOffer,
   removeLeviathanTitle: () => removeLeviathanTitle,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
+  resizeLeviathan: () => resizeLeviathan,
   resolveExpeditionChoice: () => resolveExpeditionChoice,
   resolveLairAssault: () => resolveLairAssault,
   resolveLeviathanAssault: () => resolveLeviathanAssault,
@@ -4546,7 +4551,8 @@ function normalizeLeviathan(raw) {
     contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
     endedAtMs: Number(r.endedAtMs) || 0,
     rewarded: r.rewarded === true,
-    titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null
+    titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
+    timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
   };
 }
 function leviathanWindow(now) {
@@ -4570,7 +4576,7 @@ function leviathanHp(activePlayers) {
 function spawnLeviathan(window, activePlayers, previous) {
   var _a;
   const maxHp = leviathanHp(activePlayers);
-  return __spreadProps(__spreadValues({}, window), { maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: (_a = previous == null ? void 0 : previous.titleHolder) != null ? _a : null });
+  return __spreadProps(__spreadValues({}, window), { maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: (_a = previous == null ? void 0 : previous.titleHolder) != null ? _a : null, timeline: [{ t: window.startMs, hp: maxHp }] });
 }
 function checkLeviathanLaunch(state, uid, pseudo, now) {
   var _a, _b;
@@ -4646,6 +4652,20 @@ function removeLeviathanTitle(player) {
 function closeLeviathan(state, now) {
   if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
   return state;
+}
+var TIMELINE_MAX = 120;
+function recordLeviathanTimeline(state, now) {
+  if (!isActive(state, now)) return state;
+  const last = state.timeline[state.timeline.length - 1];
+  if (last && now - last.t < HOUR4) return state;
+  return __spreadProps(__spreadValues({}, state), { timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) });
+}
+function resizeLeviathan(state, maxHp, now) {
+  if (!isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
+  const next = Math.round(maxHp);
+  const done = state.maxHp - state.hp;
+  if (!(next > done)) throw new GameActionError(`La structure doit d\xE9passer les d\xE9g\xE2ts d\xE9j\xE0 inflig\xE9s (${done}).`);
+  return __spreadProps(__spreadValues({}, state), { maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) });
 }
 
 // src/game/galaxy.ts
@@ -5652,6 +5672,70 @@ function extendUltimatums(pirates, startedAtMs, now) {
   if ("notoriety" in copy || "nextListAtMs" in copy) changed = shift(copy);
   else for (const state of Object.values(copy)) if (state && typeof state === "object" && shift(state)) changed = true;
   return changed ? copy : null;
+}
+
+// src/game/anomalies.ts
+var ANOMALY_RULES = {
+  /** Gain de valeur par heure au-delà de N heures de production totale. */
+  productionHours: 50,
+  /** Seuil minimal par heure (début de partie). */
+  minPerHour: 5e7,
+  /** Clé game_config où le serveur note la dernière analyse. */
+  scanKey: "anomaly_scan"
+};
+var HOUR5 = 36e5;
+var ALL = RESOURCE_LIST.map((r) => r.id);
+function unitValue(res) {
+  if (COMMON_RESOURCES2.includes(res)) return 1;
+  return 1 / getTradeRate(COMMON_RESOURCES2[0], res);
+}
+function stockValue(r) {
+  return ALL.reduce((a, res) => {
+    var _a;
+    return a + Math.max(0, (_a = r[res]) != null ? _a : 0) * unitValue(res);
+  }, 0);
+}
+function anomalyThreshold(player, hours2) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES2.reduce((a, res) => {
+    var _a2;
+    return a + ((_a2 = rates[res]) != null ? _a2 : 0);
+  }, 0) * 3600;
+  return Math.max(ANOMALY_RULES.minPerHour, ANOMALY_RULES.productionHours * perHour) * Math.max(1, hours2);
+}
+function detectResourceAnomalies(player, sinceMs) {
+  var _a, _b, _c, _d, _e;
+  const points = [...(_a = player.resourceHistory) != null ? _a : []].sort((a, b) => a.t - b.t);
+  const lastT = (_c = (_b = points[points.length - 1]) == null ? void 0 : _b.t) != null ? _c : 0;
+  const current2 = Number(player.resourcesUpdatedAtMs) || 0;
+  if (current2 > lastT) points.push({ t: current2, r: player.resources });
+  const out = [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (b.t <= sinceMs) continue;
+    const gain = stockValue(b.r) - stockValue(a.r);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR5);
+    if (gain <= threshold) continue;
+    const deltas = {};
+    for (const res of ALL) {
+      const d = Math.round(((_d = b.r[res]) != null ? _d : 0) - ((_e = a.r[res]) != null ? _e : 0));
+      if (d !== 0) deltas[res] = d;
+    }
+    out.push({ gain: Math.round(gain), threshold: Math.round(threshold), fromMs: a.t, toMs: b.t, deltas });
+  }
+  return out;
+}
+var fmtDate = (ms) => new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+function describeAnomalies(list) {
+  return list.map((a) => {
+    const detail = Object.entries(a.deltas).map(([res, d]) => {
+      var _a, _b;
+      return `${(_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res} ${d > 0 ? "+" : ""}${formatInt(d)}`;
+    }).join(", ");
+    return `\u2022 ${fmtDate(a.fromMs)} \u2192 ${fmtDate(a.toMs)} : valeur +${formatInt(a.gain)} (seuil ${formatInt(a.threshold)}). ${detail}.`;
+  }).join("\n");
 }
 
 // src/server/hooksEntry.ts

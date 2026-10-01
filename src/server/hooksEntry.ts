@@ -30,7 +30,7 @@ export { acceptOffer, createOffer, describeAmount, MARKET_RULES, refundOffer, ut
 export { isFormation } from "@/game/formations";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
-export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanWindow, normalizeLeviathan, removeLeviathanTitle, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanWindow, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
@@ -43,3 +43,4 @@ import type { PlayerState, QueuesState } from "@/types/game";
 export function flushPlayer(player: PlayerState, queues: QueuesState, now: number) {
   return flushState({ ...player, buildings: withMissingBuildings(player.buildings, player.resources) }, queues, now);
 }
+export { ANOMALY_RULES, describeAnomalies, detectResourceAnomalies } from "@/game/anomalies";

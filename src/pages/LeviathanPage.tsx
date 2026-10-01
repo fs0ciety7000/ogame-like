@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
+import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { computeFleetPower } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, type LeviathanState } from "@/game/leviathan";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-import { adminLeviathan, sendLeviathanAssault, useLeviathan } from "@/services/leviathanService";
+import { sendLeviathanAssault, useLeviathan } from "@/services/leviathanService";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -119,7 +120,6 @@ export function LeviathanPage() {
   const state = useLeviathan();
   const admin = useAdminStatus();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   if (!player) return null;
 
   const active = !!state && isActive(state, now);
@@ -127,18 +127,6 @@ export function LeviathanPage() {
   const wait = mine ? mine.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * 3600_000 - now : 0;
   const next = nextLeviathanStart(now);
   const hpPct = state ? (state.hp / state.maxHp) * 100 : 0;
-
-  const runAdmin = async (action: "start" | "stop") => {
-    setBusy(true);
-    try {
-      await adminLeviathan(action);
-      toast.success(action === "start" ? "Le Léviathan est lâché !" : "Le Léviathan s'est retiré : récompenses versées.");
-    } catch (err) {
-      toast.error((err as { response?: { message?: string } }).response?.message ?? "Action impossible.");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -223,19 +211,10 @@ export function LeviathanPage() {
             Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier ; moitié moins s'il survit.
           </p>
           <p>Le premier en dégâts gagne le titre « {LEVIATHAN_RULES.title} » pendant {LEVIATHAN_RULES.titleDays} jours. Chaque participant à sa chute débloque le succès « Tueur de Léviathan ».</p>
-          {admin === true && (
-            <div className="mt-2 flex flex-wrap gap-2 border-t border-white/5 pt-3">
-              <span className="w-full text-[11px] uppercase tracking-[0.15em] text-slate-500">Administration</span>
-              <Button size="sm" variant="outline" disabled={busy || active} onClick={() => void runAdmin("start")}>
-                Lâcher le Léviathan maintenant
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy || !active} onClick={() => void runAdmin("stop")}>
-                Le faire repartir (récompenses ×{LEVIATHAN_RULES.failedRewardFactor})
-              </Button>
-            </div>
-          )}
         </Card>
       </div>
+
+      {admin === true && <LeviathanAdminPanel state={state} />}
 
       <AssaultDialog open={open} onClose={() => setOpen(false)} />
     </div>

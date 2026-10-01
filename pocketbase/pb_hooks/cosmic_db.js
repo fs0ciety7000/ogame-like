@@ -1745,12 +1745,19 @@ function leviathanTick(now) {
         }
       });
     }
+    if (state) {
+      const sampled = game.recordLeviathanTimeline(state, now);
+      if (sampled !== state) {
+        state = sampled;
+        changed = true;
+      }
+    }
     if (changed && state) writeLeviathan(txApp, state);
   });
   return changed;
 }
 
-/** POST /api/cosmic/admin/leviathan { action: "start" | "stop" } */
+/** POST /api/cosmic/admin/leviathan { action: "start" | "stop" | "resize", maxHp? } */
 function adminLeviathan(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
@@ -1767,6 +1774,25 @@ function adminLeviathan(e) {
     } else if (action === "stop") {
       if (!state || state.status !== "active") throw new BadRequestError("Aucun Léviathan en cours.");
       state = distributeLeviathan(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
+    } else if (action === "resize") {
+      const before = state ? state.maxHp : 0;
+      try {
+        state = game.resizeLeviathan(state, Number(body(e).maxHp), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+      log.load({
+        actorId: e.auth ? e.auth.id : "superuser",
+        actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+        action: "update",
+        targetCollection: "game_config",
+        recordId: "leviathan",
+        recordLabel: "Léviathan : structure ajustée",
+        changes: { maxHp: { avant: before, après: state.maxHp } },
+        createdAtMs: now,
+      });
+      txApp.save(log);
     } else throw new BadRequestError("Action inconnue.");
     writeLeviathan(txApp, state);
     out = state;
@@ -2330,4 +2356,95 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Alertes de ressources anormales (v3.3) ---------- */
+
+/** Tâche horaire : compare les relevés de stocks de chaque joueur depuis la
+ *  dernière analyse ; un bond anormal devient un signalement « Compte »
+ *  réservé à l'équipe (un par joueur, complété ou rouvert ensuite). */
+function scanAnomalies(now) {
+  const game = loadGame();
+  const key = game.ANOMALY_RULES.scanKey;
+  let scanRec;
+  try {
+    scanRec = $app.findFirstRecordByData("game_config", "key", key);
+  } catch (_) {
+    scanRec = new Record($app.findCollectionByNameOrId("game_config"));
+    scanRec.set("key", key);
+  }
+  const data = toPlain(scanRec).data || {};
+  const since = Number(data.lastScanMs) || now - 2 * 3600000;
+  applyContent($app, game);
+  const flagged = [];
+  for (let page = 0; page < 20; page++) {
+    const recs = $app.findRecordsByFilter("players", "id != ''", "id", 200, page * 200);
+    recs.forEach((r) => {
+      const p = toPlain(r);
+      const list = game.detectResourceAnomalies(p, since);
+      if (list.length > 0) flagged.push({ uid: r.id, pseudo: p.pseudo || r.id, list });
+    });
+    if (recs.length < 200) break;
+  }
+  const alerts = [];
+  flagged.forEach((f) => {
+    const text = game.describeAnomalies(f.list);
+    $app.runInTransaction((txApp) => {
+      const autoKey = `anomaly:${f.uid}`;
+      const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: autoKey })[0];
+      if (existing) {
+        const r = reportJson(existing);
+        const closed = r.status === "resolved" || r.status === "rejected";
+        const history = (r.history || []).slice();
+        if (closed) history.push({ kind: "status", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, status: "new", text: "Nouveau bond détecté après la clôture." });
+        history.push({ kind: "comment", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text });
+        existing.set("history", history);
+        existing.set("status", closed ? "new" : r.status);
+        existing.set("occurrences", (r.occurrences || 1) + 1);
+        existing.set("updatedAtMs", now);
+        txApp.save(existing);
+        alerts.push({ id: existing.id, title: existing.getString("title"), text });
+        return;
+      }
+      const rec = new Record(txApp.findCollectionByNameOrId("reports"));
+      rec.set("reporterId", game.AUTO_REPORTER_ID);
+      rec.set("reporterPseudo", "Système");
+      rec.set("category", "account");
+      rec.set("title", `Ressources anormales : ${f.pseudo}`);
+      rec.set("description", `Bonds de stock qu'aucune action normale n'explique. Vérifier le journal admin et le marché.\n\n${text}`);
+      rec.set("context", { version: "", page: "", theme: "", userAgent: "", screen: "" });
+      rec.set("status", "new");
+      rec.set("resolution", "");
+      rec.set("githubUrl", "");
+      rec.set("history", [{ kind: "created", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text: "Détecté par l'analyse horaire des stocks." }]);
+      rec.set("autoKey", autoKey);
+      rec.set("occurrences", 1);
+      rec.set("affected", [f.pseudo]);
+      rec.set("createdAtMs", now);
+      rec.set("updatedAtMs", now);
+      rec.set("reporterSeenAtMs", now);
+      txApp.save(rec);
+      alerts.push({ id: rec.id, title: rec.getString("title"), text });
+    });
+  });
+  scanRec.set("data", { lastScanMs: now });
+  $app.save(scanRec);
+  alerts.forEach((a) => {
+    const link = appUrl(`/game/admin?onglet=reports&signalement=${a.id}`);
+    adminIds().forEach((id) => {
+      try {
+        notify($app, id, [{ kind: "report", title: "Ressources anormales", message: a.title, createdAtMs: now, read: false }]);
+      } catch (_) {
+        /* facultatif */
+      }
+      sendMail(userEmail(id), `[Cosmic Empires] ${a.title}`, a.text.split("\n"), link);
+    });
+  });
+  return alerts.length;
+}
+
+/** POST /api/cosmic/admin/anomalies — analyse immédiate (administrateurs). */
+function adminScanAnomalies(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { alerts: scanAnomalies(Date.now()) });
+}
+
+module.exports = { scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
