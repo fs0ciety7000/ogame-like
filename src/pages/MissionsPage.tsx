@@ -11,6 +11,7 @@ import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { findUnit } from "@/game/units";
 import { missionRewards } from "@/game/economy";
 import { ContractsCard } from "@/components/game/ContractsCard";
+import { ExpeditionCard } from "@/components/game/ExpeditionCard";
 import { cn, formatClock, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
@@ -47,6 +48,8 @@ export function MissionsPage() {
       <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" description="Envoie ta flotte en exploration ou en patrouille." />
 
       <ContractsCard />
+
+      <ExpeditionCard />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {Object.values(MISSIONS).map((mission) => {

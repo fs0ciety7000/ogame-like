@@ -308,6 +308,10 @@ export function pirateState(player: Pick<PlayerState, "pirates">, factionId = "v
   return factionStates(player)[factionId] ?? normalize(undefined);
 }
 
+export function setFactionState(player: PlayerState, factionId: string, st: PirateState) {
+  setState(player, factionId, st);
+}
+
 function setState(player: PlayerState, factionId: string, st: PirateState) {
   player.pirates = { ...factionStates(player), [factionId]: st };
 }

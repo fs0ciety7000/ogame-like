@@ -394,6 +394,19 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
   }
 });
 
+/** Expéditions (v3.1) : décision face à une faction. */
+routerAdd("POST", "/api/cosmic/expedition/choose", (e) => require(`${__hooks}/cosmic_db.js`).expeditionChoose(e), $apis.requireAuth("users"));
+
+/** Léviathan (v3.1) : apparition, échéance et récompenses ; lancement manuel par l'équipe. */
+routerAdd("POST", "/api/cosmic/admin/leviathan", (e) => require(`${__hooks}/cosmic_db.js`).adminLeviathan(e), $apis.requireAuth("users", "_superusers"));
+cronAdd("cosmic_leviathan", "*/5 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).leviathanTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] Léviathan : ${err}`);
+  }
+});
+
 /** Marché entre joueurs (v3.0) : publier, accepter, annuler une offre. */
 routerAdd("POST", "/api/cosmic/market/create", (e) => require(`${__hooks}/cosmic_db.js`).marketCreate(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/market/accept", (e) => require(`${__hooks}/cosmic_db.js`).marketAccept(e), $apis.requireAuth("users"));

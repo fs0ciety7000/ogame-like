@@ -125,7 +125,7 @@ export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech15", nom: "Canon à impulsion", desc: "Débloque le Canon à impulsion, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
   { id: "tech16", nom: "Canon plasma", desc: "Débloque le Canon plasma, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
   { id: "tech18", nom: "Intercepteur", desc: "Débloque l'Intercepteur, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { scrap: 1000, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  { id: "tech19", nom: "Étoile noire", desc: "Débloque l'Étoile noire, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } },
+  { id: "tech19", nom: "Étoile noire", desc: "Débloque l'Étoile noire, puis l'améliore : +1 700 attaque et +1 700 défense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } },
 ];
 
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */

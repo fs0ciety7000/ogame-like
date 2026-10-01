@@ -15,6 +15,7 @@ import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
+import { LeviathanBanner } from "@/components/game/LeviathanBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
@@ -68,6 +69,7 @@ export function DashboardPage() {
 
       <FleetsPanel hideWhenEmpty />
 
+      <LeviathanBanner />
       <EventCard />
       <ContractsCard />
 

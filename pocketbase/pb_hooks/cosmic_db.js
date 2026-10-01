@@ -236,6 +236,8 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "recycle") return resolveRecycleArrival(txApp, game, rec, now);
   if (mission === "pirate") return resolvePirateArrival(txApp, game, rec, now);
   if (mission === "lair") return resolveLairArrival(txApp, game, rec, now);
+  if (mission === "expedition") return expeditionStep(txApp, game, rec, now, 1);
+  if (mission === "leviathan") return leviathanArrival(txApp, game, rec, now);
   if (mission === "garrison") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
@@ -597,6 +599,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
 }
 
 function resolveFleetReturn(txApp, game, rec, now) {
+  if (rec.getString("mission") === "expedition") return expeditionStep(txApp, game, rec, now, 2);
   const fleet = fleetFromRecord(rec);
   if (findOrNull(txApp, "players", fleet.ownerUid)) {
     const owner = loadPlayer(txApp, game, fleet.ownerUid);
@@ -614,7 +617,7 @@ function processDueFleets(game, now, uid) {
   const scope = uid ? " && (ownerUid = {:u} || targetUid = {:u})" : "";
   const due = $app.findRecordsByFilter(
     "fleets",
-    `((status = "outbound" && arriveAtMs <= {:now}) || (status = "returning" && returnAtMs <= {:now}) || (status = "stationed" && stationedUntilMs <= {:now}))${scope}`,
+    `((status = "outbound" && arriveAtMs <= {:now}) || (status = "returning" && returnAtMs <= {:now}) || ((status = "stationed" || status = "decision") && stationedUntilMs <= {:now}))${scope}`,
     "arriveAtMs",
     50,
     0,
@@ -628,6 +631,7 @@ function processDueFleets(game, now, uid) {
         const status = rec.getString("status");
         if (status === "outbound" && rec.getFloat("arriveAtMs") <= now) resolveFleetArrival(txApp, game, rec, now);
         else if (status === "returning" && rec.getFloat("returnAtMs") <= now) resolveFleetReturn(txApp, game, rec, now);
+        else if (status === "decision" && rec.getFloat("stationedUntilMs") <= now) expeditionDecide(txApp, game, rec, now, "toll");
         else if (status === "stationed" && rec.getFloat("stationedUntilMs") <= now) {
           const back = game.endGarrison(fleetFromRecord(rec), now);
           rec.set("status", back.status);
@@ -650,9 +654,9 @@ function launchFleetRequest(e) {
   const body = db.body(e);
   const mission = String(body.mission || "attack");
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
-  const targetUid = mission === "patrol" ? attackerUid : String(body.targetUid || "");
+  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -671,6 +675,20 @@ function launchFleetRequest(e) {
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
     }
+    let expeditionsActive = 0;
+    let expeditionsToday = 0;
+    let leviathan = null;
+    if (mission === "expedition") {
+      expeditionsActive = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && mission = "expedition" && status != "done"', "", 5, 0, { u: attackerUid }).length;
+      expeditionsToday = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && mission = "expedition" && departAtMs >= {:t}', "", 20, 0, { u: attackerUid, t: game.utcDayStart(now) }).length;
+    }
+    if (mission === "leviathan") {
+      try {
+        leviathan = game.checkLeviathanLaunch(readLeviathan(txApp, game), attackerUid, attacker.player.pseudo, now);
+      } catch (err) {
+        throw db.asHttpError(game, err);
+      }
+    }
     let out;
     try {
       out = game.performLaunch({
@@ -686,6 +704,10 @@ function launchFleetRequest(e) {
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,
         garrisonsAtHost,
+        expeditionHours: Number(body.hours) || 0,
+        expeditionsActive,
+        expeditionsToday,
+        formation: game.isFormation(body.formation) ? body.formation : "balanced",
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -696,8 +718,10 @@ function launchFleetRequest(e) {
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
     rec.load(out.fleet);
     // v3.0 : formation choisie au lancement (attaque et repaire).
-    if (mission === "attack" || mission === "lair") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    if (mission === "attack" || mission === "lair" || mission === "expedition" || mission === "leviathan") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     txApp.save(rec);
+    // Léviathan : le délai entre deux assauts part du lancement.
+    if (leviathan) writeLeviathan(txApp, leviathan);
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet);
   });
 
@@ -1293,6 +1317,273 @@ function adminManage(e) {
   return e.json(200, response);
 }
 
+/* ---------- Expéditions (v3.1) ---------- */
+
+function expeditionFleet(rec) {
+  const fleet = fleetFromRecord(rec);
+  fleet.id = rec.id;
+  fleet.expedition = fleet.expedition || { hours: Math.round((fleet.durationMs || 0) / 3600000), log: [], pending: null };
+  fleet.expedition.formation = rec.getString("formation") || fleet.expedition.formation || "balanced";
+  return fleet;
+}
+
+function saveExpeditionFleet(txApp, rec, fleet) {
+  rec.set("units", fleet.units);
+  rec.set("loot", fleet.loot);
+  rec.set("expedition", fleet.expedition);
+  txApp.save(rec);
+}
+
+/** Fin d'expédition : survivants, butin et XP rendus au joueur. */
+function finishExpeditionFleet(txApp, game, rec, fleet, player, owner, queues, notes, now) {
+  notes.push(game.finishExpedition(player, fleet, now));
+  game.completeFleetReturn(player, fleet, now);
+  savePlayer(txApp, game, owner, player, queues);
+  notify(txApp, fleet.ownerUid, notes);
+  rec.set("status", "done");
+  saveExpeditionFleet(txApp, rec, fleet);
+}
+
+/** Événement d'expédition : à mi-parcours (1) ou au retour (2). */
+function expeditionStep(txApp, game, rec, now, stage) {
+  const fleet = expeditionFleet(rec);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  const flushed = game.flushPlayer(owner.player, owner.queues, now);
+  const player = flushed.player;
+  const notes = flushed.notifications.slice();
+  const res = game.rollExpeditionEvent(player, fleet, stage, now, Math.random);
+  notes.push({ kind: "fleet", title: stage === 1 ? "Expédition : mi-parcours" : "Expédition : dernier secteur", message: res.text, createdAtMs: now, read: false });
+  if (res.pending) {
+    notes.push({ kind: "fleet", title: "Expédition : décision requise", message: `Choisis dans les ${game.EXPEDITION_RULES.choiceMinutes} min (page Missions), sinon le péage sera payé.`, createdAtMs: now, read: false });
+    rec.set("status", "decision");
+    rec.set("stationedUntilMs", fleet.expedition.pending.deadlineMs);
+    savePlayer(txApp, game, owner, player, flushed.queues);
+    notify(txApp, fleet.ownerUid, notes);
+    saveExpeditionFleet(txApp, rec, fleet);
+    return;
+  }
+  if (stage === 1) {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", Math.max(now, fleet.departAtMs + (fleet.durationMs || 0)));
+    savePlayer(txApp, game, owner, player, flushed.queues);
+    notify(txApp, fleet.ownerUid, notes);
+    saveExpeditionFleet(txApp, rec, fleet);
+    return;
+  }
+  finishExpeditionFleet(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
+}
+
+/** Décision face à une faction (joueur, ou péage par défaut à l'échéance). */
+function expeditionDecide(txApp, game, rec, now, choice) {
+  const fleet = expeditionFleet(rec);
+  const pending = fleet.expedition.pending;
+  if (!pending || !findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  const flushed = game.flushPlayer(owner.player, owner.queues, now);
+  const player = flushed.player;
+  const notes = flushed.notifications.slice();
+  const text = game.resolveExpeditionChoice(player, fleet, choice, now, Math.random);
+  notes.push({ kind: "fleet", title: "Expédition : rencontre", message: text, createdAtMs: now, read: false });
+  rec.set("stationedUntilMs", null);
+  if (pending.stage === 1) {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", Math.max(now, fleet.departAtMs + (fleet.durationMs || 0)));
+    savePlayer(txApp, game, owner, player, flushed.queues);
+    notify(txApp, fleet.ownerUid, notes);
+    saveExpeditionFleet(txApp, rec, fleet);
+    return;
+  }
+  finishExpeditionFleet(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
+}
+
+/** POST /api/cosmic/expedition/choose { fleetId, choice: "toll" | "force" } */
+function expeditionChoose(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = findOrNull(txApp, "fleets", String(req.fleetId || ""));
+    if (!rec || rec.getString("ownerUid") !== uid || rec.getString("mission") !== "expedition") throw new NotFoundError("Expédition introuvable.");
+    if (rec.getString("status") !== "decision") throw new BadRequestError("Aucune décision en attente.");
+    try {
+      expeditionDecide(txApp, game, rec, Date.now(), req.choice === "force" ? "force" : "toll");
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    out = toPlain(txApp.findRecordById("fleets", rec.id));
+  });
+  return e.json(200, out);
+}
+
+/* ---------- Léviathan (v3.1) ---------- */
+
+function readLeviathan(txApp, game) {
+  try {
+    const rec = (txApp || $app).findFirstRecordByData("game_config", "key", game.LEVIATHAN_KEY);
+    return game.normalizeLeviathan(toPlain(rec).data);
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeLeviathan(txApp, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", "leviathan");
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", "leviathan");
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+/** Récompenses versées à tous les participants (une seule fois). */
+function distributeLeviathan(txApp, game, state, now) {
+  if (state.rewarded || state.status === "active") return state;
+  const ranking = game.leviathanRanking(state);
+  ranking.forEach((c) => {
+    if (!findOrNull(txApp, "players", c.uid)) return;
+    const owner = loadPlayer(txApp, game, c.uid);
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    const out = game.grantLeviathanReward(state, flushed.player);
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    const won = state.status === "killed";
+    notify(txApp, c.uid, flushed.notifications.concat([
+      {
+        kind: "event",
+        title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.`,
+        createdAtMs: now,
+        read: false,
+      },
+    ]));
+  });
+  const top = ranking[0];
+  return Object.assign({}, state, {
+    rewarded: true,
+    titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000 } : state.titleHolder,
+  });
+}
+
+/** Assaut à l'arrivée : dégâts au Léviathan, pertes, demi-tour. */
+function leviathanArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const backAt = now + game.LEVIATHAN_RULES.flightMinutes * 60000;
+  const state = readLeviathan(txApp, game);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  if (!state) {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", backAt);
+    txApp.save(rec);
+    return;
+  }
+  const res = game.resolveLeviathanAssault(state, owner.player, fleet.units, rec.getString("formation"), now);
+  let next = res.state;
+  rec.set("units", res.survivors);
+  rec.set("status", "returning");
+  rec.set("returnAtMs", backAt);
+  rec.set("outcome", res.killed ? "attacker_win" : "draw");
+  txApp.save(rec);
+  const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
+  notify(txApp, fleet.ownerUid, [
+    {
+      kind: "combat-attacker",
+      title: res.killed ? "Coup de grâce sur le Léviathan !" : "Assaut sur le Léviathan",
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "Le Léviathan n'était plus là : la flotte rentre.",
+      createdAtMs: now,
+      read: false,
+    },
+  ]);
+  if (res.killed) next = distributeLeviathan(txApp, game, next, now);
+  writeLeviathan(txApp, next);
+}
+
+/** Tâche planifiée : apparition, échéance, récompenses, fin du titre. */
+function leviathanTick(now) {
+  const game = loadGame();
+  let changed = false;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    let state = readLeviathan(txApp, game);
+    if (state && state.titleHolder && now >= state.titleHolder.untilMs) {
+      if (findOrNull(txApp, "players", state.titleHolder.uid)) {
+        const holder = loadPlayer(txApp, game, state.titleHolder.uid);
+        game.removeLeviathanTitle(holder.player);
+        savePlayer(txApp, game, holder, holder.player, holder.queues);
+      }
+      state = Object.assign({}, state, { titleHolder: null });
+      changed = true;
+    }
+    if (state) {
+      const closed = game.closeLeviathan(state, now);
+      if (closed !== state) {
+        state = closed;
+        changed = true;
+      }
+      if (state.status !== "active" && !state.rewarded) {
+        state = distributeLeviathan(txApp, game, state, now);
+        changed = true;
+      }
+    }
+    const win = game.leviathanWindow(now);
+    if (win && (!state || state.id !== win.id) && (!state || state.status !== "active")) {
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      state = game.spawnLeviathan(win, actives, state);
+      changed = true;
+      actives.forEach((p) => {
+        try {
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false }]);
+        } catch (_) {
+          /* facultatif */
+        }
+      });
+    }
+    if (changed && state) writeLeviathan(txApp, state);
+  });
+  return changed;
+}
+
+/** POST /api/cosmic/admin/leviathan { action: "start" | "stop" } */
+function adminLeviathan(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const action = String(body(e).action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    let state = readLeviathan(txApp, game);
+    if (action === "start") {
+      if (state && state.status === "active" && now < state.endMs) throw new BadRequestError("Le Léviathan est déjà là.");
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      state = game.spawnLeviathan({ id: `lev-manual-${now}`, startMs: now, endMs: now + game.LEVIATHAN_RULES.durationHours * 3600000 }, actives, state);
+    } else if (action === "stop") {
+      if (!state || state.status !== "active") throw new BadRequestError("Aucun Léviathan en cours.");
+      state = distributeLeviathan(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
+    } else throw new BadRequestError("Action inconnue.");
+    writeLeviathan(txApp, state);
+    out = state;
+  });
+  return e.json(200, out);
+}
+
 /* ---------- Marché entre joueurs (v3.0) ---------- */
 
 /** Joueur chargé et rattrapé (production, files) avant un échange. */
@@ -1849,4 +2140,4 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

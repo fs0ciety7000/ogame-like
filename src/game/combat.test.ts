@@ -21,6 +21,13 @@ describe("unitStat", () => {
     expect(unitStat(units, noTech, "chasseur", "attack")).toBeCloseTo(UNIT_BASE_STATS.chasseur.attack + 10);
   });
 
+  it("uses the unit's own gain per level (Étoile Noire : +1 700)", () => {
+    const units = unitsWith({ etoile_noire: { level: 10, count: 1 }, sentinelle: { level: 10, count: 1 } });
+    expect(unitStat(units, noTech, "etoile_noire", "attack")).toBe(500 + 9 * 1700);
+    expect(unitStat(units, noTech, "etoile_noire", "defense")).toBe(500 + 9 * 1700);
+    expect(unitStat(units, noTech, "sentinelle", "attack")).toBe(120 + 9 * 5);
+  });
+
   it("applies the lab attack/defense bonuses (tech5 / tech2)", () => {
     const units = unitsWith({ chasseur: { level: 1, count: 1 } });
     const boosted = unitStat(units, { tech5: 3 }, "chasseur", "attack");

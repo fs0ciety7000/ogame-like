@@ -98,6 +98,8 @@ export const METRICS = {
   recycled: { label: "Débris recyclés (cumul)", value: (p: PlayerState) => playerStats(p).recycled ?? 0 },
   patrols: { label: "Patrouilles lancées", value: (p: PlayerState) => playerStats(p).patrols ?? 0 },
   evasions: { label: "Raids subis flotte en patrouille", value: (p: PlayerState) => playerStats(p).evasions ?? 0 },
+  expeditions: { label: "Expéditions terminées", value: (p: PlayerState) => playerStats(p).expeditions ?? 0 },
+  leviathanKills: { label: "Léviathans abattus (participation)", value: (p: PlayerState) => playerStats(p).leviathanKills ?? 0 },
   traded: { label: "Ressources échangées au marché (cumul)", value: (p: PlayerState) => playerStats(p).traded ?? 0 },
   inAlliance: { label: "Membre d'une alliance (0/1)", value: (p: PlayerState) => (p.allianceId ? 1 : 0) },
   allianceFounded: { label: "Alliance fondée (0/1)", value: (p: PlayerState) => playerStats(p).allianceFounded ?? 0 },
@@ -191,6 +193,9 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("man_of_word", "missions", "argent", "contracts", 100, "Homme de parole", "Remplis 100 contrats.", "🤝"),
   def("always_there", "missions", "or", "contracts", 300, "Toujours au rendez-vous", "Remplis 300 contrats.", "📅"),
   def("no_rest", "missions", "bronze", "bestMissionDay", 10, "Sans repos", "Termine 10 missions en une seule journée.", "😤", { secret: true }),
+  def("deep_space", "missions", "bronze", "expeditions", 1, "Grand large", "Termine ta première expédition.", "🛸"),
+  def("pathfinder", "missions", "argent", "expeditions", 25, "Pionnier de l'inconnu", "Termine 25 expéditions.", "🔭"),
+  def("leviathan_slayer", "menaces", "or", "leviathanKills", 1, "Tueur de Léviathan", "Participe à la chute du Léviathan.", "🐋"),
   // Renseignement et logistique
   def("prying_eye", "logistique", "bronze", "spies", 1, "Œil indiscret", "Lance ton premier espionnage.", "👁️"),
   def("spymaster", "logistique", "argent", "spies", 50, "Maître espion", "Lance 50 espionnages.", "🕵️"),

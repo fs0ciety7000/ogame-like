@@ -20,6 +20,15 @@ const FRI_OCT = Date.UTC(2026, 9, 2);
 describe("weekend events", () => {
   beforeEach(() => {
     EVENT_RULES.rotationEnabled = true;
+    EVENT_RULES.bossMonthly = false;
+  });
+
+  it("leaves the first weekend of the month to the Leviathan", () => {
+    EVENT_RULES.bossMonthly = true;
+    // 2 octobre 2026 : premier vendredi du mois → pas d'événement de rotation.
+    expect(eventAt(FRI_OCT + 20 * H)).toBeNull();
+    // 9 octobre : la rotation reprend.
+    expect(eventAt(FRI_OCT + 7 * 24 * H + 20 * H)).not.toBeNull();
   });
 
   it("knows Paris time, summer and winter", () => {
