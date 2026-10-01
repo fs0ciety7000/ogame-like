@@ -412,7 +412,7 @@ function resolveLairArrival(txApp, game, rec, now) {
     const st = player.units[id] || { level: 1, count: 0 };
     player.units[id] = Object.assign({}, st, { count: st.count + fleet.units[id] });
   });
-  const out = game.resolveLairAssault(faction, player, loaded.queues, fleet.units, rec.getFloat("power"), now);
+  const out = game.resolveLairAssault(faction, player, loaded.queues, fleet.units, rec.getFloat("power"), now, rec.getString("formation"));
   Object.keys(fleet.units).forEach((id) => {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
@@ -536,6 +536,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, fleet.targetUid, now),
         inFlight: true,
         garrisons,
+        formation: rec.getString("formation"),
       })
     : { ok: false };
   if (!result.ok) {
@@ -694,8 +695,10 @@ function launchFleetRequest(e) {
     if (out.defenderNotifications.length > 0) db.notify(txApp, targetUid, out.defenderNotifications);
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
     rec.load(out.fleet);
+    // v3.0 : formation choisie au lancement (attaque et repaire).
+    if (mission === "attack" || mission === "lair") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     txApp.save(rec);
-    response = Object.assign({ id: rec.id }, out.fleet);
+    response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet);
   });
 
   return e.json(200, response);
@@ -1290,6 +1293,158 @@ function adminManage(e) {
   return e.json(200, response);
 }
 
+/* ---------- Marché entre joueurs (v3.0) ---------- */
+
+/** Joueur chargé et rattrapé (production, files) avant un échange. */
+function loadFlushed(txApp, game, uid, missing) {
+  const loaded = loadPlayer(txApp, game, uid, missing);
+  const f = game.flushPlayer(loaded.player, loaded.queues, Date.now());
+  return { loaded, player: f.player, queues: f.queues, notifications: f.notifications };
+}
+
+function offerJson(rec) {
+  return toPlain(rec);
+}
+
+/** POST /api/cosmic/market/create { giveRes, giveAmount, wantRes, wantAmount } */
+function marketCreate(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const seller = loadFlushed(txApp, game, uid);
+    const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
+    let offer;
+    try {
+      offer = game.createOffer(seller.player, req, open, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    notify(txApp, uid, seller.notifications);
+    const rec = new Record(txApp.findCollectionByNameOrId("market_offers"));
+    rec.load({
+      sellerId: uid,
+      sellerPseudo: seller.player.pseudo,
+      sellerAllianceId: seller.loaded.rec.getString("allianceId"),
+      giveRes: offer.giveRes,
+      giveAmount: offer.giveAmount,
+      wantRes: offer.wantRes,
+      wantAmount: offer.wantAmount,
+      status: "open",
+      createdAtMs: now,
+      expiresAtMs: offer.expiresAtMs,
+      buyerId: "",
+      buyerPseudo: "",
+      filledAtMs: 0,
+      tax: 0,
+    });
+    txApp.save(rec);
+    out = offerJson(rec);
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/market/accept { id } */
+function marketAccept(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const id = String(body(e).id || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const rec = findOrNull(txApp, "market_offers", id);
+    if (!rec) throw new NotFoundError("Offre introuvable.");
+    const offer = toPlain(rec);
+    if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
+    const buyer = loadFlushed(txApp, game, uid);
+    const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
+    const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
+    let res;
+    try {
+      res = game.acceptOffer(offer, buyer.player, seller.player, buysToday, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
+    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    notify(txApp, uid, buyer.notifications);
+    notify(txApp, offer.sellerId, seller.notifications.concat([
+      {
+        kind: "gift",
+        title: "Offre acceptée au marché",
+        message: `${buyer.player.pseudo} a pris ton offre : +${game.describeAmount(offer.wantRes, offer.wantAmount - res.tax)} (taxe : ${game.describeAmount(offer.wantRes, res.tax)}).`,
+        createdAtMs: now,
+        read: false,
+      },
+    ]));
+    rec.set("status", "filled");
+    rec.set("buyerId", uid);
+    rec.set("buyerPseudo", buyer.player.pseudo);
+    rec.set("filledAtMs", now);
+    rec.set("tax", res.tax);
+    txApp.save(rec);
+    out = offerJson(rec);
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/market/cancel { id } — le vendeur récupère sa marchandise. */
+function marketCancel(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const id = String(body(e).id || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = findOrNull(txApp, "market_offers", id);
+    if (!rec || rec.getString("sellerId") !== uid) throw new NotFoundError("Offre introuvable.");
+    if (rec.getString("status") !== "open") throw new BadRequestError("Cette offre n'est plus ouverte.");
+    const seller = loadFlushed(txApp, game, uid);
+    game.refundOffer(toPlain(rec), seller.player);
+    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    notify(txApp, uid, seller.notifications);
+    rec.set("status", "cancelled");
+    txApp.save(rec);
+    out = offerJson(rec);
+  });
+  return e.json(200, out);
+}
+
+/** Offres expirées : marchandise rendue au vendeur (tâche planifiée). */
+function expireMarketOffers(now) {
+  const game = loadGame();
+  const due = $app.findRecordsByFilter("market_offers", 'status = "open" && expiresAtMs <= {:n}', "expiresAtMs", 200, 0, { n: now });
+  let count = 0;
+  due.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = txApp.findRecordById("market_offers", r.id);
+        if (rec.getString("status") !== "open") return;
+        rec.set("status", "expired");
+        txApp.save(rec);
+        if (!findOrNull(txApp, "players", rec.getString("sellerId"))) return;
+        const seller = loadFlushed(txApp, game, rec.getString("sellerId"));
+        game.refundOffer(toPlain(rec), seller.player);
+        savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+        notify(txApp, rec.getString("sellerId"), seller.notifications.concat([
+          { kind: "gift", title: "Offre expirée", message: `Ton offre au marché a expiré : ${game.describeAmount(rec.getString("giveRes"), rec.getFloat("giveAmount"))} te sont rendus.`, createdAtMs: now, read: false },
+        ]));
+      });
+      count++;
+    } catch (err) {
+      console.log(`[cosmic] expiration d'offre ${r.id} : ${err}`);
+    }
+  });
+  return count;
+}
+
 /* ---------- Sauvegardes (v2.8) ---------- */
 
 const BACKUP_MAX_AGE_MS = 26 * 3600 * 1000;
@@ -1694,4 +1849,4 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

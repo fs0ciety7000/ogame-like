@@ -26,6 +26,8 @@ export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
 export { applyStaffTitle, DEFAULT_STAFF_BY_PSEUDO, isStaffRole, normalizeStaff, STAFF_KEY } from "@/game/staff";
 export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody, reportStatusLabel, sanitizeNewReport } from "@/game/reports";
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
+export { acceptOffer, createOffer, describeAmount, MARKET_RULES, refundOffer, utcDayStart } from "@/game/market";
+export { isFormation } from "@/game/formations";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";

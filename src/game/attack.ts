@@ -8,6 +8,7 @@ import { OFFENSIVE_UNITS } from "@/game/units";
 import { DEBRIS_RULES, debrisFromLosses, type DebrisAmount } from "@/game/debris";
 import { eventDebrisPercent, lootFactor } from "@/game/events";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
+import { formationEffects, postureEffects } from "@/game/formations";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -37,6 +38,8 @@ export interface AttackInput {
    *  décollage. Les protections ont été vérifiées à ce moment-là ; le butin
    *  et les survivants rentrent avec la flotte au lieu d'être crédités. */
   inFlight?: boolean;
+  /** v3.0 : formation de l'attaquant (la posture du défenseur est lue sur son profil). */
+  formation?: string;
   /** Garnisons alliées stationnées chez le défenseur (v1.9). */
   garrisons?: (CombatGarrison & { fleetId: string; ownerUid: string; ownerPseudo: string })[];
 }
@@ -116,7 +119,11 @@ export function performAttack(input: AttackInput): AttackOutput {
   const flushedDefender = flushState({ ...defender, buildings: withMissingBuildings(defender.buildings, defender.resources) }, input.defenderQueues, now);
   const def = flushedDefender.player;
 
+  const posture = postureEffects(def.posture?.id);
   const combat = resolveCombat({
+    ...formationEffects(input.formation),
+    defenseFactor: posture.defenseFactor,
+    homeFleetFactor: posture.homeFleetFactor,
     lootMultiplier: lootFactor(now),
     garrisons: input.garrisons ?? [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,

@@ -1,4 +1,5 @@
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
+import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
 import { buildTimeFactor, researchTimeFactor } from "@/game/events";
@@ -44,7 +45,8 @@ export type GameAction =
   | { type: "rerollContract"; contractId: string }
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
-  | { type: "hideOnboarding"; hidden: boolean };
+  | { type: "hideOnboarding"; hidden: boolean }
+  | { type: "setPosture"; posture: string };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -62,7 +64,7 @@ function positiveInt(value: unknown, label: string): number {
   return n;
 }
 
-function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: number) {
+function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: number, spending = true) {
   if (!canAffordAll(player.resources, cost as Partial<Resources>)) throw new GameActionError("Ressources insuffisantes.");
   let total = 0;
   for (const [res, val] of Object.entries(cost)) {
@@ -70,7 +72,7 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
     total += val ?? 0;
   }
   recordContract(player, "spend", total, now);
-  bumpStat(player, "spent", total);
+  if (spending) bumpStat(player, "spent", total);
 }
 
 interface ActionState {
@@ -216,6 +218,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "claimOnboarding":
       return claimOnboarding(player, String(action.stepId ?? ""));
 
+    case "setPosture":
+      return setPosture(player, action.posture, now);
+
     case "hideOnboarding":
       setOnboardingHidden(player, action.hidden === true);
       return player.onboarding;
@@ -274,7 +279,7 @@ export function performGift(
 
   const s = flushState({ ...sender, buildings: withMissingBuildings(sender.buildings, sender.resources) }, senderQueues, now);
   const r = flushState({ ...recipient, buildings: withMissingBuildings(recipient.buildings, recipient.resources) }, recipientQueues, now);
-  pay(s.player, resources, now);
+  pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
   for (const [res, amt] of Object.entries(resources)) {
     r.player.resources[res as ResourceId] = (r.player.resources[res as ResourceId] ?? 0) + (amt ?? 0);

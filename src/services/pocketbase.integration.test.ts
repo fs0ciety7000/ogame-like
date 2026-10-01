@@ -856,6 +856,59 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(Array.isArray(stats.balance.factions)).toBe(true);
   });
 
+  it("v3.0 market: escrow, price band, trade with tax, cancel and expiry refunds; posture", async () => {
+    // Connecté en B ; A vend avec son propre client.
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const asA = (path: string, body: Record<string, unknown>) => aClient.send(`/api/cosmic/market/${path}`, { method: "POST", body });
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    await admin.collection("players").update(aId, { resources: { ...aBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+    await admin.collection("players").update(bId, { resources: { ...bBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+    const created: string[] = [];
+    try {
+      await expect(asA("create", { giveRes: "scrap", giveAmount: 1000, wantRes: "energy", wantAmount: 10_000 })).rejects.toMatchObject({ status: 400 });
+      const offer = await asA("create", { giveRes: "scrap", giveAmount: 100_000, wantRes: "energy", wantAmount: 100_000 });
+      created.push(offer.id);
+      expect(offer.status).toBe("open");
+      expect((await snap(aId))!.resources.scrap).toBeLessThanOrEqual(900_100);
+      // Personne n'écrit directement dans la collection.
+      await expect(pb.collection("market_offers").update(offer.id, { status: "filled" })).rejects.toBeTruthy();
+      await expect(asA("accept", { id: offer.id })).rejects.toMatchObject({ status: 400 });
+      // B accepte : échange immédiat, taxe de 5 % pour le vendeur (pas d'alliance commune).
+      const bScrap = (await snap(bId))!.resources.scrap;
+      const aEnergy = (await snap(aId))!.resources.energy;
+      const filled = await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } });
+      expect(filled.status).toBe("filled");
+      expect(filled.buyerId).toBe(bId);
+      expect((await snap(bId))!.resources.scrap).toBeGreaterThanOrEqual(bScrap + 100_000);
+      const aAfter = (await snap(aId))!.resources.energy;
+      expect(aAfter - aEnergy).toBeGreaterThanOrEqual(100_000 - filled.tax);
+      expect(aAfter - aEnergy).toBeLessThan(100_000);
+      await expect(pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } })).rejects.toMatchObject({ status: 400 });
+      // Annulation : marchandise rendue.
+      const second = await asA("create", { giveRes: "energy", giveAmount: 50_000, wantRes: "scrap", wantAmount: 50_000 });
+      created.push(second.id);
+      const before = (await snap(aId))!.resources.energy;
+      await expect(pb.send("/api/cosmic/market/cancel", { method: "POST", body: { id: second.id } })).rejects.toMatchObject({ status: 404 });
+      expect((await asA("cancel", { id: second.id })).status).toBe("cancelled");
+      expect((await snap(aId))!.resources.energy).toBeGreaterThanOrEqual(before + 50_000);
+      // Expiration (tâche planifiée) : simulée en avançant l'échéance.
+      const third = await asA("create", { giveRes: "scrap", giveAmount: 10_000, wantRes: "energy", wantAmount: 10_000 });
+      created.push(third.id);
+      await admin.collection("market_offers").update(third.id, { expiresAtMs: Date.now() - 1000 });
+      await expect(pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: third.id } })).rejects.toMatchObject({ status: 400 });
+      // Posture de la base : action de jeu, puis délai d'une heure.
+      await ps.setBasePosture("bunker");
+      expect((await snap(bId))!.posture?.id).toBe("bunker");
+      await expect(ps.setBasePosture("riposte")).rejects.toThrow(/min/);
+    } finally {
+      for (const id of created) await admin.collection("market_offers").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { resources: aBefore!.resources });
+      await admin.collection("players").update(bId, { resources: bBefore!.resources, posture: null });
+    }
+  });
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PostureCard } from "@/components/game/PostureCard";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -89,6 +90,8 @@ export function UnitsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Chantier naval" title="Unités" description="Construis ta flotte d'attaque et de défense." />
+
+      <PostureCard player={player} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {(["attack", "defense"] as const).map((cat) => {

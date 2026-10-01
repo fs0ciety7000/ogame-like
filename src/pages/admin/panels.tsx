@@ -133,6 +133,100 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, defenseRebuildPct: v ?? 0 } }))}
           />
         </Section>
+        <Section title="Formations et postures">
+          <NumberField
+            label="Assaut : bonus d'attaque (0,10 = +10 %)"
+            value={rules.combat.assaultAttack}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, assaultAttack: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Assaut : pertes subies en plus (0,15 = +15 %)"
+            value={rules.combat.assaultLosses}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, assaultLosses: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Prudente : attaque (−0,10 = −10 %)"
+            value={rules.combat.cautiousAttack}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, cautiousAttack: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Prudente : pertes subies (−0,25 = −25 %)"
+            value={rules.combat.cautiousLosses}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, cautiousLosses: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Raid : attaque (−0,15 = −15 %)"
+            value={rules.combat.raidAttack}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, raidAttack: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Raid : cargaison en plus (0,30 = +30 %)"
+            value={rules.combat.raidCargo}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, raidCargo: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Bunker : bonus des défenses (0,08 = +8 %)"
+            value={rules.combat.bunkerDefense}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, bunkerDefense: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Riposte : part des vaisseaux à quai engagée (0,25 = 25 %)"
+            value={rules.combat.riposteHomeFleet}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, riposteHomeFleet: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Délai entre deux changements de posture (h)"
+            value={rules.combat.postureCooldownHours}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, postureCooldownHours: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Marché">
+          <NumberField
+            label="Taxe sur les ventes (0,05 = 5 %)"
+            value={rules.market.taxPct}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, taxPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Taxe entre alliés (0,02 = 2 %)"
+            value={rules.market.allianceTaxPct}
+            step={0.01}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, allianceTaxPct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Offres ouvertes par joueur"
+            value={rules.market.maxOpenOffers}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, maxOpenOffers: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Achats par joueur et par jour"
+            value={rules.market.maxBuysPerDay}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, maxBuysPerDay: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Durée de vie d'une offre (h)"
+            value={rules.market.offerHours}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, offerHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Écart max au taux du comptoir (×)"
+            value={rules.market.priceBand}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, priceBand: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Flottes en vol">
           <NumberField
             label="Durée fixe de tout trajet (min)"
