@@ -137,7 +137,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels))]),
+      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch))]),
     ),
   });
 

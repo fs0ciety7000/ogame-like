@@ -13,7 +13,7 @@ export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";
 export { performLaunch, performFleetReturn, recallFleet, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
-export { ALLIANCE_RULES, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
+export { ALLIANCE_RULES, allianceNextDueMs, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
 export { stationGarrison, endGarrison } from "@/game/fleets";
 export { currentSeasonId, performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";

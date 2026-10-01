@@ -5,7 +5,7 @@ import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPerce
 import { bumpStat, recordThreat } from "@/game/stats";
 import { computeFullPower, getShieldPercent, homeDefensePower, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
-import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
@@ -380,7 +380,7 @@ export interface AggressionStats {
 /** Ressources communes exposées (hors bunker de l'entrepôt). */
 function exposedStock(player: PlayerState): Partial<Record<ResourceId, number>> {
   const out: Partial<Record<ResourceId, number>> = {};
-  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels));
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels, player.allianceResearch));
   return out;
 }
 
@@ -627,7 +627,7 @@ export function resolvePirateRaid(
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels));
+      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
@@ -721,8 +721,11 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
   const st = pirateState(player, faction.id);
+  const fx = formationEffects(formation);
   const combat = resolveCombat({
-    ...formationEffects(formation),
+    ...fx,
+    // v3.3 : Batterie de siège de l'alliance.
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),

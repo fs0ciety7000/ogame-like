@@ -682,6 +682,18 @@
         "type": "json",
         "required": false,
         "maxSize": 200000
+      },
+      {
+        "name": "projects",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "projectContributors",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [

@@ -4,7 +4,7 @@ import { getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
-import { allianceProductionFactor } from "@/game/alliances";
+import { allianceBastionBonus, allianceProductionFactor } from "@/game/alliances";
 import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
@@ -154,10 +154,12 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
 }
 
 /** Quantité d'une ressource à l'abri du pillage (bunker de l'entrepôt). */
-export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels): number {
+export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>): number {
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels);
-  const pct = Math.min(TECH_REDUCTION_CAP, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage"));
+  // v3.3 : le Bastion fédéral s'ajoute (et repousse le plafond d'autant).
+  const bastion = allianceBastionBonus(allianceLevels);
+  const pct = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage") + bastion);
   return Number.isFinite(capacity) ? Math.floor(capacity * pct) : 0;
 }
 

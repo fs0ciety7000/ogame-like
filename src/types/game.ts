@@ -232,12 +232,16 @@ export interface Alliance {
   research?: Record<string, number>;
   activeResearch?: { id: string; level: number; endTime: number } | null;
   distributions?: { day: string; count: number };
+  /** v3.3 : projets (niveau, financement en cours, fin de construction) et
+   *  contributions personnelles des membres (valeur, une rare = 100). */
+  projects?: Record<string, { level: number; funded: Partial<Record<ResourceId, number>>; buildEndMs: number }>;
+  projectContributors?: Record<string, number>;
 }
 
 export interface AllianceLog {
   id: string;
   allianceId: string;
-  kind: "deposit" | "distribute" | "research" | "research-done" | "join" | "leave" | "kick";
+  kind: "deposit" | "distribute" | "research" | "research-done" | "project" | "project-done" | "join" | "leave" | "kick";
   actorUid: string;
   actorPseudo: string;
   targetUid?: string;

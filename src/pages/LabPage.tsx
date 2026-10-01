@@ -1,4 +1,4 @@
-import { researchTimeFactor } from "@/game/events";
+import { playerResearchTimeFactor } from "@/game/bonuses";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, techReductionFactor, type TechDef } from "@/game/technologies";
+import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
 import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
@@ -131,7 +131,7 @@ export function LabPage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * researchTimeFactor(Date.now()) * techReductionFactor(levels, "research_time")))}</p>
+                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now())))}</p>
               </div>
 
               {(() => {

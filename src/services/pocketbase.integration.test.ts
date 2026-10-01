@@ -563,6 +563,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect((await snap(bId)).allianceResearch).toEqual({ industrie: 1 });
       expect((await snap(aId)).allianceResearch).toEqual({ industrie: 1 });
 
+      // v3.3 Projets : don personnel (plafonné), trésor par le fondateur, construction puis bonus.
+      await admin.collection("players").update(bId, { resources: RICH });
+      await expect(al.fundAllianceProject("forge", "treasury", { scrap: 1 })).rejects.toThrow(/trésor/);
+      const scrapBefore = (await snap(bId)).resources.scrap;
+      await al.fundAllianceProject("forge", "self", { scrap: 1000 });
+      expect((await snap(bId)).resources.scrap).toBeLessThan(scrapBefore - 900);
+      const cost = Object.fromEntries(Object.keys(RICH).map((k) => [k, k === "scrap" ? 499_999_000 : k.length > 6 ? 5_000_000 : 500_000_000]));
+      await admin.collection("alliances").update(allianceId, { treasury: Object.fromEntries(Object.keys(RICH).map((k) => [k, 600_000_000])) });
+      await asA({ type: "project", projectId: "forge", source: "treasury", resources: cost });
+      const building = await admin.collection("alliances").getOne(allianceId);
+      expect(building.projects.forge.buildEndMs).toBeGreaterThan(Date.now());
+      expect(building.projectContributors[bId]).toBe(1000);
+      await admin.collection("alliances").update(allianceId, { projects: { forge: { ...building.projects.forge, buildEndMs: Date.now() - 1 } }, researchEndMs: Date.now() - 1 });
+      await al.depositToTreasury({ scrap: 1 });
+      expect((await snap(bId)).allianceResearch).toEqual({ industrie: 1, projet_forge: 1 });
+      expect((await admin.collection("alliances").getOne(allianceId)).researchEndMs).toBe(0);
+
       // On n'attaque pas un allié.
       await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 60 } }, createdAtMs: MONTH_AGO() });
       await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow(/alliance/);

@@ -1,7 +1,7 @@
 import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
-import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { computeCombatXp } from "@/game/pvp";
 import { lairPower, raidPower, type FactionDef } from "@/game/pirates";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -137,8 +137,10 @@ export function simulateAgainstReport(
 
 /** Assaut d'un repaire de faction (puissance du repaire calculée comme le serveur). */
 export function simulateLair(player: PlayerState, fleet: Record<string, number>, faction: FactionDef, formation?: string): SimOutcome {
+  const fx = formationEffects(formation);
   const combat = resolveCombat({
-    ...formationEffects(formation),
+    ...fx,
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),

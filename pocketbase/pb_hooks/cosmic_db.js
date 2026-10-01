@@ -815,7 +815,7 @@ function closeSeason(game, now, seasonIdIn) {
 }
 /* ---------- Alliances (v1.9) ---------- */
 
-const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions"];
+const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors"];
 
 function allianceFromRecord(rec) {
   const a = toPlain(rec);
@@ -826,6 +826,8 @@ function allianceFromRecord(rec) {
   a.research = a.research || {};
   a.activeResearch = a.activeResearch || null;
   a.distributions = a.distributions || { day: "", count: 0 };
+  a.projects = a.projects || {};
+  a.projectContributors = a.projectContributors || {};
   return a;
 }
 
@@ -837,7 +839,8 @@ function applyAllianceOutput(txApp, allianceRec, out, now) {
   } else if (out.alliance) {
     const rec = allianceRec || new Record(txApp.findCollectionByNameOrId("alliances"));
     ALLIANCE_FIELDS.forEach((f) => rec.set(f, out.alliance[f] === undefined ? null : out.alliance[f]));
-    rec.set("researchEndMs", out.alliance.activeResearch ? out.alliance.activeResearch.endTime : 0);
+    // Prochaine échéance : recherche ou construction d'un projet (v3.3).
+    rec.set("researchEndMs", loadGame().allianceNextDueMs(out.alliance));
     txApp.save(rec);
     id = rec.id;
   }
@@ -1051,6 +1054,8 @@ function adminReset(e) {
         a.set("activeResearch", null);
         a.set("researchEndMs", 0);
         a.set("distributions", { day: "", count: 0 });
+        a.set("projects", {});
+        a.set("projectContributors", {});
         txApp.save(a);
         summary.alliances++;
       });

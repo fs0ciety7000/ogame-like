@@ -1,8 +1,8 @@
+import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
-import { buildTimeFactor, researchTimeFactor } from "@/game/events";
 import {
   applyBuildingDiscount,
   BUILDING_UNLOCK_COST,
@@ -14,7 +14,7 @@ import {
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
 import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
-import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechCost, getTechTime, techReductionFactor } from "@/game/technologies";
+import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
@@ -122,7 +122,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
       pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0), now);
-      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time")) * 1000 };
+      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000 };
       recordContract(player, "upgrade_building", 1, now);
       return undefined;
     }
@@ -174,7 +174,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time")) * 1000 });
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000 });
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
