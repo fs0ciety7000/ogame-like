@@ -1,3 +1,4 @@
+import { EmojiIcon } from "@/components/ui/game-icon";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -122,7 +123,9 @@ export function HudMeter({ percent, className, tone }: { percent: number; classN
 export function EmptyState({ icon, title, children, className }: { icon: ReactNode; title?: string; children?: ReactNode; className?: string }) {
   return (
     <div className={cn("flex items-center gap-4 p-5", className)}>
-      <div className="hud-cut grid h-12 w-12 shrink-0 place-items-center border border-cyan-glow/25 bg-cyan-glow/[0.06] text-xl text-cyan-glow">{icon}</div>
+      <div className="hud-cut grid h-12 w-12 shrink-0 place-items-center border border-cyan-glow/25 bg-cyan-glow/[0.06] text-xl text-cyan-glow">
+        {typeof icon === "string" ? <EmojiIcon emoji={icon} className="h-9 w-9" /> : icon}
+      </div>
       <div>
         {title && <p className="hud-title text-sm text-slate-200">{title}</p>}
         {children && <p className="mt-0.5 text-sm text-slate-500">{children}</p>}

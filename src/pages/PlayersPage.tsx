@@ -31,6 +31,7 @@ import { AttackModal } from "@/components/game/AttackModal";
 import { TradeModal } from "@/components/game/TradeModal";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
+import { GameIcon } from "@/components/ui/game-icon";
 
 type LeaderboardMode = "total" | "season" | "alliances";
 
@@ -248,7 +249,7 @@ export function PlayersPage() {
                     )}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {p.activeTitle && <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow">🏆 {p.activeTitle}</span>}
+                    {p.activeTitle && <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>}
                     <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
                       {getRankLabel(p.xp)} · {formatNumber(displayXp)} XP
                     </span>

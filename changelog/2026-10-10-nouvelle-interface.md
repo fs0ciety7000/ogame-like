@@ -25,6 +25,11 @@ Cosmic Empires change de peau : une interface de poste de commandement, plus lis
 - **Profil** : chiffres clés en grand (victoires, taux de réussite, temps de jeu) et niveaux en barres à crans (sur 20, et non plus sur 10).
 - **Alliances, Palmarès, Combats** : listes et classements au même style, états vides plus parlants.
 
+## Nouveau logo et icônes illustrées
+- **Nouveau logo** : un emblème à chevrons cyan et violet, dans la barre latérale et en icône d'onglet.
+- **Ressources illustrées** : ferraille, énergie, nanocomposants, données et les quatre ressources rares ont chacune leur illustration, partout dans le jeu (jauges, coûts, récompenses, trésor d'alliance, échanges…).
+- **Icônes d'interface** : durée, XP, entrepôt, bouclier, sondes, recyclage, réparation, trophées, menaces, flottes, événements et notifications remplacent les anciens emojis.
+
 ## Trois thèmes au choix
 Dans **Réglages → Apparence** :
 - **Tactique** (par défaut) : cyan et violet.

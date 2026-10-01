@@ -9,6 +9,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendResourceGift } from "@/services/playerService";
 import type { ResourceId, Resources } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 export function TradeModal({
   target,
@@ -67,7 +68,7 @@ export function TradeModal({
                   return (
                     <div key={res.id} className="flex items-center gap-3 text-sm">
                       <span className="flex-1 text-slate-200">
-                        {res.emoji} {res.name}
+                        <ResourceIcon id={res.id} /> {res.name}
                       </span>
                       <span className="text-xs text-slate-500">Possédé : {owned}</span>
                       <Input

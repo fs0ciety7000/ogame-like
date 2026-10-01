@@ -20,6 +20,7 @@ import { useFleetStore } from "@/store/fleetStore";
 import { fetchLatestSpyReport, GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import type { SpyReport } from "@/types/game";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -30,7 +31,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
     <li className="flex justify-between gap-2">
       <span className="truncate">{label}</span>
@@ -65,7 +66,7 @@ export function SpyReportView({ report }: { report: SpyReport }) {
         {data.resources && (
           <Block title="Ressources">
             {RESOURCE_LIST.filter((r) => (data.resources?.[r.id] ?? 0) > 0).map((r) => (
-              <Row key={r.id} label={`${r.emoji} ${r.name}`} value={formatNumber(data.resources?.[r.id] ?? 0)} />
+              <Row key={r.id} label={<><ResourceIcon id={r.id} /> {r.name}</>} value={formatNumber(data.resources?.[r.id] ?? 0)} />
             ))}
           </Block>
         )}
@@ -119,12 +120,12 @@ export function SpyReportView({ report }: { report: SpyReport }) {
           <Block title="Chantiers en cours">
             {data.queues.buildings.length + data.queues.researches.length + data.queues.units.length === 0 && <Empty />}
             {data.queues.buildings.map((q) => (
-              <Row key={`b${q.id}`} label={`🏗️ ${findBuilding(q.id)?.name ?? q.id}`} value={formatDuration(Math.max(0, (q.endTime - report.timestamp) / 1000))} />
+              <Row key={`b${q.id}`} label={<><GameIcon name="build" /> {findBuilding(q.id)?.name ?? q.id}</>} value={formatDuration(Math.max(0, (q.endTime - report.timestamp) / 1000))} />
             ))}
             {data.queues.researches.map((q) => (
-              <Row key={`r${q.id}`} label={`🔬 ${findTech(q.id)?.nom ?? q.id}`} value={formatDuration(Math.max(0, (q.endTime - report.timestamp) / 1000))} />
+              <Row key={`r${q.id}`} label={<><GameIcon name="research" /> {findTech(q.id)?.nom ?? q.id}</>} value={formatDuration(Math.max(0, (q.endTime - report.timestamp) / 1000))} />
             ))}
-            {data.queues.units.length > 0 && <Row label="🚀 Unités en production" value={data.queues.units.length} />}
+            {data.queues.units.length > 0 && <Row label={<><GameIcon name="fleet" /> Unités en production</>} value={data.queues.units.length} />}
           </Block>
         )}
         {data.fleets && (

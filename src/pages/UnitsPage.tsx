@@ -19,6 +19,7 @@ import { unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function UnitsPage() {
   useNowTicker();
@@ -195,7 +196,7 @@ export function UnitsPage() {
 
                   {isLocked ? (
                     <p className="text-sm text-slate-500">
-                      🔒 Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
+                      <GameIcon name="lock" /> Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
                     </p>
                   ) : (
                     <>
@@ -233,16 +234,16 @@ export function UnitsPage() {
                       })()}
 
                       <div className="flex flex-wrap gap-1.5">
-                        <CostPill>⏱ {formatDuration(buildTime)} <em className="text-[10px] not-italic opacity-60">/ unité</em></CostPill>
-                        <CostPill ok>🔩 {formatNumber(unit.cost.scrap * qty(unit.id))}</CostPill>
-                        <CostPill ok>⚡ {formatNumber(unit.cost.energy * qty(unit.id))}</CostPill>
+                        <CostPill><GameIcon name="duration" /> {formatDuration(buildTime)} <em className="text-[10px] not-italic opacity-60">/ unité</em></CostPill>
+                        <CostPill ok><ResourceIcon id="scrap" /> {formatNumber(unit.cost.scrap * qty(unit.id))}</CostPill>
+                        <CostPill ok><ResourceIcon id="energy" /> {formatNumber(unit.cost.energy * qty(unit.id))}</CostPill>
                       </div>
 
                       {queueInfo ? (
                         <p className="font-mono text-xs text-mint-glow">● EN CHANTIER · {formatDuration(queueInfo.remaining)} ({queueInfo.count} en file)</p>
                       ) : waitingInfo ? (
                         <p className="text-xs text-gold-glow" title="Les unités d'une même catégorie se construisent l'une après l'autre.">
-                          ⏳ {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
+                          <GameIcon name="duration" /> {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
                         </p>
                       ) : null}
 

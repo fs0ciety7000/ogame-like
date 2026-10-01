@@ -13,6 +13,7 @@ import { getRewardText } from "@/game/missions";
 import { formatClock } from "@/lib/utils";
 import { claimContract, GameActionError, rerollContract } from "@/services/playerService";
 import { playUnlock } from "@/lib/sfx";
+import { EmojiText } from "@/components/ui/game-icon";
 
 /** Contrats du jour : 3 objectifs, série de jours consécutifs et coffre. */
 export function ContractsCard({ compact = false }: { compact?: boolean }) {
@@ -101,7 +102,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
                   {c.claimed && <CheckCircle2 className="h-4 w-4 shrink-0 text-mint-glow" />}
                 </div>
                 <Progress value={(c.progress / c.target) * 100} />
-                <p className="text-[10px] text-slate-500">{getRewardText(contractReward(player, c)).join(" · ")}</p>
+                <p className="text-[10px] text-slate-500"><EmojiText text={getRewardText(contractReward(player, c)).join(" · ")} /></p>
                 {!c.claimed && (
                   <div className="flex gap-1.5">
                     <Button size="sm" className="h-7 flex-1 text-xs" disabled={!done || pending === c.id} onClick={() => void claim(c)}>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -135,7 +136,7 @@ function Sidebar() {
     <aside className="relative z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
       <Link to="/game" className="flex items-center gap-3 px-4 pb-4 pt-5">
-        <img src="/assets/logo/logo.webp" alt="" className="hud-cut h-10 w-10 object-cover" />
+        <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-11 w-11 object-contain drop-shadow-[0_0_10px_rgba(75,232,255,0.35)]" />
         <div className="leading-none">
           <p className="font-display text-lg font-bold uppercase tracking-[0.16em] text-white">Cosmic</p>
           <p className="font-display text-xs font-semibold uppercase tracking-[0.42em] text-cyan-glow">Empires</p>

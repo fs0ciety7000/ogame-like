@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { assetUrl } from "@/lib/assets";
 import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
@@ -133,7 +134,7 @@ export function AppShell() {
           <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">
             {/* Mobile : logo ; bureau : titre de la page en cours. */}
             <Link to="/game" className="md:hidden">
-              <img src="/assets/logo/logo.webp" alt="" className="hud-cut h-9 w-9 object-cover" />
+              <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(75,232,255,0.35)]" />
             </Link>
             <div className="min-w-0">
               <p className="hud-eyebrow truncate text-[10px] text-cyan-glow/70">

@@ -14,6 +14,7 @@ import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
 import { GameActionError, recallFleet } from "@/services/playerService";
+import { EmojiText, GameIcon } from "@/components/ui/game-icon";
 
 /** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
 export function isHostile(f: Fleet, uid: string | undefined): boolean {
@@ -186,7 +187,7 @@ export function FleetsPanel({
                     : "font-semibold text-mint-glow"
                 }
               >
-                {fleetLabel(f, outbound)}
+                <EmojiText text={fleetLabel(f, outbound)} />
               </span>
               <span className="tabular-mono ml-auto text-slate-400">
                 {stationed
@@ -240,7 +241,7 @@ export function FleetsPanel({
       {hosted.length > 0 && (
         <div className="rounded-lg border border-cyan-glow/30 bg-cyan-glow/5 p-2.5 text-xs">
           <p className="font-semibold text-cyan-glow">
-            🛡️ Garnisons alliées chez toi
+            <GameIcon name="shield" /> Garnisons alliées chez toi
           </p>
           {hosted.map((f) => (
             <p key={f.id} className="mt-1 text-slate-300">

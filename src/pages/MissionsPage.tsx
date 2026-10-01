@@ -8,13 +8,14 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
-import { resourceEmoji } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { missionRewards } from "@/game/economy";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { cn, formatClock, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import type { GameIconName } from "@/lib/icons";
 
 export function MissionsPage() {
   useNowTicker();
@@ -59,11 +60,11 @@ export function MissionsPage() {
               <div className="relative grid grid-cols-[auto_1fr] items-start gap-3.5">
                 <div
                   className={cn(
-                    "grid h-14 w-12 place-items-center text-2xl [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]",
+                    "grid h-14 w-12 place-items-center [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]",
                     active ? "bg-gradient-to-b from-mint-glow/40 to-mint-glow/5" : hasReq ? "bg-gradient-to-b from-cyan-glow/40 to-cyan-glow/5" : "bg-white/[0.06] grayscale",
                   )}
                 >
-                  {missionIcon(mission.key, rewards)}
+                  <GameIcon name={missionIcon(mission.key, rewards)} className="h-9 w-9 drop-shadow-[0_2px_4px_rgba(0,0,0,.6)]" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-start justify-between gap-2">
@@ -71,7 +72,7 @@ export function MissionsPage() {
                     {active ? (
                       <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-mint-glow">● {formatClock(Math.max(0, Math.floor((active.endTime - now) / 1000)))}</span>
                     ) : (
-                      <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-slate-500">⏱ {formatDuration(mission.duration)}</span>
+                      <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-slate-500"><GameIcon name="duration" /> {formatDuration(mission.duration)}</span>
                     )}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
@@ -98,10 +99,10 @@ export function MissionsPage() {
                       .map(([res, amount]) => (
                         <span key={res} className="flex items-baseline gap-1">
                           <b className="hud-title text-xl text-white">+{formatNumber(amount)}</b>
-                          <span>{resourceEmoji(res)}</span>
+                          <ResourceIcon id={res} className="h-6 w-6 self-center" />
                         </span>
                       ))}
-                    {rewards.xp ? <span className="font-mono text-xs text-gold-glow">★ +{rewards.xp} XP</span> : null}
+                    {rewards.xp ? <span className="font-mono text-xs text-gold-glow"><GameIcon name="xp" /> +{rewards.xp} XP</span> : null}
                   </div>
                 </div>
               </div>
@@ -124,15 +125,15 @@ export function MissionsPage() {
 }
 
 /** Icône d'une mission : d'après sa récompense principale. */
-function missionIcon(key: string, rewards: Record<string, number>): string {
-  if (/patrouille|perimetr/.test(key)) return "🛰️";
-  if (/radar|bombard|siege|bastion|interception|suppression/.test(key)) return "🛡️";
-  if (rewards.energy) return "⚡";
-  if (rewards.data) return "📡";
-  if (rewards.nano) return "🧬";
-  if (rewards.aiFragment) return "🧠";
-  if (rewards.syntheticNanites) return "🤖";
-  if (rewards.cyberModule) return "🧩";
-  if (rewards.reinforcedSteel) return "🛠️";
-  return "⛏️";
+function missionIcon(key: string, rewards: Record<string, number>): GameIconName {
+  if (/patrouille|perimetr/.test(key)) return "patrol";
+  if (/radar|bombard|siege|bastion|interception|suppression/.test(key)) return "shield";
+  if (rewards.energy) return "energy";
+  if (rewards.data) return "data";
+  if (rewards.nano) return "nano";
+  if (rewards.aiFragment) return "aiFragment";
+  if (rewards.syntheticNanites) return "syntheticNanites";
+  if (rewards.cyberModule) return "cyberModule";
+  if (rewards.reinforcedSteel) return "reinforcedSteel";
+  return "scrap";
 }

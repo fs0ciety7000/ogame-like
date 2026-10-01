@@ -3,9 +3,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { flyResources, landFlight, trackPointer, useFxStore, type ResourceFlight } from "@/store/fxStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { discreteGains } from "@/game/gains";
-import { resourceEmoji } from "@/game/resources";
 import { formatCompact } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 /** Cible d'une ressource : sa puce dans l'en-tête (data-hud-res). */
 function targetOf(res: string) {
@@ -29,7 +29,7 @@ function Flight({ flight }: { flight: ResourceFlight }) {
       transition={{ duration: 1.25, delay: flight.delay, ease: "easeInOut", times: [0, 0.4, 1] }}
       onAnimationComplete={() => landFlight(flight.id)}
     >
-      <span className="text-2xl leading-none">{resourceEmoji(flight.res)}</span>
+      <ResourceIcon id={flight.res} className="h-7 w-7" />
       <span className="tabular-mono">+{formatCompact(flight.amount)}</span>
     </motion.div>
   );

@@ -1,9 +1,10 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { closeAwaySummary, useAwaySummaryStore } from "@/store/awaySummaryStore";
-import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
+import { RESOURCE_LIST } from "@/game/resources";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
 import type { NotificationKind } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 const KIND_LABEL: Record<NotificationKind, string> = {
   building: "Construction terminée",
@@ -40,7 +41,7 @@ export function AwaySummaryModal() {
               <div className="flex flex-wrap gap-2">
                 {RESOURCE_LIST.filter((r) => (current.resourceGains[r.id as ResourceId] ?? 0) > 0).map((r) => (
                   <span key={r.id} className="rounded bg-space-800 px-2 py-1 text-sm text-mint-glow">
-                    {resourceEmoji(r.id)} +{formatNumber(current.resourceGains[r.id as ResourceId] ?? 0)}
+                    <ResourceIcon id={r.id} /> +{formatNumber(current.resourceGains[r.id as ResourceId] ?? 0)}
                   </span>
                 ))}
               </div>

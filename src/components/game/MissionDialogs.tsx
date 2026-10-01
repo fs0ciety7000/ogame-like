@@ -14,6 +14,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 function clockAt(seconds: number) {
   return new Date(Date.now() + seconds * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -106,7 +107,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
                   jusqu'à mi-parcours (le retour prend alors le temps déjà écoulé).
                 </p>
                 <p className={cost > energy ? "text-danger-glow" : undefined}>
-                  ⚡ Entretien payé au départ : <strong className="tabular-mono">{formatNumber(cost)}</strong> énergie (tu en as {formatNumber(Math.floor(energy))}).
+                  <ResourceIcon id="energy" /> Entretien payé au départ : <strong className="tabular-mono">{formatNumber(cost)}</strong> énergie (tu en as {formatNumber(Math.floor(energy))}).
                 </p>
               </div>
               <Button className="w-full" disabled={!hasShips || cost > energy} onClick={() => void send()}>
@@ -157,7 +158,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
         <DialogContent>
           <DialogTitle>Recycler les débris</DialogTitle>
           <p className="text-sm text-slate-400">
-            Champ de débris de <strong className="text-slate-200">{field.locationPseudo}</strong> : 🔩 {formatNumber(field.scrap)} · ⚡ {formatNumber(field.energy)}
+            Champ de débris de <strong className="text-slate-200">{field.locationPseudo}</strong> : <ResourceIcon id="scrap" /> {formatNumber(field.scrap)} · <ResourceIcon id="energy" /> {formatNumber(field.energy)}
           </p>
           {!player || submitting ? (
             <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
@@ -170,7 +171,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
               </div>
               <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p>
-                  ♻️ Capacité : <strong className="tabular-mono text-slate-200">{formatNumber(capacity)}</strong> ({formatNumber(perDrone)} par drone)
+                  <GameIcon name="recycle" /> Capacité : <strong className="tabular-mono text-slate-200">{formatNumber(capacity)}</strong> ({formatNumber(perDrone)} par drone)
                   {capacity >= total ? " : tout le champ." : ` sur ${formatNumber(total)}.`}
                 </p>
                 {flight !== null && (
@@ -282,7 +283,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
                   </p>
                 )}
                 <p className={cost > energy ? "text-danger-glow" : undefined}>
-                  ⚡ Entretien payé au départ : <strong className="tabular-mono">{formatNumber(cost)}</strong> énergie (tu en as {formatNumber(Math.floor(energy))}).
+                  <ResourceIcon id="energy" /> Entretien payé au départ : <strong className="tabular-mono">{formatNumber(cost)}</strong> énergie (tu en as {formatNumber(Math.floor(energy))}).
                 </p>
               </div>
               <Button className="w-full" disabled={!hasShips || cost > energy} onClick={() => void send()}>

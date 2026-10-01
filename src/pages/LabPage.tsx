@@ -10,9 +10,9 @@ import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { checkPrereqs, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES } from "@/game/technologies";
 import { cn, formatDuration } from "@/lib/utils";
-import { resourceEmoji } from "@/game/resources";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 export function LabPage() {
   useNowTicker();
@@ -123,7 +123,7 @@ export function LabPage() {
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(getTechCost(selected, currentLevel + 1)).map(([res, val]) => (
                     <span key={res} className="rounded bg-space-800 px-2 py-1 text-xs text-slate-300">
-                      {resourceEmoji(res)} {val}
+                      <ResourceIcon id={res} /> {val}
                     </span>
                   ))}
                 </div>

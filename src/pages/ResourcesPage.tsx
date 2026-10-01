@@ -16,6 +16,7 @@ import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
+import { ResourceIcon } from "@/components/ui/game-icon";
 
 export function ResourcesPage() {
   const player = usePlayerStore((s) => s.player);
@@ -68,8 +69,8 @@ export function ResourcesPage() {
                 style={{ background: res.rarity === "rare" ? "var(--color-gold-glow)" : "var(--color-cyan-glow)" }}
               />
               <div className="relative flex items-center gap-3">
-                <span className="grid h-11 w-10 shrink-0 place-items-center bg-gradient-to-b from-cyan-glow/25 to-cyan-glow/5 text-xl [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]">
-                  {res.emoji}
+                <span className="grid h-11 w-10 shrink-0 place-items-center bg-gradient-to-b from-cyan-glow/25 to-cyan-glow/5 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]">
+                  <ResourceIcon id={res.id} className="h-8 w-8" />
                 </span>
                 <div className="min-w-0">
                   <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
@@ -154,7 +155,7 @@ export function ResourcesPage() {
           <div className="flex items-center justify-between border-l-2 border-cyan-glow bg-cyan-glow/[0.06] px-4 py-3 text-sm">
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tu recevras</span>
             <span className="hud-title text-lg text-cyan-glow">
-              {formatNumber(preview)} {buyRes.emoji} {buyRes.name}
+              {formatNumber(preview)} <ResourceIcon id={buyRes.id} /> {buyRes.name}
             </span>
           </div>
 

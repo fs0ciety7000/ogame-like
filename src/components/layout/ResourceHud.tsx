@@ -12,6 +12,7 @@ import { HostileFleetAlert } from "@/components/game/FleetsPanel";
 import { EventBadge } from "@/components/game/EventBanner";
 import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function ResourceHud() {
   const player = usePlayerStore((s) => s.player);
@@ -49,7 +50,7 @@ export function ResourceHud() {
                   full ? "border-ember-glow/60" : "border-cyan-glow/15",
                 )}
               >
-                <span className="text-lg leading-none">{res.emoji}</span>
+                <ResourceIcon id={res.id} className="h-8 w-8" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-[15px] font-semibold text-white" />
@@ -94,7 +95,7 @@ export function ResourceHud() {
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="animate-pulse-alert border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-danger-glow">
-              ⚡ Panne d'énergie
+              <GameIcon name="energy" /> Panne d'énergie
             </span>
           </TooltipTrigger>
           <TooltipContent>
@@ -116,7 +117,7 @@ export function ResourceHud() {
               transition={{ type: "spring", stiffness: 380, damping: 14 }}
               className="flex items-center gap-1.5 border border-gold-glow/15 bg-gold-glow/[0.04] px-2 py-1 text-xs"
             >
-              <span className="text-sm leading-none">{res.emoji}</span>
+              <ResourceIcon id={res.id} className="h-5 w-5" />
               <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-200" />
             </motion.div>
           </TooltipTrigger>

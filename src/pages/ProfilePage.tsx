@@ -17,6 +17,7 @@ import { ACHIEVEMENTS } from "@/game/achievements";
 import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
+import { GameIcon } from "@/components/ui/game-icon";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -199,7 +200,7 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
   if (titles.length === 0) {
     return (
       <Card className="p-4 text-sm text-slate-500">
-        🏆 Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
+        <GameIcon name="trophy" /> Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
       </Card>
     );
   }
@@ -231,7 +232,7 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
               t.label === active ? "border-gold-glow/70 bg-gold-glow/15 text-gold-glow" : "border-white/10 text-slate-300 hover:border-gold-glow/40",
             )}
           >
-            🏆 {t.label}
+            <GameIcon name="trophy" /> {t.label}
           </button>
         ))}
         <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>

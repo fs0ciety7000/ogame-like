@@ -28,9 +28,10 @@ import {
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
-import { resourceEmoji, RESOURCE_LIST } from "@/game/resources";
+import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -138,7 +139,7 @@ export function BuildingsPage() {
                               if (lvl > building.maxLevel) return null;
                               return (
                                 <p key={lvl} className="tabular-mono">
-                                  Niv. {lvl} — {resourceEmoji(productionResource)} {productionPerSecond(building.id, lvl)}/s
+                                  Niv. {lvl} — <ResourceIcon id={productionResource} /> {productionPerSecond(building.id, lvl)}/s
                                 </p>
                               );
                             })}
@@ -160,7 +161,7 @@ export function BuildingsPage() {
                     const nxt = level < building.maxLevel ? productionPerSecond(building.id, nextLevel) : null;
                     return (
                       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-l-2 border-mint-glow bg-mint-glow/[0.06] px-2.5 py-2 font-mono text-[13px]">
-                        <span>{resourceEmoji(productionResource)}</span>
+                        <ResourceIcon id={productionResource} className="h-5 w-5" />
                         <b className="text-mint-glow">{formatCompact(cur)}/s</b>
                         {nxt !== null && (
                           <>
@@ -176,17 +177,17 @@ export function BuildingsPage() {
                   })()}
                   {!isLocked && building.effect?.type === "storage" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
-                      📦 {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · 🛡️{" "}
+                      <GameIcon name="storage" /> {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · <GameIcon name="shield" />{" "}
                       {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage
                     </p>
                   )}
                   {!isLocked && building.effect?.type === "repair" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
-                      🔧 Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus
+                      <GameIcon name="repair" /> Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus
                     </p>
                   )}
                   {!isLocked && building.effect?.type === "hangar" && (
-                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">🛰️ {formatCompact(building.effect.perLevel * level)} places de hangar</p>
+                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300"><GameIcon name="fleet" /> {formatCompact(building.effect.perLevel * level)} places de hangar</p>
                   )}
 
                   <div className="mt-auto">
@@ -234,11 +235,11 @@ export function BuildingsPage() {
                             const lack = amount - (player.resources[res] ?? 0);
                             return (
                               <CostPill key={res} ok={lack <= 0} missing={lack > 0 ? `manque ${formatCompact(lack)}` : undefined}>
-                                {resourceEmoji(res)} {formatCompact(amount)}
+                                <ResourceIcon id={res} /> {formatCompact(amount)}
                               </CostPill>
                             );
                           })}
-                          <CostPill>⏱ {formatDuration(time)}</CostPill>
+                          <CostPill><GameIcon name="duration" /> {formatDuration(time)}</CostPill>
                         </div>
                         <Button variant="warn" className="w-full" disabled={pending === building.id} onClick={() => void handleUpgrade(building.id)}>
                           Améliorer → niv. {nextLevel}
