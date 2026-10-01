@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { Crown, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,27 +91,36 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
         </CardContent>
       </Card>
 
-      <Card className="divide-y divide-white/5">
+      <Card>
         <CardHeader>
           <CardTitle>Alliances existantes</CardTitle>
         </CardHeader>
         {alliances.length === 0 && (
-          <p className="p-4 text-sm text-slate-500">
-            Aucune alliance pour l'instant — sois le premier à en créer une !
-          </p>
+          <EmptyState icon="🚩" title="Aucune alliance">
+            Sois le premier à en créer une !
+          </EmptyState>
         )}
+        <div className="relative flex flex-col gap-2 px-3 pb-3">
         {alliances.map((a) => (
           <div
             key={a.id}
-            className="flex items-center justify-between gap-3 p-3"
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border border-cyan-glow/[0.12] bg-gradient-to-r from-white/[0.035] to-transparent px-3 py-2.5 transition-colors [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] hover:border-cyan-glow/35"
           >
-            <div>
-              <p className="text-sm font-medium text-slate-100">
-                [{a.tag}] {a.name}
-              </p>
-              <p className="text-xs text-slate-500">
-                {a.members.length} / {ALLIANCE_RULES.maxMembers} membres
-              </p>
+            <span className="hud-cut-sm grid h-10 min-w-12 place-items-center border border-gold-glow/35 bg-gold-glow/[0.08] px-1.5 font-mono text-xs font-bold tracking-[0.1em] text-gold-glow">
+              {a.tag}
+            </span>
+            <div className="min-w-0">
+              <p className="hud-title truncate text-[15px] normal-case tracking-[0.03em] text-white">{a.name}</p>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: ALLIANCE_RULES.maxMembers }, (_, i) => (
+                    <i key={i} className={i < a.members.length ? "h-1.5 w-3 bg-cyan-glow" : "h-1.5 w-3 bg-white/[0.08]"} />
+                  ))}
+                </div>
+                <span className="font-mono text-[10px] text-slate-500">
+                  {a.members.length}/{ALLIANCE_RULES.maxMembers}
+                </span>
+              </div>
             </div>
             <Button
               size="sm"
@@ -124,6 +134,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
             </Button>
           </div>
         ))}
+        </div>
       </Card>
     </div>
   );

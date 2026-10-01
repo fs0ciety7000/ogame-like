@@ -21,6 +21,9 @@ Cosmic Empires change de peau : une interface de poste de commandement, plus lis
 - **Bâtiments** : niveau en grand avec une barre à crans, production actuelle → suivante (et le gain en %), ressources manquantes signalées en rouge, bouton « Améliorer → niv. N ».
 - **Missions** : prérequis cochés ✓ ou barrés ✗ avec ce qui te manque, récompense en grand.
 - **Classement** : podium or/argent/bronze, emblème de rang, titre et XP sur chaque ligne.
+- **Ressources** : tuiles avec production par seconde et remplissage de l'entrepôt ; comptoir d'échange redessiné.
+- **Profil** : chiffres clés en grand (victoires, taux de réussite, temps de jeu) et niveaux en barres à crans (sur 20, et non plus sur 10).
+- **Alliances, Palmarès, Combats** : listes et classements au même style, états vides plus parlants.
 
 ## Trois thèmes au choix
 Dans **Réglages → Apparence** :

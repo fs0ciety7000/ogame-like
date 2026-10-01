@@ -117,3 +117,33 @@ export function HudMeter({ percent, className, tone }: { percent: number; classN
     </div>
   );
 }
+
+/** État vide : icône encadrée + message. */
+export function EmptyState({ icon, title, children, className }: { icon: ReactNode; title?: string; children?: ReactNode; className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-4 p-5", className)}>
+      <div className="hud-cut grid h-12 w-12 shrink-0 place-items-center border border-cyan-glow/25 bg-cyan-glow/[0.06] text-xl text-cyan-glow">{icon}</div>
+      <div>
+        {title && <p className="hud-title text-sm text-slate-200">{title}</p>}
+        {children && <p className="mt-0.5 text-sm text-slate-500">{children}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Tuile de chiffre clé : libellé, grande valeur, liseré coloré. */
+export function StatTile({ label, value, sub, tone = "var(--color-cyan-glow)", icon }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string; icon?: ReactNode }) {
+  return (
+    <div className="glass-panel relative overflow-hidden p-4">
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 12px ${tone}` }} />
+      <div className="relative flex items-start justify-between gap-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">{label}</p>
+        {icon && <span className="text-slate-500">{icon}</span>}
+      </div>
+      <p className="hud-title relative mt-1.5 text-3xl normal-case tabular-nums" style={{ color: tone }}>
+        {value}
+      </p>
+      {sub && <p className="relative mt-1 text-xs text-slate-500">{sub}</p>}
+    </div>
+  );
+}

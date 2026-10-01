@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
 import { Crown, Medal, Timer, Trophy, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -97,16 +98,24 @@ export function HallOfFamePage() {
         ) : (
           <ol className="space-y-1 text-sm">
             {live.map((p, i) => (
-              <li key={p.uid} className="flex items-center gap-2">
-                <span className="tabular-mono w-6 text-xs text-slate-500">#{i + 1}</span>
-                <span className={p.uid === uid ? "text-gold-glow" : "text-slate-200"}>{p.pseudo}</span>
+              <li
+                key={p.uid}
+                className={cn(
+                  "flex items-center gap-3 border-l-2 px-3 py-1.5",
+                  p.uid === uid ? "border-cyan-glow bg-cyan-glow/[0.08]" : i < 3 ? "border-gold-glow/60 bg-white/[0.025]" : "border-white/10",
+                )}
+              >
+                <span className={cn("hud-title w-8 text-lg tabular-nums", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[#e19b6d]" : "text-slate-600")}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")}>{p.pseudo}</span>
                 <span className="tabular-mono ml-auto text-xs text-slate-400">{formatNumber(p.sxp)} XP</span>
               </li>
             ))}
           </ol>
         )}
         {liveAlliances.length > 0 && (
-          <div className="rounded-lg border border-cyan-glow/20 p-3 text-sm">
+          <div className="border border-cyan-glow/20 bg-cyan-glow/[0.03] p-3 text-sm">
             <p className="mb-1 flex items-center gap-1.5 text-xs text-cyan-glow">
               <Users className="h-3.5 w-3.5" /> Alliances (somme des {ALLIANCE_RULES.seasonTopMembers} meilleurs membres)
             </p>
@@ -126,7 +135,7 @@ export function HallOfFamePage() {
             </p>
           </div>
         )}
-        <div className="grid gap-2 rounded-lg bg-black/20 p-3 text-xs text-slate-400 sm:grid-cols-2">
+        <div className="grid gap-2 border-l-2 border-gold-glow/50 bg-gold-glow/[0.04] p-3 text-xs text-slate-400 sm:grid-cols-2">
           {[...SEASON_RULES.tiers]
             .sort((a, b) => a.maxRank - b.maxRank)
             .map((t, i, all) => {
@@ -148,7 +157,7 @@ export function HallOfFamePage() {
       {results === null ? (
         <p className="text-sm text-slate-500">Chargement…</p>
       ) : bySeason.length === 0 ? (
-        <Card className="p-4 text-sm text-slate-500">Aucune saison terminée pour l'instant : le premier palmarès sera publié au début du mois prochain.</Card>
+        <Card><EmptyState icon="🏆" title="Aucune saison terminée">Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
       ) : (
         bySeason.map(([seasonId, list]) => (
           <Card key={seasonId} className="flex flex-col gap-4 p-4">

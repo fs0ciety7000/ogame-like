@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { EmptyState } from "@/components/ui/hud";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Crosshair, Skull, Trophy } from "lucide-react";
@@ -206,7 +207,7 @@ export function ThreatsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Menaces" title="Menaces" description="Les factions qui rôdent aux confins de la galaxie. Une seule à la fois peut te viser." />
-      {factions.length === 0 && <Card className="p-4 text-sm text-slate-500">Aucune faction hostile active pour l'instant.</Card>}
+      {factions.length === 0 && <Card><EmptyState icon="☠️" title="Calme plat">Aucune faction hostile active pour l'instant.</EmptyState></Card>}
       {factions.map((f) => (
         <FactionCard key={f.id} faction={f} player={player} onLair={() => setLairFaction(f)} />
       ))}
