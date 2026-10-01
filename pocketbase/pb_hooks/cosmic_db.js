@@ -1131,4 +1131,68 @@ function adminMaintenance(e) {
   return e.json(200, response);
 }
 
-module.exports = { readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Administrateurs du jeu (v2.5) ---------- */
+
+function adminEntry(txApp, id, note) {
+  const player = findOrNull(txApp, "players", id);
+  const user = findOrNull(txApp, "users", id);
+  return {
+    id,
+    pseudo: player ? player.getString("pseudo") : "",
+    email: user ? user.getString("email") : "",
+    note: note || "",
+  };
+}
+
+/** GET /api/cosmic/admin/admins — liste des administrateurs. */
+function adminList(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const list = $app.findAllRecords("admins").map((r) => adminEntry($app, r.id, r.getString("note")));
+  return e.json(200, { admins: list });
+}
+
+/** POST /api/cosmic/admin/admins { action: "add" | "remove", uid, note? } */
+function adminManage(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const action = String(req.action || "");
+  if (action !== "add" && action !== "remove") throw new BadRequestError("Action inconnue.");
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    if (!findOrNull(txApp, "users", uid)) throw new NotFoundError("Compte introuvable.");
+    const existing = findOrNull(txApp, "admins", uid);
+    let label = "";
+    if (action === "add") {
+      if (existing) throw new BadRequestError("Ce joueur est déjà administrateur.");
+      const rec = new Record(txApp.findCollectionByNameOrId("admins"));
+      rec.set("id", uid);
+      rec.set("note", String(req.note || "").slice(0, 200));
+      txApp.save(rec);
+      label = "administrateur ajouté";
+    } else {
+      if (!existing) throw new BadRequestError("Ce joueur n'est pas administrateur.");
+      if (e.auth && e.auth.id === uid) throw new BadRequestError("Tu ne peux pas te retirer toi-même.");
+      if (txApp.findAllRecords("admins").length <= 1) throw new BadRequestError("Il faut garder au moins un administrateur.");
+      txApp.delete(existing);
+      label = "administrateur retiré";
+    }
+    const entry = adminEntry(txApp, uid, String(req.note || ""));
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: action === "add" ? "create" : "delete",
+      targetCollection: "admins",
+      recordId: uid,
+      recordLabel: `${entry.pseudo || entry.email || uid} : ${label}`,
+      changes: { [label]: entry.pseudo || entry.email || uid },
+      createdAtMs: Date.now(),
+    });
+    txApp.save(log);
+    response = { ok: true, admins: txApp.findAllRecords("admins").map((r) => adminEntry(txApp, r.id, r.getString("note"))) };
+  });
+  return e.json(200, response);
+}
+
+module.exports = { adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

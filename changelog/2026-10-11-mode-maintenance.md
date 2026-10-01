@@ -15,4 +15,5 @@ Les mises à jour se font désormais au calme, sans risquer de perdre une action
 ## Pour les administrateurs
 - **Console d'administration** redessinée : navigation par sections (pilotage, contenu, communauté, système), bandeau d'état (jeu ouvert ou non, joueurs, contenu personnalisé, version) et repère sur les sections modifiées.
 - Onglet **Maintenance** : message, version annoncée, durée (raccourcis ou heure précise), aperçu de la page, prolongation en un clic et fin de maintenance. Tout est consigné dans le journal.
+- Onglet **Administrateurs** : nommer un joueur administrateur (avec une note), ou retirer un administrateur. On ne peut pas se retirer soi-même, et il reste toujours au moins un administrateur.
 - Pendant une maintenance, un **bandeau** le rappelle en haut du jeu ; les administrateurs gardent l'accès complet.

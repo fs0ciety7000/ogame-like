@@ -13,6 +13,7 @@ import {
   Scale,
   ScrollText,
   ShieldAlert,
+  ShieldCheck,
   Skull,
   Users,
   Wrench,
@@ -32,6 +33,7 @@ import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
+import { AdminsPanel } from "@/pages/admin/AdminsPanel";
 import { AdminStatusStrip } from "@/pages/admin/AdminStatusStrip";
 import { useMaintenance } from "@/services/maintenanceService";
 import { useContentStore } from "@/services/contentService";
@@ -62,7 +64,13 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
     ],
   },
-  { label: "Communauté", items: [{ id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." }] },
+  {
+    label: "Communauté",
+    items: [
+      { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "admins", label: "Administrateurs", icon: ShieldCheck, hint: "Qui a accès à cette console." },
+    ],
+  },
   { label: "Système", items: [{ id: "tools", label: "Outils", icon: Wrench, hint: "Sauvegardes, hooks, ultimatums et remise à zéro." }] },
 ];
 
@@ -140,6 +148,9 @@ export function AdminPage() {
               <p className="truncate text-xs text-slate-500">{active.hint}</p>
             </div>
           )}
+        <TabsContent value="admins">
+          <AdminsPanel />
+        </TabsContent>
         <TabsContent value="maintenance">
           <MaintenancePanel />
         </TabsContent>

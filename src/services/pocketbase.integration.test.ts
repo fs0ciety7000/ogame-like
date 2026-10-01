@@ -737,6 +737,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await admin.collection("players").update(bId, { pirates: null });
   }, 30_000);
 
+  it("v2.5 admins: only admins manage them, never yourself", async () => {
+    // Connecté en B (joueur).
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 403 });
+    const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test" } });
+    try {
+      expect(added.admins.some((a: { id: string; note: string }) => a.id === bId && a.note === "test")).toBe(true);
+      // B est maintenant admin : il lit la liste mais ne peut pas se retirer lui-même.
+      expect((await pb.send("/api/cosmic/admin/admins", { method: "GET" })).admins.length).toBeGreaterThan(0);
+      await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } })).rejects.toMatchObject({ status: 400 });
+      await expect(admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } });
+    }
+    await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+  });
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

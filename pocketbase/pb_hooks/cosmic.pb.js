@@ -388,6 +388,10 @@ routerUse((e) => {
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
 routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
 
+/** GET /api/cosmic/admin/admins · POST { action: "add" | "remove", uid, note? } — administrateurs. */
+routerAdd("GET", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminList(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_db.js`).adminManage(e), $apis.requireAuth("users", "_superusers"));
+
 /* ---------- Journal des actions d'administration ---------- */
 
 // Chaque modification faite par un administrateur (page Administration ou
