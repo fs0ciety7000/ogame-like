@@ -364,7 +364,7 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
   });
   const queues = $app.findAllRecords("queues").map((r) => db.toPlain(r));
   const reports = $app
-    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 5000, 0, { since: now - 7 * 24 * 3600 * 1000 })
+    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
     .map((r) => db.toPlain(r));
 
   return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
@@ -394,6 +394,19 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
   }
 });
 
+// Sauvegardes : PocketBase en crée une chaque nuit (setup.mjs) ; on vérifie
+// chaque matin qu'elle existe bien, sinon l'équipe est prévenue.
+cronAdd("cosmic_backup_check", "20 5 * * *", () => {
+  try {
+    if (require(`${__hooks}/cosmic_db.js`).checkBackups(Date.now())) console.log("[cosmic] alerte : sauvegarde manquante");
+  } catch (err) {
+    console.log(`[cosmic] vérification des sauvegardes : ${err}`);
+  }
+});
+
+/** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
+routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
+
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
 routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
 
@@ -407,6 +420,7 @@ routerAdd("POST", "/api/cosmic/admin/admins", (e) => require(`${__hooks}/cosmic_
 onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).reportCreateRequest(e), "reports");
 
 /** POST /api/cosmic/reports/comment { id, text } · /seen { id } — joueur. */
+routerAdd("POST", "/api/cosmic/reports/error", (e) => require(`${__hooks}/cosmic_db.js`).reportClientError(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/comment", (e) => require(`${__hooks}/cosmic_db.js`).reportComment(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/seen", (e) => require(`${__hooks}/cosmic_db.js`).reportSeen(e), $apis.requireAuth("users"));
 /** Administration : mise à jour, options, issue GitHub. */

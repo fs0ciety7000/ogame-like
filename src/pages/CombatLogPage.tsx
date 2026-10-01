@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
 import { Eye, Sword, Shield, ShieldAlert } from "lucide-react";
@@ -131,6 +132,11 @@ export function CombatLogPage() {
               {mine && openSpy === r.id && (
                 <div className="mt-3">
                   <SpyReportView report={r} />
+                  {(r.tier ?? 0) >= 2 && (
+                    <Link to={`/game/simulateur?mode=player&rapport=${r.id}`} className="mt-2 inline-block font-mono text-[11px] uppercase tracking-[0.15em] text-cyan-glow hover:underline">
+                      Simuler une attaque →
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

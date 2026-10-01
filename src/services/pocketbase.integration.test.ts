@@ -302,6 +302,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const [rep] = await pb.collection("battle_reports").getFullList({ filter: `attackerUid="${aId}"` });
     expect(rep.defenderXpDelta).toBeLessThan(0);
     expect(rep.defenderApplied).toBe(true);
+    expect(Object.keys(rep.attackerFleet ?? {}).length).toBeGreaterThan(0);
     expect(bAfter.xp).toBe(Math.max(0, bBefore.xp + rep.defenderXpDelta));
 
     // Le défenseur voit le rapport une seule fois ; rien n'est réappliqué.
@@ -803,6 +804,41 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("reports").delete(created.id);
       for (const n of await admin.collection("notifications").getFullList({ filter: `player_id = "${bId}" && kind = "report"` })) await admin.collection("notifications").delete(n.id);
     }
+  });
+
+  it("v2.8 tools: client errors grouped into staff-only reports, backup status, balance stats", async () => {
+    // Connecté en B : deux occurrences de la même erreur (lignes différentes) → un seul signalement.
+    const err = { message: "TypeError: test v2.8 is undefined", stack: "TypeError\n    at Foo (http://x/assets/index-AAAA1111.js:1:2)", page: "/game", version: "test" };
+    await pb.send("/api/cosmic/reports/error", { method: "POST", body: err });
+    await pb.send("/api/cosmic/reports/error", { method: "POST", body: { ...err, stack: "TypeError\n    at Foo (http://x/assets/index-BBBB2222.js:9:9)" } });
+    const ignored = await pb.send("/api/cosmic/reports/error", { method: "POST", body: { message: "ResizeObserver loop limit exceeded" } });
+    expect(ignored.ignored).toBe(true);
+    const autos = await admin.collection("reports").getFullList({ filter: `reporterId = "system" && title ~ "test v2.8"` });
+    try {
+      expect(autos).toHaveLength(1);
+      expect(autos[0].occurrences).toBe(2);
+      expect(autos[0].category).toBe("bug");
+      expect(autos[0].affected.length).toBe(1);
+      // Invisible pour le joueur.
+      await expect(pb.collection("reports").getOne(autos[0].id)).rejects.toBeTruthy();
+      // Clos puis reproduit : rouvert.
+      await admin.send("/api/cosmic/admin/reports", { method: "POST", body: { id: autos[0].id, status: "resolved" } });
+      await pb.send("/api/cosmic/reports/error", { method: "POST", body: err });
+      const again = await admin.collection("reports").getOne(autos[0].id);
+      expect(again.status).toBe("new");
+      expect(again.occurrences).toBe(3);
+    } finally {
+      for (const r of autos) await admin.collection("reports").delete(r.id);
+    }
+    // Sauvegardes : état réservé à l'équipe.
+    const backups = await admin.send("/api/cosmic/admin/backups", { method: "GET" });
+    expect(typeof backups.count).toBe("number");
+    expect(backups.cron).toBeTruthy();
+    await expect(pb.send("/api/cosmic/admin/backups", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    // Statistiques d'équilibrage.
+    const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
+    expect(stats.balance.activity.active30d).toBeGreaterThan(0);
+    expect(Array.isArray(stats.balance.factions)).toBe(true);
   });
 
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {

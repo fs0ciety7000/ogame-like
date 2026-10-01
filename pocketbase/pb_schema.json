@@ -430,6 +430,12 @@
         "type": "json",
         "required": false,
         "maxSize": 200000
+      },
+      {
+        "name": "attackerFleet",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [
@@ -1359,11 +1365,30 @@
         "name": "reporterSeenAtMs",
         "type": "number",
         "required": false
+      },
+      {
+        "name": "autoKey",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "occurrences",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "affected",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [
       "CREATE INDEX idx_reports_reporter ON reports (reporterId)",
-      "CREATE INDEX idx_reports_status ON reports (status)"
+      "CREATE INDEX idx_reports_status ON reports (status)",
+      "CREATE INDEX idx_reports_autokey ON reports (autoKey)"
     ]
   }
 ]

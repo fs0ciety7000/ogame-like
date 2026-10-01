@@ -776,6 +776,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     defenderApplied: true,
     attackerXpDelta: combat.outcome === "attacker_win" ? faction.lair.xp : 0,
     defenderXpDelta: 0,
+    attackerFleet: fleet,
   };
   return { player, queues: flushed.queues, combat, survivors, report, notifications };
 }

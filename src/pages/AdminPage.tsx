@@ -4,6 +4,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import {
   Award,
   BarChart3,
+  Calculator,
   Building2,
   Compass,
   Construction,
@@ -32,6 +33,7 @@ import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { newRank, RankForm } from "@/pages/admin/RankForm";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
+import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
 import { AdminsPanel } from "@/pages/admin/AdminsPanel";
@@ -51,6 +53,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     items: [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
+      { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
       { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
     ],
   },
@@ -164,6 +167,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="maintenance">
           <MaintenancePanel />
+        </TabsContent>
+        <TabsContent value="simulator">
+          <SimulatorPage />
         </TabsContent>
         <TabsContent value="logs">
           <LogsPanel />

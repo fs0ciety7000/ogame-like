@@ -111,7 +111,10 @@ export function ReportsPanel() {
                 </span>
               </span>
               <span className="truncate text-sm font-semibold text-slate-100">{r.title}</span>
-              <span className="text-xs text-slate-500">{r.reporterPseudo || r.reporterId}</span>
+              <span className="text-xs text-slate-500">
+                {r.reporterPseudo || r.reporterId}
+                {r.autoKey && <span className="ml-2 font-mono text-ember-glow">×{r.occurrences ?? 1}</span>}
+              </span>
             </button>
           ))}
         </Card>
@@ -158,6 +161,12 @@ function ReportDetail({ report, github, onDeleted }: { report: GameReport; githu
           par <strong className="text-slate-200">{report.reporterPseudo || report.reporterId}</strong>
           <StaffBadge uid={report.reporterId} compact />
         </p>
+        {report.autoKey && (
+          <p className="mt-2 text-xs text-slate-400">
+            Erreur automatique · <strong className="text-ember-glow">{report.occurrences ?? 1} occurrence{(report.occurrences ?? 1) > 1 ? "s" : ""}</strong>
+            {(report.affected ?? []).length > 0 && <> · joueurs touchés : {(report.affected ?? []).join(", ")}</>}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -177,7 +186,7 @@ function ReportDetail({ report, github, onDeleted }: { report: GameReport; githu
         ))}
       </div>
 
-      <p className="whitespace-pre-line border-l-2 border-white/10 pl-3 text-sm text-slate-200">{report.description}</p>
+      <p className="whitespace-pre-line break-words border-l-2 border-white/10 pl-3 text-sm text-slate-200">{report.description}</p>
       {shot && (
         <a href={shot} target="_blank" rel="noreferrer" className="self-start">
           <img src={shot} alt="Capture du joueur" className="max-h-72 border border-white/10" />
