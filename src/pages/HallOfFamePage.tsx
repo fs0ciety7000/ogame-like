@@ -12,6 +12,8 @@ import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import type { Alliance, SeasonResult } from "@/types/game";
 import { subscribeAlliances } from "@/services/allianceService";
 import { ALLIANCE_RULES, allianceStandings } from "@/game/alliances";
+import { warSeasonBonuses } from "@/game/wars";
+import { pb } from "@/lib/pocketbase";
 import { StaffBadge } from "@/components/ui/staff-badge";
 
 const PODIUM_STYLE = [
@@ -66,6 +68,14 @@ export function HallOfFamePage() {
   useEffect(() => subscribeLeaderboard(setPlayers), []);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
   useEffect(() => subscribeAlliances(setAlliances), []);
+  // v3.2 : bonus des guerres gagnées pendant la saison en cours.
+  const [warBonuses, setWarBonuses] = useState<Record<string, number>>({});
+  useEffect(() => {
+    pb.collection("alliance_wars")
+      .getFullList<{ winnerId: string; seasonId: string }>({ filter: pb.filter("seasonId = {:s} && winnerId != ''", { s: season }), fields: "winnerId,seasonId" })
+      .then((wars) => setWarBonuses(warSeasonBonuses(wars, season)))
+      .catch(() => setWarBonuses({}));
+  }, [season]);
 
   const bySeason = useMemo(() => {
     const map = new Map<string, SeasonResult[]>();
@@ -74,7 +84,10 @@ export function HallOfFamePage() {
   }, [results]);
 
   const allianceWinners = new Map((results ?? []).filter((r) => r.kind === "alliance" && r.rank === 1).map((r) => [r.seasonId, r]));
-  const liveAlliances = allianceStandings(players.map((p) => ({ allianceId: p.allianceId, seasonXp: p.seasonId === season ? p.seasonXp : 0 }))).slice(0, 3);
+  const liveAlliances = allianceStandings(
+    players.map((p) => ({ allianceId: p.allianceId, seasonXp: p.seasonId === season ? p.seasonXp : 0 })),
+    warBonuses,
+  ).slice(0, 3);
   const live = players
     .map((p) => ({ ...p, sxp: p.seasonId === season ? p.seasonXp : 0 }))
     .filter((p) => p.sxp > 0)

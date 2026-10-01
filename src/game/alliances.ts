@@ -263,7 +263,7 @@ export interface AllianceStanding {
 }
 
 /** Classement des alliances : somme des N meilleures XP de saison des membres. */
-export function allianceStandings(members: { allianceId?: string | null; seasonXp: number }[]): AllianceStanding[] {
+export function allianceStandings(members: { allianceId?: string | null; seasonXp: number }[], bonuses: Record<string, number> = {}): AllianceStanding[] {
   const byAlliance = new Map<string, number[]>();
   for (const m of members) {
     if (!m.allianceId || !(m.seasonXp > 0)) continue;
@@ -272,10 +272,13 @@ export function allianceStandings(members: { allianceId?: string | null; seasonX
   return [...byAlliance.entries()]
     .map(([allianceId, xps]) => ({
       allianceId,
-      score: xps
-        .sort((a, b) => b - a)
-        .slice(0, ALLIANCE_RULES.seasonTopMembers)
-        .reduce((a, b) => a + b, 0),
+      // v3.2 : bonus des guerres gagnées pendant la saison.
+      score: Math.round(
+        xps
+          .sort((a, b) => b - a)
+          .slice(0, ALLIANCE_RULES.seasonTopMembers)
+          .reduce((a, b) => a + b, 0) * (1 + (bonuses[allianceId] ?? 0)),
+      ),
     }))
     .sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1))
     .map((s, i) => ({ ...s, rank: i + 1 }));

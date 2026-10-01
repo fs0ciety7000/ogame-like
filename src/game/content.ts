@@ -14,6 +14,7 @@ import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { LEVIATHAN_RULES } from "@/game/leviathan";
+import { WAR_RULES } from "@/game/wars";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
@@ -45,6 +46,7 @@ export interface GameRules {
   market: typeof MARKET_RULES;
   expeditions: typeof EXPEDITION_RULES;
   leviathan: typeof LEVIATHAN_RULES;
+  wars: typeof WAR_RULES;
 }
 
 export interface GameContent {
@@ -75,6 +77,7 @@ const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
 const DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 const DEFAULT_LEVIATHAN_RULES = { ...LEVIATHAN_RULES };
+const DEFAULT_WAR_RULES = { ...WAR_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
@@ -86,7 +89,7 @@ export function defaultGameContent(): GameContent {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
 
@@ -127,6 +130,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         weights: { ...defaults.rules.expeditions.weights, ...(overrides.rules?.expeditions?.weights ?? {}) },
       },
       leviathan: { ...defaults.rules.leviathan, ...(overrides.rules?.leviathan ?? {}) },
+      wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
     },
   };
   setBuildings(content.buildings);
@@ -152,6 +156,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(MARKET_RULES, content.rules.market);
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
+  Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
 }

@@ -65,7 +65,9 @@ __export(hooksEntry_exports, {
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   SEASON_RULES: () => SEASON_RULES,
   STAFF_KEY: () => STAFF_KEY,
+  WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
+  activeWarBetween: () => activeWarBetween,
   addOccurrence: () => addOccurrence,
   addReportComment: () => addReportComment,
   allianceStandings: () => allianceStandings,
@@ -83,8 +85,11 @@ __export(hooksEntry_exports, {
   collectDebris: () => collectDebris,
   completeFleetReturn: () => completeFleetReturn,
   computeGameStats: () => computeGameStats,
+  concludeWar: () => concludeWar,
   createOffer: () => createOffer,
+  currentSeasonId: () => currentSeasonId,
   debrisTotal: () => debrisTotal,
+  declareWar: () => declareWar,
   defaultQueues: () => defaultQueues,
   describeAmount: () => describeAmount,
   describeGain: () => describeGain,
@@ -136,12 +141,16 @@ __export(hooksEntry_exports, {
   rollExpeditionEvent: () => rollExpeditionEvent,
   sanitizeClientError: () => sanitizeClientError,
   sanitizeNewReport: () => sanitizeNewReport,
+  scoreBattle: () => scoreBattle,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
   spawnLeviathan: () => spawnLeviathan,
   stationGarrison: () => stationGarrison,
-  utcDayStart: () => utcDayStart
+  surrender: () => surrender,
+  utcDayStart: () => utcDayStart,
+  warSeasonBonuses: () => warSeasonBonuses,
+  warTreasuryReward: () => warTreasuryReward
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -1357,17 +1366,23 @@ function completeAllianceResearch(alliance, now) {
     completed: { id: active.id, level: active.level }
   };
 }
-function allianceStandings(members) {
+function allianceStandings(members, bonuses = {}) {
   var _a;
   const byAlliance = /* @__PURE__ */ new Map();
   for (const m of members) {
     if (!m.allianceId || !(m.seasonXp > 0)) continue;
     byAlliance.set(m.allianceId, [...(_a = byAlliance.get(m.allianceId)) != null ? _a : [], m.seasonXp]);
   }
-  return [...byAlliance.entries()].map(([allianceId, xps]) => ({
-    allianceId,
-    score: xps.sort((a, b) => b - a).slice(0, ALLIANCE_RULES.seasonTopMembers).reduce((a, b) => a + b, 0)
-  })).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
+  return [...byAlliance.entries()].map(([allianceId, xps]) => {
+    var _a2;
+    return {
+      allianceId,
+      // v3.2 : bonus des guerres gagnées pendant la saison.
+      score: Math.round(
+        xps.sort((a, b) => b - a).slice(0, ALLIANCE_RULES.seasonTopMembers).reduce((a, b) => a + b, 0) * (1 + ((_a2 = bonuses[allianceId]) != null ? _a2 : 0))
+      )
+    };
+  }).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
 }
 function note(title, message, now) {
   return { kind: "alliance", title, message, createdAtMs: now, read: false };
@@ -3108,6 +3123,7 @@ function formatWait(ms) {
   return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
 }
 function checkAttackAllowed(ctx) {
+  var _a;
   const { now } = ctx;
   if (ctx.attackerUid === ctx.defenderUid) {
     return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
@@ -3135,7 +3151,7 @@ function checkAttackAllowed(ctx) {
     }
   }
   if (ctx.lastAttackOnTargetMs !== null) {
-    const until = ctx.lastAttackOnTargetMs + PVP_RULES.attackCooldownMs;
+    const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
     if (now < until) {
       return {
         allowed: false,
@@ -4345,6 +4361,141 @@ function finishExpedition(player, fleet, now) {
   };
 }
 
+// src/game/wars.ts
+var WAR_RULES = {
+  minMembers: 3,
+  costScrap: 5e6,
+  costEnergy: 5e6,
+  prepHours: 12,
+  durationHours: 72,
+  /** Délai avant de refaire la guerre au même adversaire (jours après la fin). */
+  pairCooldownDays: 7,
+  /** Délai entre deux attaques d'un joueur sur une même cible, pendant la guerre (h). */
+  attackCooldownHours: 1,
+  pointsAttackWin: 3,
+  pointsDefenseWin: 2,
+  /** 1 point par tranche de butin. */
+  lootPerPoint: 1e7,
+  rewardScrap: 2e7,
+  rewardEnergy: 2e7,
+  /** Bonus sur le score de saison d'alliance du vainqueur (0,1 = +10 %). */
+  seasonBonusPct: 0.1,
+  title: "Vainqueurs",
+  titleDays: 7
+};
+var HOUR3 = 36e5;
+function warStatusAt(war, now) {
+  if (war.status === "ended") return "ended";
+  if (now < war.startMs) return "preparing";
+  if (now < war.endMs) return "active";
+  return "ended";
+}
+function isRunning(war, now) {
+  return warStatusAt(war, now) !== "ended";
+}
+function activeWarBetween(wars, a, b, now) {
+  var _a;
+  if (!a || !b || a === b) return null;
+  return (_a = wars.find((w) => warStatusAt(w, now) === "active" && (w.attackerId === a && w.defenderId === b || w.attackerId === b && w.defenderId === a))) != null ? _a : null;
+}
+function sideOf(war, allianceId) {
+  return war.attackerId === allianceId ? "attacker" : war.defenderId === allianceId ? "defender" : null;
+}
+function declareWar(input) {
+  var _a, _b, _c, _d, _e, _f;
+  const { own, target, now } = input;
+  const role = allianceRole(own, input.actorUid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent d\xE9clarer une guerre.");
+  if (own.id === target.id) throw new GameActionError("Tu ne peux pas d\xE9clarer la guerre \xE0 ta propre alliance.");
+  if (((_a = target.members) != null ? _a : []).length < WAR_RULES.minMembers) throw new GameActionError(`Cette alliance compte moins de ${WAR_RULES.minMembers} membres.`);
+  if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
+  if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === target.id || w.defenderId === target.id))) throw new GameActionError(`[${target.tag}] est d\xE9j\xE0 en guerre.`);
+  const lastPair = input.wars.filter((w) => w.attackerId === own.id && w.defenderId === target.id || w.attackerId === target.id && w.defenderId === own.id).reduce((a, w) => Math.max(a, w.endedAtMs || w.endMs), 0);
+  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR3 - now;
+  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR3))} jour(s).`);
+  const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
+  if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
+    throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
+  }
+  treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
+  treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
+  const startMs = now + WAR_RULES.prepHours * HOUR3;
+  return {
+    own: __spreadProps(__spreadValues({}, own), { treasury }),
+    war: {
+      attackerId: own.id,
+      attackerName: own.name,
+      attackerTag: own.tag,
+      defenderId: target.id,
+      defenderName: target.name,
+      defenderTag: target.tag,
+      declaredById: input.actorUid,
+      declaredByPseudo: input.actorPseudo,
+      declaredAtMs: now,
+      startMs,
+      endMs: startMs + WAR_RULES.durationHours * HOUR3,
+      status: "preparing",
+      scoreAttacker: 0,
+      scoreDefender: 0,
+      log: [{ atMs: now, text: `${input.actorPseudo} d\xE9clare la guerre \xE0 [${target.tag}] ${target.name}.` }],
+      winnerId: "",
+      surrenderedBy: "",
+      endedAtMs: 0,
+      rewarded: false,
+      seasonId: "",
+      titleUntilMs: 0
+    }
+  };
+}
+function scoreBattle(war, attackerAllianceId, attackerPseudo, defenderPseudo, outcome, lootTotal, now) {
+  const side = sideOf(war, attackerAllianceId);
+  if (!side || warStatusAt(war, now) !== "active") return war;
+  const other = side === "attacker" ? "defender" : "attacker";
+  let points = 0;
+  let to = side;
+  let text = "";
+  if (outcome === "attacker_win") {
+    points = WAR_RULES.pointsAttackWin + Math.floor(Math.max(0, lootTotal) / WAR_RULES.lootPerPoint);
+    text = `${attackerPseudo} l'emporte contre ${defenderPseudo} (+${points}).`;
+  } else if (outcome === "defender_win") {
+    points = WAR_RULES.pointsDefenseWin;
+    to = other;
+    text = `${defenderPseudo} repousse ${attackerPseudo} (+${points}).`;
+  } else return war;
+  const next = __spreadProps(__spreadValues({}, war), { log: [...war.log, { atMs: now, text }].slice(-100) });
+  if (to === "attacker") next.scoreAttacker += points;
+  else next.scoreDefender += points;
+  return next;
+}
+function surrender(war, alliance, actorUid, actorPseudo, now) {
+  const side = sideOf(war, alliance.id);
+  if (!side) throw new GameActionError("Ton alliance ne participe pas \xE0 cette guerre.");
+  if (!isRunning(war, now)) throw new GameActionError("Cette guerre est termin\xE9e.");
+  const role = allianceRole(alliance, actorUid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent se rendre.");
+  const winnerId = side === "attacker" ? war.defenderId : war.attackerId;
+  return __spreadProps(__spreadValues({}, war), { status: "ended", winnerId, surrenderedBy: alliance.id, endedAtMs: now, log: [...war.log, { atMs: now, text: `${actorPseudo} rend les armes au nom de [${alliance.tag}].` }] });
+}
+function concludeWar(war, now) {
+  if (war.status === "ended" || now < war.endMs) return war;
+  const winnerId = war.scoreAttacker > war.scoreDefender ? war.attackerId : war.scoreDefender > war.scoreAttacker ? war.defenderId : "";
+  const text = winnerId ? `Fin de la guerre : victoire de [${winnerId === war.attackerId ? war.attackerTag : war.defenderTag}] (${war.scoreAttacker} \u2013 ${war.scoreDefender}).` : `Fin de la guerre : \xE9galit\xE9 (${war.scoreAttacker} \u2013 ${war.scoreDefender}).`;
+  return __spreadProps(__spreadValues({}, war), { status: "ended", winnerId, endedAtMs: now, log: [...war.log, { atMs: now, text }] });
+}
+function warTreasuryReward(alliance) {
+  var _a, _b, _c;
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  treasury.scrap = ((_b = treasury.scrap) != null ? _b : 0) + WAR_RULES.rewardScrap;
+  treasury.energy = ((_c = treasury.energy) != null ? _c : 0) + WAR_RULES.rewardEnergy;
+  return __spreadProps(__spreadValues({}, alliance), { treasury });
+}
+function warSeasonBonuses(wars, seasonId) {
+  var _a;
+  const out = {};
+  for (const w of wars) if (w.winnerId && w.seasonId === seasonId) out[w.winnerId] = ((_a = out[w.winnerId]) != null ? _a : 0) + WAR_RULES.seasonBonusPct;
+  return out;
+}
+
 // src/game/leviathan.ts
 var LEVIATHAN_KEY = "leviathan";
 var LEVIATHAN_RULES = {
@@ -4367,7 +4518,7 @@ var LEVIATHAN_RULES = {
   title: "Fl\xE9au du L\xE9viathan",
   titleDays: 7
 };
-var HOUR3 = 36e5;
+var HOUR4 = 36e5;
 function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
@@ -4389,7 +4540,7 @@ function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
   const w = weekendWindow(now);
   if (!w.firstOfMonth) return null;
-  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR3;
+  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR4;
   if (now < w.startMs || now >= endMs) return null;
   return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
 }
@@ -4412,7 +4563,7 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   var _a, _b;
   if (!state || !isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR3 - now : 0;
+  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR4 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
@@ -4701,7 +4852,8 @@ function launchFleet(input) {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
-    lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null
+    lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null,
+    attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 36e5 : void 0
   });
   if (!check.allowed) throw new GameActionError((_e = check.message) != null ? _e : "Attaque impossible.");
   const units = {};
@@ -4810,7 +4962,7 @@ function performLaunch(req) {
   const flushed = flushState(__spreadProps(__spreadValues({}, req.owner), { buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }), req.ownerQueues, now);
   const owner = flushed.player;
   let out;
-  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target, fleet: req.fleet, lastAttackOnTargetMs: (_b = req.lastAttackOnTargetMs) != null ? _b : null });
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target, fleet: req.fleet, lastAttackOnTargetMs: (_b = req.lastAttackOnTargetMs) != null ? _b : null, atWar: req.atWar });
   else if (mission === "spy") out = launchSpy(owner, target, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, (_c = req.debris) != null ? _c : null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, (_d = req.patrolMinutes) != null ? _d : 0, now);
@@ -5168,6 +5320,7 @@ var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
 var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
+var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
 function defaultGameContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
@@ -5177,12 +5330,12 @@ function defaultGameContent() {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N;
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
@@ -5208,7 +5361,8 @@ function applyGameContent(overrides) {
       expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_G = (_F = overrides.rules) == null ? void 0 : _F.expeditions) != null ? _G : {}), {
         weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_J = (_I = (_H = overrides.rules) == null ? void 0 : _H.expeditions) == null ? void 0 : _I.weights) != null ? _J : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_L = (_K = overrides.rules) == null ? void 0 : _K.leviathan) != null ? _L : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_L = (_K = overrides.rules) == null ? void 0 : _K.leviathan) != null ? _L : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_N = (_M = overrides.rules) == null ? void 0 : _M.wars) != null ? _N : {})
     }
   };
   setBuildings(content.buildings);
@@ -5233,6 +5387,7 @@ function applyGameContent(overrides) {
   Object.assign(MARKET_RULES, content.rules.market);
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
+  Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
 }

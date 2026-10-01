@@ -1,5 +1,6 @@
 import { bumpStat } from "@/game/stats";
 import { launchExpedition } from "@/game/expeditions";
+import { WAR_RULES } from "@/game/wars";
 import { LEVIATHAN_RULES } from "@/game/leviathan";
 import { galaxyCoords } from "@/game/galaxy";
 import { GameActionError } from "@/game/errors";
@@ -139,6 +140,7 @@ export interface LaunchInput {
   fleet: Record<string, unknown>;
   /** Dernier départ (ou combat) de cet attaquant vers cette cible. */
   lastAttackOnTargetMs: number | null;
+  atWar?: boolean;
 }
 
 export interface LaunchOutput {
@@ -162,6 +164,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
+    attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
   });
   if (!check.allowed) throw new GameActionError(check.message ?? "Attaque impossible.");
 
@@ -295,6 +298,8 @@ export interface LaunchRequest {
   garrisonsAtHost?: number;
   /** Repaire visé (lair_<faction>). */
   lairTarget?: string;
+  /** v3.2 : les deux alliances sont en guerre (délai d'attaque réduit). */
+  atWar?: boolean;
   /** v3.1 : expédition (durée, expéditions en cours et du jour) et formation. */
   expeditionHours?: number;
   expeditionsActive?: number;
@@ -312,7 +317,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
   const owner = flushed.player;
   let out: LaunchOutput;
-  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null });
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
   else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
