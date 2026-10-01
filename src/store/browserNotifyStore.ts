@@ -63,7 +63,7 @@ export function showBrowserNotification(title: string, body: string, tag?: strin
   if (!enabled || !supported() || Notification.permission !== "granted") return;
   if (typeof document !== "undefined" && !document.hidden) return;
   try {
-    const n = new Notification(title, { body, tag, icon: "/assets/logo/logo.webp" });
+    const n = new Notification(title, { body, tag, icon: "/assets/logo/favicon-64.png" });
     n.onclick = () => {
       window.focus();
       n.close();

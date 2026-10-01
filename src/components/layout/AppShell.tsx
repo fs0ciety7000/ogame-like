@@ -1,8 +1,10 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { assetUrl } from "@/lib/assets";
 import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
@@ -12,9 +14,6 @@ import { NotificationBell } from "@/components/layout/NotificationBell";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { BootSequence } from "@/components/layout/BootSequence";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { LiveClock } from "@/components/layout/LiveClock";
-import { Button } from "@/components/ui/button";
-import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
@@ -33,6 +32,23 @@ import { toggleCommandPalette } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
 import { playClick } from "@/lib/sfx";
 
+/** Bouton de la barre d'outils du haut. */
+function HeaderButton({ title, onClick, asLink, danger, children }: { title: string; onClick?: () => void; asLink?: string; danger?: boolean; children: ReactNode }) {
+  const cls = cn(
+    "grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
+    danger && "hover:bg-danger-glow/10 hover:text-danger-glow",
+  );
+  return asLink ? (
+    <Link to={asLink} title={title} className={cls}>
+      {children}
+    </Link>
+  ) : (
+    <button type="button" title={title} onClick={onClick} className={cls}>
+      {children}
+    </button>
+  );
+}
+
 function MusicToggle() {
   const ref = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -40,9 +56,7 @@ function MusicToggle() {
   return (
     <>
       <audio ref={ref} src="/assets/audio/theme.mp3" loop preload="none" />
-      <Button
-        variant="ghost"
-        size="icon"
+      <HeaderButton
         title={playing ? "Couper la musique" : "Jouer la musique"}
         onClick={() => {
           const el = ref.current;
@@ -57,8 +71,8 @@ function MusicToggle() {
           }
         }}
       >
-        {playing ? <Music className="h-4 w-4" /> : <MusicOff className="h-4 w-4 opacity-50" />}
-      </Button>
+        {playing ? <Music className="h-4 w-4 text-cyan-glow" /> : <MusicOff className="h-4 w-4 opacity-50" />}
+      </HeaderButton>
     </>
   );
 }
@@ -66,14 +80,9 @@ function MusicToggle() {
 function SfxToggle() {
   const enabled = useSfxStore((s) => s.enabled);
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      title={enabled ? "Couper les bips" : "Activer les bips"}
-      onClick={() => toggleSfx()}
-    >
+    <HeaderButton title={enabled ? "Couper les bips" : "Activer les bips"} onClick={() => toggleSfx()}>
       {enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 opacity-50" />}
-    </Button>
+    </HeaderButton>
   );
 }
 
@@ -106,71 +115,72 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Code de secteur (décoratif, stable par joueur).
+  const sectorCode = (user?.uid ?? "000000").slice(-6).toUpperCase().replace(/(.{3})/, "$1-");
   const currentLabel = ALL_NAV_ITEMS.find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
   )?.label;
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col pb-16 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
+    <div className="relative flex min-h-screen w-full flex-col pb-20 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
       <SchematicGrid />
       <Nebula />
       <Starfield count={80} />
       <NavBar />
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
-        <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/5 bg-space-900/60 px-4 py-3 backdrop-blur-xl sm:px-6">
-          <div className="order-1 flex items-center gap-2">
-            <img src="/assets/logo/logo.webp" alt="" className="h-9 w-9 rounded-lg object-cover" />
-            <div className="hidden sm:block">
-              <p className="hud-eyebrow text-slate-500">
-                Cosmic Empires{currentLabel ? ` / ${currentLabel}` : ""}
+        <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
+          <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">
+            {/* Mobile : logo ; bureau : titre de la page en cours. */}
+            <Link to="/game" className="md:hidden">
+              <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(75,232,255,0.35)]" />
+            </Link>
+            <div className="min-w-0">
+              <p className="hud-eyebrow truncate text-[10px] text-cyan-glow/70">
+                {player?.pseudo ?? "…"} <span className="text-slate-600">//</span> Secteur {sectorCode}
               </p>
-              <p className="text-xs text-slate-400">{player?.pseudo ?? "…"}</p>
+              <p className="hud-title truncate text-lg text-white md:hidden">{currentLabel ?? "Cosmic Empires"}</p>
+              <p className="hud-title hidden truncate text-lg text-white md:block">
+                <span className="text-slate-500">Poste de commandement · </span>
+                {currentLabel ?? "Accueil"}
+              </p>
             </div>
-          </div>
 
-          <div className="order-3 w-full basis-full md:order-2 md:w-auto md:flex-1 md:basis-auto md:px-4">
-            <ResourceHud />
-          </div>
-
-          <div className="order-2 ml-auto flex items-center gap-3 md:order-3 md:ml-0">
-            <div className="hidden items-center gap-3 border-r border-white/10 pr-3 lg:flex">
-              <SignalIndicator />
-              <LiveClock />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              title="Palette de commandes (Ctrl/Cmd+K)"
-              onClick={() => {
-                playClick();
-                toggleCommandPalette();
-              }}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-            <SfxToggle />
-            <MusicToggle />
-            <NotificationBell />
-            {isAdmin && (
-              <Button variant="outline" size="icon" title="Administration" asChild>
-                <Link to="/game/admin">
+            <div className="ml-auto flex items-center divide-x divide-cyan-glow/10 border border-cyan-glow/15 bg-space-900/60 hud-cut-sm">
+              <HeaderButton
+                title="Palette de commandes (Ctrl/Cmd+K)"
+                onClick={() => {
+                  playClick();
+                  toggleCommandPalette();
+                }}
+              >
+                <Search className="h-4 w-4" />
+              </HeaderButton>
+              <span className="hidden sm:contents">
+                <SfxToggle />
+                <MusicToggle />
+              </span>
+              <NotificationBell />
+              {isAdmin && (
+                <HeaderButton title="Administration" asLink="/game/admin">
                   <Wrench className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-            <Button variant="outline" size="icon" title="Réglages" asChild>
-              <Link to="/game/reglages">
+                </HeaderButton>
+              )}
+              <HeaderButton title="Réglages" asLink="/game/reglages">
                 <Settings className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="outline" size="icon" title="Déconnexion" onClick={() => void logout()}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+              </HeaderButton>
+              <HeaderButton title="Déconnexion" onClick={() => void logout()} danger>
+                <LogOut className="h-4 w-4" />
+              </HeaderButton>
+            </div>
+          </div>
+          <div className="px-4 pb-3 pt-2.5 sm:px-6">
+            <ResourceHud />
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto">
+        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 md:overflow-y-auto">
           {loading || !contentLoaded ? (
             <BootSequence />
           ) : (

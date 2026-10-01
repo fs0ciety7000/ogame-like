@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
@@ -184,6 +186,47 @@ function BrowserNotificationsCard() {
   );
 }
 
+/** Thème d'interface (propre à cet appareil). */
+function ThemeCard() {
+  const theme = useThemeStore((s) => s.theme);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Apparence</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTheme(t.id)}
+              aria-pressed={theme === t.id}
+              className={cn(
+                "hud-cut group flex flex-col gap-2 border p-3 text-left transition-colors",
+                theme === t.id ? "border-cyan-glow/70 bg-cyan-glow/10" : "border-white/10 bg-white/[0.02] hover:border-cyan-glow/40",
+              )}
+            >
+              <div className="flex gap-1">
+                {t.swatches.map((c) => (
+                  <span key={c} className="h-5 flex-1" style={{ background: c }} />
+                ))}
+              </div>
+              <span className="flex items-center justify-between">
+                <span className="hud-title text-sm text-white">{t.name}</span>
+                {theme === t.id && <span className="font-mono text-[10px] tracking-[0.16em] text-cyan-glow">ACTIF</span>}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{t.inspiration}</span>
+              <span className="text-xs text-slate-400">{t.description}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">Le choix s'applique tout de suite et reste mémorisé sur cet appareil.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
@@ -226,6 +269,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      <ThemeCard />
       <BrowserNotificationsCard />
       <ChangePasswordCard />
       <DangerZoneCard />

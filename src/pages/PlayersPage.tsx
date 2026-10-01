@@ -22,15 +22,16 @@ import {
 import { checkAttackAllowed, PVP_RULES } from "@/game/pvp";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { subscribeAlliances } from "@/services/allianceService";
-import { getRankLabel } from "@/game/ranks";
+import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { SpyModal } from "@/components/game/SpyModal";
 import { AttackModal } from "@/components/game/AttackModal";
 import { TradeModal } from "@/components/game/TradeModal";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
+import { GameIcon } from "@/components/ui/game-icon";
 
 type LeaderboardMode = "total" | "season" | "alliances";
 
@@ -187,7 +188,7 @@ export function PlayersPage() {
           ))}
         </Card>
       ) : (
-        <Card className="divide-y divide-white/5">
+        <Card className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
             <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
           )}
@@ -224,40 +225,37 @@ export function PlayersPage() {
             return (
               <div
                 key={p.uid}
-                className="flex items-center justify-between gap-3 p-3"
+                className={cn(
+                  "relative grid grid-cols-[2.5rem_3rem_1fr_auto] items-center gap-3 border bg-gradient-to-r from-white/[0.035] to-transparent px-3 py-2.5 transition-colors [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] hover:border-cyan-glow/35 hover:from-cyan-glow/[0.08] max-sm:grid-cols-[2rem_2.75rem_1fr] max-sm:gap-2",
+                  isSelf ? "border-cyan-glow/60 from-cyan-glow/[0.12]" : "border-cyan-glow/[0.12]",
+                )}
               >
-                <div className="flex items-center gap-3">
-                  <span className="tabular-mono w-6 text-center text-xs text-slate-500">
-                    #{p.rank}
-                  </span>
-                  <div>
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-100">
-                      {p.pseudo}
-                      {isProtected && (
-                        <span
-                          title={attackCheck?.message}
-                          className="flex items-center text-mint-glow"
-                        >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-cyan-glow">
-                      {p.activeTitle && (
-                        <span className="mr-2 text-gold-glow">
-                          🏆 {p.activeTitle}
-                        </span>
-                      )}
-                      {getRankLabel(p.xp)}
-                      {mode === "season" && (
-                        <span className="tabular-mono ml-2 text-slate-500">
-                          {formatNumber(displayXp)} XP
-                        </span>
-                      )}
-                    </p>
+                <span
+                  className={cn(
+                    "hud-title text-center text-2xl tabular-nums max-sm:text-xl",
+                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[#e19b6d]" : "text-slate-600",
+                  )}
+                >
+                  {String(p.rank).padStart(2, "0")}
+                </span>
+                <img src={getRankIcon(p.xp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
+                <div className="min-w-0">
+                  <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
+                    <span className="truncate">{p.pseudo}</span>
+                    {isProtected && (
+                      <span title={attackCheck?.message} className="flex items-center text-mint-glow">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {p.activeTitle && <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>}
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
+                      {getRankLabel(p.xp)} · {formatNumber(displayXp)} XP
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center divide-x divide-cyan-glow/15 border border-cyan-glow/15 max-sm:col-span-full max-sm:justify-self-end">
                   <Button
                     variant="ghost"
                     size="icon"

@@ -1,24 +1,50 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
-@theme {
-  --font-display: "Orbitron", sans-serif;
-  --font-sans: "Inter", sans-serif;
+/* =====================================================
+   Thèmes (v2.4) : les jetons de couleur et de police sont des variables
+   redéfinies par html[data-theme]. Les classes Tailwind (text-cyan-glow,
+   bg-space-800, text-slate-400, font-display…) suivent donc le thème.
+   « cyan-glow » = accent principal, « mint » = positif, « danger » = alerte,
+   « gold » = prestige, « ember » = avertissement / factions.
+===================================================== */
+@theme inline {
+  --font-display: var(--th-font-title);
+  --font-sans: var(--th-font-body);
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
-  --color-space-950: #03040a;
-  --color-space-900: #05070f;
-  --color-space-800: #0a0e1c;
-  --color-space-700: #10162b;
-  --color-space-600: #182140;
-  --color-space-500: #232f57;
+  --color-space-950: var(--th-space-950);
+  --color-space-900: var(--th-space-900);
+  --color-space-800: var(--th-space-800);
+  --color-space-700: var(--th-space-700);
+  --color-space-600: var(--th-space-600);
+  --color-space-500: var(--th-space-500);
 
-  --color-cyan-glow: #4be8ff;
-  --color-mint-glow: #4aff9c;
-  --color-danger-glow: #ff5d6c;
-  --color-gold-glow: #ffd86b;
-  --color-ember-glow: #ff7a45;
+  --color-cyan-glow: var(--th-accent);
+  --color-mint-glow: var(--th-ok);
+  --color-danger-glow: var(--th-danger);
+  --color-gold-glow: var(--th-gold);
+  --color-ember-glow: var(--th-ember);
+  --color-violet-glow: var(--th-accent2);
 
+  --color-slate-100: var(--th-text-100);
+  --color-slate-200: var(--th-text-200);
+  --color-slate-300: var(--th-text-300);
+  --color-slate-400: var(--th-text-400);
+  --color-slate-500: var(--th-text-500);
+  --color-slate-600: var(--th-text-600);
+
+  /* Coins quasi droits partout (style HUD) ; rounded-full reste rond. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+}
+
+@theme {
   --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-shimmer: shimmer 2.5s linear infinite;
@@ -53,8 +79,102 @@
   }
 }
 
-:root {
+:root,
+:root[data-theme="tactique"] {
   color-scheme: dark;
+  --th-font-title: "Chakra Petch", sans-serif;
+  --th-font-body: "Inter", sans-serif;
+  --th-title-track: 0.04em;
+  --th-cut: 12px;
+  --th-accent: #4be8ff;
+  --th-accent2: #a78bfa;
+  --th-ok: #4aff9c;
+  --th-danger: #ff5d6c;
+  --th-gold: #ffd86b;
+  --th-ember: #ff7a45;
+  --th-space-950: #03040a;
+  --th-space-900: #05070f;
+  --th-space-800: #0a0e1c;
+  --th-space-700: #10162b;
+  --th-space-600: #182140;
+  --th-space-500: #232f57;
+  --th-text-100: #f1f5f9;
+  --th-text-200: #e2e8f0;
+  --th-text-300: #cbd5e1;
+  --th-text-400: #94a3b8;
+  --th-text-500: #64748b;
+  --th-text-600: #475569;
+  --th-ink: #e7ecff;
+  --th-body-glow: #101c3d;
+  --th-panel: linear-gradient(160deg, color-mix(in srgb, #10183a 92%, transparent), color-mix(in srgb, #05080f 96%, transparent));
+  --th-edge: color-mix(in srgb, var(--th-accent) 26%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 70%, transparent);
+  --th-btn-ink: #02131a;
+  --th-scan: 0.016;
+}
+/* Holo — esprit Star Citizen (mobiGlas) : hologramme bleu translucide, traits fins. */
+:root[data-theme="holo"] {
+  --th-font-title: "Saira", sans-serif;
+  --th-font-body: "Saira", sans-serif;
+  --th-title-track: 0.09em;
+  --th-cut: 0px;
+  --th-accent: #6ec8ff;
+  --th-accent2: #6ec8ff;
+  --th-ok: #78ffd2;
+  --th-danger: #ff6e6e;
+  --th-gold: #ffd68c;
+  --th-ember: #ffbe5a;
+  --th-space-950: #020812;
+  --th-space-900: #041020;
+  --th-space-800: #07182e;
+  --th-space-700: #0b2240;
+  --th-space-600: #123055;
+  --th-space-500: #1b406c;
+  --th-text-100: #eef8ff;
+  --th-text-200: #d6eaf8;
+  --th-text-300: #b8d4e9;
+  --th-text-400: #8fb3cf;
+  --th-text-500: #67879f;
+  --th-text-600: #48627a;
+  --th-ink: #eaf6ff;
+  --th-body-glow: #0b3a6e;
+  --th-panel: linear-gradient(180deg, rgba(40, 120, 200, 0.12), rgba(8, 30, 60, 0.08));
+  --th-edge: color-mix(in srgb, var(--th-accent) 32%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 85%, transparent);
+  --th-btn-ink: #eaf6ff;
+  --th-scan: 0.022;
+}
+/* Cockpit — esprit Elite Dangerous : tableau de bord orange monochrome. */
+:root[data-theme="cockpit"] {
+  --th-font-title: "Saira Condensed", sans-serif;
+  --th-font-body: "Saira", sans-serif;
+  --th-title-track: 0.1em;
+  --th-cut: 8px;
+  --th-accent: #ff8c1e;
+  --th-accent2: #ff8c1e;
+  --th-ok: #78c8ff;
+  --th-danger: #ff4628;
+  --th-gold: #ffbe50;
+  --th-ember: #ff8c1e;
+  --th-space-950: #050302;
+  --th-space-900: #0a0603;
+  --th-space-800: #120a05;
+  --th-space-700: #1b1008;
+  --th-space-600: #26170c;
+  --th-space-500: #382212;
+  --th-text-100: #ffe8cc;
+  --th-text-200: #ffd8ad;
+  --th-text-300: #f2b77f;
+  --th-text-400: #c98a4f;
+  --th-text-500: #9a6537;
+  --th-text-600: #6e4524;
+  --th-ink: #ffd2a0;
+  --th-body-glow: #2a1204;
+  --th-panel: linear-gradient(180deg, rgba(255, 120, 20, 0.06), rgba(0, 0, 0, 0.55));
+  --th-edge: color-mix(in srgb, var(--th-accent) 35%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 85%, transparent);
+  --th-btn-ink: #1a0a00;
+  --th-scan: 0.028;
 }
 
 html, body, #root {
@@ -64,9 +184,10 @@ html, body, #root {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: radial-gradient(ellipse 120% 80% at 50% -10%, #101c3d 0%, var(--color-space-950) 55%),
+  background: radial-gradient(ellipse 120% 80% at 50% -10%, var(--th-body-glow) 0%, var(--color-space-950) 55%),
     var(--color-space-950);
-  color: #e7ecff;
+  color: var(--th-ink);
+  transition: background-color 0.4s, color 0.4s;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -93,29 +214,204 @@ body {
   font-family: var(--font-display);
 }
 
+@layer components {
+/* Panneau HUD : coins biseautés (--th-cut), liseré dégradé, trame fine. */
 .glass-panel {
   position: relative;
-  background: color-mix(in srgb, var(--color-space-700) 65%, transparent);
-  backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in srgb, var(--color-cyan-glow) 14%, transparent);
+  background: var(--th-panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--th-edge);
+  border-radius: 0 !important;
+  clip-path: polygon(var(--th-cut) 0, 100% 0, 100% calc(100% - var(--th-cut)), calc(100% - var(--th-cut)) 100%, 0 100%, 0 var(--th-cut));
 }
-
-/* Fin liseré lumineux en haut de chaque panneau : lecture "instrument de
-   bord" plutôt qu'une simple carte, sans alourdir le balisage. */
+/* Liseré lumineux en haut + diagonales des coins coupés. */
 .glass-panel::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--color-cyan-glow) 55%, transparent) 20%,
-    color-mix(in srgb, var(--color-cyan-glow) 55%, transparent) 80%,
-    transparent
-  );
-  border-radius: inherit;
+  inset: -1px;
   pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--th-edge-strong), transparent 45%) top left / 100% 1px no-repeat,
+    linear-gradient(to bottom right, transparent calc(50% - 0.75px), var(--th-edge-strong) calc(50% - 0.75px), var(--th-edge-strong) calc(50% + 0.75px), transparent calc(50% + 0.75px)) top left / var(--th-cut) var(--th-cut) no-repeat,
+    linear-gradient(to bottom right, transparent calc(50% - 0.75px), var(--th-edge) calc(50% - 0.75px), var(--th-edge) calc(50% + 0.75px), transparent calc(50% + 0.75px)) bottom right / var(--th-cut) var(--th-cut) no-repeat;
+  z-index: 1;
+}
+/* Trame de balayage très discrète. */
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, var(--th-scan)) 0 1px, transparent 1px 3px);
+}
+:root[data-theme="holo"] .glass-panel {
+  border-top: 2px solid var(--th-edge-strong);
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--th-accent) 6%, transparent);
+}
+:root[data-theme="holo"] .glass-panel::before {
+  display: none;
+}
+:root[data-theme="cockpit"] .glass-panel {
+  border-top: 3px solid var(--th-accent);
+}
+
+/* Titre d'élément (carte, unité, bâtiment) : police du thème, capitales. */
+.hud-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--th-title-track);
+  line-height: 1.1;
+}
+:root[data-theme="holo"] .hud-title {
+  font-weight: 500;
+}
+
+/* Coupe biseautée réutilisable (boutons, vignettes, étiquettes). */
+.hud-cut {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+.hud-cut-sm {
+  clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
+}
+:root[data-theme="holo"] .hud-cut,
+:root[data-theme="holo"] .hud-cut-sm {
+  clip-path: none;
+}
+
+/* Reflet qui balaye les boutons principaux. */
+.hud-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.hud-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  left: -60%;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: hud-sheen 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes hud-sheen {
+  0%, 62% { left: -60%; }
+  100% { left: 130%; }
+}
+
+/* Jauge segmentée (statistiques). */
+.hud-seg {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+}
+.hud-seg > i {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.hud-seg > i.on {
+  background: var(--seg, var(--th-accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--seg, var(--th-accent)) 70%, transparent);
+}
+
+/* Scène d'unité : grille holographique en perspective + balayage. */
+.hud-stage {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(closest-side, color-mix(in srgb, var(--th-accent) 20%, transparent), transparent 70%),
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--th-accent) 6%, transparent));
+}
+.hud-stage::before {
+  content: "";
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -30px;
+  height: 110px;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--th-accent) 25%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--th-accent) 25%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+  transform: perspective(260px) rotateX(62deg);
+  mask-image: linear-gradient(transparent, black 40%, transparent);
+  pointer-events: none;
+}
+.hud-stage .hud-float {
+  animation: hud-float 5s ease-in-out infinite;
+}
+.hud-stage .hud-scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--th-accent) 14%, transparent) 48%, transparent 52%);
+  animation: hud-scan 4.5s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+@keyframes hud-float {
+  50% { transform: translateY(-8px) rotate(-1deg); }
+}
+@keyframes hud-scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
+
+/* Barre de niveau à crans (bâtiments). */
+.hud-ticks {
+  display: grid;
+  gap: 2px;
+}
+.hud-ticks > i {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.hud-ticks > i.on {
+  background: var(--th-gold);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--th-gold) 60%, transparent);
+}
+.hud-ticks > i.next {
+  background: transparent;
+  outline: 1px dashed color-mix(in srgb, var(--th-gold) 80%, transparent);
+  animation: hud-blink 1.2s steps(2) infinite;
+}
+@keyframes hud-blink {
+  50% { outline-color: transparent; }
+}
+
+/* Badge holographique (paliers). */
+.hud-holo {
+  background: linear-gradient(110deg, #fff4c9, #ffd86b 40%, #fff 50%, #ffd86b 60%, #d9a53a);
+  background-size: 250% 100%;
+  color: #1a1305;
+  animation: hud-holo 3s linear infinite;
+}
+@keyframes hud-holo {
+  to { background-position: -250% 0; }
+}
+
+/* Scintillement des panneaux holographiques. */
+:root[data-theme="holo"] .glass-panel {
+  animation: hud-flicker 9s infinite;
+}
+@keyframes hud-flicker {
+  0%, 97%, 100% { opacity: 1; }
+  97.5% { opacity: 0.86; }
+  98.5% { opacity: 0.95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-sheen::after,
+  .hud-stage .hud-float,
+  .hud-stage .hud-scan,
+  .hud-ticks > i.next,
+  .hud-holo,
+  .glass-panel {
+    animation: none !important;
+  }
+}
+
 }
 
 .glow-text {
@@ -125,7 +421,7 @@ body {
 .hud-eyebrow {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
@@ -222,7 +518,7 @@ body {
   animation: tier-neon 2.6s ease-in-out infinite;
 }
 @keyframes tier-neon {
-  0%, 100% { box-shadow: 0 0 18px rgba(75, 232, 255, 0.45), 0 0 0 2px rgba(75, 232, 255, 0.9); }
+  0%, 100% { box-shadow: 0 0 18px color-mix(in srgb, var(--th-accent) 45%, transparent), 0 0 0 2px color-mix(in srgb, var(--th-accent) 90%, transparent); }
   50% { box-shadow: 0 0 34px rgba(255, 94, 196, 0.55), 0 0 0 2px rgba(255, 94, 196, 0.9); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -254,4 +550,17 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .fleet-route { animation: none; }
+}
+
+/* Holo : boutons principaux en hologramme (fond translucide, contour lumineux). */
+:root[data-theme="holo"] .hud-btn-primary {
+  background: color-mix(in srgb, var(--th-accent) 16%, transparent);
+  border: 1px solid var(--th-edge-strong);
+  color: var(--th-text-100);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--th-accent) 22%, transparent);
+}
+:root[data-theme="holo"] .hud-btn-primary:hover {
+  background: color-mix(in srgb, var(--th-accent) 28%, transparent);
 }

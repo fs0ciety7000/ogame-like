@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { createElement, useEffect, useRef } from "react";
+import { EmojiIcon } from "@/components/ui/game-icon";
 import { toast } from "sonner";
 import {
   claimResourceGift,
@@ -126,7 +127,8 @@ export function useGameSync(uid: string | null) {
       if (fresh.length === 0) return;
 
       const showOne = (item: (typeof fresh)[number]) => {
-        const icon = NOTIFICATION_STYLE[item.kind]?.icon;
+        const emoji = NOTIFICATION_STYLE[item.kind]?.icon;
+        const icon = emoji ? createElement(EmojiIcon, { emoji, className: "h-5 w-5" }) : undefined;
         if (item.kind === "achievement") toast.success(item.title, { description: item.message, icon, duration: 6000 });
         else toast(item.title, { description: item.message, icon });
       };

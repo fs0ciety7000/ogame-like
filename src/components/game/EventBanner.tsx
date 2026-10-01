@@ -9,6 +9,7 @@ import { currentSeasonId, seasonEndMs, seasonLabel } from "@/game/seasons";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { showBrowserNotification } from "@/store/browserNotifyStore";
 import { formatDuration } from "@/lib/utils";
+import { EmojiIcon } from "@/components/ui/game-icon";
 
 const SEEN_KEY = "cosmic-empires:last-event";
 
@@ -44,7 +45,7 @@ export function EventBadge() {
           to="/game"
           className="flex items-center gap-1.5 rounded-lg border border-gold-glow/50 bg-gold-glow/10 px-2 py-1 text-[11px] font-semibold text-gold-glow"
         >
-          <span>{event.type.emoji}</span>
+          <EmojiIcon emoji={event.type.emoji} className="h-4 w-4" />
           {event.type.name} · {remaining(event.endMs)}
         </Link>
       </TooltipTrigger>
@@ -68,7 +69,7 @@ export function EventCard() {
       {event ? (
         <div className={active ? "rounded-lg border border-gold-glow/40 bg-gold-glow/10 p-3" : "rounded-lg bg-black/20 p-3"}>
           <p className="text-sm font-semibold text-slate-100">
-            {event.type.emoji} {event.type.name}
+            <EmojiIcon emoji={event.type.emoji} /> {event.type.name}
             <span className={active ? "ml-2 text-xs text-gold-glow" : "ml-2 text-xs text-slate-400"}>
               {active ? `en cours · fin dans ${remaining(event.endMs)}` : `dans ${remaining(event.startMs)}`}
             </span>

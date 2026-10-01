@@ -17,6 +17,7 @@ import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function DashboardPage() {
   useNowTicker();
@@ -81,7 +82,7 @@ export function DashboardPage() {
               const full = economy.full.includes(r.id);
               return (
                 <div key={r.id} className="flex items-center gap-2 text-sm">
-                  <span>{r.emoji}</span>
+                  <ResourceIcon id={r.id} className="h-6 w-6" />
                   <span className="text-slate-300">{r.name}</span>
                   <span className={full ? "ml-auto text-xs font-semibold uppercase text-ember-glow" : net < 0 ? "ml-auto text-danger-glow" : "ml-auto text-mint-glow"}>
                     {full ? "entrepôt plein" : `${net >= 0 ? "+" : ""}${formatNumber(Math.round(net))}/s`}
@@ -90,9 +91,9 @@ export function DashboardPage() {
               );
             })}
             <div className="mt-1 space-y-0.5 border-t border-white/5 pt-2 text-[11px] text-slate-500">
-              {economy.upkeep > 0 && <p>🛠️ Entretien de la flotte : −{formatNumber(Math.round(economy.upkeep))} énergie/s</p>}
-              {Number.isFinite(economy.capacity) && <p>📦 Entrepôt : {formatNumber(economy.capacity)} par ressource</p>}
-              {economy.outage && <p className="font-semibold text-danger-glow">⚡ Panne d'énergie : production à 50 %</p>}
+              {economy.upkeep > 0 && <p><GameIcon name="repair" /> Entretien de la flotte : −{formatNumber(Math.round(economy.upkeep))} énergie/s</p>}
+              {Number.isFinite(economy.capacity) && <p><GameIcon name="storage" /> Entrepôt : {formatNumber(economy.capacity)} par ressource</p>}
+              {economy.outage && <p className="font-semibold text-danger-glow"><GameIcon name="energy" /> Panne d'énergie : production à 50 %</p>}
             </div>
           </CardContent>
         </Card>

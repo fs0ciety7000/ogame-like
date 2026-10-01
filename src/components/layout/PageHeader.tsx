@@ -21,11 +21,11 @@ export function PageHeader({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex flex-wrap items-end justify-between gap-3 border-b border-white/5 pb-4"
+      className="relative flex flex-wrap items-end justify-between gap-3 pb-4 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-cyan-glow/40 after:via-cyan-glow/10 after:to-transparent"
     >
       <div>
-        <p className="hud-eyebrow text-slate-500">{eyebrow}</p>
-        <h1 className="font-display text-2xl text-white glow-text sm:text-3xl">
+        <p className="hud-eyebrow text-cyan-glow/80">{eyebrow}</p>
+        <h1 className="hud-title mt-1 text-3xl text-white sm:text-4xl">
           <DecodeText text={title} />
         </h1>
         {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}

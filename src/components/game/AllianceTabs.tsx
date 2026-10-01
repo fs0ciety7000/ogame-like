@@ -22,6 +22,7 @@ import {
 } from "@/services/allianceService";
 import { cn, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 import type { Alliance, AllianceLog, ResourceId } from "@/types/game";
+import { EmojiIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 type Amounts = Partial<Record<ResourceId, number>>;
 
@@ -31,7 +32,7 @@ function AmountsForm({ value, onChange, max }: { value: Amounts; onChange: (v: A
       {RESOURCE_LIST.map((r) => (
         <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
           <span>
-            {r.emoji} {r.name}
+            <ResourceIcon id={r.id} /> {r.name}
             {max && <span className="ml-1 text-slate-600">(max {formatCompact(max(r.id))})</span>}
           </span>
           <Input
@@ -102,7 +103,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
           {RESOURCE_LIST.map((r) => (
             <p key={r.id} className="flex justify-between gap-2">
-              <span>{r.emoji}</span>
+              <ResourceIcon id={r.id} className="h-5 w-5" />
               <span className="tabular-mono text-slate-200">{formatCompact(treasury[r.id] ?? 0)}</span>
             </p>
           ))}
@@ -196,7 +197,7 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
         return (
           <Card key={r.id} className={cn("flex flex-col gap-2 p-4", running && "border-cyan-glow/50")}>
             <div className="flex items-center gap-2">
-              <span className="text-lg">{r.emoji}</span>
+              <EmojiIcon emoji={r.emoji} className="h-7 w-7" />
               <h3 className="flex-1 font-display text-sm text-white">{r.name}</h3>
               <span className="tabular-mono text-xs text-slate-400">
                 niv. {level} / {r.maxLevel}
