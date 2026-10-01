@@ -372,6 +372,14 @@ export function startMission(_uid: string, missionKey: string) {
   return act({ type: "mission", missionKey });
 }
 
+export function claimOnboarding(stepId: string) {
+  return act<Partial<Record<import("@/types/game").ResourceId, number>>>({ type: "claimOnboarding", stepId });
+}
+
+export function hideOnboarding(hidden: boolean) {
+  return act({ type: "hideOnboarding", hidden });
+}
+
 export function claimContract(contractId: string) {
   return act<import("@/game/contracts").ClaimResult>({ type: "claimContract", contractId });
 }

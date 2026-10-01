@@ -1,3 +1,4 @@
+import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
 import { buildTimeFactor, researchTimeFactor } from "@/game/events";
@@ -41,7 +42,9 @@ export type GameAction =
   | { type: "trade"; sellId: ResourceId; buyId: ResourceId; amount: number }
   | { type: "claimContract"; contractId: string }
   | { type: "rerollContract"; contractId: string }
-  | { type: "setTitle"; title: string };
+  | { type: "setTitle"; title: string }
+  | { type: "claimOnboarding"; stepId: string }
+  | { type: "hideOnboarding"; hidden: boolean };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -209,6 +212,13 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "setTitle":
       setActiveTitle(player, String(action.title ?? ""));
       return player.activeTitle;
+
+    case "claimOnboarding":
+      return claimOnboarding(player, String(action.stepId ?? ""));
+
+    case "hideOnboarding":
+      setOnboardingHidden(player, action.hidden === true);
+      return player.onboarding;
 
     default:
       throw new GameActionError("Action inconnue.");
