@@ -1,7 +1,7 @@
 ---
 version: 2.0.0
 iteration: 11
-date: 2026-10-06
+date: 2026-10-01
 title: La Liste de Varan
 image: /assets/story/varan.webp
 ---

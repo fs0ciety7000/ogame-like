@@ -678,6 +678,32 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v2.3 achievements: stats written by the server, rewards, rates route; Cartel prices on the stock", async () => {
+    // Connecté en B.
+    await admin.collection("players").update(bId, { resources: RICH, stats: null, unlockedAchievements: [], pirates: null, createdAtMs: MONTH_AGO() });
+    try {
+      // Un client ne peut pas écrire ses statistiques.
+      await expect(pb.collection("players").update(bId, { stats: { traded: 1e9 } })).rejects.toBeTruthy();
+      await ps.tradeResources(bId, "scrap", "energy", 5000);
+      const after = await snap(bId);
+      expect(after.stats.traded).toBe(5000);
+      // Rattrapage : les succès déjà mérités sont attribués d'un coup.
+      expect(after.unlockedAchievements.length).toBeGreaterThan(0);
+      const rates = await pb.send("/api/cosmic/achievements", { method: "GET" });
+      expect(rates.players).toBeGreaterThan(0);
+      expect(Object.keys(rates.counts).length).toBeGreaterThan(0);
+
+      // Cartel Néon : tribut = 15 % du stock exposé.
+      expect((await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, factionId: "cartel", force: true } })).changed).toBe(1);
+      const p = await snap(bId);
+      expect(p.pirates.cartel.ultimatum.tribute.scrap).toBeGreaterThan(0);
+      expect(p.stats.ultimatums).toBe(1);
+      expect(p.stats.threatenedBy).toEqual(["cartel"]);
+    } finally {
+      await admin.collection("players").update(bId, { pirates: null });
+    }
+  }, 60_000);
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();

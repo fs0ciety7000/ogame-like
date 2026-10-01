@@ -11,6 +11,7 @@ import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, T
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { newRank, RankForm } from "@/pages/admin/RankForm";
+import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 
@@ -56,6 +57,7 @@ export function AdminPage() {
           <TabsTrigger value="missions">Missions</TabsTrigger>
           <TabsTrigger value="factions">Factions</TabsTrigger>
           <TabsTrigger value="ranks">Rangs</TabsTrigger>
+          <TabsTrigger value="achievements">Succès</TabsTrigger>
           <TabsTrigger value="rules">Règles</TabsTrigger>
           <TabsTrigger value="players">Joueurs</TabsTrigger>
           <TabsTrigger value="logs">Journal</TabsTrigger>
@@ -132,6 +134,17 @@ export function AdminPage() {
             setId={(r, id) => ({ ...r, id })}
             createItem={newRank}
             renderForm={(r, onChange, isNew) => <RankForm value={r} onChange={onChange} isNew={isNew} />}
+          />
+        </TabsContent>
+        <TabsContent value="achievements" className="mt-4">
+          <ContentEditor
+            section="achievements"
+            title="Succès"
+            getId={(a) => a.id}
+            getLabel={(a) => `${a.emoji} ${a.name}${a.enabled ? "" : " (inactif)"}`}
+            setId={(a, id) => ({ ...a, id })}
+            createItem={newAchievement}
+            renderForm={(a, onChange, isNew) => <AchievementForm value={a} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
         <TabsContent value="rules" className="mt-4">

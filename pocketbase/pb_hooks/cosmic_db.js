@@ -365,7 +365,8 @@ function resolvePirateArrival(txApp, game, rec, now) {
     const gf = fleetFromRecord(g);
     return { ownerUid: gf.ownerUid, ownerPseudo: gf.ownerPseudo, units: owner.units || {}, techLevels: owner.techLevels || {}, fleet: gf.units };
   });
-  const out = game.resolvePirateRaid(faction, loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now);
+  const patrolling = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && mission = "patrol" && status != "done"', "", 1, 0, { u: fleet.targetUid }).length > 0;
+  const out = game.resolvePirateRaid(faction, loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now, { evading: patrolling });
   savePlayer(txApp, game, loaded, out.player, out.queues);
   notify(txApp, fleet.targetUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
@@ -466,6 +467,7 @@ function processPirates(game, now, uid, force) {
         const out = game.pirateTick(player, now, { random: Math.random, aggression, force: force || null });
         if (!out.changed) return;
         rec.set("pirates", player.pirates);
+        rec.set("stats", player.stats || null);
         txApp.save(rec);
         notify(txApp, rec.id, out.notifications);
         if (out.raid) createPirateRaid(txApp, game, player, out.raid, now);

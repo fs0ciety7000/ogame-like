@@ -1,7 +1,7 @@
 ---
 version: 1.6.0
 iteration: 7
-date: 2026-10-02
+date: 2026-09-30
 title: Flottes en vol et carte de la galaxie
 ---
 ## Flottes en vol

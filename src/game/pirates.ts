@@ -1,6 +1,7 @@
 import { getProductionRatesPerSecond } from "@/game/production";
 import { flushState, type NewNotification } from "@/game/flush";
-import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent } from "@/game/buildings";
+import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent, getStorageCapacity } from "@/game/buildings";
+import { bumpStat, recordThreat } from "@/game/stats";
 import { computeFullPower, getShieldPercent, homeDefensePower, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
@@ -22,7 +23,10 @@ import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "
    propres à chaque faction.
 ===================================================== */
 
-export type FactionTrigger = "wealth" | "aggression";
+/** wealth : empires actifs ; aggression : victoires récentes contre des joueurs ;
+ *  research : savoir accumulé et recherche récente ; hoard : entrepôts pleins ;
+ *  expansion : niveaux de bâtiments gagnés sur la période. */
+export type FactionTrigger = "wealth" | "aggression" | "research" | "hoard" | "expansion";
 export type RaidTarget = "base" | "fleet";
 
 export interface FactionDef {
@@ -54,14 +58,19 @@ export interface FactionDef {
     /** Agression : victoires contre des joueurs sur la période. */
     minVictories: number;
     windowDays: number;
+    /** Seuil des déclencheurs research (niveaux de technos), hoard (% des
+     *  entrepôts) et expansion (niveaux de bâtiments gagnés). */
+    threshold?: number;
   };
   tribute: {
-    /** production : heures de production ; plunder : part du butin récent. */
-    basis: "production" | "plunder";
+    /** production : heures de production ; plunder : part du butin récent ;
+     *  stock : part du stock de ressources communes (hors bunker). */
+    basis: "production" | "plunder" | "stock";
     hours: number;
     plunderPct: number;
-    /** Plancher en heures de production (base « plunder »). */
+    /** Plancher en heures de production (bases « plunder » et « stock »). */
     minHours: number;
+    stockPct?: number;
   };
   answerHours: number;
   raidTravelHours: number;
@@ -135,6 +144,87 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
     lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
   },
+  {
+    id: "inquisition",
+    enabled: true,
+    name: "Inquisition de l'Aube Blanche",
+    leader: "Haut-Juge Séraphin Vol",
+    enforcer: "Le Lecteur",
+    art: "/assets/story/inquisition.webp",
+    color: "cyan",
+    story:
+      "Dans les archives scellées de l'ancien Empire, certaines connaissances étaient interdites. L'Inquisition de l'Aube Blanche s'est donné pour mission de les garder enfouies.\n\n" +
+      "Le Haut-Juge Séraphin Vol, drapé de blanc et d'or, lit chaque découverte comme une hérésie. Ses lunettes d'or ne quittent jamais son Livre des Interdits, où s'inscrivent d'elles-mêmes les recherches des empires trop curieux.\n\n" +
+      "Sa sentence est exécutée par le Lecteur, un androïde-scribe au visage de porcelaine qui récite à voix basse les crimes de ses cibles avant de frapper. On dit qu'il n'a jamais oublié une ligne.",
+    ultimatum: {
+      title: "« Ton savoir est une hérésie. »",
+      quote:
+        "{pseudo}. Ton nom vient d'apparaître dans le Livre. Tes laboratoires ont touché à ce qui devait rester enfoui. Fais pénitence, et l'Aube Blanche te pardonnera. Persiste, et le Lecteur viendra réciter tes fautes devant tes murs.",
+      signature: "Haut-Juge Séraphin Vol",
+      payLabel: "Faire pénitence",
+    },
+    trigger: { type: "research", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 3, threshold: 30 },
+    tribute: { basis: "production", hours: 6, plunderPct: 0, minHours: 0 },
+    answerHours: 10,
+    raidTravelHours: 2,
+    raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
+    bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
+  },
+  {
+    id: "cartel",
+    enabled: true,
+    name: "Cartel Néon",
+    leader: "Madame Vashti Kor",
+    enforcer: "Les Jumeaux Chrome",
+    art: "/assets/story/cartel.webp",
+    color: "danger",
+    story:
+      "Sur les stations-casinos de la Bordure, tout s'achète : les dettes, les secrets, les vies. Le Cartel Néon y règne sans partage.\n\n" +
+      "Madame Vashti Kor, reine du Cartel en manteau de fourrure et lunettes holographiques, prête à toute la galaxie, et finit toujours par se faire rembourser. Elle flaire l'odeur des coffres pleins comme d'autres sentent le parfum.\n\n" +
+      "Ses recouvreurs, les Jumeaux Chrome, deux mercenaires identiques aux visières dorées, ne parlent jamais en même temps et ne ratent jamais un coffre.",
+    ultimatum: {
+      title: "« Tes coffres débordent, chéri. »",
+      quote:
+        "{pseudo}, mon cher… Tes entrepôts brillent jusque dans mes salons. Dans la Bordure, la richesse paie des intérêts. Règle ta part, et nous resterons bons amis. Sinon, les Jumeaux passeront compter eux-mêmes.",
+      signature: "Madame Vashti Kor",
+      payLabel: "Payer les intérêts",
+    },
+    trigger: { type: "hoard", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 7, threshold: 80 },
+    tribute: { basis: "stock", hours: 0, plunderPct: 0, minHours: 4, stockPct: 0.15 },
+    answerHours: 12,
+    raidTravelHours: 2.5,
+    raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
+    bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
+    lair: { name: "Le Casino Fantôme", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
+  },
+  {
+    id: "meute",
+    enabled: true,
+    name: "Meute d'Ysgrim",
+    leader: "Ysgrim Crocs-de-Fer",
+    enforcer: "La Louve Rouge",
+    art: "/assets/story/meute.webp",
+    color: "ember",
+    story:
+      "Venus des mondes morts du Rift, les guerriers de la Meute ont remplacé leur chair par l'acier et ne vivent que pour la chasse.\n\n" +
+      "Ysgrim Crocs-de-Fer, colosse à tête de loup bardé d'implants, flaire l'expansion de loin : chaque empire qui grandit trop vite devient une proie.\n\n" +
+      "Il envoie d'abord la Louve Rouge, éclaireuse à la cape écarlate et au fusil long, poser sa marque sur la cible. Quand la Meute charge ensuite, elle est rapide, et sans pitié pour les flottes restées au port.",
+    ultimatum: {
+      title: "« La Meute a senti ton odeur. »",
+      quote:
+        "Tu grandis vite, {pseudo}. Trop vite. La Louve Rouge a posé sa marque sur tes murs. Jette un os à la Meute, et nous chasserons ailleurs. Fais le fier, et nos crocs trouveront ta flotte avant l'aube.",
+      signature: "Ysgrim Crocs-de-Fer",
+      payLabel: "Jeter un os",
+    },
+    trigger: { type: "expansion", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 7, threshold: 25 },
+    tribute: { basis: "production", hours: 5, plunderPct: 0, minHours: 0 },
+    answerHours: 6,
+    raidTravelHours: 0.75,
+    raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
+    bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
+    lair: { name: "La Tanière du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+  },
 ];
 
 /** Registre courant (remplacé par applyGameContent). */
@@ -177,6 +267,8 @@ export interface PirateState {
   raidsLost: number;
   tributesPaid: number;
   lairsTaken: number;
+  /** Repère du déclencheur expansion : niveaux de bâtiments à une date. */
+  mark?: { atMs: number; value: number } | null;
 }
 
 /** État de toutes les factions d'un joueur (avec migration de l'ancien
@@ -195,6 +287,7 @@ function normalize(p: Partial<PirateState> | undefined, maxNotoriety = 8): Pirat
     raidsLost: p?.raidsLost ?? 0,
     tributesPaid: p?.tributesPaid ?? 0,
     lairsTaken: p?.lairsTaken ?? 0,
+    mark: p?.mark ?? null,
   };
 }
 
@@ -279,8 +372,39 @@ export interface AggressionStats {
   plunder: Partial<Record<ResourceId, number>>;
 }
 
+/** Ressources communes exposées (hors bunker de l'entrepôt). */
+function exposedStock(player: PlayerState): Partial<Record<ResourceId, number>> {
+  const out: Partial<Record<ResourceId, number>> = {};
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res));
+  return out;
+}
+
+/** Remplissage des entrepôts (ressource commune la plus pleine), en %. */
+export function storageFillPct(player: PlayerState): number {
+  const cap = getStorageCapacity(player.buildings ?? {});
+  if (!(cap > 0)) return 0;
+  return Math.floor((Math.max(...COMMON_RESOURCES.map((r) => player.resources?.[r] ?? 0)) / cap) * 100);
+}
+
+export function totalTechLevels(player: Pick<PlayerState, "techLevels">): number {
+  return Object.values(player.techLevels ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
+}
+
+export function totalBuildingLevels(player: Pick<PlayerState, "buildings">): number {
+  return BUILDINGS.reduce((sum, b) => sum + (player.buildings?.[b.id]?.level ?? 0), 0);
+}
+
 export function tributeFor(faction: FactionDef, player: PlayerState, aggression: AggressionStats | null): Partial<Record<ResourceId, number>> {
   if (faction.tribute.basis === "production") return productionHours(player, faction.tribute.hours);
+  if (faction.tribute.basis === "stock") {
+    const fromStock: Partial<Record<ResourceId, number>> = {};
+    for (const [res, v] of Object.entries(exposedStock(player)) as [ResourceId, number][]) {
+      const n = Math.floor(v * (faction.tribute.stockPct ?? 0));
+      if (n > 0) fromStock[res] = n;
+    }
+    const floor = productionHours(player, faction.tribute.minHours);
+    return total(fromStock) >= total(floor) ? fromStock : floor;
+  }
   const fromPlunder: Partial<Record<ResourceId, number>> = {};
   for (const [res, v] of Object.entries(aggression?.plunder ?? {}) as [ResourceId, number][]) {
     const n = Math.floor((v ?? 0) * faction.tribute.plunderPct);
@@ -341,20 +465,46 @@ export function pirateTick(
     const st = states[faction.id] ?? normalize(undefined);
     if (!st.nextListAtMs && !forced) {
       // Premier passage : on fixe la date de la première inscription.
-      st.nextListAtMs = now + (faction.trigger.type === "aggression" ? hours(12) : nextListDelay(faction, random));
+      st.nextListAtMs = now + (faction.trigger.type === "wealth" ? nextListDelay(faction, random) : hours(12));
+      if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
       setState(player, faction.id, st);
       out.changed = true;
       continue;
     }
-    const triggered =
-      faction.trigger.type === "aggression"
-        ? (options.aggression?.victories ?? 0) >= faction.trigger.minVictories
-        : now - (player.resourcesUpdatedAtMs ?? 0) <= hours(faction.trigger.activeWithinHours);
+    const active = now - (player.resourcesUpdatedAtMs ?? 0) <= hours(faction.trigger.activeWithinHours);
+    const window = hours(faction.trigger.windowDays * 24);
+    const threshold = faction.trigger.threshold ?? 0;
+    let triggered = false;
+    switch (faction.trigger.type) {
+      case "aggression":
+        triggered = (options.aggression?.victories ?? 0) >= faction.trigger.minVictories;
+        break;
+      case "research":
+        triggered = totalTechLevels(player) >= threshold && now - (player.stats?.lastResearchAtMs ?? 0) <= window;
+        break;
+      case "hoard":
+        triggered = active && storageFillPct(player) >= threshold;
+        break;
+      case "expansion": {
+        // Repère glissant : remis à zéro à la fin de chaque période.
+        if (!st.mark || now - st.mark.atMs > window) {
+          st.mark = { atMs: now, value: totalBuildingLevels(player) };
+          setState(player, faction.id, st);
+          out.changed = true;
+        }
+        triggered = totalBuildingLevels(player) - st.mark.value >= threshold;
+        break;
+      }
+      default:
+        triggered = active;
+    }
     const eligible = forced || (now >= st.nextListAtMs && now - (player.createdAtMs ?? 0) >= hours(72) && triggered);
     if (!eligible) continue;
     const tribute = tributeFor(faction, player, options.aggression ?? null);
     st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(faction.answerHours) };
+    if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
     setState(player, faction.id, st);
+    recordThreat(player, faction.id);
     out.changed = true;
     out.notifications.push(
       note(
@@ -431,9 +581,11 @@ export function resolvePirateRaid(
   power: number,
   garrisons: (CombatGarrison & { ownerUid: string; ownerPseudo: string })[],
   now: number,
+  options: { evading?: boolean } = {},
 ): PirateRaidOutput {
   const flushed = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
   const player = flushed.player;
+  if (options.evading) bumpStat(player, "evasions");
   const st = pirateState(player, faction.id);
   const fleetOnly = faction.raid.target === "fleet";
   // Cible « flotte » : les défenses ne combattent pas, les vaisseaux à 100 %.

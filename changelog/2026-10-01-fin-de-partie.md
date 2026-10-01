@@ -1,7 +1,7 @@
 ---
 version: 1.5.0
 iteration: 6
-date: 2026-10-01
+date: 2026-09-30
 title: La fin de partie s'ouvre
 ---
 ## Bâtiments jusqu'au niveau 20

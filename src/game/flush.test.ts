@@ -1,5 +1,6 @@
 import { MISSIONS } from "@/game/missions";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_ACHIEVEMENTS, setAchievements } from "@/game/achievements";
 import { flushState, RESOURCE_HISTORY_INTERVAL_MS, RESOURCE_HISTORY_MAX_POINTS } from "@/game/flush";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { getUnitBuildTime, findUnit } from "@/game/units";
@@ -150,6 +151,8 @@ describe("flushState — research", () => {
 });
 
 describe("flushState — succès", () => {
+  beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
+
   it("débloque un succès et notifie quand sa condition devient vraie", () => {
     const player = makePlayer({ victories: 1 });
     const { player: after, notifications } = flushState(player, makeQueues(), NOW);
