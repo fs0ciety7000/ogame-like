@@ -7,11 +7,12 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { getRewardText, hasPrerequisites, MISSIONS } from "@/game/missions";
+import { hasPrerequisites, MISSIONS } from "@/game/missions";
+import { resourceEmoji } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { missionRewards } from "@/game/economy";
 import { ContractsCard } from "@/components/game/ContractsCard";
-import { formatClock } from "@/lib/utils";
+import { cn, formatClock, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 
@@ -46,44 +47,70 @@ export function MissionsPage() {
 
       <ContractsCard />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {Object.values(MISSIONS).map((mission) => {
           const active = queues.activeMissions.find((m) => m.key === mission.key);
           const hasReq = hasPrerequisites(mission, player.units);
           const prereqEntries = Object.entries(mission.prereq);
+          const rewards = missionRewards(mission, player);
 
           return (
-            <Card key={mission.key} className="flex flex-col gap-2 p-4">
-              <h3 className="font-display text-sm text-slate-100">{mission.name}</h3>
-              <p className="text-xs text-slate-500">Durée : {Math.floor(mission.duration / 60)} min</p>
-
-              <p className="text-xs text-slate-400">
-                Prérequis :{" "}
-                {prereqEntries.map(([id, count], i) => (
-                  <span key={id}>
-                    {i > 0 && " + "}
-                    {count} {findUnit(id)?.name ?? id}
-                  </span>
-                ))}
-              </p>
-
-              <p className="text-xs text-mint-glow">{getRewardText(missionRewards(mission, player)).join(" · ")}</p>
-
-              <div className="mt-auto pt-2">
-                {active ? (
-                  <div>
-                    <Progress value={100 - ((active.endTime - now) / (mission.duration * 1000)) * 100} className="mb-2" />
-                    <p className="text-center text-xs text-slate-400">
-                      Temps restant : {formatClock(Math.max(0, Math.floor((active.endTime - now) / 1000)))}
-                    </p>
+            <Card key={mission.key} className="hud-glitch flex flex-col gap-3 p-4">
+              <div className="relative grid grid-cols-[auto_1fr] items-start gap-3.5">
+                <div
+                  className={cn(
+                    "grid h-14 w-12 place-items-center text-2xl [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]",
+                    active ? "bg-gradient-to-b from-mint-glow/40 to-mint-glow/5" : hasReq ? "bg-gradient-to-b from-cyan-glow/40 to-cyan-glow/5" : "bg-white/[0.06] grayscale",
+                  )}
+                >
+                  {missionIcon(mission.key, rewards)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="hud-title text-[17px] text-white">{mission.name}</h3>
+                    {active ? (
+                      <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-mint-glow">● {formatClock(Math.max(0, Math.floor((active.endTime - now) / 1000)))}</span>
+                    ) : (
+                      <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-slate-500">⏱ {formatDuration(mission.duration)}</span>
+                    )}
                   </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {prereqEntries.map(([id, count]) => {
+                      const owned = player.units[id]?.count ?? 0;
+                      const ok = owned >= count;
+                      return (
+                        <span
+                          key={id}
+                          className={cn(
+                            "border px-2 py-0.5 text-xs",
+                            ok ? "border-mint-glow/35 bg-mint-glow/[0.06] text-mint-glow" : "border-danger-glow/40 bg-danger-glow/[0.06] text-danger-glow",
+                          )}
+                        >
+                          {ok ? "✓" : "✗"} {count} {findUnit(id)?.name ?? id}
+                          {!ok && <span className="opacity-70"> ({owned}/{count})</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    {(Object.entries(rewards) as [string, number][])
+                      .filter(([k]) => k !== "xp")
+                      .map(([res, amount]) => (
+                        <span key={res} className="flex items-baseline gap-1">
+                          <b className="hud-title text-xl text-white">+{formatNumber(amount)}</b>
+                          <span>{resourceEmoji(res)}</span>
+                        </span>
+                      ))}
+                    {rewards.xp ? <span className="font-mono text-xs text-gold-glow">★ +{rewards.xp} XP</span> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative mt-auto">
+                {active ? (
+                  <Progress value={100 - ((active.endTime - now) / (mission.duration * 1000)) * 100} />
                 ) : (
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={!hasReq || pending === mission.key}
-                    onClick={() => void handleStart(mission.key)}
-                  >
+                  <Button className="w-full" disabled={!hasReq || pending === mission.key} onClick={() => void handleStart(mission.key)}>
                     {hasReq ? "Lancer la mission" : "Prérequis non remplis"}
                   </Button>
                 )}
@@ -94,4 +121,18 @@ export function MissionsPage() {
       </div>
     </div>
   );
+}
+
+/** Icône d'une mission : d'après sa récompense principale. */
+function missionIcon(key: string, rewards: Record<string, number>): string {
+  if (/patrouille|perimetr/.test(key)) return "🛰️";
+  if (/radar|bombard|siege|bastion|interception|suppression/.test(key)) return "🛡️";
+  if (rewards.energy) return "⚡";
+  if (rewards.data) return "📡";
+  if (rewards.nano) return "🧬";
+  if (rewards.aiFragment) return "🧠";
+  if (rewards.syntheticNanites) return "🤖";
+  if (rewards.cyberModule) return "🧩";
+  if (rewards.reinforcedSteel) return "🛠️";
+  return "⛏️";
 }

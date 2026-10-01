@@ -1,0 +1,119 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+/* Briques visuelles du HUD (v2.4) : étiquette, jauge segmentée, pastille de
+   coût, barre de niveau à crans, sélecteur de quantité. */
+
+export function HudTag({ children, tone = "accent", className }: { children: ReactNode; tone?: "accent" | "ember" | "gold" | "mint" | "danger"; className?: string }) {
+  const tones = {
+    accent: "border-cyan-glow/35 bg-cyan-glow/[0.07] text-cyan-glow",
+    ember: "border-ember-glow/40 bg-ember-glow/[0.07] text-ember-glow",
+    gold: "border-gold-glow/40 bg-gold-glow/[0.07] text-gold-glow",
+    mint: "border-mint-glow/40 bg-mint-glow/[0.07] text-mint-glow",
+    danger: "border-danger-glow/45 bg-danger-glow/[0.08] text-danger-glow",
+  }[tone];
+  return <span className={cn("hud-cut-sm inline-flex items-center gap-1 border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em]", tones, className)}>{children}</span>;
+}
+
+/** Statistique avec jauge à 12 segments (`value` rapporté à `max`). */
+export function StatBar({ label, value, max, color, display }: { label: string; value: number; max: number; color: string; display?: ReactNode }) {
+  const on = max > 0 ? Math.max(value > 0 ? 1 : 0, Math.round((Math.min(value, max) / max) * 12)) : 0;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.2em] text-slate-400">
+        {label}
+        <b className="text-xs tracking-normal text-slate-100">{display ?? value}</b>
+      </div>
+      <div className="hud-seg mt-1" style={{ ["--seg" as string]: color }}>
+        {Array.from({ length: 12 }, (_, i) => (
+          <i key={i} className={i < on ? "on" : undefined} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Pastille de coût / durée ; `missing` la passe en rouge avec le manque. */
+export function CostPill({ children, missing, ok, className }: { children: ReactNode; missing?: ReactNode; ok?: boolean; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-xs tabular-nums",
+        missing ? "border-danger-glow/55 bg-danger-glow/[0.08] text-danger-glow" : ok ? "border-mint-glow/30 bg-white/[0.03] text-slate-200" : "border-cyan-glow/15 bg-white/[0.03] text-slate-300",
+        className,
+      )}
+    >
+      {children}
+      {missing && <em className="text-[10px] not-italic opacity-75">{missing}</em>}
+    </span>
+  );
+}
+
+/** Barre de niveau : un cran par niveau, le suivant clignote. */
+export function LevelTicks({ level, max, next = true, className }: { level: number; max: number; next?: boolean; className?: string }) {
+  return (
+    <div className={cn("hud-ticks", className)} style={{ gridTemplateColumns: `repeat(${Math.max(1, max)}, 1fr)` }}>
+      {Array.from({ length: max }, (_, i) => (
+        <i key={i} className={i < level ? "on" : next && i === level ? "next" : undefined} />
+      ))}
+    </div>
+  );
+}
+
+/** Quantité : − / valeur / + et raccourcis. */
+export function QtyStepper({ value, onChange, max, presets = [1, 10, 100] }: { value: number; onChange: (v: number) => void; max?: number; presets?: number[] }) {
+  const clamp = (v: number) => Math.max(1, max !== undefined ? Math.min(Math.max(1, max), v) : v);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center border border-cyan-glow/20 bg-black/25">
+        <button type="button" className="grid h-9 w-8 place-items-center font-mono text-slate-400 hover:text-cyan-glow" onClick={() => onChange(clamp(value - 1))} aria-label="Moins">
+          −
+        </button>
+        <input
+          type="number"
+          min={1}
+          value={value}
+          onChange={(e) => onChange(clamp(parseInt(e.target.value) || 1))}
+          className="w-12 bg-transparent text-center font-mono text-sm font-bold text-slate-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+          aria-label="Quantité"
+        />
+        <button type="button" className="grid h-9 w-8 place-items-center font-mono text-slate-400 hover:text-cyan-glow" onClick={() => onChange(clamp(value + 1))} aria-label="Plus">
+          +
+        </button>
+      </div>
+      <div className="flex gap-1">
+        {presets.map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(clamp(p))}
+            className={cn("border px-2 py-1 font-mono text-[10px] tracking-[0.1em] transition-colors", value === p ? "border-cyan-glow/60 text-cyan-glow" : "border-cyan-glow/15 text-slate-400 hover:border-cyan-glow/50 hover:text-cyan-glow")}
+          >
+            ×{p}
+          </button>
+        ))}
+        {max !== undefined && max > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange(clamp(max))}
+            className={cn("border px-2 py-1 font-mono text-[10px] tracking-[0.1em] transition-colors", value === max ? "border-cyan-glow/60 text-cyan-glow" : "border-cyan-glow/15 text-slate-400 hover:border-cyan-glow/50 hover:text-cyan-glow")}
+          >
+            MAX
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Jauge de remplissage fine avec reflet. */
+export function HudMeter({ percent, className, tone }: { percent: number; className?: string; tone?: string }) {
+  return (
+    <div className={cn("relative h-1 overflow-hidden bg-white/[0.06]", className)}>
+      <i
+        className="hud-sheen absolute inset-y-0 left-0 block"
+        style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: tone ?? "linear-gradient(90deg, var(--color-cyan-glow), var(--color-mint-glow))" }}
+      />
+    </div>
+  );
+}

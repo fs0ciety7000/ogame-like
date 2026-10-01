@@ -42,7 +42,7 @@ export function ResourceHud() {
                 animate={{ scale: 1, borderColor: "rgba(255,255,255,0.05)" }}
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/70 px-2.5 py-1.5 text-sm",
+                  "flex items-center gap-1.5 hud-cut-sm border border-cyan-glow/15 bg-space-900/70 px-2.5 py-1.5 text-sm",
                   economy.full.includes(res.id) && "!border-ember-glow/60",
                 )}
               >
@@ -100,7 +100,7 @@ export function ResourceHud() {
               initial={pulse[res.id] ? { scale: 1.18, borderColor: "rgba(255,209,102,0.8)" } : false}
               animate={{ scale: 1, borderColor: "rgba(255,255,255,0.05)" }}
               transition={{ type: "spring", stiffness: 380, damping: 14 }}
-              className="hidden items-center gap-1.5 rounded-lg border border-white/5 bg-space-800/50 px-2 py-1.5 text-sm sm:flex"
+              className="hidden items-center gap-1.5 hud-cut-sm border border-cyan-glow/10 bg-space-900/50 px-2 py-1.5 text-sm sm:flex"
             >
               <span className="text-base leading-none opacity-80">{res.emoji}</span>
               <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-300" />
