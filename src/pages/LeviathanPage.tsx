@@ -19,6 +19,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
+import { assetUrl } from "@/lib/assets";
 
 function AssaultDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const player = usePlayerStore((s) => s.player);
@@ -147,6 +148,25 @@ export function LeviathanPage() {
         description="Un monstre colossal surgit le premier week-end de chaque mois. Tout le serveur s'unit pour l'abattre ; chacun est récompensé selon ses dégâts."
       />
 
+      <div className="hud-cut relative overflow-hidden border border-danger-glow/30">
+        <picture>
+          <source media="(max-width: 640px)" srcSet={assetUrl("/assets/leviathan/leviathan-portrait.webp")} />
+          <img
+            src={assetUrl("/assets/leviathan/leviathan.webp")}
+            alt="Le Léviathan surgit face à une flotte"
+            className={cn("h-64 w-full object-cover object-[center_72%] sm:h-72 lg:h-80", !active && "opacity-60 grayscale-[40%]")}
+          />
+        </picture>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/20 to-transparent" />
+        <div className="absolute bottom-3 left-4 flex items-center gap-3">
+          <img src={assetUrl("/assets/leviathan/leviathan-emblem.webp")} alt="" className="h-14 w-14 drop-shadow-[0_0_14px_rgba(255,60,60,0.45)]" />
+          <div>
+            <p className="hud-title text-lg text-white">{LEVIATHAN_RULES.name}</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-danger-glow">{active ? "Menace en cours" : state?.status === "killed" ? "Abattu" : "En sommeil"}</p>
+          </div>
+        </div>
+      </div>
+
       {state ? (
         <Card className="relative flex flex-col gap-4 overflow-hidden p-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -183,7 +203,7 @@ export function LeviathanPage() {
         </Card>
       ) : (
         <Card>
-          <EmptyState icon={<Skull className="h-5 w-5" />} title="Aucun Léviathan pour l'instant">
+          <EmptyState icon={<img src={assetUrl("/assets/leviathan/leviathan-emblem.webp")} alt="" className="h-10 w-10" />} title="Aucun Léviathan pour l'instant">
             {next ? `Prochaine apparition : ${new Date(next).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}.` : "Les apparitions mensuelles sont désactivées."}
           </EmptyState>
         </Card>
