@@ -1,3 +1,4 @@
+import type { ResetOptions } from "@/game/reset";
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { useAuthStore } from "@/store/authStore";
@@ -101,6 +102,36 @@ export async function adminCloseSeason(seasonId: string): Promise<{ seasonId: st
   } catch (err) {
     const data = (err as { response?: { message?: string } }).response;
     throw new Error(data?.message || "Clôture impossible.");
+  }
+}
+
+export interface ResetSummary {
+  scope: "all" | "player";
+  players: number;
+  fleets: number;
+  debris: number;
+  reports: number;
+  alliances: number;
+  backup: string;
+}
+
+/** Hard reset de la progression (sauvegarde automatique avant, côté serveur). */
+export async function adminHardReset(params: { scope: "all" | "player"; uid?: string; confirm: string; options: ResetOptions }): Promise<ResetSummary> {
+  try {
+    return await pb.send<ResetSummary>("/api/cosmic/admin/reset", { method: "POST", body: params });
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Reset impossible.");
+  }
+}
+
+/** Passe la Liste de Varan pour un joueur (force : ultimatum immédiat). */
+export async function adminTriggerPirates(uid: string, force = true): Promise<{ changed: number }> {
+  try {
+    return await pb.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid, force } });
+  } catch (err) {
+    const data = (err as { response?: { message?: string } }).response;
+    throw new Error(data?.message || "Impossible.");
   }
 }
 

@@ -26,6 +26,8 @@ export interface ChangelogEntry {
   iteration: number | null;
   date: string;
   title: string;
+  /** Illustration facultative (chemin public, ex. /assets/story/varan.webp). */
+  image: string | null;
   body: string;
 }
 
@@ -50,6 +52,7 @@ export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
     iteration: Number.isFinite(iteration) ? iteration : null,
     date: meta.date ?? id.slice(0, 10),
     title: meta.title ?? id,
+    image: meta.image || null,
     body: (match ? match[2] : raw).trim(),
   };
 }

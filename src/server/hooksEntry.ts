@@ -18,6 +18,8 @@ export { stationGarrison, endGarrison } from "@/game/fleets";
 export { performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
+export { parseResetOptions, resetPlayerState } from "@/game/reset";
+export { answerUltimatum, PIRATE_OWNER_UID, PIRATE_RAIDER, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";

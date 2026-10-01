@@ -245,7 +245,7 @@ export function GalaxyPage() {
               {visibleFleets.map((f) => {
                 const from = mapPosition(f.ownerUid);
                 const to = mapPosition(f.targetUid);
-                const hostile = f.targetUid === uid && f.ownerUid !== uid && (f.mission ?? "attack") === "attack";
+                const hostile = f.targetUid === uid && f.ownerUid !== uid && ((f.mission ?? "attack") === "attack" || f.mission === "pirate");
                 const color = hostile ? "var(--color-danger-glow)" : f.mission === "recycle" ? "var(--color-mint-glow)" : "var(--color-cyan-glow)";
                 const t = fleetProgress(f, now);
                 const px = from.x + (to.x - from.x) * t;

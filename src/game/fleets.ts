@@ -8,6 +8,7 @@ import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
+import { checkLairLaunch, lairPower, PIRATE_LAIR_NAME, PIRATE_LAIR_UID } from "@/game/pirates";
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
 import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
@@ -38,7 +39,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -46,6 +47,8 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   recycle: "Recyclage",
   patrol: "Patrouille",
   garrison: "Garnison",
+  pirate: "Raid pirate",
+  lair: "Assaut du repaire",
 };
 
 export interface Fleet {
@@ -68,6 +71,8 @@ export interface Fleet {
   /** Garnison : durée de stationnement prévue, puis fin du stationnement. */
   durationMs?: number | null;
   stationedUntilMs?: number | null;
+  /** Raid pirate ou repaire : puissance adverse fixée au départ. */
+  power?: number | null;
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -231,6 +236,8 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
+    case "lair":
+      return { title: "Retour du repaire", message: `Les survivants de l'assaut sur le ${PIRATE_LAIR_NAME} sont rentrés.` };
     case "garrison":
       return { title: "Garnison rentrée", message: `Ta garnison stationnée chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -286,6 +293,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
+  else if (mission === "lair") out = launchLair(owner, req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target!, req.fleet, req.garrisonHours ?? 0, req.garrisonsAtHost ?? 0, now);
   else throw new GameActionError("Mission inconnue.");
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
@@ -414,6 +422,23 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
     ],
   };
 }
+
+/** Assaut du repaire de Varan (PvE) : sa puissance est fixée au départ. */
+export function launchLair(owner: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
+  checkLairLaunch(owner, raw);
+  const power = lairPower(owner);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unités d'attaque peuvent être envoyées.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch)) * 1000;
+  return {
+    attacker: owner,
+    fleet: { ...newFleet(owner, { uid: PIRATE_LAIR_UID, pseudo: PIRATE_LAIR_NAME }, "lair", units, now, arriveAtMs), power },
+    defenderNotifications: [],
+  };
+}
+
+/** Distance fixe jusqu'au repaire (aux confins de la carte). */
+export const LAIR_DISTANCE = 60;
 
 /** Arrivée d'une garnison : elle stationne pour la durée prévue. */
 export function stationGarrison(fleet: Fleet): Fleet {

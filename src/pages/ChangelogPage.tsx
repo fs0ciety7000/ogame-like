@@ -45,6 +45,7 @@ export function ChangelogPage() {
                   {formatDate(entry.date)}
                 </span>
               </div>
+              {entry.image && <img src={entry.image} alt="" className="mb-3 max-h-80 w-full rounded-lg object-cover object-top" />}
               <Markdown source={entry.body} />
             </Card>
           </motion.div>
