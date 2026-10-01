@@ -17,7 +17,7 @@ export function MaintenanceGate({ children }: { children: ReactNode }) {
   const [reopening, setReopening] = useState(false);
   const blockedOnce = useRef(false);
 
-  const blocked = loaded && state.enabled && admin !== true && pathname !== "/reset-password" && !(adminLogin && !user);
+  const blocked = loaded && state.enabled && admin !== true && pathname !== "/reset-password" && pathname !== "/bible" && !(adminLogin && !user);
   if (blocked) blockedOnce.current = true;
 
   // Réouverture vue depuis la page de maintenance : rechargement complet,

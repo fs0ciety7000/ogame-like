@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#03040a" />
+<meta name="description" content="Bible visuelle de Cosmic Empires : moodboard, identité, thèmes, composants, storyboard, rangs, icônes et univers du jeu." />
+<meta property="og:title" content="Cosmic Empires — Bible visuelle" />
+<meta property="og:description" content="Moodboard, storyboard et design system du jeu, en captures réelles." />
+<meta property="og:image" content="/bible/shots/d-accueil.webp" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon-32.png?v=2.4" />
+<link rel="apple-touch-icon" href="/assets/logo/apple-touch-icon.png?v=2.4" />
+<title>Cosmic Empires — Bible visuelle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Saira:wght@400;500;600&family=Saira+Condensed:wght@600;700&family=Rajdhani:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Mise en page : une console de commandement. Barre d'onglets fixe en haut,
+     sections empilées comme des panneaux biseautés du jeu, le contenu visuel
+     (captures, emblèmes, icônes) au premier plan, le texte en légende. */
+  :root {
+    color-scheme: dark;
+    --bg: #03040a;
+    --bg-2: #070a14;
+    --panel: #0b1022;
+    --panel-2: #10162b;
+    --line: rgba(75, 232, 255, 0.16);
+    --line-strong: rgba(75, 232, 255, 0.55);
+    --fg: #e7ecff;
+    --fg-2: #b6c0d8;
+    --muted: #7d89a6;
+    --accent: #4be8ff;
+    --accent-2: #a78bfa;
+    --ok: #4aff9c;
+    --gold: #ffd86b;
+    --ember: #ff7a45;
+    --danger: #ff5d6c;
+    --f-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --f-body: "Inter", "Segoe UI", system-ui, sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    --cut: 12px;
+    --gutter: clamp(16px, 4vw, 48px);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 700px at 85% -10%, rgba(167, 139, 250, 0.14), transparent 60%),
+      radial-gradient(900px 600px at -10% 20%, rgba(75, 232, 255, 0.10), transparent 60%),
+      var(--bg);
+    color: var(--fg);
+    font: 15px/1.6 var(--f-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(75, 232, 255, 0.035) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, rgba(75, 232, 255, 0.035) 1px, transparent 1px) 0 0 / 48px 48px;
+    mask-image: linear-gradient(#000 0%, transparent 70%);
+  }
+  img { max-width: 100%; display: block; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- navigation ---------- */
+  .nav {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 10px var(--gutter);
+    background: rgba(3, 4, 10, 0.86);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
+  .nav .brand img { width: 30px; height: 30px; filter: drop-shadow(0 0 8px rgba(75, 232, 255, 0.4)); }
+  .nav .brand span { font: 700 13px/1 var(--f-display); letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg); }
+  .nav ul { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .nav ul::-webkit-scrollbar { display: none; }
+  .nav li a {
+    display: block;
+    padding: 6px 10px;
+    font: 600 11px/1 var(--f-display);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav li a:hover { color: var(--accent); }
+
+  main { position: relative; display: flex; flex-direction: column; gap: clamp(56px, 8vw, 104px); padding: 40px var(--gutter) 80px; max-width: 1360px; margin: 0 auto; }
+
+  /* ---------- briques ---------- */
+  .eyebrow { font: 500 11px/1.2 var(--f-mono); letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; opacity: 0.85; }
+  h1, h2, h3 { font-family: var(--f-display); text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.05; margin: 0; text-wrap: balance; }
+  h2 { font-size: clamp(26px, 3.6vw, 40px); }
+  h3 { font-size: 15px; letter-spacing: 0.1em; }
+  .lead { color: var(--fg-2); max-width: 64ch; margin: 12px 0 0; }
+  .section-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
+  .section-head > div { min-width: 0; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px; border: 1px solid var(--line-strong);
+    font: 500 10px/1.4 var(--f-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+    background: rgba(75, 232, 255, 0.06);
+  }
+  .panel {
+    position: relative;
+    background: linear-gradient(160deg, rgba(16, 24, 58, 0.9), rgba(5, 8, 15, 0.94));
+    border: 1px solid var(--line);
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  }
+  .panel::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg, var(--line-strong), transparent 45%) top left / 100% 1px no-repeat,
+      linear-gradient(to bottom right, transparent calc(50% - 0.75px), var(--line-strong) calc(50% - 0.75px), var(--line-strong) calc(50% + 0.75px), transparent calc(50% + 0.75px)) top left / var(--cut) var(--cut) no-repeat;
+  }
+  .shot { cursor: zoom-in; border: 1px solid var(--line); background: #000; transition: transform 0.25s ease, border-color 0.25s ease; }
+  .shot:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin-top: 10px; color: var(--fg-2); font-size: 13.5px; }
+  figcaption b { display: block; font: 600 12px/1.3 var(--f-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg); margin-bottom: 2px; }
+  .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- hero ---------- */
+  .hero { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+  .hero h1 { font-size: clamp(42px, 7vw, 92px); letter-spacing: 0.06em; }
+  .hero h1 small { display: block; font-size: 0.32em; letter-spacing: 0.5em; color: var(--accent); margin-top: 10px; }
+  .hero .motto { font: 600 clamp(18px, 2vw, 22px)/1.3 var(--f-display); text-transform: uppercase; letter-spacing: 0.14em; margin: 22px 0 0; color: var(--fg-2); }
+  .hero .motto em { font-style: normal; color: var(--accent); }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 28px; background: var(--line); border: 1px solid var(--line); }
+  .facts div { background: var(--bg-2); padding: 12px 14px; }
+  .facts b { display: block; font: 700 26px/1 var(--f-display); color: var(--fg); }
+  .facts span { font: 500 10px/1.4 var(--f-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .monitor { position: relative; padding: 10px; }
+  .monitor img { border: 1px solid var(--line-strong); box-shadow: 0 30px 80px -30px rgba(75, 232, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.6); }
+  .monitor::before, .monitor::after { content: ""; position: absolute; width: 28px; height: 28px; border: 2px solid var(--accent); }
+  .monitor::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+  .monitor::after { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+  .monitor .phone { position: absolute; right: -14px; bottom: -34px; width: 22%; min-width: 92px; border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px -10px #000; }
+  .monitor .phone img { border: 0; box-shadow: none; }
+
+  /* ---------- moodboard ---------- */
+  .mood { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 120px; gap: 10px; }
+  .mood > * { position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  .mood img { width: 100%; height: 100%; object-fit: cover; }
+  .mood .contain img { object-fit: contain; padding: 14px; }
+  .mood .w2 { grid-column: span 2; }
+  .mood .w3 { grid-column: span 3; }
+  .mood .h2 { grid-row: span 2; }
+  .mood .h3 { grid-row: span 3; }
+  .mood .label { position: absolute; left: 8px; bottom: 8px; font: 500 9px/1.3 var(--f-mono); letter-spacing: 0.16em; text-transform: uppercase; color: #fff; background: rgba(3, 4, 10, 0.75); padding: 3px 6px; }
+  .mood .word { display: grid; place-items: center; padding: 12px; text-align: center; font: 700 clamp(14px, 1.6vw, 20px)/1.1 var(--f-display); letter-spacing: 0.12em; text-transform: uppercase; background: linear-gradient(140deg, rgba(75, 232, 255, 0.12), rgba(167, 139, 250, 0.12)); }
+  .mood .word.alt { color: var(--gold); background: linear-gradient(140deg, rgba(255, 216, 107, 0.12), rgba(255, 122, 69, 0.08)); }
+  .mood .swatches { display: flex; }
+  .mood .swatches i { flex: 1; }
+
+  /* ---------- identité ---------- */
+  .identity { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 16px; }
+  .logo-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: center; padding: 28px; }
+  .logo-card .big { width: clamp(120px, 14vw, 180px); filter: drop-shadow(0 0 24px rgba(75, 232, 255, 0.35)); }
+  .sizes { display: flex; align-items: end; gap: 16px; margin-top: 18px; }
+  .sizes figure { text-align: center; }
+  .sizes figcaption { font: 500 10px var(--f-mono); color: var(--muted); margin-top: 6px; }
+  .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 20px; }
+  .palette div { display: flex; flex-direction: column; gap: 6px; }
+  .palette i { height: 52px; border: 1px solid rgba(255, 255, 255, 0.08); }
+  .palette b { font: 600 11px/1.2 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase; }
+  .palette span { font: 400 11px/1.2 var(--f-mono); color: var(--muted); }
+  .type { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  .type .panel { padding: 22px; }
+  .type .specimen { font-size: 34px; line-height: 1.05; margin: 14px 0 10px; color: var(--fg); }
+  .type p { margin: 0; color: var(--fg-2); font-size: 13.5px; }
+
+  /* ---------- thèmes ---------- */
+  .themes { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .theme-tabs { display: flex; flex-direction: column; gap: 8px; }
+  .theme-tab {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center;
+    text-align: left; padding: 14px 16px; cursor: pointer; color: var(--fg);
+    border: 1px solid var(--line); background: var(--bg-2);
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+  .theme-tab[aria-selected="true"] { border-color: var(--tc, var(--accent)); background: color-mix(in srgb, var(--tc, var(--accent)) 10%, var(--bg-2)); }
+  .theme-tab .sw { grid-row: span 2; display: grid; grid-template-columns: repeat(2, 14px); gap: 3px; }
+  .theme-tab .sw i { width: 14px; height: 14px; }
+  .theme-tab b { font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .theme-tab span { font: 500 10px/1.3 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .theme-tab p { grid-column: 2; margin: 4px 0 0; font-size: 13px; color: var(--fg-2); }
+  .theme-view { position: relative; }
+  .theme-view img { border: 1px solid var(--line-strong); }
+
+  /* ---------- composants vivants ---------- */
+  .ds {
+    --t-accent: #4be8ff; --t-accent2: #a78bfa; --t-ok: #4aff9c; --t-danger: #ff5d6c; --t-gold: #ffd86b; --t-ember: #ff7a45;
+    --t-bg: #0a0e1c; --t-panel-a: rgba(16, 24, 58, 0.92); --t-panel-b: rgba(5, 8, 15, 0.96); --t-text: #e2e8f0; --t-muted: #94a3b8; --t-ink: #02131a;
+    --t-title: "Chakra Petch", sans-serif; --t-body: "Inter", sans-serif; --t-cut: 12px; --t-track: 0.04em;
+    padding: clamp(16px, 3vw, 28px); background: var(--t-bg); border: 1px solid color-mix(in srgb, var(--t-accent) 25%, transparent);
+    font-family: var(--t-body); color: var(--t-text); transition: background 0.4s;
+  }
+  .ds[data-t="holo"] { --t-accent: #6ec8ff; --t-accent2: #6ec8ff; --t-ok: #78ffd2; --t-danger: #ff6e6e; --t-gold: #ffd68c; --t-ember: #ffbe5a; --t-bg: #07182e; --t-panel-a: rgba(40, 120, 200, 0.14); --t-panel-b: rgba(8, 30, 60, 0.1); --t-text: #d6eaf8; --t-muted: #8fb3cf; --t-ink: #eaf6ff; --t-title: "Saira", sans-serif; --t-body: "Saira", sans-serif; --t-cut: 0px; --t-track: 0.09em; }
+  .ds[data-t="cockpit"] { --t-accent: #ff8c1e; --t-accent2: #ff8c1e; --t-ok: #78c8ff; --t-danger: #ff4628; --t-gold: #ffbe50; --t-ember: #ff8c1e; --t-bg: #120a05; --t-panel-a: rgba(255, 120, 20, 0.07); --t-panel-b: rgba(0, 0, 0, 0.55); --t-text: #ffd8ad; --t-muted: #c98a4f; --t-ink: #1a0a00; --t-title: "Saira Condensed", sans-serif; --t-body: "Saira", sans-serif; --t-cut: 8px; --t-track: 0.1em; }
+  .ds[data-t="netrunner"] { --t-accent: #f3e600; --t-accent2: #ff003c; --t-ok: #55ead4; --t-danger: #ff003c; --t-gold: #f3e600; --t-ember: #ff6b2c; --t-bg: #0f0d11; --t-panel-a: rgba(20, 18, 16, 0.94); --t-panel-b: rgba(8, 7, 10, 0.96); --t-text: #ece8c6; --t-muted: #a39f86; --t-ink: #120f00; --t-title: "Rajdhani", sans-serif; --t-body: "Rajdhani", sans-serif; --t-cut: 16px; --t-track: 0.08em; }
+  .ds-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .ds-switch button { padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--t-accent) 30%, transparent); background: transparent; color: var(--t-muted); font: 600 11px/1 var(--f-display); letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+  .ds-switch button[aria-pressed="true"] { color: var(--t-accent); background: color-mix(in srgb, var(--t-accent) 14%, transparent); border-color: var(--t-accent); }
+  .ds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .c-panel {
+    position: relative; padding: 18px; background: linear-gradient(160deg, var(--t-panel-a), var(--t-panel-b));
+    border: 1px solid color-mix(in srgb, var(--t-accent) 26%, transparent);
+    clip-path: polygon(var(--t-cut) 0, 100% 0, 100% calc(100% - var(--t-cut)), calc(100% - var(--t-cut)) 100%, 0 100%, 0 var(--t-cut));
+  }
+  .ds[data-t="netrunner"] .c-panel { border-left: 3px solid var(--t-accent2); }
+  .ds[data-t="cockpit"] .c-panel { border-top: 3px solid var(--t-accent); }
+  .ds[data-t="holo"] .c-panel { border-top: 2px solid var(--t-accent); }
+  .c-label { font: 500 10px/1.3 var(--f-mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--t-muted); margin: 0 0 12px; }
+  .c-title { font: 700 22px/1.1 var(--t-title); letter-spacing: var(--t-track); text-transform: uppercase; color: #fff; margin: 0; }
+  .ds[data-t="netrunner"] .c-title { color: var(--t-accent); text-shadow: 3px 3px 0 color-mix(in srgb, var(--t-accent2) 85%, transparent); }
+  .c-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .c-btn { padding: 10px 18px; border: 0; font: 700 12px/1 var(--t-title); letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+  .c-btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--t-accent) 70%, white), var(--t-accent)); color: var(--t-ink); }
+  .ds[data-t="holo"] .c-btn.primary { background: color-mix(in srgb, var(--t-accent) 18%, transparent); border: 1px solid var(--t-accent); color: var(--t-text); clip-path: none; }
+  .ds[data-t="netrunner"] .c-btn.primary { background: var(--t-accent); box-shadow: inset -3px 0 0 var(--t-accent2); }
+  .c-btn.secondary { background: color-mix(in srgb, var(--t-accent) 10%, transparent); color: var(--t-accent); border: 1px solid color-mix(in srgb, var(--t-accent) 40%, transparent); }
+  .c-btn.warn { background: linear-gradient(180deg, #ffd0a0, var(--t-ember)); color: #1a0a00; }
+  .c-btn.danger { background: color-mix(in srgb, var(--t-danger) 16%, transparent); color: var(--t-danger); border: 1px solid color-mix(in srgb, var(--t-danger) 50%, transparent); }
+  .c-tag { padding: 3px 8px; font: 500 10px/1.4 var(--f-mono); letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid; }
+  .c-tag.a { color: var(--t-accent); border-color: color-mix(in srgb, var(--t-accent) 50%, transparent); background: color-mix(in srgb, var(--t-accent) 8%, transparent); }
+  .c-tag.g { color: var(--t-gold); border-color: color-mix(in srgb, var(--t-gold) 50%, transparent); background: color-mix(in srgb, var(--t-gold) 8%, transparent); }
+  .c-tag.m { color: var(--t-ok); border-color: color-mix(in srgb, var(--t-ok) 50%, transparent); background: color-mix(in srgb, var(--t-ok) 8%, transparent); }
+  .c-tag.d { color: var(--t-danger); border-color: color-mix(in srgb, var(--t-danger) 50%, transparent); background: color-mix(in srgb, var(--t-danger) 8%, transparent); }
+  .c-stat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+  .c-stat div p { display: flex; justify-content: space-between; margin: 0 0 4px; font: 500 10px/1 var(--f-mono); letter-spacing: 0.16em; color: var(--t-muted); }
+  .c-stat div p b { color: var(--t-text); font-weight: 700; }
+  .bar { display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; }
+  .bar i { height: 5px; background: rgba(255, 255, 255, 0.07); }
+  .bar i.on { background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .ticks { display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; margin-top: 10px; }
+  .ticks i { height: 8px; background: rgba(255, 255, 255, 0.07); }
+  .ticks i.on { background: var(--t-gold); }
+  .ticks i.next { background: color-mix(in srgb, var(--t-gold) 40%, transparent); animation: blink 1.2s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--t-ok) 30%, transparent); background: rgba(255, 255, 255, 0.03); font: 500 12px/1 var(--f-mono); color: var(--t-text); }
+  .pill.miss { border-color: color-mix(in srgb, var(--t-danger) 55%, transparent); color: var(--t-danger); background: color-mix(in srgb, var(--t-danger) 8%, transparent); }
+  .pill img { width: 18px; height: 18px; }
+  .res { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .res div { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px 10px; border: 1px solid color-mix(in srgb, var(--t-accent) 18%, transparent); background: rgba(0, 0, 0, 0.3); }
+  .res img { width: 30px; height: 30px; }
+  .res b { display: block; font: 700 15px/1 var(--f-mono); color: #fff; }
+  .res span { font: 500 9px/1.4 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--t-muted); }
+  .res em { position: absolute; left: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--t-accent), var(--t-ok)); }
+
+  /* ---------- storyboard ---------- */
+  .story { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 26px 18px; counter-reset: step; }
+  .story figure { counter-increment: step; }
+  .story figcaption b::before { content: counter(step, decimal-leading-zero) " · "; color: var(--accent); }
+  .story .shot { aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; width: 100%; }
+
+  /* ---------- mobile ---------- */
+  .phones { display: flex; gap: 18px; overflow-x: auto; padding: 6px 2px 18px; scroll-snap-type: x mandatory; }
+  .phones figure { flex: 0 0 auto; width: clamp(170px, 18vw, 220px); scroll-snap-align: start; }
+  .phones .frame { border: 1px solid var(--line-strong); border-radius: 22px; padding: 6px; background: #000; box-shadow: 0 20px 50px -20px rgba(75, 232, 255, 0.3); }
+  .phones .frame img { border-radius: 16px; cursor: zoom-in; }
+
+  /* ---------- rangs ---------- */
+  .ranks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+  .family { padding: 14px; }
+  .family h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; color: var(--fc, var(--fg)); }
+  .family h3 span { font: 400 10px var(--f-mono); color: var(--muted); letter-spacing: 0.1em; }
+  .family ol { display: flex; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .family li { flex: 1; text-align: center; min-width: 0; }
+  .family img { width: 100%; max-width: 64px; margin: 0 auto; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)); transition: transform 0.25s; }
+  .family li:hover img { transform: translateY(-3px) scale(1.06); }
+  .family small { display: block; margin-top: 4px; font: 500 10px/1.2 var(--f-mono); color: var(--fg-2); }
+  .family small i { display: block; font-style: normal; color: var(--muted); }
+
+  /* ---------- icônes ---------- */
+  .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+  .icon { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px 12px; border: 1px solid var(--line); background: var(--bg-2); text-align: center; }
+  .icon img { width: 64px; height: 64px; transition: transform 0.25s; }
+  .icon:hover img { transform: scale(1.1); }
+  .icon b { font: 600 11px/1.2 var(--f-display); letter-spacing: 0.08em; text-transform: uppercase; }
+  .icon span { font: 400 10px/1.3 var(--f-mono); color: var(--muted); }
+  .icons-sub { margin: 22px 0 10px; font: 600 12px var(--f-display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- factions & récompenses ---------- */
+  .factions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+  .faction { position: relative; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 3 / 4; background: #000; }
+  .faction img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+  .faction:hover img { transform: scale(1.05); }
+  .faction div { position: absolute; inset: auto 0 0 0; padding: 40px 14px 14px; background: linear-gradient(transparent, rgba(3, 4, 10, 0.95)); }
+  .faction b { display: block; font: 700 16px/1.1 var(--f-display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fc); }
+  .faction span { font-size: 12.5px; color: var(--fg-2); }
+  .medals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .medals figure { padding: 16px; text-align: center; }
+  .medals img { width: 96px; margin: 0 auto; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)); gap: 8px; margin-top: 16px; }
+  .gallery img { aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); background: var(--panel); }
+
+  /* ---------- coulisses ---------- */
+  .backstage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; }
+
+  footer { border-top: 1px solid var(--line); padding: 26px var(--gutter) 40px; color: var(--muted); font: 400 12px var(--f-mono); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; max-width: 1360px; margin: 0 auto; }
+
+  /* ---------- visionneuse ---------- */
+  dialog { border: 1px solid var(--line-strong); background: var(--bg); padding: 0; max-width: min(1400px, 94vw); max-height: 92vh; color: var(--fg); }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(4px); }
+  dialog img { max-height: 84vh; width: auto; margin: 0 auto; }
+  dialog p { margin: 0; padding: 10px 14px; font: 500 12px var(--f-mono); color: var(--fg-2); display: flex; justify-content: space-between; gap: 12px; }
+  dialog button { background: none; border: 1px solid var(--line-strong); color: var(--accent); font: 600 11px var(--f-display); letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 10px; cursor: pointer; }
+
+  /* ---------- apparition ---------- */
+  .reveal { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @keyframes rise { from { transform: translateY(14px); } to { transform: none; } }
+
+  @media (max-width: 900px) {
+    .hero, .identity, .themes, .backstage { grid-template-columns: minmax(0, 1fr); }
+    .type { grid-template-columns: minmax(0, 1fr); }
+    .mood { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 100px; }
+    .mood .w3 { grid-column: span 3; }
+    .medals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .monitor .phone { display: none; }
+    .logo-card { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+  .nav .play { flex-shrink: 0; margin-left: auto; padding: 7px 14px; font: 700 11px/1 var(--f-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--bg); background: var(--accent); text-decoration: none; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  .nav .play:hover { filter: brightness(1.15); }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Sections">
+  <a class="brand" href="#top"><img src="/assets/logo/logo.webp" alt="" /><span>Cosmic Empires</span></a>
+  <ul>
+    <li><a href="#moodboard">Moodboard</a></li>
+    <li><a href="#identite">Identité</a></li>
+    <li><a href="#themes">Thèmes</a></li>
+    <li><a href="#composants">Composants</a></li>
+    <li><a href="#storyboard">Storyboard</a></li>
+    <li><a href="#mobile">Mobile</a></li>
+    <li><a href="#rangs">Rangs</a></li>
+    <li><a href="#icones">Icônes</a></li>
+    <li><a href="#univers">Univers</a></li>
+    <li><a href="#coulisses">Coulisses</a></li>
+  </ul>
+  <a class="play" href="/">Jouer</a>
+</nav>
+
+<main id="top">
+  <!-- ============ HERO ============ -->
+  <section class="hero reveal">
+    <div>
+      <p class="eyebrow">Bible visuelle · version 2.7</p>
+      <h1>Cosmic Empires<small>Poste de commandement</small></h1>
+      <p class="motto">Bâtis. Conquiers. <em>Règne.</em></p>
+      <p class="lead">
+        Un jeu de stratégie spatiale en temps réel, dans le navigateur. Chaque écran est pensé comme l'interface d'un vaisseau : panneaux biseautés, liserés
+        lumineux, chiffres en chasse fixe. Ce document rassemble l'univers, l'identité, les thèmes, les composants et le parcours du joueur, avec des captures
+        réelles du jeu.
+      </p>
+      <div class="facts">
+        <div><b class="mono">4</b><span>thèmes</span></div>
+        <div><b class="mono">28</b><span>rangs</span></div>
+        <div><b class="mono">69</b><span>succès</span></div>
+        <div><b class="mono">5</b><span>factions</span></div>
+        <div><b class="mono">8</b><span>ressources</span></div>
+        <div><b class="mono">12</b><span>unités</span></div>
+      </div>
+    </div>
+    <div class="monitor">
+      <img class="shot" src="/bible/shots/d-batiments.webp" alt="Page Bâtiments du jeu" data-caption="Bâtiments · thème Tactique" />
+      <div class="phone"><img src="/bible/shots/m-accueil.webp" alt="Accueil sur mobile" /></div>
+    </div>
+  </section>
+
+  <!-- ============ MOODBOARD ============ -->
+  <section id="moodboard">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">01 · Moodboard</p>
+        <h2>Industriel, néon, holographique</h2>
+        <p class="lead">Une galaxie de récupérateurs : métal patiné, énergie instable, signaux cyan dans le noir. Les factions apportent la menace, les rangs la gloire.</p>
+      </div>
+    </div>
+    <div class="mood">
+      <figure class="w2 h3"><img src="/assets/maintenance/operator-portrait.webp" alt="Opérateur de maintenance" loading="lazy" /><span class="label">Opérateur K-7</span></figure>
+      <figure class="w2 h2"><img src="/assets/story/cartel.webp" alt="Cartel Néon" loading="lazy" /><span class="label">Cartel Néon</span></figure>
+      <div class="word">HUD tactique</div>
+      <figure class="contain h2"><img src="/assets/ranks/maitre1.webp" alt="Emblème Maître I" loading="lazy" /><span class="label">Maître I</span></figure>
+      <figure class="contain"><img src="/assets/units/fregate.webp" alt="Frégate" loading="lazy" /><span class="label">Frégate</span></figure>
+      <figure class="w2 h2"><img src="/assets/story/inquisition.webp" alt="Inquisition de l'Aube Blanche" loading="lazy" /><span class="label">Inquisition</span></figure>
+      <figure class="contain"><img src="/assets/buildings/reacteur_instable.webp" alt="Réacteur instable" loading="lazy" /><span class="label">Réacteur</span></figure>
+      <div class="word alt">Énergie instable</div>
+      <figure class="contain"><img src="/assets/icons/nano.webp" alt="Nanocomposants" loading="lazy" /><span class="label">Nanocomposants</span></figure>
+      <figure class="w2"><img src="/assets/story/varan.webp" alt="Confrérie du Vide" loading="lazy" style="object-position: center 30%" /><span class="label">Confrérie du Vide</span></figure>
+      <div class="swatches"><i style="background:#4be8ff"></i><i style="background:#a78bfa"></i><i style="background:#4aff9c"></i><i style="background:#ffd86b"></i><i style="background:#ff7a45"></i></div>
+      <figure class="contain"><img src="/assets/units/etoile_noire.webp" alt="Étoile noire" loading="lazy" /><span class="label">Étoile noire</span></figure>
+      <figure class="w2 h2"><img src="/assets/maintenance/operator.webp" alt="Opérateur en intervention" loading="lazy" /><span class="label">Maintenance</span></figure>
+      <figure class="contain"><img src="/assets/ranks/elite.webp" alt="Emblème Élite" loading="lazy" /><span class="label">Élite</span></figure>
+      <div class="word">Ferraille &amp; signaux</div>
+      <figure class="contain"><img src="/assets/buildings/extracteur_ferraille.webp" alt="Extracteur de ferraille" loading="lazy" /><span class="label">Extracteur</span></figure>
+      <figure class="contain"><img src="/assets/achievements/legendaire.webp" alt="Cadre de succès légendaire" loading="lazy" /><span class="label">Succès légendaire</span></figure>
+    </div>
+  </section>
+
+  <!-- ============ IDENTITÉ ============ -->
+  <section id="identite">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">02 · Identité</p>
+        <h2>Logo, couleurs, typographie</h2>
+        <p class="lead">Un emblème à chevrons empilés, comme un insigne de grade. Le cyan signale l'action, le violet la profondeur, l'or la récompense.</p>
+      </div>
+    </div>
+    <div class="identity">
+      <div class="panel logo-card">
+        <img class="big" src="/assets/logo/logo.webp" alt="Logo Cosmic Empires" />
+        <div>
+          <h3>Emblème à chevrons</h3>
+          <p class="lead" style="font-size:14px">Cyan et violet sur fond transparent, lisible jusqu'en favicon.</p>
+          <div class="sizes">
+            <figure><img src="/assets/logo/logo.webp" alt="" width="64" height="64" /><figcaption>64 px</figcaption></figure>
+            <figure><img src="/assets/logo/logo.webp" alt="" width="32" height="32" /><figcaption>32 px</figcaption></figure>
+            <figure><img src="/assets/logo/logo.webp" alt="" width="16" height="16" /><figcaption>16 px</figcaption></figure>
+          </div>
+        </div>
+      </div>
+      <div class="panel palette" aria-label="Palette du thème Tactique">
+        <div><i style="background:#4be8ff"></i><b>Cyan signal</b><span>#4BE8FF · action</span></div>
+        <div><i style="background:#a78bfa"></i><b>Violet profond</b><span>#A78BFA · second plan</span></div>
+        <div><i style="background:#4aff9c"></i><b>Menthe</b><span>#4AFF9C · production, succès</span></div>
+        <div><i style="background:#ffd86b"></i><b>Or</b><span>#FFD86B · XP, paliers</span></div>
+        <div><i style="background:#ff7a45"></i><b>Braise</b><span>#FF7A45 · amélioration</span></div>
+        <div><i style="background:#ff5d6c"></i><b>Alerte</b><span>#FF5D6C · danger, manque</span></div>
+        <div><i style="background:#10162b"></i><b>Coque</b><span>#10162B · panneaux</span></div>
+        <div><i style="background:#03040a"></i><b>Vide</b><span>#03040A · fond</span></div>
+      </div>
+    </div>
+    <div class="type">
+      <div class="panel">
+        <p class="eyebrow">Titres</p>
+        <h3>Chakra Petch</h3>
+        <p class="specimen" style="font-family:'Chakra Petch';font-weight:700;text-transform:uppercase;letter-spacing:.04em">Frégate · niv. 6</p>
+        <p>Capitales, approche large. Noms d'éléments, titres de page, boutons.</p>
+      </div>
+      <div class="panel">
+        <p class="eyebrow">Texte</p>
+        <h3>Inter</h3>
+        <p class="specimen" style="font-family:Inter;font-weight:500;font-size:26px">Récupère la ferraille des débris environnants.</p>
+        <p>Descriptions, aides, messages. Lisible à petite taille sur mobile.</p>
+      </div>
+      <div class="panel">
+        <p class="eyebrow">Données</p>
+        <h3>JetBrains Mono</h3>
+        <p class="specimen mono" style="font-size:28px">+1,9 k/s · 06:42:13</p>
+        <p>Chiffres en chasse fixe : les compteurs ne « sautent » pas en direct.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THÈMES ============ -->
+  <section id="themes">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">03 · Thèmes</p>
+        <h2>Quatre postes de commandement</h2>
+        <p class="lead">Même jeu, quatre ambiances. Chaque joueur choisit la sienne dans Réglages → Apparence ; tout le jeu suit, jusqu'aux polices et aux découpes.</p>
+      </div>
+    </div>
+    <div class="themes">
+      <div class="theme-view">
+        <img id="theme-img" class="shot" src="/bible/shots/t-tactique.webp" alt="Page Unités, thème Tactique" data-caption="Unités · thème Tactique" />
+      </div>
+      <div class="theme-tabs" role="tablist" aria-label="Thèmes">
+        <button class="theme-tab" role="tab" aria-selected="true" data-theme="tactique" style="--tc:#4be8ff">
+          <span class="sw"><i style="background:#4be8ff"></i><i style="background:#a78bfa"></i><i style="background:#4aff9c"></i><i style="background:#10162b"></i></span>
+          <b style="font-family:'Chakra Petch'">Tactique</b><span>Thème principal</span>
+          <p>Cyan et violet, coins biseautés. Polyvalent et lisible.</p>
+        </button>
+        <button class="theme-tab" role="tab" aria-selected="false" data-theme="holo" style="--tc:#6ec8ff">
+          <span class="sw"><i style="background:#6ec8ff"></i><i style="background:#78ffd2"></i><i style="background:#ffd68c"></i><i style="background:#0b2240"></i></span>
+          <b style="font-family:Saira;font-weight:500">Holo</b><span>Esprit Star Citizen</span>
+          <p>Hologramme bleu translucide, traits fins, scintillement discret.</p>
+        </button>
+        <button class="theme-tab" role="tab" aria-selected="false" data-theme="cockpit" style="--tc:#ff8c1e">
+          <span class="sw"><i style="background:#ff8c1e"></i><i style="background:#78c8ff"></i><i style="background:#ffbe50"></i><i style="background:#1b1008"></i></span>
+          <b style="font-family:'Saira Condensed'">Cockpit</b><span>Esprit Elite Dangerous</span>
+          <p>Tableau de bord orange monochrome, sobre et immersif.</p>
+        </button>
+        <button class="theme-tab" role="tab" aria-selected="false" data-theme="netrunner" style="--tc:#f3e600">
+          <span class="sw"><i style="background:#f3e600"></i><i style="background:#ff003c"></i><i style="background:#55ead4"></i><i style="background:#171419"></i></span>
+          <b style="font-family:Rajdhani">Netrunner</b><span>Esprit Cyberpunk 2077</span>
+          <p>Jaune haute tension et rouge néon, encoches et glitch.</p>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMPOSANTS ============ -->
+  <section id="composants">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">04 · Design system</p>
+        <h2>Les briques du HUD</h2>
+        <p class="lead">Les composants du jeu, reproduits ici en direct. Change de thème : les couleurs, les polices et les découpes suivent, comme dans le jeu.</p>
+      </div>
+    </div>
+    <div class="ds" id="ds" data-t="tactique">
+      <div class="ds-switch" role="group" aria-label="Thème des composants">
+        <button type="button" data-t="tactique" aria-pressed="true">Tactique</button>
+        <button type="button" data-t="holo" aria-pressed="false">Holo</button>
+        <button type="button" data-t="cockpit" aria-pressed="false">Cockpit</button>
+        <button type="button" data-t="netrunner" aria-pressed="false">Netrunner</button>
+      </div>
+      <div class="ds-grid">
+        <div class="c-panel">
+          <p class="c-label">Panneau · titre</p>
+          <p class="c-title">Extracteur de ferraille</p>
+          <p style="margin:8px 0 0;color:var(--t-muted);font-size:14px">Récupère automatiquement la ferraille dans les débris environnants.</p>
+          <div class="ticks" aria-label="Niveau 16 sur 20">
+            <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="next"></i><i></i><i></i><i></i>
+          </div>
+          <p class="mono" style="margin:6px 0 0;font-size:11px;color:var(--t-muted)">NIV. 16 / 20</p>
+        </div>
+        <div class="c-panel">
+          <p class="c-label">Boutons</p>
+          <div class="c-row">
+            <button type="button" class="c-btn primary">Lancer</button>
+            <button type="button" class="c-btn warn">Améliorer</button>
+            <button type="button" class="c-btn secondary">Détails</button>
+            <button type="button" class="c-btn danger">Refuser</button>
+          </div>
+          <p class="c-label" style="margin-top:18px">Étiquettes</p>
+          <div class="c-row">
+            <span class="c-tag a">En cours</span><span class="c-tag g">Palier or</span><span class="c-tag m">Résolu</span><span class="c-tag d">Menace</span>
+          </div>
+        </div>
+        <div class="c-panel">
+          <p class="c-label">Jauges d'unité</p>
+          <div class="c-stat">
+            <div><p>ATK <b>120</b></p><div class="bar" style="--c:var(--t-danger)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div><p>DEF <b>40</b></p><div class="bar" style="--c:var(--t-accent)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div><p>VIT <b>15</b></p><div class="bar" style="--c:var(--t-ok)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div><p>CAP <b>25</b></p><div class="bar" style="--c:var(--t-gold)"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          </div>
+          <p class="c-label" style="margin-top:18px">Coûts</p>
+          <div class="c-row">
+            <span class="pill"><img src="/assets/icons/scrap.webp" alt="" />23,2 M</span>
+            <span class="pill"><img src="/assets/icons/energy.webp" alt="" />13,9 M</span>
+            <span class="pill miss"><img src="/assets/icons/reinforcedSteel.webp" alt="" />92,8 k · manque 44,8 k</span>
+            <span class="pill"><img src="/assets/icons/duration.webp" alt="" />6 h 00</span>
+          </div>
+        </div>
+        <div class="c-panel">
+          <p class="c-label">Jauges de ressources</p>
+          <div class="res">
+            <div><img src="/assets/icons/scrap.webp" alt="" /><p style="margin:0"><b>1,84 M</b><span>Ferraille</span></p><em style="width:72%"></em></div>
+            <div><img src="/assets/icons/energy.webp" alt="" /><p style="margin:0"><b>960 k</b><span>Énergie</span></p><em style="width:38%"></em></div>
+            <div><img src="/assets/icons/nano.webp" alt="" /><p style="margin:0"><b>710 k</b><span>Nanocomp.</span></p><em style="width:28%"></em></div>
+            <div><img src="/assets/icons/data.webp" alt="" /><p style="margin:0"><b>330 k</b><span>Données</span></p><em style="width:13%"></em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STORYBOARD ============ -->
+  <section id="storyboard">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">05 · Storyboard</p>
+        <h2>Le parcours d'un commandant</h2>
+        <p class="lead">De la connexion à la conquête : les écrans dans l'ordre où un joueur les découvre. Clique sur une capture pour l'agrandir.</p>
+      </div>
+      <span class="tag">Captures réelles · v2.7</span>
+    </div>
+    <div class="story">
+      <figure><img class="shot" src="/bible/shots/login.webp" alt="Écran de connexion" loading="lazy" /><figcaption><b>Connexion</b>Bâtis. Conquiers. Règne. Création d'empire en une minute.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-accueil.webp" alt="Poste de commandement" loading="lazy" /><figcaption><b>Poste de commandement</b>La planète grandit avec l'empire ; contrats du jour et prochaines fins.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-ressources.webp" alt="Ressources" loading="lazy" /><figcaption><b>Ressources</b>Quatre ressources communes, quatre rares, un comptoir d'échange.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-batiments.webp" alt="Bâtiments" loading="lazy" /><figcaption><b>Bâtiments</b>Niveaux à crans, production actuelle → suivante, paliers bronze à légendaire.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-labo.webp" alt="Laboratoire" loading="lazy" /><figcaption><b>Laboratoire</b>Arbre de technologies et effets par niveau.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-unites.webp" alt="Unités" loading="lazy" /><figcaption><b>Chantier naval</b>Vaisseaux sur grille holographique, ATK / DEF / VIT / CAP en jauges.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-missions.webp" alt="Missions" loading="lazy" /><figcaption><b>Missions</b>Patrouilles, collectes et expéditions ; prérequis cochés ou barrés.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-galaxie.webp" alt="Carte galactique" loading="lazy" /><figcaption><b>Carte galactique</b>Secteurs, flottes en vol, champs de débris à recycler.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-joueurs.webp" alt="Classement" loading="lazy" /><figcaption><b>Classement</b>Rangs, titres et badges d'équipe ; espionner, attaquer, aider.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-menaces.webp" alt="Menaces" loading="lazy" /><figcaption><b>Menaces</b>Cinq factions hostiles, chacune avec ses raisons d'attaquer.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-ultimatum.webp" alt="Ultimatum du Cartel Néon" loading="lazy" /><figcaption><b>Ultimatum</b>Payer le tribut ou refuser et préparer ses défenses.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-alliance.webp" alt="Alliances" loading="lazy" /><figcaption><b>Alliances</b>Trésor commun, recherches, garnisons chez les alliés.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-palmares.webp" alt="Palmarès" loading="lazy" /><figcaption><b>Palmarès</b>Saisons mensuelles, podium et récompenses de fin de mois.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-succes.webp" alt="Succès" loading="lazy" /><figcaption><b>Succès</b>69 succès en paliers bronze, argent, or et légendaire.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-profil.webp" alt="Profil" loading="lazy" /><figcaption><b>Profil</b>Échelle des rangs, titres, victoires et temps de jeu.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-reglages.webp" alt="Réglages" loading="lazy" /><figcaption><b>Réglages</b>Choix du thème, notifications du navigateur, compte.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ============ MOBILE ============ -->
+  <section id="mobile">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">06 · Mobile</p>
+        <h2>Dans la poche</h2>
+        <p class="lead">Barre d'onglets en bas, menu en grille, jauges compactes. Les mêmes panneaux, réorganisés pour le pouce.</p>
+      </div>
+    </div>
+    <div class="phones">
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-accueil.webp" alt="Accueil mobile" loading="lazy" /></div><figcaption><b>Accueil</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-batiments.webp" alt="Bâtiments mobile" loading="lazy" /></div><figcaption><b>Bâtiments</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-unites.webp" alt="Unités mobile" loading="lazy" /></div><figcaption><b>Unités</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-missions.webp" alt="Missions mobile" loading="lazy" /></div><figcaption><b>Missions</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-menu.webp" alt="Menu mobile" loading="lazy" /></div><figcaption><b>Menu</b>Toutes les sections en grille.</figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-netrunner.webp" alt="Thème Netrunner sur mobile" loading="lazy" /></div><figcaption><b>Netrunner</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-maintenance.webp" alt="Maintenance sur mobile" loading="lazy" /></div><figcaption><b>Maintenance</b></figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ============ RANGS ============ -->
+  <section id="rangs">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">07 · Rangs</p>
+        <h2>28 emblèmes de progression</h2>
+        <p class="lead">Dix familles, de Fer à Élite. Chaque emblème gagne en matière, en lumière et en ornements ; les seuils d'XP s'écartent à mesure qu'on monte.</p>
+      </div>
+    </div>
+    <div class="ranks" id="ranks"></div>
+  </section>
+
+  <!-- ============ ICÔNES ============ -->
+  <section id="icones">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">08 · Icônes</p>
+        <h2>Objets plutôt qu'emojis</h2>
+        <p class="lead">28 illustrations en vue trois-quarts, détourées, lisibles de 20 à 64 px. Elles remplacent les emojis dans tout le jeu.</p>
+      </div>
+    </div>
+    <p class="icons-sub">Ressources</p>
+    <div class="icons" id="icons-res"></div>
+    <p class="icons-sub">Interface</p>
+    <div class="icons" id="icons-ui"></div>
+  </section>
+
+  <!-- ============ UNIVERS ============ -->
+  <section id="univers">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">09 · Univers</p>
+        <h2>Factions, flotte, infrastructures</h2>
+        <p class="lead">Les antagonistes ont un visage, la flotte et les bâtiments une matière. Les cadres de succès montent en prestige du bronze au légendaire.</p>
+      </div>
+    </div>
+    <div class="factions">
+      <figure class="faction" style="--fc:#ff7a45"><img src="/assets/story/varan.webp" alt="" loading="lazy" /><div><b>Confrérie du Vide</b><span>Capitaine Orsk Varan · pirates du vide</span></div></figure>
+      <figure class="faction" style="--fc:#ffd86b"><img src="/assets/story/gravhorn.webp" alt="" loading="lazy" /><div><b>Syndicat Gravhorn</b><span>Oggrath le Pisteur · chasse les agresseurs</span></div></figure>
+      <figure class="faction" style="--fc:#e2e8f0"><img src="/assets/story/inquisition.webp" alt="" loading="lazy" /><div><b>Inquisition de l'Aube Blanche</b><span>Haut-Juge Séraphin Vol · traque le savoir</span></div></figure>
+      <figure class="faction" style="--fc:#ff5df0"><img src="/assets/story/cartel.webp" alt="" loading="lazy" /><div><b>Cartel Néon</b><span>Madame Vashti Kor · flaire les coffres pleins</span></div></figure>
+      <figure class="faction" style="--fc:#4aff9c"><img src="/assets/story/meute.webp" alt="" loading="lazy" /><div><b>Meute d'Ysgrim</b><span>Ysgrim Crocs-de-Fer · chasse les ambitieux</span></div></figure>
+    </div>
+    <div class="medals">
+      <figure class="panel"><img src="/assets/achievements/bronze.webp" alt="" loading="lazy" /><figcaption><b>Bronze</b>Premiers pas</figcaption></figure>
+      <figure class="panel"><img src="/assets/achievements/argent.webp" alt="" loading="lazy" /><figcaption><b>Argent</b>Régularité</figcaption></figure>
+      <figure class="panel"><img src="/assets/achievements/or.webp" alt="" loading="lazy" /><figcaption><b>Or</b>Exploits</figcaption></figure>
+      <figure class="panel"><img src="/assets/achievements/legendaire.webp" alt="" loading="lazy" /><figcaption><b>Légendaire</b>Faits d'armes rares</figcaption></figure>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <!-- ============ COULISSES ============ -->
+  <section id="coulisses">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">10 · Coulisses</p>
+        <h2>Maintenance, support, administration</h2>
+        <p class="lead">Les écrans que les joueurs voient rarement, soignés comme les autres : une page d'attente illustrée et animée, un espace de signalement, une console pour l'équipe.</p>
+      </div>
+    </div>
+    <div class="backstage">
+      <figure><img class="shot" src="/bible/shots/d-maintenance.webp" alt="Page de maintenance" loading="lazy" /><figcaption><b>Maintenance</b>Compte à rebours, journal technique animé, réouverture automatique.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-signalements.webp" alt="Signalements" loading="lazy" /><figcaption><b>Signalements</b>Capture, contexte technique joint, suivi des réponses de l'équipe.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-admin_onglet_stats.webp" alt="Console d'administration" loading="lazy" /><figcaption><b>Console d'administration</b>Statistiques, pistes d'équilibrage, état du jeu.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-admin_onglet_technologies.webp" alt="Éditeur de technologies" loading="lazy" /><figcaption><b>Éditeur de contenu</b>Bâtiments, unités, technos à effets multiples, factions, rangs, succès.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-admin_onglet_maintenance.webp" alt="Pilotage de la maintenance" loading="lazy" /><figcaption><b>Pilotage de la maintenance</b>Message, version, durée, aperçu, réouverture automatique.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-nouveautes.webp" alt="Nouveautés" loading="lazy" /><figcaption><b>Nouveautés</b>Chaque mise à jour racontée aux joueurs.</figcaption></figure>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Cosmic Empires · bible visuelle · v2.7.0</span>
+  <span>Captures réalisées sur le jeu réel, thème Tactique sauf mention</span>
+</footer>
+
+<dialog id="viewer" aria-label="Capture agrandie">
+  <img id="viewer-img" alt="" />
+  <p><span id="viewer-cap"></span><button type="button" id="viewer-close">Fermer</button></p>
+</dialog>
+
+<script>
+  const RANKS = [
+    ["Fer", "#b7a99a", [["fer3", "III", 100], ["fer2", "II", 250], ["fer1", "I", 500]]],
+    ["Bronze", "#e19b6d", [["bronze3", "III", 900], ["bronze2", "II", 1400], ["bronze1", "I", 2000]]],
+    ["Argent", "#d7dee8", [["argent3", "III", 3000], ["argent2", "II", 4200], ["argent1", "I", 5600]]],
+    ["Or", "#ffd86b", [["or3", "III", 7500], ["or2", "II", 10000], ["or1", "I", 13000]]],
+    ["Platine", "#7fe8e0", [["platine3", "III", 17000], ["platine2", "II", 22000], ["platine1", "I", 28000]]],
+    ["Émeraude", "#4aff9c", [["emeraude3", "III", 36000], ["emeraude2", "II", 45000], ["emeraude1", "I", 56000]]],
+    ["Diamant", "#8fd3ff", [["diamant3", "III", 70000], ["diamant2", "II", 87000], ["diamant1", "I", 107000]]],
+    ["Maître", "#c59bff", [["maitre3", "III", 130000], ["maitre2", "II", 160000], ["maitre1", "I", 195000]]],
+    ["Sommet", "#ff7a45", [["grand_maitre", "Grand Maître", 240000], ["challenger", "Challenger", 320000], ["elite", "Élite", 420000]]],
+    ["Départ", "#7d89a6", [["non_classe", "Non classé", 0]]],
+  ];
+  const fmt = (n) => n.toLocaleString("fr-FR");
+  document.getElementById("ranks").innerHTML = RANKS.map(([family, color, list]) => {
+    const from = list[0][2];
+    return `<div class="panel family" style="--fc:${color}"><h3>${family}<span>${fmt(from)} XP +</span></h3><ol>${list
+      .map(([id, label, xp]) => `<li><img src="/assets/ranks/${id}.webp" alt="${family} ${label}" loading="lazy" /><small>${label}<i>${fmt(xp)}</i></small></li>`)
+      .join("")}</ol></div>`;
+  }).join("");
+
+  const RES = [
+    ["scrap", "Ferraille", "commune"], ["energy", "Énergie instable", "commune"], ["nano", "Nanocomposants", "commune"], ["data", "Données anciennes", "commune"],
+    ["reinforcedSteel", "Acier renforcé", "rare"], ["cyberModule", "Module cybernétique", "rare"], ["syntheticNanites", "Nanites synthétiques", "rare"], ["aiFragment", "Fragment d'IA", "rare"],
+  ];
+  const UI = [
+    ["xp", "XP", "progression"], ["duration", "Durée", "temps, files"], ["storage", "Entrepôt", "capacité, cargaison"], ["shield", "Bouclier", "défense, garnison"],
+    ["attack", "Attaque", "combats"], ["spy", "Espionnage", "sondes"], ["recycle", "Recyclage", "débris"], ["repair", "Réparation", "atelier, entretien"],
+    ["lock", "Verrouillé", "déblocage"], ["reward", "Récompense", "coffres, événements"], ["threat", "Menace", "factions"], ["trophy", "Trophée", "titres, palmarès"],
+    ["alliance", "Alliance", "drapeau"], ["patrol", "Patrouille", "flotte en ronde"], ["event", "Événement", "week-ends"], ["mission", "Mission", "radar"],
+    ["build", "Construction", "chantiers"], ["research", "Recherche", "Labo"], ["fleet", "Flotte", "vaisseaux"], ["rankup", "Montée de rang", "chevrons"],
+  ];
+  const tile = ([id, name, use]) => `<div class="icon"><img src="/assets/icons/${id}.webp" alt="" loading="lazy" /><b>${name}</b><span>${use}</span></div>`;
+  document.getElementById("icons-res").innerHTML = RES.map(tile).join("");
+  document.getElementById("icons-ui").innerHTML = UI.map(tile).join("");
+
+  const ART = [
+    "/assets/units/drone_recuperateur", "/assets/units/sonde_espionnage", "/assets/units/fregate", "/assets/units/cargo", "/assets/units/roquette", "/assets/units/chasseur", "/assets/units/sentinelle", "/assets/units/batterie_aa",
+    "/assets/units/canon_impulsion", "/assets/units/canon_plasma", "/assets/units/intercepteur", "/assets/units/etoile_noire",
+    "/assets/buildings/extracteur_ferraille", "/assets/buildings/reacteur_instable", "/assets/buildings/extracteur_nanocomposants", "/assets/buildings/archives_fracturees",
+    "/assets/buildings/atelier_reparation", "/assets/buildings/hangar_attaque", "/assets/buildings/hangar_defense", "/assets/buildings/entrepot",
+  ];
+  document.getElementById("gallery").innerHTML = ART.map((p) => `<img src="${p}.webp" alt="${p.split("/")[1].replace(/_/g, " ")}" loading="lazy" />`).join("");
+
+  // Thèmes : onglets
+  const themeImg = document.getElementById("theme-img");
+  const NAMES = { tactique: "Tactique", holo: "Holo", cockpit: "Cockpit", netrunner: "Netrunner" };
+  document.querySelectorAll(".theme-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".theme-tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+      const t = tab.dataset.theme;
+      themeImg.src = `/bible/shots/t-${t}.webp`;
+      themeImg.alt = `Page Unités, thème ${NAMES[t]}`;
+      themeImg.dataset.caption = `Unités · thème ${NAMES[t]}`;
+    });
+  });
+
+  // Composants : thème en direct
+  const ds = document.getElementById("ds");
+  ds.querySelectorAll(".ds-switch button").forEach((b) =>
+    b.addEventListener("click", () => {
+      ds.dataset.t = b.dataset.t;
+      ds.querySelectorAll(".ds-switch button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    }),
+  );
+
+  // Visionneuse
+  const viewer = document.getElementById("viewer");
+  const vImg = document.getElementById("viewer-img");
+  const vCap = document.getElementById("viewer-cap");
+  document.addEventListener("click", (e) => {
+    const img = e.target.closest("img.shot, img.shotm");
+    if (!img) return;
+    vImg.src = img.src;
+    vImg.alt = img.alt;
+    vCap.textContent = img.dataset.caption || img.alt;
+    viewer.showModal();
+  });
+  document.getElementById("viewer-close").addEventListener("click", () => viewer.close());
+  viewer.addEventListener("click", (e) => {
+    if (e.target === viewer) viewer.close();
+  });
+</script>
+</body>
+</html>
