@@ -232,6 +232,12 @@ export function LoginPage() {
             {mode === "forgot" && "Retour à la connexion"}
           </button>
         </form>
+        <a
+          href="/bible/index.html"
+          className="mt-4 block text-center font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500 transition hover:text-cyan-glow"
+        >
+          Découvrir la bible visuelle du jeu
+        </a>
         </motion.div>
       </div>
     </div>

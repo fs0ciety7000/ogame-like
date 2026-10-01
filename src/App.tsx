@@ -28,6 +28,12 @@ const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ defa
 const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage").then((m) => ({ default: m.ReportsPage })));
+// Bible visuelle : page statique publique (public/bible), hors de l'application.
+function BibleRedirect() {
+  window.location.replace("/bible/index.html");
+  return null;
+}
+
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -46,6 +52,7 @@ export default function App() {
             />
             {/* Lien de l'email « mot de passe oublié » : accessible connecté ou non. */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/bible" element={<BibleRedirect />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/game" element={<AppShell />}>
