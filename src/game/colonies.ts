@@ -58,6 +58,8 @@ export interface Colony {
   building: ColonyBuildingJob | null;
   defenses: Record<string, { level: number; count: number }>;
   defenseJob: ColonyDefenseJob | null;
+  /** Dernière défaite (bouclier d'une heure, propre à la colonie). */
+  lastDefeatAtMs?: number;
 }
 
 export interface Colonizing {
@@ -88,6 +90,18 @@ export function colonyId(uid: string, slot: number): string {
 
 export function colonyOf(player: Pick<PlayerState, "colonies">, id: string): Colony | undefined {
   return (player.colonies ?? []).find((c) => c.id === id);
+}
+
+/** Propriétaire d'une colonie d'après son identifiant (null si ce n'en est pas une). */
+export function colonyOwnerUid(id: string): string | null {
+  const m = /^(.+)-c(\d+)$/.exec(String(id ?? ""));
+  return m ? m[1] : null;
+}
+
+/** Vue « planète » d'une colonie pour le combat et l'espionnage : ses
+ *  défenses, bâtiments et stock à la place de ceux de la planète mère. */
+export function colonyView(player: PlayerState, colony: Colony): PlayerState {
+  return { ...player, uid: colony.id, pseudo: `${player.pseudo} — ${colony.name}`, units: colony.defenses, buildings: colony.buildings, resources: colony.resources, posture: undefined, lastDefeatAtMs: colony.lastDefeatAtMs };
 }
 
 function emptyResources(): Resources {

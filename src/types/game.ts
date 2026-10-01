@@ -173,6 +173,8 @@ export interface BattleReport {
   garrisons?: { ownerUid: string; ownerPseudo: string; units: Record<string, number>; losses: Record<string, number> }[];
   /** v2.8 : flotte envoyée par l'attaquant (statistiques d'équilibrage). */
   attackerFleet?: Record<string, number>;
+  /** v3.5 : colonie attaquée (vide : planète mère). */
+  planetId?: string;
 }
 
 export interface SpyReport {

@@ -44,3 +44,4 @@ export function flushPlayer(player: PlayerState, queues: QueuesState, now: numbe
   return flushState({ ...player, buildings: withMissingBuildings(player.buildings, player.resources) }, queues, now);
 }
 export { ANOMALY_RULES, describeAnomalies, detectResourceAnomalies } from "@/game/anomalies";
+export { colonyOwnerUid } from "@/game/colonies";

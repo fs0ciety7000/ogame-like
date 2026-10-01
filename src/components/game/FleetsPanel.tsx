@@ -1,3 +1,4 @@
+import { targetsPlayer } from "@/game/fleets";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CornerUpLeft, Rocket, Wind } from "lucide-react";
@@ -19,8 +20,7 @@ import { EmojiText, GameIcon } from "@/components/ui/game-icon";
 /** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
 export function isHostile(f: Fleet, uid: string | undefined): boolean {
   return (
-    !!uid &&
-    f.targetUid === uid &&
+    targetsPlayer(f, uid) &&
     f.ownerUid !== uid &&
     f.status === "outbound" &&
     ((f.mission ?? "attack") === "attack" || f.mission === "pirate")

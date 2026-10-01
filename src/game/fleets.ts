@@ -11,7 +11,7 @@ import { withMissingBuildings } from "@/game/buildings";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { fleetCargoCapacity } from "@/game/combat";
-import { advanceColonies, collectFromColony, colonyOf, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
+import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
@@ -86,8 +86,15 @@ export interface Fleet {
   factionId?: string | null;
   /** v3.1 : déroulé d'une expédition. */
   expedition?: import("@/game/expeditions").ExpeditionState | null;
+  /** v3.5 : propriétaire de la planète visée (attaque d'une colonie). */
+  targetOwnerUid?: string | null;
   /** v3.5 : transport entre la planète mère et une colonie. */
   transport?: TransportState | null;
+}
+
+/** v3.5 : la flotte vise ce joueur (planète mère ou une de ses colonies). */
+export function targetsPlayer(f: Pick<Fleet, "targetUid"> & { targetOwnerUid?: string | null }, uid: string | undefined): boolean {
+  return !!uid && (f.targetUid === uid || f.targetOwnerUid === uid);
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -319,6 +326,8 @@ export interface LaunchRequest {
   expeditionsActive?: number;
   expeditionsToday?: number;
   formation?: string;
+  /** v3.5 : colonie visée par une attaque ou un espionnage (sinon la planète mère). */
+  targetColonyId?: string;
   /** v3.5 : transport (colonie, sens, chargement). */
   transport?: { colonyId?: unknown; direction?: unknown; cargo?: unknown };
 }
@@ -332,9 +341,17 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   if (mission === "garrison" && !target) throw new GameActionError("Ce joueur est introuvable.");
   const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
   const owner = flushed.player;
+  // v3.5 : attaque ou espionnage d'une colonie (ses coordonnées, son bouclier).
+  let planet = target;
+  if (req.targetColonyId && (mission === "attack" || mission === "spy")) {
+    if (target!.uid === owner.uid) throw new GameActionError("C'est ta propre colonie.");
+    const colony = colonyOf(advanceTarget(target!, now), req.targetColonyId);
+    if (!colony) throw new GameActionError("Cette colonie n'existe plus.");
+    planet = colonyView(target!, colony);
+  }
   let out: LaunchOutput;
-  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
-  else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
+  else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
   else if (mission === "lair") out = launchLair(owner, req.lairTarget ?? "", req.fleet, now);
@@ -356,6 +373,13 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+}
+
+/** Copie de la cible avec ses colonies rattrapées (colonisation arrivée). */
+function advanceTarget(target: PlayerState, now: number): PlayerState {
+  const copy = structuredClone(target);
+  advanceColonies(copy, now);
+  return copy;
 }
 
 /** Transport (v3.5) : livraison (chargée sur la planète mère) ou collecte

@@ -1080,6 +1080,56 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v3.5 colonies: attacking and spying a colony hits its own defenses and stock", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const colonyId = `${aId}-c1`;
+    const colony = {
+      id: colonyId, slot: 1, name: "Bastion-Nord", foundedAtMs: Date.now() - 86400000, updatedAtMs: Date.now(),
+      buildings: { extracteur_ferraille: { level: 1, unlocked: true }, entrepot: { level: 1, unlocked: true }, hangar_defense: { level: 1, unlocked: true } },
+      resources: { ...RICH, scrap: 900_000 }, building: null, defenses: {}, defenseJob: null,
+    };
+    const fleets: string[] = [];
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    try {
+      await admin.collection("players").update(aId, { colonies: [colony], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, xp: (await snap(bId)).xp });
+      await admin.collection("players").update(bId, { allianceId: "", units: { chasseur: { level: 1, count: 40 }, sonde_espionnage: { level: 1, count: 5 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0 });
+      expect((await pb.collection("profiles").getOne(aId)).planets).toEqual([{ id: colonyId, name: "Bastion-Nord" }]);
+      const homeScrap = (await snap(aId)).resources.scrap;
+
+      // Espionnage : le rapport décrit la colonie.
+      const probes = await ps.sendFleet(colonyId, { sonde_espionnage: 2 }, "spy");
+      fleets.push(probes.id);
+      await admin.collection("fleets").update(probes.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const spyRep = await pb.collection("spy_reports").getFirstListItem(`targetUid="${colonyId}"`, { sort: "-timestamp" });
+      expect(spyRep.targetPseudo).toMatch(/Bastion-Nord/);
+
+      // Attaque : le défenseur voit venir la flotte, la colonie est pillée, pas la planète mère.
+      const sent = await ps.sendFleet(colonyId, { chasseur: 30 }, "attack");
+      fleets.push(sent.id);
+      expect((await aClient.collection("fleets").getOne(sent.id)).targetOwnerUid).toBe(aId);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.outcome).toBe("attacker_win");
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.defenderUid).toBe(aId);
+      expect(report.defenderPseudo).toMatch(/Bastion-Nord/);
+      const after = await snap(aId);
+      expect(after.colonies[0].resources.scrap).toBeLessThan(900_000);
+      expect(after.colonies[0].lastDefeatAtMs).toBeGreaterThan(0);
+      expect(after.resources.scrap).toBeGreaterThanOrEqual(homeScrap);
+      // Bouclier de la colonie : nouvelle attaque refusée.
+      await expect(ps.sendFleet(colonyId, { chasseur: 1 }, "attack")).rejects.toThrow(/bouclier|battu|récemment/);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { colonies: [], resources: aBefore!.resources, lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0, xp: aBefore!.xp });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId, units: bBefore!.units });
+    }
+  }, 60_000);
+
   it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
     const before = await snap(bId);
     const now = Date.now();

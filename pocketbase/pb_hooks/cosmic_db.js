@@ -156,6 +156,24 @@ function syncProfile(app, player) {
       changed = true;
     }
   });
+  // v3.5 : colonies publiques (identifiant et nom seulement).
+  let colonies = [];
+  try {
+    const raw = JSON.parse(player.getString("colonies") || "[]");
+    colonies = (Array.isArray(raw) ? raw : []).map((c) => ({ id: c.id, name: c.name }));
+  } catch (_) {
+    colonies = [];
+  }
+  let current = "[]";
+  try {
+    current = JSON.stringify(JSON.parse(profile.getString("planets") || "[]"));
+  } catch (_) {
+    current = "";
+  }
+  if (current !== JSON.stringify(colonies)) {
+    profile.set("planets", colonies);
+    changed = true;
+  }
   if (changed) app.save(profile);
 }
 
@@ -172,7 +190,16 @@ function deleteProfile(app, playerId) {
 /** Dernière attaque (combat ou départ de flotte) de a vers d (ms), ou null. */
 function lastAttackOnTarget(txApp, a, d) {
   let last = null;
-  const reports = txApp.findRecordsByFilter("battle_reports", "attackerUid = {:a} && defenderUid = {:d}", "-timestamp", 1, 0, { a, d });
+  // v3.5 : délai propre à chaque planète (planète mère ou colonie).
+  const onColony = !!loadGame().colonyOwnerUid(d);
+  const reports = txApp.findRecordsByFilter(
+    "battle_reports",
+    onColony ? "attackerUid = {:a} && planetId = {:d}" : "attackerUid = {:a} && defenderUid = {:d} && planetId = ''",
+    "-timestamp",
+    1,
+    0,
+    { a, d },
+  );
   if (reports.length > 0) last = reports[0].getFloat("timestamp");
   const fleets = txApp.findRecordsByFilter("fleets", "ownerUid = {:a} && targetUid = {:d} && mission = 'attack'", "-departAtMs", 1, 0, { a, d });
   if (fleets.length > 0) last = Math.max(last || 0, fleets[0].getFloat("departAtMs"));
@@ -262,7 +289,10 @@ function resolveSpyArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
   const spy = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
-  const target = findOrNull(txApp, "players", fleet.targetUid) ? loadPlayer(txApp, game, fleet.targetUid) : null;
+  // v3.5 : sondes envoyées sur une colonie (identifiant <uid>-c<n>).
+  const colonyOwner = game.colonyOwnerUid(fleet.targetUid);
+  const targetUid = colonyOwner || fleet.targetUid;
+  const target = findOrNull(txApp, "players", targetUid) ? loadPlayer(txApp, game, targetUid) : null;
   if (!spy || !target) {
     rec.set("status", spy ? "returning" : "done");
     rec.set("returnAtMs", spy ? now + tripMs : null);
@@ -271,7 +301,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
     return;
   }
   const targetFleets = txApp
-    .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: fleet.targetUid })
+    .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: targetUid })
     .map(fleetFromRecord);
   const probes = Object.keys(fleet.units).reduce((sum, k) => sum + (fleet.units[k] || 0), 0);
   const out = game.resolveSpyArrival({
@@ -281,14 +311,15 @@ function resolveSpyArrival(txApp, game, rec, now) {
     target: target.player,
     targetQueues: target.queues,
     targetFleets,
-    targetGarrisons: stationedGarrisons(txApp, fleet.targetUid).map(fleetFromRecord),
+    targetGarrisons: colonyOwner ? [] : stationedGarrisons(txApp, fleet.targetUid).map(fleetFromRecord),
     probes,
+    colonyId: colonyOwner ? fleet.targetUid : undefined,
   });
   const report = new Record(txApp.findCollectionByNameOrId("spy_reports"));
   report.load(out.report);
   txApp.save(report);
   notify(txApp, fleet.ownerUid, out.spyNotifications);
-  notify(txApp, fleet.targetUid, out.targetNotifications);
+  notify(txApp, targetUid, out.targetNotifications);
   rec.set("reportId", report.id);
   rec.set("outcome", out.detected ? "detected" : "success");
   if (out.detected) {
@@ -533,14 +564,17 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
   const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
   const attacker = findOrNull(txApp, "players", fleet.ownerUid) ? loadPlayer(txApp, game, fleet.ownerUid) : null;
-  const defender = findOrNull(txApp, "players", fleet.targetUid) ? loadPlayer(txApp, game, fleet.targetUid) : null;
+  // v3.5 : attaque d'une colonie (identifiant <uid>-c<n>) : son propriétaire défend.
+  const colonyOwner = game.colonyOwnerUid(fleet.targetUid);
+  const defenderUid = colonyOwner || fleet.targetUid;
+  const defender = findOrNull(txApp, "players", defenderUid) ? loadPlayer(txApp, game, defenderUid) : null;
   if (!attacker) {
     rec.set("status", "done");
     txApp.save(rec);
     return;
   }
   // Garnisons alliées chez le défenseur : elles combattent à ses côtés.
-  const garrisonRecs = defender ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
+  const garrisonRecs = defender && !colonyOwner ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
   const garrisons = garrisonRecs.map((g) => {
     const owner = toPlain(txApp.findRecordById("players", g.getString("ownerUid")));
     const gf = fleetFromRecord(g);
@@ -552,12 +586,13 @@ function resolveAttackArrival(txApp, game, rec, now) {
         attackerUid: fleet.ownerUid,
         attacker: attacker.player,
         attackerQueues: attacker.queues,
-        defenderUid: fleet.targetUid,
+        defenderUid,
         defender: defender.player,
         defenderQueues: defender.queues,
         fleet: fleet.units,
         lastAttackOnTargetMs: null,
-        defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, fleet.targetUid, now),
+        defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, defenderUid, now),
+        colonyId: colonyOwner ? fleet.targetUid : undefined,
         inFlight: true,
         garrisons,
         formation: rec.getString("formation"),
@@ -574,7 +609,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   notify(txApp, fleet.ownerUid, result.notifications);
-  notify(txApp, fleet.targetUid, result.defenderNotifications);
+  notify(txApp, defenderUid, result.defenderNotifications);
 
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
@@ -693,9 +728,11 @@ function launchFleetRequest(e) {
     if (mission === "garrison") {
       garrisonsAtHost = txApp.findRecordsByFilter("fleets", 'targetUid = {:h} && mission = "garrison" && (status = "outbound" || status = "stationed")', "", 10, 0, { h: targetUid }).length;
     }
+    // v3.5 : une attaque ou un espionnage peut viser une colonie (<uid>-c<n>).
+    const colonyOwner = mission === "attack" || mission === "spy" ? game.colonyOwnerUid(targetUid) : null;
     if (mission === "attack" || mission === "spy" || mission === "garrison") {
-      if (!db.findOrNull(txApp, "players", targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
-      target = db.loadPlayer(txApp, game, targetUid, "Ce joueur est introuvable.").player;
+      if (!db.findOrNull(txApp, "players", colonyOwner || targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
+      target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
     }
@@ -724,6 +761,7 @@ function launchFleetRequest(e) {
         debris,
         fleet,
         lairTarget: mission === "lair" ? targetUid : undefined,
+        targetColonyId: colonyOwner ? targetUid : undefined,
         lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,
@@ -740,9 +778,11 @@ function launchFleetRequest(e) {
     }
     db.savePlayer(txApp, game, attacker, out.attacker, out.attackerQueues);
     db.notify(txApp, attackerUid, out.attackerNotifications);
-    if (out.defenderNotifications.length > 0) db.notify(txApp, targetUid, out.defenderNotifications);
+    if (out.defenderNotifications.length > 0) db.notify(txApp, target ? target.uid : targetUid, out.defenderNotifications);
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
     rec.load(out.fleet);
+    // v3.5 : propriétaire de la colonie visée (il voit l'attaque approcher).
+    if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
     if (mission === "attack" || mission === "lair" || mission === "expedition" || mission === "leviathan") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     txApp.save(rec);
