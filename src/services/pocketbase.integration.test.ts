@@ -563,6 +563,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect((await snap(bId)).allianceResearch).toEqual({ industrie: 1 });
       expect((await snap(aId)).allianceResearch).toEqual({ industrie: 1 });
 
+      // v3.3 Projets : don personnel (plafonné), trésor par le fondateur, construction puis bonus.
+      await admin.collection("players").update(bId, { resources: RICH });
+      await expect(al.fundAllianceProject("forge", "treasury", { scrap: 1 })).rejects.toThrow(/trésor/);
+      const scrapBefore = (await snap(bId)).resources.scrap;
+      await al.fundAllianceProject("forge", "self", { scrap: 1000 });
+      expect((await snap(bId)).resources.scrap).toBeLessThan(scrapBefore - 900);
+      const cost = Object.fromEntries(Object.keys(RICH).map((k) => [k, k === "scrap" ? 499_999_000 : k.length > 6 ? 5_000_000 : 500_000_000]));
+      await admin.collection("alliances").update(allianceId, { treasury: Object.fromEntries(Object.keys(RICH).map((k) => [k, 600_000_000])) });
+      await asA({ type: "project", projectId: "forge", source: "treasury", resources: cost });
+      const building = await admin.collection("alliances").getOne(allianceId);
+      expect(building.projects.forge.buildEndMs).toBeGreaterThan(Date.now());
+      expect(building.projectContributors[bId]).toBe(1000);
+      await admin.collection("alliances").update(allianceId, { projects: { forge: { ...building.projects.forge, buildEndMs: Date.now() - 1 } }, researchEndMs: Date.now() - 1 });
+      await al.depositToTreasury({ scrap: 1 });
+      expect((await snap(bId)).allianceResearch).toEqual({ industrie: 1, projet_forge: 1 });
+      expect((await admin.collection("alliances").getOne(allianceId)).researchEndMs).toBe(0);
+
       // On n'attaque pas un allié.
       await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 60 } }, createdAtMs: MONTH_AGO() });
       await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow(/alliance/);
@@ -969,6 +986,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const cfg = await pb.collection("game_config").getFirstListItem('key="leviathan"');
       expect(cfg.data.hp).toBeLessThan(cfg.data.maxHp);
       expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
+      const done = cfg.data.maxHp - cfg.data.hp;
+      await expect(admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "resize", maxHp: done } })).rejects.toMatchObject({ status: 400 });
+      const resized = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "resize", maxHp: done + 5000 } });
+      expect(resized.maxHp).toBe(done + 5000);
+      expect(resized.hp).toBe(5000);
+      const logged = await admin.collection("admin_logs").getFirstListItem('recordId="leviathan"', { sort: "-createdAtMs" });
+      expect(logged.recordLabel).toMatch(/structure/);
       const scrap = (await snap(bId))!.resources.scrap;
       const stopped = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } });
       expect(stopped.status).toBe("failed");
@@ -979,6 +1003,153 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
       if (cfg) await admin.collection("game_config").delete(cfg.id);
       await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources });
+    }
+  }, 60_000);
+
+  it("v3.4 ascension: resets buildings and resources, keeps the fleet, public stars and shield", async () => {
+    const before = await snap(bId);
+    const maxed = Object.fromEntries(Object.entries(before!.buildings).map(([id, b]) => [id, { ...(b as object), level: findBuilding(id)?.maxLevel ?? 20, unlocked: true }]));
+    try {
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      await admin.collection("players").update(bId, { buildings: maxed, resources: RICH, units: { chasseur: { level: 1, count: 77 } }, ascensions: 0, ascendedAtMs: 0 });
+      await ps.ascendEmpire();
+      const after = await snap(bId);
+      expect(after.ascensions).toBe(1);
+      expect(Object.values(after.buildings).every((b) => (b as { level: number }).level === 1)).toBe(true);
+      expect(after.resources.reinforcedSteel).toBe(0);
+      expect(after.units.chasseur.count).toBe(77);
+      const profile = await pb.collection("profiles").getOne(bId);
+      expect(profile.ascensions).toBe(1);
+      expect(profile.ascendedAtMs).toBeGreaterThan(0);
+      await expect(ps.ascendEmpire()).rejects.toThrow(/niveau maximal|jour/);
+    } finally {
+      await admin.collection("players").update(bId, { buildings: before!.buildings, resources: before!.resources, units: before!.units, ascensions: 0, ascendedAtMs: 0 });
+    }
+  }, 60_000);
+
+  it("v3.5 colonies: colony ship, separate stock, buildings, delivery and collection", async () => {
+    const before = await snap(bId);
+    const maxed = Object.fromEntries(Object.entries(before!.buildings).map(([id, b]) => [id, { ...(b as object), level: 16, unlocked: true }]));
+    const big = Object.fromEntries(Object.keys(RICH).map((k) => [k, 200_000_000]));
+    const fleets: string[] = [];
+    try {
+      await admin.collection("players").update(bId, { buildings: maxed, resources: big, units: { cargo: { level: 1, count: 50 }, chasseur: { level: 1, count: 5 } }, colonies: [], colonizing: null });
+      await ps.startColonization("Néo-Avalon");
+      let me = await snap(bId);
+      expect(me.colonizing.name).toBe("Néo-Avalon");
+      expect(me.resources.scrap).toBeLessThan(200_000_000 - 49_000_000);
+      await expect(ps.startColonization("Bis")).rejects.toThrow(/en route/);
+      await admin.collection("players").update(bId, { colonizing: { ...me.colonizing, endTime: Date.now() - 1000 } });
+      await ps.syncPlayer("");
+      me = await snap(bId);
+      expect(me.colonies).toHaveLength(1);
+      const colony = me.colonies[0];
+      expect(colony.id).toBe(`${bId}-c1`);
+      const homeScrap = me.resources.scrap;
+      await ps.upgradeColonyBuilding(colony.id, "extracteur_ferraille");
+      me = await snap(bId);
+      expect(me.colonies[0].building.id).toBe("extracteur_ferraille");
+      expect(me.resources.scrap).toBeGreaterThanOrEqual(homeScrap); // payé par la colonie
+
+      // Livraison : quitte la planète mère, arrive dans le stock de la colonie.
+      const sent = await ps.sendTransport(colony.id, "deliver", { cargo: 20 }, { reinforcedSteel: 1000 });
+      fleets.push(sent.id);
+      expect((await snap(bId)).resources.reinforcedSteel).toBe(200_000_000 - 1_000_000 - 1000);
+      await expect(ps.sendTransport(colony.id, "deliver", { cargo: 1 }, { scrap: 10_000_000 })).rejects.toThrow(/soute/);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      me = await snap(bId);
+      expect(me.colonies[0].resources.reinforcedSteel).toBe(1000);
+      expect((await pb.collection("fleets").getOne(sent.id)).status).toBe("returning");
+
+      // Rapatriement : chargé à l'arrivée, crédité au retour.
+      const back = await ps.sendTransport(colony.id, "collect", { cargo: 20 }, { reinforcedSteel: 400 });
+      fleets.push(back.id);
+      await admin.collection("fleets").update(back.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const loaded = await pb.collection("fleets").getOne(back.id);
+      expect(loaded.loot).toEqual({ reinforcedSteel: 400 });
+      const steel = (await snap(bId)).resources.reinforcedSteel;
+      await admin.collection("fleets").update(back.id, { returnAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      expect((await snap(bId)).resources.reinforcedSteel).toBe(steel + 400);
+      expect((await snap(bId)).colonies[0].resources.reinforcedSteel).toBe(600);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(bId, { buildings: before!.buildings, resources: before!.resources, units: before!.units, colonies: [], colonizing: null });
+    }
+  }, 60_000);
+
+  it("v3.5 colonies: attacking and spying a colony hits its own defenses and stock", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const colonyId = `${aId}-c1`;
+    const colony = {
+      id: colonyId, slot: 1, name: "Bastion-Nord", foundedAtMs: Date.now() - 86400000, updatedAtMs: Date.now(),
+      buildings: { extracteur_ferraille: { level: 1, unlocked: true }, entrepot: { level: 1, unlocked: true }, hangar_defense: { level: 1, unlocked: true } },
+      resources: { ...RICH, scrap: 900_000 }, building: null, defenses: {}, defenseJob: null,
+    };
+    const fleets: string[] = [];
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    try {
+      await admin.collection("players").update(aId, { colonies: [colony], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, xp: (await snap(bId)).xp });
+      await admin.collection("players").update(bId, { allianceId: "", units: { chasseur: { level: 1, count: 40 }, sonde_espionnage: { level: 1, count: 5 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0 });
+      expect((await pb.collection("profiles").getOne(aId)).planets).toEqual([{ id: colonyId, name: "Bastion-Nord" }]);
+      const homeScrap = (await snap(aId)).resources.scrap;
+
+      // Espionnage : le rapport décrit la colonie.
+      const probes = await ps.sendFleet(colonyId, { sonde_espionnage: 2 }, "spy");
+      fleets.push(probes.id);
+      await admin.collection("fleets").update(probes.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const spyRep = await pb.collection("spy_reports").getFirstListItem(`targetUid="${colonyId}"`, { sort: "-timestamp" });
+      expect(spyRep.targetPseudo).toMatch(/Bastion-Nord/);
+
+      // Attaque : le défenseur voit venir la flotte, la colonie est pillée, pas la planète mère.
+      const sent = await ps.sendFleet(colonyId, { chasseur: 30 }, "attack");
+      fleets.push(sent.id);
+      expect((await aClient.collection("fleets").getOne(sent.id)).targetOwnerUid).toBe(aId);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.outcome).toBe("attacker_win");
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.defenderUid).toBe(aId);
+      expect(report.defenderPseudo).toMatch(/Bastion-Nord/);
+      const after = await snap(aId);
+      expect(after.colonies[0].resources.scrap).toBeLessThan(900_000);
+      expect(after.colonies[0].lastDefeatAtMs).toBeGreaterThan(0);
+      expect(after.resources.scrap).toBeGreaterThanOrEqual(homeScrap);
+      // Bouclier de la colonie : nouvelle attaque refusée.
+      await expect(ps.sendFleet(colonyId, { chasseur: 1 }, "attack")).rejects.toThrow(/bouclier|battu|récemment/);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { colonies: [], resources: aBefore!.resources, lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0, xp: aBefore!.xp });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId, units: bBefore!.units });
+    }
+  }, 60_000);
+
+  it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
+    const before = await snap(bId);
+    const now = Date.now();
+    const scan = await admin.collection("game_config").getFirstListItem('key="anomaly_scan"').catch(() => null);
+    if (scan) await admin.collection("game_config").delete(scan.id);
+    const base = { ...before!.resources };
+    const jumped = { ...base, reinforcedSteel: (base.reinforcedSteel ?? 0) + 900_000_000 };
+    try {
+      await admin.collection("players").update(bId, { resources: jumped, resourcesUpdatedAtMs: now - 60_000, resourceHistory: [{ t: now - 3600_000, r: base }] });
+      await expect(pb.send("/api/cosmic/admin/anomalies", { method: "POST" })).rejects.toMatchObject({ status: 403 });
+      const res = await admin.send("/api/cosmic/admin/anomalies", { method: "POST" });
+      expect(res.alerts).toBeGreaterThanOrEqual(1);
+      const report = await admin.collection("reports").getFirstListItem(`autoKey="anomaly:${bId}"`);
+      expect(report.category).toBe("account");
+      expect(report.description).toMatch(/Acier renforcé \+900/);
+      expect((await admin.send("/api/cosmic/admin/anomalies", { method: "POST" })).alerts).toBe(0); // déjà analysé
+    } finally {
+      const reports = await admin.collection("reports").getFullList({ filter: `autoKey="anomaly:${bId}"` });
+      for (const r of reports) await admin.collection("reports").delete(r.id);
+      await admin.collection("players").update(bId, { resources: before!.resources, resourceHistory: before!.resourceHistory ?? [] });
     }
   }, 60_000);
 

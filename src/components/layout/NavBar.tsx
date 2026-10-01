@@ -1,9 +1,10 @@
+import { AscensionStars } from "@/components/game/AscensionCard";
 import { useState } from "react";
 import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2 } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +39,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { to: "/game/missions", label: "Missions", icon: MapPin },
       { to: "/game/galaxie", label: "Galaxie", icon: Orbit },
+      { to: "/game/colonies", label: "Colonies", icon: Globe2 },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/combats", label: "Combats", icon: Swords },
       { to: "/game/simulateur", label: "Simulateur", icon: Calculator },
@@ -128,6 +130,7 @@ function CommanderCard() {
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-[0.04em] text-white">
             <span className="truncate">{player.pseudo}</span>
+            <AscensionStars count={player.ascensions} />
             <StaffBadge uid={player.uid} compact />
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">{getRankLabel(player.xp)}</p>

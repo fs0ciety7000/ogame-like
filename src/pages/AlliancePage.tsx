@@ -29,6 +29,7 @@ import { WarTab } from "@/components/game/WarTab";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import {
   IntelTab,
+  ProjectsTab,
   ResearchTab,
   TreasuryTab,
 } from "@/components/game/AllianceTabs";
@@ -241,6 +242,7 @@ function AllianceRoom({
         <TabsTrigger value="membres">Membres et canal</TabsTrigger>
         <TabsTrigger value="tresor">Trésor</TabsTrigger>
         <TabsTrigger value="recherches">Recherches</TabsTrigger>
+        <TabsTrigger value="projets">Projets</TabsTrigger>
         <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
         <TabsTrigger value="guerre">Guerre</TabsTrigger>
       </TabsList>
@@ -259,6 +261,9 @@ function AllianceRoom({
           alliance={alliance}
           canStart={role === "founder" || role === "officer"}
         />
+      </TabsContent>
+      <TabsContent value="projets">
+        <ProjectsTab alliance={alliance} canUseTreasury={role === "founder" || role === "officer"} />
       </TabsContent>
       <TabsContent value="renseignement">
         <IntelTab />

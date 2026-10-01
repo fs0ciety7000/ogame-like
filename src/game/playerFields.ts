@@ -26,6 +26,10 @@ export const GAME_FIELDS = [
   "stats",
   "onboarding",
   "posture",
+  "ascensions",
+  "ascendedAtMs",
+  "colonies",
+  "colonizing",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

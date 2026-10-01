@@ -1,3 +1,4 @@
+import { colonyOf, colonyView } from "@/game/colonies";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import type { Fleet } from "@/game/fleets";
@@ -145,6 +146,8 @@ export interface SpyArrivalInput {
   targetGarrisons?: Fleet[];
   probes: number;
   random?: () => number;
+  /** v3.5 : colonie visée (sinon la planète mère). */
+  colonyId?: string;
 }
 
 export interface SpyArrivalOutput {
@@ -160,7 +163,10 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
   const { now, probes } = input;
   const spy = flushState({ ...input.spy, buildings: withMissingBuildings(input.spy.buildings, input.spy.resources) }, input.spyQueues, now).player;
   const flushed = flushState({ ...input.target, buildings: withMissingBuildings(input.target.buildings, input.target.resources) }, input.targetQueues, now);
-  const target = flushed.player;
+  const owner = flushed.player;
+  // v3.5 : sur une colonie, le rapport décrit la colonie (défenses, stock, bâtiments).
+  const colony = input.colonyId ? colonyOf(owner, input.colonyId) : undefined;
+  const target = colony ? colonyView(owner, colony) : owner;
 
   const level = espionageLevel(spy);
   const counter = counterEspionage(target);
@@ -179,7 +185,7 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
     score: Math.round(score * 100) / 100,
     tier,
     detected,
-    data: buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []),
+    data: colony ? buildSpyReportData(target, { ...flushed.queues, buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] } }, [], tier, now) : buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []),
   };
 
   const spyNotifications: NewNotification[] = [

@@ -213,6 +213,30 @@
         "type": "json",
         "required": false,
         "maxSize": 2000
+      },
+      {
+        "name": "ascensions",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "ascendedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "colonies",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      },
+      {
+        "name": "colonizing",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [
@@ -448,6 +472,12 @@
         "type": "json",
         "required": false,
         "maxSize": 20000
+      },
+      {
+        "name": "planetId",
+        "type": "text",
+        "required": false,
+        "max": 40
       }
     ],
     "indexes": [
@@ -682,6 +712,18 @@
         "type": "json",
         "required": false,
         "maxSize": 200000
+      },
+      {
+        "name": "projects",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "projectContributors",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [
@@ -874,8 +916,8 @@
     "id": "pbc_ce_fleets",
     "name": "fleets",
     "type": "base",
-    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && (mission = \"attack\" || mission = \"pirate\")) || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\")",
-    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && (mission = \"attack\" || mission = \"pirate\")) || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\")",
+    "listRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && (mission = \"attack\" || mission = \"pirate\")) || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\") || (targetOwnerUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
+    "viewRule": "ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \"outbound\" && (mission = \"attack\" || mission = \"pirate\")) || (targetUid = @request.auth.id && mission = \"garrison\" && status != \"done\") || (targetOwnerUid = @request.auth.id && status = \"outbound\" && mission = \"attack\")",
     "createRule": null,
     "updateRule": null,
     "deleteRule": null,
@@ -1008,6 +1050,18 @@
         "type": "json",
         "required": false,
         "maxSize": 50000
+      },
+      {
+        "name": "transport",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "targetOwnerUid",
+        "type": "text",
+        "required": false,
+        "max": 40
       }
     ],
     "indexes": [
@@ -1083,6 +1137,24 @@
         "required": false,
         "max": 200,
         "presentable": false
+      },
+      {
+        "name": "ascensions",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "ascendedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "planets",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [

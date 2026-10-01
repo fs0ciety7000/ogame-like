@@ -248,6 +248,11 @@ export interface LeaderboardEntry {
   lastAttackAtMs?: number;
   allianceId?: string;
   activeTitle?: string;
+  /** v3.4 */
+  ascensions?: number;
+  ascendedAtMs?: number;
+  /** v3.5 : colonies publiques. */
+  planets?: { id: string; name: string }[];
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -262,10 +267,13 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     lastAttackAtMs: (data.lastAttackAtMs as number) || undefined,
     allianceId: (data.allianceId as string) || undefined,
     activeTitle: (data.activeTitle as string) || undefined,
+    ascensions: (data.ascensions as number) || 0,
+    ascendedAtMs: (data.ascendedAtMs as number) || undefined,
+    planets: Array.isArray(data.planets) ? (data.planets as { id?: unknown; name?: unknown }[]).filter((c) => typeof c?.id === "string" && c.id).map((c) => ({ id: String(c.id), name: String(c.name ?? "Colonie") })) : [],
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -475,7 +483,7 @@ export function recallFleet(fleetId: string): Promise<Fleet> {
  *  au défenseur que les flottes encore en approche). */
 export function subscribeFleets(uid: string, cb: (fleets: Fleet[]) => void): () => void {
   const filter = pb.filter(
-    '(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && (mission = "attack" || mission = "pirate")) || (targetUid = {:uid} && mission = "garrison" && status != "done")',
+    '(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && (mission = "attack" || mission = "pirate")) || (targetOwnerUid = {:uid} && status = "outbound" && mission = "attack") || (targetUid = {:uid} && mission = "garrison" && status != "done")',
     { uid },
   );
   return subscribeList(
@@ -570,4 +578,31 @@ export async function fetchAchievementRates(): Promise<{ players: number; counts
   } catch {
     return { players: 0, counts: {} };
   }
+}
+
+/** v3.4 : ascension (bâtiments au niveau 1 contre un bonus permanent). */
+export function ascendEmpire() {
+  return act<{ ascensions: number }>({ type: "ascend" });
+}
+
+/* v3.5 : colonies */
+
+export function startColonization(name: string) {
+  return act({ type: "colonize", name });
+}
+
+export function upgradeColonyBuilding(colonyId: string, buildingId: string) {
+  return act({ type: "colonyUpgrade", colonyId, buildingId });
+}
+
+export function buildColonyDefense(colonyId: string, unitId: string, qty: number) {
+  return act({ type: "colonyDefense", colonyId, unitId, qty });
+}
+
+export function renameColony(colonyId: string, name: string) {
+  return act({ type: "colonyRename", colonyId, name });
+}
+
+export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
+  return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
 }

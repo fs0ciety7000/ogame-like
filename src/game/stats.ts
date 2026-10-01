@@ -39,6 +39,8 @@ export interface PlayerStats {
   /** Recherche lancée entre 3 h et 5 h (heure de Paris). */
   nightResearch?: number;
   allianceFounded?: number;
+  ascensions?: number;
+  transports?: number;
   lastResearchAtMs?: number;
 }
 

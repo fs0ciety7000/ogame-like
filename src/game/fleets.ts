@@ -10,6 +10,8 @@ import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
+import { fleetCargoCapacity } from "@/game/combat";
+import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
@@ -43,7 +45,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -55,6 +57,7 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   lair: "Assaut du repaire",
   expedition: "Expédition",
   leviathan: "Assaut du Léviathan",
+  transport: "Transport",
 };
 
 export interface Fleet {
@@ -83,6 +86,15 @@ export interface Fleet {
   factionId?: string | null;
   /** v3.1 : déroulé d'une expédition. */
   expedition?: import("@/game/expeditions").ExpeditionState | null;
+  /** v3.5 : propriétaire de la planète visée (attaque d'une colonie). */
+  targetOwnerUid?: string | null;
+  /** v3.5 : transport entre la planète mère et une colonie. */
+  transport?: TransportState | null;
+}
+
+/** v3.5 : la flotte vise ce joueur (planète mère ou une de ses colonies). */
+export function targetsPlayer(f: Pick<Fleet, "targetUid"> & { targetOwnerUid?: string | null }, uid: string | undefined): boolean {
+  return !!uid && (f.targetUid === uid || f.targetOwnerUid === uid);
 }
 
 export function mapPosition(uid: string): { x: number; y: number } {
@@ -163,6 +175,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     defenderCreatedAtMs: defender.createdAtMs,
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
   });
@@ -237,6 +250,10 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     const state = owner.units[unitId] ?? { level: 1, count: 0 };
     owner.units[unitId] = { ...state, count: state.count + qty };
   }
+  // v3.5 : livraison rappelée avant d'atteindre la colonie, la cargaison revient.
+  if (fleet.mission === "transport" && fleet.recalled && fleet.transport?.direction === "deliver") {
+    for (const [res, amount] of Object.entries(fleet.transport.cargo ?? {})) owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
+  }
   // Le butin arrive même si l'entrepôt est plein (comme une livraison).
   for (const [res, amount] of Object.entries(fleet.loot ?? {})) {
     owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
@@ -257,6 +274,10 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
       return { title: "Retour du Léviathan", message: "Les survivants de l'assaut sur le Léviathan sont rentrés." };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
+    case "transport":
+      return fleet.transport?.direction === "collect" && !fleet.recalled
+        ? { title: "Transport rentré", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatriées de ${fleet.targetPseudo}.` : `Rien à rapatrier de ${fleet.targetPseudo}.` }
+        : { title: "Transport rentré", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
     case "garrison":
       return { title: "Garnison rentrée", message: `Ta garnison stationnée chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -305,6 +326,10 @@ export interface LaunchRequest {
   expeditionsActive?: number;
   expeditionsToday?: number;
   formation?: string;
+  /** v3.5 : colonie visée par une attaque ou un espionnage (sinon la planète mère). */
+  targetColonyId?: string;
+  /** v3.5 : transport (colonie, sens, chargement). */
+  transport?: { colonyId?: unknown; direction?: unknown; cargo?: unknown };
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
@@ -316,9 +341,17 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
   if (mission === "garrison" && !target) throw new GameActionError("Ce joueur est introuvable.");
   const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
   const owner = flushed.player;
+  // v3.5 : attaque ou espionnage d'une colonie (ses coordonnées, son bouclier).
+  let planet = target;
+  if (req.targetColonyId && (mission === "attack" || mission === "spy")) {
+    if (target!.uid === owner.uid) throw new GameActionError("C'est ta propre colonie.");
+    const colony = colonyOf(advanceTarget(target!, now), req.targetColonyId);
+    if (!colony) throw new GameActionError("Cette colonie n'existe plus.");
+    planet = colonyView(target!, colony);
+  }
   let out: LaunchOutput;
-  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: target!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
-  else if (mission === "spy") out = launchSpy(owner, target!, req.fleet, now);
+  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
+  else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
   else if (mission === "lair") out = launchLair(owner, req.lairTarget ?? "", req.fleet, now);
@@ -335,10 +368,71 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
       defenderNotifications: [],
     };
   }
+  else if (mission === "transport") out = launchTransport(owner, req.fleet, req.transport ?? {}, now);
   else throw new GameActionError("Mission inconnue.");
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
   return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+}
+
+/** Copie de la cible avec ses colonies rattrapées (colonisation arrivée). */
+function advanceTarget(target: PlayerState, now: number): PlayerState {
+  const copy = structuredClone(target);
+  advanceColonies(copy, now);
+  return copy;
+}
+
+/** Transport (v3.5) : livraison (chargée sur la planète mère) ou collecte
+ *  (chargée à l'arrivée sur la colonie, rapportée au retour). */
+export function launchTransport(owner: PlayerState, raw: Record<string, unknown>, req: { colonyId?: unknown; direction?: unknown; cargo?: unknown }, now: number): LaunchOutput {
+  const colony = colonyOf(owner, String(req.colonyId ?? ""));
+  if (!colony) throw new GameActionError("Colonie introuvable.");
+  const direction: TransportDirection = req.direction === "collect" ? "collect" : "deliver";
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent transporter.");
+  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  if (capacity <= 0) throw new GameActionError("Ces vaisseaux n'ont pas de soute.");
+  const cargo = parseCargo(req.cargo, direction === "deliver" ? capacity : Infinity);
+  if (direction === "deliver") {
+    if (Object.keys(cargo).length === 0) throw new GameActionError("Charge au moins une ressource.");
+    for (const [res, n] of Object.entries(cargo) as [ResourceId, number][]) {
+      if ((owner.resources[res] ?? 0) < n) throw new GameActionError("Ressources insuffisantes sur la planète mère.");
+    }
+    for (const [res, n] of Object.entries(cargo) as [ResourceId, number][]) owner.resources[res] -= n;
+  }
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  bumpStat(owner, "transports");
+  return {
+    attacker: owner,
+    fleet: { ...newFleet(owner, { uid: colony.id, pseudo: colony.name }, "transport", units, now, arriveAtMs), transport: { direction, colonyId: colony.id, cargo } },
+    defenderNotifications: [],
+  };
+}
+
+/** Arrivée d'un transport : livraison ou chargement, puis retour. */
+export function performTransportArrival(
+  ownerIn: PlayerState,
+  ownerQueues: QueuesState,
+  fleet: Fleet,
+  now: number,
+): { owner: PlayerState; queues: QueuesState; notifications: NewNotification[]; loot: Partial<Record<ResourceId, number>> | null; outcome: string } {
+  const flushed = flushState({ ...ownerIn, buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }, ownerQueues, now);
+  const owner = flushed.player;
+  const notes = [...flushed.notifications, ...advanceColonies(owner, now)];
+  const colony = colonyOf(owner, fleet.transport?.colonyId ?? fleet.targetUid);
+  const t = fleet.transport;
+  if (!colony || !t) {
+    // Colonie disparue : la cargaison d'une livraison repart vers la planète mère.
+    return { owner, queues: flushed.queues, notifications: notes, loot: t?.direction === "deliver" ? t.cargo : null, outcome: "lost" };
+  }
+  if (t.direction === "deliver") {
+    deliverToColony(colony, t.cargo);
+    const total = Object.values(t.cargo).reduce((a: number, b) => a + (b ?? 0), 0);
+    notes.push({ kind: "fleet", title: "Livraison effectuée", message: `${formatInt(total)} ressources livrées à ${colony.name}.`, createdAtMs: now, read: false });
+    return { owner, queues: flushed.queues, notifications: notes, loot: null, outcome: "delivered" };
+  }
+  const taken = collectFromColony(colony, t.cargo, fleetCargoCapacity(owner.units, fleet.units, owner.techLevels));
+  return { owner, queues: flushed.queues, notifications: notes, loot: taken, outcome: "collected" };
 }
 
 /** Vaisseaux choisis pour une mission, retirés de la base. */

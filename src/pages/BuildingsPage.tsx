@@ -1,4 +1,4 @@
-import { buildTimeFactor } from "@/game/events";
+import { playerBuildTimeFactor } from "@/game/bonuses";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AscensionCard } from "@/components/game/AscensionCard";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -32,7 +33,6 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
-import { techReductionFactor } from "@/game/technologies";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -74,6 +74,8 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
+      <AscensionCard />
+
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
         {BUILDINGS.map((building, index) => {
           const state = player.buildings[building.id];
@@ -87,7 +89,7 @@ export function BuildingsPage() {
           const nextLevel = level + 1;
           const rawCost = getBuildingUpgradeCost(building, nextLevel);
           const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
-          const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time"));
+          const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * playerBuildTimeFactor(player, now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
 

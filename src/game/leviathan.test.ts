@@ -5,7 +5,10 @@ import {
   checkLeviathanLaunch,
   closeLeviathan,
   grantLeviathanReward,
+  leviathanPace,
   leviathanWindow,
+  recordLeviathanTimeline,
+  resizeLeviathan,
   LEVIATHAN_RULES,
   removeLeviathanTitle,
   resolveLeviathanAssault,
@@ -75,5 +78,39 @@ describe("leviathan", () => {
     expect(rewardHours(st, "b")).toBe((LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours) * LEVIATHAN_RULES.failedRewardFactor);
     expect(rewardHours(st, "a")).toBeCloseTo((LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours / 2) * LEVIATHAN_RULES.failedRewardFactor);
     expect(grantLeviathanReward(st, b).title).toBe(false);
+  });
+});
+
+describe("leviathan live tracking", () => {
+  const base = () => spawnLeviathan({ id: "lev-t", startMs: START, endMs: START + 72 * H }, [], null);
+
+  it("samples the structure at most once per hour", () => {
+    let s = base();
+    expect(s.timeline).toEqual([{ t: START, hp: s.maxHp }]);
+    s = recordLeviathanTimeline({ ...s, hp: s.maxHp - 10 }, START + 30 * 60_000);
+    expect(s.timeline).toHaveLength(1);
+    s = recordLeviathanTimeline(s, START + H);
+    expect(s.timeline).toHaveLength(2);
+    expect(s.timeline[1].hp).toBe(s.maxHp - 10);
+  });
+
+  it("projects the outcome from the average pace", () => {
+    const s = { ...base(), maxHp: 1_200_000, hp: 1_000_000, timeline: [{ t: START, hp: 1_200_000 }, { t: START + 9 * H, hp: 1_020_000 }] };
+    const pace = leviathanPace(s, START + 10 * H);
+    expect(pace.ratePerHour).toBe(20_000);
+    expect(pace.lastHour).toBe(20_000);
+    expect(pace.remainingHours).toBe(62);
+    expect(pace.projectedHp).toBe(0); // abattu avant l'échéance
+    expect(pace.killInHours).toBe(50);
+    expect(pace.suggestedMaxHp).toBe(200_000 + 20_000 * 62);
+  });
+
+  it("resizes while keeping the damage already dealt", () => {
+    const s = { ...base(), maxHp: 1_200_000, hp: 1_000_000 };
+    const r = resizeLeviathan(s, 800_000, START + 2 * H);
+    expect(r.maxHp).toBe(800_000);
+    expect(r.hp).toBe(600_000);
+    expect(() => resizeLeviathan(s, 150_000, START + 2 * H)).toThrow();
+    expect(() => resizeLeviathan(s, 900_000, START + 80 * H)).toThrow();
   });
 });

@@ -84,6 +84,10 @@ export async function startAllianceResearch(researchId: string) {
   await allianceAction({ type: "research", researchId });
 }
 
+export async function fundAllianceProject(projectId: string, source: "treasury" | "self", resources: Partial<Record<ResourceId, number>>) {
+  await allianceAction({ type: "project", projectId, source, resources });
+}
+
 export function subscribeAllianceLogs(allianceId: string, cb: (logs: AllianceLog[]) => void): () => void {
   let active = true;
   const filter = pb.filter("allianceId = {:allianceId}", { allianceId });

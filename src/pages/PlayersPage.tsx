@@ -1,3 +1,4 @@
+import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
 import {
   Sword,
@@ -212,6 +213,7 @@ export function PlayersPage() {
                   defenderCreatedAtMs: p.createdAtMs,
                   defenderHasAttacked: (p.lastAttackAtMs ?? 0) > 0,
                   lastAttackOnTargetMs: myRecentAttacks[p.uid] ?? null,
+                  defenderAscendedAtMs: p.ascendedAtMs,
                   lastDefenderDefeatMs: p.lastDefeatAtMs ?? null,
                 });
             const isProtected =
@@ -243,6 +245,7 @@ export function PlayersPage() {
                 <div className="min-w-0">
                   <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
                     <span className="truncate">{p.pseudo}</span>
+                    <AscensionStars count={p.ascensions} />
                     <StaffBadge uid={p.uid} />
                     {isProtected && (
                       <span title={attackCheck?.message} className="flex items-center text-mint-glow">
