@@ -28,57 +28,72 @@ export function ResourceHud() {
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5 md:justify-start">
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:flex xl:flex-wrap xl:items-stretch">
       {common.map((res) => {
         const rate = rates[res.id] ?? 0;
         const trend = history.slice(-12).map((p) => p.r[res.id] ?? 0);
+        const full = economy.full.includes(res.id);
+        const fill = Number.isFinite(economy.capacity) && economy.capacity > 0 ? (resources[res.id] / economy.capacity) * 100 : 0;
         return (
           <Tooltip key={res.id}>
             <TooltipTrigger asChild>
               <motion.div
                 key={pulse[res.id] ?? 0}
                 data-hud-res={res.id}
-                initial={pulse[res.id] ? { scale: 1.18, borderColor: "rgba(94,255,196,0.8)" } : false}
-                animate={{ scale: 1, borderColor: "rgba(255,255,255,0.05)" }}
+                initial={pulse[res.id] ? { scale: 1.08 } : false}
+                animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
-                  "flex items-center gap-1.5 hud-cut-sm border border-cyan-glow/15 bg-space-900/70 px-2.5 py-1.5 text-sm",
-                  economy.full.includes(res.id) && "!border-ember-glow/60",
+                  "hud-cut-sm relative flex min-w-[9.5rem] items-center gap-2 overflow-hidden border bg-space-900/70 px-2.5 pb-2 pt-1.5 xl:flex-1",
+                  full ? "border-ember-glow/60" : "border-cyan-glow/15",
                 )}
               >
-                <span className="text-base leading-none">{res.emoji}</span>
-                <AnimatedNumber
-                  value={resources[res.id]}
-                  format={formatCompact}
-                  className="tabular-mono font-medium text-slate-100"
-                />
-                {trend.length >= 2 && <Sparkline values={trend} className="hidden lg:block" />}
-                {economy.full.includes(res.id) ? (
-                  <span className="text-[10px] font-semibold uppercase text-ember-glow">plein</span>
-                ) : rate > 0 ? (
-                  <span className="tabular-mono text-[10px] text-mint-glow">+{formatCompact(rate)}/s</span>
-                ) : rate < 0 ? (
-                  <span className="tabular-mono text-[10px] text-danger-glow">{formatCompact(rate)}/s</span>
-                ) : null}
+                <span className="text-lg leading-none">{res.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-[15px] font-semibold text-white" />
+                    {full ? (
+                      <span className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-ember-glow">plein</span>
+                    ) : rate !== 0 ? (
+                      <span className={cn("tabular-mono text-[10px]", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
+                        {rate > 0 ? "+" : ""}
+                        {formatCompact(rate)}/s
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
+                </div>
+                {trend.length >= 2 && <Sparkline values={trend} className="hidden 2xl:block" />}
+                <span className="absolute inset-x-0 bottom-0 h-[3px] bg-white/[0.05]">
+                  <span
+                    className="block h-full transition-[width] duration-700"
+                    style={{
+                      width: `${Math.min(100, fill)}%`,
+                      background: full ? "var(--color-ember-glow)" : fill > 85 ? "var(--color-gold-glow)" : "linear-gradient(90deg, var(--color-cyan-glow), var(--color-mint-glow))",
+                    }}
+                  />
+                </span>
               </motion.div>
             </TooltipTrigger>
             <TooltipContent>
               {res.name} : {formatNumber(resources[res.id])} / {Number.isFinite(economy.capacity) ? formatNumber(economy.capacity) : "∞"}
               {rate !== 0 && ` (${rate > 0 ? "+" : ""}${formatNumber(rate)}/s)`}
-              {economy.full.includes(res.id) && " — entrepôt plein, production à l'arrêt"}
+              {full && " — entrepôt plein, production à l'arrêt"}
               {res.id === "energy" && economy.upkeep > 0 && ` — entretien de la flotte : −${formatNumber(Math.round(economy.upkeep))}/s`}
             </TooltipContent>
           </Tooltip>
         );
       })}
-
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
       <HostileFleetAlert />
       <EventBadge />
       <UltimatumBadge />
       {economy.outage && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="animate-pulse-alert rounded-lg border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 text-[11px] font-semibold text-danger-glow">
+            <span className="animate-pulse-alert border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-danger-glow">
               ⚡ Panne d'énergie
             </span>
           </TooltipTrigger>
@@ -89,7 +104,6 @@ export function ResourceHud() {
         </Tooltip>
       )}
 
-      <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
 
       {rare.map((res) => (
         <Tooltip key={res.id}>
@@ -97,13 +111,13 @@ export function ResourceHud() {
             <motion.div
               key={pulse[res.id] ?? 0}
               data-hud-res={res.id}
-              initial={pulse[res.id] ? { scale: 1.18, borderColor: "rgba(255,209,102,0.8)" } : false}
-              animate={{ scale: 1, borderColor: "rgba(255,255,255,0.05)" }}
+              initial={pulse[res.id] ? { scale: 1.15 } : false}
+              animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 14 }}
-              className="hidden items-center gap-1.5 hud-cut-sm border border-cyan-glow/10 bg-space-900/50 px-2 py-1.5 text-sm sm:flex"
+              className="flex items-center gap-1.5 border border-gold-glow/15 bg-gold-glow/[0.04] px-2 py-1 text-xs"
             >
-              <span className="text-base leading-none opacity-80">{res.emoji}</span>
-              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-300" />
+              <span className="text-sm leading-none">{res.emoji}</span>
+              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-200" />
             </motion.div>
           </TooltipTrigger>
           <TooltipContent>
@@ -111,6 +125,7 @@ export function ResourceHud() {
           </TooltipContent>
         </Tooltip>
       ))}
+      </div>
     </div>
   );
 }

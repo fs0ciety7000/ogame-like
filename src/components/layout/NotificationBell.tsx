@@ -41,14 +41,14 @@ export function NotificationBell() {
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-space-800/70 text-slate-300 transition hover:text-white hover:border-cyan-glow/40",
+            "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
             hasUrgentUnread && "animate-pulse-alert",
           )}
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-glow px-1 text-[10px] font-bold text-space-950">
+            <span className="absolute right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center bg-danger-glow px-0.5 font-mono text-[9px] font-bold text-space-950">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
