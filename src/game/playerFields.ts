@@ -22,6 +22,7 @@ export const GAME_FIELDS = [
   "lastSeasonXp",
   "titles",
   "activeTitle",
+  "pirates",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

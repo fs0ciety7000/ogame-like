@@ -95,6 +95,15 @@ export function computeFullPower(
   return total;
 }
 
+/** Puissance défensive d'une base (défenses + vaisseaux à quai, bonus à domicile). */
+export function homeDefensePower(units: Units, techLevels: TechLevels): number {
+  return (
+    (computeFullPower(units, techLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
+      computeFullPower(units, techLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) *
+    (1 + COMBAT_RULES.homeDefenseBonus)
+  );
+}
+
 export interface CombatResult {
   outcome: CombatOutcome;
   /** Puissances effectives (bouclier et bonus à domicile compris). */
@@ -143,21 +152,20 @@ export function resolveCombat(params: {
   /** Garnisons alliées et part de leur puissance engagée. */
   garrisons?: CombatGarrison[];
   garrisonFactor?: number;
+  /** Puissances imposées (pirates : flotte sans unités réelles). */
+  attackerPowerOverride?: number;
+  defenderPowerOverride?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
 
   // Le bouclier absorbe une part de l'attaque ; le défenseur, chez lui, se
   // bat avec ses défenses ET ses vaisseaux à quai (ceux en vol n'y sont plus).
-  const attackerPower = computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"]) * (1 - shield);
+  const attackerPower = (params.attackerPowerOverride ?? computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * (1 - shield);
   const garrisons = params.garrisons ?? [];
   const garrisonFactor = params.garrisonFactor ?? 0.5;
   const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const defenderPower =
-    (computeFullPower(defenderUnits, defenderTechLevels, DEFENSIVE_UNITS, ["attack", "defense"]) +
-      computeFullPower(defenderUnits, defenderTechLevels, OFFENSIVE_UNITS, ["attack", "defense"]) * COMBAT_RULES.homeFleetDefenseFactor) *
-      (1 + COMBAT_RULES.homeDefenseBonus) +
-    garrisonPower;
+  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels) + garrisonPower;
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;

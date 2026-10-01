@@ -376,6 +376,11 @@ export function claimContract(contractId: string) {
   return act<import("@/game/contracts").ClaimResult>({ type: "claimContract", contractId });
 }
 
+/** Réponse à l'ultimatum de Varan : payer le tribut ou refuser (raid). */
+export function answerPirateUltimatum(answer: "pay" | "refuse") {
+  return callGame<{ answer: string; raid: { power: number; arriveAtMs: number } | null }>("pirates", { answer });
+}
+
 export function setActiveTitle(title: string) {
   return act({ type: "setTitle", title });
 }
@@ -458,7 +463,7 @@ export function recallFleet(fleetId: string): Promise<Fleet> {
  *  au défenseur que les flottes encore en approche). */
 export function subscribeFleets(uid: string, cb: (fleets: Fleet[]) => void): () => void {
   const filter = pb.filter(
-    '(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && mission = "attack") || (targetUid = {:uid} && mission = "garrison" && status != "done")',
+    '(ownerUid = {:uid} && status != "done") || (targetUid = {:uid} && status = "outbound" && (mission = "attack" || mission = "pirate")) || (targetUid = {:uid} && mission = "garrison" && status != "done")',
     { uid },
   );
   return subscribeList(

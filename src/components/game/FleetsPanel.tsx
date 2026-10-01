@@ -21,7 +21,7 @@ export function isHostile(f: Fleet, uid: string | undefined): boolean {
     f.targetUid === uid &&
     f.ownerUid !== uid &&
     f.status === "outbound" &&
-    (f.mission ?? "attack") === "attack"
+    ((f.mission ?? "attack") === "attack" || f.mission === "pirate")
   );
 }
 
@@ -33,6 +33,8 @@ function fleetLabel(f: Fleet, outbound: boolean): string {
       return outbound
         ? `🛰️ Sondes → ${f.targetPseudo}`
         : `🛰️ ← sondes de ${f.targetPseudo}`;
+    case "lair":
+      return outbound ? "☠️ Assaut du repaire de Varan" : "☠️ ← retour du repaire";
     case "garrison":
       return f.status === "stationed"
         ? `🛡️ Garnison chez ${f.targetPseudo}`
@@ -129,10 +131,12 @@ export function FleetsPanel({
             className="animate-pulse-alert rounded-lg border border-danger-glow/50 bg-danger-glow/10 p-2.5"
           >
             <p className="flex items-center gap-1.5 text-xs font-semibold text-danger-glow">
-              <AlertTriangle className="h-3.5 w-3.5" /> Attaque de{" "}
+              <AlertTriangle className="h-3.5 w-3.5" /> {f.mission === "pirate" ? "Raid du" : "Attaque de"}{" "}
               {f.ownerPseudo} — impact dans {formatClock(left)}
             </p>
-            <p className="mt-1 text-[11px] text-slate-400">{fleetSummary(f)}</p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {f.mission === "pirate" ? `Corsaires de la Confrérie du Vide · puissance ${formatCompact(f.power ?? 0)}` : fleetSummary(f)}
+            </p>
             <div className="mt-1.5 flex items-center gap-2">
               <Progress
                 value={fleetProgress(f, now) * 100}

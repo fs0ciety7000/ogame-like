@@ -48,6 +48,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       spy: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
       // Pas d'événement du week-end pendant les tests (résultats stables).
       events: { rotationEnabled: false, scheduled: [] },
+      pirates: { raidTravelHours: 0.001 },
     };
     if (existing) {
       savedRules = { id: existing.id, data: existing.data };
@@ -578,6 +579,87 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
     expect((await snap(bId)).allianceId).toBe("");
     expect((await snap(bId)).allianceResearch).toEqual({});
+  }, 60_000);
+
+  it("hard reset of one player, with a backup first", async () => {
+    // Connecté en B (joueur normal) : refusé.
+    await expect(pb.send("/api/cosmic/admin/reset", { method: "POST", body: { scope: "player", uid: bId, confirm: B.pseudo } })).rejects.toMatchObject({ status: 403 });
+    await admin.collection("players").update(bId, { units: { chasseur: { level: 3, count: 99 } }, techLevels: { tech1: 5 }, xp: 777, resources: RICH });
+    await expect(
+      admin.send("/api/cosmic/admin/reset", { method: "POST", body: { scope: "player", uid: bId, confirm: "mauvais" } }),
+    ).rejects.toMatchObject({ status: 400 });
+    const out = await admin.send("/api/cosmic/admin/reset", {
+      method: "POST",
+      body: { scope: "player", uid: bId, confirm: B.pseudo, options: { xp: true, starterKit: { scrap: 5000, reinforcedSteel: 50 } } },
+    });
+    expect(out.players).toBe(1);
+    expect(out.backup).toMatch(/^avant_reset_\d{12}\.zip$/);
+    const backups = await admin.backups.getFullList();
+    expect(backups.some((b) => b.key === out.backup)).toBe(true);
+    await admin.backups.delete(out.backup);
+
+    const b = await snap(bId);
+    expect(b.units).toEqual({});
+    expect(b.techLevels).toEqual({});
+    expect(b.xp).toBe(0);
+    expect(b.resources.scrap).toBeGreaterThanOrEqual(5100);
+    expect(b.resources.scrap).toBeLessThan(5200);
+    expect(b.resources.reinforcedSteel).toBe(50);
+    expect(b.createdAtMs).toBeGreaterThan(Date.now() - 60_000);
+    const a = await snap(aId);
+    expect(a.xp).toBeGreaterThan(0); // les autres joueurs ne bougent pas
+    const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}"` });
+    expect(notes.map((n) => n.title)).toEqual(["Nouvelle ère : la galaxie repart de zéro"]);
+  }, 60_000);
+
+  it("v2.0 pirates: ultimatum, refused raid repelled, tribute paid, lair assault", async () => {
+    // Connecté en B.
+    await expect(pb.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } })).rejects.toMatchObject({ status: 403 });
+    await admin.collection("players").update(bId, { pirates: null, resources: RICH, units: { canon_plasma: { level: 1, count: 80 }, chasseur: { level: 3, count: 3000 } } });
+    const pirates = async () => (await snap(bId)).pirates;
+    try {
+      expect((await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } })).changed).toBe(1);
+      const u = (await pirates()).ultimatum;
+      expect(u.expiresAtMs).toBeGreaterThan(Date.now());
+      await expect(pb.collection("players").update(bId, { pirates: { ultimatum: null } })).rejects.toBeTruthy();
+
+      // Refus : le Silencieux part, B voit le raid arriver puis le repousse.
+      const refused = await ps.answerPirateUltimatum("refuse");
+      expect(refused.raid).not.toBeNull();
+      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` }))[0];
+      expect(raid.status).toBe("outbound");
+      await wait(Math.max(0, refused.raid!.arriveAtMs - Date.now()) + 400);
+      await ps.syncPlayer("");
+      const report = (await pb.collection("battle_reports").getFullList({ filter: `defenderUid="${bId}" && attackerUid="pirates"` }))[0];
+      expect(report.outcome).toBe("defender_win");
+      const afterRaid = await pirates();
+      expect(afterRaid).toMatchObject({ raidsWon: 1, notoriety: 1, repelled: 1, ultimatum: null });
+
+      // Deuxième ultimatum : B paie.
+      await admin.collection("players").update(bId, { pirates: { ...afterRaid, raidUntilMs: 0 } });
+      await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, force: true } });
+      const scrapBefore = (await snap(bId)).resources.scrap;
+      expect((await ps.answerPirateUltimatum("pay")).raid).toBeNull();
+      expect((await snap(bId)).resources.scrap).toBeLessThan(scrapBefore);
+      expect((await pirates()).tributesPaid).toBe(1);
+      await expect(ps.answerPirateUltimatum("pay")).rejects.toThrow(/Aucun ultimatum/);
+
+      // Repaire : fermé, puis localisé et pris d'assaut.
+      await expect(ps.sendFleet("pirates_lair", { chasseur: 10 }, "lair")).rejects.toThrow(/localisé/);
+      await admin.collection("players").update(bId, { pirates: { ...(await pirates()), lairOpen: true, repelled: 5 } });
+      const assault = await ps.sendFleet("pirates_lair", { chasseur: (await snap(bId)).units.chasseur.count }, "lair");
+      expect(assault.power).toBeGreaterThan(0);
+      await wait(Math.max(0, assault.arriveAtMs - Date.now()) + 400);
+      await ps.syncPlayer("");
+      const landed = await pb.collection("fleets").getOne(assault.id);
+      expect(landed.outcome).toBe("attacker_win");
+      const final = await snap(bId);
+      expect(final.pirates).toMatchObject({ lairOpen: false, lairsTaken: 1, notoriety: 0 });
+      expect(final.titles.map((t: { label: string }) => t.label)).toContain("Fléau de la Confrérie");
+    } finally {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" || ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(bId, { pirates: null });
+    }
   }, 60_000);
 
   it("changes password and keeps the session", async () => {

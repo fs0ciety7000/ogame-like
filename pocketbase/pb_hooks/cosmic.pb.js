@@ -272,6 +272,29 @@ routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.j
 /** POST /api/cosmic/alliance/intel — rapports récents des membres. */
 routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
+// La Liste de Varan : inscriptions et ultimatums expirés, toutes les 10 min.
+cronAdd("cosmic_pirates", "*/10 * * * *", () => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  db.processPirates(db.loadGame(), Date.now(), null);
+});
+
+/** POST /api/cosmic/pirates { answer: "pay" | "refuse" } — réponse à l'ultimatum de Varan. */
+routerAdd("POST", "/api/cosmic/pirates", (e) => require(`${__hooks}/cosmic_db.js`).piratesRequest(e), $apis.requireAuth("users"));
+
+/**
+ * POST /api/cosmic/admin/pirates  { uid, force? } — administrateurs : passe la
+ * Liste pour un joueur ; force = inscription immédiate (test, animation).
+ */
+routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const req = db.body(e);
+  const uid = String(req.uid || "");
+  const rec = uid ? db.findOrNull($app, "players", uid) : null;
+  if (!rec) throw new NotFoundError("Joueur introuvable.");
+  return e.json(200, { changed: db.processPirates(db.loadGame(), Date.now(), uid, !!req.force) });
+});
+
 // Clôture de la saison précédente (sans effet si elle est déjà close).
 cronAdd("cosmic_seasons", "7 * * * *", () => {
   const db = require(`${__hooks}/cosmic_db.js`);
@@ -326,6 +349,12 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
 
   return e.json(200, game.computeGameStats(players, queues, reports, now, 7));
 });
+
+/**
+ * POST /api/cosmic/admin/reset — hard reset de la progression (un joueur ou
+ * tous), précédé d'une sauvegarde complète. Administrateurs uniquement.
+ */
+routerAdd("POST", "/api/cosmic/admin/reset", (e) => require(`${__hooks}/cosmic_db.js`).adminReset(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- Journal des actions d'administration ---------- */
 
