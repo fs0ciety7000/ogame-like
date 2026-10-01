@@ -161,6 +161,8 @@ export interface BattleReport {
   defenderXpDelta?: number;
   /** Garnisons alliées engagées en défense (v1.9). */
   garrisons?: { ownerUid: string; ownerPseudo: string; units: Record<string, number>; losses: Record<string, number> }[];
+  /** v2.8 : flotte envoyée par l'attaquant (statistiques d'équilibrage). */
+  attackerFleet?: Record<string, number>;
 }
 
 export interface SpyReport {

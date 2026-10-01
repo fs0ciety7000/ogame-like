@@ -4,7 +4,8 @@ import { getProductionRatesPerSecond } from "@/game/production";
 import { familyIndex, getRank } from "@/game/ranks";
 import { RESOURCE_LIST } from "@/game/resources";
 import { TECHNOLOGIES } from "@/game/technologies";
-import { UNITS } from "@/game/units";
+import { UNIT_BASE_STATS, UNITS } from "@/game/units";
+import { FACTIONS, factionOfLair, PIRATE_OWNER_UID } from "@/game/pirates";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -45,6 +46,19 @@ export interface GameStats {
     topAttackers: { pseudo: string; count: number }[];
     mostAttacked: { pseudo: string; count: number }[];
   };
+  /** v2.8 : indicateurs d'équilibrage, sur `balance.windowDays` jours. */
+  balance: {
+    windowDays: number;
+    activity: { active1d: number; active7d: number; active30d: number; dormant: { pseudo: string; days: number }[] };
+    /** Ancienneté médiane (jours depuis l'inscription) des joueurs de chaque famille de rang. */
+    rankAge: { label: string; players: number; medianDays: number }[];
+    /** Combats lancés par des joueurs, classés par unité dominante de la flotte. */
+    dominantUnits: { id: string; name: string; attacks: number; winPct: number }[];
+    factions: { id: string; name: string; raids: number; repelledPct: number; lairAssaults: number; lairWinPct: number }[];
+    flows: { productionPerHour: number; spentTotal: number; lootWindow: number; tradedTotal: number };
+    /** Stocks très au-dessus des autres joueurs (à vérifier). */
+    anomalies: { pseudo: string; resource: string; amount: number; ratio: number }[];
+  };
   insights: string[];
 }
 
@@ -70,9 +84,10 @@ function topCounts(values: string[], limit: number) {
 export function computeGameStats(
   players: PlayerState[],
   queues: Partial<QueuesState>[],
-  reports: Pick<BattleReport, "attackerPseudo" | "defenderPseudo" | "outcome" | "timestamp" | "loot">[],
+  reports: (Pick<BattleReport, "attackerPseudo" | "defenderPseudo" | "outcome" | "timestamp" | "loot"> & Partial<Pick<BattleReport, "attackerUid" | "defenderUid" | "attackerFleet">>)[],
   now: number,
   windowDays = 7,
+  balanceDays = 30,
 ): GameStats {
   const n = players.length;
   const lastSeen = (p: PlayerState) => p.resourcesUpdatedAtMs ?? 0;
@@ -186,10 +201,112 @@ export function computeGameStats(
       topAttackers: topCounts(recent.map((r) => r.attackerPseudo), 5),
       mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5),
     },
+    balance: computeBalance(players, reports, now, balanceDays),
     insights: [],
   };
   stats.insights = computeInsights(stats);
   return stats;
+}
+
+/** Unité qui pèse le plus dans la puissance d'attaque d'une flotte. */
+export function dominantUnit(fleet: Record<string, number>): string | null {
+  let best: string | null = null;
+  let bestPower = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const power = (UNIT_BASE_STATS[id]?.attack ?? 0) * (qty || 0);
+    if (power > bestPower) {
+      best = id;
+      bestPower = power;
+    }
+  }
+  return best;
+}
+
+const sumValues = (r: Partial<Record<string, number>> | null | undefined) => Object.values(r ?? {}).reduce((a: number, v) => a + (v ?? 0), 0);
+
+function computeBalance(players: PlayerState[], reports: Parameters<typeof computeGameStats>[2], now: number, windowDays: number): GameStats["balance"] {
+  const seen = (p: PlayerState) => p.resourcesUpdatedAtMs ?? 0;
+  const days = (ms: number) => Math.floor(ms / DAY);
+  const since = now - windowDays * DAY;
+  const recent = reports.filter((r) => (r.timestamp ?? 0) >= since);
+
+  const dormant = players
+    .filter((p) => now - seen(p) >= 3 * DAY && now - seen(p) < 30 * DAY)
+    .map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) }))
+    .sort((a, b) => a.days - b.days);
+
+  const byFamily = new Map<string, number[]>();
+  players.forEach((p) => {
+    if (!p.createdAtMs) return;
+    const family = getRank(p.xp ?? 0).family;
+    byFamily.set(family, [...(byFamily.get(family) ?? []), (now - p.createdAtMs) / DAY]);
+  });
+  const rankAge = [...byFamily.entries()]
+    .map(([label, ages]) => ({ label, players: ages.length, medianDays: round1(median(ages)) }))
+    .sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+
+  const dom = new Map<string, { attacks: number; wins: number }>();
+  recent.forEach((r) => {
+    if (!r.attackerFleet || r.attackerUid === PIRATE_OWNER_UID) return;
+    const id = dominantUnit(r.attackerFleet);
+    if (!id) return;
+    const cur = dom.get(id) ?? { attacks: 0, wins: 0 };
+    cur.attacks++;
+    if (r.outcome === "attacker_win") cur.wins++;
+    dom.set(id, cur);
+  });
+  const dominantUnits = [...dom.entries()]
+    .map(([id, v]) => ({ id, name: UNITS.find((u) => u.id === id)?.name ?? id, attacks: v.attacks, winPct: pct(v.wins, v.attacks) }))
+    .sort((a, b) => b.attacks - a.attacks);
+
+  const factions = FACTIONS.map((f) => {
+    const raids = recent.filter((r) => r.attackerUid === PIRATE_OWNER_UID && r.attackerPseudo.includes(f.name));
+    const lairs = recent.filter((r) => r.defenderUid && factionOfLair(r.defenderUid) === f.id);
+    return {
+      id: f.id,
+      name: f.name,
+      raids: raids.length,
+      repelledPct: pct(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
+      lairAssaults: lairs.length,
+      lairWinPct: pct(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length),
+    };
+  });
+
+  const active = players.filter((p) => now - seen(p) < 7 * DAY);
+  const productionPerHour = Math.round(active.reduce((a, p) => a + sumValues(getProductionRatesPerSecond(p.buildings ?? {}, p.techLevels ?? {})) * 3600, 0));
+
+  // Stock anormal : plus de 20 fois la médiane des autres joueurs (et au moins 1 M).
+  const anomalies: GameStats["balance"]["anomalies"] = [];
+  for (const r of RESOURCE_LIST) {
+    for (const p of players) {
+      const amount = p.resources?.[r.id] ?? 0;
+      if (amount < 1_000_000) continue;
+      const others = median(players.filter((o) => o !== p).map((o) => o.resources?.[r.id] ?? 0));
+      const ratio = others > 0 ? amount / others : Infinity;
+      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
+    }
+  }
+  anomalies.sort((a, b) => b.amount - a.amount);
+
+  return {
+    windowDays,
+    activity: {
+      active1d: players.filter((p) => now - seen(p) < DAY).length,
+      active7d: active.length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY).length,
+      dormant,
+    },
+    rankAge,
+    dominantUnits,
+    factions,
+    flows: {
+      productionPerHour,
+      spentTotal: players.reduce((a, p) => a + (p.stats?.spent ?? 0), 0),
+      lootWindow: recent.filter((r) => r.attackerUid !== PIRATE_OWNER_UID).reduce((a, r) => a + sumValues(r.loot), 0),
+      tradedTotal: players.reduce((a, p) => a + (p.stats?.traded ?? 0), 0),
+    },
+    anomalies: anomalies.slice(0, 10),
+  };
 }
 
 /** Pistes d'équilibrage repérées automatiquement. */
@@ -212,5 +329,14 @@ function computeInsights(s: GameStats): string[] {
   if (attacks >= 5 && outcomes.attacker_win / attacks > 0.85) out.push("Les attaquants gagnent plus de 85 % des combats : la défense est peut-être trop faible.");
   if (s.players.active7d > 0 && attacks === 0) out.push(`Aucun combat depuis ${s.combat.windowDays} jours.`);
   if (s.players.total >= 5 && s.players.active7d / s.players.total < 0.4) out.push("Moins de 40 % des joueurs sont venus cette semaine.");
+  for (const u of s.balance.dominantUnits) {
+    if (u.attacks >= 5 && u.winPct >= 85) out.push(`Flottes dominées par « ${u.name} » : ${u.winPct} % de victoires sur ${u.attacks} attaques — trop efficace ?`);
+    if (u.attacks >= 5 && u.winPct <= 20) out.push(`Flottes dominées par « ${u.name} » : seulement ${u.winPct} % de victoires — trop faible ?`);
+  }
+  for (const f of s.balance.factions) {
+    if (f.raids >= 5 && f.repelledPct >= 90) out.push(`${f.name} : ${f.repelledPct} % des raids repoussés — faction trop faible ?`);
+    if (f.raids >= 5 && f.repelledPct <= 20) out.push(`${f.name} : seulement ${f.repelledPct} % des raids repoussés — faction trop forte ?`);
+  }
+  if (s.balance.anomalies.length > 0) out.push(`${s.balance.anomalies.length} stock(s) anormalement élevé(s) à vérifier (section Équilibrage).`);
   return out;
 }

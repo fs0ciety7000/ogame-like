@@ -20,6 +20,8 @@ export interface PlayerStats {
   contracts?: number;
   donated?: number;
   unitsBuilt?: number;
+  /** v2.8 : ressources dépensées (bâtiments, recherches, unités). */
+  spent?: number;
   traded?: number;
   ultimatums?: number;
   /** Factions qui ont déjà adressé un ultimatum au joueur. */

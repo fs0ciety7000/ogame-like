@@ -67,6 +67,7 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
     total += val ?? 0;
   }
   recordContract(player, "spend", total, now);
+  bumpStat(player, "spent", total);
 }
 
 interface ActionState {

@@ -1290,6 +1290,66 @@ function adminManage(e) {
   return e.json(200, response);
 }
 
+/* ---------- Sauvegardes (v2.8) ---------- */
+
+const BACKUP_MAX_AGE_MS = 26 * 3600 * 1000;
+
+/** Sauvegardes présentes : nombre, plus récente, planification. */
+function backupStatus() {
+  let latestAtMs = 0;
+  let count = 0;
+  let latestKey = "";
+  const fsys = $app.newBackupsFilesystem();
+  try {
+    const list = fsys.list("");
+    for (let i = 0; i < list.length; i++) {
+      const obj = list[i];
+      const key = String(obj.key || "");
+      if (!key.endsWith(".zip")) continue;
+      count++;
+      const at = new Date(String(obj.modTime)).getTime();
+      if (at > latestAtMs) {
+        latestAtMs = at;
+        latestKey = key;
+      }
+    }
+  } finally {
+    fsys.close();
+  }
+  let cron = "";
+  let maxKeep = 0;
+  try {
+    cron = String($app.settings().backups.cron || "");
+    maxKeep = Number($app.settings().backups.cronMaxKeep) || 0;
+  } catch (_) {
+    /* réglages illisibles */
+  }
+  return { latestAtMs, latestKey, count, cron, maxKeep, staleAfterMs: BACKUP_MAX_AGE_MS };
+}
+
+/** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
+function adminBackupStatus(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, backupStatus());
+}
+
+/** Vérification quotidienne : alerte l'équipe si la dernière sauvegarde est trop ancienne. */
+function checkBackups(now) {
+  const st = backupStatus();
+  if (st.latestAtMs > 0 && now - st.latestAtMs <= BACKUP_MAX_AGE_MS) return false;
+  const age = st.latestAtMs > 0 ? `la dernière date de ${Math.round((now - st.latestAtMs) / 3600000)} h` : "aucune sauvegarde trouvée";
+  const message = `Sauvegarde quotidienne manquante : ${age}. Planification : ${st.cron || "désactivée"}.`;
+  adminIds().forEach((id) => {
+    try {
+      notify($app, id, [{ kind: "report", title: "Alerte sauvegarde", message, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+    sendMail(userEmail(id), "[Cosmic Empires] Alerte : sauvegarde manquante", [message, "Vérifie l'espace disque et les réglages Backups de PocketBase."], appUrl("/game/admin?onglet=tools"));
+  });
+  return true;
+}
+
 /* ---------- Signalements de problèmes (v2.7) ---------- */
 
 /** Adresse publique du jeu (« Application URL » de PocketBase). */
@@ -1398,6 +1458,84 @@ function reportCreateRequest(e) {
   });
 }
 
+/** POST /api/cosmic/reports/error { message, stack, page, version } — erreur
+ *  JavaScript remontée automatiquement (v2.8), regroupée par empreinte. */
+function reportClientError(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const now = Date.now();
+  const err = game.sanitizeClientError(body(e));
+  if (!err) return e.json(200, { ok: true, ignored: true });
+
+  // Quota quotidien par joueur (mémoire du serveur, remise à zéro au redémarrage).
+  const quotaKey = game.errorQuotaKey(uid, now);
+  let sent = 0;
+  try {
+    sent = Number($app.store().get(quotaKey)) || 0;
+    if (sent >= game.AUTO_ERROR_RULES.maxPerDay) return e.json(200, { ok: true, ignored: true });
+    $app.store().set(quotaKey, sent + 1);
+  } catch (_) {
+    /* sans mémoire partagée : pas de quota */
+  }
+
+  const player = findOrNull($app, "players", uid);
+  const pseudo = player ? player.getString("pseudo") : "";
+  const key = game.errorKey(err.message, err.stack);
+  let created = null;
+  let reopened = null;
+  $app.runInTransaction((txApp) => {
+    const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: key })[0];
+    if (existing) {
+      const r = reportJson(existing);
+      const next = game.addOccurrence({ status: r.status, history: r.history, occurrences: r.occurrences || 1, affected: r.affected || [] }, pseudo, now);
+      existing.set("status", next.status);
+      existing.set("history", next.history);
+      existing.set("occurrences", next.occurrences);
+      existing.set("affected", next.affected);
+      existing.set("updatedAtMs", now);
+      txApp.save(existing);
+      if (next.reopened) reopened = existing;
+      return;
+    }
+    const col = txApp.findCollectionByNameOrId("reports");
+    const rec = new Record(col);
+    rec.set("reporterId", game.AUTO_REPORTER_ID);
+    rec.set("reporterPseudo", "Système");
+    rec.set("category", "bug");
+    rec.set("title", game.autoReportTitle(err.message));
+    rec.set("description", game.autoReportDescription(err));
+    rec.set("context", { version: err.version, page: err.page, theme: "", userAgent: String(e.request.header.get("User-Agent") || "").slice(0, 300), screen: "" });
+    rec.set("status", "new");
+    rec.set("resolution", "");
+    rec.set("githubUrl", "");
+    rec.set("history", [{ kind: "created", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text: `Première occurrence chez ${pseudo || "un joueur"}.` }]);
+    rec.set("autoKey", key);
+    rec.set("occurrences", 1);
+    rec.set("affected", pseudo ? [pseudo] : []);
+    rec.set("createdAtMs", now);
+    rec.set("updatedAtMs", now);
+    rec.set("reporterSeenAtMs", now);
+    txApp.save(rec);
+    created = rec;
+  });
+
+  // Équipe prévenue à la première occurrence (ou si l'erreur revient après clôture).
+  const rec = created || reopened;
+  if (rec) {
+    const title = rec.getString("title");
+    const link = appUrl(`/game/admin?onglet=reports&signalement=${rec.id}`);
+    adminIds().forEach((id) => {
+      try {
+        notify($app, id, [{ kind: "report", title: created ? "Erreur détectée" : "Erreur revenue", message: title, createdAtMs: now, read: false }]);
+      } catch (_) {
+        /* facultatif */
+      }
+      sendMail(userEmail(id), `[Cosmic Empires] ${created ? "Erreur détectée" : "Erreur revenue"} : ${title}`, [err.message, err.stack, `Page : ${err.page || "?"} · version ${err.version || "?"}`], link);
+    });
+  }
+  return e.json(200, { ok: true });
+}
+
 /** POST /api/cosmic/reports/comment { id, text } — réponse du joueur. */
 function reportComment(e) {
   const game = loadGame();
@@ -1504,7 +1642,7 @@ function adminReportUpdate(e) {
     });
     txApp.save(log);
   });
-  if (notifyText && reporterId) {
+  if (notifyText && reporterId && reporterId !== game.AUTO_REPORTER_ID) {
     try {
       notify($app, reporterId, [{ kind: "report", title: "Ton signalement a avancé", message: `${title} — ${notifyText}`, createdAtMs: now, read: false }]);
     } catch (_) {
@@ -1556,4 +1694,4 @@ function adminReportGithub(e) {
   return e.json(200, reportJson(rec));
 }
 
-module.exports = { reportCreateRequest, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
