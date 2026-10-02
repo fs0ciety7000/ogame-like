@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
-import { Crown, Shield } from "lucide-react";
+import { ChevronsDown, ChevronsUp, Crown, Shield, ShieldPlus, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -293,70 +293,42 @@ function AllianceRoom({
                       ? "officer"
                       : "member";
                 return (
-                  <li key={m} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
-                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <li key={m} className="flex flex-col gap-1 border-b border-white/5 pb-1.5 last:border-0">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
                       <span className="truncate">{alliance.memberPseudos[m] ?? "?"}</span>
                       <StaffBadge uid={m} compact />
+                      {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}
+                      {role === "officer" && <Shield className="h-3.5 w-3.5 shrink-0 text-cyan-glow" aria-label="Officier" />}
                     </span>
+                    {/* Actions sur une seconde ligne : le pseudo reste toujours lisible. */}
                     {m !== uid && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-1.5 text-xs text-cyan-glow"
-                        title="Envoyer une garnison"
-                        onClick={() =>
-                          setGarrisonTarget({
-                            uid: m,
-                            pseudo: alliance.memberPseudos[m] ?? "?",
-                          })
-                        }
-                      >
-                        Renforcer
-                      </Button>
-                    )}
-                    {role === "founder" && (
-                      <Crown
-                        className="h-3.5 w-3.5 shrink-0 text-gold-glow"
-                        aria-label="Fondateur"
-                      />
-                    )}
-                    {role === "officer" && (
-                      <Shield
-                        className="h-3.5 w-3.5 shrink-0 text-cyan-glow"
-                        aria-label="Officier"
-                      />
-                    )}
-                    {isFounder && m !== uid && (
-                      <div className="flex shrink-0 gap-1">
-                        {role === "officer" ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-1.5 text-xs"
-                            onClick={() => void handleDemote(m)}
-                          >
-                            Rétrograder
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-1.5 text-xs"
-                            onClick={() => void handlePromote(m)}
-                          >
-                            Promouvoir
-                          </Button>
-                        )}
+                      <span className="flex flex-wrap gap-1 pl-3.5">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-6 px-1.5 text-xs text-danger-glow"
-                          onClick={() => void handleKick(m)}
+                          className="h-6 gap-1 px-1.5 text-[10px] text-cyan-glow"
+                          title="Envoyer une garnison"
+                          onClick={() => setGarrisonTarget({ uid: m, pseudo: alliance.memberPseudos[m] ?? "?" })}
                         >
-                          Exclure
+                          <ShieldPlus className="h-3 w-3" /> Renforcer
                         </Button>
-                      </div>
+                        {isFounder &&
+                          (role === "officer" ? (
+                            <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px]" onClick={() => void handleDemote(m)}>
+                              <ChevronsDown className="h-3 w-3" /> Rétrograder
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px]" onClick={() => void handlePromote(m)}>
+                              <ChevronsUp className="h-3 w-3" /> Promouvoir
+                            </Button>
+                          ))}
+                        {isFounder && (
+                          <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px] text-danger-glow" onClick={() => void handleKick(m)}>
+                            <UserX className="h-3 w-3" /> Exclure
+                          </Button>
+                        )}
+                      </span>
                     )}
                   </li>
                 );

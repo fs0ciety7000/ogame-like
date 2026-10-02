@@ -54,11 +54,18 @@ async function run(fn: () => Promise<unknown>, ok: string, fail: string): Promis
   }
 }
 
-function amountsText(a: Amounts): string {
-  return Object.entries(a)
-    .filter(([, n]) => (n ?? 0) > 0)
-    .map(([r, n]) => `${RESOURCE_LIST.find((x) => x.id === r)?.emoji ?? ""} ${formatCompact(n ?? 0)}`)
-    .join(" · ");
+/** Montants avec les icônes des ressources. */
+function AmountsInline({ amounts, className }: { amounts: Amounts; className?: string }) {
+  const list = Object.entries(amounts).filter(([, n]) => (n ?? 0) > 0);
+  return (
+    <span className={cn("inline-flex flex-wrap items-center gap-x-2 gap-y-0.5", className)}>
+      {list.map(([r, n]) => (
+        <span key={r} className="inline-flex items-center gap-1">
+          <ResourceIcon id={r} className="h-4 w-4" /> {formatCompact(n ?? 0)}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /* ---------- transport ---------- */
@@ -253,7 +260,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className={cn("flex-1 text-[11px]", affordable ? "text-slate-400" : "text-ember-glow")}>
-                      {amountsText(cost)} · {formatDuration(colonyUpgradeSeconds(player, id, level + 1, now))}
+                      <AmountsInline amounts={cost} /> · {formatDuration(colonyUpgradeSeconds(player, id, level + 1, now))}
                     </span>
                     <Button size="sm" variant="outline" disabled={busy || !!colony.building || !affordable} onClick={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")}>
                       Niv. {level + 1}
@@ -286,18 +293,25 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           <p className="text-[11px] text-slate-500">Débloque des défenses sur ta planète mère pour en construire ici.</p>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={defense.unitId}
-              onChange={(e) => setDefense((d) => ({ ...d, unitId: e.target.value }))}
-              className="h-8 rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
-            >
-              <option value="">Choisir une défense…</option>
+            <div className="flex w-full flex-wrap gap-1.5">
               {defenses.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({formatCompact(u.cost.scrap)} 🔩 · {formatCompact(u.cost.energy)} ⚡)
-                </option>
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => setDefense((d) => ({ ...d, unitId: u.id }))}
+                  className={cn(
+                    "flex items-center gap-2 border px-2 py-1 text-left text-xs transition-colors",
+                    defense.unitId === u.id ? "border-cyan-glow/70 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-300 hover:border-cyan-glow/40",
+                  )}
+                >
+                  <img src={u.image} alt="" className="h-7 w-7 object-contain" />
+                  <span className="flex flex-col">
+                    <span>{u.name}</span>
+                    <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
             <Input type="number" min={0} value={defense.qty || ""} placeholder="Qté" onChange={(e) => setDefense((d) => ({ ...d, qty: Math.max(0, parseInt(e.target.value) || 0) }))} className="h-8 w-24" />
             <Button
               size="sm"
@@ -339,7 +353,7 @@ function FoundColony({ player }: { player: PlayerState }) {
       <p className={cn("text-xs", ready ? "text-mint-glow" : "text-slate-400")}>
         Niveaux de bâtiments cumulés : {levels} / {next.levels}
       </p>
-      <p className={cn("text-xs", affordable ? "text-slate-400" : "text-ember-glow")}>Vaisseau colonial : {amountsText(cost)}</p>
+      <p className={cn("text-xs", affordable ? "text-slate-400" : "text-ember-glow")}>Vaisseau colonial : <AmountsInline amounts={cost} /></p>
       <div className="flex flex-wrap gap-2">
         <Input value={name} placeholder={`Colonie ${next.slot}`} maxLength={30} onChange={(e) => setName(e.target.value)} className="h-9 w-56" />
         <Button

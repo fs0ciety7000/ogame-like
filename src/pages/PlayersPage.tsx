@@ -9,7 +9,9 @@ import {
   Flag,
   ShieldCheck,
   ShieldPlus,
+  Mail,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +37,7 @@ import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
 import { GameIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
+import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
 
 type LeaderboardMode = "total" | "season" | "alliances";
 
@@ -44,6 +47,7 @@ export function PlayersPage() {
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<LeaderboardMode>("total");
   const uid = useAuthStore((s) => s.user?.uid);
+  const navigate = useNavigate();
   const [spyTarget, setSpyTarget] = useState<{
     uid: string;
     pseudo: string;
@@ -56,6 +60,7 @@ export function PlayersPage() {
     uid: string;
     pseudo: string;
   } | null>(null);
+  const [sheetTarget, setSheetTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{
     uid: string;
     pseudo: string;
@@ -246,10 +251,12 @@ export function PlayersPage() {
                 </span>
                 <img src={getRankIcon(displayXp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
                 <div className="min-w-0">
-                  <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
-                    <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className="truncate" />
+                  <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
+                    <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 max-w-full truncate text-left hover:text-cyan-glow">
+                      <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} />
+                    </button>
                     <AscensionStars count={p.ascensions} />
-                    <StaffBadge uid={p.uid} />
+                    <StaffBadge uid={p.uid} compact />
                     {isProtected && (
                       <span title={attackCheck?.message} className="flex items-center text-mint-glow">
                         <ShieldCheck className="h-3.5 w-3.5" />
@@ -330,6 +337,17 @@ export function PlayersPage() {
         </Card>
       )}
 
+      <PlayerSheetDialog
+        target={sheetTarget}
+        onClose={() => setSheetTarget(null)}
+        actions={
+          sheetTarget && sheetTarget.uid !== uid ? (
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/game/messages?with=${sheetTarget.uid}&pseudo=${encodeURIComponent(sheetTarget.pseudo)}`)}>
+              <Mail className="h-3.5 w-3.5" /> Écrire
+            </Button>
+          ) : null
+        }
+      />
       <SpyModal target={spyTarget} onClose={() => setSpyTarget(null)} />
       <GarrisonDialog
         target={garrisonTarget}

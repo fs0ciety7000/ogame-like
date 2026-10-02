@@ -12,6 +12,7 @@ import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
+import * as ms from "@/services/messageService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
@@ -792,6 +793,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
     await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 403 });
     await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+    // Base vierge (CI) : un autre administrateur doit exister pour pouvoir retirer B.
+    const guardian = (await admin.collection("admins").getFullList()).length === 0 ? await admin.collection("admins").create({ id: aId, note: "test" }) : null;
     const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test", role: "developer" } });
     try {
       expect(added.admins.some((a: { id: string; note: string; role: string }) => a.id === bId && a.note === "test" && a.role === "developer")).toBe(true);
@@ -810,6 +813,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 400 });
     } finally {
       await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } });
+      if (guardian) await admin.collection("admins").delete(guardian.id);
     }
     const after = await snap(bId);
     expect(after.titles ?? []).toEqual([]);
@@ -1270,6 +1274,44 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { pirates: null });
     }
   }, 60_000);
+
+  it("sends private messages with read receipts, blocking and privacy", async () => {
+    await loginPlayer(A.email, A.pw);
+    const sent = await ms.sendPrivateMessage(bId, "  Salut Bravo !  ");
+    expect(sent).toMatchObject({ fromUid: aId, toUid: bId, fromPseudo: A.pseudo, toPseudo: B.pseudo, text: "Salut Bravo !", readAtMs: 0 });
+    await ms.sendPrivateMessage(bId, "Tu es là ?");
+    await expect(ms.sendPrivateMessage(aId, "moi-même")).rejects.toThrow("Destinataire");
+    await expect(ms.sendPrivateMessage(bId, "   ")).rejects.toThrow("vide");
+    // Personne d'autre ne peut écrire directement dans la collection.
+    await expect(pb.collection("private_messages").create({ fromUid: aId, toUid: bId, text: "direct" })).rejects.toBeTruthy();
+
+    await loginPlayer(B.email, B.pw);
+    const notes = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && kind="message"` });
+    expect(notes.length).toBe(1); // une seule notification tant que rien n'est lu
+    const inbox = await pb.collection("private_messages").getFullList({ filter: `toUid="${bId}"` });
+    expect(inbox.length).toBe(2);
+    expect((await ms.markConversationRead(aId)).read).toBe(2);
+    expect((await pb.collection("private_messages").getOne(sent.id)).readAtMs).toBeGreaterThan(0);
+
+    const block = await ms.blockPlayer(bId, aId, A.pseudo);
+    await loginPlayer(A.email, A.pw);
+    await expect(ms.sendPrivateMessage(bId, "encore")).rejects.toThrow("ne reçoit pas");
+    // Le blocage de B n'est pas visible par A.
+    expect((await pb.collection("message_blocks").getFullList()).length).toBe(0);
+    await loginPlayer(B.email, B.pw);
+    await ms.unblock(block.id);
+    await loginPlayer(A.email, A.pw);
+    await ms.sendPrivateMessage(bId, "Débloqué");
+    for (const m of await admin.collection("private_messages").getFullList({ filter: `fromUid="${aId}"` })) await admin.collection("private_messages").delete(m.id);
+    await loginPlayer(B.email, B.pw);
+  });
+
+  it("exposes public feats on the profile sheet", async () => {
+    await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
+    const sheet = await ps.fetchPlayerSheet(aId);
+    expect(sheet.entry.pseudo).toBe(A.pseudo);
+    expect(sheet.feats).toMatchObject({ victories: 3, missions: 5, warsWon: 1 });
+  });
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

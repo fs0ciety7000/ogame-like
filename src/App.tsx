@@ -1,16 +1,18 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
-import { LoginPage } from "@/pages/LoginPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
 // pour ne pas alourdir le bundle initial (écran de connexion) avec des
 // écrans que le joueur ne visitera peut-être pas tout de suite.
+// Pages publiques chargées à la demande : le formulaire de connexion
+// (react-hook-form) ne pèse plus sur le bundle du jeu.
+const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ResourcesPage = lazy(() => import("@/pages/ResourcesPage").then((m) => ({ default: m.ResourcesPage })));
 const BuildingsPage = lazy(() => import("@/pages/BuildingsPage").then((m) => ({ default: m.BuildingsPage })));
@@ -38,6 +40,8 @@ const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ 
 const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
 const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
 const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
+const MessagesPage = lazy(() => import("@/pages/MessagesPage").then((m) => ({ default: m.MessagesPage })));
+const JournalPage = lazy(() => import("@/pages/JournalPage").then((m) => ({ default: m.JournalPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -45,6 +49,7 @@ export default function App() {
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MaintenanceGate>
+          <Suspense fallback={null}>
           <Routes>
             <Route
               path="/"
@@ -80,6 +85,8 @@ export default function App() {
                 <Route path="profil" element={<ProfilePage />} />
                 <Route path="reglages" element={<SettingsPage />} />
                 <Route path="admin" element={<AdminPage />} />
+                <Route path="journal" element={<JournalPage />} />
+                <Route path="messages" element={<MessagesPage />} />
                 <Route path="nouveautes" element={<ChangelogPage />} />
                 <Route path="signalements" element={<ReportsPage />} />
               </Route>
@@ -87,6 +94,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </MaintenanceGate>
       </BrowserRouter>
 

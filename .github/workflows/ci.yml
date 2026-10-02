@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types et tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+
+  e2e:
+    name: PocketBase (intégration) et navigateur (fumée)
+    runs-on: ubuntu-latest
+    env:
+      PB_URL: http://127.0.0.1:8090
+      PB_ADMIN_EMAIL: ci@test.local
+      PB_ADMIN_PASSWORD: ci-password-123
+      # Les hooks testés sont ceux de la branche, pas ceux de main.
+      COSMIC_HOOKS_AUTOUPDATE: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Installer PocketBase
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(gh release view --repo pocketbase/pocketbase --json tagName -q .tagName)
+          echo "PocketBase $VERSION"
+          curl -sSL -o pb.zip "https://github.com/pocketbase/pocketbase/releases/download/${VERSION}/pocketbase_${VERSION#v}_linux_amd64.zip"
+          unzip -q pb.zip pocketbase -d .pb
+          rm pb.zip
+
+      - name: Démarrer PocketBase avec les hooks du jeu
+        run: |
+          .pb/pocketbase superuser upsert "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD" --dir .pb/pb_data
+          nohup .pb/pocketbase serve --http 127.0.0.1:8090 --dir .pb/pb_data --hooksDir pocketbase/pb_hooks > .pb/pb.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf "$PB_URL/api/health" > /dev/null && break; sleep 1; done
+          curl -sf "$PB_URL/api/health"
+
+      - name: Installer le schéma
+        run: node pocketbase/setup.mjs
+
+      - name: Tests d'intégration
+        run: npx vitest run src/services/pocketbase.integration.test.ts
+        env:
+          PB_TEST_URL: ${{ env.PB_URL }}
+          PB_TEST_ADMIN_EMAIL: ${{ env.PB_ADMIN_EMAIL }}
+          PB_TEST_ADMIN_PASSWORD: ${{ env.PB_ADMIN_PASSWORD }}
+
+      - name: Construire le client
+        run: npm run build
+        env:
+          VITE_POCKETBASE_URL: ${{ env.PB_URL }}
+
+      - name: Parcours de fumée (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          nohup npx vite preview --port 4173 --strictPort > .pb/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173 > /dev/null && break; sleep 1; done
+          node e2e/smoke.mjs
+        env:
+          BASE_URL: http://localhost:4173
+
+      - name: Journaux PocketBase
+        if: failure()
+        run: tail -n 200 .pb/pb.log

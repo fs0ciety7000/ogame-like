@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2 } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -16,6 +16,8 @@ import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
+import { useUnreadMessageCount } from "@/services/messageService";
+import { useAuthStore } from "@/store/authStore";
 
 interface NavItem {
   to: string;
@@ -49,12 +51,14 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/leviathan", label: "Léviathan", icon: Fish },
       { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/alliance", label: "Alliance", icon: Flag },
+      { to: "/game/messages", label: "Messages", icon: Mail },
     ],
   },
   {
     label: "Compte",
     items: [
       { to: "/game/profil", label: "Profil", icon: UserCircle },
+      { to: "/game/journal", label: "Journal", icon: ScrollText },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
       { to: "/game/signalements", label: "Signalements", icon: Bug },
@@ -69,7 +73,9 @@ function useBadge(to: string): number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count);
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();
+  if (to === "/game/messages") return messagesUnread;
   if (to === "/game/leviathan") return leviathan && isActive(leviathan, Date.now()) ? 1 : 0;
   return to === "/game/alliance" ? allianceUnread : to === "/game/nouveautes" ? changelogUnread : to === "/game/signalements" ? reportsUnread : 0;
 }
@@ -268,6 +274,7 @@ function MobileTabBar() {
   const allianceUnread = useAllianceUnreadStore((s) => s.count);
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
   const tabs = TAB_ITEMS.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter(Boolean);
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
@@ -288,7 +295,7 @@ function MobileTabBar() {
         >
           <span className="relative">
             <LayoutGrid className="h-5 w-5" />
-            <Badge count={allianceUnread + changelogUnread + reportsUnread} />
+            <Badge count={allianceUnread + changelogUnread + reportsUnread + messagesUnread} />
           </span>
           Menu
         </button>

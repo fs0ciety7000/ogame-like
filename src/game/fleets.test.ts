@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  attackTravelSeconds,
   completeFleetReturn,
+  FLEET_RULES,
+  slowestUnits,
   distanceBetween,
   fleetProgress,
   fleetSpeed,
@@ -32,6 +35,23 @@ describe("fleet travel", () => {
     expect(d).toBeGreaterThan(0);
     expect(d).toBeLessThanOrEqual(Math.SQRT2 * 100);
     expect(distanceBetween("a", "b")).toBe(distanceBetween("b", "a"));
+  });
+
+  it("caps an attack's trip at 90 minutes, and names the ships setting the pace", () => {
+    expect(attackTravelSeconds(50, 5)).toBe(travelSeconds(50, 5));
+    expect(travelSeconds(140, 1)).toBeGreaterThan(90 * 60);
+    expect(attackTravelSeconds(140, 1)).toBe(FLEET_RULES.maxAttackMinutes * 60);
+    const units = { chasseur: { level: 1, count: 10 }, sentinelle: { level: 1, count: 10 }, cargo: { level: 1, count: 10 } };
+    expect(slowestUnits(units, { chasseur: 5, sentinelle: 2, cargo: 1 })).toEqual({ ids: ["sentinelle"], speed: 1, speedWithout: 3 });
+    expect(slowestUnits(units, { sentinelle: 2 })).toEqual({ ids: ["sentinelle"], speed: 1, speedWithout: null });
+    expect(slowestUnits(units, {})).toBeNull();
+  });
+
+  it("applies the cap when launching an attack (return mirrors it)", () => {
+    const a = player("far_a", { units: { ...defaultPlayerState("x", "x").units, sentinelle: { level: 1, count: 50 } } });
+    const d = player("far_b");
+    const out = launchFleet({ now: NOW, attacker: a, defender: d, fleet: { sentinelle: 10 }, lastAttackOnTargetMs: null });
+    expect(out.fleet.arriveAtMs - NOW).toBeLessThanOrEqual(FLEET_RULES.maxAttackMinutes * 60_000);
   });
 });
 

@@ -20,6 +20,7 @@ import {
   Users,
   Wrench,
   type LucideIcon,
+  Megaphone,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -36,6 +37,7 @@ import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
+import { BannersPanel } from "@/pages/admin/BannersPanel";
 import { AdminsPanel } from "@/pages/admin/AdminsPanel";
 import { ReportsPanel } from "@/pages/admin/ReportsPanel";
 import { useReportBadges } from "@/services/reportService";
@@ -53,6 +55,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     items: [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
+      { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site : annonces, évènements, alertes." },
       { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
       { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
     ],
@@ -164,6 +167,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="admins">
           <AdminsPanel />
+        </TabsContent>
+        <TabsContent value="banners">
+          <BannersPanel />
         </TabsContent>
         <TabsContent value="maintenance">
           <MaintenancePanel />

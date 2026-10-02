@@ -179,6 +179,23 @@ transférables : chaque compte reçoit un mot de passe provisoire, listé dans
 `--send-reset-emails` pour envoyer aussi un lien de réinitialisation aux
 comptes qui ont un vrai email). Le script est relançable.
 
+## Tests et intégration continue
+
+```bash
+npm run lint && npm run build && npm test     # vérifications rapides
+# Intégration, contre un PocketBase de TEST (jamais la production) :
+PB_TEST_URL=http://127.0.0.1:8090 PB_TEST_ADMIN_EMAIL=… PB_TEST_ADMIN_PASSWORD=… \
+  npx vitest run src/services/pocketbase.integration.test.ts
+# Parcours de fumée dans Chromium (client lancé avec VITE_POCKETBASE_URL de test) :
+BASE_URL=http://localhost:5173 node e2e/smoke.mjs
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) lance tout cela à chaque pull
+request : un PocketBase vierge est démarré avec les hooks de la branche
+(`COSMIC_HOOKS_AUTOUPDATE=0`), le schéma est installé, puis viennent les tests
+d'intégration et le parcours de fumée (bureau et téléphone : erreurs
+JavaScript, pages vides, débordement horizontal).
+
 ## Déploiement
 
 `npm run build` produit `dist/` (SPA statique : rediriger toutes les routes

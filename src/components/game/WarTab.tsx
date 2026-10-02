@@ -140,7 +140,7 @@ export function WarTab({ alliance, canLead }: { alliance: Alliance; canLead: boo
           </p>
           {canLead ? (
             <div className="flex flex-wrap gap-2">
-              <select aria-label="Alliance visée" value={target} onChange={(e) => setTarget(e.target.value)} className="h-9 min-w-0 flex-1 border border-cyan-glow/20 bg-space-900 px-2 text-sm text-slate-200">
+              <select aria-label="Alliance visée" value={target} onChange={(e) => setTarget(e.target.value)} className="h-9 min-w-[12rem] flex-1 border border-cyan-glow/20 bg-space-900 px-2 text-sm text-slate-200">
                 <option value="">Choisir une alliance…</option>
                 {targets.map((a) => (
                   <option key={a.id} value={a.id}>
