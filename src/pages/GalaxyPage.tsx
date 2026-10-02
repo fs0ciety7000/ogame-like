@@ -27,6 +27,9 @@ import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
 
 const SIZE = FLEET_RULES.mapSize;
+/** Marge autour de la carte : les empires posés au bord restent entiers. */
+const MARGIN = 4;
+const VIEW = SIZE + 2 * MARGIN;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
 
@@ -107,11 +110,20 @@ export function GalaxyPage() {
 
   /* ---------- zoom / déplacement ---------- */
 
-  const toMapPoint = (clientX: number, clientY: number) => {
+  // La carte carrée est entièrement affichée (« meet ») et centrée dans le
+  // cadre, quelle que soit sa forme : un pixel vaut 1 / scale unité.
+  const mapScale = () => {
     const svg = svgRef.current;
-    if (!svg) return { x: SIZE / 2, y: SIZE / 2 };
+    if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    return { x: ((clientX - rect.left) / rect.width) * SIZE, y: ((clientY - rect.top) / rect.height) * SIZE };
+    const scale = Math.min(rect.width, rect.height) / VIEW;
+    return { rect, scale, ox: (rect.width - VIEW * scale) / 2, oy: (rect.height - VIEW * scale) / 2 };
+  };
+
+  const toMapPoint = (clientX: number, clientY: number) => {
+    const m = mapScale();
+    if (!m) return { x: SIZE / 2, y: SIZE / 2 };
+    return { x: (clientX - m.rect.left - m.ox) / m.scale - MARGIN, y: (clientY - m.rect.top - m.oy) / m.scale - MARGIN };
   };
 
   const zoomAt = (factor: number, cx = SIZE / 2, cy = SIZE / 2) => {
@@ -137,11 +149,10 @@ export function GalaxyPage() {
   };
   const onPointerMove = (e: ReactPointerEvent) => {
     const d = drag.current;
-    const svg = svgRef.current;
-    if (!d || !svg) return;
-    const rect = svg.getBoundingClientRect();
-    const dx = ((e.clientX - d.x) / rect.width) * SIZE;
-    const dy = ((e.clientY - d.y) / rect.height) * SIZE;
+    const m = mapScale();
+    if (!d || !m) return;
+    const dx = (e.clientX - d.x) / m.scale;
+    const dy = (e.clientY - d.y) / m.scale;
     if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) d.moved = true;
     setView(clampView({ ...d.view, x: d.view.x + dx, y: d.view.y + dy }));
   };
@@ -231,8 +242,8 @@ export function GalaxyPage() {
         <Card className="tactical-grid relative aspect-square max-h-[75vh] w-full overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
           <svg
             ref={svgRef}
-            viewBox={`0 0 ${SIZE} ${SIZE}`}
-            preserveAspectRatio="xMidYMid slice"
+            viewBox={`${-MARGIN} ${-MARGIN} ${VIEW} ${VIEW}`}
+            preserveAspectRatio="xMidYMid meet"
             className="h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
             onWheel={onWheel}
             onPointerDown={onPointerDown}
