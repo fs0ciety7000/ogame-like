@@ -1,3 +1,4 @@
+import { FleetReturnFx } from "@/components/game/FleetReturnFx";
 import { useDirectorySync } from "@/store/directoryStore";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
@@ -228,6 +229,7 @@ export function AppShell() {
       <AnnouncementDialog />
       <CommandPalette />
       <FxLayer />
+      <FleetReturnFx />
     </div>
   );
 }
