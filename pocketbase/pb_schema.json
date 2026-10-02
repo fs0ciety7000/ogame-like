@@ -1121,7 +1121,8 @@
         "name": "boosts",
         "type": "json",
         "required": false,
-        "maxSize": 2000
+        "maxSize": 2000,
+        "hidden": true
       },
       {
         "name": "trueUnits",
