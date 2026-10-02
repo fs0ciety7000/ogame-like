@@ -1749,5 +1749,110 @@
       "CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)",
       "CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"
     ]
+  },
+  {
+    "id": "pbc_ce_private_messages",
+    "name": "private_messages",
+    "type": "base",
+    "listRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "viewRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "fromUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "fromPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": false,
+        "max": 1000,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "readAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)",
+      "CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_message_blocks",
+    "name": "message_blocks",
+    "type": "base",
+    "listRule": "ownerUid = @request.auth.id",
+    "viewRule": "ownerUid = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.ownerUid = @request.auth.id",
+    "updateRule": null,
+    "deleteRule": "ownerUid = @request.auth.id",
+    "fields": [
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "blockedUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "blockedPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"
+    ]
   }
 ]

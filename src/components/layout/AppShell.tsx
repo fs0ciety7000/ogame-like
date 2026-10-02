@@ -23,6 +23,7 @@ import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
 import { useAllianceUnread } from "@/hooks/useAllianceUnread";
+import { subscribeMyMessages } from "@/services/messageService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
@@ -107,6 +108,8 @@ export function AppShell() {
   useDirectorySync(!!user);
   useRankCelebration(player);
   useAllianceUnread(user?.uid ?? null, player);
+  const uidForMessages = user?.uid ?? null;
+  useEffect(() => (uidForMessages ? subscribeMyMessages(uidForMessages) : undefined), [uidForMessages]);
   useReportBadgeSync(user?.uid ?? null, isAdmin);
   const pendingReports = useReportBadges((s) => s.pendingNew);
 

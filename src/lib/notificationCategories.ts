@@ -9,7 +9,7 @@ export const NOTIFICATION_CATEGORIES: { id: NotificationCategory; label: string;
   { id: "build", label: "Chantiers", kinds: ["building", "research", "unit"] },
   { id: "war", label: "Combats et flottes", kinds: ["combat-attacker", "combat-defender", "fleet", "spy", "spy-detected", "debris"] },
   { id: "rewards", label: "Missions et récompenses", kinds: ["mission", "achievement", "gift", "season", "event"] },
-  { id: "social", label: "Alliance et système", kinds: ["alliance", "system", "report"] },
+  { id: "social", label: "Alliance et système", kinds: ["alliance", "message", "system", "report"] },
 ];
 
 export function inCategory(kind: NotificationKind, category: NotificationCategory): boolean {
@@ -34,6 +34,7 @@ const KIND_WORDS: Partial<Record<NotificationKind, [string, string]>> = {
   gift: ["don", "dons"],
   debris: ["recyclage", "recyclages"],
   alliance: ["message d'alliance", "messages d'alliance"],
+  message: ["message privé", "messages privés"],
   season: ["annonce de saison", "annonces de saison"],
   event: ["évènement", "évènements"],
   report: ["réponse à un signalement", "réponses à des signalements"],

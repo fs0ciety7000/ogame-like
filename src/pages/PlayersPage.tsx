@@ -9,7 +9,9 @@ import {
   Flag,
   ShieldCheck,
   ShieldPlus,
+  Mail,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +47,7 @@ export function PlayersPage() {
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<LeaderboardMode>("total");
   const uid = useAuthStore((s) => s.user?.uid);
+  const navigate = useNavigate();
   const [spyTarget, setSpyTarget] = useState<{
     uid: string;
     pseudo: string;
@@ -334,7 +337,17 @@ export function PlayersPage() {
         </Card>
       )}
 
-      <PlayerSheetDialog target={sheetTarget} onClose={() => setSheetTarget(null)} />
+      <PlayerSheetDialog
+        target={sheetTarget}
+        onClose={() => setSheetTarget(null)}
+        actions={
+          sheetTarget && sheetTarget.uid !== uid ? (
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/game/messages?with=${sheetTarget.uid}&pseudo=${encodeURIComponent(sheetTarget.pseudo)}`)}>
+              <Mail className="h-3.5 w-3.5" /> Écrire
+            </Button>
+          ) : null
+        }
+      />
       <SpyModal target={spyTarget} onClose={() => setSpyTarget(null)} />
       <GarrisonDialog
         target={garrisonTarget}

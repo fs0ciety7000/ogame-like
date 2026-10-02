@@ -60,6 +60,7 @@ __export(hooksEntry_exports, {
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
+  MESSAGE_RULES: () => MESSAGE_RULES,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
   PVP_RULES: () => PVP_RULES,
@@ -79,6 +80,7 @@ __export(hooksEntry_exports, {
   applyLegacyGift: () => applyLegacyGift,
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
+  assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
@@ -148,6 +150,7 @@ __export(hooksEntry_exports, {
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
   sanitizeClientError: () => sanitizeClientError,
+  sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
   scoreBattle: () => scoreBattle,
   seasonRewardFor: () => seasonRewardFor,
@@ -6279,6 +6282,24 @@ function addOccurrence(report, pseudo, now) {
 }
 function errorQuotaKey(uid, now) {
   return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
+}
+
+// src/game/messages.ts
+var MESSAGE_RULES = {
+  maxLength: 1e3,
+  /** Messages envoyés au plus par minute et par jour (anti-spam). */
+  perMinute: 8,
+  perDay: 300
+};
+function sanitizeMessageText(raw) {
+  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
+  return text;
+}
+function assertMessageQuota(lastMinute, lastDay) {
+  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
+  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
 // src/game/maintenance.ts

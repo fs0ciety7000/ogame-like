@@ -56,6 +56,7 @@ const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
   spy: "/game/combats",
   achievement: "/game/succes",
   alliance: "/game/alliance",
+  message: "/game/messages",
   debris: "/game/galaxie",
   report: "/game/signalements",
 };

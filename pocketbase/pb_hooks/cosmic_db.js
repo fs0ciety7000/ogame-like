@@ -2605,4 +2605,61 @@ function adminScanAnomalies(e) {
   return e.json(200, { alerts: scanAnomalies(Date.now()) });
 }
 
-module.exports = { requireAdminReason, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Messagerie privée (v3.7) ---------- */
+
+/** POST /api/cosmic/messages/send { to, text } */
+function messageSend(e) {
+  const game = loadGame();
+  const req = body(e);
+  const uid = e.auth.id;
+  const to = String(req.to || "");
+  const now = Date.now();
+  let text;
+  try {
+    text = game.sanitizeMessageText(req.text);
+  } catch (err) {
+    throw asHttpError(game, err);
+  }
+  if (!to || to === uid) throw new BadRequestError("Destinataire invalide.");
+  const sender = findOrNull($app, "players", uid);
+  const target = findOrNull($app, "players", to);
+  if (!sender || !target) throw new NotFoundError("Joueur introuvable.");
+  if ($app.findRecordsByFilter("message_blocks", "ownerUid = {:to} && blockedUid = {:uid}", "", 1, 0, { to, uid }).length > 0) {
+    throw new BadRequestError("Ce joueur ne reçoit pas tes messages.");
+  }
+  const count = (since) => $app.countRecords("private_messages", $dbx.exp("fromUid = {:uid} AND createdAtMs >= {:since}", { uid, since }));
+  try {
+    game.assertMessageQuota(count(now - 60000), count(now - 86400000));
+  } catch (err) {
+    throw asHttpError(game, err);
+  }
+  // Une seule notification tant que les messages précédents ne sont pas lus.
+  const pending = $app.findRecordsByFilter("private_messages", "fromUid = {:uid} && toUid = {:to} && readAtMs = 0", "", 1, 0, { uid, to }).length > 0;
+  const rec = new Record($app.findCollectionByNameOrId("private_messages"));
+  rec.load({ fromUid: uid, fromPseudo: sender.getString("pseudo"), toUid: to, toPseudo: target.getString("pseudo"), text, createdAtMs: now, readAtMs: 0 });
+  $app.save(rec);
+  if (!pending) {
+    try {
+      notify($app, to, [{ kind: "message", title: `Message de ${sender.getString("pseudo")}`, message: text.length > 140 ? `${text.slice(0, 140)}…` : text, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+  }
+  return e.json(200, toPlain(rec));
+}
+
+/** POST /api/cosmic/messages/read { with } — messages reçus de `with` marqués lus. */
+function messageRead(e) {
+  const req = body(e);
+  const uid = e.auth.id;
+  const other = String(req.with || "");
+  const now = Date.now();
+  const recs = $app.findRecordsByFilter("private_messages", "toUid = {:uid} && fromUid = {:other} && readAtMs = 0", "", 500, 0, { uid, other });
+  recs.forEach((r) => {
+    r.set("readAtMs", now);
+    $app.save(r);
+  });
+  return e.json(200, { read: recs.length });
+}
+
+module.exports = { requireAdminReason, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -477,6 +477,12 @@ routerAdd("POST", "/api/cosmic/admin/reports", (e) => require(`${__hooks}/cosmic
 routerAdd("GET", "/api/cosmic/admin/reports/config", (e) => require(`${__hooks}/cosmic_db.js`).adminReportConfig(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/reports/github", (e) => require(`${__hooks}/cosmic_db.js`).adminReportGithub(e), $apis.requireAuth("users", "_superusers"));
 
+/* ---------- Messagerie privée (v3.7) ---------- */
+
+/** POST /api/cosmic/messages/send { to, text } · /read { with } */
+routerAdd("POST", "/api/cosmic/messages/send", (e) => require(`${__hooks}/cosmic_db.js`).messageSend(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/messages/read", (e) => require(`${__hooks}/cosmic_db.js`).messageRead(e), $apis.requireAuth("users"));
+
 /* ---------- Journal des actions d'administration ---------- */
 
 // Chaque modification faite par un administrateur (page Administration ou
