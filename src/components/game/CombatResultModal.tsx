@@ -1,4 +1,11 @@
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { CombatIntro } from "@/components/fx/CombatIntro";
+import { emblemOptions, profileStyle } from "@/game/profile";
+import { getRankIcon } from "@/game/ranks";
+import { warlordsConfig } from "@/game/warlords";
+import { FACTIONS } from "@/game/pirates";
+import { usePlayerStore } from "@/store/playerStore";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
 import { CombatReplay } from "@/components/game/CombatReplay";
@@ -74,8 +81,23 @@ function LossList({ losses, recovered }: { losses: Record<string, number>; recov
   );
 }
 
+/** Blason affiché pour l'adversaire : seigneur, faction pirate, ou insigne générique. */
+function opponentEmblem(pseudo: string): string {
+  const lord = warlordsConfig().defs.find((d) => d.name === pseudo || d.name.split(",")[0] === pseudo);
+  if (lord) return lord.emblem;
+  const faction = FACTIONS.find((f) => f.emblem && (f.name === pseudo || f.leader === pseudo || pseudo.includes(f.name)));
+  if (faction?.emblem) return faction.emblem;
+  return getRankIcon(0);
+}
+
 export function CombatResultModal() {
   const current = useCombatModalStore((s) => s.current);
+  const player = usePlayerStore((s) => s.player);
+  const [intro, setIntro] = useState(false);
+  useEffect(() => setIntro(!!current), [current]);
+  const endIntro = useCallback(() => setIntro(false), []);
+  const style = player ? profileStyle(player) : null;
+  const myEmblem = !player || !style || style.emblem === "rank" ? getRankIcon(player?.xp ?? 0) : emblemOptions(player).find((e) => e.id === style.emblem)?.image ?? getRankIcon(player.xp);
   const isVictory =
     !!current &&
     ((current.perspective === "attacker" && current.outcome === "attacker_win") ||
@@ -85,10 +107,22 @@ export function CombatResultModal() {
     <Dialog open={current !== null} onOpenChange={(open) => !open && closeCombatResult()}>
       {current && (
         <DialogContent className="relative overflow-visible">
-          {isVictory && <ParticleBurst />}
+          <CombatIntro
+            show={intro}
+            left={myEmblem}
+            right={opponentEmblem(current.opponentPseudo)}
+            verdict={current.outcome === "draw" ? "Match nul" : isVictory ? "Victoire" : "Défaite"}
+            tone={current.outcome === "draw" ? "draw" : isVictory ? "win" : "loss"}
+            onDone={endIntro}
+          />
+          {isVictory && !intro && <ParticleBurst />}
           <DialogTitle className={current.outcome === "draw" ? "text-gold-glow" : isVictory ? "text-mint-glow" : "text-danger-glow"}>
             {current.perspective === "attacker" ? OUTCOME_STYLE[current.outcome].attacker : OUTCOME_STYLE[current.outcome].defender}
           </DialogTitle>
+          {intro ? (
+            <div className="h-72" />
+          ) : (
+            <>
           <p className="mt-1 text-sm text-slate-400">
             {current.perspective === "attacker" ? "Contre" : "Attaque de"} <strong className="text-slate-200">{current.opponentPseudo}</strong>
           </p>
@@ -141,6 +175,8 @@ export function CombatResultModal() {
               <p className="text-sm text-slate-500">Aucune ressource concernée</p>
             )}
           </div>
+            </>
+          )}
         </DialogContent>
       )}
     </Dialog>

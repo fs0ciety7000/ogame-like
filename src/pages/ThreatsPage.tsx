@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { TiltPortrait } from "@/components/fx/TiltPortrait";
 import { EmptyState } from "@/components/ui/hud";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -134,7 +135,9 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
         </div>
       )}
       <div className="grid md:grid-cols-[minmax(0,18rem)_1fr]">
-        <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
+        <TiltPortrait glow={`var(--color-${faction.color === "cyan" ? "cyan" : faction.color}-glow)`} className="h-64 w-full md:h-full">
+          <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="h-full w-full object-cover object-top" />
+        </TiltPortrait>
         <div className="flex flex-col gap-3 p-5">
           <div className="flex items-center gap-3">
             {faction.emblem && <img src={assetUrl(faction.emblem)} alt="" className="h-11 w-11 rounded-full object-cover ring-1 ring-white/10" />}

@@ -57,6 +57,8 @@ export function DashboardPage() {
   const economy = economySnapshot(player, Date.now());
   const now = Date.now();
   const armor = synthesisState(player).armor;
+  // v4.8 : planète plus grande (bureau), adaptée à l'écran sur mobile.
+  const planetSize = typeof window !== "undefined" && window.innerWidth >= 640 ? 150 : 116;
   const planetLife = {
     synth: synthLevel(player),
     armor: !!armor && armor.untilMs > now,
@@ -66,6 +68,7 @@ export function DashboardPage() {
     away: fleets.filter((f) => f.ownerUid === player.uid && f.status !== "done").length,
     incoming: fleets.filter((f) => isHostile(f, player.uid)).length,
     hour: parisHour(now),
+    colonies: (player.colonies ?? []).map((c) => c.name),
   };
 
   const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
@@ -75,8 +78,10 @@ export function DashboardPage() {
   const sections: Record<DashboardSection, ReactNode> = {
     next: <NextActionsCard />,
     planet: (
-      <Card className="flex flex-wrap items-center gap-6 p-4 sm:p-5">
-        <HomePlanet buildings={player.buildings} life={planetLife} />
+      <Card className="flex flex-wrap items-center justify-center gap-6 p-4 sm:justify-start sm:p-5">
+        <div className="mx-auto sm:mx-0">
+          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} />
+        </div>
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
           <p className="font-display text-3xl text-white">{developmentPercent}%</p>

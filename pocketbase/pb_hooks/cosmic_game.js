@@ -2391,7 +2391,7 @@ function startColonization(player, nameIn, now) {
   if (player.colonizing) throw new GameActionError("Un vaisseau colonial est d\xE9j\xE0 en route.");
   const next = nextColonySlot(player);
   if (!next) throw new GameActionError(`Tu as d\xE9j\xE0 ${COLONY_RULES.maxColonies} colonies.`);
-  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de b\xE2timents cumul\xE9s sur ta plan\xE8te m\xE8re.`);
+  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de b\xE2timents cumul\xE9s sur ta plan\xE8te m\xE8re, hors b\xE2timents de fin de partie (tu en as ${homeLevels(player)}).`);
   const name = String(nameIn != null ? nameIn : "").trim() || `Colonie ${next.slot}`;
   if (name.length > 30) throw new GameActionError("Le nom d'une colonie fait au plus 30 caract\xE8res.");
   const cost = colonyFoundCost();
