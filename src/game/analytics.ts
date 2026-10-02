@@ -6,7 +6,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { ENDGAME_TECH_IDS, TECHNOLOGIES } from "@/game/technologies";
 import { UNIT_BASE_STATS, UNITS } from "@/game/units";
 import { FACTIONS, factionOfLair, PIRATE_OWNER_UID } from "@/game/pirates";
-import { computeRetention } from "@/game/retention";
+import { computeRetention, lastActivity } from "@/game/retention";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -102,7 +102,8 @@ export function computeGameStats(
   balanceDays = 30,
 ): GameStats {
   const n = players.length;
-  const lastSeen = (p: PlayerState) => p.resourcesUpdatedAtMs ?? 0;
+  // v4.6 : dernière activité réelle (les tâches du serveur mettent aussi à jour les ressources).
+  const lastSeen = (p: PlayerState) => Math.min(now, lastActivity(p));
 
   // Rangs regroupés par famille (Fer, Bronze, Argent…).
   const families = new Map<string, number>();
@@ -298,7 +299,7 @@ export function dominantUnit(fleet: Record<string, number>): string | null {
 const sumValues = (r: Partial<Record<string, number>> | null | undefined) => Object.values(r ?? {}).reduce((a: number, v) => a + (v ?? 0), 0);
 
 function computeBalance(players: PlayerState[], reports: Parameters<typeof computeGameStats>[2], now: number, windowDays: number): GameStats["balance"] {
-  const seen = (p: PlayerState) => p.resourcesUpdatedAtMs ?? 0;
+  const seen = (p: PlayerState) => Math.min(now, lastActivity(p));
   const days = (ms: number) => Math.floor(ms / DAY);
   const since = now - windowDays * DAY;
   const recent = reports.filter((r) => (r.timestamp ?? 0) >= since);

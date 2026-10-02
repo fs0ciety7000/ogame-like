@@ -666,6 +666,36 @@ cronAdd("cosmic_warlords", "37 * * * *", () => {
 
 routerAdd("POST", "/api/cosmic/admin/seasonboss", (e) => require(`${__hooks}/cosmic_db.js`).adminSeasonBoss(e), $apis.requireAuth("users", "_superusers"));
 
+/* ---------- Gazette du secteur (v4.6) ---------- */
+
+routerAdd("POST", "/api/cosmic/admin/gazette", (e) => require(`${__hooks}/cosmic_db.js`).adminGazette(e), $apis.requireAuth("users", "_superusers"));
+
+cronAdd("cosmic_gazette", "41 * * * *", () => {
+  try {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    if (db.readMaintenance($app).enabled) return;
+    db.gazetteTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] gazette : ${err}`);
+  }
+});
+
+/* ---------- Chat d'alliance : « … écrit » (v4.6) ---------- */
+
+routerAdd("POST", "/api/cosmic/alliance/typing", (e) => require(`${__hooks}/cosmic_db.js`).allianceTyping(e), $apis.requireAuth("users"));
+
+/* ---------- Boss d'alliance (v4.6) ---------- */
+
+routerAdd("POST", "/api/cosmic/allianceboss", (e) => require(`${__hooks}/cosmic_db.js`).allianceBossRequest(e), $apis.requireAuth("users"));
+
+cronAdd("cosmic_allianceboss", "*/5 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).allianceBossTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] boss d'alliance : ${err}`);
+  }
+});
+
 cronAdd("cosmic_seasonboss", "*/5 * * * *", () => {
   try {
     require(`${__hooks}/cosmic_db.js`).seasonBossTick(Date.now());

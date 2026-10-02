@@ -10,9 +10,11 @@ import { subscribeLeaderboard } from "@/services/playerService";
 interface Directory {
   allianceOf: Record<string, string>;
   tagOf: Record<string, string>;
+  /** v4.6 : dernière activité réelle de chaque joueur (« en ligne »). */
+  lastActiveOf: Record<string, number>;
 }
 
-export const useDirectoryStore = create<Directory>(() => ({ allianceOf: {}, tagOf: {} }));
+export const useDirectoryStore = create<Directory>(() => ({ allianceOf: {}, tagOf: {}, lastActiveOf: {} }));
 
 let users = 0;
 let stop: (() => void) | null = null;
@@ -23,7 +25,10 @@ export function useDirectorySync(enabled: boolean) {
     if (!enabled) return;
     if (users++ === 0) {
       const a = subscribeLeaderboard((players) =>
-        useDirectoryStore.setState({ allianceOf: Object.fromEntries(players.filter((p) => p.allianceId).map((p) => [p.uid, p.allianceId!])) }),
+        useDirectoryStore.setState({
+          allianceOf: Object.fromEntries(players.filter((p) => p.allianceId).map((p) => [p.uid, p.allianceId!])),
+          lastActiveOf: Object.fromEntries(players.filter((p) => p.lastActiveMs).map((p) => [p.uid, p.lastActiveMs!])),
+        }),
       );
       const b = subscribeAlliances((alliances) => useDirectoryStore.setState({ tagOf: Object.fromEntries(alliances.map((al) => [al.id, al.tag])) }));
       stop = () => {

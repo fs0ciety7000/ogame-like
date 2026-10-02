@@ -173,7 +173,7 @@ function logAdminAction(e, action, before, after) {
 
 /* ---------- Fiche publique (collection profiles) ---------- */
 
-const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs", "npc"];
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs", "npc", "lastActiveMs"];
 
 /** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
  *  complète (ressources, flotte…) n'est plus lisible par les autres. */
@@ -393,6 +393,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "expedition") return expeditionStep(txApp, game, rec, now, 1);
   if (mission === "leviathan") return leviathanArrival(txApp, game, rec, now);
   if (mission === "seasonboss") return seasonBossArrival(txApp, game, rec, now);
+  if (mission === "allianceboss") return allianceBossArrival(txApp, game, rec, now);
   if (mission === "transport") return transportArrival(txApp, game, rec, now);
   if (mission === "bounty") return bountyArrival(txApp, game, rec, now);
   if (mission === "elite") return eliteArrival(txApp, game, rec, now);
@@ -882,6 +883,8 @@ function launchFleetRequest(e) {
         ? "leviathan"
         : mission === "seasonboss"
         ? "seasonboss"
+        : mission === "allianceboss"
+        ? "allianceboss"
         : mission === "transport"
           ? String(body.colonyId || "")
           : mission === "bounty"
@@ -892,7 +895,7 @@ function launchFleetRequest(e) {
               ? "bounty_elite"
               : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -946,6 +949,18 @@ function launchFleetRequest(e) {
         throw db.asHttpError(game, err);
       }
     }
+    // v4.6 : boss d'alliance (état sur la fiche de l'alliance).
+    let allianceBoss = null;
+    let allianceBossRec = null;
+    if (mission === "allianceboss") {
+      const aid = attacker.rec.getString("allianceId");
+      allianceBossRec = aid ? db.findOrNull(txApp, "alliances", aid) : null;
+      try {
+        allianceBoss = game.checkAllianceBossLaunch(allianceBossRec ? db.readAllianceBoss(game, allianceBossRec) : null, attackerUid, attacker.player.pseudo, now);
+      } catch (err) {
+        throw db.asHttpError(game, err);
+      }
+    }
     let elite = null;
     if (mission === "elite") {
       try {
@@ -977,7 +992,7 @@ function launchFleetRequest(e) {
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
         transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
-        eliteName: elite ? game.describeElite(elite).name : seasonBoss ? (game.bossMonthOf(seasonBoss) || { boss: { name: "Boss de saison" } }).boss.name : undefined,
+        eliteName: elite ? game.describeElite(elite).name : seasonBoss ? (game.bossMonthOf(seasonBoss) || { boss: { name: "Boss de saison" } }).boss.name : allianceBoss ? game.allianceBossDef(allianceBoss).name : undefined,
         capsules: mission === "attack" ? body.capsules : undefined,
       });
     } catch (err) {
@@ -991,7 +1006,7 @@ function launchFleetRequest(e) {
     // v3.5 : propriétaire de la colonie visée (il voit l'attaque approcher).
     if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
-    if (["attack", "lair", "expedition", "leviathan", "bounty", "elite", "seasonboss"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    if (["attack", "lair", "expedition", "leviathan", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     // v4.0 : capsules (champs cachés) ; le leurre montre une fausse composition.
     const caps = out.capsules;
     const boosted = !!caps && Object.keys(caps.boosts).length > 0;
@@ -1017,6 +1032,10 @@ function launchFleetRequest(e) {
     // Léviathan : le délai entre deux assauts part du lancement.
     if (leviathan) writeLeviathan(txApp, leviathan);
     if (seasonBoss) writeSeasonBoss(txApp, game, seasonBoss);
+    if (allianceBoss && allianceBossRec) {
+      allianceBossRec.set("boss", allianceBoss);
+      txApp.save(allianceBossRec);
+    }
     if (elite) writeElite(txApp, game, elite);
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet, { anomaly: !!anomaly });
   });
@@ -4256,4 +4275,290 @@ function adminSeasonBoss(e) {
   return e.json(200, out);
 }
 
-module.exports = { seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Boss d'alliance (v4.6) : une fois par semaine, payé par le trésor ---------- */
+
+function readAllianceBoss(game, allianceRec) {
+  try {
+    return game.normalizeAllianceBoss(toPlain(allianceRec).boss);
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Membres de l'alliance (fiches complètes), et ceux actifs ces 7 derniers jours. */
+function allianceMembers(txApp, alliance, now) {
+  const members = [];
+  (alliance.members || []).forEach((uid) => {
+    const r = findOrNull(txApp, "players", uid);
+    if (r) members.push(Object.assign(toPlain(r), { uid: r.id }));
+  });
+  const actives = members.filter((m) => now - (Number(m.lastActiveMs) || Number(m.resourcesUpdatedAtMs) || 0) < 7 * 86400000);
+  return { members, actives };
+}
+
+function allianceBossLog(txApp, allianceId, uid, pseudo, text, resources) {
+  const rec = new Record(txApp.findCollectionByNameOrId("alliance_logs"));
+  rec.load({ allianceId, kind: "boss", actorUid: uid, actorPseudo: pseudo, text, resources: resources || null, createdAtMs: Date.now() });
+  txApp.save(rec);
+}
+
+/** Récompenses, remboursement au trésor et notifications (une seule fois). */
+function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
+  if (state.rewarded || state.status === "active") return state;
+  const name = game.allianceBossDef(state).name;
+  game.leviathanRanking(state).forEach((c) => {
+    if (!findOrNull(txApp, "players", c.uid)) return;
+    const owner = loadPlayer(txApp, game, c.uid);
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    const out = game.grantAllianceBossReward(state, flushed.player, now);
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    const won = state.status === "killed";
+    notify(txApp, c.uid, flushed.notifications.concat([
+      {
+        kind: "alliance",
+        title: won ? `${name} est tombé !` : `${name} s'est retiré`,
+        message: `+${out.points} points de passe${Object.keys(out.gain || {}).length ? ", 2 h de production" : ""}${out.relic ? `, relique : ${out.relic}` : ""}.`,
+        createdAtMs: now,
+        read: false,
+        link: "/game/alliance",
+      },
+    ]));
+  });
+  const refund = game.allianceBossRefund(state);
+  if (Object.keys(refund).length > 0) {
+    const treasury = toPlain(allianceRec).treasury || {};
+    Object.keys(refund).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + refund[r]));
+    allianceRec.set("treasury", treasury);
+  }
+  allianceBossLog(txApp, allianceRec.id, "", name, state.status === "killed" ? `${name} abattu : la moitié du coût revient au trésor.` : `${name} a survécu.`, Object.keys(refund).length ? refund : null);
+  return Object.assign({}, state, { rewarded: true });
+}
+
+/** POST /api/cosmic/allianceboss { action: "call" } */
+function allianceBossRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const actor = loadPlayer(txApp, game, uid);
+    const allianceRec = actor.player.allianceId ? findOrNull(txApp, "alliances", actor.player.allianceId) : null;
+    if (!allianceRec) throw new BadRequestError("Il faut une alliance.");
+    const alliance = Object.assign(toPlain(allianceRec), { id: allianceRec.id });
+    if ((alliance.members || []).indexOf(uid) < 0) throw new BadRequestError("Tu ne fais plus partie de cette alliance.");
+    if (String(req.action || "") !== "call") throw new BadRequestError("Action inconnue.");
+    const { members, actives } = allianceMembers(txApp, alliance, now);
+    let state;
+    try {
+      state = game.callAllianceBoss(alliance, readAllianceBoss(game, allianceRec), members, actives, uid, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    allianceRec.set("treasury", alliance.treasury);
+    allianceRec.set("boss", state);
+    txApp.save(allianceRec);
+    const def = game.allianceBossDef(state);
+    allianceBossLog(txApp, allianceRec.id, uid, actor.player.pseudo, `${actor.player.pseudo} appelle ${def.name} : 24 h pour l'abattre.`, state.cost);
+    members.forEach((m) => {
+      notify(txApp, m.uid, [{ kind: "alliance", title: `${def.name} approche !`, message: `${actor.player.pseudo} a appelé le boss d'alliance : 24 h pour l'abattre, un assaut toutes les 4 h.`, createdAtMs: now, read: false, link: "/game/alliance" }]);
+    });
+    out = state;
+  });
+  return e.json(200, out);
+}
+
+function allianceBossArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const backAt = now + game.ALLIANCE_BOSS_RULES.flightMinutes * 60000;
+  const allianceId = String(fleet.targetUid || "").replace(/^allianceboss:/, "");
+  const allianceRec = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+  const state = allianceRec ? readAllianceBoss(game, allianceRec) : null;
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  if (!state || !allianceRec) {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", backAt);
+    txApp.save(rec);
+    return;
+  }
+  const res = game.resolveLeviathanAssault(state, owner.player, fleet.units, rec.getString("formation"), now);
+  let next = res.state;
+  rec.set("units", res.survivors);
+  rec.set("status", "returning");
+  rec.set("returnAtMs", backAt);
+  rec.set("outcome", res.killed ? "attacker_win" : "draw");
+  txApp.save(rec);
+  if (res.damage > 0) {
+    game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.addPassPoints(owner.player, "bossAssault", now);
+    owner.rec.set("commanders", owner.player.commanders || null);
+    owner.rec.set("seasonPass", owner.player.seasonPass || null);
+    owner.rec.set("chronicle", owner.player.chronicle || null);
+    txApp.save(owner.rec);
+  }
+  const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
+  notify(txApp, fleet.ownerUid, [
+    {
+      kind: "combat-attacker",
+      title: res.killed ? `Coup de grâce sur ${fleet.targetPseudo} !` : `Assaut sur ${fleet.targetPseudo}`,
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "Le boss n'était plus là : la flotte rentre.",
+      createdAtMs: now,
+      read: false,
+    },
+  ]);
+  if (res.killed) next = distributeAllianceBoss(txApp, game, allianceRec, next, now);
+  allianceRec.set("boss", next);
+  txApp.save(allianceRec);
+}
+
+/** Tâche planifiée : fin des boss d'alliance (24 h), récompenses, relevé horaire. */
+function allianceBossTick(now) {
+  const game = loadGame();
+  let changed = 0;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    txApp.findAllRecords("alliances").forEach((allianceRec) => {
+      let state = readAllianceBoss(game, allianceRec);
+      if (!state) return;
+      const before = JSON.stringify(state);
+      state = game.closeLeviathan(state, now);
+      if (state.status !== "active" && !state.rewarded) state = distributeAllianceBoss(txApp, game, allianceRec, state, now);
+      state = game.recordLeviathanTimeline(state, now);
+      if (JSON.stringify(state) !== before) {
+        allianceRec.set("boss", state);
+        txApp.save(allianceRec);
+        changed++;
+      }
+    });
+  });
+  return changed;
+}
+
+/* ---------- Chat d'alliance : « … écrit » (v4.6) ---------- */
+
+/** POST /api/cosmic/alliance/typing — diffuse un signal éphémère aux
+ *  membres abonnés au sujet « alliancetyping_<id> » (rien n'est enregistré). */
+function allianceTyping(e) {
+  const uid = e.auth.id;
+  const player = findOrNull($app, "players", uid);
+  const allianceId = player ? player.getString("allianceId") : "";
+  if (!allianceId) return e.json(200, { ok: false });
+  const topic = `alliancetyping_${allianceId}`;
+  const message = new SubscriptionMessage({ name: topic, data: JSON.stringify({ uid, pseudo: player.getString("pseudo"), at: Date.now() }) });
+  const clients = $app.subscriptionsBroker().clients();
+  for (const id in clients) {
+    try {
+      if (clients[id].hasSubscription(topic)) clients[id].send(message);
+    } catch (_) {
+      /* client déconnecté */
+    }
+  }
+  return e.json(200, { ok: true });
+}
+
+/* ---------- Gazette du secteur (v4.6) : chaque lundi à 9 h ---------- */
+
+function readGazette(txApp, game) {
+  try {
+    return game.gazetteState(toPlain((txApp || $app).findFirstRecordByData("game_config", "key", game.GAZETTE_KEY)).data);
+  } catch (_) {
+    return game.gazetteState(null);
+  }
+}
+
+function writeGazette(txApp, game, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.GAZETTE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.GAZETTE_KEY);
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+function bossSummary(game, state, name) {
+  if (!state || state.status === "active" || !state.endedAtMs) return null;
+  return { name, status: state.status, endedAtMs: state.endedAtMs, top: game.leviathanRanking(state).slice(0, 3).map((c) => c.pseudo) };
+}
+
+/** Compose et publie le numéro de la semaine (force : publication manuelle). */
+function publishGazetteNow(txApp, game, now) {
+  const state = readGazette(txApp, game);
+  const sinceMs = now - 7 * 86400000;
+  const players = txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => ({ uid: r.id, pseudo: r.getString("pseudo"), xp: r.getInt("xp"), seasonXp: r.getInt("seasonXp"), createdAtMs: r.getInt("createdAtMs") }));
+  const bosses = [];
+  const lev = readLeviathan(txApp, game);
+  const levSum = bossSummary(game, lev, game.LEVIATHAN_RULES.name);
+  if (levSum) bosses.push(levSum);
+  const sb = readSeasonBoss(txApp, game);
+  const sbMonth = sb ? game.bossMonthOf(sb) : null;
+  const sbSum = bossSummary(game, sb, sbMonth ? sbMonth.boss.name : "Le boss de saison");
+  if (sbSum) bosses.push(sbSum);
+  txApp.findAllRecords("alliances").forEach((a) => {
+    const st = readAllianceBoss(game, a);
+    const sum = st ? bossSummary(game, st, `${game.allianceBossDef(st).name} de [${a.getString("tag")}]`) : null;
+    if (sum) bosses.push(sum);
+  });
+  const wl = readWarlordsState(txApp, game);
+  const nameOf = (id) => {
+    const d = game.warlordsConfig().defs.find((x) => x.id === id);
+    return d ? d.name : id;
+  };
+  const vendettas = (wl.vendettas || []).filter((v) => v.status !== "active" && v.finishedAtMs).map((v) => ({ warlordName: nameOf(v.warlordId), ownerPseudo: v.ownerPseudo, won: v.status === "won", finishedAtMs: v.finishedAtMs }));
+  const wars = txApp.findRecordsByFilter("alliance_wars", "endedAtMs >= {:t}", "", 50, 0, { t: sinceMs }).map((w) => {
+    const winner = w.getString("winnerId");
+    return { attackerTag: w.getString("attackerTag"), defenderTag: w.getString("defenderTag"), winnerTag: winner ? (winner === w.getString("attackerId") ? w.getString("attackerTag") : w.getString("defenderTag")) : null, endedAtMs: w.getInt("endedAtMs") };
+  });
+  const raids = txApp.findRecordsByFilter("battle_reports", "timestamp >= {:t} && outcome = 'attacker_win'", "-timestamp", 2000, 0, { t: sinceMs }).map((r) => {
+    const loot = toPlain(r).loot || {};
+    return { attackerPseudo: r.getString("attackerPseudo"), defenderPseudo: r.getString("defenderPseudo"), loot: Object.keys(loot).reduce((a, k) => a + (Number(loot[k]) || 0), 0), timestamp: r.getInt("timestamp") };
+  });
+  const warlords = txApp.findRecordsByFilter("players", "npc != ''", "", 50, 0).map((r) => {
+    const p = toPlain(r);
+    return { name: r.getString("pseudo"), power: game.empirePower(p) };
+  });
+  const issue = game.compileGazette({ now, sinceMs, players, xpSnapshot: state.xpSnapshot, bosses, vendettas, wars, raids, warlords }, (state.issues[0] ? state.issues[0].number : 0) + 1);
+  writeGazette(txApp, game, game.publishGazette(state, issue, players));
+  players.forEach((p) => {
+    try {
+      notify(txApp, p.uid, [{ kind: "event", title: `La Gazette n°${issue.number} est parue`, message: issue.headline, createdAtMs: now, read: false, link: "/game/gazette" }]);
+    } catch (_) {
+      /* facultatif */
+    }
+  });
+  return issue;
+}
+
+/** Tâche planifiée : publie le numéro du lundi une fois l'heure passée. */
+function gazetteTick(now) {
+  const game = loadGame();
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    if (!game.gazetteDue(readGazette(txApp, game), now)) return;
+    out = publishGazetteNow(txApp, game, now);
+  });
+  return out;
+}
+
+/** POST /api/cosmic/admin/gazette — publie un numéro tout de suite. */
+function adminGazette(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    out = publishGazetteNow(txApp, game, Date.now());
+  });
+  return e.json(200, out);
+}
+
+module.exports = { gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

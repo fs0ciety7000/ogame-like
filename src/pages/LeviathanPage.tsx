@@ -23,7 +23,7 @@ import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import { assetUrl } from "@/lib/assets";
 
-export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown> }) {
+export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault, flightMinutes = LEVIATHAN_RULES.flightMinutes }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown>; flightMinutes?: number }) {
   const player = usePlayerStore((s) => s.player);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [formation, setFormation] = useState<FormationId>("balanced");
@@ -38,7 +38,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
     try {
       await sendAssault(selected, formation);
       triggerWarpEffect();
-      toast.success(`Flotte lancée : impact dans ${LEVIATHAN_RULES.flightMinutes} min.`);
+      toast.success(`Flotte lancée : impact dans ${flightMinutes} min.`);
       setFleet({});
       onClose();
     } catch (err) {

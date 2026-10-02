@@ -263,6 +263,8 @@ export interface LeaderboardEntry {
   /** v4.2 : seigneur de guerre (identifiant du roster) et fin des vacances. */
   npc?: string;
   vacationUntilMs?: number;
+  /** v4.6 : dernière activité réelle (synchro du navigateur), pour « en ligne ». */
+  lastActiveMs?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -282,10 +284,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     planets: Array.isArray(data.planets) ? (data.planets as { id?: unknown; name?: unknown }[]).filter((c) => typeof c?.id === "string" && c.id).map((c) => ({ id: String(c.id), name: String(c.name ?? "Colonie") })) : [],
     npc: (data.npc as string) || undefined,
     vacationUntilMs: (data.vacationUntilMs as number) || undefined,
+    lastActiveMs: (data.lastActiveMs as number) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche

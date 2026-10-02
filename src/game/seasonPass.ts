@@ -30,6 +30,9 @@ export const PASS_POINTS = {
   /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
   chronicle: 40,
   seasonBoss: 60,
+  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
+  allianceBoss: 40,
+  allianceBossTry: 15,
 };
 export type PassSource = keyof typeof PASS_POINTS;
 

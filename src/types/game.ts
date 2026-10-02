@@ -77,6 +77,8 @@ export interface PlayerState {
   victories: number;
   defeats: number;
   playtimeSeconds: number;
+  /** v4.6 : dernière synchro réelle du navigateur (arrondie à 2 min). */
+  lastActiveMs?: number;
   resourcesUpdatedAtMs: number;
   resourceHistory?: ResourceHistoryPoint[];
   unlockedAchievements?: string[];
@@ -267,6 +269,8 @@ export interface Alliance {
    *  contributions personnelles des membres (valeur, une rare = 100). */
   projects?: Record<string, { level: number; funded: Partial<Record<ResourceId, number>>; buildEndMs: number }>;
   projectContributors?: Record<string, number>;
+  /** v4.6 : boss d'alliance de la semaine (état du moteur du Léviathan). */
+  boss?: unknown;
 }
 
 export interface AllianceLog {

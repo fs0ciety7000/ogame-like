@@ -22,6 +22,8 @@ const SOURCES: [keyof typeof PASS_POINTS, string][] = [
   ["vendetta", "Vendetta gagnée contre un seigneur"],
   ["chronicle", "Épisode des Chroniques terminé"],
   ["seasonBoss", "Participation au boss de saison"],
+  ["allianceBoss", "Boss d'alliance abattu (5 % des dégâts)"],
+  ["allianceBossTry", "Participation au boss d'alliance"],
   ["raidRepelled", "Raid de faction repoussé"],
   ["victory", "Combat gagné (attaque, défense, repaire)"],
   ["bossAssault", "Assaut sur le Léviathan ou la proie d'élite"],

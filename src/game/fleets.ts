@@ -1,3 +1,4 @@
+import { ALLIANCE_BOSS_RULES } from "@/game/allianceBoss";
 import { recordChronicle } from "@/game/chronicles";
 import { bumpStat } from "@/game/stats";
 import { takeLaunchCapsules, type LaunchCapsules } from "@/game/synthesis";
@@ -52,7 +53,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss" | "allianceboss";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -68,6 +69,7 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   bounty: "Chasse à la prime",
   elite: "Proie d'élite",
   seasonboss: "Assaut du boss de saison",
+  allianceboss: "Assaut du boss d'alliance",
 };
 
 export interface Fleet {
@@ -273,7 +275,7 @@ export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
     // Garnison : elle quitte l'allié et rentre (durée du trajet aller).
     return { ...fleet, status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) };
   }
-  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus être rappelée.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est déjà au contact.");
   return { ...fleet, status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) };
@@ -309,6 +311,7 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
     case "leviathan":
       return { title: "Retour du Léviathan", message: "Les survivants de l'assaut sur le Léviathan sont rentrés." };
     case "seasonboss":
+    case "allianceboss":
       return { title: "Retour de l'assaut", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
@@ -424,6 +427,17 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     out = {
       attacker: owner,
       fleet: newFleet(owner, { uid: "seasonboss", pseudo: req.eliteName ?? "Boss de saison" }, "seasonboss", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
+      defenderNotifications: [],
+    };
+  }
+  else if (mission === "allianceboss") {
+    // v4.6 : boss d'alliance, cible « allianceboss:<id de l'alliance> ».
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le boss d'alliance.");
+    if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
+    if (!owner.allianceId) throw new GameActionError("Il faut une alliance pour combattre son boss.");
+    out = {
+      attacker: owner,
+      fleet: newFleet(owner, { uid: `allianceboss:${owner.allianceId}`, pseudo: req.eliteName ?? "Boss d'alliance" }, "allianceboss", units, now, now + ALLIANCE_BOSS_RULES.flightMinutes * 60_000),
       defenderNotifications: [],
     };
   }
@@ -673,7 +687,7 @@ export const ELITE_TARGET = "bounty_elite";
 export function beaconReturn(fleet: Fleet, uid: string, now: number): Fleet {
   if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
   if (!["outbound", "returning", "stationed"].includes(fleet.status)) throw new GameActionError("Cette flotte n'est plus en vol.");
-  if (fleet.mission === "expedition" || ((fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "elite") && fleet.status === "outbound")) {
+  if (fleet.mission === "expedition" || ((fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") && fleet.status === "outbound")) {
     throw new GameActionError("La balise ne peut pas ramener cette flotte.");
   }
   const recalled = fleet.status === "outbound" ? true : fleet.recalled;
