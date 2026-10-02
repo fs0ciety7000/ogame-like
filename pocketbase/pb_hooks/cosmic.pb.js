@@ -79,7 +79,7 @@ routerAdd(
       const away =
         action && action.type === "buildUnits"
           ? game.unitsAwayOf(
-              txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.toPlain(r)),
+              txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),
               uid,
             )
           : {};

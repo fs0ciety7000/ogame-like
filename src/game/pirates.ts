@@ -1,4 +1,6 @@
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -644,13 +646,15 @@ export function resolvePirateRaid(
     attackerPowerOverride: power,
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
-    defenderRepairPct: getRepairPercent(player.buildings),
+    defenderRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
     defenderResources: {},
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     homeFleetFactor: posture.homeFleetFactor,
     defenseFactor: posture.defenseFactor,
+    // v4.0 : Stratège et reliques (les capsules ne jouent pas contre les PNJ).
+    defenderPowerFactor: 1 + playerModifiers(player).defense,
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
@@ -685,6 +689,7 @@ export function resolvePirateRaid(
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor((destroyed * faction.bounty.debrisPerPower) / 2) };
     st.raidsWon += 1;
     st.repelled += 1;
+    grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
@@ -763,10 +768,10 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   const combat = resolveCombat({
     ...fx,
     // v3.3 : Batterie de siège de l'alliance.
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
-    attackerRepairPct: getRepairPercent(player.buildings),
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
     defenderUnits: {},
     defenderTechLevels: {},
@@ -791,6 +796,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     st.repelled = 0;
     st.notoriety = 0;
     st.lairsTaken += 1;
+    grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(
       note(

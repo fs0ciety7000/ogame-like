@@ -115,6 +115,14 @@ export interface PlayerState {
   bounties?: import("@/game/bounties").BountyState;
   /** v3.9.2 : ne plus recevoir les nouvelles du jeu par e-mail. */
   emailOptOut?: boolean;
+  /** v4.0 : notifications d'alliance que le joueur veut recevoir (absent = oui). */
+  notifPrefs?: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean };
+  /** v4.0 : officiers, reliques et capsules du Labo de synthèse. */
+  commanders?: import("@/game/commanders").CommandersState;
+  relics?: import("@/game/relics").RelicsState;
+  synthesis?: import("@/game/synthesis").SynthesisState;
+  /** v4.0 : bannière, emblème et devise de la fiche publique. */
+  profileStyle?: import("@/game/profile").ProfileStyle;
 }
 
 export interface SeasonResult {
@@ -197,6 +205,8 @@ export interface SpyReport {
   tier?: number;
   detected?: boolean;
   data?: SpyReportData;
+  /** v4.0 : l'Espionne a flairé un brouilleur de défense (chiffres faussés). */
+  anomaly?: boolean;
 }
 
 export interface SpyReportData {

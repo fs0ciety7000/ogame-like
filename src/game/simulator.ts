@@ -91,6 +91,8 @@ export function simulateAgainstReport(
   report: Pick<SpyReport, "tier" | "data">,
   lootMultiplier = 1,
   formation?: string,
+  /** v4.0 : bonus d'attaque du joueur (officiers, reliques, stimulant d'assaut). */
+  attackBonus = 0,
 ): SimOutcome | null {
   const data = report.data;
   if (!data || (report.tier ?? 0) < 2 || (!data.units && !data.defenses)) return null;
@@ -115,8 +117,10 @@ export function simulateAgainstReport(
 
   // Posture relevée par les sondes (une posture changée depuis n'est pas connue).
   const posture = postureEffects(data.posture);
+  const fx = formationEffects(formation);
   const combat = resolveCombat({
-    ...formationEffects(formation),
+    ...fx,
+    attackFactor: fx.attackFactor * (1 + attackBonus),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     attackerUnits: attacker.units,

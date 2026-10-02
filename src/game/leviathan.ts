@@ -1,4 +1,6 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
@@ -138,10 +140,10 @@ export function resolveLeviathanAssault(
   now: number,
 ): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = getRepairPercent(player.buildings);
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};
@@ -187,7 +189,7 @@ export function rewardHours(state: LeviathanState, uid: string): number {
 }
 
 /** Verse la récompense d'un participant (et le titre au premier). */
-export function grantLeviathanReward(state: LeviathanState, player: PlayerState): { gain: Partial<Record<ResourceId, number>>; title: boolean } {
+export function grantLeviathanReward(state: LeviathanState, player: PlayerState, random: () => number = Math.random): { gain: Partial<Record<ResourceId, number>>; title: boolean; relic?: string } {
   const hours = rewardHours(state, player.uid);
   const gain = hours > 0 ? productionHours(player, hours) : {};
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
@@ -197,6 +199,11 @@ export function grantLeviathanReward(state: LeviathanState, player: PlayerState)
   if (title && !(player.titles ?? []).some((t) => t.label === LEVIATHAN_RULES.title)) {
     player.titles = [...(player.titles ?? []), { label: LEVIATHAN_RULES.title, seasonId: `leviathan:${state.id}`, rank: 1 }];
     player.activeTitle = LEVIATHAN_RULES.title;
+  }
+  // v4.0 : Léviathan abattu, une relique (épique au moins pour le premier).
+  if (state.status === "killed" && hours > 0) {
+    const item = rollRelic("leviathan", Date.now(), random, title ? "epic" : "rare");
+    if (addRelic(player, item)) return { gain, title, relic: relicLabel(item) };
   }
   return { gain, title };
 }

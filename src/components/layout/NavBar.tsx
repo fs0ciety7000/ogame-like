@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { LiveClock } from "@/components/layout/LiveClock";
 import { usePlayerStore } from "@/store/playerStore";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
+import { usePactUnreadStore } from "@/services/diplomacyService";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -35,6 +36,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/batiments", label: "Bâtiments", icon: Building2 },
       { to: "/game/unites", label: "Unités", icon: Rocket },
       { to: "/game/labo", label: "Labo", icon: FlaskConical },
+      { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
     ],
   },
   {
@@ -71,7 +73,7 @@ export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 const ALL_ITEMS = ALL_NAV_ITEMS;
 
 function useBadge(to: string): number {
-  const allianceUnread = useAllianceUnreadStore((s) => s.count);
+  const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
@@ -272,7 +274,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
 function MobileTabBar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const allianceUnread = useAllianceUnreadStore((s) => s.count);
+  const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));

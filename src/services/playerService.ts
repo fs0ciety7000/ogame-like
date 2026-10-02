@@ -429,6 +429,8 @@ export interface PlayerFeats {
   /** v3.9 : primes Kesh'Vaar. */
   bounties?: number;
   kesh?: { rank: number; frame: boolean; emblem: boolean; shieldUntilMs: number };
+  /** v4.0 : bannière, emblème, devise, officiers et reliques. */
+  showcase?: import("@/game/profile").PublicShowcase | null;
 }
 
 export interface PlayerSheet {
@@ -507,7 +509,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number; hours?: number; formation?: string } = {},
+  options: { minutes?: number; hours?: number; formation?: string; capsules?: { assault?: number | true; decoy?: number | true } } = {},
 ): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }
@@ -642,4 +644,42 @@ export function renameColony(colonyId: string, name: string) {
 
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
+}
+
+/* ---------- v4.0 : État-major (officiers, reliques, Labo de synthèse) ---------- */
+
+export function recruitCommander(commanderId: string, method: "amber" | "production") {
+  return act<{ id: string }>({ type: "commanderRecruit", commanderId, method });
+}
+
+export function assignCommanders(ids: string[]) {
+  return act({ type: "commanderAssign", ids });
+}
+
+export function trainCommander(commanderId: string) {
+  return act<{ level: number }>({ type: "commanderTrain", commanderId });
+}
+
+export function craftCapsule(capsule: string, level: number) {
+  return act<{ type: string; level: number; endsAtMs: number }>({ type: "synthCraft", capsule, level });
+}
+
+export function activateCapsule(capsule: string, level?: number) {
+  return act<{ pct: number }>({ type: "synthActivate", capsule, level });
+}
+
+export function equipRelic(slot: number, relicId: string | null) {
+  return act({ type: "relicEquip", slot, relicId });
+}
+
+export function fuseRelics(template: string, rarity: string) {
+  return act<import("@/game/relics").RelicItem>({ type: "relicFuse", template, rarity });
+}
+
+export function recycleRelic(relicId: string) {
+  return act<{ amber: number }>({ type: "relicRecycle", relicId });
+}
+
+export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string }) {
+  return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }

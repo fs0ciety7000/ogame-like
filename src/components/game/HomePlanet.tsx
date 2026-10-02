@@ -117,9 +117,28 @@ function orbitPath(rx: number, ry: number) {
   return `M ${C - rx} ${C} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
 }
 
-export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; size?: number }) {
+/** v4.0 : ce qui se passe autour de la planète en ce moment. */
+export interface PlanetLife {
+  /** Niveau du Labo de synthèse (0 = absent). */
+  synth?: number;
+  armor?: boolean;
+  veil?: boolean;
+  /** Officiers en poste. */
+  officers?: number;
+  /** Une relique légendaire est équipée. */
+  legendary?: boolean;
+  /** Flottes en mission / flottes hostiles en approche. */
+  away?: number;
+  incoming?: number;
+  /** Heure locale (0-24) : position du terminateur jour/nuit. */
+  hour?: number;
+}
+
+export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Buildings; size?: number; life?: PlanetLife }) {
   const r = useBuildingRatios(buildings);
   const still = useReducedMotion() ?? false;
+  // Terminateur : le côté éclairé suit l'heure (midi = face au joueur).
+  const sun = life.hour === undefined ? 30 : Math.round(15 + (((life.hour + 18) % 24) / 24) * 70);
 
   const mines = Math.ceil(r.mines * 8);
   const nano = Math.ceil(r.nano * 7);
@@ -137,6 +156,13 @@ export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; si
     r.repair && "drone de réparation",
     ships > 0 && `${ships} vaisseau(x) en orbite`,
     r.defenseHangar > 0 && "bouclier planétaire",
+    (life.synth ?? 0) > 0 && "vapeurs du Labo de synthèse",
+    life.armor && "carapace réactive active",
+    life.veil && "brouilleur de défense actif",
+    (life.officers ?? 0) > 0 && `${life.officers} officier(s) en poste`,
+    life.legendary && "relique légendaire",
+    (life.away ?? 0) > 0 && `${life.away} flotte(s) en mission`,
+    (life.incoming ?? 0) > 0 && `${life.incoming} flotte(s) hostile(s) en approche`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -149,7 +175,7 @@ export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; si
           <stop offset="0%" style={{ stopColor: "color-mix(in srgb, var(--color-cyan-glow) 45%, var(--color-space-600))" }} />
           <stop offset="75%" style={{ stopColor: "var(--color-space-800)" }} />
         </radialGradient>
-        <radialGradient id="hp-shade" cx="30%" cy="28%" r="85%">
+        <radialGradient id="hp-shade" cx={`${sun}%`} cy="28%" r="85%">
           <stop offset="45%" style={{ stopColor: "#000", stopOpacity: 0 }} />
           <stop offset="100%" style={{ stopColor: "#000", stopOpacity: 0.75 }} />
         </radialGradient>
@@ -248,6 +274,74 @@ export function HomePlanet({ buildings, size = 116 }: { buildings: Buildings; si
           </path>
         ))}
       </g>
+
+      {/* v4.0 : relique légendaire, aura dorée scintillante */}
+      {life.legendary && (
+        <circle cx={C} cy={C} r={R + 4} fill="none" stroke="var(--color-gold-glow)" strokeWidth={2} strokeOpacity={0.35} strokeDasharray="1 7" strokeLinecap="round">
+          {!still && <animateTransform attributeName="transform" type="rotate" from={`360 ${C} ${C}`} to={`0 ${C} ${C}`} dur="24s" repeatCount="indefinite" />}
+          {!still && <animate attributeName="stroke-opacity" values="0.15;0.6;0.15" dur="2.6s" repeatCount="indefinite" />}
+        </circle>
+      )}
+
+      {/* v4.0 : carapace réactive (bouclier hexagonal qui pulse) */}
+      {life.armor && (
+        <polygon
+          points={Array.from({ length: 6 }, (_, i) => `${C + Math.cos((i * Math.PI) / 3) * (R + 18)},${C + Math.sin((i * Math.PI) / 3) * (R + 18)}`).join(" ")}
+          fill="var(--color-cyan-glow)"
+          fillOpacity={0.05}
+          stroke="#e0fbff"
+          strokeOpacity={0.7}
+          strokeWidth={1.4}
+        >
+          {!still && <animate attributeName="stroke-opacity" values="0.3;0.9;0.3" dur="1.8s" repeatCount="indefinite" />}
+        </polygon>
+      )}
+
+      {/* v4.0 : brouilleur de défense, scintillement vert */}
+      {life.veil && (
+        <circle cx={C} cy={C} r={R + 22} fill="none" stroke="var(--color-mint-glow)" strokeWidth={6} strokeOpacity={0.12} strokeDasharray="14 9 3 9">
+          {!still && <animateTransform attributeName="transform" type="rotate" from={`0 ${C} ${C}`} to={`-360 ${C} ${C}`} dur="9s" repeatCount="indefinite" />}
+          {!still && <animate attributeName="stroke-opacity" values="0.05;0.25;0.08;0.2;0.05" dur="3.3s" repeatCount="indefinite" />}
+        </circle>
+      )}
+
+      {/* v4.0 : vapeurs violettes du Labo de synthèse */}
+      {(life.synth ?? 0) > 0 &&
+        Array.from({ length: Math.min(3, 1 + Math.floor((life.synth ?? 0) / 4)) }, (_, i) => (
+          <circle key={`v${i}`} cx={C + 18 - i * 14} cy={C - R + 10} r={2.5} fill="#a78bfa" opacity={still ? 0.5 : 0}>
+            {!still && (
+              <>
+                <animate attributeName="cy" values={`${C - R + 10};${C - R - 22}`} dur="4.5s" begin={`${i * 1.5}s`} repeatCount="indefinite" />
+                <animate attributeName="r" values="2;6" dur="4.5s" begin={`${i * 1.5}s`} repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0;0.65;0" dur="4.5s" begin={`${i * 1.5}s`} repeatCount="indefinite" />
+              </>
+            )}
+          </circle>
+        ))}
+
+      {/* v4.0 : officiers en poste, insignes dorés en orbite haute */}
+      {Array.from({ length: Math.min(3, life.officers ?? 0) }, (_, i) => (
+        <path key={`o${i}`} d="M -3 1.5 L 0 -1.5 L 3 1.5" fill="none" stroke="var(--color-gold-glow)" strokeWidth={1.4} strokeLinecap="round" transform={still ? `translate(${C} ${C - R - 26 + i * 6})` : undefined}>
+          {!still && <animateMotion path={orbitPath(R + 26, R + 26)} dur="28s" begin={`${(-28 * i) / 3}s`} repeatCount="indefinite" />}
+        </path>
+      ))}
+
+      {/* v4.0 : flottes qui partent en mission */}
+      {!still &&
+        Array.from({ length: Math.min(3, life.away ?? 0) }, (_, i) => (
+          <path key={`a${i}`} d="M 3 0 L -2.5 -1.6 L -1.2 0 L -2.5 1.6 Z" fill="var(--color-cyan-glow)" opacity={0}>
+            <animateMotion path={`M ${C} ${C} L ${C - 105 + i * 20} ${C - 90 + i * 30}`} dur="6s" begin={`${i * 2}s`} rotate="auto" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.25;0.8;1" dur="6s" begin={`${i * 2}s`} repeatCount="indefinite" />
+          </path>
+        ))}
+
+      {/* v4.0 : flottes hostiles en approche (échos radar rouges) */}
+      {Array.from({ length: Math.min(3, life.incoming ?? 0) }, (_, i) => (
+        <circle key={`h${i}`} r={2.4} fill="var(--color-danger-glow)" cx={still ? VIEW - 12 : 0} cy={still ? 30 + i * 20 : 0}>
+          {!still && <animateMotion path={`M ${VIEW + 10} ${20 + i * 25} L ${C + R + 16} ${C - 10 + i * 8}`} dur="5s" begin={`${i * 1.3}s`} repeatCount="indefinite" />}
+          {!still && <animate attributeName="opacity" values="0.2;1;0.2" dur="0.9s" repeatCount="indefinite" />}
+        </circle>
+      ))}
 
       {/* Atelier de réparation : drone en orbite basse */}
       {r.repair && (

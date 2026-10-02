@@ -1,4 +1,4 @@
-import { DEFAULT_BUILDINGS, setBuildings, type BuildingDef } from "@/game/buildings";
+import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
@@ -110,7 +110,7 @@ export function currentGameContent(): GameContent {
 export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   const defaults = defaultGameContent();
   const content: GameContent = {
-    buildings: overrides.buildings ?? defaults.buildings,
+    buildings: withFixedBuildings(overrides.buildings ?? defaults.buildings),
     units: withFixedUnits(overrides.units ?? defaults.units),
     technologies: overrides.technologies ?? defaults.technologies,
     missions: overrides.missions ?? defaults.missions,

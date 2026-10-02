@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
+import { BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -444,6 +444,7 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   jammer: Radar,
   beacon: Zap,
   shield: ShieldHalf,
+  dossier: BookOpen,
   blueprint: Crosshair,
   title: Crown,
   frame: Star,

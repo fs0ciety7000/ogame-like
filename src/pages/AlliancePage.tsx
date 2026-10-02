@@ -1,4 +1,8 @@
 import { DiplomacyTab } from "@/components/game/DiplomacyTab";
+import { useSearchParams } from "react-router-dom";
+import { usePactUnreadStore } from "@/services/diplomacyService";
+
+const ALLIANCE_TABS = ["membres", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
@@ -158,6 +162,9 @@ function AllianceRoom({
 }) {
   const [alliance, setAlliance] = useState<Alliance | null>(null);
   const [messages, setMessages] = useState<AllianceMessage[]>([]);
+  // v4.0 : onglet ouvert par un lien de notification, non lus du canal diplomatique.
+  const tabParam = useSearchParams()[0].get("onglet");
+  const pactUnread = usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const [text, setText] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [garrisonTarget, setGarrisonTarget] = useState<{
@@ -241,7 +248,7 @@ function AllianceRoom({
   const role = allianceRole(alliance, uid);
 
   return (
-    <Tabs defaultValue="membres" className="flex flex-col gap-4">
+    <Tabs defaultValue={tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"} className="flex flex-col gap-4">
       <TabsList className="self-start">
         <TabsTrigger value="membres">Membres et canal</TabsTrigger>
         <TabsTrigger value="tresor">Trésor</TabsTrigger>
@@ -249,7 +256,10 @@ function AllianceRoom({
         <TabsTrigger value="projets">Projets</TabsTrigger>
         <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
         <TabsTrigger value="guerre">Guerre</TabsTrigger>
-        <TabsTrigger value="diplomatie">Diplomatie</TabsTrigger>
+        <TabsTrigger value="diplomatie" className="inline-flex items-center gap-1.5">
+          Diplomatie
+          {pactUnread > 0 && <span className="min-w-4 rounded-full bg-ember-glow px-1 text-[10px] font-bold leading-4 text-space-950">{pactUnread}</span>}
+        </TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
       <TabsContent value="classement">

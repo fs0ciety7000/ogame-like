@@ -21,11 +21,18 @@ import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { useFleetStore } from "@/store/fleetStore";
+import { isHostile } from "@/components/game/FleetsPanel";
+import { activeVeil, synthesisState, synthLevel } from "@/game/synthesis";
+import { commandersState } from "@/game/commanders";
+import { equippedRelics } from "@/game/relics";
+import { parisHour } from "@/game/stats";
 
 export function DashboardPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
+  const fleets = useFleetStore((s) => s.fleets);
 
   if (!player) return null;
 
@@ -40,6 +47,17 @@ export function DashboardPage() {
 
   const economy = economySnapshot(player, Date.now());
   const now = Date.now();
+  const armor = synthesisState(player).armor;
+  const planetLife = {
+    synth: synthLevel(player),
+    armor: !!armor && armor.untilMs > now,
+    veil: activeVeil(player, now) > 0,
+    officers: commandersState(player).active.length,
+    legendary: equippedRelics(player).some((r) => r.rarity === "legendary"),
+    away: fleets.filter((f) => f.ownerUid === player.uid && f.status !== "done").length,
+    incoming: fleets.filter((f) => isHostile(f, player.uid)).length,
+    hour: parisHour(now),
+  };
 
   const totalBuildingLevels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
   const maxBuildingLevels = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
@@ -57,7 +75,7 @@ export function DashboardPage() {
       <NextActionsCard />
 
       <Card className="flex flex-wrap items-center gap-6 p-6">
-        <HomePlanet buildings={player.buildings} />
+        <HomePlanet buildings={player.buildings} life={planetLife} />
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
           <p className="font-display text-3xl text-white">{developmentPercent}%</p>

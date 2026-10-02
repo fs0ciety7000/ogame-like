@@ -246,10 +246,31 @@ function profileFeats(player) {
     warsWon: Number(stats.warsWon) || 0,
     bounties: Number(stats.bounties) || 0,
     kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}),
+    showcase: showcaseOf(player),
   };
 }
 
 /** v3.9 : rang dans l'Essaim, cosmétiques et Voile de chitine (fiche publique). */
+/** v4.0 : bannière, emblème, devise, officiers en poste et reliques équipées. */
+function showcaseOf(player) {
+  try {
+    const game = loadGame();
+    applyContent($app, game);
+    return game.publicShowcase({
+      pirates: parseJsonField(player, "pirates", null),
+      bounties: parseJsonField(player, "bounties", null),
+      stats: parseJsonField(player, "stats", null),
+      profileStyle: parseJsonField(player, "profileStyle", null),
+      commanders: parseJsonField(player, "commanders", null),
+      relics: parseJsonField(player, "relics", null),
+      ascensions: player.getInt("ascensions"),
+    });
+  } catch (err) {
+    console.log(`[cosmic] vitrine du profil : ${err}`);
+    return null;
+  }
+}
+
 function keshFeats(b) {
   const owned = Array.isArray(b.owned) ? b.owned : [];
   const rep = Number(b.reputation) || 0;
@@ -304,9 +325,15 @@ function defenderXpLostLast24h(txApp, game, uid, now) {
   return lost;
 }
 
-function fleetFromRecord(rec) {
+function fleetFromRecord(rec, publicView) {
   const f = toPlain(rec);
   f.units = f.units || {};
+  // v4.0 : flotte leurrée, la vraie composition est dans un champ caché.
+  if (publicView !== true) {
+    const real = parseJsonField(rec, "trueUnits", null);
+    if (real && typeof real === "object" && Object.keys(real).length > 0) f.units = real;
+    f.boosts = parseJsonField(rec, "boosts", null);
+  }
   f.loot = f.loot || null;
   f.returnAtMs = f.returnAtMs || null;
   f.transport = f.transport || null;
@@ -399,7 +426,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
   }
   const targetFleets = txApp
     .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: targetUid })
-    .map(fleetFromRecord);
+    .map((r) => fleetFromRecord(r, true));
   const probes = Object.keys(fleet.units).reduce((sum, k) => sum + (fleet.units[k] || 0), 0);
   const out = game.resolveSpyArrival({
     now,
@@ -417,6 +444,12 @@ function resolveSpyArrival(txApp, game, rec, now) {
   txApp.save(report);
   notify(txApp, fleet.ownerUid, out.spyNotifications);
   notify(txApp, targetUid, out.targetNotifications);
+  // v4.0 : sondes abattues, l'Espionne en poste de la cible progresse.
+  if (out.detected) {
+    game.grantCommanderXp(target.player, "spy", game.COMMANDER_XP.probesCaught);
+    target.rec.set("commanders", target.player.commanders || null);
+    txApp.save(target.rec);
+  }
   rec.set("reportId", report.id);
   rec.set("outcome", out.detected ? "detected" : "success");
   if (out.detected) {
@@ -693,6 +726,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         inFlight: true,
         garrisons,
         formation: rec.getString("formation"),
+        boosts: fleet.boosts || undefined,
       })
     : { ok: false };
   if (!result.ok) {
@@ -703,6 +737,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
     txApp.save(rec);
     return;
   }
+  game.clearDecoy(result.attacker, rec.id);
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   notify(txApp, fleet.ownerUid, result.notifications);
@@ -746,6 +781,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const survivors = result.survivors || {};
   const anyLeft = Object.keys(survivors).some((k) => survivors[k] > 0);
   rec.set("units", survivors);
+  rec.set("trueUnits", null);
   rec.set("loot", result.loot || {});
   rec.set("reportId", report.id);
   rec.set("outcome", result.combat.outcome);
@@ -760,6 +796,7 @@ function resolveFleetReturn(txApp, game, rec, now) {
   if (findOrNull(txApp, "players", fleet.ownerUid)) {
     const owner = loadPlayer(txApp, game, fleet.ownerUid);
     const out = game.performFleetReturn(owner.player, owner.queues, fleet, now);
+    game.clearDecoy(out.owner, rec.id);
     savePlayer(txApp, game, owner, out.owner, out.queues);
     notify(txApp, fleet.ownerUid, out.notifications);
   }
@@ -900,6 +937,7 @@ function launchFleetRequest(e) {
         transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
         eliteName: elite ? game.describeElite(elite).name : undefined,
+        capsules: mission === "attack" ? body.capsules : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -913,11 +951,32 @@ function launchFleetRequest(e) {
     if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
     if (["attack", "lair", "expedition", "leviathan", "bounty", "elite"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    // v4.0 : capsules (champs cachés) ; le leurre montre une fausse composition.
+    const caps = out.capsules;
+    const boosted = !!caps && Object.keys(caps.boosts).length > 0;
+    if (boosted) rec.set("boosts", caps.boosts);
+    if (caps && caps.fakeUnits) {
+      rec.set("trueUnits", out.fleet.units);
+      rec.set("units", caps.fakeUnits);
+    }
+    // Option C : l'Espionne en poste du défenseur peut flairer une anomalie chimique.
+    const anomaly = boosted && target && Math.random() < game.anomalyChance(target);
+    if (anomaly) rec.set("anomaly", true);
     txApp.save(rec);
+    if (caps && caps.fakeUnits) {
+      game.recordDecoy(out.attacker, rec.id, out.fleet.units);
+      attacker.rec.set("synthesis", out.attacker.synthesis);
+      txApp.save(attacker.rec);
+    }
+    if (anomaly) {
+      db.notify(txApp, target.uid, [
+        { kind: "spy-detected", title: "Anomalie chimique", message: `Ton Espionne a repéré des traces de synthèse sur la flotte de ${attacker.player.pseudo} : elle embarque des capsules (stimulant ou brouilleur).`, createdAtMs: now, read: false },
+      ]);
+    }
     // Léviathan : le délai entre deux assauts part du lancement.
     if (leviathan) writeLeviathan(txApp, leviathan);
     if (elite) writeElite(txApp, game, elite);
-    response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet);
+    response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet, { anomaly: !!anomaly });
   });
 
   return e.json(200, response);
@@ -1540,10 +1599,52 @@ function saveWar(txApp, rec, war) {
   txApp.save(rec);
 }
 
+/** Canal diplomatique : prévient les membres des deux alliances (sauf
+ *  l'auteur). Une seule notification non lue par pacte et par joueur toutes
+ *  les 10 minutes, pour ne pas inonder la cloche pendant une discussion. */
+function notifyPactMessage(txApp, pact, authorUid, authorPseudo, authorTag, text, now) {
+  const link = `/game/alliance?onglet=diplomatie&pacte=${pact.id}`;
+  const otherTag = authorTag === pact.tagA ? pact.tagB : pact.tagA;
+  const excerpt = text.length > 90 ? `${text.slice(0, 89)}…` : text;
+  [pact.allianceA, pact.allianceB].forEach((allianceId) => {
+    const rec = findOrNull(txApp, "alliances", allianceId);
+    if (!rec) return;
+    const ownSide = allianceId === (authorTag === pact.tagA ? pact.allianceA : pact.allianceB);
+    (allianceFromRecord(rec).members || []).forEach((uid) => {
+      if (uid === authorUid || mutedNotif(txApp, uid, "pactMessages")) return;
+      try {
+        const recent = txApp.findRecordsByFilter("notifications", "player_id = {:u} && link = {:l} && read = false && createdAtMs > {:t}", "", 1, 0, { u: uid, l: link, t: now - 10 * 60000 });
+        if (recent.length > 0) return;
+        notify(txApp, uid, [
+          {
+            kind: "alliance",
+            title: `Canal diplomatique [${ownSide ? otherTag : authorTag}]`,
+            message: `[${authorTag}] ${authorPseudo} : ${excerpt}`,
+            createdAtMs: now,
+            read: false,
+            link,
+          },
+        ]);
+      } catch (_) {
+        /* facultatif */
+      }
+    });
+  });
+}
+
+/** v4.0 : le joueur a coupé ce type de notification dans ses réglages. */
+function mutedNotif(txApp, uid, key) {
+  const rec = findOrNull(txApp, "players", uid);
+  if (!rec) return false;
+  const prefs = parseJsonField(rec, "notifPrefs", {}) || {};
+  return prefs[key] === false;
+}
+
 function notifyAlliance(txApp, allianceId, title, message, now) {
   const rec = findOrNull(txApp, "alliances", allianceId);
   if (!rec) return;
   (allianceFromRecord(rec).members || []).forEach((uid) => {
+    if (mutedNotif(txApp, uid, "allianceEvents")) return;
     try {
       notify(txApp, uid, [{ kind: "alliance", title, message, createdAtMs: now, read: false }]);
     } catch (_) {
@@ -1853,7 +1954,7 @@ function distributeLeviathan(txApp, game, state, now) {
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}`,
         createdAtMs: now,
         read: false,
       },
@@ -1890,6 +1991,12 @@ function leviathanArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
+  if (res.damage > 0) {
+    game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    owner.rec.set("commanders", owner.player.commanders || null);
+    txApp.save(owner.rec);
+  }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   notify(txApp, fleet.ownerUid, [
     {
@@ -2823,6 +2930,7 @@ function diplomacyRequest(e) {
         const msg = new Record(txApp.findCollectionByNameOrId("pact_messages"));
         msg.load({ pactId: pact.id, allianceA: pact.allianceA, allianceB: pact.allianceB, authorUid: uid, authorPseudo: pseudo, authorTag: own.tag, text, createdAtMs: now });
         txApp.save(msg);
+        notifyPactMessage(txApp, pact, uid, pseudo, own.tag, text, now);
         out = toPlain(msg);
         return;
       }
@@ -3044,6 +3152,12 @@ function eliteArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
+  if (res.damage > 0) {
+    game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    owner.rec.set("commanders", owner.player.commanders || null);
+    txApp.save(owner.rec);
+  }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   const name = game.describeElite(state).name;
   notify(txApp, fleet.ownerUid, [
@@ -3130,6 +3244,7 @@ function bountyRequest(e) {
         game.consumeBeacon(player);
         if (fleet.mission === "bounty" && wasStatus === "outbound") game.releaseBounty(player, game.bountyIdOf(fleet.targetUid));
         const done = game.completeFleetReturn(player, fleet, now);
+        game.clearDecoy(player, rec.id);
         notify(txApp, uid, done.notifications);
         rec.set("status", "done");
         rec.set("recalled", fleet.recalled);
@@ -3165,7 +3280,7 @@ function adminElite(e) {
 
 /** Seuls ces champs s'écrivent directement par un joueur ; tout le reste
  *  passe par les routes du serveur (actions de jeu). */
-const PLAYER_WRITABLE = ["pseudo", "allianceLastReadMs", "emailOptOut"];
+const PLAYER_WRITABLE = ["pseudo", "allianceLastReadMs", "emailOptOut", "notifPrefs"];
 
 function guardPlayerUpdate(e) {
   if (e.hasSuperuserAuth() || isGameAdmin(e)) return;
@@ -3325,4 +3440,4 @@ function unsubscribe(e) {
   return e.html(200, page);
 }
 
-module.exports = { guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

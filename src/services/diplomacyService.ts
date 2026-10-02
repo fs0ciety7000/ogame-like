@@ -62,3 +62,64 @@ export function diplomacy(action: "message", payload: { pactId: string; text: st
 export function diplomacy(action: string, payload: Record<string, unknown>) {
   return callGame("diplomacy", { action, ...payload });
 }
+
+/* ---------- non lus du canal diplomatique ---------- */
+
+const READ_KEY = "cosmic-empires:pact-read";
+
+function readMarks(uid: string): Record<string, number> {
+  try {
+    return (JSON.parse(localStorage.getItem(`${READ_KEY}:${uid}`) ?? "{}") as Record<string, number>) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export const usePactUnreadStore = create<{ unread: Record<string, number> }>(() => ({ unread: {} }));
+
+let lastMessages: PactMessage[] = [];
+let lastUid = "";
+
+function recount() {
+  const marks = readMarks(lastUid);
+  const unread: Record<string, number> = {};
+  for (const m of lastMessages) {
+    if (m.authorUid === lastUid || m.createdAtMs <= (marks[m.pactId] ?? 0)) continue;
+    unread[m.pactId] = (unread[m.pactId] ?? 0) + 1;
+  }
+  usePactUnreadStore.setState({ unread });
+}
+
+/** Le joueur a lu le canal de ce pacte (mémorisé dans ce navigateur). */
+export function markPactRead(uid: string, pactId: string) {
+  try {
+    localStorage.setItem(`${READ_KEY}:${uid}`, JSON.stringify({ ...readMarks(uid), [pactId]: Date.now() }));
+  } catch {
+    /* stockage indisponible */
+  }
+  recount();
+}
+
+/** Messages récents des canaux de l'alliance, pour les pastilles « non lu ». */
+export function subscribePactUnread(uid: string, allianceId: string): () => void {
+  let active = true;
+  lastUid = uid;
+  const filter = pb.filter("allianceA = {:a} || allianceB = {:a}", { a: allianceId });
+  const refresh = () => {
+    pb.collection("pact_messages")
+      .getList<PactMessage>(1, 200, { filter, sort: "-createdAtMs" })
+      .then((res) => {
+        if (!active) return;
+        lastMessages = res.items;
+        recount();
+      })
+      .catch(() => {});
+  };
+  refresh();
+  const unsubscribe = subscribeRecords("pact_messages", "*", refresh, filter);
+  return () => {
+    active = false;
+    unsubscribe();
+    usePactUnreadStore.setState({ unread: {} });
+  };
+}

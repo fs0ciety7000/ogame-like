@@ -2,6 +2,7 @@ import { allianceForgeFactor } from "@/game/alliances";
 import { ascensionBuildTimeFactor } from "@/game/ascension";
 import { buildTimeFactor, researchTimeFactor } from "@/game/events";
 import { techReductionFactor } from "@/game/technologies";
+import { playerModifiers } from "@/game/modifiers";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -10,12 +11,12 @@ import type { PlayerState } from "@/types/game";
    l'affichage.
 ===================================================== */
 
-type TimePlayer = Pick<PlayerState, "techLevels" | "allianceResearch"> & Partial<Pick<PlayerState, "ascensions" | "ascendedAtMs">>;
+type TimePlayer = Pick<PlayerState, "techLevels" | "allianceResearch"> & Partial<Pick<PlayerState, "ascensions" | "ascendedAtMs" | "commanders" | "relics">>;
 
 export function playerBuildTimeFactor(player: TimePlayer, now: number): number {
-  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player);
+  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 
 export function playerResearchTimeFactor(player: TimePlayer, now: number): number {
-  return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch);
+  return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
