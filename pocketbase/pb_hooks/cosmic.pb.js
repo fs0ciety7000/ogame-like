@@ -75,9 +75,17 @@ routerAdd(
     $app.runInTransaction((txApp) => {
       db.applyContent(txApp, game);
       const loaded = db.loadPlayer(txApp, game, uid);
+      // Vaisseaux en mission : ils reviendront, le hangar doit les compter.
+      const away =
+        action && action.type === "buildUnits"
+          ? game.unitsAwayOf(
+              txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.toPlain(r)),
+              uid,
+            )
+          : {};
       let out;
       try {
-        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now());
+        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away);
       } catch (err) {
         throw db.asHttpError(game, err);
       }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyLegacyBattleReport, applyLegacyGift, newPlayerProfile, performGift, performPlayerAction } from "@/game/actions";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { GameActionError } from "@/game/errors";
+import { getUnitCapacity } from "@/game/buildings";
 import type { PlayerState } from "@/types/game";
 
 const NOW = 1_800_000_000_000;
@@ -17,6 +18,17 @@ describe("performPlayerAction", () => {
     expect(out.player.resourcesUpdatedAtMs).toBe(NOW);
     expect(out.player.playtimeSeconds).toBeLessThanOrEqual(15);
     expect((out.result as { elapsedMs: number }).elapsedMs).toBe(10_000);
+  });
+
+  it("counts ships away on a mission in the hangar (v3.9.1)", () => {
+    const base = player("a", { resources: { ...player("x").resources, scrap: 1e9, energy: 1e9 }, units: { chasseur: { level: 1, count: 0 } } });
+    const cap = getUnitCapacity(base.buildings, "attack");
+    const fit = Math.floor(cap / 20);
+    expect(fit).toBeGreaterThan(0);
+    // Toute la place est prise par des chasseurs partis en mission : on ne peut plus en construire.
+    expect(() => performPlayerAction(base, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 1 }, NOW, { chasseur: fit })).toThrow(/hangar/);
+    // Sans eux, la construction passe.
+    expect(() => performPlayerAction(base, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 1 }, NOW)).not.toThrow();
   });
 
   it("pays and queues a building upgrade, refuses a second one", () => {

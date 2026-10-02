@@ -200,6 +200,7 @@ __export(hooksEntry_exports, {
   startChallenge: () => startChallenge,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  unitsAwayOf: () => unitsAwayOf,
   utcDayStart: () => utcDayStart,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
@@ -4821,6 +4822,19 @@ function pay(player, cost, now, spending = true) {
   recordContract(player, "spend", total2, now);
   if (spending) bumpStat(player, "spent", total2);
 }
+function hangarUsed(units, away, category) {
+  var _a;
+  let used = 0;
+  for (const [id, u] of Object.entries(units)) {
+    const def2 = findUnit(id);
+    if ((def2 == null ? void 0 : def2.category) === category) used += ((_a = u == null ? void 0 : u.count) != null ? _a : 0) * def2.hangarSpace;
+  }
+  for (const [id, n] of Object.entries(away)) {
+    const def2 = findUnit(id);
+    if ((def2 == null ? void 0 : def2.category) === category) used += (n > 0 ? n : 0) * def2.hangarSpace;
+  }
+  return used;
+}
 function applyAction(s, action) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
   const { player, queues, now } = s;
@@ -4868,10 +4882,7 @@ function applyAction(s, action) {
       const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
       if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
       const category = unit.category;
-      const built = Object.entries(player.units).reduce((sum3, [id, u]) => {
-        const def2 = findUnit(id);
-        return (def2 == null ? void 0 : def2.category) === category ? sum3 + u.count * def2.hangarSpace : sum3;
-      }, 0);
+      const built = hangarUsed(player.units, s.unitsAway, category);
       const reserved = queues.unitQueues[category].reduce((sum3, item) => {
         var _a2, _b2;
         return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
@@ -4966,11 +4977,11 @@ function applyAction(s, action) {
       throw new GameActionError("Action inconnue.");
   }
 }
-function performPlayerAction(playerIn, queuesIn, action, now) {
+function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
   const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now },
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
     action
   );
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
@@ -6560,6 +6571,15 @@ function beaconReturn(fleet, uid, now) {
   }
   const recalled = fleet.status === "outbound" ? true : fleet.recalled;
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled, returnAtMs: now });
+}
+function unitsAwayOf(fleets, uid) {
+  var _a, _b;
+  const away = {};
+  for (const f of fleets) {
+    if (f.ownerUid !== uid || f.status === "done") continue;
+    for (const [id, n] of Object.entries((_a = f.units) != null ? _a : {})) if (n > 0) away[id] = ((_b = away[id]) != null ? _b : 0) + n;
+  }
+  return away;
 }
 var LAIR_DISTANCE = 60;
 function stationGarrison(fleet) {

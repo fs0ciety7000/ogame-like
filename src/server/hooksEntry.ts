@@ -69,4 +69,4 @@ export {
   consumeBeacon,
   consumeJammer,
 } from "@/game/bounties";
-export { beaconReturn, bountyIdOf } from "@/game/fleets";
+export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
