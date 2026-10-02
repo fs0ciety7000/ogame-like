@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { reportClientError } from "@/services/errorReporter";
+import { isStaleChunkError, reloadForUpdate } from "@/lib/updateReload";
 
 interface Props {
   children: ReactNode;
@@ -17,6 +18,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
+    // Fichier d'une ancienne version : on recharge plutôt que d'afficher l'erreur.
+    if (isStaleChunkError(error) && reloadForUpdate()) return;
     console.error("Erreur non interceptée :", error, info.componentStack);
     reportClientError(error);
   }
