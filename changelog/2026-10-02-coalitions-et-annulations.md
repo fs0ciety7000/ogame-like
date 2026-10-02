@@ -38,3 +38,6 @@ Un secteur qui s'unit contre les seigneurs trop forts, des chantiers qu'on peut 
 
 ## Classements
 - Les seigneurs de guerre n'apparaissent plus dans les classements **total** et **saison** ni dans le classement en direct du Panthéon. Ils restent attaquables depuis la page **Seigneurs** et la galaxie.
+
+## Correctif
+- Le compteur de notifications du menu latéral (bureau) n'est plus coupé.

@@ -122,13 +122,16 @@ function SideLink({ item }: { item: NavItem }) {
     >
       {({ isActive }) => (
         <>
-          <span
-            className={cn(
-              "hud-cut-sm relative grid h-7 w-7 shrink-0 place-items-center border transition-colors",
-              isActive ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-cyan-glow/10 bg-space-900/60 group-hover:border-cyan-glow/35 group-hover:text-cyan-glow",
-            )}
-          >
-            <item.icon className="h-3.5 w-3.5" />
+          {/* Le badge reste hors de la case découpée (clip-path), sinon il est rogné. */}
+          <span className="relative shrink-0">
+            <span
+              className={cn(
+                "hud-cut-sm grid h-7 w-7 place-items-center border transition-colors",
+                isActive ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-cyan-glow/10 bg-space-900/60 group-hover:border-cyan-glow/35 group-hover:text-cyan-glow",
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+            </span>
             <Badge count={badge} />
           </span>
           <span className="flex-1">{item.label}</span>
