@@ -1,3 +1,4 @@
+import { playAlert, playDefeat, playVictory } from "@/lib/sfx";
 import { create } from "zustand";
 import type { BattleReport, CombatOutcome, RareResourceId } from "@/types/game";
 
@@ -25,6 +26,11 @@ export const useCombatModalStore = create<CombatModalState>(() => ({ current: nu
 
 export function showCombatResult(display: CombatDisplay) {
   useCombatModalStore.setState({ current: display });
+  // v4.4 : fanfare ou glas selon l'issue, vue de ce joueur.
+  const won = display.outcome === (display.perspective === "attacker" ? "attacker_win" : "defender_win");
+  if (display.outcome === "draw") playAlert();
+  else if (won) playVictory();
+  else playDefeat();
 }
 
 export function closeCombatResult() {

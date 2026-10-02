@@ -26,6 +26,9 @@ import type { Alliance } from "@/types/game";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
+import { ParallaxStars } from "@/components/fx/ParallaxStars";
+import { isWarlordUid } from "@/game/warlords";
+import { FLEET_MISSION_LABELS, type Fleet } from "@/game/fleets";
 
 const SIZE = FLEET_RULES.mapSize;
 /** Marge autour de la carte : les empires posés au bord restent entiers. */
@@ -40,6 +43,17 @@ function allianceColor(id: string | undefined): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
   return `hsl(${h} 85% 65%)`;
+}
+
+/** v4.4 : couleur d'une route de flotte. Seigneur de guerre en ambre, flotte
+ *  qui arrive sur moi en rouge, les miennes en cyan (recyclage en vert). */
+function routeStyle(f: Fleet, uid: string | undefined): { color: string; label: string; hostile: boolean } {
+  const incoming = targetsPlayer(f, uid) && f.ownerUid !== uid;
+  if (isWarlordUid(f.ownerUid)) return { color: "var(--color-ember-glow)", label: incoming ? "Seigneur de guerre · sur toi" : "Seigneur de guerre", hostile: incoming };
+  if (incoming && ((f.mission ?? "attack") === "attack" || f.mission === "pirate" || f.mission === "spy")) return { color: "var(--color-danger-glow)", label: "Flotte hostile", hostile: true };
+  if (f.ownerUid !== uid) return { color: "var(--color-violet-glow)", label: "Flotte alliée", hostile: false };
+  if (f.mission === "recycle") return { color: "var(--color-mint-glow)", label: "Ta flotte", hostile: false };
+  return { color: "var(--color-cyan-glow)", label: "Ta flotte", hostile: false };
 }
 
 interface View {
@@ -83,6 +97,9 @@ export function GalaxyPage() {
   const [garrisonTarget, setGarrisonTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x: number; y: number; view: View; moved: boolean } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  // v4.4 : flotte survolée (info-bulle avec l'heure d'arrivée).
+  const [hoverFleet, setHoverFleet] = useState<{ id: string; x: number; y: number } | null>(null);
 
   useEffect(() => subscribeLeaderboard(setPlayers), []);
   useEffect(() => subscribeAlliances(setAlliances), []);
@@ -240,7 +257,8 @@ export function GalaxyPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        <Card className="tactical-grid relative aspect-square max-h-[75vh] w-full overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
+        <div ref={cardRef} className="glass-panel tactical-grid relative aspect-square max-h-[75vh] w-full overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
+          <ParallaxStars pan={{ x: view.x * 6, y: view.y * 6 }} />
           <svg
             ref={svgRef}
             viewBox={`${-MARGIN} ${-MARGIN} ${VIEW} ${VIEW}`}
@@ -266,32 +284,42 @@ export function GalaxyPage() {
                   </g>
                 ))}
 
-              {/* Trajectoires des flottes */}
+              {/* Trajectoires des flottes (v4.4 : couleur selon le camp, trajet restant animé) */}
               {visibleFleets.map((f) => {
                 const from = mapPosition(f.ownerUid);
                 const to = mapPosition(f.targetUid);
-                const hostile = targetsPlayer(f, uid ?? undefined) && f.ownerUid !== uid && ((f.mission ?? "attack") === "attack" || f.mission === "pirate");
-                const color = hostile ? "var(--color-danger-glow)" : f.mission === "recycle" ? "var(--color-mint-glow)" : "var(--color-cyan-glow)";
+                const style = routeStyle(f, uid ?? undefined);
                 const t = fleetProgress(f, now);
                 const px = from.x + (to.x - from.x) * t;
                 const py = from.y + (to.y - from.y) * t;
-                const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI + (f.status === "returning" ? 180 : 0);
+                const returning = f.status === "returning";
+                const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI + (returning ? 180 : 0);
+                // Reste à parcourir : vers la cible à l'aller, vers la base au retour.
+                const end = returning ? from : to;
+                const hover = (e: ReactPointerEvent) => {
+                  const box = cardRef.current?.getBoundingClientRect();
+                  if (box) setHoverFleet({ id: f.id, x: e.clientX - box.left, y: e.clientY - box.top });
+                };
                 return (
-                  <g key={f.id}>
+                  <g key={f.id} onPointerEnter={hover} onPointerMove={hover} onPointerLeave={() => setHoverFleet(null)}>
+                    <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={style.color} strokeOpacity={0.14} strokeWidth={0.3 / k} />
                     <line
-                      x1={from.x}
-                      y1={from.y}
-                      x2={to.x}
-                      y2={to.y}
-                      stroke={color}
-                      strokeOpacity={0.45}
-                      strokeWidth={0.35 / k}
+                      x1={px}
+                      y1={py}
+                      x2={end.x}
+                      y2={end.y}
+                      stroke={style.color}
+                      strokeOpacity={0.7}
+                      strokeWidth={0.4 / k}
                       strokeDasharray={`${1.5 / k} ${1 / k}`}
                       className="fleet-route"
+                      style={{ animationDuration: `${1.2 / Math.max(1, k * 0.6)}s` }}
                     />
-                    <g transform={`translate(${px} ${py}) rotate(${angle})`} style={{ transition: "transform 0.25s linear" }}>
-                      <circle r={2.2 / k} fill={color} opacity={0.18} />
-                      <path d={`M ${1.6 / k} 0 L ${-1 / k} ${-0.9 / k} L ${-0.4 / k} 0 L ${-1 / k} ${0.9 / k} Z`} fill={color} />
+                    <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth={2.4 / k} className="cursor-help" />
+                    <g transform={`translate(${px} ${py}) rotate(${angle})`} style={{ transition: "transform 0.25s linear" }} className="cursor-help">
+                      <circle r={3 / k} fill={style.color} opacity={0.12} className={style.hostile ? "animate-pulse" : undefined} />
+                      <circle r={1.8 / k} fill={style.color} opacity={0.22} />
+                      <path d={`M ${1.6 / k} 0 L ${-1 / k} ${-0.9 / k} L ${-0.4 / k} 0 L ${-1 / k} ${0.9 / k} Z`} fill={style.color} />
                     </g>
                   </g>
                 );
@@ -385,6 +413,32 @@ export function GalaxyPage() {
             </g>
           </svg>
 
+          {hoverFleet &&
+            (() => {
+              const f = visibleFleets.find((x) => x.id === hoverFleet.id);
+              if (!f) return null;
+              const style = routeStyle(f, uid ?? undefined);
+              const eta = f.status === "returning" ? f.returnAtMs : f.arriveAtMs;
+              return (
+                <div
+                  className="pointer-events-none absolute z-10 max-w-[16rem] border bg-space-950/90 px-2.5 py-1.5 text-xs shadow-lg backdrop-blur"
+                  style={{ left: Math.min(hoverFleet.x + 14, (cardRef.current?.clientWidth ?? 400) - 260), top: hoverFleet.y + 14, borderColor: style.color }}
+                >
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: style.color }}>
+                    {style.label} · {FLEET_MISSION_LABELS[f.mission ?? "attack"] ?? f.mission}
+                  </p>
+                  <p className="text-slate-200">
+                    {f.status === "returning" ? `${f.targetPseudo} → ${f.ownerPseudo}` : `${f.ownerPseudo} → ${f.targetPseudo}`}
+                  </p>
+                  {eta && (
+                    <p className="font-mono text-slate-400">
+                      {f.status === "returning" ? "Retour" : "Arrivée"} à {new Date(eta).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · dans {formatDuration(Math.max(0, (eta - now) / 1000))}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
           {blips.length === 0 && (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
@@ -404,6 +458,9 @@ export function GalaxyPage() {
               <span className="h-0.5 w-3 bg-danger-glow" /> Flotte hostile
             </span>
             <span className="flex items-center gap-1">
+              <span className="h-0.5 w-3 bg-ember-glow" /> Seigneur de guerre
+            </span>
+            <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 bg-mint-glow" /> Débris
             </span>
             <span className="flex items-center gap-1">
@@ -413,7 +470,7 @@ export function GalaxyPage() {
           <p className="pointer-events-none absolute right-2 top-2 rounded-md bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
-        </Card>
+        </div>
 
         <div className="flex flex-col gap-4">
           {selected && (

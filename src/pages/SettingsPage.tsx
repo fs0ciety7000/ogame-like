@@ -2,7 +2,7 @@ import { useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, Palmtree, ShieldCheck, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
 import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
+import { SFX_SAMPLES } from "@/lib/sfx";
+import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -458,6 +460,57 @@ function ThemeCard() {
   );
 }
 
+function SoundCard() {
+  const enabled = useSfxStore((s) => s.enabled);
+  const volumes = useSfxStore((s) => s.volumes);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4" /> Son
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <label className="flex items-center justify-between gap-3">
+          <span>
+            <span className="text-slate-200">Effets sonores</span>
+            <span className="block text-xs text-slate-500">Coupés par défaut sur mobile. Le bouton haut-parleur de l'en-tête fait la même chose.</span>
+          </span>
+          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={enabled} onChange={(e) => setSfxEnabled(e.target.checked)} />
+        </label>
+        <div className={cn("grid gap-3 border-t border-white/5 pt-3 sm:grid-cols-2", !enabled && "pointer-events-none opacity-40")}>
+          {SFX_CATEGORIES.map((c) => (
+            <div key={c.id} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-200">{c.label}</span>
+                <span className="flex items-center gap-2">
+                  <span className="w-9 text-right font-mono text-xs text-slate-400">{Math.round(volumes[c.id] * 100)} %</span>
+                  {c.id !== "ambience" && (
+                    <button type="button" title="Écouter" className="text-slate-500 hover:text-cyan-glow" onClick={() => SFX_SAMPLES[c.id]()}>
+                      <Play className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(volumes[c.id] * 100)}
+                aria-label={`Volume ${c.label}`}
+                onChange={(e) => setSfxVolume(c.id, Number(e.target.value) / 100)}
+                className="w-full accent-cyan-400"
+              />
+              <span className="text-xs text-slate-500">{c.description}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
@@ -501,6 +554,7 @@ export function SettingsPage() {
       </Card>
 
       <ThemeCard />
+      <SoundCard />
       <HelpCard />
       <BrowserNotificationsCard />
       <VacationCard />
