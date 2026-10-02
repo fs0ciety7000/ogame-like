@@ -1,3 +1,4 @@
+import { recordChronicle } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { getTradeRate, RESOURCE_LIST } from "@/game/resources";
 import { bumpStat } from "@/game/stats";
@@ -117,6 +118,7 @@ export function acceptOffer(
   bumpStat(seller, "marketTrades");
   bumpStat(seller, "marketTax", tax);
   bumpStat(buyer, "marketVolume", offer.giveAmount);
+  recordChronicle(buyer, "market", now);
   bumpStat(seller, "marketVolume", offer.wantAmount - tax);
   return { tax, sameAlliance };
 }

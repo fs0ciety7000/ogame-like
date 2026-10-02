@@ -1,3 +1,4 @@
+import { bossEmblems } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { bountyState, KESH } from "@/game/bounties";
 import { commanderLevel, commandersState, type CommanderId } from "@/game/commanders";
@@ -31,7 +32,7 @@ export interface CosmeticOption {
 
 export const PROFILE_RULES = { mottoMax: 60 };
 
-type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass">>;
+type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle">>;
 
 const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [
   { id: "nebula", label: "Nébuleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
@@ -88,6 +89,8 @@ export function emblemOptions(p: StylePlayer): CosmeticOption[] {
     })),
     { id: "kesh", label: "Emblème de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du Léviathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
+    // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
+    ...bossEmblems(p).map((b) => ({ ...b, hint: "Participer à la chute du boss de saison" })),
   ];
 }
 

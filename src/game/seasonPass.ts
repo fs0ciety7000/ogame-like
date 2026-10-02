@@ -27,6 +27,9 @@ export const PASS_POINTS = {
   mission: 2,
   /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
   vendetta: 40,
+  /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
+  chronicle: 40,
+  seasonBoss: 60,
 };
 export type PassSource = keyof typeof PASS_POINTS;
 
@@ -72,6 +75,50 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }],
 ];
 
+/* ---------- v4.3 : réglages modifiables depuis l'administration ---------- */
+
+export interface SeasonPassConfig {
+  rules: typeof PASS_RULES;
+  points: typeof PASS_POINTS;
+  tiers: PassReward[][];
+}
+
+const DEFAULT_PASS: SeasonPassConfig = structuredClone({ rules: PASS_RULES, points: PASS_POINTS, tiers: PASS_TIERS });
+
+export function defaultSeasonPassConfig(): SeasonPassConfig {
+  return structuredClone(DEFAULT_PASS);
+}
+
+/** Applique le passe personnalisé (sections absentes = valeurs du code). */
+export function setSeasonPass(cfg: Partial<SeasonPassConfig> | null | undefined): void {
+  const d = defaultSeasonPassConfig();
+  Object.assign(PASS_RULES, d.rules, cfg?.rules ?? {});
+  Object.assign(PASS_POINTS, d.points, cfg?.points ?? {});
+  const tiers = Array.isArray(cfg?.tiers) && cfg!.tiers.length > 0 ? cfg!.tiers : d.tiers;
+  PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers));
+  PASS_RULES.tiers = PASS_TIERS.length;
+}
+
+const REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "cosmetic"];
+
+export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): string[] {
+  const errors: string[] = [];
+  if (!cfg) return errors;
+  if (cfg.rules && !(cfg.rules.pointsPerTier >= 1)) errors.push("Passe : points par palier ≥ 1.");
+  for (const [k, v] of Object.entries(cfg.points ?? {})) if (!(typeof v === "number" && v >= 0)) errors.push(`Passe : points invalides pour « ${k} ».`);
+  if (cfg.tiers) {
+    if (cfg.tiers.length < 1 || cfg.tiers.length > 60) errors.push("Passe : entre 1 et 60 paliers.");
+    cfg.tiers.forEach((list, i) =>
+      (list ?? []).forEach((r) => {
+        if (!REWARD_KINDS.includes(r?.kind)) errors.push(`Passe, palier ${i + 1} : récompense inconnue.`);
+        if (r?.kind === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
+        if (r?.kind === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : rareté inconnue.`);
+      }),
+    );
+  }
+  return errors;
+}
+
 /** Ambre donnée à la place d'une capsule quand la réserve est pleine. */
 const CAPSULE_AMBER = 15;
 
@@ -111,7 +158,14 @@ export function passTier(points: number): number {
 }
 
 /** Ajoute des points (le passe plafonne à 30 paliers). Modifie le joueur. */
+/** v4.3 : les Chroniques suivent les mêmes actions que le passe. */
+let passHook: ((player: PlayerState, source: PassSource, now: number, times: number) => void) | null = null;
+export function onPassPoints(hook: typeof passHook): void {
+  passHook = hook;
+}
+
 export function addPassPoints(player: PlayerState, source: PassSource, now: number, times = 1): void {
+  passHook?.(player, source, now, times);
   const st = passState(player, now);
   const max = PASS_RULES.tiers * PASS_RULES.pointsPerTier;
   st.points = Math.min(max, st.points + PASS_POINTS[source] * Math.max(0, times));

@@ -19,6 +19,7 @@ import * as bs from "@/services/bountyService";
 import * as rs from "@/services/referralService";
 import * as vcs from "@/services/victoryCardService";
 import * as ws from "@/services/warlordService";
+import * as sbs from "@/services/seasonBossService";
 import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
@@ -1808,6 +1809,54 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const st = await admin.collection("game_config").getFirstListItem('key="warlords_state"').catch(() => null);
       if (st) await admin.collection("game_config").delete(st.id);
       await loginPlayer(B.email, B.pw);
+    }
+  });
+
+  it("v4.3 chronicles: episode claimed, season boss assault, rewards on stop, admin pass", async () => {
+    const bBefore = await snap(bId);
+    const bossRec = async () => admin.collection("game_config").getFirstListItem('key="season_boss"').catch(() => null);
+    try {
+      // Épisode 1 du mois en cours rempli par l'équipe, réclamé par le joueur.
+      await loginPlayer(B.email, B.pw);
+      const monthId = new Date().toISOString().slice(0, 7);
+      const hasChronicle = ["2026-10", "2026-11", "2026-12"].includes(monthId);
+      if (hasChronicle) {
+        await admin.collection("players").update(bId, { chronicle: { monthId, progress: [99, 0, 0, 0], claimed: [], emblems: [] }, seasonPass: null, vacation: null });
+        expect((await ps.claimChronicleEpisode(0)).points).toBe(40);
+        await expect(ps.claimChronicleEpisode(0)).rejects.toThrow(/déjà/);
+        expect((await snap(bId)).seasonPass.points).toBeGreaterThanOrEqual(40);
+      }
+
+      // Boss de saison lancé par l'équipe, assaut, arrêt et récompenses.
+      const existing = await bossRec();
+      if (existing) await admin.collection("game_config").delete(existing.id);
+      if (hasChronicle) {
+        await admin.send("/api/cosmic/admin/seasonboss", { method: "POST", body: { action: "start" } });
+        await admin.collection("players").update(bId, { units: { ...bBefore.units, chasseur: { level: 1, count: 50 } }, seasonPass: null });
+        for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+        const sent = await sbs.sendSeasonBossAssault({ chasseur: 50 }, "balanced");
+        await expect(sbs.sendSeasonBossAssault({ chasseur: 1 }, "balanced")).rejects.toThrow(/Prochain assaut/);
+        await admin.collection("fleets").update((sent as { id: string }).id, { arriveAtMs: Date.now() - 1000 });
+        await ps.syncPlayer("");
+        const state = (await bossRec())!.data;
+        expect(state.contributions[bId].damage).toBeGreaterThan(0);
+        await admin.send("/api/cosmic/admin/seasonboss", { method: "POST", body: { action: "stop" } });
+        const after = await snap(bId);
+        expect(after.seasonPass.points).toBeGreaterThanOrEqual(60);
+        expect((await bossRec())!.data.rewarded).toBe(true);
+      }
+
+      // Passe personnalisé : un seul palier, appliqué par le serveur.
+      const cfg = await admin.collection("game_config").create({ key: "seasonPass", data: { tiers: [[{ kind: "amber", amount: 7 }]], points: {}, rules: { pointsPerTier: 10, tiers: 1 } } });
+      await admin.collection("players").update(bId, { seasonPass: { seasonId: monthId, points: 10, claimed: [], loginDay: "", completed: [] }, bounties: { ...(bBefore.bounties ?? {}), amber: 0 } });
+      await ps.claimPassTier(1);
+      expect((await snap(bId)).bounties.amber).toBe(7);
+      await admin.collection("game_config").delete(cfg.id);
+    } finally {
+      const st = await bossRec();
+      if (st) await admin.collection("game_config").delete(st.id);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, chronicle: null, bounties: bBefore.bounties, relics: null, titles: bBefore.titles ?? null });
     }
   });
 

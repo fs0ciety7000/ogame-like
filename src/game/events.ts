@@ -121,7 +121,7 @@ export function parisOffsetMs(utcMs: number): number {
 }
 
 /** Heure locale de Paris (exprimée comme un instant « UTC ») → instant réel. */
-function parisLocalToUtc(localMs: number): number {
+export function parisLocalToUtc(localMs: number): number {
   return localMs - parisOffsetMs(localMs - 2 * HOUR);
 }
 

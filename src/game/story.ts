@@ -4,11 +4,18 @@
    Confrérie du Vide (Varan), affaibli : le joueur le repousse forcément.
 ===================================================== */
 
-export type Speaker = "vashka" | "varan";
+export type Speaker = "vashka" | "varan" | "kor" | "ilyon" | "nerea" | "brannoc" | "lysa" | "vesper";
 
 export const STORY_SPEAKERS: Record<Speaker, { name: string; role: string; image: string; color: string }> = {
   vashka: { name: "Vashka", role: "Matriarche-Chasseuse · Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
   varan: { name: "Capitaine Orsk Varan", role: "Confrérie du Vide", image: "/assets/story/varan.webp", color: "#ff7a45" },
+  // v4.3 : voix des Chroniques mensuelles.
+  kor: { name: "Madame Vashti Kor", role: "Cartel Néon", image: "/assets/story/cartel.webp", color: "#ff5fd2" },
+  ilyon: { name: "Cantor Ilyon", role: "Déserteur du Chœur", image: "/assets/warlords/ilyon.webp", color: "#b18cff" },
+  nerea: { name: "Sœur Néréa des Échos", role: "Marchande", image: "/assets/warlords/nerea.webp", color: "#d6b4ff" },
+  brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
+  lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
+  vesper: { name: "L'Archonte Vesper", role: "Le Chœur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
 };
 
 export interface StoryLine {

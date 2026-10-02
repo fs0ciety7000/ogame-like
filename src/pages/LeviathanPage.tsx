@@ -23,7 +23,7 @@ import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import { assetUrl } from "@/lib/assets";
 
-function AssaultDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown> }) {
   const player = usePlayerStore((s) => s.player);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [formation, setFormation] = useState<FormationId>("balanced");
@@ -36,7 +36,7 @@ function AssaultDialog({ open, onClose }: { open: boolean; onClose: () => void }
   const send = async () => {
     setBusy(true);
     try {
-      await sendLeviathanAssault(selected, formation);
+      await sendAssault(selected, formation);
       triggerWarpEffect();
       toast.success(`Flotte lancée : impact dans ${LEVIATHAN_RULES.flightMinutes} min.`);
       setFleet({});
@@ -51,7 +51,7 @@ function AssaultDialog({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
-        <DialogTitle>Assaut sur le Léviathan</DialogTitle>
+        <DialogTitle>{title}</DialogTitle>
         <p className="text-sm text-slate-400">
           Les dégâts valent la puissance d'attaque de la flotte. {Math.round(LEVIATHAN_RULES.lossPct * 100)} % des vaisseaux sont détruits (en partie réparés par l'Atelier). Trajet de {LEVIATHAN_RULES.flightMinutes} min, puis retour.
         </p>
@@ -90,7 +90,7 @@ function AssaultDialog({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-function Ranking({ state, uid }: { state: LeviathanState; uid: string }) {
+export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) {
   const ranking = leviathanRanking(state);
   if (ranking.length === 0) return <p className="text-xs text-slate-500">Personne n'a encore frappé.</p>;
   const top = ranking[0].damage;

@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { useSeasonAccent } from "@/lib/seasonSkin";
 
 /* Nappe de nébuleuses en arrière-plan (taches de couleur floutées, sans
  * image externe). Chaque page a sa teinte ; le changement se fait en fondu
@@ -24,7 +25,9 @@ const DEFAULT_PALETTE: Palette = ["var(--color-cyan-glow)", "var(--color-ember-g
 
 export function Nebula() {
   const { pathname } = useLocation();
-  const palette = PALETTES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? DEFAULT_PALETTE;
+  const season = useSeasonAccent();
+  // v4.3 : sur les pages sans teinte propre, la couleur du mois prend la tête.
+  const palette = PALETTES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? (season ? ([season.accent, DEFAULT_PALETTE[1], DEFAULT_PALETTE[0]] as Palette) : DEFAULT_PALETTE);
 
   return (
     <div className="nebula-field" aria-hidden>
