@@ -1,6 +1,6 @@
 ---
 version: 3.8.0
-iteration: 35
+iteration: 36
 date: 2026-10-01
 title: Défis de la semaine, diplomatie et combats mieux préparés
 ---
@@ -31,5 +31,3 @@ Une mise à jour pour jouer ensemble… ou se préparer à s'affronter.
 ## Confort
 - Accueil : **« Que faire maintenant ? »** signale les chantiers inactifs, la recherche libre, les contrats à récupérer, l'entrepôt plein ou la flotte à quai.
 - **Recherche globale** (Ctrl+K) : joueurs (ouvre leur fiche), alliances, unités, bâtiments et technologies.
-- **Listes de ressources** avec les vraies icônes au comptoir, au marché et dans l'administration ; montants d'alliance illustrés.
-- **Unités** : survole la vitesse ou la capacité pour voir le calcul (base × niveau).
