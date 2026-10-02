@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { KESH, rankName } from "@/game/bounties";
+import { assetUrl } from "@/lib/assets";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PlayerName } from "@/components/ui/player-name";
@@ -9,7 +11,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { seasonLabel } from "@/game/seasons";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 /* Fiche publique détaillée d'un joueur (v3.7) : rang, colonies, faits
    d'armes, titres, saisons passées et participation au Léviathan. */
@@ -53,9 +55,10 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className={cn("max-w-xl", feats?.kesh?.frame && "kesh-frame")}>
         <div className="flex items-center gap-3 pr-6">
           <img src={getRankIcon(entry?.xp ?? 0)} alt="" className="h-14 w-14 shrink-0 object-contain" />
+          {feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
           <div className="min-w-0">
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
               <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} />
@@ -97,7 +100,14 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                   <Stat label="Léviathans abattus" value={formatNumber(feats.leviathanKills)} />
                   <Stat label="Guerres gagnées" value={formatNumber(feats.warsWon)} />
                   <Stat label="Ascensions" value={formatNumber(entry.ascensions ?? 0)} />
+                  {(feats.bounties ?? 0) > 0 && <Stat label="Primes remplies" value={formatNumber(feats.bounties ?? 0)} />}
                 </div>
+                {feats.kesh && (feats.kesh.rank > 0 || feats.kesh.shieldUntilMs > Date.now()) && (
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gold-glow">
+                    {feats.kesh.rank > 0 && <span>Essaim Kesh'Vaar : {rankName(feats.kesh.rank)}</span>}
+                    {feats.kesh.shieldUntilMs > Date.now() && <span className="border border-gold-glow/40 px-1.5 py-px">Voile de chitine actif</span>}
+                  </p>
+                )}
               </section>
             )}
 

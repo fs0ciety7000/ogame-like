@@ -590,7 +590,7 @@ export function dropShield(player: PlayerState, now: number): void {
 }
 
 /** Consomme un brouilleur (true si l'espionnage échoue). */
-export function useJammer(player: PlayerState): boolean {
+export function consumeJammer(player: PlayerState): boolean {
   const st = bountyState(player);
   if (st.jammers <= 0) return false;
   st.jammers -= 1;
@@ -599,7 +599,7 @@ export function useJammer(player: PlayerState): boolean {
 }
 
 /** Consomme une balise de repli. */
-export function useBeacon(player: PlayerState): void {
+export function consumeBeacon(player: PlayerState): void {
   const st = bountyState(player);
   if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : achète-en au Comptoir de la Ruche.");
   st.beacons -= 1;

@@ -2,7 +2,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CornerUpLeft, Rocket, Wind } from "lucide-react";
+import { AlertTriangle, CornerUpLeft, Rocket, Wind, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
 import { GameActionError, recallFleet } from "@/services/playerService";
+import { fireRecallBeacon } from "@/services/bountyService";
+import { bountyState } from "@/game/bounties";
+import { usePlayerStore } from "@/store/playerStore";
 import { EmojiText, GameIcon } from "@/components/ui/game-icon";
 
 /** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
@@ -46,6 +49,10 @@ function fleetLabel(f: Fleet, outbound: boolean): string {
         : outbound
           ? `🛡️ Garnison → ${f.targetPseudo}`
           : `🛡️ ← retour de chez ${f.targetPseudo}`;
+    case "bounty":
+      return outbound ? `🐝 Prime : ${f.targetPseudo}` : `🐝 ← retour de la traque de ${f.targetPseudo}`;
+    case "elite":
+      return outbound ? `🐝 Proie d'élite : ${f.targetPseudo}` : "🐝 ← retour de la proie d'élite";
     case "recycle":
       return outbound
         ? `♻️ Débris de ${f.targetPseudo}`
@@ -73,6 +80,7 @@ export function FleetsPanel({
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
   const [patrolOpen, setPatrolOpen] = useState(false);
+  const beacons = usePlayerStore((s) => (s.player ? bountyState(s.player).beacons : 0));
   const now = Date.now();
 
   const incoming = fleets.filter((f) => isHostile(f, uid));
@@ -91,6 +99,17 @@ export function FleetsPanel({
     hosted.length === 0
   )
     return null;
+
+  const beacon = async (fleet: Fleet) => {
+    setPending(fleet.id);
+    try {
+      toast.success((await fireRecallBeacon(fleet.id)).message);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Balise inutilisable.");
+    } finally {
+      setPending(null);
+    }
+  };
 
   const recall = async (fleet: Fleet) => {
     setPending(fleet.id);
@@ -166,7 +185,8 @@ export function FleetsPanel({
         const outbound = f.status === "outbound";
         const stationed = f.status === "stationed";
         const decision = f.status === "decision";
-        const recallable = f.mission !== "expedition" && f.mission !== "leviathan";
+        const recallable = f.mission !== "expedition" && f.mission !== "leviathan" && f.mission !== "elite";
+        const beaconable = beacons > 0 && f.mission !== "expedition" && !decision && !((f.mission === "leviathan" || f.mission === "elite") && outbound);
         const at = decision
           ? (f.stationedUntilMs ?? now)
           : outbound
@@ -240,6 +260,18 @@ export function FleetsPanel({
                   onClick={() => void recall(f)}
                 >
                   <CornerUpLeft className="mr-1 h-3.5 w-3.5" /> Rappeler
+                </Button>
+              )}
+              {beaconable && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-gold-glow"
+                  disabled={pending === f.id}
+                  title={`Balise de repli : retour immédiat (${beacons} en réserve)`}
+                  onClick={() => void beacon(f)}
+                >
+                  <Zap className="mr-1 h-3.5 w-3.5" /> Balise
                 </Button>
               )}
             </div>

@@ -36,7 +36,7 @@ export function exchangeBountyAmber(amount: number): Promise<{ gain: Partial<Rec
   return callGame("bounty", { action: "exchange", amount });
 }
 
-export function useRecallBeacon(fleetId: string): Promise<{ message: string }> {
+export function fireRecallBeacon(fleetId: string): Promise<{ message: string }> {
   return callGame("bounty", { action: "beacon", fleetId });
 }
 

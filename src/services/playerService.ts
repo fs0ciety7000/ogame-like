@@ -426,6 +426,9 @@ export interface PlayerFeats {
   expeditions: number;
   leviathanKills: number;
   warsWon: number;
+  /** v3.9 : primes Kesh'Vaar. */
+  bounties?: number;
+  kesh?: { rank: number; frame: boolean; emblem: boolean; shieldUntilMs: number };
 }
 
 export interface PlayerSheet {

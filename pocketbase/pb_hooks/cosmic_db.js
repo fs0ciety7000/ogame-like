@@ -387,7 +387,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
     return;
   }
   // v3.9 : Brouilleur d'essaim de la cible, les sondes rentrent bredouilles.
-  if (game.useJammer(target.player)) {
+  if (game.consumeJammer(target.player)) {
     savePlayer(txApp, game, target, target.player, target.queues);
     notify(txApp, fleet.ownerUid, [{ kind: "spy", title: "Sondes brouillées", message: `Un brouilleur kesh'vaar protège ${fleet.targetPseudo} : tes sondes rentrent sans rapport.`, createdAtMs: now, read: false }]);
     notify(txApp, targetUid, [{ kind: "spy-detected", title: "Espionnage brouillé", message: `Ton brouilleur d'essaim a aveuglé les sondes de ${fleet.ownerPseudo}.`, createdAtMs: now, read: false }]);
@@ -3127,7 +3127,7 @@ function bountyRequest(e) {
         if (!rec) throw new game.GameActionError("Flotte introuvable.");
         const wasStatus = rec.getString("status");
         const fleet = game.beaconReturn(fleetFromRecord(rec), uid, now);
-        game.useBeacon(player);
+        game.consumeBeacon(player);
         if (fleet.mission === "bounty" && wasStatus === "outbound") game.releaseBounty(player, game.bountyIdOf(fleet.targetUid));
         const done = game.completeFleetReturn(player, fleet, now);
         notify(txApp, uid, done.notifications);

@@ -66,7 +66,7 @@ export {
   resolveBountyHunt,
   resolveEliteAssault,
   spawnElite,
-  useBeacon,
-  useJammer,
+  consumeBeacon,
+  consumeJammer,
 } from "@/game/bounties";
 export { beaconReturn, bountyIdOf } from "@/game/fleets";

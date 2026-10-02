@@ -111,6 +111,8 @@ __export(hooksEntry_exports, {
   completeFleetReturn: () => completeFleetReturn,
   computeGameStats: () => computeGameStats,
   concludeWar: () => concludeWar,
+  consumeBeacon: () => consumeBeacon,
+  consumeJammer: () => consumeJammer,
   createOffer: () => createOffer,
   currentSeasonId: () => currentSeasonId,
   debrisTotal: () => debrisTotal,
@@ -198,8 +200,6 @@ __export(hooksEntry_exports, {
   startChallenge: () => startChallenge,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
-  useBeacon: () => useBeacon,
-  useJammer: () => useJammer,
   utcDayStart: () => utcDayStart,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
@@ -4114,14 +4114,14 @@ function dropShield(player, now) {
     player.bounties = st;
   }
 }
-function useJammer(player) {
+function consumeJammer(player) {
   const st = bountyState(player);
   if (st.jammers <= 0) return false;
   st.jammers -= 1;
   player.bounties = st;
   return true;
 }
-function useBeacon(player) {
+function consumeBeacon(player) {
   const st = bountyState(player);
   if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
   st.beacons -= 1;

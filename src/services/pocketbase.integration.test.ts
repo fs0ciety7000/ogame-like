@@ -1458,7 +1458,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const other = viewBounties(me, Date.now()).board.find((c) => c.status === "open")!;
       const hunt = await bs.sendBountyHunt(other.id, { chasseur: 10 }, "balanced");
       fleets.push(hunt.id);
-      await bs.useRecallBeacon(hunt.id);
+      await bs.fireRecallBeacon(hunt.id);
       expect((await pb.collection("fleets").getOne(hunt.id)).status).toBe("done");
       me = await snap(bId);
       expect(bountyState(me).board.find((c) => c.id === other.id)?.status).toBe("open");
