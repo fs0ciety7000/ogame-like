@@ -6,6 +6,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { ENDGAME_TECH_IDS, TECHNOLOGIES } from "@/game/technologies";
 import { UNIT_BASE_STATS, UNITS } from "@/game/units";
 import { FACTIONS, factionOfLair, PIRATE_OWNER_UID } from "@/game/pirates";
+import { computeRetention } from "@/game/retention";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -68,6 +69,8 @@ export interface GameStats {
     buildings: { id: string; name: string; builders: number; avgLevel: number; maxLevel: number; resource: string | null; perHour: number }[];
     units: { id: string; name: string; owners: number; total: number; attacks: number; winPct: number }[];
   };
+  /** v4.5 : rétention (connexions par jour, cohortes, prise en main). */
+  retention?: import("@/game/retention").RetentionStats;
   insights: string[];
 }
 
@@ -212,6 +215,7 @@ export function computeGameStats(
     },
     balance: computeBalance(players, reports, now, balanceDays),
     endgame: computeEndgame(players, queues, reports, now, balanceDays),
+    retention: computeRetention(players, now),
     insights: [],
   };
   stats.insights = computeInsights(stats);

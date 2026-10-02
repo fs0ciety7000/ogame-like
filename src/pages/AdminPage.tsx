@@ -42,6 +42,7 @@ import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
 import { PassPanel } from "@/pages/admin/PassPanel";
 import { ChroniclesPanel } from "@/pages/admin/ChroniclesPanel";
+import { AnnouncementsPanel } from "@/pages/admin/AnnouncementsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
@@ -65,7 +66,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     items: [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
-      { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site : annonces, évènements, alertes." },
+      { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site et annonces plein écran : création et programmation." },
       { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
       { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
     ],
@@ -190,7 +191,10 @@ export function AdminPage() {
           <EmojisPanel />
         </TabsContent>
         <TabsContent value="banners">
-          <BannersPanel />
+          <div className="flex flex-col gap-6">
+            <BannersPanel />
+            <AnnouncementsPanel />
+          </div>
         </TabsContent>
         <TabsContent value="maintenance">
           <MaintenancePanel />

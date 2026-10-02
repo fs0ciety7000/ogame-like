@@ -912,12 +912,12 @@ function getBuildingUpgradeTime(building, nextLevel) {
 }
 function getRepairPercent(buildings) {
   var _a;
-  let pct4 = 0;
+  let pct5 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    pct4 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+    pct5 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
-  return pct4;
+  return pct5;
 }
 function repairPercentAt(effect, level3) {
   var _a;
@@ -1156,8 +1156,8 @@ function resolveCombat(params) {
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct4 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount2 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct4);
+      const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
+      const amount2 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
       wanted[res] = amount2;
       total2 += amount2;
     }
@@ -2204,10 +2204,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY8 = 864e5;
+  const DAY9 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY8) * DAY8;
-  return new Date(midnight - (day + 6) % 7 * DAY8).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY9) * DAY9;
+  return new Date(midnight - (day + 6) % 7 * DAY9).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -2878,8 +2878,8 @@ function targetPower(faction, player) {
 function raidPower(faction, player, notoriety) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
-  const pct4 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct4));
+  const pct5 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct5));
 }
 function exposedStock(player) {
   var _a, _b, _c;
@@ -3645,28 +3645,28 @@ function activateCapsule(player, typeIn, levelIn, now) {
   const st = synthesisState(player);
   const current2 = st[type];
   if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct4 = takeCapsule(player, type, levelIn);
+  const pct5 = takeCapsule(player, type, levelIn);
   const after = synthesisState(player);
-  after[type] = { pct: pct4, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
   player.synthesis = after;
-  return pct4;
+  return pct5;
 }
 function consumeArmor(player, now) {
   const st = synthesisState(player);
   if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct4 = st.armor.pct;
+  const pct5 = st.armor.pct;
   st.armor = null;
   player.synthesis = st;
-  return pct4;
+  return pct5;
 }
 function activeVeil(player, now) {
   const v = synthesisState(player).veil;
   return v && v.untilMs > now ? v.pct : 0;
 }
-function decoyUnits(real, pct4, pool, random = Math.random) {
+function decoyUnits(real, pct5, pool, random = Math.random) {
   var _a;
   const out = {};
-  const swing = pct4 / 100;
+  const swing = pct5 / 100;
   for (const [id, qty] of Object.entries(real)) {
     if (!(qty > 0)) continue;
     const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
@@ -3679,9 +3679,9 @@ function decoyUnits(real, pct4, pool, random = Math.random) {
   }
   return out;
 }
-function veilCounts(entries, pct4, random = Math.random) {
+function veilCounts(entries, pct5, random = Math.random) {
   if (!entries) return entries;
-  const swing = pct4 / 100;
+  const swing = pct5 / 100;
   return Object.fromEntries(Object.entries(entries).map(([id, e]) => [id, __spreadProps(__spreadValues({}, e), { count: Math.max(0, Math.round(e.count * (1 + (random() * 2 - 1) * swing))) })]));
 }
 function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
@@ -4354,8 +4354,8 @@ function protectedAmount(buildings, res, techLevels2, allianceLevels) {
   if (!COMMON_RESOURCES2.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
   const bastion = allianceBastionBonus(allianceLevels);
-  const pct4 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct4) : 0;
+  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
 }
 function rareRewardScale(player) {
   var _a;
@@ -5892,10 +5892,10 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
-    const pct4 = between(R.wreckMinPct, R.wreckMaxPct, random);
+    const pct5 = between(R.wreckMinPct, R.wreckMaxPct, random);
     const found = {};
     for (const [id, n] of Object.entries(fleet.units)) {
-      const extra = Math.floor(n * pct4);
+      const extra = Math.floor(n * pct5);
       if (extra > 0) found[id] = extra;
     }
     if (Object.keys(found).length === 0) {
@@ -7840,6 +7840,112 @@ function setOnboardingHidden(player, hidden) {
   player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
 }
 
+// src/game/retention.ts
+var DAY6 = 24 * 36e5;
+var ACTIVITY_DAYS_KEPT = 60;
+function parisDay(now) {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
+}
+function dayDiff(a, b) {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY6);
+}
+function recordActiveDay(player, now) {
+  var _a, _b, _c;
+  const day = parisDay(now);
+  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
+  if (days[days.length - 1] === day) return;
+  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
+}
+var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+function computeRetention(players, now) {
+  var _a, _b, _c;
+  const today = parisDay(now);
+  const lastSeen = (p) => {
+    var _a2;
+    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
+  };
+  const days = (p) => {
+    var _a2, _b2;
+    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
+  };
+  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
+  const allDays = players.flatMap((p) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
+  }).sort();
+  const trackingSince = (_a = allDays[0]) != null ? _a : null;
+  const daily = Array.from({ length: 30 }, (_, i) => {
+    const day = parisDay(now - (29 - i) * DAY6);
+    return {
+      day,
+      active: players.filter((p) => days(p).has(day)).length,
+      signups: players.filter((p) => signupDay(p) === day).length
+    };
+  });
+  const active = {
+    d1: players.filter((p) => now - lastSeen(p) < DAY6).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
+    total: players.length
+  };
+  const cohorts = Array.from({ length: 6 }, (_, i) => {
+    const end = now - i * 7 * DAY6;
+    const start = end - 7 * DAY6;
+    const members = players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
+    });
+    const tracked = trackingSince ? members.filter((p) => {
+      var _a2;
+      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
+    }) : [];
+    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
+    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
+    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
+    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    return {
+      week: parisDay(start),
+      signups: members.length,
+      d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
+      d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
+      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
+    };
+  }).reverse();
+  const recent = players.filter((p) => {
+    var _a2;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY6;
+  });
+  const funnel = ONBOARDING_STEPS.map((step) => {
+    const reached = recent.filter((p) => {
+      try {
+        return step.done(p);
+      } catch (e) {
+        return false;
+      }
+    }).length;
+    return { id: step.id, label: step.label, reached, pct: pct3(reached, recent.length) };
+  });
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY6);
+  const stopAt = /* @__PURE__ */ new Map();
+  for (const p of stalled) {
+    const step = ONBOARDING_STEPS.find((s) => {
+      try {
+        return !s.done(p);
+      } catch (e) {
+        return true;
+      }
+    });
+    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
+    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
+  }
+  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
+    var _a2, _b2;
+    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
+  }).sort((a, b) => b.count - a.count);
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length };
+}
+
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60 };
 var FREE_BANNERS = [
@@ -7989,6 +8095,7 @@ function applyAction(s, action) {
       const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1e3 + 5, 300);
       player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
       if (!onVacation(player, now)) passDailyLogin(player, now);
+      recordActiveDay(player, now);
       const resourceGains = {};
       for (const key of Object.keys(player.resources)) {
         const delta = ((_a = player.resources[key]) != null ? _a : 0) - ((_b = s.preFlushPlayer.resources[key]) != null ? _b : 0);
@@ -8261,14 +8368,14 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 
 // src/game/analytics.ts
 var HOUR8 = 36e5;
-var DAY6 = 24 * HOUR8;
+var DAY7 = 24 * HOUR8;
 function median2(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
-var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+var pct4 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
 var round1 = (n) => Math.round(n * 10) / 10;
 function topCounts(values, limit) {
   const counts = /* @__PURE__ */ new Map();
@@ -8304,8 +8411,8 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
       name: b.name,
       avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
       maxLevel: b.maxLevel,
-      unlockedPct: pct3(levels.filter((l) => l > 0).length, n),
-      maxedPct: pct3(levels.filter((l) => l >= b.maxLevel).length, n)
+      unlockedPct: pct4(levels.filter((l) => l > 0).length, n),
+      maxedPct: pct4(levels.filter((l) => l >= b.maxLevel).length, n)
     };
   });
   const technologies = TECHNOLOGIES.map((t) => {
@@ -8316,7 +8423,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     return {
       id: t.id,
       name: t.nom,
-      researchedPct: pct3(levels.filter((l) => l > 0).length, n),
+      researchedPct: pct4(levels.filter((l) => l > 0).length, n),
       avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
       maxLevel: t.maxLevel
     };
@@ -8333,11 +8440,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         var _a;
         return a + ((_a = s == null ? void 0 : s.count) != null ? _a : 0);
       }, 0),
-      ownersPct: pct3(owned.filter((s) => {
+      ownersPct: pct4(owned.filter((s) => {
         var _a;
         return ((_a = s == null ? void 0 : s.count) != null ? _a : 0) > 0;
       }).length, n),
-      unlockedPct: pct3(owned.filter((s) => {
+      unlockedPct: pct4(owned.filter((s) => {
         var _a;
         return ((_a = s == null ? void 0 : s.level) != null ? _a : 0) > 0;
       }).length, n)
@@ -8355,7 +8462,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY6;
+  const since = now - windowDays * DAY7;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -8365,11 +8472,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY6;
-    const d = new Date(start + DAY6);
+    const start = now - (windowDays - i) * DAY7;
+    const d = new Date(start + DAY7);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY6).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY7).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -8380,11 +8487,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY6).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY7).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY7).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY6;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY7;
       }).length,
       medianPlaytimeHours: round1(median2(players.map((p) => {
         var _a;
@@ -8436,13 +8543,14 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     },
     balance: computeBalance(players, reports, now, balanceDays),
     endgame: computeEndgame(players, queues, reports, now, balanceDays),
+    retention: computeRetention(players, now),
     insights: []
   };
   stats.insights = computeInsights(stats);
   return stats;
 }
 function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY6;
+  const since = now - windowDays * DAY7;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
@@ -8506,7 +8614,7 @@ function computeEndgame(players, queues, reports, now, windowDays) {
       owners: owned.filter((c) => c > 0).length,
       total: owned.reduce((a, c) => a + c, 0),
       attacks: used.length,
-      winPct: pct3(used.filter((r) => r.outcome === "attacker_win").length, used.length)
+      winPct: pct4(used.filter((r) => r.outcome === "attacker_win").length, used.length)
     };
   });
   return {
@@ -8540,19 +8648,19 @@ function computeBalance(players, reports, now, windowDays) {
     var _a2;
     return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
   };
-  const days = (ms) => Math.floor(ms / DAY6);
-  const since = now - windowDays * DAY6;
+  const days = (ms) => Math.floor(ms / DAY7);
+  const since = now - windowDays * DAY7;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY6 && now - seen(p) < 30 * DAY6).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY7 && now - seen(p) < 30 * DAY7).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY6]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY7]);
   });
   const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -8568,7 +8676,7 @@ function computeBalance(players, reports, now, windowDays) {
   });
   const dominantUnits = [...dom.entries()].map(([id, v]) => {
     var _a2, _b2;
-    return { id, name: (_b2 = (_a2 = UNITS.find((u) => u.id === id)) == null ? void 0 : _a2.name) != null ? _b2 : id, attacks: v.attacks, winPct: pct3(v.wins, v.attacks) };
+    return { id, name: (_b2 = (_a2 = UNITS.find((u) => u.id === id)) == null ? void 0 : _a2.name) != null ? _b2 : id, attacks: v.attacks, winPct: pct4(v.wins, v.attacks) };
   }).sort((a, b) => b.attacks - a.attacks);
   const factions2 = FACTIONS.map((f) => {
     const raids = recent.filter((r) => r.attackerUid === PIRATE_OWNER_UID && r.attackerPseudo.includes(f.name));
@@ -8577,12 +8685,12 @@ function computeBalance(players, reports, now, windowDays) {
       id: f.id,
       name: f.name,
       raids: raids.length,
-      repelledPct: pct3(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
+      repelledPct: pct4(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
       lairAssaults: lairs.length,
-      lairWinPct: pct3(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
+      lairWinPct: pct4(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY6);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY7);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -8604,9 +8712,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY6).length,
+      active1d: players.filter((p) => now - seen(p) < DAY7).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY6).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY7).length,
       dormant
     },
     rankAge,
@@ -9199,12 +9307,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY7 = 864e5;
+var DAY8 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY7) * DAY7;
-  const startMs = midnight - (day + 6) % 7 * DAY7;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY7 };
+  const midnight = Math.floor(now / DAY8) * DAY8;
+  const startMs = midnight - (day + 6) % 7 * DAY8;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY8 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
