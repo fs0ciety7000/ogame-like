@@ -11,7 +11,10 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MARKET_RULES, marketTax, priceBounds, type MarketOffer } from "@/game/market";
 import { RESOURCE_LIST } from "@/game/resources";
-import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, subscribeOffers } from "@/services/marketService";
+import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, fetchMarketTrades, subscribeOffers } from "@/services/marketService";
+import { MarketPriceChart, formatRatio } from "@/components/game/MarketPriceChart";
+import { MARKET_HISTORY_RULES, priceFlag } from "@/game/marketHistory";
+const MARKET_HISTORY_DAYS = MARKET_HISTORY_RULES.days;
 import { GameActionError } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
@@ -44,6 +47,13 @@ export function MarketPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => subscribeOffers(setData), []);
+  // v4.8 : échanges conclus (historique des prix), rechargés quand le marché bouge.
+  const [trades, setTrades] = useState<Awaited<ReturnType<typeof fetchMarketTrades>>>([]);
+  const filledCount = data.mine.filter((o) => o.status === "filled").length + data.open.length;
+  useEffect(() => {
+    void fetchMarketTrades().then(setTrades).catch(() => undefined);
+  }, [filledCount]);
+  const now = Date.now();
 
   const bounds = giveAmount > 0 && giveRes !== wantRes ? priceBounds(giveRes, giveAmount, wantRes) : null;
   const priceOk = !!bounds && wantAmount >= bounds.min && wantAmount <= bounds.max;
@@ -160,6 +170,7 @@ export function MarketPage() {
               {others.map((o) => {
                 const affordable = have(o.wantRes) >= o.wantAmount;
                 const ally = !!o.sellerAllianceId && o.sellerAllianceId === player.allianceId;
+                const flag = priceFlag(o, trades, now);
                 return (
                   <div key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
                     <span className="min-w-0 truncate text-xs text-slate-400">
@@ -172,6 +183,11 @@ export function MarketPage() {
                       <span className="text-[10px] uppercase text-slate-500">contre</span>
                       <Amount res={o.wantRes} n={o.wantAmount} />
                     </span>
+                    {flag && (
+                      <span title={`${formatRatio(flag.factor)} le prix habituel des ${MARKET_HISTORY_DAYS} derniers jours`}>
+                        <HudTag tone={flag.kind === "high" ? "danger" : "gold"}>{flag.kind === "high" ? "Prix anormal : cher" : "Prix anormal : bradé"}</HudTag>
+                      </span>
+                    )}
                     <span className="ml-auto flex items-center gap-2">
                       <span className="text-[10px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
                       <Button size="sm" disabled={busy !== null || !affordable} title={affordable ? undefined : `Il te manque ${formatNumber(o.wantAmount - have(o.wantRes))} ${resName(o.wantRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id), "Échange conclu !")}>
@@ -186,6 +202,8 @@ export function MarketPage() {
           <p className="text-[11px] text-slate-500">{MARKET_RULES.maxBuysPerDay} achats au plus par jour.</p>
         </Card>
       </div>
+
+      <MarketPriceChart trades={trades} now={now} />
 
       {data.mine.length > 0 && (
         <Card className="p-4">

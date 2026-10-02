@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { SeasonGlow } from "@/components/layout/SeasonGlow";
+import { Snowfall } from "@/components/fx/Snowfall";
 import { TierUpOverlay } from "@/components/fx/TierUpOverlay";
 import { useAmbience } from "@/hooks/useAmbience";
 import { checkTierUps } from "@/store/tierUpStore";
@@ -161,6 +162,7 @@ export function AppShell() {
       <SchematicGrid />
       <Nebula />
       <SeasonGlow />
+      <Snowfall />
       <TierUpOverlay />
       <Starfield count={80} />
       <NavBar />

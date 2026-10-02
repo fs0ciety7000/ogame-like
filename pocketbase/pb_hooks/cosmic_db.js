@@ -3559,6 +3559,36 @@ function referralRequest(e) {
   return e.json(200, out);
 }
 
+/** v4.8 : adversaires PNJ d'un joueur (seigneurs affrontés, pour le Codex). */
+function npcOpponents(app, uid) {
+  const uids = {};
+  app
+    .findRecordsByFilter("battle_reports", "(attackerUid = {:u} && defenderUid ~ 'npc') || (defenderUid = {:u} && attackerUid ~ 'npc')", "", 500, 0, { u: uid })
+    .forEach((r) => {
+      uids[r.getString("attackerUid") === uid ? r.getString("defenderUid") : r.getString("attackerUid")] = true;
+    });
+  return Object.keys(uids);
+}
+
+/** POST /api/cosmic/codex/claim : titre « Archiviste » à 100 % du Codex. */
+function codexClaim(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid);
+    const entries = game.codexEntries(loaded.player, game.foughtWarlords(npcOpponents(txApp, uid)), Date.now());
+    const progress = game.codexProgress(entries);
+    if (progress.pct < 100) throw new BadRequestError(`Codex complété à ${progress.pct} % : il faut 100 %.`);
+    if (!game.grantCodexTitle(loaded.player, entries)) throw new BadRequestError("Titre déjà reçu.");
+    loaded.rec.set("titles", loaded.player.titles);
+    txApp.save(loaded.rec);
+    out = { title: game.CODEX_TITLE };
+  });
+  return e.json(200, out);
+}
+
 /** v4.7.1 : pseudo d'un parrain (page d'inscription, sans connexion). */
 function referralSponsorName(e) {
   const id = String(e.request.url.query().get("id") || "");
@@ -4729,4 +4759,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

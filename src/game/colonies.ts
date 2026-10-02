@@ -113,7 +113,8 @@ function emptyResources(): Resources {
   return Object.fromEntries(RESOURCE_LIST.map((r) => [r.id, 0])) as unknown as Resources;
 }
 
-function homeLevels(player: Pick<PlayerState, "buildings">): number {
+/** Niveaux cumulés de la planète mère, hors bâtiments de fin de partie (règle de fondation). */
+export function homeLevels(player: Pick<PlayerState, "buildings">): number {
   return BUILDINGS.filter((b) => !b.endgame).reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
 }
 
@@ -137,7 +138,7 @@ export function startColonization(player: PlayerState, nameIn: string, now: numb
   if (player.colonizing) throw new GameActionError("Un vaisseau colonial est déjà en route.");
   const next = nextColonySlot(player);
   if (!next) throw new GameActionError(`Tu as déjà ${COLONY_RULES.maxColonies} colonies.`);
-  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de bâtiments cumulés sur ta planète mère.`);
+  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de bâtiments cumulés sur ta planète mère, hors bâtiments de fin de partie (tu en as ${homeLevels(player)}).`);
   const name = String(nameIn ?? "").trim() || `Colonie ${next.slot}`;
   if (name.length > 30) throw new GameActionError("Le nom d'une colonie fait au plus 30 caractères.");
   const cost = colonyFoundCost();

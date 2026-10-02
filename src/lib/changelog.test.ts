@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CURRENT_VERSION, parseChangelogFile } from "@/lib/changelog";
 import { CHANGELOG } from "@/lib/changelogEntries";
 import { CHANGELOG_INDEX } from "virtual:changelog-index";
+import { parisDay } from "@/game/retention";
 
 describe("changelog", () => {
   it("parses the front matter and body", () => {
@@ -50,7 +51,8 @@ describe("changelog", () => {
   });
 
   it("dates each entry with its release day, never in the future, in release order", () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // Jour de publication à Paris (règle des changelogs), pas en UTC.
+    const today = parisDay(Date.now());
     for (const e of CHANGELOG) expect(e.date <= today, `${e.id} : date ${e.date} dans le futur`).toBe(true);
     const dates = CHANGELOG.map((e) => e.date);
     expect(dates).toEqual([...dates].sort().reverse());

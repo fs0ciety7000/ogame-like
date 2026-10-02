@@ -152,3 +152,4 @@ export {
   seasonBossWindow,
   spawnSeasonBoss,
 } from "@/game/chronicles";
+export { CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
