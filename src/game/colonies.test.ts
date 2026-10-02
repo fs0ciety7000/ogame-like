@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
 import { findUnit, UNITS } from "@/game/units";
@@ -62,8 +62,13 @@ describe("colonies", () => {
     expect(() => buildColonyDefense(p, c.id, def.id, 1, job.endTime + 2)).toThrow(/Débloque/);
     p.units[def.id] = { level: 2, count: 0 };
     const d = buildColonyDefense(p, c.id, def.id, 2, job.endTime + 2);
+    // Durée et place affichées = celles appliquées par le serveur.
+    expect(d.endTime - (job.endTime + 2)).toBe(colonyDefenseSeconds(p, def.id, 2) * 1000);
     advanceColonies(p, d.endTime);
     expect(c.defenses[def.id]).toEqual({ level: 2, count: 2 });
+    const hangar = colonyDefenseHangar(c);
+    expect(hangar.used).toBe(2 * def.hangarSpace);
+    expect(() => buildColonyDefense(p, c.id, def.id, Math.floor((hangar.capacity - hangar.used) / def.hangarSpace) + 1, d.endTime)).toThrow(/Capacité/);
     expect(findUnit(def.id)).toBeTruthy();
   });
 

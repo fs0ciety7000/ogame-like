@@ -248,6 +248,18 @@ export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, b
   return colony.building;
 }
 
+/** Place occupée et capacité du hangar de défense d'une colonie. */
+export function colonyDefenseHangar(colony: Colony): { used: number; capacity: number } {
+  const used = Object.entries(colony.defenses).reduce((a, [id, s]) => a + (findUnit(id)?.hangarSpace ?? 1) * s.count, 0);
+  return { used, capacity: getUnitCapacity(colony.buildings, "defense") };
+}
+
+/** Durée de construction (secondes) d'un lot de défenses sur une colonie. */
+export function colonyDefenseSeconds(player: Pick<PlayerState, "techLevels">, unitId: string, qty: number): number {
+  const unit = findUnit(unitId);
+  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) : 0;
+}
+
 export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unitId: string, qtyIn: number, now: number): ColonyDefenseJob {
   const colony = colonyOf(player, colonyIdIn);
   if (!colony) throw new GameActionError("Colonie introuvable.");
@@ -257,10 +269,10 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantité invalide.");
   if (colony.defenseJob) throw new GameActionError("Des défenses sont déjà en construction sur cette colonie.");
-  const used = Object.entries(colony.defenses).reduce((a, [id, s]) => a + (findUnit(id)?.hangarSpace ?? 1) * s.count, 0);
-  if (used + qty * unit.hangarSpace > getUnitCapacity(colony.buildings, "defense")) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
+  const { used, capacity } = colonyDefenseHangar(colony);
+  if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   payFrom(colony.resources, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, "ces défenses");
-  colony.defenseJob = { unitId, qty, endTime: now + getUnitBuildTime(unit, player.techLevels) * qty * 1000 };
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1000 };
   return colony.defenseJob;
 }
 
