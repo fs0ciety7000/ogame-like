@@ -31,7 +31,7 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
-import { LevelUpBurst } from "@/components/ui/level-up-burst";
+import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 export function BuildingsPage() {
@@ -102,8 +102,9 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className={cn("hud-glitch flex h-full flex-col", nearlyDone && "animate-pulse-alert")}>
+              <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert")}>
                 <HudBrackets className="border-gold-glow/70" />
+                <LevelPulse level={level} />
                 <div className="relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-1">
                   <div className={cn("hud-cut relative aspect-square overflow-hidden border border-gold-glow/25 bg-space-900", TIER_FRAME[visualTier(level)])}>
                     <LevelUpBurst level={level} />
