@@ -4,7 +4,7 @@
    Confrérie du Vide (Varan), affaibli : le joueur le repousse forcément.
 ===================================================== */
 
-export type Speaker = "vashka" | "varan" | "kor" | "ilyon" | "nerea" | "brannoc" | "lysa" | "vesper";
+export type Speaker = "vashka" | "varan" | "kor" | "ilyon" | "nerea" | "brannoc" | "lysa" | "vesper" | "kragmor" | "maru";
 
 export const STORY_SPEAKERS: Record<Speaker, { name: string; role: string; image: string; color: string }> = {
   vashka: { name: "Vashka", role: "Matriarche-Chasseuse · Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
@@ -16,11 +16,16 @@ export const STORY_SPEAKERS: Record<Speaker, { name: string; role: string; image
   brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
   lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
   vesper: { name: "L'Archonte Vesper", role: "Le Chœur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
+  // v4.7 : voix des Chroniques de janvier à mars 2027.
+  kragmor: { name: "Kragmor Corne-Fendue", role: "Mercenaire Gravhorn", image: "/assets/warlords/kragmor.webp", color: "#7fd1ff" },
+  maru: { name: "Le Prophète Maru", role: "Culte du Léviathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" },
 };
 
 export interface StoryLine {
   speaker: Speaker;
   text: string;
+  /** v4.7 : orateur ponctuel (un seigneur de guerre), à la place de `speaker`. */
+  as?: { name: string; role: string; image: string; color: string };
 }
 
 export interface StoryChapter {

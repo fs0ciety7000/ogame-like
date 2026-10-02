@@ -54,6 +54,7 @@ __export(hooksEntry_exports, {
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
+  COALITION_RULES: () => COALITION_RULES,
   COMMANDER_XP: () => COMMANDER_XP,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
@@ -70,6 +71,7 @@ __export(hooksEntry_exports, {
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
+  PASS_POINTS: () => PASS_POINTS,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
   PVP_RULES: () => PVP_RULES,
@@ -104,6 +106,7 @@ __export(hooksEntry_exports, {
   applyLegacyGift: () => applyLegacyGift,
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
+  archiveCoalition: () => archiveCoalition,
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
@@ -122,6 +125,7 @@ __export(hooksEntry_exports, {
   challengeRewardees: () => challengeRewardees,
   challengeTier: () => challengeTier,
   checkAllianceBossLaunch: () => checkAllianceBossLaunch,
+  checkCoalitionTrigger: () => checkCoalitionTrigger,
   checkEliteLaunch: () => checkEliteLaunch,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
@@ -130,6 +134,7 @@ __export(hooksEntry_exports, {
   clearDecoy: () => clearDecoy,
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
+  coalitionRanking: () => coalitionRanking,
   collectDebris: () => collectDebris,
   colonyOwnerUid: () => colonyOwnerUid,
   compileGazette: () => compileGazette,
@@ -152,6 +157,7 @@ __export(hooksEntry_exports, {
   eliteRanking: () => eliteRanking,
   eliteWindow: () => eliteWindow,
   empirePower: () => empirePower,
+  empowerWarlord: () => empowerWarlord,
   emptyRuntime: () => emptyRuntime,
   endGarrison: () => endGarrison,
   endVacation: () => endVacation,
@@ -172,6 +178,7 @@ __export(hooksEntry_exports, {
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
+  grantCoalitionReward: () => grantCoalitionReward,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
@@ -220,7 +227,9 @@ __export(hooksEntry_exports, {
   proposePact: () => proposePact,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
+  readCoalitions: () => readCoalitions,
   recallFleet: () => recallFleet,
+  recordCoalitionDamage: () => recordCoalitionDamage,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recordVendettaDamage: () => recordVendettaDamage,
@@ -251,6 +260,7 @@ __export(hooksEntry_exports, {
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
+  settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
   spawnElite: () => spawnElite,
@@ -278,7 +288,8 @@ __export(hooksEntry_exports, {
   warlordUid: () => warlordUid,
   warlordsConfig: () => warlordsConfig,
   warlordsState: () => warlordsState,
-  weekWindow: () => weekWindow
+  weekWindow: () => weekWindow,
+  writeCoalitions: () => writeCoalitions
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -2216,10 +2227,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY10 = 864e5;
+  const DAY11 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY10) * DAY10;
-  return new Date(midnight - (day + 6) % 7 * DAY10).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY11) * DAY11;
+  return new Date(midnight - (day + 6) % 7 * DAY11).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -2470,8 +2481,9 @@ function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   if (colony.building) throw new GameActionError("Une construction est d\xE9j\xE0 en cours sur cette colonie.");
   const level3 = (_b = (_a = colony.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
   if (level3 >= colonyMaxLevel(buildingId)) throw new GameActionError(`Niveau maximum d'une colonie atteint (${colonyMaxLevel(buildingId)}).`);
-  payFrom(colony.resources, colonyUpgradeCost(player, buildingId, level3 + 1), "cette construction");
-  colony.building = { id: buildingId, level: level3 + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level3 + 1, now) * 1e3 };
+  const paid = colonyUpgradeCost(player, buildingId, level3 + 1);
+  payFrom(colony.resources, paid, "cette construction");
+  colony.building = { id: buildingId, level: level3 + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level3 + 1, now) * 1e3, startedAtMs: now, paid };
   return colony.building;
 }
 function colonyDefenseHangar(colony) {
@@ -2497,8 +2509,9 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   if (colony.defenseJob) throw new GameActionError("Des d\xE9fenses sont d\xE9j\xE0 en construction sur cette colonie.");
   const { used, capacity } = colonyDefenseHangar(colony);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
-  payFrom(colony.resources, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, "ces d\xE9fenses");
-  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1e3 };
+  const paid = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
+  payFrom(colony.resources, paid, "ces d\xE9fenses");
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1e3, startedAtMs: now, paid };
   return colony.defenseJob;
 }
 function renameColony(player, colonyIdIn, nameIn) {
@@ -3775,14 +3788,26 @@ function endVacation(player, queues, at, early = false) {
   const later = (t) => t === null ? null : t + shift;
   for (const id of Object.keys(queues.buildingUpgrades)) {
     const e = queues.buildingUpgrades[id];
-    if (e) e.endTime += shift;
+    if (e) {
+      e.endTime += shift;
+      if (e.startedAtMs) e.startedAtMs += shift;
+    }
   }
   ["attack", "defense"].forEach((c) => queues.unitQueues[c].forEach((e) => e.endTime = later(e.endTime)));
-  queues.activeResearches.forEach((e) => e.endTime += shift);
+  queues.activeResearches.forEach((e) => {
+    e.endTime += shift;
+    if (e.startedAtMs) e.startedAtMs += shift;
+  });
   queues.activeMissions.forEach((e) => e.endTime += shift);
   for (const c of (_a = player.colonies) != null ? _a : []) {
-    if (c.building) c.building.endTime += shift;
-    if (c.defenseJob) c.defenseJob.endTime += shift;
+    if (c.building) {
+      c.building.endTime += shift;
+      if (c.building.startedAtMs) c.building.startedAtMs += shift;
+    }
+    if (c.defenseJob) {
+      c.defenseJob.endTime += shift;
+      if (c.defenseJob.startedAtMs) c.defenseJob.startedAtMs += shift;
+    }
     c.updatedAtMs = Math.min(end, c.updatedAtMs + shift * (1 - VACATION_RULES.productionFactor));
   }
   if (player.colonizing) player.colonizing.endTime += shift;
@@ -5134,7 +5159,9 @@ var PASS_POINTS = {
   seasonBoss: 60,
   /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
   allianceBoss: 40,
-  allianceBossTry: 15
+  allianceBossTry: 15,
+  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
+  coalition: 50
 };
 var PASS_TIERS = [
   [{ kind: "production", hours: 2 }],
@@ -5612,6 +5639,147 @@ var DEFAULT_CHRONICLES = {
             L("vashka", "Alors faisons-lui entendre le bruit d'une flotte. Rassemble tout ce que tu as, {pseudo}.")
           ],
           objective: { type: "mission", count: 8 }
+        }
+      ]
+    },
+    {
+      id: "2027-01",
+      title: "Le D\xE9gel",
+      theme: { accent: "#7fd1ff", label: "Bleu glacier" },
+      boss: {
+        name: "Le Brise-Glace de Kragmor",
+        title: "Pourfendeur du Brise-Glace",
+        image: "/assets/chronicles/2027-01-boss.webp",
+        emblem: "/assets/chronicles/2027-01-sceau.webp",
+        fallbackImage: "/assets/story/gravhorn.webp",
+        lore: "Un vaisseau-forage du Syndicat Gravhorn, \xE0 l'\xE9trave h\xE9riss\xE9e de foreuses, qui brise la glace des routes gel\xE9es pour les revendre au plus offrant."
+      },
+      episodes: [
+        {
+          title: "Les routes gel\xE9es",
+          lines: [
+            L("vashka", "L'hiver du Ch\u0153ur s'est retir\xE9, {pseudo}, mais il a laiss\xE9 les routes prises dans la glace. Les prix flambent."),
+            L("kragmor", "Flamber ? Moi, j'appelle \xE7a \xAB le march\xE9 \xBB. Ach\xE8te, petit. Tant que c'est encore moi qui fixe les prix.")
+          ],
+          objective: { type: "market", count: 4 }
+        },
+        {
+          title: "Les convois",
+          lines: [
+            L("nerea", "Les convois d'hiver repartent. Escorte-les, ou Kragmor fera payer chaque tonne qui passe."),
+            L("vashka", "Envoie tes \xE9quipes en mission, {pseudo}. Chaque route rouverte est une route de moins pour lui.")
+          ],
+          objective: { type: "mission", count: 8 }
+        },
+        {
+          title: "Le prix de la glace",
+          lines: [
+            L("lysa", "J'ai vu ses registres. Il ne vend pas la glace : il vend des routes qu'il a lui-m\xEAme bloqu\xE9es."),
+            L("vashka", "Alors trouve o\xF9 sont ses foreuses. Sonde le secteur avant qu'il ne remette la main sur les passages.")
+          ],
+          objective: { type: "spy", count: 3 }
+        },
+        {
+          title: "La d\xE9b\xE2cle",
+          lines: [
+            L("kragmor", "Mon Brise-Glace sort le dernier week-end du mois. Quiconque se met devant l'\xE9trave finit en copeaux."),
+            L("vashka", "Ses alli\xE9s d'abord. Brise deux seigneurs de guerre, {pseudo}, et il arrivera seul.")
+          ],
+          objective: { type: "warlordWin", count: 2 }
+        }
+      ]
+    },
+    {
+      id: "2027-02",
+      title: "Le Ch\u0153ur bris\xE9",
+      theme: { accent: "#c58bff", label: "Violet du Ch\u0153ur" },
+      boss: {
+        name: "La Cath\xE9drale d'Ilyon",
+        title: "Pourfendeur de la Cath\xE9drale",
+        image: "/assets/chronicles/2027-02-boss.webp",
+        emblem: "/assets/chronicles/2027-02-sceau.webp",
+        fallbackImage: "/assets/story/choeur.webp",
+        lore: "La nef de cristal o\xF9 Ilyon chantait autrefois, rappel\xE9e par le Ch\u0153ur et retourn\xE9e contre lui. Ses vitraux vibrent assez fort pour fendre une coque."
+      },
+      episodes: [
+        {
+          title: "La fausse note",
+          lines: [
+            L("ilyon", "Ils ont rallum\xE9 ma cath\xE9drale. Sans moi. Ce chant qui traverse le secteur\u2026 c'est ma voix, vol\xE9e."),
+            L("vashka", "Tes contrats d'abord, {pseudo}. Un empire qui tient ses engagements ne se laisse pas bercer par une chanson.")
+          ],
+          objective: { type: "contract", count: 5 }
+        },
+        {
+          title: "Les fid\xE8les",
+          lines: [
+            L("nerea", "Des empires entiers se tournent vers la cath\xE9drale. Ils envoient leurs flottes l\xE0 o\xF9 le chant les appelle."),
+            L("vashka", "Alors r\xE9veille-les \xE0 coups de canon. Gagne quatre combats, que tout le secteur l'entende.")
+          ],
+          objective: { type: "victory", count: 4 }
+        },
+        {
+          title: "Le contre-chant",
+          lines: [
+            L("vashka", "L'Essaim ne chante pas, {pseudo}. Il chasse. Remplis trois primes : les chasseurs Kesh feront taire les fid\xE8les."),
+            L("ilyon", "Je connais les passages de la nef. Je vous les donnerai\u2026 si vous me rendez ma voix.")
+          ],
+          objective: { type: "bounty", count: 3 }
+        },
+        {
+          title: "La nef",
+          lines: [
+            L("ilyon", "Le dernier week-end, la cath\xE9drale entrera dans le secteur. Visez les vitraux : c'est l\xE0 qu'elle respire."),
+            L("vashka", "Pr\xE9pare tes flottes, {pseudo}. Six missions pour rassembler tout ce qui peut voler.")
+          ],
+          objective: { type: "mission", count: 6 }
+        }
+      ]
+    },
+    {
+      id: "2027-03",
+      title: "Les Racines de Maru",
+      theme: { accent: "#7dff9a", label: "Vert des racines" },
+      boss: {
+        name: "L'Avatar du Proph\xE8te",
+        title: "Pourfendeur de l'Avatar",
+        image: "/assets/chronicles/2027-03-boss.webp",
+        emblem: "/assets/chronicles/2027-03-sceau.webp",
+        fallbackImage: "/assets/leviathan/leviathan.webp",
+        lore: "Un colosse de chair et de racines que le culte de Maru a fait pousser sur un ast\xE9ro\xEFde, \xE0 l'image du L\xE9viathan qu'il v\xE9n\xE8re. Il grandit \xE0 chaque pri\xE8re."
+      },
+      episodes: [
+        {
+          title: "Les germes",
+          lines: [
+            L("maru", "Le printemps vient, enfants du vide. Et avec lui, la graine du L\xE9viathan \xE9clot dans votre secteur."),
+            L("vashka", "Des racines sur les ast\xE9ro\xEFdes, {pseudo}. Sonde-les toutes : je veux savoir jusqu'o\xF9 elles courent.")
+          ],
+          objective: { type: "spy", count: 4 }
+        },
+        {
+          title: "Les fid\xE8les arm\xE9s",
+          lines: [
+            L("maru", "Mes fr\xE8res seigneurs ont entendu l'appel. Ils prot\xE9geront le jardin."),
+            L("vashka", "Alors arrache les gardiens. Brise deux seigneurs de guerre, et le jardin restera sans d\xE9fense.")
+          ],
+          objective: { type: "warlordWin", count: 2 }
+        },
+        {
+          title: "Les raids de printemps",
+          lines: [
+            L("varan", "M\xEAme moi, je n'aime pas ce qui pousse l\xE0-bas. La Confr\xE9rie frappera les colonies qui tra\xEEnent : tiens bon, ou tu serviras d'engrais."),
+            L("vashka", "Repousse trois raids, {pseudo}. Un empire qui plie nourrit les racines.")
+          ],
+          objective: { type: "raidRepelled", count: 3 }
+        },
+        {
+          title: "La floraison",
+          lines: [
+            L("maru", "Le dernier week-end, l'Avatar ouvrira les yeux. Et le secteur entier priera avec moi."),
+            L("vashka", "Le secteur entier tirera, oui. Tes contrats d'abord : il nous faudra chaque ressource, {pseudo}.")
+          ],
+          objective: { type: "contract", count: 5 }
         }
       ]
     }
@@ -7816,14 +7984,14 @@ function nearestWarlord(uid, defs) {
 function warlordsState(raw) {
   var _a, _b, _c, _d;
   const r = raw && typeof raw === "object" ? raw : {};
-  return {
+  return __spreadValues({
     byId: __spreadValues({}, (_a = r.byId) != null ? _a : {}),
     hits: __spreadValues({}, (_b = r.hits) != null ? _b : {}),
     contacted: __spreadValues({}, (_c = r.contacted) != null ? _c : {}),
     lastMsg: __spreadValues({}, (_d = r.lastMsg) != null ? _d : {}),
     vendettas: Array.isArray(r.vendettas) ? [...r.vendettas] : [],
     reprisals: Array.isArray(r.reprisals) ? [...r.reprisals] : []
-  };
+  }, r.coalitions ? { coalitions: r.coalitions } : {});
 }
 function canMessage(state, warlordId, uid, now) {
   var _a;
@@ -8113,6 +8281,166 @@ function performAttack(input) {
   };
 }
 
+// src/game/cancel.ts
+var CANCEL_RULES = {
+  /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
+  graceMs: 6e4,
+  /** Part remboursée du temps restant. */
+  refundPct: 0.8
+};
+function refundFraction(startMs, endMs, now) {
+  if (now - startMs <= CANCEL_RULES.graceMs) return 1;
+  const total2 = endMs - startMs;
+  if (!(total2 > 0)) return 0;
+  const remaining = Math.min(1, Math.max(0, (endMs - now) / total2));
+  return remaining * CANCEL_RULES.refundPct;
+}
+function scaleCost(cost, fraction) {
+  const out = {};
+  for (const [res, n] of Object.entries(cost)) {
+    const v = Math.floor((n != null ? n : 0) * fraction);
+    if (v > 0) out[res] = v;
+  }
+  return out;
+}
+function addCost(a, b) {
+  var _a;
+  const out = __spreadValues({}, a);
+  for (const [res, n] of Object.entries(b)) out[res] = ((_a = out[res]) != null ? _a : 0) + (n != null ? n : 0);
+  return out;
+}
+function credit(target, refund) {
+  var _a;
+  for (const [res, n] of Object.entries(refund)) target[res] = ((_a = target[res]) != null ? _a : 0) + (n != null ? n : 0);
+}
+function unitGroupAt(queue, index) {
+  if (index < 0 || index >= queue.length) return null;
+  const unitId = queue[index].unitId;
+  let start = index;
+  while (start > 0 && queue[start - 1].unitId === unitId) start--;
+  let end = index;
+  while (end + 1 < queue.length && queue[end + 1].unitId === unitId) end++;
+  return { start, count: end - start + 1 };
+}
+function quoteCancel(player, queues, target, now) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  switch (target.kind) {
+    case "building": {
+      const entry = queues.buildingUpgrades[target.id];
+      const def3 = findBuilding(target.id);
+      if (!entry || !def3) throw new GameActionError("Aucune am\xE9lioration en cours pour ce b\xE2timent.");
+      const level3 = ((_b = (_a = player.buildings[target.id]) == null ? void 0 : _a.level) != null ? _b : 0) + 1;
+      const paid = (_e = entry.paid) != null ? _e : applyBuildingDiscount(getBuildingUpgradeCost(def3, level3), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0);
+      const start = (_f = entry.startedAtMs) != null ? _f : entry.endTime - Math.round(getBuildingUpgradeTime(def3, level3) * playerBuildTimeFactor(player, now)) * 1e3;
+      const fraction = refundFraction(start, entry.endTime, now);
+      return { refund: scaleCost(paid, fraction), fraction, label: `${def3.name} niveau ${level3}` };
+    }
+    case "research": {
+      const entry = queues.activeResearches.find((r) => r.id === target.id);
+      const tech = findTech(target.id);
+      if (!entry || !tech) throw new GameActionError("Cette recherche n'est pas en cours.");
+      const level3 = ((_g = player.techLevels[target.id]) != null ? _g : 0) + 1;
+      const paid = (_h = entry.paid) != null ? _h : getTechCost(tech, level3);
+      const start = (_i = entry.startedAtMs) != null ? _i : entry.endTime - Math.round(getTechTime(tech, level3) * playerResearchTimeFactor(player, now)) * 1e3;
+      const fraction = refundFraction(start, entry.endTime, now);
+      return { refund: scaleCost(paid, fraction), fraction, label: `${tech.nom} niveau ${level3}` };
+    }
+    case "units": {
+      const queue = queues.unitQueues[target.category];
+      const group = unitGroupAt(queue, target.index);
+      const unit = group ? findUnit(queue[group.start].unitId) : void 0;
+      if (!group || !unit) throw new GameActionError("Ce lot n'est plus dans la file.");
+      const each = { scrap: unit.cost.scrap, energy: unit.cost.energy };
+      let refund = {};
+      let fraction = 1;
+      for (let i = group.start; i < group.start + group.count; i++) {
+        const e = queue[i];
+        if (e.endTime) {
+          const f = refundFraction(e.endTime - getUnitBuildTime(unit, player.techLevels) * 1e3, e.endTime, now);
+          fraction = Math.min(fraction, f);
+          refund = addCost(refund, scaleCost(each, f));
+        } else refund = addCost(refund, each);
+      }
+      return { refund, fraction, label: `${group.count} \xD7 ${unit.name}` };
+    }
+    case "colonyBuilding": {
+      const colony = colonyOf(player, target.colonyId);
+      const job = colony == null ? void 0 : colony.building;
+      const def3 = job ? findBuilding(job.id) : void 0;
+      if (!colony || !job || !def3) throw new GameActionError("Aucune construction en cours sur cette colonie.");
+      const paid = (_j = job.paid) != null ? _j : colonyUpgradeCost(player, job.id, job.level);
+      const start = (_k = job.startedAtMs) != null ? _k : job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1e3;
+      const fraction = refundFraction(start, job.endTime, now);
+      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${def3.name} niveau ${job.level}` };
+    }
+    case "colonyDefense": {
+      const colony = colonyOf(player, target.colonyId);
+      const job = colony == null ? void 0 : colony.defenseJob;
+      const unit = job ? findUnit(job.unitId) : void 0;
+      if (!colony || !job || !unit) throw new GameActionError("Aucune d\xE9fense en construction sur cette colonie.");
+      const paid = (_l = job.paid) != null ? _l : { scrap: unit.cost.scrap * job.qty, energy: unit.cost.energy * job.qty };
+      const start = (_m = job.startedAtMs) != null ? _m : job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty) * 1e3;
+      const fraction = refundFraction(start, job.endTime, now);
+      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${job.qty} \xD7 ${unit.name}` };
+    }
+  }
+}
+function performCancel(player, queues, target, now) {
+  var _a;
+  const quote = quoteCancel(player, queues, target, now);
+  switch (target.kind) {
+    case "building":
+      delete queues.buildingUpgrades[target.id];
+      credit(player.resources, quote.refund);
+      break;
+    case "research":
+      queues.activeResearches = queues.activeResearches.filter((r) => r.id !== target.id);
+      credit(player.resources, quote.refund);
+      break;
+    case "units": {
+      const queue = queues.unitQueues[target.category];
+      const group = unitGroupAt(queue, target.index);
+      const wasRunning = group.start === 0 && !!((_a = queue[0]) == null ? void 0 : _a.endTime);
+      queue.splice(group.start, group.count);
+      if (wasRunning && queue[0] && !queue[0].endTime) {
+        const next = findUnit(queue[0].unitId);
+        queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels) : 0) * 1e3;
+      }
+      credit(player.resources, quote.refund);
+      break;
+    }
+    case "colonyBuilding": {
+      const colony = colonyOf(player, target.colonyId);
+      colony.building = null;
+      credit(colony.resources, quote.refund);
+      break;
+    }
+    case "colonyDefense": {
+      const colony = colonyOf(player, target.colonyId);
+      colony.defenseJob = null;
+      credit(colony.resources, quote.refund);
+      break;
+    }
+  }
+  return quote;
+}
+function isCancelTarget(raw) {
+  const t = raw;
+  if (!t || typeof t !== "object") return false;
+  switch (t.kind) {
+    case "building":
+    case "research":
+      return typeof t.id === "string" && !!t.id;
+    case "units":
+      return (t.category === "attack" || t.category === "defense") && Number.isInteger(t.index) && t.index >= 0;
+    case "colonyBuilding":
+    case "colonyDefense":
+      return typeof t.colonyId === "string" && !!t.colonyId;
+    default:
+      return false;
+  }
+}
+
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60 };
 var FREE_BANNERS = [
@@ -8292,8 +8620,9 @@ function applyAction(s, action) {
       if (queues.buildingUpgrades[def3.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
       if (state.level >= def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_e = (_d = player.bonuses) == null ? void 0 : _d.buildingUpgradeDiscount) != null ? _e : 0), now);
-      queues.buildingUpgrades[def3.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) * 1e3 };
+      const paid = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_e = (_d = player.bonuses) == null ? void 0 : _d.buildingUpgradeDiscount) != null ? _e : 0);
+      pay(player, paid, now);
+      queues.buildingUpgrades[def3.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) * 1e3, startedAtMs: now, paid };
       recordContract(player, "upgrade_building", 1, now);
       return void 0;
     }
@@ -8339,8 +8668,9 @@ function applyAction(s, action) {
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
-      pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3 });
+      const paid = getTechCost(tech, nextLevel);
+      pay(player, paid, now);
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3, startedAtMs: now, paid });
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
@@ -8443,6 +8773,9 @@ function applyAction(s, action) {
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
       return { points: claimChronicle(player, action.episode, now) };
+    case "cancel":
+      if (!isCancelTarget(action.target)) throw new GameActionError("Chantier inconnu.");
+      return performCancel(player, queues, action.target, now);
     case "vacationEnd":
       endVacation(player, queues, now, true);
       return true;
@@ -9805,6 +10138,131 @@ function grantReferral(sponsor, recruit, now) {
     sponsor.referral = __spreadProps(__spreadValues({}, s), { recruits: ((_c = s.recruits) != null ? _c : 0) + 1, monthly: __spreadProps(__spreadValues({}, s.monthly), { [m]: ((_e = (_d = s.monthly) == null ? void 0 : _d[m]) != null ? _e : 0) + 1 }) });
   }
   return { capped };
+}
+
+// src/game/coalition.ts
+var COALITION_RULES = {
+  thresholdFactor: 1.5,
+  holdHours: 48,
+  durationDays: 5,
+  goalFactor: 1.5,
+  cooldownDays: 14,
+  /** Réussite : puissance perdue, jours d'absence. */
+  powerLoss: 0.4,
+  awayDays: 10,
+  /** Part minimale de l'objectif pour être récompensé. */
+  minShare: 0.03,
+  rewardHours: 4,
+  topRelics: 3,
+  /** Échec : le seigneur gagne cette part de puissance. */
+  failGrowth: 0.1
+};
+var HOUR12 = 36e5;
+var DAY10 = 24 * HOUR12;
+function coalitionState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    coalition: r.coalition && typeof r.coalition === "object" && r.coalition.id ? r.coalition : null,
+    history: Array.isArray(r.history) ? r.history.slice(0, 5) : [],
+    overSince: r.overSince && typeof r.overSince === "object" ? __spreadValues({}, r.overSince) : {},
+    lastEndMs: Number(r.lastEndMs) || 0
+  };
+}
+function readCoalitions(state) {
+  return coalitionState(state.coalitions);
+}
+function writeCoalitions(state, c) {
+  state.coalitions = c;
+}
+function activeCoalition(c, now) {
+  return c.coalition && c.coalition.status === "active" && now < c.coalition.endsAtMs ? c.coalition : null;
+}
+function checkCoalitionTrigger(c, lords, topHumanPower, now) {
+  var _a;
+  for (const l of lords) {
+    if (l.present && topHumanPower > 0 && l.power > topHumanPower * COALITION_RULES.thresholdFactor) c.overSince[l.id] = (_a = c.overSince[l.id]) != null ? _a : now;
+    else delete c.overSince[l.id];
+  }
+  if (c.coalition && c.coalition.status === "active") return null;
+  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY10) return null;
+  const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR12).sort((a, b) => b.power - a.power)[0];
+  if (!ready) return null;
+  const coalition = {
+    id: `coal-${ready.id}-${now}`,
+    warlordId: ready.id,
+    startedAtMs: now,
+    endsAtMs: now + COALITION_RULES.durationDays * DAY10,
+    goal: Math.max(1, Math.round(ready.fleetPower * COALITION_RULES.goalFactor)),
+    dealt: 0,
+    contributions: {},
+    pseudos: {},
+    status: "active"
+  };
+  c.coalition = coalition;
+  delete c.overSince[ready.id];
+  return coalition;
+}
+function recordCoalitionDamage(c, warlordId, uid, pseudo, dealt, now) {
+  var _a;
+  const co = activeCoalition(c, now);
+  if (!co || co.warlordId !== warlordId || !(dealt > 0)) return null;
+  co.dealt += Math.round(dealt);
+  co.contributions[uid] = ((_a = co.contributions[uid]) != null ? _a : 0) + Math.round(dealt);
+  co.pseudos[uid] = pseudo;
+  if (co.dealt >= co.goal) {
+    co.status = "won";
+    co.finishedAtMs = now;
+    return co;
+  }
+  return null;
+}
+function settleCoalition(c, now) {
+  const co = c.coalition;
+  if (!co || co.status !== "active" || now < co.endsAtMs) return null;
+  co.status = "lost";
+  co.finishedAtMs = now;
+  return co;
+}
+function archiveCoalition(c, now) {
+  if (!c.coalition || c.coalition.status === "active") return;
+  c.history = [c.coalition, ...c.history].slice(0, 5);
+  c.coalition = null;
+  c.lastEndMs = now;
+}
+function coalitionRanking(co) {
+  return Object.entries(co.contributions).map(([uid, damage]) => {
+    var _a;
+    return { uid, pseudo: (_a = co.pseudos[uid]) != null ? _a : "?", damage };
+  }).sort((a, b) => b.damage - a.damage);
+}
+function coalitionTitle(d) {
+  return `Briseur de ${d.name.split(",")[0]}`;
+}
+function grantCoalitionReward(co, d, player, now, random = Math.random) {
+  var _a, _b, _c, _d;
+  const mine = (_a = co.contributions[player.uid]) != null ? _a : 0;
+  if (co.status !== "won" || mine < co.goal * COALITION_RULES.minShare) return { eligible: false, gain: {} };
+  addPassPoints(player, "coalition", now);
+  const gain = productionHours(player, COALITION_RULES.rewardHours);
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  const rank2 = coalitionRanking(co).findIndex((r) => r.uid === player.uid);
+  let relic;
+  if (rank2 >= 0 && rank2 < COALITION_RULES.topRelics) {
+    const item = rollRelic(`coalition:${co.warlordId}`, now, random, "epic");
+    if (addRelic(player, item)) relic = relicLabel(item);
+  }
+  let title;
+  if (rank2 === 0) {
+    title = coalitionTitle(d);
+    if (!((_c = player.titles) != null ? _c : []).some((t) => t.label === title)) player.titles = [...(_d = player.titles) != null ? _d : [], { label: title, seasonId: "coalition", rank: 1 }];
+  }
+  return { eligible: true, gain, relic, title };
+}
+function empowerWarlord(npc, growth = COALITION_RULES.failGrowth) {
+  var _a;
+  for (const [id, st] of Object.entries((_a = npc.units) != null ? _a : {})) {
+    if (st.count > 0) npc.units[id] = __spreadProps(__spreadValues({}, st), { count: Math.round(st.count * (1 + growth)) });
+  }
 }
 
 // src/game/gazette.ts

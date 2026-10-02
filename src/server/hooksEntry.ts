@@ -76,7 +76,7 @@ export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
 export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";
 export { publicShowcase } from "@/game/profile";
-export { addPassPoints } from "@/game/seasonPass";
+export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";
 export { TUTORIAL_RAID } from "@/game/story";
 
@@ -128,6 +128,18 @@ export {
   grantAllianceBossReward,
   normalizeAllianceBoss,
 } from "@/game/allianceBoss";
+export {
+  archiveCoalition,
+  checkCoalitionTrigger,
+  COALITION_RULES,
+  coalitionRanking,
+  empowerWarlord,
+  grantCoalitionReward,
+  readCoalitions,
+  recordCoalitionDamage,
+  settleCoalition,
+  writeCoalitions,
+} from "@/game/coalition";
 export { compileGazette, GAZETTE_KEY, gazetteDue, gazetteState, publishGazette } from "@/game/gazette";
 export {
   bossMonthOf,

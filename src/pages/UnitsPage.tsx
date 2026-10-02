@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
@@ -273,10 +274,16 @@ export function UnitsPage() {
                       </div>
 
                       {queueInfo ? (
-                        <p className="font-mono text-xs text-mint-glow">● EN CHANTIER · {formatDuration(queueInfo.remaining)} ({queueInfo.count} en file)</p>
+                        <p className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-mint-glow">
+                          ● EN CHANTIER · {formatDuration(queueInfo.remaining)} ({queueInfo.count} en file)
+                          <CancelJobButton target={{ kind: "units", category: unit.category, index: 0 }} compact className="ml-auto" />
+                        </p>
                       ) : waitingInfo ? (
-                        <p className="text-xs text-gold-glow" title="Les unités d'une même catégorie se construisent l'une après l'autre.">
-                          <GameIcon name="duration" /> {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
+                        <p className="flex flex-wrap items-center gap-x-2 text-xs text-gold-glow" title="Les unités d'une même catégorie se construisent l'une après l'autre.">
+                          <span>
+                            <GameIcon name="duration" /> {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
+                          </span>
+                          <CancelJobButton target={{ kind: "units", category: unit.category, index: queue.findIndex((e) => e.unitId === unit.id) }} compact className="ml-auto" />
                         </p>
                       ) : null}
 

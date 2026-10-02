@@ -38,12 +38,17 @@ export interface ColonyBuildingJob {
   id: string;
   level: number;
   endTime: number;
+  /** v4.7 : départ et coût payé (annulation au prorata). */
+  startedAtMs?: number;
+  paid?: Partial<Record<ResourceId, number>>;
 }
 
 export interface ColonyDefenseJob {
   unitId: string;
   qty: number;
   endTime: number;
+  startedAtMs?: number;
+  paid?: Partial<Record<ResourceId, number>>;
 }
 
 export interface Colony {
@@ -243,8 +248,9 @@ export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, b
   if (colony.building) throw new GameActionError("Une construction est déjà en cours sur cette colonie.");
   const level = colony.buildings[buildingId]?.level ?? 0;
   if (level >= colonyMaxLevel(buildingId)) throw new GameActionError(`Niveau maximum d'une colonie atteint (${colonyMaxLevel(buildingId)}).`);
-  payFrom(colony.resources, colonyUpgradeCost(player, buildingId, level + 1), "cette construction");
-  colony.building = { id: buildingId, level: level + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level + 1, now) * 1000 };
+  const paid = colonyUpgradeCost(player, buildingId, level + 1);
+  payFrom(colony.resources, paid, "cette construction");
+  colony.building = { id: buildingId, level: level + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level + 1, now) * 1000, startedAtMs: now, paid };
   return colony.building;
 }
 
@@ -271,8 +277,9 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   if (colony.defenseJob) throw new GameActionError("Des défenses sont déjà en construction sur cette colonie.");
   const { used, capacity } = colonyDefenseHangar(colony);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
-  payFrom(colony.resources, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, "ces défenses");
-  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1000 };
+  const paid = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
+  payFrom(colony.resources, paid, "ces défenses");
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1000, startedAtMs: now, paid };
   return colony.defenseJob;
 }
 

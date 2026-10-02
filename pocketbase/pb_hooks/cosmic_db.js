@@ -3812,6 +3812,97 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
   if (findOrNull(txApp, "players", v.ownerUid)) warlordSay(txApp, game, state, d, humanPlain(txApp.findRecordById("players", v.ownerUid)), "vendettaWon", now, true);
 }
 
+/* ---------- Coalitions (v4.7) ---------- */
+
+function notifyHumans(txApp, notes) {
+  txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).forEach((r) => {
+    try {
+      notify(txApp, r.id, notes);
+    } catch (_) {
+      /* facultatif */
+    }
+  });
+}
+
+/** Coalition gagnée : seigneur affaibli de 40 % et absent 10 jours, récompenses. */
+function finishCoalitionWon(txApp, game, state, coal, co, now) {
+  const d = game.findWarlord(co.warlordId);
+  if (!d) return;
+  const uid = game.warlordUid(d.id);
+  if (findOrNull(txApp, "players", uid)) {
+    const npc = loadPlayer(txApp, game, uid);
+    game.shatterWarlord(npc.player, game.COALITION_RULES.powerLoss);
+    savePlayer(txApp, game, npc, npc.player, npc.queues);
+  }
+  const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+  rt.absentUntilMs = now + game.COALITION_RULES.awayDays * 86400000;
+  state.byId[d.id] = rt;
+  txApp.findRecordsByFilter("fleets", 'targetUid = {:u} && status = "outbound"', "", 200, 0, { u: uid }).forEach((f) => {
+    f.set("status", "returning");
+    f.set("returnAtMs", now + Math.max(0, f.getFloat("arriveAtMs") - f.getFloat("departAtMs")));
+    f.set("outcome", "none");
+    txApp.save(f);
+  });
+  game.coalitionRanking(co).forEach((c) => {
+    if (!findOrNull(txApp, "players", c.uid)) return;
+    const loaded = loadPlayer(txApp, game, c.uid);
+    const out = game.grantCoalitionReward(co, d, loaded.player, now);
+    savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+    notify(txApp, c.uid, [
+      {
+        kind: "achievement",
+        title: `Coalition victorieuse contre ${d.name}`,
+        message: out.eligible
+          ? `+${game.PASS_POINTS.coalition} points de passe, ${game.COALITION_RULES.rewardHours} h de production${out.relic ? `, relique : ${out.relic}` : ""}${out.title ? `, titre « ${out.title} »` : ""}.`
+          : `Ta part (moins de ${Math.round(game.COALITION_RULES.minShare * 100)} % de l'objectif) ne suffit pas pour une récompense, mais le secteur te doit une fière chandelle.`,
+        createdAtMs: now,
+        read: false,
+        link: "/game/seigneurs",
+      },
+    ]);
+  });
+  notifyHumans(txApp, [{ kind: "event", title: `${d.name} est brisé`, message: `La coalition a gagné : il quitte le secteur pour ${game.COALITION_RULES.awayDays} jours.`, createdAtMs: now, read: false, link: "/game/seigneurs" }]);
+  game.archiveCoalition(coal, now);
+}
+
+/** Coalition échouée : le seigneur se renforce. */
+function finishCoalitionLost(txApp, game, coal, co, now) {
+  const d = game.findWarlord(co.warlordId);
+  const uid = d ? game.warlordUid(d.id) : "";
+  if (d && findOrNull(txApp, "players", uid)) {
+    const npc = loadPlayer(txApp, game, uid);
+    game.empowerWarlord(npc.player);
+    savePlayer(txApp, game, npc, npc.player, npc.queues);
+  }
+  if (d) notifyHumans(txApp, [{ kind: "event", title: `${d.name} a résisté à la coalition`, message: `Il sort de ces 5 jours renforcé de ${Math.round(game.COALITION_RULES.failGrowth * 100)} %.`, createdAtMs: now, read: false, link: "/game/seigneurs" }]);
+  game.archiveCoalition(coal, now);
+}
+
+/** Tâche horaire des seigneurs : échéance, seuils, ouverture d'une coalition. */
+function coalitionTick(txApp, game, state, humans, now) {
+  const coal = game.readCoalitions(state);
+  const lost = game.settleCoalition(coal, now);
+  if (lost) finishCoalitionLost(txApp, game, coal, lost, now);
+  const topHuman = humans.reduce((m, h) => Math.max(m, game.empirePower(h)), 0);
+  const lords = game.warlordsConfig().defs
+    .filter((d) => d.enabled)
+    .map((d) => {
+      const r = findOrNull(txApp, "players", game.warlordUid(d.id));
+      const p = r ? humanPlain(r) : null;
+      const rt = state.byId[d.id];
+      return { id: d.id, power: p ? game.empirePower(p) : 0, fleetPower: p ? game.warlordFleetPower(p) : 0, present: !!p && !(rt && rt.absentUntilMs > now) };
+    });
+  const opened = game.checkCoalitionTrigger(coal, lords, topHuman, now);
+  if (opened) {
+    const d = game.findWarlord(opened.warlordId);
+    notifyHumans(txApp, [
+      { kind: "event", title: `Coalition contre ${d ? d.name : "un seigneur"} !`, message: `Il écrase le secteur : 5 jours pour lui détruire ${game.formatInt(opened.goal)} de puissance, tous ensemble.`, createdAtMs: now, read: false, link: "/game/seigneurs" },
+    ]);
+  }
+  game.writeCoalitions(state, coal);
+  return opened;
+}
+
 /** Après un combat impliquant un seigneur : vendetta, répliques. */
 function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
   const atkDef = attacker.player.npc ? game.findWarlord(attacker.player.npc) : null;
@@ -3833,6 +3924,13 @@ function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
     warlordSay(txApp, game, state, atkDef, humanPlain(defender.rec), outcome === "attacker_win" ? "won" : "repelled", now, false);
   }
   if (won) finishVendettaWon(txApp, game, state, lord, won, now);
+  // v4.7 : chaque vaisseau détruit chez le seigneur visé compte pour la coalition.
+  const human = defDef ? attacker : defender;
+  const humanDealt = defDef ? game.lossesPower(result.defender, result.combat.defenderLosses || {}) : game.lossesPower(result.attacker, result.combat.attackerLosses || {});
+  const coal = game.readCoalitions(state);
+  const coWon = game.recordCoalitionDamage(coal, lord.id, human.player.uid, human.player.pseudo, humanDealt, now);
+  if (coWon) finishCoalitionWon(txApp, game, state, coal, coWon, now);
+  game.writeCoalitions(state, coal);
   writeWarlordsState(txApp, state);
 }
 
@@ -3897,6 +3995,13 @@ function warlordTick(now, opts) {
         console.log(`[cosmic] seigneur ${d.id} : ${err}`);
       }
     });
+
+    // v4.7 : coalitions (échéance, seuils, ouverture).
+    try {
+      if (coalitionTick(txApp, game, state, humans, now)) summary.coalition = true;
+    } catch (err) {
+      console.log(`[cosmic] coalition : ${err}`);
+    }
 
     // Attaques (agressifs, opportunistes, ripostes de vendetta).
     active.forEach((d) => {
@@ -4010,7 +4115,8 @@ function warlordsList(e) {
         })
     : [];
   const history = state.vendettas.filter((v) => v.status !== "active").slice(-10);
-  return e.json(200, { warlords: list, history, rules: { vendetta: game.WARLORD_RULES.vendetta } });
+  const coal = game.readCoalitions(state);
+  return e.json(200, { warlords: list, history, rules: { vendetta: game.WARLORD_RULES.vendetta, coalition: game.COALITION_RULES }, coalition: coal.coalition || coal.history[0] || null });
 }
 
 /** POST /api/cosmic/warlords { action: "vendetta", warlordId, scope } */
@@ -4070,6 +4176,36 @@ function adminWarlords(e) {
       delete state.byId[d.id];
       writeWarlordsState(txApp, state);
     });
+  }
+  if (action === "coalitionStart" || action === "coalitionStop") {
+    let out = null;
+    $app.runInTransaction((txApp) => {
+      applyContent(txApp, game);
+      const now = Date.now();
+      const state = readWarlordsState(txApp, game);
+      const coal = game.readCoalitions(state);
+      if (action === "coalitionStart") {
+        const d = game.findWarlord(id);
+        const rec = d ? findOrNull(txApp, "players", game.warlordUid(d.id)) : null;
+        if (!d || !rec) throw new NotFoundError("Seigneur introuvable.");
+        if (coal.coalition && coal.coalition.status === "active") throw new BadRequestError("Une coalition est déjà en cours.");
+        const p = humanPlain(rec);
+        // Lancement manuel : seuil et délais considérés comme remplis.
+        coal.lastEndMs = 0;
+        coal.overSince = { [d.id]: now - game.COALITION_RULES.holdHours * 3600000 };
+        out = game.checkCoalitionTrigger(coal, [{ id: d.id, power: Number.MAX_SAFE_INTEGER, fleetPower: game.warlordFleetPower(p), present: true }], 1, now);
+        if (!out) throw new BadRequestError("Coalition impossible.");
+        notifyHumans(txApp, [{ kind: "event", title: `Coalition contre ${d.name} !`, message: `5 jours pour lui détruire ${game.formatInt(out.goal)} de puissance, tous ensemble.`, createdAtMs: now, read: false, link: "/game/seigneurs" }]);
+      } else {
+        if (!coal.coalition || coal.coalition.status !== "active") throw new BadRequestError("Aucune coalition en cours.");
+        coal.coalition.endsAtMs = now;
+        const lost = game.settleCoalition(coal, now);
+        if (lost) finishCoalitionLost(txApp, game, coal, lost, now);
+      }
+      game.writeCoalitions(state, coal);
+      writeWarlordsState(txApp, state);
+    });
+    return e.json(200, out || { ok: true });
   }
   const summary = warlordTick(Date.now(), action === "attack" ? { forceAttack: id } : null);
   return e.json(200, summary);

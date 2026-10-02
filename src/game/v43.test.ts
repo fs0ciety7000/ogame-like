@@ -31,7 +31,8 @@ describe("v4.3 chronicles", () => {
   it("one episode a week (1st, 8th, 15th, 22nd), three months written", () => {
     expect(chronicleOf(OCT13)?.title).toBe("La Liste");
     expect(chronicleOf(Date.UTC(2026, 11, 3))?.title).toBe("Le Silence d'hiver");
-    expect(chronicleOf(Date.UTC(2027, 0, 3))).toBeNull();
+    expect(chronicleOf(Date.UTC(2027, 0, 3))?.title).toBe("Le Dégel");
+    expect(chronicleOf(Date.UTC(2027, 3, 3))).toBeNull();
     expect(unlockedEpisodes(Date.UTC(2026, 9, 2, 10))).toBe(1);
     expect(unlockedEpisodes(OCT13)).toBe(2);
     expect(unlockedEpisodes(Date.UTC(2026, 9, 22, 10))).toBe(4);
@@ -68,8 +69,8 @@ describe("v4.3 chronicles", () => {
     expect(new Date(w.endMs).toISOString()).toBe("2026-11-01T22:00:00.000Z");
     expect(seasonBossWindow(OCT13, false)).toBeNull();
     expect(seasonBossWindow(OCT13, true)?.startMs).toBe(w.startMs);
-    // Pas de chronique en janvier 2027 : pas de boss.
-    expect(seasonBossWindow(Date.UTC(2027, 0, 29, 20), false)).toBeNull();
+    // Pas de chronique en avril 2027 : pas de boss.
+    expect(seasonBossWindow(Date.UTC(2027, 3, 30, 20), false)).toBeNull();
   });
 
   it("rewards: pass points for all, title and unique sceau if killed, epic relic for the podium", () => {

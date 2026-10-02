@@ -33,6 +33,8 @@ export const PASS_POINTS = {
   /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
   allianceBoss: 40,
   allianceBossTry: 15,
+  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
+  coalition: 50,
 };
 export type PassSource = keyof typeof PASS_POINTS;
 

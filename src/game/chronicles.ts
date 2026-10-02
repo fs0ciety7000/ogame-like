@@ -206,6 +206,147 @@ export const DEFAULT_CHRONICLES: ChroniclesConfig = {
         },
       ],
     },
+    {
+      id: "2027-01",
+      title: "Le Dégel",
+      theme: { accent: "#7fd1ff", label: "Bleu glacier" },
+      boss: {
+        name: "Le Brise-Glace de Kragmor",
+        title: "Pourfendeur du Brise-Glace",
+        image: "/assets/chronicles/2027-01-boss.webp",
+        emblem: "/assets/chronicles/2027-01-sceau.webp",
+        fallbackImage: "/assets/story/gravhorn.webp",
+        lore: "Un vaisseau-forage du Syndicat Gravhorn, à l'étrave hérissée de foreuses, qui brise la glace des routes gelées pour les revendre au plus offrant.",
+      },
+      episodes: [
+        {
+          title: "Les routes gelées",
+          lines: [
+            L("vashka", "L'hiver du Chœur s'est retiré, {pseudo}, mais il a laissé les routes prises dans la glace. Les prix flambent."),
+            L("kragmor", "Flamber ? Moi, j'appelle ça « le marché ». Achète, petit. Tant que c'est encore moi qui fixe les prix."),
+          ],
+          objective: { type: "market", count: 4 },
+        },
+        {
+          title: "Les convois",
+          lines: [
+            L("nerea", "Les convois d'hiver repartent. Escorte-les, ou Kragmor fera payer chaque tonne qui passe."),
+            L("vashka", "Envoie tes équipes en mission, {pseudo}. Chaque route rouverte est une route de moins pour lui."),
+          ],
+          objective: { type: "mission", count: 8 },
+        },
+        {
+          title: "Le prix de la glace",
+          lines: [
+            L("lysa", "J'ai vu ses registres. Il ne vend pas la glace : il vend des routes qu'il a lui-même bloquées."),
+            L("vashka", "Alors trouve où sont ses foreuses. Sonde le secteur avant qu'il ne remette la main sur les passages."),
+          ],
+          objective: { type: "spy", count: 3 },
+        },
+        {
+          title: "La débâcle",
+          lines: [
+            L("kragmor", "Mon Brise-Glace sort le dernier week-end du mois. Quiconque se met devant l'étrave finit en copeaux."),
+            L("vashka", "Ses alliés d'abord. Brise deux seigneurs de guerre, {pseudo}, et il arrivera seul."),
+          ],
+          objective: { type: "warlordWin", count: 2 },
+        },
+      ],
+    },
+    {
+      id: "2027-02",
+      title: "Le Chœur brisé",
+      theme: { accent: "#c58bff", label: "Violet du Chœur" },
+      boss: {
+        name: "La Cathédrale d'Ilyon",
+        title: "Pourfendeur de la Cathédrale",
+        image: "/assets/chronicles/2027-02-boss.webp",
+        emblem: "/assets/chronicles/2027-02-sceau.webp",
+        fallbackImage: "/assets/story/choeur.webp",
+        lore: "La nef de cristal où Ilyon chantait autrefois, rappelée par le Chœur et retournée contre lui. Ses vitraux vibrent assez fort pour fendre une coque.",
+      },
+      episodes: [
+        {
+          title: "La fausse note",
+          lines: [
+            L("ilyon", "Ils ont rallumé ma cathédrale. Sans moi. Ce chant qui traverse le secteur… c'est ma voix, volée."),
+            L("vashka", "Tes contrats d'abord, {pseudo}. Un empire qui tient ses engagements ne se laisse pas bercer par une chanson."),
+          ],
+          objective: { type: "contract", count: 5 },
+        },
+        {
+          title: "Les fidèles",
+          lines: [
+            L("nerea", "Des empires entiers se tournent vers la cathédrale. Ils envoient leurs flottes là où le chant les appelle."),
+            L("vashka", "Alors réveille-les à coups de canon. Gagne quatre combats, que tout le secteur l'entende."),
+          ],
+          objective: { type: "victory", count: 4 },
+        },
+        {
+          title: "Le contre-chant",
+          lines: [
+            L("vashka", "L'Essaim ne chante pas, {pseudo}. Il chasse. Remplis trois primes : les chasseurs Kesh feront taire les fidèles."),
+            L("ilyon", "Je connais les passages de la nef. Je vous les donnerai… si vous me rendez ma voix."),
+          ],
+          objective: { type: "bounty", count: 3 },
+        },
+        {
+          title: "La nef",
+          lines: [
+            L("ilyon", "Le dernier week-end, la cathédrale entrera dans le secteur. Visez les vitraux : c'est là qu'elle respire."),
+            L("vashka", "Prépare tes flottes, {pseudo}. Six missions pour rassembler tout ce qui peut voler."),
+          ],
+          objective: { type: "mission", count: 6 },
+        },
+      ],
+    },
+    {
+      id: "2027-03",
+      title: "Les Racines de Maru",
+      theme: { accent: "#7dff9a", label: "Vert des racines" },
+      boss: {
+        name: "L'Avatar du Prophète",
+        title: "Pourfendeur de l'Avatar",
+        image: "/assets/chronicles/2027-03-boss.webp",
+        emblem: "/assets/chronicles/2027-03-sceau.webp",
+        fallbackImage: "/assets/leviathan/leviathan.webp",
+        lore: "Un colosse de chair et de racines que le culte de Maru a fait pousser sur un astéroïde, à l'image du Léviathan qu'il vénère. Il grandit à chaque prière.",
+      },
+      episodes: [
+        {
+          title: "Les germes",
+          lines: [
+            L("maru", "Le printemps vient, enfants du vide. Et avec lui, la graine du Léviathan éclot dans votre secteur."),
+            L("vashka", "Des racines sur les astéroïdes, {pseudo}. Sonde-les toutes : je veux savoir jusqu'où elles courent."),
+          ],
+          objective: { type: "spy", count: 4 },
+        },
+        {
+          title: "Les fidèles armés",
+          lines: [
+            L("maru", "Mes frères seigneurs ont entendu l'appel. Ils protégeront le jardin."),
+            L("vashka", "Alors arrache les gardiens. Brise deux seigneurs de guerre, et le jardin restera sans défense."),
+          ],
+          objective: { type: "warlordWin", count: 2 },
+        },
+        {
+          title: "Les raids de printemps",
+          lines: [
+            L("varan", "Même moi, je n'aime pas ce qui pousse là-bas. La Confrérie frappera les colonies qui traînent : tiens bon, ou tu serviras d'engrais."),
+            L("vashka", "Repousse trois raids, {pseudo}. Un empire qui plie nourrit les racines."),
+          ],
+          objective: { type: "raidRepelled", count: 3 },
+        },
+        {
+          title: "La floraison",
+          lines: [
+            L("maru", "Le dernier week-end, l'Avatar ouvrira les yeux. Et le secteur entier priera avec moi."),
+            L("vashka", "Le secteur entier tirera, oui. Tes contrats d'abord : il nous faudra chaque ressource, {pseudo}."),
+          ],
+          objective: { type: "contract", count: 5 },
+        },
+      ],
+    },
   ],
 };
 

@@ -83,15 +83,27 @@ export function endVacation(player: PlayerState, queues: QueuesState, at: number
   const later = (t: number | null) => (t === null ? null : t + shift);
   for (const id of Object.keys(queues.buildingUpgrades)) {
     const e = queues.buildingUpgrades[id as keyof typeof queues.buildingUpgrades];
-    if (e) e.endTime += shift;
+    if (e) {
+      e.endTime += shift;
+      if (e.startedAtMs) e.startedAtMs += shift;
+    }
   }
   (["attack", "defense"] as const).forEach((c) => queues.unitQueues[c].forEach((e) => (e.endTime = later(e.endTime))));
-  queues.activeResearches.forEach((e) => (e.endTime += shift));
+  queues.activeResearches.forEach((e) => {
+    e.endTime += shift;
+    if (e.startedAtMs) e.startedAtMs += shift;
+  });
   queues.activeMissions.forEach((e) => (e.endTime += shift));
   // Colonies : travaux décalés, production réduite au quart pendant l'absence.
   for (const c of player.colonies ?? []) {
-    if (c.building) c.building.endTime += shift;
-    if (c.defenseJob) c.defenseJob.endTime += shift;
+    if (c.building) {
+      c.building.endTime += shift;
+      if (c.building.startedAtMs) c.building.startedAtMs += shift;
+    }
+    if (c.defenseJob) {
+      c.defenseJob.endTime += shift;
+      if (c.defenseJob.startedAtMs) c.defenseJob.startedAtMs += shift;
+    }
     c.updatedAtMs = Math.min(end, c.updatedAtMs + shift * (1 - VACATION_RULES.productionFactor));
   }
   if (player.colonizing) player.colonizing.endTime += shift;
