@@ -135,6 +135,9 @@ function requireAdminReason(e) {
   if (changed.length > 0 && adminReason(e).length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins) pour modifier ce joueur.");
 }
 
+/** v4.7.2 : champs écrits par le jeu lui-même (lecture du canal…), jamais consignés. */
+const LOG_IGNORED_FIELDS = ["allianceLastReadMs"];
+
 function logAdminAction(e, action, before, after) {
   try {
     if (!isGameAdmin(e)) return;
@@ -143,7 +146,7 @@ function logAdminAction(e, action, before, after) {
     const labelField = LOG_LABEL_FIELD[collection];
     const changes = {};
     if (action === "update") {
-      const fields = Object.keys(e.requestInfo().body || {});
+      const fields = Object.keys(e.requestInfo().body || {}).filter((f) => LOG_IGNORED_FIELDS.indexOf(f) < 0);
       fields.forEach((f) => {
         const a = before[f];
         const b = after[f];
