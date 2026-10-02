@@ -82,12 +82,28 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
   if (spending) bumpStat(player, "spent", total);
 }
 
+/** Places de hangar occupées : vaisseaux à quai + vaisseaux en mission. */
+export function hangarUsed(units: PlayerState["units"], away: Record<string, number>, category: "attack" | "defense"): number {
+  let used = 0;
+  for (const [id, u] of Object.entries(units)) {
+    const def = findUnit(id);
+    if (def?.category === category) used += (u?.count ?? 0) * def.hangarSpace;
+  }
+  for (const [id, n] of Object.entries(away)) {
+    const def = findUnit(id);
+    if (def?.category === category) used += (n > 0 ? n : 0) * def.hangarSpace;
+  }
+  return used;
+}
+
 interface ActionState {
   player: PlayerState;
   queues: QueuesState;
   preFlushPlayer: PlayerState;
   flushNotifications: NewNotification[];
   now: number;
+  /** Vaisseaux partis en mission (ils reviendront occuper le hangar). */
+  unitsAway: Record<string, number>;
 }
 
 function applyAction(s: ActionState, action: GameAction): unknown {
@@ -141,10 +157,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;
-      const built = Object.entries(player.units).reduce((sum, [id, u]) => {
-        const def = findUnit(id);
-        return def?.category === category ? sum + u.count * def.hangarSpace : sum;
-      }, 0);
+      const built = hangarUsed(player.units, s.unitsAway, category);
       const reserved = queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
       if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
@@ -260,11 +273,13 @@ export function performPlayerAction(
   queuesIn: QueuesState,
   action: GameAction,
   now: number,
+  /** Vaisseaux en vol (flottes du joueur), comptés dans le hangar. */
+  unitsAway: Record<string, number> = {},
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; result: unknown } {
   const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) };
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now },
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
     action,
   );
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };

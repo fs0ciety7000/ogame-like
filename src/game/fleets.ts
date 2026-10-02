@@ -644,6 +644,16 @@ export function beaconReturn(fleet: Fleet, uid: string, now: number): Fleet {
   return { ...fleet, status: "returning", recalled, returnAtMs: now };
 }
 
+/** Vaisseaux d'un joueur actuellement hors de la base (toutes missions). */
+export function unitsAwayOf(fleets: Pick<Fleet, "ownerUid" | "status" | "units">[], uid: string): Record<string, number> {
+  const away: Record<string, number> = {};
+  for (const f of fleets) {
+    if (f.ownerUid !== uid || f.status === "done") continue;
+    for (const [id, n] of Object.entries(f.units ?? {})) if (n > 0) away[id] = (away[id] ?? 0) + n;
+  }
+  return away;
+}
+
 /** Distance fixe jusqu'au repaire (aux confins de la carte). */
 export const LAIR_DISTANCE = 60;
 

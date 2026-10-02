@@ -22,7 +22,7 @@ import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
-import { getBuildingUpgradeTime, findBuilding } from "@/game/buildings";
+import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -1485,6 +1485,22 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources, bounties: {}, stats: before!.stats ?? {}, titles: before!.titles ?? [], activeTitle: before!.activeTitle ?? "" });
     }
   }, 60_000);
+
+  it("v3.9.1 hangar: ships away on a mission still take their place", async () => {
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const fleets: string[] = [];
+    try {
+      const fit = Math.floor(getUnitCapacity(before.buildings, "attack") / 20);
+      await admin.collection("players").update(bId, { units: { ...before.units, chasseur: { level: 1, count: fit } }, resources: RICH });
+      const patrol = await ps.sendFleet("", { chasseur: fit }, "patrol", { minutes: 30 });
+      fleets.push(patrol.id);
+      await expect(ps.enqueueUnitBuild(bId, "chasseur", 1)).rejects.toThrow(/hangar/);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources });
+    }
+  });
 
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
