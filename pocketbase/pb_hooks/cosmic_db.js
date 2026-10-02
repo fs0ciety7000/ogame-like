@@ -1599,6 +1599,39 @@ function saveWar(txApp, rec, war) {
   txApp.save(rec);
 }
 
+/** Canal diplomatique : prévient les membres des deux alliances (sauf
+ *  l'auteur). Une seule notification non lue par pacte et par joueur toutes
+ *  les 10 minutes, pour ne pas inonder la cloche pendant une discussion. */
+function notifyPactMessage(txApp, pact, authorUid, authorPseudo, authorTag, text, now) {
+  const link = `/game/alliance?onglet=diplomatie&pacte=${pact.id}`;
+  const otherTag = authorTag === pact.tagA ? pact.tagB : pact.tagA;
+  const excerpt = text.length > 90 ? `${text.slice(0, 89)}…` : text;
+  [pact.allianceA, pact.allianceB].forEach((allianceId) => {
+    const rec = findOrNull(txApp, "alliances", allianceId);
+    if (!rec) return;
+    const ownSide = allianceId === (authorTag === pact.tagA ? pact.allianceA : pact.allianceB);
+    (allianceFromRecord(rec).members || []).forEach((uid) => {
+      if (uid === authorUid) return;
+      try {
+        const recent = txApp.findRecordsByFilter("notifications", "player_id = {:u} && link = {:l} && read = false && createdAtMs > {:t}", "", 1, 0, { u: uid, l: link, t: now - 10 * 60000 });
+        if (recent.length > 0) return;
+        notify(txApp, uid, [
+          {
+            kind: "alliance",
+            title: `Canal diplomatique [${ownSide ? otherTag : authorTag}]`,
+            message: `[${authorTag}] ${authorPseudo} : ${excerpt}`,
+            createdAtMs: now,
+            read: false,
+            link,
+          },
+        ]);
+      } catch (_) {
+        /* facultatif */
+      }
+    });
+  });
+}
+
 function notifyAlliance(txApp, allianceId, title, message, now) {
   const rec = findOrNull(txApp, "alliances", allianceId);
   if (!rec) return;
@@ -2888,6 +2921,7 @@ function diplomacyRequest(e) {
         const msg = new Record(txApp.findCollectionByNameOrId("pact_messages"));
         msg.load({ pactId: pact.id, allianceA: pact.allianceA, allianceB: pact.allianceB, authorUid: uid, authorPseudo: pseudo, authorTag: own.tag, text, createdAtMs: now });
         txApp.save(msg);
+        notifyPactMessage(txApp, pact, uid, pseudo, own.tag, text, now);
         out = toPlain(msg);
         return;
       }

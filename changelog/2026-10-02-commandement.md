@@ -35,5 +35,9 @@ La plus grosse mise à jour depuis le lancement : ton empire a désormais un **�
 - Bannières et sceaux se débloquent par tes exploits : repaires des factions tombés, primes Kesh'Vaar, Léviathan abattu.
 - Ta fiche montre aussi tes **officiers en poste** et tes **reliques équipées**.
 
+## Diplomatie
+- Un message dans le **canal diplomatique** d'un pacte prévient désormais les membres des deux alliances : une notification par salve de messages (pas plus d'une toutes les 10 minutes), qui ouvre directement le bon canal.
+- Pastilles **« non lu »** sur l'onglet Diplomatie, sur le bouton Canal de chaque pacte et dans le menu Alliance.
+
 ## Une planète plus vivante
 - Sur l'accueil, ta planète montre le **jour et la nuit** (heure de Paris), les vapeurs du Labo de synthèse, tes boucliers de capsules, les insignes de tes officiers, l'aura d'une relique légendaire, tes flottes qui partent en mission et les échos des flottes hostiles en approche.

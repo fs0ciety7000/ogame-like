@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { subscribeAllianceMessages } from "@/services/allianceService";
 import { setAllianceUnreadCount } from "@/store/allianceUnreadStore";
+import { subscribePactUnread } from "@/services/diplomacyService";
 import type { PlayerState } from "@/types/game";
 
 /** Alimente le badge de messages non lus du chat d'alliance (voir NavBar) :
@@ -19,4 +20,7 @@ export function useAllianceUnread(uid: string | null, player: PlayerState | null
       setAllianceUnreadCount(count);
     });
   }, [allianceId, uid, lastReadMs]);
+
+  // v4.0 : messages du canal diplomatique (pastilles de l'onglet Diplomatie).
+  useEffect(() => (allianceId && uid ? subscribePactUnread(uid, allianceId) : undefined), [allianceId, uid]);
 }

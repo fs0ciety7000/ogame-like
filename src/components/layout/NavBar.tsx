@@ -14,6 +14,7 @@ import { LiveClock } from "@/components/layout/LiveClock";
 import { usePlayerStore } from "@/store/playerStore";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
+import { usePactUnreadStore } from "@/services/diplomacyService";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -72,7 +73,7 @@ export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 const ALL_ITEMS = ALL_NAV_ITEMS;
 
 function useBadge(to: string): number {
-  const allianceUnread = useAllianceUnreadStore((s) => s.count);
+  const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
@@ -273,7 +274,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
 function MobileTabBar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const allianceUnread = useAllianceUnreadStore((s) => s.count);
+  const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));

@@ -1349,6 +1349,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(pact).toMatchObject({ status: "proposed", allianceA: X.id, allianceB: Y.id });
       await expect(ds.diplomacy("accept", { pactId: pact.id })).rejects.toThrow("invitée");
       await ds.diplomacy("message", { pactId: pact.id, text: "On signe ?" });
+      await ds.diplomacy("message", { pactId: pact.id, text: "Réponse attendue." });
+      // v4.0 : l'autre alliance est prévenue, une seule fois par salve.
+      const pactNotes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && link="/game/alliance?onglet=diplomatie&pacte=${pact.id}"` });
+      expect(pactNotes).toHaveLength(1);
+      expect(pactNotes[0]).toMatchObject({ kind: "alliance", title: `Canal diplomatique [${X.tag}]` });
+      expect(pactNotes[0].message).toContain("On signe ?");
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && link~"pacte=${pact.id}"` })).toHaveLength(0);
 
       await loginPlayer(B.email, B.pw);
       expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
