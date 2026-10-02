@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" sizes="64x64" href="/assets/logo/favicon-64.png?v=2.4" />
     <link rel="apple-touch-icon" href="/assets/logo/apple-touch-icon.png?v=2.4" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
     <meta name="theme-color" content="#05070f" />
     <title>Cosmic Empires</title>
     <meta name="description" content="Cosmic Empires — bâtis ton empire, recherche, combats et alliances en temps réel." />
@@ -15,6 +16,31 @@
       href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Saira:wght@300;400;500;600;700&family=Saira+Condensed:wght@600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Après une mise à jour, un navigateur qui a gardé l'ancienne page en cache
+      // réclame des fichiers qui n'existent plus : la page resterait vide. On
+      // recharge alors une fois pour récupérer la nouvelle version.
+      window.__reloadForUpdate = function () {
+        try {
+          var last = Number(sessionStorage.getItem("cosmic-empires:update-reload") || 0);
+          if (Date.now() - last < 30000) return false;
+          sessionStorage.setItem("cosmic-empires:update-reload", String(Date.now()));
+        } catch (e) {}
+        var url = new URL(window.location.href);
+        url.searchParams.set("v", Date.now().toString(36));
+        window.location.replace(url.toString());
+        return true;
+      };
+      window.addEventListener(
+        "error",
+        function (e) {
+          var el = e.target;
+          var src = el && (el.src || el.href);
+          if (src && /\/assets\/[^/]+\.(js|css)(\?|$)/.test(src)) window.__reloadForUpdate();
+        },
+        true,
+      );
+    </script>
     <script>
       // Thème d'interface choisi (Réglages), appliqué avant le premier rendu.
       try {
