@@ -800,6 +800,14 @@ function launchFleetRequest(e) {
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
     }
+    // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
+    if (mission === "attack" && target) {
+      const pact = bindingPact(txApp, game, attacker.rec.getString("allianceId"), target.allianceId, now);
+      if (pact) {
+        const tag = pact.allianceA === target.allianceId ? pact.tagA : pact.tagB;
+        throw new BadRequestError(`Pacte de non-agression avec [${tag}] : attaque impossible${pact.status === "ending" ? " jusqu'à la fin du préavis" : ""}.`);
+      }
+    }
     let expeditionsActive = 0;
     let expeditionsToday = 0;
     let leviathan = null;
@@ -1559,6 +1567,7 @@ function warRequest(e) {
       const targetRec = findOrNull(txApp, "alliances", String(req.targetAllianceId || ""));
       if (!targetRec) throw new NotFoundError("Alliance introuvable.");
       const target = allianceFromRecord(targetRec);
+      if (bindingPact(txApp, game, own.id, target.id, now)) throw new BadRequestError(`Un pacte de non-agression vous lie à [${target.tag}] : rompez-le d'abord (préavis de ${game.DIPLOMACY_RULES.breakNoticeHours} h).`);
       let res;
       try {
         res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now });
@@ -2684,4 +2693,103 @@ function reportShare(e) {
   return e.json(200, { id: rec.id });
 }
 
-module.exports = { requireAdminReason, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Diplomatie (v3.8) ---------- */
+
+const PACT_FIELDS = ["allianceA", "allianceB", "tagA", "tagB", "nameA", "nameB", "status", "proposedByUid", "proposedByPseudo", "createdAtMs", "acceptedAtMs", "endsAtMs", "brokenByTag"];
+
+function pactJson(rec) {
+  const out = { id: rec.id };
+  PACT_FIELDS.forEach((f) => (out[f] = rec.get(f)));
+  return out;
+}
+
+function pactsOf(txApp, ids) {
+  const recs = [];
+  const seen = {};
+  ids.filter(Boolean).forEach((id) => {
+    txApp.findRecordsByFilter("alliance_pacts", "allianceA = {:id} || allianceB = {:id}", "", 100, 0, { id }).forEach((r) => {
+      if (!seen[r.id]) {
+        seen[r.id] = true;
+        recs.push(r);
+      }
+    });
+  });
+  return recs;
+}
+
+/** Pacte qui interdit les attaques entre deux alliances (ou null). */
+function bindingPact(txApp, game, allianceA, allianceB, now) {
+  if (!allianceA || !allianceB || allianceA === allianceB) return null;
+  return game.bindingPactBetween(pactsOf(txApp, [allianceA]).map(pactJson), allianceA, allianceB, now);
+}
+
+/** POST /api/cosmic/diplomacy { action: propose|accept|decline|cancel|break|message, ... } */
+function diplomacyRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    const player = findOrNull(txApp, "players", uid);
+    const allianceId = player ? player.getString("allianceId") : "";
+    if (!allianceId) throw new BadRequestError("Tu n'as pas d'alliance.");
+    const ownRec = findOrNull(txApp, "alliances", allianceId);
+    if (!ownRec) throw new BadRequestError("Alliance introuvable.");
+    const own = allianceFromRecord(ownRec);
+    const pseudo = player.getString("pseudo");
+    try {
+      if (req.action === "propose") {
+        const targetRec = findOrNull(txApp, "alliances", String(req.targetAllianceId || ""));
+        if (!targetRec) throw new NotFoundError("Alliance introuvable.");
+        const target = allianceFromRecord(targetRec);
+        const pacts = pactsOf(txApp, [own.id, target.id]).map(pactJson);
+        const atWar = !!activeWarRecord(txApp, game, own.id, target.id, now);
+        const pact = game.proposePact({ actorUid: uid, actorPseudo: pseudo, own, target, pacts, atWar, now });
+        const rec = new Record(txApp.findCollectionByNameOrId("alliance_pacts"));
+        rec.load(pact);
+        txApp.save(rec);
+        notifyAlliance(txApp, target.id, "Proposition de pacte", `[${own.tag}] ${own.name} propose un pacte de non-agression.`, now);
+        out = pactJson(rec);
+        return;
+      }
+      const rec = findOrNull(txApp, "alliance_pacts", String(req.pactId || ""));
+      if (!rec) throw new NotFoundError("Pacte introuvable.");
+      const pact = pactJson(rec);
+      if (pact.allianceA !== own.id && pact.allianceB !== own.id) throw new ForbiddenError("Ce pacte ne concerne pas ton alliance.");
+      const other = pact.allianceA === own.id ? pact.allianceB : pact.allianceA;
+      if (req.action === "message") {
+        if (!game.pactOpen(pact, now)) throw new BadRequestError("Ce canal est fermé.");
+        const text = game.sanitizePactMessage(req.text);
+        const msg = new Record(txApp.findCollectionByNameOrId("pact_messages"));
+        msg.load({ pactId: pact.id, allianceA: pact.allianceA, allianceB: pact.allianceB, authorUid: uid, authorPseudo: pseudo, authorTag: own.tag, text, createdAtMs: now });
+        txApp.save(msg);
+        out = toPlain(msg);
+        return;
+      }
+      let next;
+      if (req.action === "break") next = game.breakPact(pact, own, uid, now);
+      else if (req.action === "accept" || req.action === "decline" || req.action === "cancel") next = game.answerPact(pact, own, uid, req.action, now);
+      else throw new BadRequestError("Action inconnue.");
+      PACT_FIELDS.forEach((f) => rec.set(f, next[f]));
+      txApp.save(rec);
+      const label = `[${own.tag}] ${own.name}`;
+      if (req.action === "accept") {
+        notifyAlliance(txApp, own.id, "Pacte signé", `Pacte de non-agression avec [${pact.tagA}] ${pact.nameA}.`, now);
+        notifyAlliance(txApp, other, "Pacte signé", `${label} accepte votre pacte de non-agression.`, now);
+      } else if (req.action === "break") {
+        const h = game.DIPLOMACY_RULES.breakNoticeHours;
+        notifyAlliance(txApp, other, "Pacte rompu", `${label} rompt le pacte : il prend fin dans ${h} h.`, now);
+        notifyAlliance(txApp, own.id, "Pacte rompu", `${pseudo} a rompu le pacte : fin dans ${h} h.`, now);
+      } else if (req.action === "decline") {
+        notifyAlliance(txApp, other, "Pacte refusé", `${label} refuse votre proposition de pacte.`, now);
+      }
+      out = pactJson(rec);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+  });
+  return e.json(200, out);
+}
+
+module.exports = { requireAdminReason, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

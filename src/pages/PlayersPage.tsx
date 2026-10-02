@@ -1,3 +1,5 @@
+import { subscribePacts, usePactStore } from "@/services/diplomacyService";
+import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
@@ -73,6 +75,9 @@ export function PlayersPage() {
   >({});
 
   useEffect(() => subscribeLeaderboard(setPlayers), []);
+  // v3.8 : pactes de non-agression (attaque grisée entre alliances liées).
+  useEffect(() => subscribePacts(), []);
+  const pacts = usePactStore((s) => s.pacts);
   // v3.8 : ouverture depuis la recherche globale (?fiche=uid, ?mode=alliances).
   useEffect(() => {
     const fiche = params.get("fiche");
@@ -235,6 +240,11 @@ export function PlayersPage() {
                   defenderAscendedAtMs: p.ascendedAtMs,
                   lastDefenderDefeatMs: p.lastDefeatAtMs ?? null,
                 });
+            const pact = !isSelf && me?.allianceId && p.allianceId ? bindingPactBetween(pacts, me.allianceId, p.allianceId, Date.now()) : null;
+            if (pact && attackCheck) {
+              attackCheck.allowed = false;
+              attackCheck.message = `Pacte de non-agression avec [${pact.allianceA === p.allianceId ? pact.tagA : pact.tagB}]${pact.status === "ending" ? " (préavis en cours)" : ""}.`;
+            }
             const isProtected =
               attackCheck?.reason === "newbie" ||
               attackCheck?.reason === "shield";

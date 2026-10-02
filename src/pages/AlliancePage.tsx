@@ -1,3 +1,4 @@
+import { DiplomacyTab } from "@/components/game/DiplomacyTab";
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
@@ -247,10 +248,14 @@ function AllianceRoom({
         <TabsTrigger value="projets">Projets</TabsTrigger>
         <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
         <TabsTrigger value="guerre">Guerre</TabsTrigger>
+        <TabsTrigger value="diplomatie">Diplomatie</TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
       <TabsContent value="classement">
         <AllianceRanking currentId={alliance.id} />
+      </TabsContent>
+      <TabsContent value="diplomatie">
+        <DiplomacyTab alliance={alliance} uid={uid} canLead={role === "founder" || role === "officer"} />
       </TabsContent>
       <TabsContent value="guerre">
         <WarTab alliance={alliance} canLead={role === "founder" || role === "officer"} />

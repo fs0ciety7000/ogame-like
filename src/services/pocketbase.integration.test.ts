@@ -14,6 +14,7 @@ import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
 import * as srs from "@/services/sharedReportService";
+import * as ds from "@/services/diplomacyService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
@@ -1330,6 +1331,42 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("shared_reports").delete(id);
     } finally {
       await admin.collection("battle_reports").delete(report.id);
+      await loginPlayer(B.email, B.pw);
+    }
+  });
+
+  it("v3.8 diplomacy: pact proposed, accepted, blocks attacks and war, shared channel, notice on break", async () => {
+    const before = { a: (await snap(aId)).allianceId ?? "", b: (await snap(bId)).allianceId ?? "" };
+    const X = await admin.collection("alliances").create({ name: "Pacte X", tag: `X${suffix.slice(0, 3)}`, createdBy: aId, createdAtMs: Date.now(), members: [aId], memberPseudos: { [aId]: A.pseudo }, roles: {} });
+    const Y = await admin.collection("alliances").create({ name: "Pacte Y", tag: `Y${suffix.slice(0, 3)}`, createdBy: bId, createdAtMs: Date.now(), members: [bId], memberPseudos: { [bId]: B.pseudo }, roles: {} });
+    await admin.collection("players").update(aId, { allianceId: X.id });
+    await admin.collection("players").update(bId, { allianceId: Y.id });
+    try {
+      await loginPlayer(A.email, A.pw);
+      const pact = await ds.diplomacy("propose", { targetAllianceId: Y.id });
+      expect(pact).toMatchObject({ status: "proposed", allianceA: X.id, allianceB: Y.id });
+      await expect(ds.diplomacy("accept", { pactId: pact.id })).rejects.toThrow("invitée");
+      await ds.diplomacy("message", { pactId: pact.id, text: "On signe ?" });
+
+      await loginPlayer(B.email, B.pw);
+      expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
+      expect((await ds.diplomacy("accept", { pactId: pact.id })).status).toBe("active");
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("Pacte de non-agression");
+      await expect(pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: X.id } })).rejects.toMatchObject({ status: 400 });
+
+      const ending = await ds.diplomacy("break", { pactId: pact.id });
+      expect(ending.status).toBe("ending");
+      expect(ending.endsAtMs).toBeGreaterThan(Date.now() + 23 * 3600_000);
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("préavis");
+      // Un tiers ne lit pas le canal.
+      await expect(new PocketBase(PB_TEST_URL!).collection("pact_messages").getFullList()).resolves.toHaveLength(0);
+    } finally {
+      for (const m of await admin.collection("pact_messages").getFullList({ filter: `allianceA="${X.id}"` })) await admin.collection("pact_messages").delete(m.id);
+      for (const p of await admin.collection("alliance_pacts").getFullList({ filter: `allianceA="${X.id}"` })) await admin.collection("alliance_pacts").delete(p.id);
+      await admin.collection("players").update(aId, { allianceId: before.a });
+      await admin.collection("players").update(bId, { allianceId: before.b });
+      await admin.collection("alliances").delete(X.id);
+      await admin.collection("alliances").delete(Y.id);
       await loginPlayer(B.email, B.pw);
     }
   });

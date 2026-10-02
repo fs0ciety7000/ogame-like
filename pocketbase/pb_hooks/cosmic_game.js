@@ -52,6 +52,7 @@ __export(hooksEntry_exports, {
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
+  DIPLOMACY_RULES: () => DIPLOMACY_RULES,
   EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
@@ -74,6 +75,7 @@ __export(hooksEntry_exports, {
   addReportComment: () => addReportComment,
   allianceNextDueMs: () => allianceNextDueMs,
   allianceStandings: () => allianceStandings,
+  answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
@@ -84,6 +86,8 @@ __export(hooksEntry_exports, {
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  bindingPactBetween: () => bindingPactBetween,
+  breakPact: () => breakPact,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   closeLeviathan: () => closeLeviathan,
   collectDebris: () => collectDebris,
@@ -123,6 +127,7 @@ __export(hooksEntry_exports, {
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
+  pactOpen: () => pactOpen,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -135,6 +140,7 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
+  proposePact: () => proposePact,
   recallFleet: () => recallFleet,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recyclerCapacity: () => recyclerCapacity,
@@ -152,6 +158,7 @@ __export(hooksEntry_exports, {
   sanitizeClientError: () => sanitizeClientError,
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
+  sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
@@ -6389,6 +6396,87 @@ function assertMessageQuota(lastMinute, lastDay) {
   if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
+// src/game/diplomacy.ts
+var DIPLOMACY_RULES = {
+  /** Préavis de rupture, en heures (le pacte protège encore). */
+  breakNoticeHours: 24,
+  /** Pactes simultanés (proposés, actifs ou en préavis) par alliance. */
+  maxPacts: 3,
+  messageMax: 500
+};
+var HOUR6 = 36e5;
+function pactStatusAt(p, now) {
+  return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
+}
+function pactBinds(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "active" || s === "ending";
+}
+function pactOpen(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "proposed" || s === "active" || s === "ending";
+}
+function involves(p, allianceId) {
+  return p.allianceA === allianceId || p.allianceB === allianceId;
+}
+function bindingPactBetween(pacts, a, b, now) {
+  var _a;
+  if (!a || !b || a === b) return null;
+  return (_a = pacts.find((p) => involves(p, a) && involves(p, b) && pactBinds(p, now))) != null ? _a : null;
+}
+function assertLeader(alliance, uid, what) {
+  const role = allianceRole(alliance, uid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError(`Seuls le fondateur et les officiers peuvent ${what}.`);
+}
+function proposePact(input) {
+  const { own, target, pacts, now } = input;
+  assertLeader(own, input.actorUid, "proposer un pacte");
+  if (own.id === target.id) throw new GameActionError("Impossible de signer un pacte avec sa propre alliance.");
+  if (input.atWar) throw new GameActionError(`Vous \xEAtes en guerre contre [${target.tag}] : la paix d'abord.`);
+  if (pacts.some((p) => involves(p, own.id) && involves(p, target.id) && pactOpen(p, now))) throw new GameActionError(`Une relation est d\xE9j\xE0 en cours avec [${target.tag}].`);
+  const count2 = (id) => pacts.filter((p) => involves(p, id) && pactOpen(p, now)).length;
+  if (count2(own.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`${DIPLOMACY_RULES.maxPacts} pactes au plus par alliance.`);
+  if (count2(target.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`[${target.tag}] a d\xE9j\xE0 ${DIPLOMACY_RULES.maxPacts} pactes.`);
+  return {
+    allianceA: own.id,
+    allianceB: target.id,
+    tagA: own.tag,
+    tagB: target.tag,
+    nameA: own.name,
+    nameB: target.name,
+    status: "proposed",
+    proposedByUid: input.actorUid,
+    proposedByPseudo: input.actorPseudo,
+    createdAtMs: now,
+    acceptedAtMs: 0,
+    endsAtMs: 0,
+    brokenByTag: ""
+  };
+}
+function answerPact(pact, own, actorUid, answer, now) {
+  if (pactStatusAt(pact, now) !== "proposed") throw new GameActionError("Ce pacte n'est plus en attente.");
+  if (answer === "cancel") {
+    if (own.id !== pact.allianceA) throw new GameActionError("Seule l'alliance qui a propos\xE9 peut retirer sa proposition.");
+    assertLeader(own, actorUid, "retirer une proposition");
+    return __spreadProps(__spreadValues({}, pact), { status: "cancelled" });
+  }
+  if (own.id !== pact.allianceB) throw new GameActionError("Seule l'alliance invit\xE9e peut r\xE9pondre.");
+  assertLeader(own, actorUid, "r\xE9pondre \xE0 un pacte");
+  return answer === "accept" ? __spreadProps(__spreadValues({}, pact), { status: "active", acceptedAtMs: now }) : __spreadProps(__spreadValues({}, pact), { status: "declined" });
+}
+function breakPact(pact, own, actorUid, now) {
+  if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
+  if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
+  assertLeader(own, actorUid, "rompre un pacte");
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR6, brokenByTag: own.tag });
+}
+function sanitizePactMessage(raw) {
+  const text = String(raw != null ? raw : "").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > DIPLOMACY_RULES.messageMax) throw new GameActionError(`Message trop long (${DIPLOMACY_RULES.messageMax} caract\xE8res max).`);
+  return text;
+}
+
 // src/game/maintenance.ts
 var MAINTENANCE_KEY = "maintenance";
 var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
@@ -6448,7 +6536,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR6 = 36e5;
+var HOUR7 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES.includes(res)) return 1;
@@ -6481,7 +6569,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR6);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR7);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {

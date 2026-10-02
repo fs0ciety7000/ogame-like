@@ -396,6 +396,8 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
 
 /** Guerres d'alliance (v3.2) : déclaration et reddition ; début et fin planifiés. */
 routerAdd("POST", "/api/cosmic/war", (e) => require(`${__hooks}/cosmic_db.js`).warRequest(e), $apis.requireAuth("users"));
+/** POST /api/cosmic/diplomacy — pactes de non-agression et canal partagé (v3.8). */
+routerAdd("POST", "/api/cosmic/diplomacy", (e) => require(`${__hooks}/cosmic_db.js`).diplomacyRequest(e), $apis.requireAuth("users"));
 cronAdd("cosmic_wars", "*/5 * * * *", () => {
   try {
     require(`${__hooks}/cosmic_db.js`).warTick(Date.now());
