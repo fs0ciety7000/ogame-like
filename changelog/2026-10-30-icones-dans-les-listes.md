@@ -1,7 +1,7 @@
 ---
 version: 3.7.1
 iteration: 35
-date: 2026-10-01
+date: 2026-10-02
 title: Vraies icônes dans les listes de ressources
 ---
 Petites finitions visuelles.

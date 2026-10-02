@@ -1,7 +1,7 @@
 ---
 version: 3.9.0
 iteration: 38
-date: 2026-10-01
+date: 2026-10-02
 title: Chasseurs de primes — l'Essaim Kesh'Vaar
 ---
 Une nouvelle faction **alliée** entre en scène : les **Kesh'Vaar**, un essaim insectoïde dont la Ruche-Mère a été pillée par les pirates et le Syndicat Gravhorn. Ils paient en **Ambre de Ruche** la capture des coupables.

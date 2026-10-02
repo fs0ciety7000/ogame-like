@@ -1,7 +1,7 @@
 ---
 version: 3.5.1
 iteration: 32
-date: 2026-10-01
+date: 2026-10-02
 title: Tags d'alliance et classement des alliances
 ---
 Les alliances gagnent en visibilité.

@@ -1,7 +1,7 @@
 ---
 version: 3.8.1
 iteration: 37
-date: 2026-10-01
+date: 2026-10-02
 title: Emojis dans les discussions et notifications cliquables
 ---
 De quoi mettre un peu plus de vie dans les échanges.

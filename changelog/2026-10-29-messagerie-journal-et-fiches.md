@@ -1,7 +1,7 @@
 ---
 version: 3.7.0
 iteration: 34
-date: 2026-10-01
+date: 2026-10-02
 title: Messagerie privée, journal d'empire et fiches de joueur
 ---
 Trois nouveautés pour suivre ce qui se passe dans la galaxie et parler aux autres commandants.
