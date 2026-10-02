@@ -23,6 +23,11 @@ import { GameActionError } from "@/game/errors";
 import { claimContract, recordContract, rerollContract } from "@/game/contracts";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { applyXpDelta } from "@/game/seasons";
+import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recruitCommander, trainCommander } from "@/game/commanders";
+import { activateCapsule, craftCapsule } from "@/game/synthesis";
+import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
+import { bountyState } from "@/game/bounties";
+import { productionHours } from "@/game/pirates";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -53,7 +58,15 @@ export type GameAction =
   | { type: "colonize"; name: string }
   | { type: "colonyUpgrade"; colonyId: string; buildingId: string }
   | { type: "colonyDefense"; colonyId: string; unitId: string; qty: number }
-  | { type: "colonyRename"; colonyId: string; name: string };
+  | { type: "colonyRename"; colonyId: string; name: string }
+  | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
+  | { type: "commanderAssign"; ids: string[] }
+  | { type: "commanderTrain"; commanderId: string }
+  | { type: "synthCraft"; capsule: string; level: number }
+  | { type: "synthActivate"; capsule: string; level?: number }
+  | { type: "relicEquip"; slot: number; relicId: string | null }
+  | { type: "relicFuse"; template: string; rarity: string }
+  | { type: "relicRecycle"; relicId: string };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -219,12 +232,14 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.resources[sellId] -= amount;
       player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
       bumpStat(player, "traded", amount);
+      grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return gained;
     }
 
     case "claimContract": {
       const claimed = claimContract(player, String(action.contractId ?? ""), now);
       bumpStat(player, "contracts");
+      grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
       return claimed;
     }
 
@@ -261,6 +276,54 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "colonyRename":
       renameColony(player, String(action.colonyId ?? ""), action.name);
       return undefined;
+
+    case "commanderRecruit": {
+      const method = action.method === "production" ? "production" : "amber";
+      const def = recruitCommander(
+        player,
+        action.commanderId,
+        (m) => {
+          if (m === "production") {
+            pay(player, productionHours(player, COMMANDER_RULES.recruitProductionHours), now);
+            return;
+          }
+          const st = bountyState(player);
+          if (st.amber < COMMANDER_RULES.recruitAmber) throw new GameActionError(`Il faut ${COMMANDER_RULES.recruitAmber} Ambre de Ruche (primes Kesh'Vaar).`);
+          st.amber -= COMMANDER_RULES.recruitAmber;
+          player.bounties = st;
+        },
+        method,
+      );
+      return { id: def.id };
+    }
+
+    case "commanderAssign":
+      assignCommanders(player, action.ids, now);
+      return undefined;
+
+    case "commanderTrain":
+      return { level: trainCommander(player, action.commanderId) };
+
+    case "synthCraft":
+      return craftCapsule(player, action.capsule, action.level, now);
+
+    case "synthActivate":
+      return { pct: activateCapsule(player, action.capsule, action.level, now) };
+
+    case "relicEquip":
+      equipRelic(player, action.slot, action.relicId);
+      return undefined;
+
+    case "relicFuse":
+      return fuseRelics(player, action.template, action.rarity, now);
+
+    case "relicRecycle": {
+      const out = recycleRelic(player, action.relicId);
+      const st = bountyState(player);
+      st.amber += out.amber;
+      player.bounties = st;
+      return { amber: out.amber };
+    }
 
     default:
       throw new GameActionError("Action inconnue.");

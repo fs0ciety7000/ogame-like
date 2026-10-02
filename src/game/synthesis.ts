@@ -1,7 +1,7 @@
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { getProductionRatesPerSecond } from "@/game/production";
-import type { BuildingDef } from "@/game/buildings";
+import { SYNTH_BUILDING, SYNTH_BUILDING_ID } from "@/game/buildings";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -11,23 +11,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    peut flairer une « anomalie chimique » (option C).
 ===================================================== */
 
-export const SYNTH_BUILDING_ID = "labo_synthese";
-
-/** Toujours présent, même si la liste des bâtiments est personnalisée. */
-export const SYNTH_BUILDING: BuildingDef = {
-  id: SYNTH_BUILDING_ID,
-  name: "Labo de synthèse",
-  description: "Des cuves bouillonnantes où mûrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
-  image: "/assets/buildings/labo_synthese.webp",
-  maxLevel: 10,
-  unlockCost: { scrap: 1_500_000, energy: 800_000, data: 300_000 },
-  upgrade: {
-    baseCost: { scrap: 400_000, energy: 250_000, data: 100_000 },
-    maxCost: { scrap: 150_000_000, energy: 90_000_000, data: 40_000_000 },
-    costFromLevel: 2,
-    secondsPerLevel: 5_400,
-  },
-};
+export { SYNTH_BUILDING, SYNTH_BUILDING_ID };
 
 export type CapsuleType = "assault" | "armor" | "decoy" | "veil";
 
@@ -77,6 +61,8 @@ export interface SynthesisState {
   stock: Record<CapsuleType, number[]>;
   armor: { pct: number; untilMs: number } | null;
   veil: { pct: number; untilMs: number } | null;
+  /** Vraie composition des flottes leurrées, pour l'affichage chez leur propriétaire. */
+  decoys: Record<string, Record<string, number>>;
 }
 
 export function capsulePct(level: number): number {
@@ -88,7 +74,8 @@ export function synthesisState(player: Pick<PlayerState, "synthesis">): Synthesi
   const stock = {} as Record<CapsuleType, number[]>;
   for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray(raw.stock?.[t]) ? raw.stock![t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
   const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
-  return { crafting, stock, armor: raw.armor ?? null, veil: raw.veil ?? null };
+  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
+  return { crafting, stock, armor: raw.armor ?? null, veil: raw.veil ?? null, decoys };
 }
 
 export function synthLevel(player: Pick<PlayerState, "buildings">): number {
@@ -206,4 +193,53 @@ export function veilCounts<T extends { count: number }>(entries: Record<string, 
   if (!entries) return entries;
   const swing = pct / 100;
   return Object.fromEntries(Object.entries(entries).map(([id, e]) => [id, { ...e, count: Math.max(0, Math.round(e.count * (1 + (random() * 2 - 1) * swing))) }]));
+}
+
+/* ---------- capsules au lancement d'une attaque (joueur contre joueur) ---------- */
+
+export interface LaunchCapsules {
+  /** Bonus en % (enregistrés, cachés, sur la flotte). */
+  boosts: { assault?: number; decoy?: number };
+  /** Fausse composition affichée au défenseur (brouilleur d'approche). */
+  fakeUnits: Record<string, number> | null;
+}
+
+/** Prend en réserve les capsules demandées au lancement (`true` : la plus forte, ou un niveau). */
+export function takeLaunchCapsules(
+  player: PlayerState,
+  request: unknown,
+  realUnits: Record<string, number>,
+  pool: string[],
+  random: () => number = Math.random,
+): LaunchCapsules {
+  const req = request && typeof request === "object" ? (request as Record<string, unknown>) : {};
+  const out: LaunchCapsules = { boosts: {}, fakeUnits: null };
+  const level = (v: unknown) => (v === true ? undefined : v);
+  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level(req.assault));
+  if (req.decoy) {
+    out.boosts.decoy = takeCapsule(player, "decoy", level(req.decoy));
+    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
+  }
+  return out;
+}
+
+export function recordDecoy(player: PlayerState, fleetId: string, units: Record<string, number>): void {
+  const st = synthesisState(player);
+  st.decoys = { ...st.decoys, [fleetId]: units };
+  player.synthesis = st;
+}
+
+export function clearDecoy(player: PlayerState, fleetId: string): void {
+  const st = synthesisState(player);
+  if (!st.decoys[fleetId]) return;
+  const next = { ...st.decoys };
+  delete next[fleetId];
+  st.decoys = next;
+  player.synthesis = st;
+}
+
+/** Composition réelle d'une flotte du joueur (le leurre ne trompe que l'adversaire). */
+export function realFleetUnits(player: Pick<PlayerState, "synthesis"> | null | undefined, fleet: { id: string; units: Record<string, number> }): Record<string, number> {
+  const decoy = player ? synthesisState(player).decoys[fleet.id] : undefined;
+  return decoy ?? fleet.units ?? {};
 }

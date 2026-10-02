@@ -9,6 +9,8 @@ import { allianceCounterSpy } from "@/game/alliances";
 import type { PlayerState, QueuesState, ResourceId, SpyReport, SpyReportData } from "@/types/game";
 import { techBonus } from "@/game/technologies";
 import { playerModifiers } from "@/game/modifiers";
+import { activeVeil, veilCounts } from "@/game/synthesis";
+import { anomalyChance } from "@/game/commanders";
 
 /* =====================================================
    Espionnage à niveaux (v1.7) : des sondes partent vers la cible. À
@@ -176,6 +178,16 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
   const tier = spyTier(score);
   const detected = (input.random ?? Math.random)() < Math.min(0.95, detectionChance(level, counter) + playerModifiers(owner).detection);
 
+  const random = input.random ?? Math.random;
+  const data = colony ? buildSpyReportData(target, { ...flushed.queues, buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] } }, [], tier, now) : buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []);
+  // v4.0 : brouilleur de défense (Labo de synthèse) : flotte et défenses faussées.
+  const veil = activeVeil(owner, now);
+  if (veil > 0) {
+    data.units = veilCounts(data.units, veil, random);
+    data.defenses = veilCounts(data.defenses, veil, random);
+  }
+  const anomaly = veil > 0 && random() < anomalyChance(spy);
+
   const report: Omit<SpyReport, "id"> = {
     spyUid: spy.uid,
     spyPseudo: spy.pseudo,
@@ -187,14 +199,15 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
     score: Math.round(score * 100) / 100,
     tier,
     detected,
-    data: colony ? buildSpyReportData(target, { ...flushed.queues, buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] } }, [], tier, now) : buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []),
+    data,
+    anomaly,
   };
 
   const spyNotifications: NewNotification[] = [
     {
       kind: "spy",
       title: detected ? "Sondes repérées et abattues" : "Rapport d'espionnage reçu",
-      message: `${target.pseudo} : ${SPY_TIER_LABELS[tier].toLowerCase()}${detected ? ". Tes sondes n'ont pas survécu." : "."}`,
+      message: `${target.pseudo} : ${SPY_TIER_LABELS[tier].toLowerCase()}${detected ? ". Tes sondes n'ont pas survécu." : "."}${anomaly ? " Ton Espionne flaire une anomalie chimique : les chiffres sont peut-être faussés." : ""}`,
       createdAtMs: now,
       read: false,
     },

@@ -70,3 +70,6 @@ export {
   consumeJammer,
 } from "@/game/bounties";
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
+export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+export { clearDecoy, recordDecoy } from "@/game/synthesis";
+export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";

@@ -201,6 +201,8 @@ export interface SpyReport {
   tier?: number;
   detected?: boolean;
   data?: SpyReportData;
+  /** v4.0 : l'Espionne a flairé un brouilleur de défense (chiffres faussés). */
+  anomaly?: boolean;
 }
 
 export interface SpyReportData {

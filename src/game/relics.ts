@@ -117,6 +117,11 @@ export function relicBonus(item: Pick<RelicItem, "rarity">): number {
   return rarityInfo(item.rarity).pct;
 }
 
+/** « Écaille de Léviathan (rare) ». */
+export function relicLabel(item: Pick<RelicItem, "template" | "rarity">): string {
+  return `${findTemplate(item.template)?.name ?? "Relique"} (${rarityInfo(item.rarity).label.toLowerCase()})`;
+}
+
 export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): string {
   const t = findTemplate(item.template);
   const pct = Math.round(relicBonus(item) * 100);
