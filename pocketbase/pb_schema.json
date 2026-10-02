@@ -321,6 +321,13 @@
         "id": "json9201033483"
       },
       {
+        "name": "announcementsSeen",
+        "type": "json",
+        "required": false,
+        "maxSize": 6000,
+        "id": "json4710000001"
+      },
+      {
         "name": "lastActiveMs",
         "type": "number",
         "required": false,

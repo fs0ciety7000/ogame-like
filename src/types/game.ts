@@ -140,6 +140,8 @@ export interface PlayerState {
   vacation?: import("@/game/vacation").VacationState | null;
   /** v4.3 : épisodes des Chroniques du mois et sceaux de boss gagnés. */
   chronicle?: import("@/game/chronicles").ChronicleState;
+  /** v4.7.1 : annonces plein écran déjà fermées (sur tous les appareils). */
+  announcementsSeen?: string[];
 }
 
 export interface SeasonResult {

@@ -8546,6 +8546,15 @@ function publicShowcase(p) {
   };
 }
 
+// src/game/announcements.ts
+var SEEN_LIMIT = 120;
+var SEEN_ID = /^[A-Za-z0-9._:-]{1,60}$/;
+function addSeenAnnouncements(current2, ids) {
+  const clean2 = (Array.isArray(ids) ? ids : []).filter((id) => typeof id === "string" && SEEN_ID.test(id));
+  const merged = [...(current2 != null ? current2 : []).filter((id) => !clean2.includes(id)), ...clean2];
+  return merged.slice(-SEEN_LIMIT);
+}
+
 // src/game/actions.ts
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
@@ -8577,7 +8586,7 @@ function hangarUsed(units, away, category) {
   }
   return used;
 }
-var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
 function applyAction(s, action) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
   const { player, queues, now } = s;
@@ -8712,6 +8721,9 @@ function applyAction(s, action) {
       return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
     case "setPosture":
       return setPosture(player, action.posture, now);
+    case "seenAnnouncements":
+      player.announcementsSeen = addSeenAnnouncements(player.announcementsSeen, action.ids);
+      return { seen: player.announcementsSeen.length };
     case "hideOnboarding":
       setOnboardingHidden(player, action.hidden === true);
       return player.onboarding;
@@ -9380,7 +9392,8 @@ var GAME_FIELDS = [
   "seasonPass",
   "referral",
   "vacation",
-  "chronicle"
+  "chronicle",
+  "announcementsSeen"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 

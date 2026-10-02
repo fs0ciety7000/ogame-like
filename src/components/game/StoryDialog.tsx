@@ -11,6 +11,7 @@ import type { PlayerState } from "@/types/game";
 import { coalitionPhase, coalitionScene, type Coalition } from "@/game/coalition";
 import { findWarlord } from "@/game/warlords";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
+import { markAnnouncementsSeen } from "@/services/playerService";
 
 /* v4.1 : dialogues du tutoriel scénarisé (Vashka, Varan), une fois chacun. */
 
@@ -77,7 +78,9 @@ export function StoryDialog({ player }: { player: PlayerState }) {
   useEffect(() => {
     void loadWarlords().catch(() => undefined);
   }, []);
-  const [state, setState] = useState(() => readSeen(player.uid));
+  const [local, setState] = useState(() => readSeen(player.uid));
+  // v4.7.1 : les scènes vues sont aussi gardées sur le compte (autres appareils).
+  const state = useMemo(() => ({ ...local, seen: [...new Set([...local.seen, ...(player.announcementsSeen ?? [])])] }), [local, player.announcementsSeen]);
   // Laisse passer d'abord une éventuelle annonce plein écran.
   const [ready, setReady] = useState(false);
   const announcing = useAnnouncementPending((s) => s.pending);
@@ -91,14 +94,16 @@ export function StoryDialog({ player }: { player: PlayerState }) {
   );
   if (!scene || !ready || announcing) return null;
   const close = () => {
-    const next = { ...state, seen: [...state.seen, scene.id] };
+    const next = { ...local, seen: [...local.seen, scene.id] };
     writeSeen(player.uid, next);
     setState(next);
+    void markAnnouncementsSeen([scene.id]).catch(() => undefined);
   };
   const skipAll = () => {
-    const next = { seen: [...state.seen, scene.id], off: true };
+    const next = { seen: [...local.seen, scene.id], off: true };
     writeSeen(player.uid, next);
     setState(next);
+    void markAnnouncementsSeen([scene.id]).catch(() => undefined);
   };
   return <SceneDialog key={scene.id} title={scene.title} lines={scene.lines} pseudo={player.pseudo} onClose={close} onSkipAll={skipAll} doneLabel={scene.id === "outro" ? "Merci, Vashka" : "Compris"} />;
 }

@@ -361,6 +361,11 @@ export function subscribeDebrisFields(cb: (fields: DebrisField[]) => void): () =
    Actions de jeu
 ===================================================== */
 
+/** v4.7.1 : annonces fermées, gardées sur le compte. */
+export function markAnnouncementsSeen(ids: string[]): Promise<{ seen: number }> {
+  return act<{ seen: number }>({ type: "seenAnnouncements", ids });
+}
+
 async function act<T = void>(action: GameAction): Promise<T> {
   const res = await callGame<{ result: T }>("action", action as unknown as Record<string, unknown>);
   return res.result;

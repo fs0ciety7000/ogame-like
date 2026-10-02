@@ -96,3 +96,26 @@ export function scheduledAnnouncements<T extends { id: string }>(code: T[], sett
   const custom = [...settings.custom].sort((a, b) => (settings.schedule[b.id]?.startsAtMs ?? b.createdAtMs) - (settings.schedule[a.id]?.startsAtMs ?? a.createdAtMs)).map(toAnnouncement);
   return [...custom, ...code].filter((a) => announcementLive(a.id, settings, now));
 }
+
+/* ---------- v4.7.1 : annonces vues, gardées sur le compte ---------- */
+
+export const SEEN_LIMIT = 120;
+const SEEN_ID = /^[A-Za-z0-9._:-]{1,60}$/;
+
+/** Ajoute des annonces vues (identifiants valides, 120 gardés au plus). */
+export function addSeenAnnouncements(current: string[] | undefined, ids: unknown): string[] {
+  const clean = (Array.isArray(ids) ? ids : []).filter((id): id is string => typeof id === "string" && SEEN_ID.test(id));
+  const merged = [...(current ?? []).filter((id) => !clean.includes(id)), ...clean];
+  return merged.slice(-SEEN_LIMIT);
+}
+
+/**
+ * Annonce à montrer : la première non vue de la liste de diffusion (les
+ * plus récentes d'abord). Fermer une annonce marque aussi toutes celles qui
+ * la suivent (plus anciennes) : pas de défilé des anciennes mises à jour.
+ */
+export function nextAnnouncement<T extends { id: string }>(list: T[], seen: string[]): { show: T; markIds: string[] } | null {
+  const i = list.findIndex((a) => !seen.includes(a.id));
+  if (i < 0) return null;
+  return { show: list[i], markIds: list.slice(i).map((a) => a.id) };
+}

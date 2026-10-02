@@ -1993,6 +1993,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(sheet.feats).toMatchObject({ victories: 3, missions: 5, warsWon: 1 });
   });
 
+  it("v4.7.1: closed announcements are kept on the account", async () => {
+    await loginPlayer(B.email, B.pw);
+    await admin.collection("players").update(bId, { announcementsSeen: null, vacation: null });
+    await ps.markAnnouncementsSeen(["v4.7-coalitions", "v4.6-social", "bad id!"]);
+    expect((await snap(bId)).announcementsSeen).toEqual(["v4.7-coalitions", "v4.6-social"]);
+    await ps.markAnnouncementsSeen(["v4.6-social"]);
+    expect((await snap(bId)).announcementsSeen).toEqual(["v4.7-coalitions", "v4.6-social"]);
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);
