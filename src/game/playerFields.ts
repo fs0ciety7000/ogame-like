@@ -34,6 +34,7 @@ export const GAME_FIELDS = [
   "commanders",
   "relics",
   "synthesis",
+  "profileStyle",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

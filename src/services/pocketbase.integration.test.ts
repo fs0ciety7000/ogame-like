@@ -1608,9 +1608,17 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(b.bounties.amber).toBe(amber + 5);
       expect(b.relics.slots[0]).toBe(fused.id);
       expect(b.relics.items).toHaveLength(1);
+
+      // Profil : bannière verrouillée refusée, devise nettoyée, vitrine publique.
+      await expect(ps.saveProfileStyle({ banner: "leviathan" })).rejects.toThrow(/verrouillée/);
+      await ps.saveProfileStyle({ banner: "abysse", motto: "Personne ne passe." });
+      const pub = await pb.collection("profiles").getOne(bId);
+      expect(pub.feats.showcase.motto).toBe("Personne ne passe.");
+      expect(pub.feats.showcase.commanders.map((c: { id: string }) => c.id)).toEqual(["admiral", "spy"]);
+      expect(pub.feats.showcase.relics).toEqual([{ template: "engrenage_varan", rarity: "rare" }]);
     } finally {
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
-      await admin.collection("players").update(bId, { units: bBefore.units, resources: bBefore.resources, buildings: bBefore.buildings, bounties: bBefore.bounties, commanders: null, relics: null, synthesis: null, xp: bBefore.xp });
+      await admin.collection("players").update(bId, { units: bBefore.units, resources: bBefore.resources, buildings: bBefore.buildings, bounties: bBefore.bounties, commanders: null, relics: null, synthesis: null, profileStyle: null, xp: bBefore.xp });
       await admin.collection("players").update(aId, { units: aBefore.units, resources: aBefore.resources });
     }
   });

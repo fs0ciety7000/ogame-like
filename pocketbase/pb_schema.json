@@ -273,6 +273,12 @@
         "type": "json",
         "required": false,
         "maxSize": 50000
+      },
+      {
+        "name": "profileStyle",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
       }
     ],
     "indexes": [

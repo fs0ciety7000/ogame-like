@@ -429,6 +429,8 @@ export interface PlayerFeats {
   /** v3.9 : primes Kesh'Vaar. */
   bounties?: number;
   kesh?: { rank: number; frame: boolean; emblem: boolean; shieldUntilMs: number };
+  /** v4.0 : bannière, emblème, devise, officiers et reliques. */
+  showcase?: import("@/game/profile").PublicShowcase | null;
 }
 
 export interface PlayerSheet {
@@ -676,4 +678,8 @@ export function fuseRelics(template: string, rarity: string) {
 
 export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
+}
+
+export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string }) {
+  return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }

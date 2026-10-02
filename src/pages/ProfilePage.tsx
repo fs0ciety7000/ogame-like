@@ -18,6 +18,7 @@ import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
 import { GameIcon } from "@/components/ui/game-icon";
+import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -67,6 +68,8 @@ export function ProfilePage() {
           <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
         </div>
       </Card>
+
+      <ProfileStyleCard player={player} />
 
       <RankLadder xp={player.xp} />
 

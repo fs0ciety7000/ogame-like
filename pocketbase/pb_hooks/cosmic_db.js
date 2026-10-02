@@ -246,10 +246,31 @@ function profileFeats(player) {
     warsWon: Number(stats.warsWon) || 0,
     bounties: Number(stats.bounties) || 0,
     kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}),
+    showcase: showcaseOf(player),
   };
 }
 
 /** v3.9 : rang dans l'Essaim, cosmétiques et Voile de chitine (fiche publique). */
+/** v4.0 : bannière, emblème, devise, officiers en poste et reliques équipées. */
+function showcaseOf(player) {
+  try {
+    const game = loadGame();
+    applyContent($app, game);
+    return game.publicShowcase({
+      pirates: parseJsonField(player, "pirates", null),
+      bounties: parseJsonField(player, "bounties", null),
+      stats: parseJsonField(player, "stats", null),
+      profileStyle: parseJsonField(player, "profileStyle", null),
+      commanders: parseJsonField(player, "commanders", null),
+      relics: parseJsonField(player, "relics", null),
+      ascensions: player.getInt("ascensions"),
+    });
+  } catch (err) {
+    console.log(`[cosmic] vitrine du profil : ${err}`);
+    return null;
+  }
+}
+
 function keshFeats(b) {
   const owned = Array.isArray(b.owned) ? b.owned : [];
   const rep = Number(b.reputation) || 0;

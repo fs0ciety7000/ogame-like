@@ -119,6 +119,8 @@ export interface PlayerState {
   commanders?: import("@/game/commanders").CommandersState;
   relics?: import("@/game/relics").RelicsState;
   synthesis?: import("@/game/synthesis").SynthesisState;
+  /** v4.0 : bannière, emblème et devise de la fiche publique. */
+  profileStyle?: import("@/game/profile").ProfileStyle;
 }
 
 export interface SeasonResult {

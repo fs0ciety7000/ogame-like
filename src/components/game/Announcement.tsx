@@ -41,6 +41,37 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.0-commandement",
+    eyebrow: "Mise à jour 4.0 · Commandement",
+    title: "Ton État-major t'attend",
+    text: "Cinq officiers à recruter, des reliques arrachées aux confins du secteur et un laboratoire qui distille des capsules interdites. Ton empire ne se commande plus seul.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/buildings/labo_synthese.webp",
+    artMobile: "/assets/commanders/admiral.webp",
+    emblem: "/assets/relics/couronne_essaim.webp",
+    spotlight: {
+      image: "/assets/commanders/admiral.webp",
+      name: "Rhys Calder",
+      role: "Amiral",
+      quote: "Donnez-moi une flotte et un poste, commandant. Je vous rendrai des victoires.",
+    },
+    currency: {
+      icon: "/assets/commanders/strategist.webp",
+      name: "Premier officier offert",
+      text: "Recrute ton premier officier gratuitement depuis la page État-major. Les suivants : 150 Ambre ou 12 h de production.",
+    },
+    features: [
+      { title: "Commandants", text: "Amiral, Stratège, Ingénieure, Espionne, Intendant : 2 en poste, jusqu'au niveau 20, +1 % par niveau.", to: "/game/etat-major", image: "/assets/commanders/engineer.webp" },
+      { title: "Reliques", text: "De 3 à 15 % de bonus permanent. Expéditions, proie d'élite, Léviathan. Fusion et recyclage en Ambre.", to: "/game/etat-major", image: "/assets/relics/egide_reine.webp" },
+      { title: "Labo de synthèse", text: "Capsules jusqu'à 50 % : stimulant, carapace, fausse flotte, rapports faussés. Invisibles à l'espionnage.", to: "/game/etat-major", image: "/assets/capsules/decoy.webp" },
+      { title: "Anomalie chimique", text: "Une Espionne en poste peut flairer les capsules adverses : flotte truquée ou rapport faussé.", to: "/game/etat-major", image: "/assets/commanders/spy.webp" },
+      { title: "Profil personnalisable", text: "Bannière, sceau et devise de ta fiche, débloqués par tes exploits. Tes officiers et reliques s'y affichent.", to: "/game/profil" },
+      { title: "Planète vivante", text: "Jour et nuit, vapeurs du labo, boucliers, insignes d'officiers, flottes qui partent et menaces qui arrivent.", to: "/game" },
+    ],
+    cta: { label: "Ouvrir l'État-major", to: "/game/etat-major" },
+  },
+  {
     id: "v3.9-les-keshvaar",
     eyebrow: "Mise à jour 3.9 · Nouvelle faction alliée",
     title: "L'Essaim Kesh'Vaar recrute des chasseurs",

@@ -28,6 +28,7 @@ import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
+import { setProfileStyle } from "@/game/profile";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -66,7 +67,8 @@ export type GameAction =
   | { type: "synthActivate"; capsule: string; level?: number }
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
-  | { type: "relicRecycle"; relicId: string };
+  | { type: "relicRecycle"; relicId: string }
+  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -324,6 +326,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.bounties = st;
       return { amber: out.amber };
     }
+
+    case "setProfileStyle":
+      return setProfileStyle(player, action.style);
 
     default:
       throw new GameActionError("Action inconnue.");

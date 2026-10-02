@@ -175,6 +175,7 @@ __export(hooksEntry_exports, {
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
   proposePact: () => proposePact,
+  publicShowcase: () => publicShowcase,
   recallFleet: () => recallFleet,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
@@ -4392,6 +4393,18 @@ var BOUNTY_RULES = {
   ],
   exchange: { rarePerAmber: 40, weeklyCap: 100 }
 };
+var KESH = {
+  name: "Kesh'Vaar",
+  full: "L'Essaim de la Traque",
+  leader: "Vashka, Matriarche-Chasseuse",
+  currency: "Ambre de Ruche",
+  art: "/assets/bounties/vashka.webp",
+  hunters: "/assets/bounties/hunters.webp",
+  banner: "/assets/bounties/banner.webp",
+  emblem: "/assets/bounties/emblem.webp",
+  amberIcon: "/assets/bounties/amber.webp",
+  story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
+};
 var FUGITIVES = [
   { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
   { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
@@ -5434,6 +5447,94 @@ function setOnboardingHidden(player, hidden) {
   player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
 }
 
+// src/game/profile.ts
+var PROFILE_RULES = { mottoMax: 60 };
+var FREE_BANNERS = [
+  { id: "nebula", label: "N\xE9buleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
+  { id: "aurore", label: "Aurore", gradient: "linear-gradient(120deg,#0a1a1a 0%,#0f4d45 50%,#5ef2b066 100%)", hint: "Offerte" },
+  { id: "braise", label: "Braise", gradient: "linear-gradient(120deg,#1a0a06 0%,#5c1f0e 50%,#ff7a4566 100%)", hint: "Offerte" },
+  { id: "abysse", label: "Abysse", gradient: "linear-gradient(120deg,#07060f 0%,#2a1450 50%,#a78bfa66 100%)", hint: "Offerte" }
+];
+function leviathanKills(p) {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a.leviathanKills) || 0;
+}
+function bannerOptions(p) {
+  const kesh = bountyState(p);
+  return [
+    ...FREE_BANNERS.map((b) => __spreadProps(__spreadValues({}, b), { unlocked: true })),
+    ...FACTIONS.filter((f) => f.banner || f.art).map((f) => ({
+      id: `faction:${f.id}`,
+      label: f.name,
+      image: f.banner || f.art,
+      hint: `Faire tomber ${f.lair.name}`,
+      unlocked: pirateState(p, f.id).lairsTaken > 0
+    })),
+    { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
+    { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 }
+  ];
+}
+function emblemOptions(p) {
+  const kesh = bountyState(p);
+  return [
+    { id: "rank", label: "Insigne de rang", hint: "Offert", unlocked: true },
+    ...FACTIONS.filter((f) => f.emblem).map((f) => ({
+      id: `faction:${f.id}`,
+      label: `Sceau ${f.name}`,
+      image: f.emblem,
+      hint: `Faire tomber ${f.lair.name}`,
+      unlocked: pirateState(p, f.id).lairsTaken > 0
+    })),
+    { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
+    { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 }
+  ];
+}
+function profileStyle(p) {
+  var _a, _b, _c, _d;
+  const raw = (_a = p.profileStyle) != null ? _a : {};
+  return { banner: String((_b = raw.banner) != null ? _b : "nebula"), emblem: String((_c = raw.emblem) != null ? _c : "rank"), motto: String((_d = raw.motto) != null ? _d : "") };
+}
+function sanitizeMotto(text) {
+  return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
+}
+function setProfileStyle(player, input) {
+  const req = input && typeof input === "object" ? input : {};
+  const current2 = profileStyle(player);
+  const next = __spreadValues({}, current2);
+  if (req.banner !== void 0) {
+    const opt = bannerOptions(player).find((o) => o.id === req.banner);
+    if (!opt) throw new GameActionError("Banni\xE8re inconnue.");
+    if (!opt.unlocked) throw new GameActionError(`Banni\xE8re verrouill\xE9e : ${opt.hint.toLowerCase()}.`);
+    next.banner = opt.id;
+  }
+  if (req.emblem !== void 0) {
+    const opt = emblemOptions(player).find((o) => o.id === req.emblem);
+    if (!opt) throw new GameActionError("Embl\xE8me inconnu.");
+    if (!opt.unlocked) throw new GameActionError(`Embl\xE8me verrouill\xE9 : ${opt.hint.toLowerCase()}.`);
+    next.emblem = opt.id;
+  }
+  if (req.motto !== void 0) next.motto = sanitizeMotto(req.motto);
+  player.profileStyle = next;
+  return next;
+}
+function publicShowcase(p) {
+  var _a, _b;
+  const style = profileStyle(p);
+  const banner = (_a = bannerOptions(p).find((o) => o.id === style.banner && o.unlocked)) != null ? _a : __spreadProps(__spreadValues({}, FREE_BANNERS[0]), { unlocked: true });
+  const emblem = emblemOptions(p).find((o) => o.id === style.emblem && o.unlocked);
+  const st = commandersState(p);
+  return {
+    banner: banner.image ? { image: banner.image } : { gradient: banner.gradient },
+    emblem: (_b = emblem == null ? void 0 : emblem.image) != null ? _b : null,
+    motto: style.motto,
+    commanders: st.active.map((id) => {
+      var _a2, _b2;
+      return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
+    }),
+    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity }))
+  };
+}
+
 // src/game/actions.ts
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
@@ -5645,6 +5746,8 @@ function applyAction(s, action) {
       player.bounties = st;
       return { amber: out.amber };
     }
+    case "setProfileStyle":
+      return setProfileStyle(player, action.style);
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -7404,7 +7507,8 @@ var GAME_FIELDS = [
   "bounties",
   "commanders",
   "relics",
-  "synthesis"
+  "synthesis",
+  "profileStyle"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
