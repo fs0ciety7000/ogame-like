@@ -17,6 +17,7 @@ import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
+import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
@@ -52,6 +53,7 @@ export function DashboardPage() {
       />
 
       <OnboardingChecklist player={player} />
+      <NextActionsCard />
 
       <Card className="flex flex-wrap items-center gap-6 p-6">
         <HomePlanet buildings={player.buildings} />
@@ -71,7 +73,9 @@ export function DashboardPage() {
 
       <LeviathanBanner />
       <EventCard />
-      <ContractsCard />
+      <div id="contrats" className="scroll-mt-24">
+        <ContractsCard />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
