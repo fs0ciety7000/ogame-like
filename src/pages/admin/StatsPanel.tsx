@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Lightbulb, RefreshCw } from "lucide-react";
+import { FileDown, Lightbulb, RefreshCw } from "lucide-react";
+import { StatsPrintReport } from "@/pages/admin/StatsPrintReport";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadarScan } from "@/components/game/RadarScan";
@@ -89,8 +90,13 @@ export function StatsPanel() {
         <Button variant="outline" size="sm" className="ml-auto" disabled={loading} onClick={() => void load()}>
           <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
         </Button>
+        {/* v4.8 : export PDF (impression du navigateur, mise en page dédiée). */}
+        <Button variant="secondary" size="sm" onClick={() => window.print()}>
+          <FileDown className="mr-1 h-3.5 w-3.5" /> Exporter en PDF
+        </Button>
       </div>
       {error && <p className="text-xs text-danger-glow">{error}</p>}
+      <StatsPrintReport stats={stats} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Tile label="Joueurs" value={players.total} hint={`${players.new7d} nouveau(x) cette semaine`} />

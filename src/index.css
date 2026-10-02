@@ -802,3 +802,30 @@ body {
     radial-gradient(circle at 0 0, color-mix(in srgb, var(--color-gold-glow) 18%, transparent), transparent 35%),
     radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--color-ember-glow) 16%, transparent), transparent 35%);
 }
+
+/* v4.8 : rapport imprimable (export PDF des statistiques). Hors impression,
+   la zone reste masquée ; à l'impression, elle seule est visible. */
+#print-root {
+  display: none;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  html,
+  body {
+    background: #060a14 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  body:has(#print-root:not(:empty)) > *:not(#print-root) {
+    display: none !important;
+  }
+  #print-root {
+    display: block;
+  }
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+}
