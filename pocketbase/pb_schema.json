@@ -1161,6 +1161,12 @@
         "type": "json",
         "required": false,
         "maxSize": 20000
+      },
+      {
+        "name": "feats",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [

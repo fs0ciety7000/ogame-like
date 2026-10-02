@@ -417,6 +417,33 @@ export async function fetchSeasonResults(): Promise<SeasonResult[]> {
   return pb.collection("season_results").getFullList<SeasonResult>({ sort: "-seasonId,rank", filter: 'rank <= 10 && (kind != "alliance" || rank = 1)' });
 }
 
+export interface PlayerFeats {
+  titles: string[];
+  achievements: number;
+  victories: number;
+  defeats: number;
+  missions: number;
+  expeditions: number;
+  leviathanKills: number;
+  warsWon: number;
+}
+
+export interface PlayerSheet {
+  entry: LeaderboardEntry;
+  feats: PlayerFeats | null;
+  seasons: SeasonResult[];
+}
+
+/** Fiche publique détaillée d'un joueur (v3.7) : faits d'armes et saisons. */
+export async function fetchPlayerSheet(uid: string): Promise<PlayerSheet> {
+  const [record, seasons] = await Promise.all([
+    pb.collection("profiles").getOne<PbRecord>(uid, { fields: `${LEADERBOARD_FIELDS},feats` }),
+    pb.collection("season_results").getList<SeasonResult>(1, 12, { filter: pb.filter('uid = {:uid} && kind != "alliance"', { uid }), sort: "-seasonId" }),
+  ]);
+  const feats = record.feats && typeof record.feats === "object" ? (record.feats as PlayerFeats) : null;
+  return { entry: leaderboardEntryFromRecord(record), feats, seasons: seasons.items };
+}
+
 export function rerollContract(contractId: string) {
   return act({ type: "rerollContract", contractId });
 }

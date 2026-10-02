@@ -50,10 +50,25 @@ console.log(`Collections du jeu à jour : ${schema.map((c) => c.name).join(", ")
 // Fiches publiques : créées pour les joueurs existants (les hooks les
 // tiennent ensuite à jour à chaque modification d'un joueur).
 const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId"];
-const allPlayers = await pb.collection("players").getFullList({ fields: ["id", ...PROFILE_FIELDS].join(",") });
+const allPlayers = await pb.collection("players").getFullList({ fields: ["id", ...PROFILE_FIELDS, "titles", "unlockedAchievements", "victories", "defeats", "stats"].join(",") });
 const existingProfiles = new Set((await pb.collection("profiles").getFullList({ fields: "id" })).map((r) => r.id));
+// Même calcul que profileFeats() dans les hooks (faits d'armes publics).
+const featsOf = (player) => {
+  const stats = player.stats ?? {};
+  const labels = [...new Set((player.titles ?? []).map((t) => t?.label).filter(Boolean).map(String))];
+  return {
+    titles: labels.slice(-12),
+    achievements: (player.unlockedAchievements ?? []).length,
+    victories: Math.trunc(player.victories ?? 0),
+    defeats: Math.trunc(player.defeats ?? 0),
+    missions: Number(stats.missions) || 0,
+    expeditions: Number(stats.expeditions) || 0,
+    leviathanKills: Number(stats.leviathanKills) || 0,
+    warsWon: Number(stats.warsWon) || 0,
+  };
+};
 for (const player of allPlayers) {
-  const data = Object.fromEntries(PROFILE_FIELDS.map((f) => [f, player[f] ?? null]));
+  const data = { ...Object.fromEntries(PROFILE_FIELDS.map((f) => [f, player[f] ?? null])), feats: featsOf(player) };
   if (existingProfiles.has(player.id)) await pb.collection("profiles").update(player.id, data);
   else await pb.collection("profiles").create({ id: player.id, ...data });
 }

@@ -197,7 +197,48 @@ function syncProfile(app, player) {
     profile.set("planets", colonies);
     changed = true;
   }
+  // v3.7 : faits d'armes publics (titres, succès, combats, Léviathan, guerres).
+  const feats = JSON.stringify(profileFeats(player));
+  let currentFeats = "";
+  try {
+    currentFeats = JSON.stringify(JSON.parse(profile.getString("feats") || "null"));
+  } catch (_) {
+    currentFeats = "";
+  }
+  if (currentFeats !== feats) {
+    profile.set("feats", JSON.parse(feats));
+    changed = true;
+  }
   if (changed) app.save(profile);
+}
+
+function parseJsonField(record, field, fallback) {
+  try {
+    const value = JSON.parse(record.getString(field) || "null");
+    return value === null || value === undefined ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function profileFeats(player) {
+  const stats = parseJsonField(player, "stats", {}) || {};
+  const titles = parseJsonField(player, "titles", []);
+  const achievements = parseJsonField(player, "unlockedAchievements", []);
+  const labels = [];
+  (Array.isArray(titles) ? titles : []).forEach((t) => {
+    if (t && t.label && labels.indexOf(t.label) < 0) labels.push(String(t.label));
+  });
+  return {
+    titles: labels.slice(-12),
+    achievements: Array.isArray(achievements) ? achievements.length : 0,
+    victories: player.getInt("victories"),
+    defeats: player.getInt("defeats"),
+    missions: Number(stats.missions) || 0,
+    expeditions: Number(stats.expeditions) || 0,
+    leviathanKills: Number(stats.leviathanKills) || 0,
+    warsWon: Number(stats.warsWon) || 0,
+  };
 }
 
 function deleteProfile(app, playerId) {
@@ -1474,6 +1515,7 @@ function rewardWar(txApp, game, war, now) {
           p.titles = (p.titles || []).concat([{ label: game.WAR_RULES.title, seasonId: `war:${war.id}`, rank: 1 }]);
           p.activeTitle = game.WAR_RULES.title;
         }
+        p.stats = Object.assign({}, p.stats || {}, { warsWon: ((p.stats && p.stats.warsWon) || 0) + 1 });
         savePlayer(txApp, game, loaded, p, loaded.queues);
       });
     }

@@ -41,6 +41,8 @@ export interface PlayerStats {
   allianceFounded?: number;
   ascensions?: number;
   transports?: number;
+  /** v3.7 : guerres d'alliance gagnées (fiche publique). */
+  warsWon?: number;
   lastResearchAtMs?: number;
 }
 
