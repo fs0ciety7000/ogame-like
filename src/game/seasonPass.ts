@@ -25,6 +25,8 @@ export const PASS_POINTS = {
   bossAssault: 5,
   dailyLogin: 5,
   mission: 2,
+  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
+  vendetta: 40,
 };
 export type PassSource = keyof typeof PASS_POINTS;
 

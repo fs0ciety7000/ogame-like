@@ -320,7 +320,7 @@ routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
 /** GET /api/cosmic/achievements — part des joueurs ayant obtenu chaque succès. */
 routerAdd("GET", "/api/cosmic/achievements", (e) => {
   const counts = {};
-  const players = $app.findAllRecords("players");
+  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0);
   players.forEach((rec) => {
     let list = [];
     try {
@@ -375,7 +375,7 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
   db.applyContent($app, game);
 
   const now = Date.now();
-  const players = $app.findAllRecords("players").map((r) => {
+  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => {
     const p = db.toPlain(r);
     p.uid = r.id;
     return p;
@@ -642,3 +642,22 @@ routerAdd("POST", "/api/cosmic/admin/referrals", (e) => {
   if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   return e.json(200, { rewarded: db.referralTick(Date.now()) });
 }, $apis.requireAuth("users", "_superusers"));
+
+/* ---------- Seigneurs de guerre et vacances (v4.2) ---------- */
+
+routerAdd("GET", "/api/cosmic/warlords", (e) => require(`${__hooks}/cosmic_db.js`).warlordsList(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/warlords", (e) => require(`${__hooks}/cosmic_db.js`).warlordsRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/admin/warlords", (e) => require(`${__hooks}/cosmic_db.js`).adminWarlords(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/vacation", (e) => require(`${__hooks}/cosmic_db.js`).vacationRequest(e), $apis.requireAuth("users"));
+
+cronAdd("cosmic_warlords", "37 * * * *", () => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  // En maintenance, les seigneurs attendent aussi.
+  if (db.readMaintenance($app).enabled) return;
+  try {
+    const s = db.warlordTick(Date.now(), null);
+    if (s.attacks > 0 || s.offers > 0 || s.removed > 0) console.log(`[cosmic] seigneurs : ${JSON.stringify(s)}`);
+  } catch (err) {
+    console.log(`[cosmic] seigneurs : ${err}`);
+  }
+});

@@ -76,8 +76,12 @@ __export(hooksEntry_exports, {
   SEASON_RULES: () => SEASON_RULES,
   STAFF_KEY: () => STAFF_KEY,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
+  VACATION_RULES: () => VACATION_RULES,
+  WARLORD_RULES: () => WARLORD_RULES,
   WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
+  activeUltimatum: () => activeUltimatum,
+  activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
@@ -104,6 +108,7 @@ __export(hooksEntry_exports, {
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
   buyShopItem: () => buyShopItem,
+  canMessage: () => canMessage,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
   challengeRewardees: () => challengeRewardees,
@@ -133,7 +138,10 @@ __export(hooksEntry_exports, {
   eliteNotice: () => eliteNotice,
   eliteRanking: () => eliteRanking,
   eliteWindow: () => eliteWindow,
+  empirePower: () => empirePower,
+  emptyRuntime: () => emptyRuntime,
   endGarrison: () => endGarrison,
+  endVacation: () => endVacation,
   errorKey: () => errorKey,
   errorQuotaKey: () => errorQuotaKey,
   exchangeAmber: () => exchangeAmber,
@@ -141,6 +149,7 @@ __export(hooksEntry_exports, {
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
+  findWarlord: () => findWarlord,
   finishAllianceResearch: () => finishAllianceResearch,
   finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
@@ -151,21 +160,30 @@ __export(hooksEntry_exports, {
   grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
   grantReferral: () => grantReferral,
+  growWarlord: () => growWarlord,
+  inVendetta: () => inVendetta,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isStaffRole: () => isStaffRole,
+  isWarlordUid: () => isWarlordUid,
   leviathanRanking: () => leviathanRanking,
   leviathanWindow: () => leviathanWindow,
   linkReferrer: () => linkReferrer,
+  lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
+  nearestWarlord: () => nearestWarlord,
   newPlayerProfile: () => newPlayerProfile,
+  nextAttackDelayMs: () => nextAttackDelayMs,
   nextMaintenance: () => nextMaintenance,
+  nextMarketDelayMs: () => nextMarketDelayMs,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeElite: () => normalizeElite,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
+  onVacation: () => onVacation,
+  openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
@@ -177,13 +195,16 @@ __export(hooksEntry_exports, {
   performPlayerAction: () => performPlayerAction,
   performSeasonReward: () => performSeasonReward,
   performTransportArrival: () => performTransportArrival,
+  pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
+  productionHours: () => productionHours,
   proposePact: () => proposePact,
   publicShowcase: () => publicShowcase,
   recallFleet: () => recallFleet,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
+  recordVendettaDamage: () => recordVendettaDamage,
   recyclerCapacity: () => recyclerCapacity,
   referralDue: () => referralDue,
   refundOffer: () => refundOffer,
@@ -210,16 +231,32 @@ __export(hooksEntry_exports, {
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
+  settleVendettas: () => settleVendettas,
+  shatterWarlord: () => shatterWarlord,
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
   startChallenge: () => startChallenge,
+  startVacation: () => startVacation,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   tutorialRaidPower: () => tutorialRaidPower,
   unitsAwayOf: () => unitsAwayOf,
   utcDayStart: () => utcDayStart,
+  vendettaTitle: () => vendettaTitle,
+  vendettaWinners: () => vendettaWinners,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
+  warlordByUid: () => warlordByUid,
+  warlordFleetPower: () => warlordFleetPower,
+  warlordLine: () => warlordLine,
+  warlordLootCap: () => warlordLootCap,
+  warlordOffer: () => warlordOffer,
+  warlordPublic: () => warlordPublic,
+  warlordReference: () => warlordReference,
+  warlordTravelMs: () => warlordTravelMs,
+  warlordUid: () => warlordUid,
+  warlordsConfig: () => warlordsConfig,
+  warlordsState: () => warlordsState,
   weekWindow: () => weekWindow
 });
 module.exports = __toCommonJS(hooksEntry_exports);
@@ -981,10 +1018,10 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
   var _a, _b, _c;
   let total2 = 0;
   for (const [id, qty] of Object.entries(fleet)) {
-    const def2 = findUnit(id);
+    const def3 = findUnit(id);
     const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def2 || qty <= 0 || level3 <= 0) continue;
-    total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level3 * qty;
+    if (!def3 || qty <= 0 || level3 <= 0) continue;
+    total2 += ((_c = def3.stats.cargo) != null ? _c : 0) * level3 * qty;
   }
   return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
 }
@@ -993,11 +1030,11 @@ function clamp(v, min, max) {
 }
 function unitStat(units, techLevels2, unitId, stat) {
   var _a, _b, _c, _d;
-  const def2 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def2 == null ? void 0 : def2[stat]) != null ? _a : 0;
+  const def3 = UNIT_BASE_STATS[unitId];
+  const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
-  let value = base + (level3 - 1) * ((_d = def2 == null ? void 0 : def2.perLevel) != null ? _d : 5);
+  let value = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
   if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
   if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
   return value;
@@ -1254,8 +1291,8 @@ function allianceRole(alliance, uid) {
 }
 function level(levels, id) {
   var _a;
-  const def2 = findAllianceResearch(id);
-  return Math.max(0, Math.min((_a = def2 == null ? void 0 : def2.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
+  const def3 = findAllianceResearch(id);
+  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
 }
 function allianceFlightFactor(levels, techLevels2) {
   var _a, _b;
@@ -1279,8 +1316,8 @@ function findAllianceProject(id) {
 }
 function memberProjectLevel(levels, id) {
   var _a;
-  const def2 = findAllianceProject(id);
-  return Math.max(0, Math.min((_a = def2 == null ? void 0 : def2.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[projectKey(id)]) || 0)));
+  const def3 = findAllianceProject(id);
+  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[projectKey(id)]) || 0)));
 }
 function projectEffect(levels, id) {
   var _a, _b;
@@ -1406,18 +1443,18 @@ function startAllianceResearch(alliance, actorUid, researchId, now) {
   var _a, _b, _c;
   const role = allianceRole(alliance, actorUid);
   if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers lancent les recherches.");
-  const def2 = findAllianceResearch(researchId);
-  if (!def2) throw new GameActionError("Recherche inconnue.");
+  const def3 = findAllianceResearch(researchId);
+  if (!def3) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
-  const next = level(alliance.research, def2.id) + 1;
-  if (next > def2.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+  const next = level(alliance.research, def3.id) + 1;
+  if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
   const cost = allianceResearchCost(next);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
   for (const [res, amount2] of Object.entries(cost)) {
     if (((_b = treasury[res]) != null ? _b : 0) < amount2) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
   }
   for (const [res, amount2] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount2;
-  return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def2.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
+  return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def3.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
 }
 function completeAllianceResearch(alliance, now) {
   var _a;
@@ -1445,9 +1482,9 @@ function projectState(alliance, id) {
 function memberLevels(alliance) {
   var _a;
   const out = __spreadValues({}, (_a = alliance == null ? void 0 : alliance.research) != null ? _a : {});
-  for (const def2 of ALLIANCE_RULES.projects) {
-    const level3 = alliance ? projectState(alliance, def2.id).level : 0;
-    if (level3 > 0) out[projectKey(def2.id)] = level3;
+  for (const def3 of ALLIANCE_RULES.projects) {
+    const level3 = alliance ? projectState(alliance, def3.id).level : 0;
+    if (level3 > 0) out[projectKey(def3.id)] = level3;
   }
   return out;
 }
@@ -1459,15 +1496,15 @@ function contributionValue(amounts) {
 }
 function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
-  const def2 = findAllianceProject(projectId);
-  if (!def2) throw new GameActionError("Projet inconnu.");
+  const def3 = findAllianceProject(projectId);
+  if (!def3) throw new GameActionError("Projet inconnu.");
   const role = allianceRole(alliance, actor.uid);
   if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
   if (source === "treasury" && role === "member") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le tr\xE9sor.");
-  const state = projectState(alliance, def2.id);
+  const state = projectState(alliance, def3.id);
   if (state.buildEndMs > 0) throw new GameActionError("Ce palier est d\xE9j\xE0 en construction.");
   const next = state.level + 1;
-  if (next > def2.maxLevel) throw new GameActionError("Ce projet est achev\xE9.");
+  if (next > def3.maxLevel) throw new GameActionError("Ce projet est achev\xE9.");
   const cost = allianceProjectCost(next);
   const pool = source === "treasury" ? __spreadValues({}, (_a = alliance.treasury) != null ? _a : {}) : actor.resources;
   const used = {};
@@ -1494,7 +1531,7 @@ function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
   return {
     alliance: __spreadProps(__spreadValues({}, alliance), {
       treasury: source === "treasury" ? pool : alliance.treasury,
-      projects: __spreadProps(__spreadValues({}, (_i = alliance.projects) != null ? _i : {}), { [def2.id]: nextState }),
+      projects: __spreadProps(__spreadValues({}, (_i = alliance.projects) != null ? _i : {}), { [def3.id]: nextState }),
       projectContributors: contributors
     }),
     used,
@@ -1505,11 +1542,11 @@ function completeAllianceProjects(alliance, now) {
   var _a;
   const completed = [];
   const projects = __spreadValues({}, (_a = alliance.projects) != null ? _a : {});
-  for (const def2 of ALLIANCE_RULES.projects) {
-    const state = projectState(alliance, def2.id);
+  for (const def3 of ALLIANCE_RULES.projects) {
+    const state = projectState(alliance, def3.id);
     if (state.buildEndMs > 0 && state.buildEndMs <= now) {
-      projects[def2.id] = { level: state.level + 1, funded: {}, buildEndMs: 0 };
-      completed.push({ id: def2.id, level: state.level + 1 });
+      projects[def3.id] = { level: state.level + 1, funded: {}, buildEndMs: 0 };
+      completed.push({ id: def3.id, level: state.level + 1 });
     }
   }
   return { alliance: completed.length ? __spreadProps(__spreadValues({}, alliance), { projects }) : alliance, completed };
@@ -1611,8 +1648,8 @@ function performAllianceAction(input) {
       if (!alliance) throw new GameActionError("Alliance introuvable.");
       const started = startAllianceResearch(alliance, actor.uid, String((_f = action.researchId) != null ? _f : ""), now);
       out.alliance = started;
-      const def2 = findAllianceResearch(started.activeResearch.id);
-      log({ kind: "research", text: `${def2.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
+      const def3 = findAllianceResearch(started.activeResearch.id);
+      log({ kind: "research", text: `${def3.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
       return out;
     }
     case "project": {
@@ -1620,13 +1657,13 @@ function performAllianceAction(input) {
       const source = action.source === "treasury" ? "treasury" : "self";
       const res = fundAllianceProject(alliance, actor, String((_g = action.projectId) != null ? _g : ""), source, parseAmounts(action.resources), now);
       out.alliance = res.alliance;
-      const def2 = findAllianceProject(String(action.projectId));
-      const next = projectState(alliance, def2.id).level + 1;
+      const def3 = findAllianceProject(String(action.projectId));
+      const next = projectState(alliance, def3.id).level + 1;
       if (source === "self") bumpStat(actor, "donated", Object.values(res.used).reduce((a, b) => a + (b != null ? b : 0), 0));
-      log({ kind: "project", text: `${def2.name} niveau ${next}${source === "treasury" ? " (tr\xE9sor)" : ""}${res.started ? " : financ\xE9, construction lanc\xE9e" : ""}`, resources: res.used });
+      log({ kind: "project", text: `${def3.name} niveau ${next}${source === "treasury" ? " (tr\xE9sor)" : ""}${res.started ? " : financ\xE9, construction lanc\xE9e" : ""}`, resources: res.used });
       if (res.started) {
         for (const uid of alliance.members) {
-          out.notifications[uid] = [note("Projet d'alliance financ\xE9", `${def2.emoji} ${def2.name} niveau ${next} : construction lanc\xE9e.`, now)];
+          out.notifications[uid] = [note("Projet d'alliance financ\xE9", `${def3.emoji} ${def3.name} niveau ${next} : construction lanc\xE9e.`, now)];
         }
       }
       return out;
@@ -1643,15 +1680,15 @@ function finishAllianceResearch(alliance, now) {
   const labels = [];
   const logs = [];
   if (done.completed) {
-    const def2 = findAllianceResearch(done.completed.id);
-    const label2 = `${(_a = def2 == null ? void 0 : def2.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
-    labels.push(`${(_b = def2 == null ? void 0 : def2.emoji) != null ? _b : ""} ${label2}`.trim());
+    const def3 = findAllianceResearch(done.completed.id);
+    const label2 = `${(_a = def3 == null ? void 0 : def3.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
+    labels.push(`${(_b = def3 == null ? void 0 : def3.emoji) != null ? _b : ""} ${label2}`.trim());
     logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label2, createdAtMs: now });
   }
   for (const c of built.completed) {
-    const def2 = findAllianceProject(c.id);
-    const label2 = `${(_c = def2 == null ? void 0 : def2.name) != null ? _c : c.id} niveau ${c.level}`;
-    labels.push(`${(_d = def2 == null ? void 0 : def2.emoji) != null ? _d : ""} ${label2}`.trim());
+    const def3 = findAllianceProject(c.id);
+    const label2 = `${(_c = def3 == null ? void 0 : def3.name) != null ? _c : c.id} niveau ${c.level}`;
+    labels.push(`${(_d = def3 == null ? void 0 : def3.emoji) != null ? _d : ""} ${label2}`.trim());
     logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label2, createdAtMs: now });
   }
   const memberships = {};
@@ -1983,15 +2020,15 @@ function recruitCost(player) {
   return Object.keys(commandersState(player).roster).length === 0 ? "free" : "paid";
 }
 function recruitCommander(player, id, pay2, method) {
-  const def2 = findCommander(id);
-  if (!def2) throw new GameActionError("Officier inconnu.");
+  const def3 = findCommander(id);
+  if (!def3) throw new GameActionError("Officier inconnu.");
   const st = commandersState(player);
-  if (st.roster[def2.id]) throw new GameActionError(`${def2.title} ${def2.name} sert d\xE9j\xE0 dans ta flotte.`);
+  if (st.roster[def3.id]) throw new GameActionError(`${def3.title} ${def3.name} sert d\xE9j\xE0 dans ta flotte.`);
   if (recruitCost(player) === "paid") pay2(method);
-  st.roster[def2.id] = { xp: 0 };
-  if (st.active.length < commanderSlots(player)) st.active.push(def2.id);
+  st.roster[def3.id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(def3.id);
   player.commanders = st;
-  return def2;
+  return def3;
 }
 function assignCommanders(player, idsIn, now) {
   var _a, _b;
@@ -2004,8 +2041,8 @@ function assignCommanders(player, idsIn, now) {
   for (const id of changed) {
     const at = (_a = st.movedAtMs[id]) != null ? _a : 0;
     if (at && now - at < cooldown) {
-      const def2 = findCommander(id);
-      throw new GameActionError(`${(_b = def2 == null ? void 0 : def2.title) != null ? _b : "Cet officier"} vient de changer de poste : r\xE9essaie dans ${Math.ceil((at + cooldown - now) / 36e5)} h.`);
+      const def3 = findCommander(id);
+      throw new GameActionError(`${(_b = def3 == null ? void 0 : def3.title) != null ? _b : "Cet officier"} vient de changer de poste : r\xE9essaie dans ${Math.ceil((at + cooldown - now) / 36e5)} h.`);
     }
   }
   for (const id of changed) st.movedAtMs[id] = now;
@@ -2013,16 +2050,16 @@ function assignCommanders(player, idsIn, now) {
   player.commanders = st;
 }
 function trainCommander(player, id) {
-  const def2 = findCommander(id);
-  if (!def2) throw new GameActionError("Officier inconnu.");
+  const def3 = findCommander(id);
+  if (!def3) throw new GameActionError("Officier inconnu.");
   const st = commandersState(player);
-  if (!st.roster[def2.id]) throw new GameActionError("Cet officier n'est pas recrut\xE9.");
+  if (!st.roster[def3.id]) throw new GameActionError("Cet officier n'est pas recrut\xE9.");
   if (st.dossiers <= 0) throw new GameActionError("Aucun Dossier d'entra\xEEnement : il s'en trouve au Comptoir de la Ruche.");
-  if (commanderLevel(st.roster[def2.id].xp) >= COMMANDER_RULES.maxLevel) throw new GameActionError("Cet officier a atteint le niveau maximal.");
+  if (commanderLevel(st.roster[def3.id].xp) >= COMMANDER_RULES.maxLevel) throw new GameActionError("Cet officier a atteint le niveau maximal.");
   st.dossiers -= 1;
-  st.roster[def2.id] = { xp: st.roster[def2.id].xp + COMMANDER_RULES.dossierXp };
+  st.roster[def3.id] = { xp: st.roster[def3.id].xp + COMMANDER_RULES.dossierXp };
   player.commanders = st;
-  return commanderLevel(st.roster[def2.id].xp);
+  return commanderLevel(st.roster[def3.id].xp);
 }
 function addDossiers(player, n) {
   const st = commandersState(player);
@@ -2179,10 +2216,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY6 = 864e5;
+  const DAY7 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY6) * DAY6;
-  return new Date(midnight - (day + 6) % 7 * DAY6).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY7) * DAY7;
+  return new Date(midnight - (day + 6) % 7 * DAY7).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -2272,10 +2309,10 @@ function storageCapacityOf(input) {
 function getFleetUpkeep(units, techLevels2) {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units != null ? units : {})) {
-    const def2 = findUnit(id);
-    if (!def2 || !(state == null ? void 0 : state.count)) continue;
-    const perPlace = def2.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
-    upkeep += state.count * def2.hangarSpace * perPlace;
+    const def3 = findUnit(id);
+    if (!def3 || !(state == null ? void 0 : state.count)) continue;
+    const perPlace = def3.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
+    upkeep += state.count * def3.hangarSpace * perPlace;
   }
   return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
 }
@@ -2566,7 +2603,7 @@ var DEFAULT_MISSIONS = {
 var MISSIONS = __spreadValues({}, DEFAULT_MISSIONS);
 function setMissions(defs) {
   for (const key of Object.keys(MISSIONS)) delete MISSIONS[key];
-  for (const def2 of defs) MISSIONS[def2.key] = def2;
+  for (const def3 of defs) MISSIONS[def3.key] = def3;
 }
 function hasPrerequisites(mission, units) {
   return Object.entries(mission.prereq).every(([unitId, req]) => {
@@ -3393,7 +3430,9 @@ var PASS_POINTS = {
   victory: 5,
   bossAssault: 5,
   dailyLogin: 5,
-  mission: 2
+  mission: 2,
+  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
+  vendetta: 40
 };
 var PASS_TIERS = [
   [{ kind: "production", hours: 2 }],
@@ -4425,6 +4464,75 @@ function achievementReward(a, player) {
   return out;
 }
 
+// src/game/vacation.ts
+var VACATION_RULES = {
+  minDays: 2,
+  maxDays: 21,
+  /** Attente entre deux périodes. */
+  cooldownDays: 5,
+  /** Production pendant l'absence. */
+  productionFactor: 0.25,
+  /** Pas d'activation dans les 12 h qui suivent une attaque subie. */
+  recentAttackHours: 12,
+  /** Retour anticipé possible après 48 h seulement. */
+  minStayHours: 48
+};
+var DAY3 = 864e5;
+var HOUR3 = 36e5;
+function onVacation(p, now) {
+  const v = p.vacation;
+  return !!v && !v.endedAtMs && v.startedAtMs <= now && now < v.untilMs;
+}
+function startVacation(player, daysIn, ctx, now) {
+  var _a, _b, _c, _d;
+  const days = Math.floor(Number(daysIn));
+  if (!(days >= VACATION_RULES.minDays && days <= VACATION_RULES.maxDays)) {
+    throw new GameActionError(`Choisis une dur\xE9e entre ${VACATION_RULES.minDays} et ${VACATION_RULES.maxDays} jours.`);
+  }
+  if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
+  const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY3) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY3 - now) / HOUR3);
+    throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
+  }
+  if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
+  if (ctx.hostileIncoming > 0) throw new GameActionError("Une flotte hostile approche : impossible de partir maintenant.");
+  if (ctx.ultimatum) throw new GameActionError("R\xE9ponds d'abord \xE0 l'ultimatum en cours.");
+  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR3) {
+    throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
+  }
+  const v = { startedAtMs: now, untilMs: now + days * DAY3 };
+  player.vacation = v;
+  return v;
+}
+function endVacation(player, queues, at, early = false) {
+  var _a, _b;
+  const v = player.vacation;
+  if (!v || v.endedAtMs) return;
+  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR3) {
+    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR3 - at) / HOUR3);
+    throw new GameActionError(`Retour possible apr\xE8s ${VACATION_RULES.minStayHours} h de vacances : encore ${left} h.`);
+  }
+  const end = Math.min(at, v.untilMs);
+  const shift = Math.max(0, end - v.startedAtMs);
+  const later = (t) => t === null ? null : t + shift;
+  for (const id of Object.keys(queues.buildingUpgrades)) {
+    const e = queues.buildingUpgrades[id];
+    if (e) e.endTime += shift;
+  }
+  ["attack", "defense"].forEach((c) => queues.unitQueues[c].forEach((e) => e.endTime = later(e.endTime)));
+  queues.activeResearches.forEach((e) => e.endTime += shift);
+  queues.activeMissions.forEach((e) => e.endTime += shift);
+  for (const c of (_a = player.colonies) != null ? _a : []) {
+    if (c.building) c.building.endTime += shift;
+    if (c.defenseJob) c.defenseJob.endTime += shift;
+    c.updatedAtMs = Math.min(end, c.updatedAtMs + shift * (1 - VACATION_RULES.productionFactor));
+  }
+  if (player.colonizing) player.colonizing.endTime += shift;
+  if ((_b = player.synthesis) == null ? void 0 : _b.crafting) player.synthesis.crafting.endsAtMs += shift;
+  player.vacation = __spreadProps(__spreadValues({}, v), { endedAtMs: end });
+}
+
 // src/game/flush.ts
 function unitForTech(techId) {
   var _a;
@@ -4448,6 +4556,30 @@ function flushState(playerIn, queuesIn, now) {
   const player = structuredClone(playerIn);
   const queues = structuredClone(queuesIn);
   const notifications = [];
+  const vac = player.vacation;
+  if (vac && !vac.endedAtMs && vac.startedAtMs <= now) {
+    const from = Math.max(player.resourcesUpdatedAtMs || now, vac.startedAtMs);
+    const to = Math.min(now, vac.untilMs);
+    if (to > from) {
+      const before = player.resources;
+      const after = advanceResources(player, (to - from) / 1e3, from);
+      player.resources = Object.fromEntries(
+        Object.entries(after).map(([res, n]) => {
+          var _a2;
+          const old = (_a2 = before[res]) != null ? _a2 : 0;
+          return [res, n > old ? old + (n - old) * VACATION_RULES.productionFactor : n];
+        })
+      );
+      player.resourcesUpdatedAtMs = to;
+    }
+    if (now >= vac.untilMs) {
+      endVacation(player, queues, vac.untilMs);
+      notifications.push({ kind: "event", title: "Retour de vacances", message: "Tes vacances sont termin\xE9es : production et chantiers reprennent normalement.", createdAtMs: now, read: false });
+    } else {
+      recordResourceHistory(player, now);
+      return { player, queues, notifications };
+    }
+  }
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1e3);
   player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1e3);
   ensureContracts(player, now);
@@ -4458,14 +4590,14 @@ function flushState(playerIn, queuesIn, now) {
   for (const buildingId of Object.keys(queues.buildingUpgrades)) {
     const entry = queues.buildingUpgrades[buildingId];
     if (!entry || entry.endTime > now) continue;
-    const def2 = findBuilding(buildingId);
-    if (def2) {
+    const def3 = findBuilding(buildingId);
+    if (def3) {
       player.buildings[buildingId].level += 1;
       grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
       notifications.push({
         kind: "building",
         title: "Construction termin\xE9e",
-        message: `${def2.name} a atteint le niveau ${player.buildings[buildingId].level}.`,
+        message: `${def3.name} a atteint le niveau ${player.buildings[buildingId].level}.`,
         createdAtMs: now,
         read: false
       });
@@ -4815,7 +4947,7 @@ var ASCENSION_RULES = {
   shieldHours: 72,
   upkeepFreeDays: 7
 };
-var DAY3 = 24 * 36e5;
+var DAY4 = 24 * 36e5;
 function ascensionCount(player) {
   return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
 }
@@ -4827,7 +4959,7 @@ function ascensionBuildTimeFactor(player) {
 }
 function upkeepFreeUntil(player) {
   const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY3 : 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY4 : 0;
 }
 function canAscend(player, queues, now) {
   var _a;
@@ -4845,8 +4977,8 @@ function canAscend(player, queues, now) {
   });
   if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
   if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY3 - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY3)} jour(s).`, missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY4 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY4)} jour(s).`, missing };
   if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
   return { ok: true, missing };
 }
@@ -4890,7 +5022,7 @@ var COLONY_RULES = {
   /** Coût des bâtiments d'une colonie : × ce facteur par rapport à la planète mère. */
   costFactor: 1.5
 };
-var HOUR3 = 36e5;
+var HOUR4 = 36e5;
 function colonyBuildingIds() {
   return BUILDINGS.filter((b) => {
     var _a, _b;
@@ -4953,7 +5085,7 @@ function startColonization(player, nameIn, now) {
     if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError("Ressources insuffisantes pour le vaisseau colonial.");
   }
   for (const [res, n] of Object.entries(cost)) player.resources[res] -= n;
-  player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR3 };
+  player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR4 };
   return player.colonizing;
 }
 function foundColony(uid, job, at) {
@@ -5023,14 +5155,14 @@ function payFrom(resources, cost, what) {
 }
 function colonyUpgradeCost(player, buildingId, nextLevel) {
   var _a, _b;
-  const def2 = findBuilding(buildingId);
-  if (!def2) return {};
-  const base = applyBuildingDiscount(getBuildingUpgradeCost(def2, nextLevel), (_b = (_a = player.bonuses) == null ? void 0 : _a.buildingUpgradeDiscount) != null ? _b : 0);
+  const def3 = findBuilding(buildingId);
+  if (!def3) return {};
+  const base = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_b = (_a = player.bonuses) == null ? void 0 : _a.buildingUpgradeDiscount) != null ? _b : 0);
   return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil((n != null ? n : 0) * COLONY_RULES.costFactor)]));
 }
 function colonyUpgradeSeconds(player, buildingId, nextLevel, now) {
-  const def2 = findBuilding(buildingId);
-  return def2 ? Math.round(getBuildingUpgradeTime(def2, nextLevel) * playerBuildTimeFactor(player, now)) : 0;
+  const def3 = findBuilding(buildingId);
+  return def3 ? Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) : 0;
 }
 function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   var _a, _b;
@@ -5106,1331 +5238,6 @@ function collectFromColony(colony, requested, capacity) {
 function deliverToColony(colony, cargo) {
   var _a;
   for (const [r, n] of Object.entries(cargo)) colony.resources[r] = ((_a = colony.resources[r]) != null ? _a : 0) + (n != null ? n : 0);
-}
-
-// src/game/debris.ts
-var DEBRIS_RULES = {
-  /** Part du coût (ferraille, énergie) des vaisseaux détruits. */
-  percent: 0.3,
-  /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
-  lifetimeHours: 48,
-  /** Capacité de ramassage d'un recycleur, par niveau. */
-  capacityPerLevel: 250,
-  recyclerUnitId: "drone_recuperateur"
-};
-function debrisFromLosses(losses, percent = DEBRIS_RULES.percent) {
-  var _a, _b, _c, _d;
-  let scrap = 0;
-  let energy = 0;
-  for (const map of losses) {
-    for (const [unitId, qty] of Object.entries(map != null ? map : {})) {
-      if (!(qty > 0) || !OFFENSIVE_UNITS.includes(unitId)) continue;
-      const cost = (_b = (_a = findUnit(unitId)) == null ? void 0 : _a.cost) != null ? _b : {};
-      scrap += ((_c = cost.scrap) != null ? _c : 0) * qty;
-      energy += ((_d = cost.energy) != null ? _d : 0) * qty;
-    }
-  }
-  return { scrap: Math.floor(scrap * percent), energy: Math.floor(energy * percent) };
-}
-function debrisTotal(d) {
-  var _a, _b;
-  return d ? ((_a = d.scrap) != null ? _a : 0) + ((_b = d.energy) != null ? _b : 0) : 0;
-}
-function mergeDebris(field, add, location, now) {
-  var _a, _b;
-  const alive = field && field.expiresAtMs > now ? field : null;
-  return {
-    id: location.uid,
-    locationPseudo: location.pseudo,
-    scrap: ((_a = alive == null ? void 0 : alive.scrap) != null ? _a : 0) + add.scrap,
-    energy: ((_b = alive == null ? void 0 : alive.energy) != null ? _b : 0) + add.energy,
-    expiresAtMs: now + DEBRIS_RULES.lifetimeHours * 36e5,
-    updatedAtMs: now
-  };
-}
-function recyclerCapacity(units, fleet) {
-  var _a, _b;
-  let capacity = 0;
-  for (const [unitId, qty] of Object.entries(fleet != null ? fleet : {})) {
-    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
-    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, (_b = (_a = units[unitId]) == null ? void 0 : _a.level) != null ? _b : 1);
-  }
-  return capacity;
-}
-function collectDebris(field, capacity) {
-  var _a, _b, _c, _d, _e, _f, _g;
-  const total2 = debrisTotal(field);
-  if (total2 <= 0 || capacity <= 0) return { taken: { scrap: 0, energy: 0 }, remaining: { scrap: (_a = field.scrap) != null ? _a : 0, energy: (_b = field.energy) != null ? _b : 0 } };
-  const ratio = Math.min(1, capacity / total2);
-  const scrap = Math.floor(((_c = field.scrap) != null ? _c : 0) * ratio);
-  const energy = Math.min((_d = field.energy) != null ? _d : 0, Math.floor(capacity - scrap), Math.ceil(((_e = field.energy) != null ? _e : 0) * ratio));
-  return {
-    taken: { scrap, energy },
-    remaining: { scrap: ((_f = field.scrap) != null ? _f : 0) - scrap, energy: ((_g = field.energy) != null ? _g : 0) - energy }
-  };
-}
-
-// src/game/pvp.ts
-var PVP_RULES = {
-  /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
-  attackCooldownMs: 2 * 60 * 60 * 1e3,
-  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense. */
-  shieldAfterDefeatMs: 60 * 60 * 1e3,
-  /** Protection débutant (levée dès que le joueur attaque lui-même). */
-  newbieProtectionMs: 72 * 60 * 60 * 1e3,
-  /** v3.4 : bouclier après une ascension. */
-  ascensionShieldMs: 72 * 60 * 60 * 1e3,
-  /** Impossible d'attaquer un joueur N fois moins expérimenté… */
-  maxXpRatio: 3,
-  /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
-   *  bloquerait mutuellement en début de partie). */
-  xpGapFloor: 500,
-  /** Perte d'XP maximale en défense sur 24 h glissantes. */
-  defenseXpLossCapPer24h: 60,
-  defenseXpLossWindowMs: 24 * 60 * 60 * 1e3
-};
-function clamp2(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-function computeCombatXp(outcome, attackerPower, defenderPower) {
-  const att = Math.max(attackerPower, 0);
-  const def2 = Math.max(defenderPower, 0);
-  if (outcome === "attacker_win") {
-    const ratio = att > 0 ? def2 / att : 0;
-    return {
-      attackerXp: Math.round(40 * clamp2(ratio, 0.1, 2)),
-      defenderXp: -Math.round(clamp2(20 * ratio, 5, 20))
-    };
-  }
-  if (outcome === "defender_win") {
-    const ratio = def2 > 0 ? att / def2 : 0;
-    return {
-      attackerXp: -20,
-      defenderXp: Math.round(40 * clamp2(ratio, 0.5, 1.5))
-    };
-  }
-  return { attackerXp: 5, defenderXp: 5 };
-}
-function capDefenderXpLoss(defenderXp, alreadyLost) {
-  if (defenderXp >= 0) return defenderXp;
-  const remaining = Math.max(0, PVP_RULES.defenseXpLossCapPer24h - alreadyLost);
-  return -Math.min(-defenderXp, remaining);
-}
-function formatWait(ms) {
-  const minutes = Math.ceil(ms / 6e4);
-  if (minutes < 60) return `${minutes} min`;
-  const hours2 = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
-}
-function checkAttackAllowed(ctx) {
-  var _a;
-  const { now } = ctx;
-  if (ctx.attackerUid === ctx.defenderUid) {
-    return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
-  }
-  if (ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
-    const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "newbie",
-        until,
-        message: `Ce joueur d\xE9bute : il est prot\xE9g\xE9 encore ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (ctx.lastDefenderDefeatMs !== null) {
-    const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "shield",
-        until,
-        message: `Ce joueur vient d'\xEAtre battu : bouclier actif encore ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
-    const until = ctx.defenderShieldUntilMs;
-    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
-  }
-  if (ctx.defenderAscendedAtMs) {
-    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
-    if (now < until) {
-      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
-    }
-  }
-  if (ctx.lastAttackOnTargetMs !== null) {
-    const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "cooldown",
-        until,
-        message: `Tu as d\xE9j\xE0 attaqu\xE9 ce joueur r\xE9cemment : r\xE9essaie dans ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
-    return {
-      allowed: false,
-      reason: "too_weak",
-      message: `Ce joueur est trop faible pour toi (moins d'un tiers de ton XP).`
-    };
-  }
-  return { allowed: true };
-}
-
-// src/game/attack.ts
-function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D;
-  const { now, attackerUid, defenderUid, defender } = input;
-  const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
-    now,
-    attackerUid,
-    attackerXp: (_a = input.attacker.xp) != null ? _a : 0,
-    defenderUid,
-    defenderXp: (_b = defender.xp) != null ? _b : 0,
-    defenderCreatedAtMs: defender.createdAtMs,
-    defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
-    lastAttackOnTargetMs: input.lastAttackOnTargetMs,
-    defenderAscendedAtMs: defender.ascendedAtMs,
-    defenderShieldUntilMs: shieldUntil(defender),
-    lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null
-  });
-  if (!check.allowed) return { ok: false, message: (_e = check.message) != null ? _e : "Attaque impossible." };
-  const fleet = {};
-  for (const [unitId, raw] of Object.entries((_f = input.fleet) != null ? _f : {})) {
-    const qty = Math.floor(Number(raw));
-    if (qty <= 0) continue;
-    if (!OFFENSIVE_UNITS.includes(unitId)) return { ok: false, message: "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es." };
-    fleet[unitId] = qty;
-  }
-  if (Object.keys(fleet).length === 0) return { ok: false, message: "S\xE9lectionne au moins une unit\xE9 \xE0 envoyer." };
-  const flushed = flushState(
-    __spreadProps(__spreadValues({}, input.attacker), { buildings: withMissingBuildings(input.attacker.buildings, input.attacker.resources) }),
-    input.attackerQueues,
-    now
-  );
-  const attacker = flushed.player;
-  if (input.inFlight) {
-    for (const [unitId, qty] of Object.entries(fleet)) {
-      const state = (_g = attacker.units[unitId]) != null ? _g : { level: 1, count: 0 };
-      attacker.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
-    }
-  }
-  for (const [unitId, qty] of Object.entries(fleet)) {
-    if (((_i = (_h = attacker.units[unitId]) == null ? void 0 : _h.count) != null ? _i : 0) < qty) {
-      return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
-    }
-  }
-  const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings, defender.resources) }), input.defenderQueues, now);
-  const owner = flushedDefender.player;
-  const colony = input.colonyId ? colonyOf(owner, input.colonyId) : void 0;
-  if (input.colonyId && !colony) return { ok: false, message: "Cette colonie n'existe plus." };
-  const def2 = colony ? colonyView(owner, colony) : owner;
-  const posture = postureEffects((_j = def2.posture) == null ? void 0 : _j.id);
-  const formation = formationEffects(input.formation);
-  const atkMods = playerModifiers(attacker);
-  const defMods = playerModifiers(owner);
-  const assault = Math.max(0, Math.min(50, Number((_k = input.boosts) == null ? void 0 : _k.assault) || 0)) / 100;
-  const armor = consumeArmor(owner, now) / 100;
-  const combat = resolveCombat(__spreadProps(__spreadValues({}, formation), {
-    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault),
-    cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
-    defenderPowerFactor: 1 + defMods.defense + armor,
-    defenseFactor: posture.defenseFactor,
-    homeFleetFactor: posture.homeFleetFactor,
-    lootMultiplier: lootFactor(now),
-    garrisons: (_l = input.garrisons) != null ? _l : [],
-    garrisonFactor: ALLIANCE_RULES.garrisonPower,
-    attackerUnits: attacker.units,
-    attackerTechLevels: attacker.techLevels,
-    attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
-    fleet,
-    defenderUnits: (_m = def2.units) != null ? _m : {},
-    defenderTechLevels: (_n = def2.techLevels) != null ? _n : {},
-    defenderRepairPct: withRepairBonus(getRepairPercent(def2.buildings), owner),
-    defenderShieldPct: getShieldPercent(def2.buildings, allianceShieldBonus(def2.allianceResearch)),
-    // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
-    defenderResources: Object.fromEntries(
-      Object.entries((_o = def2.resources) != null ? _o : {}).map(([res, amount2]) => [res, Math.max(0, (amount2 != null ? amount2 : 0) - protectedAmount(def2.buildings, res, def2.techLevels, def2.allianceResearch))])
-    )
-  }));
-  const aegis = combat.outcome === "attacker_win" && Object.values((_p = combat.loot) != null ? _p : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
-  if (aegis) combat.loot = {};
-  for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
-    if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
-  }
-  const survivors = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_q = combat.attackerLosses[unitId]) != null ? _q : 0));
-  if (input.inFlight) {
-    for (const [unitId, qty] of Object.entries(survivors)) {
-      if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
-    }
-  }
-  for (const [res, amt] of Object.entries((_r = combat.loot) != null ? _r : {})) {
-    if (!input.inFlight) {
-      attacker.resources[res] = ((_s = attacker.resources[res]) != null ? _s : 0) + (amt != null ? amt : 0);
-      bumpStat(attacker, "loot", amt != null ? amt : 0);
-    }
-    def2.resources[res] = Math.max(0, ((_t = def2.resources[res]) != null ? _t : 0) - (amt != null ? amt : 0));
-  }
-  for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
-    if (def2.units[unitId]) def2.units[unitId].count = Math.max(0, def2.units[unitId].count - lost);
-  }
-  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
-  const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
-  if (combat.outcome === "attacker_win") {
-    if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
-    attacker.victories = ((_u = attacker.victories) != null ? _u : 0) + 1;
-  } else if (combat.outcome === "defender_win") attacker.defeats = ((_v = attacker.defeats) != null ? _v : 0) + 1;
-  applyXpDelta(attacker, xp.attackerXp, now);
-  attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") owner.victories = ((_w = owner.victories) != null ? _w : 0) + 1;
-  else if (combat.outcome === "attacker_win") {
-    owner.defeats = ((_x = owner.defeats) != null ? _x : 0) + 1;
-    if (colony) colony.lastDefeatAtMs = now;
-    else owner.lastDefeatAtMs = now;
-  }
-  applyXpDelta(owner, defenderXpDelta, now);
-  if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
-  if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
-  if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
-  if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
-  if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
-  grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
-  const outcomeTitle = {
-    attacker_win: "Victoire !",
-    defender_win: "D\xE9faite\u2026",
-    draw: "Match nul"
-  };
-  const notifications = [
-    ...flushed.notifications,
-    {
-      kind: "combat-attacker",
-      title: (_y = outcomeTitle[combat.outcome]) != null ? _y : "Rapport de combat",
-      message: `Attaque contre ${def2.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
-      createdAtMs: now,
-      read: false
-    }
-  ];
-  const defenderTitle = {
-    attacker_win: "Tu as perdu ce combat...",
-    defender_win: "Attaque repouss\xE9e !",
-    draw: "Match nul."
-  };
-  const defenderNotifications = [
-    ...flushedDefender.notifications,
-    {
-      kind: "combat-defender",
-      title: (_z = defenderTitle[combat.outcome]) != null ? _z : "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
-      createdAtMs: now,
-      read: false
-    }
-  ];
-  const report = {
-    attackerUid,
-    attackerPseudo: input.attacker.pseudo,
-    defenderUid,
-    defenderPseudo: def2.pseudo,
-    timestamp: now,
-    outcome: combat.outcome,
-    attackerPower: combat.attackerPower,
-    defenderPower: combat.defenderPower,
-    attackerLossPercent: combat.attackerLossPercent,
-    defenderLossPercent: combat.defenderLossPercent,
-    attackerLosses: combat.attackerLosses,
-    attackerRecovered: combat.attackerRecovered,
-    defenderLosses: combat.defenderLosses,
-    defenderRecovered: combat.defenderRecovered,
-    loot: combat.loot,
-    defenderProcessed: false,
-    attackerXpDelta: xp.attackerXp,
-    defenderXpDelta,
-    defenderApplied: true,
-    garrisons: ((_A = input.garrisons) != null ? _A : []).map((g, i) => {
-      var _a2, _b2;
-      return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
-    }),
-    attackerFleet: fleet,
-    planetId: colony ? colony.id : ""
-  };
-  return {
-    ok: true,
-    attacker,
-    attackerQueues: flushed.queues,
-    notifications,
-    defender: owner,
-    defenderQueues: flushedDefender.queues,
-    defenderNotifications,
-    report,
-    combat,
-    survivors,
-    loot: (_B = combat.loot) != null ? _B : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_C = combat.garrisonLosses) != null ? _C : []], (_D = eventDebrisPercent(now)) != null ? _D : DEBRIS_RULES.percent)
-  };
-}
-
-// src/game/onboarding.ts
-var ONBOARDING_RANK = "fer2";
-var ONBOARDING_TITLE = "Recrue";
-var level2 = (p, id) => {
-  var _a, _b, _c;
-  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
-};
-var count = (p, id) => {
-  var _a, _b, _c;
-  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
-};
-function onboardingRankXp() {
-  var _a, _b;
-  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
-}
-var ONBOARDING_STEPS = [
-  {
-    id: "scrap3",
-    label: "Extracteur de ferraille au niveau 3",
-    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
-    to: "/game/batiments",
-    reward: { scrap: 1e3, energy: 500 },
-    done: (p) => level2(p, "extracteur_ferraille") >= 3
-  },
-  {
-    id: "reactor3",
-    label: "R\xE9acteur au niveau 3",
-    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
-    to: "/game/batiments",
-    reward: { scrap: 1500, energy: 1e3 },
-    done: (p) => level2(p, "reacteur_instable") >= 3
-  },
-  {
-    id: "research",
-    label: "Lancer une premi\xE8re recherche",
-    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
-    to: "/game/labo",
-    reward: { nano: 2e3, data: 2e3 },
-    done: (p) => {
-      var _a;
-      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
-    }
-  },
-  {
-    id: "drones5",
-    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
-    hint: "Les drones ouvrent les premi\xE8res missions.",
-    to: "/game/unites",
-    reward: { scrap: 3e3 },
-    done: (p) => count(p, "drone_recuperateur") >= 5
-  },
-  {
-    id: "mission",
-    label: "Terminer une mission",
-    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
-    to: "/game/missions",
-    reward: { scrap: 5e3, energy: 2e3 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "storage2",
-    label: "Entrep\xF4t au niveau 2",
-    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
-    to: "/game/batiments",
-    reward: { scrap: 5e3, energy: 5e3 },
-    done: (p) => level2(p, "entrepot") >= 2
-  },
-  {
-    id: "rockets10",
-    label: "Installer 10 roquettes",
-    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
-    to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
-    done: (p) => count(p, "roquette") >= 10
-  },
-  {
-    id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
-    to: "/game/galaxie",
-    reward: { cyberModule: 30 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "alliance",
-    label: "Rejoindre ou cr\xE9er une alliance",
-    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
-    to: "/game/alliance",
-    reward: { scrap: 1e4, energy: 1e4 },
-    done: (p) => !!p.allianceId
-  },
-  {
-    id: "rank",
-    label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
-    title: ONBOARDING_TITLE,
-    done: (p) => {
-      var _a;
-      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
-    }
-  }
-];
-function onboardingState(p) {
-  const raw = p.onboarding;
-  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
-}
-function onboardingEligible(p) {
-  var _a;
-  const st = onboardingState(p);
-  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
-  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
-}
-function claimOnboarding(player, stepId) {
-  var _a, _b, _c, _d, _e, _f;
-  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
-  const st = onboardingState(player);
-  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount2] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
-  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
-    if (!player.activeTitle) player.activeTitle = step.title;
-  }
-  const claimed = [...st.claimed, step.id];
-  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
-  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
-  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return step.reward;
-}
-function setOnboardingHidden(player, hidden) {
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
-}
-
-// src/game/profile.ts
-var PROFILE_RULES = { mottoMax: 60 };
-var FREE_BANNERS = [
-  { id: "nebula", label: "N\xE9buleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
-  { id: "aurore", label: "Aurore", gradient: "linear-gradient(120deg,#0a1a1a 0%,#0f4d45 50%,#5ef2b066 100%)", hint: "Offerte" },
-  { id: "braise", label: "Braise", gradient: "linear-gradient(120deg,#1a0a06 0%,#5c1f0e 50%,#ff7a4566 100%)", hint: "Offerte" },
-  { id: "abysse", label: "Abysse", gradient: "linear-gradient(120deg,#07060f 0%,#2a1450 50%,#a78bfa66 100%)", hint: "Offerte" }
-];
-function leviathanKills(p) {
-  var _a;
-  return Number((_a = p.stats) == null ? void 0 : _a.leviathanKills) || 0;
-}
-function bannerOptions(p) {
-  var _a, _b, _c, _d;
-  const kesh = bountyState(p);
-  return [
-    ...FREE_BANNERS.map((b) => __spreadProps(__spreadValues({}, b), { unlocked: true })),
-    ...FACTIONS.filter((f) => f.banner || f.art).map((f) => ({
-      id: `faction:${f.id}`,
-      label: f.name,
-      image: f.banner || f.art,
-      hint: `Faire tomber ${f.lair.name}`,
-      unlocked: pirateState(p, f.id).lairsTaken > 0
-    })),
-    { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
-    { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
-    // v4.1 : parrainage et passes de saison terminés.
-    { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'\xE0 Bronze I", unlocked: ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0 },
-    ...((_d = (_c = p.seasonPass) == null ? void 0 : _c.completed) != null ? _d : []).map((seasonId, i) => ({
-      id: `pass:${seasonId}`,
-      label: `Passe ${seasonLabel(seasonId)}`,
-      gradient: PASS_GRADIENTS[i % PASS_GRADIENTS.length],
-      hint: "Terminer le passe de saison",
-      unlocked: true
-    }))
-  ];
-}
-var PASS_GRADIENTS = [
-  "linear-gradient(120deg,#05101a 0%,#0e4d6b 40%,#4be8ff 70%,#a78bfa 100%)",
-  "linear-gradient(120deg,#140514 0%,#5c0e4d 40%,#ff5df0 70%,#ffd86b 100%)",
-  "linear-gradient(120deg,#05140c 0%,#0e5c3a 40%,#5ef2b0 70%,#4be8ff 100%)"
-];
-function emblemOptions(p) {
-  const kesh = bountyState(p);
-  return [
-    { id: "rank", label: "Insigne de rang", hint: "Offert", unlocked: true },
-    ...FACTIONS.filter((f) => f.emblem).map((f) => ({
-      id: `faction:${f.id}`,
-      label: `Sceau ${f.name}`,
-      image: f.emblem,
-      hint: `Faire tomber ${f.lair.name}`,
-      unlocked: pirateState(p, f.id).lairsTaken > 0
-    })),
-    { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
-    { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 }
-  ];
-}
-function profileStyle(p) {
-  var _a, _b, _c, _d;
-  const raw = (_a = p.profileStyle) != null ? _a : {};
-  return { banner: String((_b = raw.banner) != null ? _b : "nebula"), emblem: String((_c = raw.emblem) != null ? _c : "rank"), motto: String((_d = raw.motto) != null ? _d : "") };
-}
-function sanitizeMotto(text) {
-  return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
-}
-function setProfileStyle(player, input) {
-  const req = input && typeof input === "object" ? input : {};
-  const current2 = profileStyle(player);
-  const next = __spreadValues({}, current2);
-  if (req.banner !== void 0) {
-    const opt = bannerOptions(player).find((o) => o.id === req.banner);
-    if (!opt) throw new GameActionError("Banni\xE8re inconnue.");
-    if (!opt.unlocked) throw new GameActionError(`Banni\xE8re verrouill\xE9e : ${opt.hint.toLowerCase()}.`);
-    next.banner = opt.id;
-  }
-  if (req.emblem !== void 0) {
-    const opt = emblemOptions(player).find((o) => o.id === req.emblem);
-    if (!opt) throw new GameActionError("Embl\xE8me inconnu.");
-    if (!opt.unlocked) throw new GameActionError(`Embl\xE8me verrouill\xE9 : ${opt.hint.toLowerCase()}.`);
-    next.emblem = opt.id;
-  }
-  if (req.motto !== void 0) next.motto = sanitizeMotto(req.motto);
-  player.profileStyle = next;
-  return next;
-}
-function publicShowcase(p) {
-  var _a, _b;
-  const style = profileStyle(p);
-  const banner = (_a = bannerOptions(p).find((o) => o.id === style.banner && o.unlocked)) != null ? _a : __spreadProps(__spreadValues({}, FREE_BANNERS[0]), { unlocked: true });
-  const emblem = emblemOptions(p).find((o) => o.id === style.emblem && o.unlocked);
-  const st = commandersState(p);
-  return {
-    banner: banner.image ? { image: banner.image } : { gradient: banner.gradient },
-    emblem: (_b = emblem == null ? void 0 : emblem.image) != null ? _b : null,
-    motto: style.motto,
-    commanders: st.active.map((id) => {
-      var _a2, _b2;
-      return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
-    }),
-    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity }))
-  };
-}
-
-// src/game/actions.ts
-var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
-var MAX_QTY = 1e5;
-function positiveInt(value, label2) {
-  const n = Math.floor(Number(value));
-  if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label2} invalide.`);
-  return n;
-}
-function pay(player, cost, now, spending = true) {
-  if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
-  let total2 = 0;
-  for (const [res, val] of Object.entries(cost)) {
-    player.resources[res] -= val != null ? val : 0;
-    total2 += val != null ? val : 0;
-  }
-  recordContract(player, "spend", total2, now);
-  if (spending) bumpStat(player, "spent", total2);
-}
-function hangarUsed(units, away, category) {
-  var _a;
-  let used = 0;
-  for (const [id, u] of Object.entries(units)) {
-    const def2 = findUnit(id);
-    if ((def2 == null ? void 0 : def2.category) === category) used += ((_a = u == null ? void 0 : u.count) != null ? _a : 0) * def2.hangarSpace;
-  }
-  for (const [id, n] of Object.entries(away)) {
-    const def2 = findUnit(id);
-    if ((def2 == null ? void 0 : def2.category) === category) used += (n > 0 ? n : 0) * def2.hangarSpace;
-  }
-  return used;
-}
-function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
-  const { player, queues, now } = s;
-  switch (action == null ? void 0 : action.type) {
-    case "sync": {
-      const elapsedMs = Math.max(0, now - (s.preFlushPlayer.resourcesUpdatedAtMs || now));
-      const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1e3 + 5, 300);
-      player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
-      passDailyLogin(player, now);
-      const resourceGains = {};
-      for (const key of Object.keys(player.resources)) {
-        const delta = ((_a = player.resources[key]) != null ? _a : 0) - ((_b = s.preFlushPlayer.resources[key]) != null ? _b : 0);
-        if (delta > 0) resourceGains[key] = delta;
-      }
-      const summary = { elapsedMs, resourceGains, notifications: s.flushNotifications };
-      return summary;
-    }
-    case "unlockBuilding": {
-      const info = BUILDING_UNLOCK_COST[action.buildingId];
-      const state = player.buildings[action.buildingId];
-      if (!info || !state) throw new GameActionError("Ce b\xE2timent se d\xE9bloque via le Labo.");
-      if (state.unlocked) throw new GameActionError("D\xE9j\xE0 d\xE9bloqu\xE9.");
-      const cost = {};
-      if ("multi" in info) info.resources.forEach((r) => cost[r.resource] = r.amount);
-      else cost[info.resource] = info.amount;
-      pay(player, cost, now);
-      state.unlocked = true;
-      return void 0;
-    }
-    case "upgradeBuilding": {
-      const def2 = findBuilding(action.buildingId);
-      const state = player.buildings[action.buildingId];
-      if (!def2 || !state) throw new GameActionError("B\xE2timent inconnu.");
-      if (!state.unlocked && !def2.startsUnlocked) throw new GameActionError("Ce b\xE2timent n'est pas d\xE9bloqu\xE9.");
-      if (queues.buildingUpgrades[def2.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
-      if (state.level >= def2.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-      const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def2, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
-      queues.buildingUpgrades[def2.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def2, nextLevel) * playerBuildTimeFactor(player, now)) * 1e3 };
-      recordContract(player, "upgrade_building", 1, now);
-      return void 0;
-    }
-    case "buildUnits": {
-      const unit = findUnit(action.unitId);
-      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
-      const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
-      if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
-      const category = unit.category;
-      const built = hangarUsed(player.units, s.unitsAway, category);
-      const reserved = queues.unitQueues[category].reduce((sum3, item) => {
-        var _a2, _b2;
-        return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
-      }, 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
-        throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
-      }
-      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
-      recordContract(player, "build_units", qty, now);
-      const queue = queues.unitQueues[category];
-      const wasEmpty = queue.length === 0;
-      for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
-      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels) * 1e3;
-      return void 0;
-    }
-    case "sellUnits": {
-      const unit = findUnit(action.unitId);
-      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
-      const qty = positiveInt(action.qty, "Quantit\xE9");
-      if (((_h = (_g = player.units[unit.id]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
-      player.units[unit.id].count -= qty;
-      player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
-      player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
-      return void 0;
-    }
-    case "research": {
-      const tech = findTech(action.techId);
-      if (!tech) throw new GameActionError("Technologie inconnue.");
-      const nextLevel = ((_i = player.techLevels[tech.id]) != null ? _i : 0) + 1;
-      if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Pr\xE9requis non remplis.");
-      if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
-      if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
-        throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
-      }
-      pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3 });
-      recordContract(player, "research", 1, now);
-      const hour = parisHour(now);
-      if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
-      return void 0;
-    }
-    case "mission": {
-      const mission = MISSIONS[action.missionKey];
-      if (!mission) throw new GameActionError("Mission inconnue.");
-      if (queues.activeMissions.some((m) => m.key === mission.key)) throw new GameActionError("Mission d\xE9j\xE0 en cours.");
-      if (!hasPrerequisites(mission, player.units)) throw new GameActionError("Pr\xE9requis non remplis.");
-      queues.activeMissions.push({ key: mission.key, endTime: now + mission.duration * 1e3 });
-      return void 0;
-    }
-    case "trade": {
-      const { sellId, buyId } = action;
-      if (!RESOURCE_IDS2.has(sellId) || !RESOURCE_IDS2.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
-      const amount2 = positiveInt(action.amount, "Montant");
-      if (((_j = player.resources[sellId]) != null ? _j : 0) < amount2) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
-      const gained = Math.floor(amount2 * getTradeRate(sellId, buyId));
-      player.resources[sellId] -= amount2;
-      player.resources[buyId] = ((_k = player.resources[buyId]) != null ? _k : 0) + gained;
-      bumpStat(player, "traded", amount2);
-      grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
-      return gained;
-    }
-    case "claimContract": {
-      const claimed = claimContract(player, String((_l = action.contractId) != null ? _l : ""), now);
-      bumpStat(player, "contracts");
-      addPassPoints(player, "contract", now);
-      grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
-      return claimed;
-    }
-    case "rerollContract":
-      return rerollContract(player, String((_m = action.contractId) != null ? _m : ""), now);
-    case "setTitle":
-      setActiveTitle(player, String((_n = action.title) != null ? _n : ""));
-      return player.activeTitle;
-    case "claimOnboarding":
-      return claimOnboarding(player, String((_o = action.stepId) != null ? _o : ""));
-    case "setPosture":
-      return setPosture(player, action.posture, now);
-    case "hideOnboarding":
-      setOnboardingHidden(player, action.hidden === true);
-      return player.onboarding;
-    case "ascend":
-      ascend(player, queues, now);
-      return { ascensions: player.ascensions };
-    case "colonize":
-      return startColonization(player, action.name, now);
-    case "colonyUpgrade":
-      return upgradeColonyBuilding(player, String((_p = action.colonyId) != null ? _p : ""), String((_q = action.buildingId) != null ? _q : ""), now);
-    case "colonyDefense":
-      return buildColonyDefense(player, String((_r = action.colonyId) != null ? _r : ""), String((_s = action.unitId) != null ? _s : ""), action.qty, now);
-    case "colonyRename":
-      renameColony(player, String((_t = action.colonyId) != null ? _t : ""), action.name);
-      return void 0;
-    case "commanderRecruit": {
-      const method = action.method === "production" ? "production" : "amber";
-      const def2 = recruitCommander(
-        player,
-        action.commanderId,
-        (m) => {
-          if (m === "production") {
-            pay(player, productionHours(player, COMMANDER_RULES.recruitProductionHours), now);
-            return;
-          }
-          const st = bountyState(player);
-          if (st.amber < COMMANDER_RULES.recruitAmber) throw new GameActionError(`Il faut ${COMMANDER_RULES.recruitAmber} Ambre de Ruche (primes Kesh'Vaar).`);
-          st.amber -= COMMANDER_RULES.recruitAmber;
-          player.bounties = st;
-        },
-        method
-      );
-      return { id: def2.id };
-    }
-    case "commanderAssign":
-      assignCommanders(player, action.ids, now);
-      return void 0;
-    case "commanderTrain":
-      return { level: trainCommander(player, action.commanderId) };
-    case "synthCraft":
-      return craftCapsule(player, action.capsule, action.level, now);
-    case "synthActivate":
-      return { pct: activateCapsule(player, action.capsule, action.level, now) };
-    case "relicEquip":
-      equipRelic(player, action.slot, action.relicId);
-      return void 0;
-    case "relicFuse":
-      return fuseRelics(player, action.template, action.rarity, now);
-    case "relicRecycle": {
-      const out = recycleRelic(player, action.relicId);
-      const st = bountyState(player);
-      st.amber += out.amber;
-      player.bounties = st;
-      return { amber: out.amber };
-    }
-    case "setProfileStyle":
-      return setProfileStyle(player, action.style);
-    case "passClaim":
-      return { gained: claimPassTier(player, action.tier, now) };
-    default:
-      throw new GameActionError("Action inconnue.");
-  }
-}
-function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
-  const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
-  const flushed = flushState(preFlushPlayer, queuesIn, now);
-  const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
-    action
-  );
-  return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
-}
-function performGift(sender, senderQueues, recipient, recipientQueues, rawResources, now) {
-  var _a;
-  if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources \xE0 toi-m\xEAme !");
-  const resources = {};
-  for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
-    const n = Math.floor(Number(raw));
-    if (!RESOURCE_IDS2.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
-    if (n > 0) resources[res] = n;
-  }
-  if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
-  const s = flushState(__spreadProps(__spreadValues({}, sender), { buildings: withMissingBuildings(sender.buildings, sender.resources) }), senderQueues, now);
-  const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings, recipient.resources) }), recipientQueues, now);
-  pay(s.player, resources, now, false);
-  recordContract(s.player, "gift", 1, now);
-  for (const [res, amt] of Object.entries(resources)) {
-    r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + (amt != null ? amt : 0);
-  }
-  r.notifications.push({
-    kind: "gift",
-    title: "Ressources re\xE7ues !",
-    message: `${sender.pseudo} t'a envoy\xE9 des ressources.`,
-    createdAtMs: now,
-    read: false
-  });
-  return {
-    sender: s.player,
-    senderQueues: s.queues,
-    senderNotifications: s.notifications,
-    recipient: r.player,
-    recipientQueues: r.queues,
-    recipientNotifications: r.notifications,
-    resources
-  };
-}
-function newPlayerProfile(uid, rawPseudo, now) {
-  const pseudo = String(rawPseudo != null ? rawPseudo : "").trim().replace(/\s+/g, " ").slice(0, 30) || "Joueur";
-  const player = __spreadProps(__spreadValues({}, defaultPlayerState(uid, pseudo)), { createdAtMs: now, resourcesUpdatedAtMs: now });
-  return { player, queues: defaultQueues() };
-}
-function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
-  var _a, _b, _c, _d, _e, _f;
-  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
-  for (const [unitId, lost] of Object.entries((_a = report.defenderLosses) != null ? _a : {})) {
-    if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - (Number(lost) || 0));
-  }
-  for (const [res, amt] of Object.entries((_b = report.loot) != null ? _b : {})) {
-    const key = res;
-    if (RESOURCE_IDS2.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
-  }
-  if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
-  else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
-  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now);
-  const title = { attacker_win: "Tu as perdu ce combat...", defender_win: "Attaque repouss\xE9e !", draw: "Match nul." };
-  notifications.push({
-    kind: "combat-defender",
-    title: (_f = title[report.outcome]) != null ? _f : "Rapport de combat",
-    message: `Attaque de ${report.attackerPseudo}.`,
-    createdAtMs: now,
-    read: false
-  });
-  return { player, queues, notifications };
-}
-function applyLegacyGift(playerIn, queuesIn, gift, now) {
-  var _a, _b;
-  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
-  for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
-    const n = Math.floor(Number(amt));
-    if (RESOURCE_IDS2.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
-  }
-  notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
-  return { player, queues, notifications };
-}
-
-// src/game/analytics.ts
-var HOUR4 = 36e5;
-var DAY4 = 24 * HOUR4;
-function median(values) {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
-var round1 = (n) => Math.round(n * 10) / 10;
-function topCounts(values, limit) {
-  const counts = /* @__PURE__ */ new Map();
-  values.forEach((v) => {
-    var _a;
-    return counts.set(v, ((_a = counts.get(v)) != null ? _a : 0) + 1);
-  });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count2]) => ({ pseudo, count: count2 }));
-}
-function computeGameStats(players, queues, reports, now, windowDays = 7, balanceDays = 30) {
-  const n = players.length;
-  const lastSeen = (p) => {
-    var _a;
-    return (_a = p.resourcesUpdatedAtMs) != null ? _a : 0;
-  };
-  const families = /* @__PURE__ */ new Map();
-  players.forEach((p) => {
-    var _a, _b;
-    const family = getRank((_a = p.xp) != null ? _a : 0).family;
-    families.set(family, ((_b = families.get(family)) != null ? _b : 0) + 1);
-  });
-  const rates = players.map((p) => {
-    var _a, _b;
-    return getProductionRatesPerSecond((_a = p.buildings) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {});
-  });
-  const buildings = BUILDINGS.map((b) => {
-    const levels = players.map((p) => {
-      var _a;
-      return effectiveBuildingLevel((_a = p.buildings) != null ? _a : {}, b.id);
-    });
-    return {
-      id: b.id,
-      name: b.name,
-      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
-      maxLevel: b.maxLevel,
-      unlockedPct: pct3(levels.filter((l) => l > 0).length, n),
-      maxedPct: pct3(levels.filter((l) => l >= b.maxLevel).length, n)
-    };
-  });
-  const technologies = TECHNOLOGIES.map((t) => {
-    const levels = players.map((p) => {
-      var _a, _b;
-      return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
-    });
-    return {
-      id: t.id,
-      name: t.nom,
-      researchedPct: pct3(levels.filter((l) => l > 0).length, n),
-      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
-      maxLevel: t.maxLevel
-    };
-  });
-  const units = UNITS.map((u) => {
-    const owned = players.map((p) => {
-      var _a;
-      return (_a = p.units) == null ? void 0 : _a[u.id];
-    });
-    return {
-      id: u.id,
-      name: u.name,
-      total: owned.reduce((a, s) => {
-        var _a;
-        return a + ((_a = s == null ? void 0 : s.count) != null ? _a : 0);
-      }, 0),
-      ownersPct: pct3(owned.filter((s) => {
-        var _a;
-        return ((_a = s == null ? void 0 : s.count) != null ? _a : 0) > 0;
-      }).length, n),
-      unlockedPct: pct3(owned.filter((s) => {
-        var _a;
-        return ((_a = s == null ? void 0 : s.level) != null ? _a : 0) > 0;
-      }).length, n)
-    };
-  });
-  const missionCounts = /* @__PURE__ */ new Map();
-  queues.forEach((q) => {
-    var _a;
-    return ((_a = q.activeMissions) != null ? _a : []).forEach((m) => {
-      var _a2;
-      return missionCounts.set(m.key, ((_a2 = missionCounts.get(m.key)) != null ? _a2 : 0) + 1);
-    });
-  });
-  const missions = Object.values(MISSIONS).map((m) => {
-    var _a;
-    return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
-  }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY4;
-  const recent = reports.filter((r) => {
-    var _a;
-    return ((_a = r.timestamp) != null ? _a : 0) >= since;
-  });
-  const outcomes = { attacker_win: 0, defender_win: 0, draw: 0 };
-  recent.forEach((r) => {
-    if (r.outcome in outcomes) outcomes[r.outcome]++;
-  });
-  const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY4;
-    const d = new Date(start + DAY4);
-    return {
-      day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY4).length
-    };
-  });
-  const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
-    var _a;
-    return Object.values((_a = r.loot) != null ? _a : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
-  });
-  const stats = {
-    generatedAt: now,
-    players: {
-      total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY4).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY4).length,
-      new7d: players.filter((p) => {
-        var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY4;
-      }).length,
-      medianPlaytimeHours: round1(median(players.map((p) => {
-        var _a;
-        return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
-      }))),
-      ranks: [...families.entries()].map(([label2, count2]) => ({ label: label2, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
-      medianXp: median(players.map((p) => {
-        var _a;
-        return (_a = p.xp) != null ? _a : 0;
-      })),
-      topXp: [...players].sort((a, b) => {
-        var _a, _b;
-        return ((_a = b.xp) != null ? _a : 0) - ((_b = a.xp) != null ? _b : 0);
-      }).slice(0, 5).map((p) => {
-        var _a;
-        return { pseudo: p.pseudo, xp: (_a = p.xp) != null ? _a : 0 };
-      })
-    },
-    economy: {
-      resources: RESOURCE_LIST.map((r) => {
-        const amounts = players.map((p) => {
-          var _a, _b;
-          return (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
-        });
-        return {
-          id: r.id,
-          name: r.name,
-          median: Math.floor(median(amounts)),
-          total: Math.floor(amounts.reduce((a, v) => a + v, 0)),
-          medianRate: round1(median(rates.map((rt) => {
-            var _a;
-            return (_a = rt[r.id]) != null ? _a : 0;
-          })))
-        };
-      })
-    },
-    buildings,
-    technologies,
-    units,
-    missions,
-    combat: {
-      windowDays,
-      attacks: recent.length,
-      outcomes,
-      perDay,
-      avgLoot: lootTotals.length ? Math.round(lootTotals.reduce((a, v) => a + v, 0) / lootTotals.length) : 0,
-      topAttackers: topCounts(recent.map((r) => r.attackerPseudo), 5),
-      mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
-    },
-    balance: computeBalance(players, reports, now, balanceDays),
-    endgame: computeEndgame(players, queues, reports, now, balanceDays),
-    insights: []
-  };
-  stats.insights = computeInsights(stats);
-  return stats;
-}
-function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY4;
-  const recent = reports.filter((r) => {
-    var _a;
-    return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
-  });
-  const avg = (values) => values.length ? round1(values.reduce((a, v) => a + v, 0) / values.length) : 0;
-  const techs = TECHNOLOGIES.filter((t) => ENDGAME_TECH_IDS.includes(t.id)).map((t) => {
-    const holders = players.filter((p) => {
-      var _a, _b;
-      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) > 0;
-    }).sort((a, b) => {
-      var _a, _b, _c, _d;
-      return ((_b = (_a = b.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) - ((_d = (_c = a.techLevels) == null ? void 0 : _c[t.id]) != null ? _d : 0);
-    });
-    return {
-      id: t.id,
-      name: t.nom,
-      researchers: holders.length,
-      inProgress: queues.filter((q) => {
-        var _a;
-        return ((_a = q.activeResearches) != null ? _a : []).some((r) => r.id === t.id);
-      }).length,
-      avgLevel: avg(holders.map((p) => {
-        var _a, _b;
-        return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
-      })),
-      maxLevel: t.maxLevel,
-      leaders: holders.slice(0, 3).map((p) => {
-        var _a, _b;
-        return `${p.pseudo} (${(_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0})`;
-      })
-    };
-  });
-  const buildings = BUILDINGS.filter((b) => b.endgame).map((b) => {
-    var _a, _b;
-    const levels = players.map((p) => {
-      var _a2;
-      return effectiveBuildingLevel((_a2 = p.buildings) != null ? _a2 : {}, b.id);
-    }).filter((l) => l > 0);
-    return {
-      id: b.id,
-      name: b.name,
-      builders: levels.length,
-      avgLevel: avg(levels),
-      maxLevel: b.maxLevel,
-      resource: (_b = (_a = b.production) == null ? void 0 : _a.resource) != null ? _b : null,
-      perHour: b.production ? Math.round(levels.reduce((a, l) => a + productionPerSecond(b.id, l), 0) * 3600) : 0
-    };
-  });
-  const units = UNITS.filter((u) => ENDGAME_TECH_IDS.includes(u.unlockTech)).map((u) => {
-    const owned = players.map((p) => {
-      var _a, _b, _c;
-      return (_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.count) != null ? _c : 0;
-    });
-    const used = recent.filter((r) => {
-      var _a, _b;
-      return ((_b = (_a = r.attackerFleet) == null ? void 0 : _a[u.id]) != null ? _b : 0) > 0;
-    });
-    return {
-      id: u.id,
-      name: u.name,
-      owners: owned.filter((c) => c > 0).length,
-      total: owned.reduce((a, c) => a + c, 0),
-      attacks: used.length,
-      winPct: pct3(used.filter((r) => r.outcome === "attacker_win").length, used.length)
-    };
-  });
-  return {
-    windowDays,
-    players: players.filter((p) => ENDGAME_TECH_IDS.some((id) => {
-      var _a, _b;
-      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[id]) != null ? _b : 0) > 0;
-    })).length,
-    techs,
-    buildings,
-    units
-  };
-}
-function dominantUnit(fleet) {
-  var _a, _b;
-  let best = null;
-  let bestPower = 0;
-  for (const [id, qty] of Object.entries(fleet)) {
-    const power = ((_b = (_a = UNIT_BASE_STATS[id]) == null ? void 0 : _a.attack) != null ? _b : 0) * (qty || 0);
-    if (power > bestPower) {
-      best = id;
-      bestPower = power;
-    }
-  }
-  return best;
-}
-var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
-function computeBalance(players, reports, now, windowDays) {
-  var _a, _b;
-  const seen = (p) => {
-    var _a2;
-    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
-  };
-  const days = (ms) => Math.floor(ms / DAY4);
-  const since = now - windowDays * DAY4;
-  const recent = reports.filter((r) => {
-    var _a2;
-    return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
-  });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY4 && now - seen(p) < 30 * DAY4).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
-  const byFamily = /* @__PURE__ */ new Map();
-  players.forEach((p) => {
-    var _a2, _b2;
-    if (!p.createdAtMs) return;
-    const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY4]);
-  });
-  const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
-  const dom = /* @__PURE__ */ new Map();
-  recent.forEach((r) => {
-    var _a2;
-    if (!r.attackerFleet || r.attackerUid === PIRATE_OWNER_UID) return;
-    const id = dominantUnit(r.attackerFleet);
-    if (!id) return;
-    const cur = (_a2 = dom.get(id)) != null ? _a2 : { attacks: 0, wins: 0 };
-    cur.attacks++;
-    if (r.outcome === "attacker_win") cur.wins++;
-    dom.set(id, cur);
-  });
-  const dominantUnits = [...dom.entries()].map(([id, v]) => {
-    var _a2, _b2;
-    return { id, name: (_b2 = (_a2 = UNITS.find((u) => u.id === id)) == null ? void 0 : _a2.name) != null ? _b2 : id, attacks: v.attacks, winPct: pct3(v.wins, v.attacks) };
-  }).sort((a, b) => b.attacks - a.attacks);
-  const factions2 = FACTIONS.map((f) => {
-    const raids = recent.filter((r) => r.attackerUid === PIRATE_OWNER_UID && r.attackerPseudo.includes(f.name));
-    const lairs = recent.filter((r) => r.defenderUid && factionOfLair(r.defenderUid) === f.id);
-    return {
-      id: f.id,
-      name: f.name,
-      raids: raids.length,
-      repelledPct: pct3(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
-      lairAssaults: lairs.length,
-      lairWinPct: pct3(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
-    };
-  });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY4);
-  const productionPerHour = Math.round(active.reduce((a, p) => {
-    var _a2, _b2;
-    return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
-  }, 0));
-  const anomalies = [];
-  for (const r of RESOURCE_LIST) {
-    for (const p of players) {
-      const amount2 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
-      if (amount2 < 1e6) continue;
-      const others = median(players.filter((o) => o !== p).map((o) => {
-        var _a2, _b2;
-        return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
-      }));
-      const ratio = others > 0 ? amount2 / others : Infinity;
-      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount2), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
-    }
-  }
-  anomalies.sort((a, b) => b.amount - a.amount);
-  return {
-    windowDays,
-    activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY4).length,
-      active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY4).length,
-      dormant
-    },
-    rankAge,
-    dominantUnits,
-    factions: factions2,
-    flows: {
-      productionPerHour,
-      spentTotal: players.reduce((a, p) => {
-        var _a2, _b2;
-        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.spent) != null ? _b2 : 0);
-      }, 0),
-      lootWindow: recent.filter((r) => r.attackerUid !== PIRATE_OWNER_UID).reduce((a, r) => a + sumValues(r.loot), 0),
-      tradedTotal: players.reduce((a, p) => {
-        var _a2, _b2;
-        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.traded) != null ? _b2 : 0);
-      }, 0),
-      marketTrades: Math.round(players.reduce((a, p) => {
-        var _a2, _b2;
-        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.marketTrades) != null ? _b2 : 0);
-      }, 0) / 2),
-      marketTax: players.reduce((a, p) => {
-        var _a2, _b2;
-        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.marketTax) != null ? _b2 : 0);
-      }, 0)
-    },
-    anomalies: anomalies.slice(0, 10)
-  };
-}
-function computeInsights(s) {
-  const out = [];
-  if (s.players.total === 0) return out;
-  const shortList = (names) => names.length > 4 ? `${names.slice(0, 4).join(", ")} et ${names.length - 4} autre(s)` : names.join(", ");
-  const neverResearched = s.technologies.filter((t) => t.researchedPct === 0).map((t) => t.name);
-  if (neverResearched.length > 0) out.push(`Technologies que personne n'a recherch\xE9es : ${shortList(neverResearched)}.`);
-  for (const u of s.units) {
-    if (u.unlockedPct >= 30 && u.ownersPct === 0) out.push(`Unit\xE9 \xAB ${u.name} \xBB : d\xE9bloqu\xE9e par ${u.unlockedPct} % des joueurs mais jamais construite.`);
-  }
-  for (const b of s.buildings) {
-    if (b.maxedPct >= 50) out.push(`B\xE2timent \xAB ${b.name} \xBB : au niveau max chez ${b.maxedPct} % des joueurs \u2014 ajouter des niveaux ?`);
-  }
-  const idle = s.missions.filter((m) => m.running === 0).map((m) => m.name);
-  if (idle.length > 0 && idle.length < s.missions.length) out.push(`Missions lanc\xE9es par personne en ce moment : ${shortList(idle)}.`);
-  const { attacks, outcomes } = s.combat;
-  if (attacks >= 5 && outcomes.defender_win / attacks > 0.7) out.push("Les d\xE9fenseurs gagnent plus de 70 % des combats : l'attaque est peut-\xEAtre trop faible.");
-  if (attacks >= 5 && outcomes.attacker_win / attacks > 0.85) out.push("Les attaquants gagnent plus de 85 % des combats : la d\xE9fense est peut-\xEAtre trop faible.");
-  if (s.players.active7d > 0 && attacks === 0) out.push(`Aucun combat depuis ${s.combat.windowDays} jours.`);
-  if (s.players.total >= 5 && s.players.active7d / s.players.total < 0.4) out.push("Moins de 40 % des joueurs sont venus cette semaine.");
-  for (const u of s.balance.dominantUnits) {
-    if (u.attacks >= 5 && u.winPct >= 85) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : ${u.winPct} % de victoires sur ${u.attacks} attaques \u2014 trop efficace ?`);
-    if (u.attacks >= 5 && u.winPct <= 20) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : seulement ${u.winPct} % de victoires \u2014 trop faible ?`);
-  }
-  for (const f of s.balance.factions) {
-    if (f.raids >= 5 && f.repelledPct >= 90) out.push(`${f.name} : ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop faible ?`);
-    if (f.raids >= 5 && f.repelledPct <= 20) out.push(`${f.name} : seulement ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop forte ?`);
-  }
-  if (s.balance.anomalies.length > 0) out.push(`${s.balance.anomalies.length} stock(s) anormalement \xE9lev\xE9(s) \xE0 v\xE9rifier (section \xC9quilibrage).`);
-  return out;
 }
 
 // src/game/expeditions.ts
@@ -6990,6 +5797,121 @@ function galaxyCoords(uid) {
   };
 }
 
+// src/game/pvp.ts
+var PVP_RULES = {
+  /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
+  attackCooldownMs: 2 * 60 * 60 * 1e3,
+  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense. */
+  shieldAfterDefeatMs: 60 * 60 * 1e3,
+  /** Protection débutant (levée dès que le joueur attaque lui-même). */
+  newbieProtectionMs: 72 * 60 * 60 * 1e3,
+  /** v3.4 : bouclier après une ascension. */
+  ascensionShieldMs: 72 * 60 * 60 * 1e3,
+  /** Impossible d'attaquer un joueur N fois moins expérimenté… */
+  maxXpRatio: 3,
+  /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
+   *  bloquerait mutuellement en début de partie). */
+  xpGapFloor: 500,
+  /** Perte d'XP maximale en défense sur 24 h glissantes. */
+  defenseXpLossCapPer24h: 60,
+  defenseXpLossWindowMs: 24 * 60 * 60 * 1e3
+};
+function clamp2(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+function computeCombatXp(outcome, attackerPower, defenderPower) {
+  const att = Math.max(attackerPower, 0);
+  const def3 = Math.max(defenderPower, 0);
+  if (outcome === "attacker_win") {
+    const ratio = att > 0 ? def3 / att : 0;
+    return {
+      attackerXp: Math.round(40 * clamp2(ratio, 0.1, 2)),
+      defenderXp: -Math.round(clamp2(20 * ratio, 5, 20))
+    };
+  }
+  if (outcome === "defender_win") {
+    const ratio = def3 > 0 ? att / def3 : 0;
+    return {
+      attackerXp: -20,
+      defenderXp: Math.round(40 * clamp2(ratio, 0.5, 1.5))
+    };
+  }
+  return { attackerXp: 5, defenderXp: 5 };
+}
+function capDefenderXpLoss(defenderXp, alreadyLost) {
+  if (defenderXp >= 0) return defenderXp;
+  const remaining = Math.max(0, PVP_RULES.defenseXpLossCapPer24h - alreadyLost);
+  return -Math.min(-defenderXp, remaining);
+}
+function formatWait(ms) {
+  const minutes = Math.ceil(ms / 6e4);
+  if (minutes < 60) return `${minutes} min`;
+  const hours2 = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
+}
+function checkAttackAllowed(ctx) {
+  var _a;
+  const { now } = ctx;
+  if (ctx.attackerUid === ctx.defenderUid) {
+    return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
+  }
+  if (ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
+    const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "newbie",
+        until,
+        message: `Ce joueur d\xE9bute : il est prot\xE9g\xE9 encore ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
+    return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
+  }
+  if (ctx.lastDefenderDefeatMs !== null && !ctx.defenderIsWarlord) {
+    const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "shield",
+        until,
+        message: `Ce joueur vient d'\xEAtre battu : bouclier actif encore ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+    const until = ctx.defenderShieldUntilMs;
+    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
+  }
+  if (ctx.defenderAscendedAtMs) {
+    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
+    if (now < until) {
+      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
+    }
+  }
+  if (ctx.lastAttackOnTargetMs !== null) {
+    const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "cooldown",
+        until,
+        message: `Tu as d\xE9j\xE0 attaqu\xE9 ce joueur r\xE9cemment : r\xE9essaie dans ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+    return {
+      allowed: false,
+      reason: "too_weak",
+      message: `Ce joueur est trop faible pour toi (moins d'un tiers de ton XP).`
+    };
+  }
+  return { allowed: true };
+}
+
 // src/game/espionage.ts
 var SPY_RULES = {
   /** Unité envoyée en mission d'espionnage. */
@@ -7150,6 +6072,68 @@ function resolveSpyArrival(input) {
   return { report, detected, spyNotifications, targetNotifications };
 }
 
+// src/game/debris.ts
+var DEBRIS_RULES = {
+  /** Part du coût (ferraille, énergie) des vaisseaux détruits. */
+  percent: 0.3,
+  /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
+  lifetimeHours: 48,
+  /** Capacité de ramassage d'un recycleur, par niveau. */
+  capacityPerLevel: 250,
+  recyclerUnitId: "drone_recuperateur"
+};
+function debrisFromLosses(losses, percent = DEBRIS_RULES.percent) {
+  var _a, _b, _c, _d;
+  let scrap = 0;
+  let energy = 0;
+  for (const map of losses) {
+    for (const [unitId, qty] of Object.entries(map != null ? map : {})) {
+      if (!(qty > 0) || !OFFENSIVE_UNITS.includes(unitId)) continue;
+      const cost = (_b = (_a = findUnit(unitId)) == null ? void 0 : _a.cost) != null ? _b : {};
+      scrap += ((_c = cost.scrap) != null ? _c : 0) * qty;
+      energy += ((_d = cost.energy) != null ? _d : 0) * qty;
+    }
+  }
+  return { scrap: Math.floor(scrap * percent), energy: Math.floor(energy * percent) };
+}
+function debrisTotal(d) {
+  var _a, _b;
+  return d ? ((_a = d.scrap) != null ? _a : 0) + ((_b = d.energy) != null ? _b : 0) : 0;
+}
+function mergeDebris(field, add, location, now) {
+  var _a, _b;
+  const alive = field && field.expiresAtMs > now ? field : null;
+  return {
+    id: location.uid,
+    locationPseudo: location.pseudo,
+    scrap: ((_a = alive == null ? void 0 : alive.scrap) != null ? _a : 0) + add.scrap,
+    energy: ((_b = alive == null ? void 0 : alive.energy) != null ? _b : 0) + add.energy,
+    expiresAtMs: now + DEBRIS_RULES.lifetimeHours * 36e5,
+    updatedAtMs: now
+  };
+}
+function recyclerCapacity(units, fleet) {
+  var _a, _b;
+  let capacity = 0;
+  for (const [unitId, qty] of Object.entries(fleet != null ? fleet : {})) {
+    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
+    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, (_b = (_a = units[unitId]) == null ? void 0 : _a.level) != null ? _b : 1);
+  }
+  return capacity;
+}
+function collectDebris(field, capacity) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const total2 = debrisTotal(field);
+  if (total2 <= 0 || capacity <= 0) return { taken: { scrap: 0, energy: 0 }, remaining: { scrap: (_a = field.scrap) != null ? _a : 0, energy: (_b = field.energy) != null ? _b : 0 } };
+  const ratio = Math.min(1, capacity / total2);
+  const scrap = Math.floor(((_c = field.scrap) != null ? _c : 0) * ratio);
+  const energy = Math.min((_d = field.energy) != null ? _d : 0, Math.floor(capacity - scrap), Math.ceil(((_e = field.energy) != null ? _e : 0) * ratio));
+  return {
+    taken: { scrap, energy },
+    remaining: { scrap: ((_f = field.scrap) != null ? _f : 0) - scrap, energy: ((_g = field.energy) != null ? _g : 0) - energy }
+  };
+}
+
 // src/game/fleets.ts
 var FLEET_RULES = {
   /** Durée fixe de tout trajet (décollage, approche), en minutes. */
@@ -7179,8 +6163,8 @@ function fleetSpeed(units, fleet) {
   let slowest = Infinity;
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0)) continue;
-    const def2 = findUnit(id);
-    const speed = ((_a = def2 == null ? void 0 : def2.stats.vitesse) != null ? _a : 0) * Math.max(1, (_c = (_b = units[id]) == null ? void 0 : _b.level) != null ? _c : 1);
+    const def3 = findUnit(id);
+    const speed = ((_a = def3 == null ? void 0 : def3.stats.vitesse) != null ? _a : 0) * Math.max(1, (_c = (_b = units[id]) == null ? void 0 : _b.level) != null ? _c : 1);
     slowest = Math.min(slowest, Math.max(1, speed));
   }
   return Number.isFinite(slowest) ? slowest : 1;
@@ -7194,7 +6178,7 @@ function attackTravelSeconds(distance, speed, factor = 1) {
   return cap > 0 ? Math.min(seconds, Math.round(cap * 60)) : seconds;
 }
 function launchFleet(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const { now, attacker, defender } = input;
   if (attacker.allianceId && attacker.allianceId === defender.allianceId) throw new GameActionError("Tu ne peux pas attaquer un membre de ton alliance.");
   const check = checkAttackAllowed({
@@ -7208,16 +6192,18 @@ function launchFleet(input) {
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
     defenderShieldUntilMs: shieldUntil(defender),
-    lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null,
+    defenderVacationUntilMs: onVacation(defender, now) ? (_d = defender.vacation) == null ? void 0 : _d.untilMs : void 0,
+    defenderIsWarlord: !!defender.npc,
+    lastDefenderDefeatMs: (_e = defender.lastDefeatAtMs) != null ? _e : null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 36e5 : void 0
   });
-  if (!check.allowed) throw new GameActionError((_e = check.message) != null ? _e : "Attaque impossible.");
+  if (!check.allowed) throw new GameActionError((_f = check.message) != null ? _f : "Attaque impossible.");
   const units = {};
-  for (const [unitId, raw] of Object.entries((_f = input.fleet) != null ? _f : {})) {
+  for (const [unitId, raw] of Object.entries((_g = input.fleet) != null ? _g : {})) {
     const qty = Math.floor(Number(raw));
     if (!(qty > 0)) continue;
     if (!OFFENSIVE_UNITS.includes(unitId)) throw new GameActionError("Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
-    if (((_h = (_g = attacker.units[unitId]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
+    if (((_i = (_h = attacker.units[unitId]) == null ? void 0 : _h.count) != null ? _i : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
     units[unitId] = qty;
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
@@ -7594,6 +6580,1728 @@ function performFleetReturn(ownerIn, ownerQueues, fleet, now) {
   return { owner: done.owner, queues: flushed.queues, notifications: [...flushed.notifications, ...done.notifications] };
 }
 
+// src/game/warlords.ts
+var WARLORD_RULES = {
+  /** Puissance visée : faibles et moyens par rapport à la médiane des actifs, forts par rapport au meilleur. */
+  tierRange: { weak: [0.4, 0.6], medium: [0.8, 1.2], strong: [1.3, 1.8] },
+  /** Puissance minimale (serveur presque vide). */
+  minPower: 3e3,
+  /** Croissance maximale par jour, en part de la puissance visée. */
+  growthPerDay: 0.08,
+  /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
+  buildingFactor: { weak: 0.8, medium: 1, strong: 1.25 },
+  buildingLevelEveryHours: 12,
+  /** XP visée (classement) : même échelle que la puissance. */
+  xpGrowthPerHour: 0.02,
+  /** Joueur actif : vu dans les 7 derniers jours. */
+  activeDays: 7,
+  /** Attaques : une par 48 h (± 6 h) et par seigneur agressif ou opportuniste. */
+  attackEveryHours: 48,
+  attackJitterHours: 6,
+  /** Nouvel essai quand aucune cible ne convient. */
+  retryHours: 3,
+  /** Une même cible : une attaque de seigneur par 72 h, tous seigneurs confondus. */
+  targetCooldownHours: 72,
+  /** Jamais sous Bronze I. */
+  minTargetXp: 2e3,
+  /** Puissance d'attaque envoyée : 80 à 110 % de la défense de la cible. */
+  attackPowerMin: 0.8,
+  attackPowerMax: 1.1,
+  /** Trajet : 3 à 5 h (le joueur a le temps de réagir). */
+  travelMinHours: 3,
+  travelMaxHours: 5,
+  /** Butin plafonné à 6 h de production de la cible. */
+  lootCapHours: 6,
+  /** Opportuniste : cible battue dans les 24 h, ou stock de plus de 18 h. */
+  opportunistDefeatHours: 24,
+  opportunistStockHours: 18,
+  /** Stock gardé en réserve (heures de production). */
+  stockHours: { builder: 12, default: 6 },
+  /** Part de la puissance en vaisseaux d'attaque (le reste en défenses). */
+  offenseShare: { aggressive: 0.8, opportunist: 0.7, builder: 0.3, merchant: 0.4 },
+  /** Marchands : 3 offres par jour environ, à ±10 % du taux du comptoir. */
+  marketOffersPerDay: 3,
+  marketSpread: 0.1,
+  marketOfferHours: 4,
+  /** Messages : un par jour au plus, par seigneur et par joueur. */
+  messageEveryHours: 24,
+  /** Vendetta. */
+  vendetta: {
+    costHours: 6,
+    durationHours: 72,
+    goalFactor: 2,
+    powerLoss: 0.3,
+    awayDays: 7,
+    passPoints: 40,
+    /** Part minimale de l'objectif pour être récompensé (vendetta d'alliance). */
+    minShare: 0.1
+  }
+};
+var ORIGIN_ART = {
+  kesh: { label: "Kesh'Vaar ren\xE9gats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
+  choeur: { label: "D\xE9serteurs du Ch\u0153ur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
+  confrerie: { label: "Anciens de la Confr\xE9rie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan.webp", color: "#ff7a45" },
+  gravhorn: { label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn.webp", color: "#f2c94c" },
+  leviathan: { label: "Culte du L\xE9viathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" }
+};
+function warlordOrigin(origin) {
+  var _a;
+  return (_a = ORIGIN_ART[origin]) != null ? _a : ORIGIN_ART.kesh;
+}
+function warlordUid(id) {
+  return `npc${id.toLowerCase().replace(/[^a-z0-9]/g, "")}000000000000`.slice(0, 15);
+}
+var def2 = (id, name, origin, personality, tier, bio, lines) => ({ id, name, origin, personality, tier, portrait: `/assets/warlords/${id}.webp`, emblem: `/assets/warlords/${id}-sceau.webp`, bio, enabled: true, lines });
+var DEFAULT_WARLORDS = [
+  def2("zharkesh", "Zhar'Kesh, l'Essaim Noir", "kesh", "aggressive", "strong", "Ancien roi d'une ruche rivale, banni par la Reine bien avant sa chute. Il porte encore les ornements d'or vol\xE9s aux couvains qu'il a br\xFBl\xE9s, et voit dans chaque jeune empire un couvain de plus.", {
+    contact: ["{pseudo}. Vashka t'a choisi, para\xEEt-il. Moi aussi, je t'ai choisi : comme on choisit une proie dans un couvain."],
+    raided: ["Tu as arrach\xE9 un peu de ma chitine, {pseudo}. Elle repousse. La tienne ne repoussera pas.", "Une morsure. Rien de plus. L'Essaim Noir se souviendra de ton odeur."],
+    won: ["Ton couvain est ouvert, {pseudo}. J'ai pris ce que je voulais. Je reviendrai prendre le reste."],
+    repelled: ["Tes d\xE9fenses ont tenu. Cette fois. Les ruches aussi tenaient, avant moi."],
+    vendettaOpen: ["Une vendetta ? Enfin un peu de nectar. Viens, {pseudo}, et am\xE8ne tes amis : il y aura assez de cendres pour tous."],
+    vendettaWon: ["Je me retire dans le Vide\u2026 pour l'instant. Garde bien ton titre, {pseudo} : je viendrai le reprendre sur ton cadavre."],
+    vendettaLost: ["Trois jours, et pas une \xE9gratignure qui compte. Ma riposte arrive, {pseudo}."],
+    reply: ["L'Essaim Noir ne n\xE9gocie pas avec la nourriture."]
+  }),
+  def2("tivrek", "Tivrek Mue-Rouge", "kesh", "aggressive", "medium", "Jeune Kesh'Vaar ren\xE9gat, en pleine mue, affam\xE9 et press\xE9. Il attaque comme il mue : sans pr\xE9venir et en laissant des morceaux derri\xE8re lui.", {
+    contact: ["H\xE9, {pseudo} ! Ma nouvelle carapace me d\xE9mange. Rien de tel qu'un bon raid pour la faire durcir."],
+    raided: ["A\xEFe ! Tu tapes fort pour un mou. Je reviens d\xE8s que ma chitine a durci."],
+    won: ["Trop facile ! Merci pour le repas, {pseudo}. Je repasse quand j'ai encore faim, donc bient\xF4t."],
+    repelled: ["Pfff, tes roquettes piquent. Je retenterai apr\xE8s ma prochaine mue."],
+    vendettaOpen: ["Une vendetta contre moi ? G\xE9nial ! Personne ne m'avait jamais pris au s\xE9rieux."],
+    vendettaWon: ["D'accord, d'accord, je file ! Mais je reviendrai plus gros, plus rouge et plus m\xE9chant."],
+    vendettaLost: ["Ha ! Rat\xE9 ! \xC0 mon tour maintenant."],
+    reply: ["Pas le temps de causer, je mue."]
+  }),
+  def2("ossaya", "Ossaya la Tisseuse", "kesh", "builder", "weak", "Architecte Kesh'Vaar qui a refus\xE9 de servir la nouvelle Reine. Elle tisse des forteresses de soie et de chitine, patiemment, et ne quitte jamais sa toile.", {
+    contact: ["Bienvenue dans ma toile, {pseudo}. Je n'attaque personne. Mais ceux qui viennent \xE0 moi restent souvent coll\xE9s."],
+    raided: ["Tu as d\xE9chir\xE9 quelques fils, {pseudo}. Je retisse. Je retisse toujours."],
+    vendettaOpen: ["Une vendetta\u2026 Il faudra plus que de la col\xE8re pour d\xE9faire mille ans de patience."],
+    vendettaWon: ["Ma toile est d\xE9chir\xE9e. Je pars en tisser une autre, loin d'ici. Tu as gagn\xE9, {pseudo}."],
+    vendettaLost: ["Ta col\xE8re s'est us\xE9e sur mes fils. Pour une fois, je vais rendre la visite."],
+    reply: ["Chut. Je compte les fils."]
+  }),
+  def2("ilyon", "Cantor Ilyon", "choeur", "builder", "strong", "Une voix du Ch\u0153ur Silencieux qui a choisi de parler seul. Il a grav\xE9 lui-m\xEAme une bouche dans son masque et b\xE2tit, loin de l'Archonte, une cath\xE9drale qu'aucune flotte n'a encore fissur\xE9e.", {
+    contact: ["Je\u2026 parle. Seul. C'est encore \xE9trange. Je te salue, {pseudo}. Ne viens pas frapper \xE0 ma cath\xE9drale."],
+    raided: ["Une fissure. Je l'entends chanter. Elle sera combl\xE9e avant l'aube."],
+    vendettaOpen: ["Nous\u2026 je\u2026 Pardon. J'accepte ta vendetta, {pseudo}. Le cristal noir n'a jamais craint la col\xE8re."],
+    vendettaWon: ["La cath\xE9drale s'effondre. Je retourne au silence quelque temps. Tu m'as appris quelque chose : la d\xE9faite a une voix."],
+    vendettaLost: ["Tu t'es heurt\xE9 au cristal. Maintenant, \xE9coute le mien."],
+    reply: ["Les mots me co\xFBtent encore. Pardonne ma bri\xE8vet\xE9."]
+  }),
+  def2("nerea", "S\u0153ur N\xE9r\xE9a des \xC9chos", "choeur", "merchant", "medium", "D\xE9serteuse du Ch\u0153ur au masque \xE0 moiti\xE9 bris\xE9. Elle vend ce que le Ch\u0153ur a appris, et ach\xE8te ce que vos laboratoires oublient. Ses prix sont justes ; ses sourires, moins.", {
+    contact: ["Bonsoir, {pseudo}. J'ai quitt\xE9 le Ch\u0153ur pour une raison tr\xE8s simple : on ne peut rien vendre au silence. Passe au march\xE9."],
+    raided: ["Piller une marchande\u2026 quel manque d'\xE9l\xE9gance, {pseudo}. Mes prix pour toi viennent de monter."],
+    market: ["Une nouvelle offre t'attend au march\xE9, {pseudo}. Prix d'ami, ou presque."],
+    vendettaOpen: ["Une vendetta est un tr\xE8s mauvais investissement, {pseudo}. Mais soit."],
+    vendettaWon: ["Je ferme boutique quelques jours. Tu as gagn\xE9\u2026 et perdu une excellente fournisseuse."],
+    vendettaLost: ["Les comptes sont faits, {pseudo}. Tu me dois une visite."],
+    reply: ["Je ne r\xE9ponds qu'aux offres. Le march\xE9 est ouvert."]
+  }),
+  def2("brannoc", "Brannoc Demi-Barbe", "confrerie", "aggressive", "medium", "Ancien de la Confr\xE9rie du Vide, chass\xE9 par Varan pour avoir gard\xE9 une part de trop. La moiti\xE9 de sa barbe a br\xFBl\xE9 ce jour-l\xE0 ; l'autre moiti\xE9 attend sa revanche sur tout le secteur.", {
+    contact: ["Alors c'est toi, {pseudo}, le nouveau dont Varan parle ? Moi, je ne fais pas d'ultimatum. Je viens, c'est tout."],
+    raided: ["Tu m'as piqu\xE9 ma part, {pseudo}. La derni\xE8re fois qu'on a fait \xE7a, j'y ai laiss\xE9 la moiti\xE9 de ma barbe. Toi, tu y laisseras plus."],
+    won: ["Pas de tribut, pas de liste, pas de discours : juste ta soute vid\xE9e. Bien le bonjour, {pseudo}."],
+    repelled: ["Ta base tient mieux que ma barbe. Je reviendrai avec plus de poudre."],
+    vendettaOpen: ["Une vendetta ! Comme au bon vieux temps de la Confr\xE9rie. Je fais chauffer les canons."],
+    vendettaWon: ["Je me replie, {pseudo}. Mais garde un \u0153il sur ton ciel : Brannoc revient toujours."],
+    vendettaLost: ["Trois jours et rien. \xC0 moi de jouer."],
+    reply: ["Si tu veux causer, envoie des vaisseaux."]
+  }),
+  def2("lysa", "Lysa Ferro, \xAB la Comptable \xBB", "confrerie", "opportunist", "weak", "Ancienne intendante de la Confr\xE9rie. Elle tient le compte de chaque dette du secteur, et passe les encaisser au pire moment : juste apr\xE8s une d\xE9faite, ou quand les coffres d\xE9bordent.", {
+    contact: ["{pseudo}, j'ouvre ton dossier. Rien \xE0 me reprocher pour l'instant. Pour l'instant."],
+    raided: ["Not\xE9 dans mon registre, {pseudo}. Avec les int\xE9r\xEAts."],
+    won: ["Dette encaiss\xE9e, {pseudo}. Tu \xE9tais \xE0 d\xE9couvert : je ne fais que r\xE9tablir l'\xE9quilibre."],
+    repelled: ["Mauvais calcul de ma part. Je r\xE9vise mes pr\xE9visions."],
+    vendettaOpen: ["Une vendetta co\xFBte cher, {pseudo}. Je vais te montrer combien."],
+    vendettaWon: ["Je solde mes comptes et je disparais quelque temps. Bien jou\xE9."],
+    vendettaLost: ["Fin de la p\xE9riode. Tu me dois une riposte, je viens la chercher."],
+    reply: ["Ton dossier est \xE0 jour. Rien d'autre \xE0 dire."]
+  }),
+  def2("kragmor", "Kragmor Corne-Fendue", "gravhorn", "merchant", "weak", "Vieux Gravhorn qui a raccroch\xE9 les contrats de chasse pour ouvrir un comptoir. Il a perdu la moiti\xE9 d'une corne dans sa derni\xE8re traque et pr\xE9f\xE8re maintenant compter les cr\xE9dits que les troph\xE9es.", {
+    contact: ["Ho, {pseudo} ! Kragmor, pour te servir. Je ne chasse plus : je vends. Ferraille, \xE9nergie, tout ce qu'il te faut."],
+    raided: ["Tu as pill\xE9 mon comptoir ? H\xE9, j'ai \xE9t\xE9 chasseur, gamin. J'ai encore un fusil quelque part."],
+    market: ["Arrivage frais au march\xE9, {pseudo}. Kragmor fait des prix pour les amis."],
+    vendettaOpen: ["Une vendetta contre un vieux marchand ? Bon. Je ressors le fusil."],
+    vendettaWon: ["Je ferme le comptoir quelques jours. Sans rancune, {pseudo}\u2026 presque."],
+    vendettaLost: ["J'ai encore la main, hein ? Tiens, un petit souvenir de mes ann\xE9es de chasse."],
+    reply: ["Pour causer, passe au march\xE9 !"]
+  }),
+  def2("thessa", "Thessa Vrill, la Traqueuse", "gravhorn", "opportunist", "medium", "Chasseuse Gravhorn sans contrat ni ma\xEEtre. Ses antennes captent la faiblesse \xE0 des parsecs : elle frappe les empires qui viennent de tomber, ou ceux qui ont laiss\xE9 leurs coffres trop pleins.", {
+    contact: ["Je t'ai senti arriver, {pseudo}. Tu sens encore le neuf. Ne laisse jamais tes coffres trop pleins."],
+    raided: ["Bien vis\xE9, {pseudo}. Je note l'odeur de ta flotte."],
+    won: ["Tu sentais la d\xE9faite, {pseudo}. Je n'ai fait que suivre la piste."],
+    repelled: ["Fausse piste. \xC7a arrive, m\xEAme aux meilleures."],
+    vendettaOpen: ["Une vendetta, c'est une traque \xE0 l'envers. Voyons qui chasse qui, {pseudo}."],
+    vendettaWon: ["Je me mets au vert quelque temps. Belle traque, {pseudo}."],
+    vendettaLost: ["La traque est finie. Maintenant, c'est moi qui suis la piste."],
+    reply: ["Je ne parle pas pendant une traque."]
+  }),
+  def2("maru", "Le Proph\xE8te Maru", "leviathan", "builder", "strong", "Proph\xE8te d'un culte qui v\xE9n\xE8re le L\xE9viathan comme un dieu. Il b\xE2tit des sanctuaires imprenables o\xF9 ses fid\xE8les attendent le prochain r\xE9veil de la b\xEAte, et garde leurs offrandes dans des chambres fortes sans fond.", {
+    contact: ["Le L\xE9viathan r\xEAve de toi, {pseudo}. Moi, je me contente de prier. Ne trouble pas mon sanctuaire."],
+    raided: ["Tu voles les offrandes du L\xE9viathan, {pseudo}. Il s'en souviendra le premier week-end du mois."],
+    vendettaOpen: ["Une vendetta contre le sanctuaire ? Les profondeurs accueillent tous les pr\xE9somptueux."],
+    vendettaWon: ["Le sanctuaire sombre. Je retourne dans les abysses m\xE9diter ta victoire, {pseudo}."],
+    vendettaLost: ["Les eaux sont rest\xE9es calmes. \xC0 pr\xE9sent, la mar\xE9e monte vers toi."],
+    reply: ["Le L\xE9viathan \xE9coute. Moi, je prie."]
+  })
+];
+var DEFAULT_WARLORD_SETTINGS = { enabled: true, attackFrequency: 1, powerFactor: 1 };
+var config = { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS) };
+function setWarlords(next) {
+  var _a, _b;
+  const overrides = new Map(((_a = next == null ? void 0 : next.defs) != null ? _a : []).map((d) => [d.id, d]));
+  config = {
+    settings: __spreadValues(__spreadValues({}, DEFAULT_WARLORD_SETTINGS), (_b = next == null ? void 0 : next.settings) != null ? _b : {}),
+    // Toujours les dix seigneurs du code ; l'administration modifie leurs champs.
+    defs: DEFAULT_WARLORDS.map((d) => {
+      var _a2;
+      const o = overrides.get(d.id);
+      return o ? __spreadProps(__spreadValues(__spreadValues({}, d), o), { id: d.id, lines: __spreadValues(__spreadValues({}, d.lines), (_a2 = o.lines) != null ? _a2 : {}) }) : structuredClone(d);
+    })
+  };
+}
+function warlordsConfig() {
+  return config;
+}
+function defaultWarlordsConfig() {
+  return { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS) };
+}
+function findWarlord(id) {
+  return config.defs.find((d) => d.id === id);
+}
+function warlordByUid(uid) {
+  return config.defs.find((d) => warlordUid(d.id) === uid);
+}
+function isWarlordUid(uid) {
+  return !!uid && uid.startsWith("npc") && !!warlordByUid(uid);
+}
+function empirePower(p) {
+  var _a, _b;
+  const units = (_a = p.units) != null ? _a : {};
+  const tech = (_b = p.techLevels) != null ? _b : {};
+  return Math.round(computeFullPower(units, tech, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower(units, tech));
+}
+function warlordFleetPower(p) {
+  var _a, _b;
+  return Math.round(computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack", "defense"]));
+}
+function lossesPower(p, losses) {
+  var _a, _b;
+  return Math.round(computeFleetPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, losses, ["attack", "defense"]));
+}
+function median(values) {
+  if (values.length === 0) return 0;
+  const s = [...values].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function warlordReference(actives) {
+  const humans = actives.filter((p) => !p.npc);
+  const powers = humans.map(empirePower).filter((n) => n > 0);
+  const xps = humans.map((p) => {
+    var _a;
+    return (_a = p.xp) != null ? _a : 0;
+  }).filter((n) => n > 0);
+  const buildings = {};
+  for (const b of BUILDINGS) {
+    const levels = humans.map((p) => {
+      var _a, _b, _c;
+      return (_c = (_b = (_a = p.buildings) == null ? void 0 : _a[b.id]) == null ? void 0 : _b.level) != null ? _c : 0;
+    });
+    buildings[b.id] = levels.length ? levels.reduce((a, c) => a + c, 0) / levels.length : 0;
+  }
+  return {
+    median: median(powers),
+    max: powers.length ? Math.max(...powers) : 0,
+    medianXp: median(xps),
+    maxXp: xps.length ? Math.max(...xps) : 0,
+    medianSeasonXp: median(humans.map((p) => {
+      var _a;
+      return (_a = p.seasonXp) != null ? _a : 0;
+    })),
+    buildings
+  };
+}
+function hash01(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 1e3 / 999;
+}
+function tierFactor(d) {
+  var _a;
+  const [lo, hi] = (_a = WARLORD_RULES.tierRange[d.tier]) != null ? _a : WARLORD_RULES.tierRange.medium;
+  return lo + (hi - lo) * hash01(d.id);
+}
+function warlordTargetPower(d, ref, settings = config.settings) {
+  const base = d.tier === "strong" ? ref.max : ref.median;
+  return Math.max(WARLORD_RULES.minPower, Math.round(base * tierFactor(d) * (settings.powerFactor || 1)));
+}
+function warlordTargetXp(d, ref) {
+  const base = d.tier === "strong" ? ref.maxXp : ref.medianXp;
+  return Math.max(500, Math.round(base * tierFactor(d)));
+}
+function unitAttack(id) {
+  var _a, _b;
+  return (_b = (_a = UNIT_BASE_STATS[id]) == null ? void 0 : _a.attack) != null ? _b : 0;
+}
+function pickUnits(pool, tier) {
+  const sorted = pool.filter((id) => unitAttack(id) >= 40).sort((a, b) => unitAttack(a) - unitAttack(b));
+  if (sorted.length <= 2) return sorted;
+  const third = Math.max(1, Math.floor(sorted.length / 3));
+  const start = tier === "weak" ? 0 : tier === "medium" ? third : sorted.length - Math.max(2, third);
+  return sorted.slice(start, start + 2).length === 2 ? sorted.slice(start, start + 2) : sorted.slice(-2);
+}
+function desiredArmy(d, targetPower2) {
+  var _a;
+  const share = (_a = WARLORD_RULES.offenseShare[d.personality]) != null ? _a : 0.5;
+  const out = {};
+  const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
+  const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
+  ships.forEach((id) => {
+    const per = computeFullPower({ [id]: { level: 1, count: 1 } }, {}, [id], ["attack"]);
+    if (per > 0) out[id] = Math.ceil(targetPower2 * share / ships.length / per);
+  });
+  defenses.forEach((id) => {
+    const per = homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
+    if (per > 0) out[id] = Math.ceil(targetPower2 * (1 - share) / defenses.length / per);
+  });
+  return out;
+}
+function emptyRuntime() {
+  return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0 };
+}
+function growWarlord(npc, d, ref, rt, now) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  const out = __spreadValues({}, rt);
+  const target = warlordTargetPower(d, ref);
+  const desired = desiredArmy(d, target);
+  const hours2 = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 36e5)) : 1;
+  const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours2 / 24)) : 1;
+  for (const [id, want] of Object.entries(desired)) {
+    const state = (_a = npc.units[id]) != null ? _a : { level: 1, count: 0 };
+    const count2 = (_b = state.count) != null ? _b : 0;
+    if (count2 < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count2 + Math.ceil(want * step)) };
+  }
+  const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 36e5;
+  if (buildStep) {
+    for (const b of BUILDINGS) {
+      const want = Math.min(b.maxLevel, Math.round(((_c = ref.buildings[b.id]) != null ? _c : 0) * ((_d = WARLORD_RULES.buildingFactor[d.tier]) != null ? _d : 1)));
+      const cur = (_f = (_e = npc.buildings[b.id]) == null ? void 0 : _e.level) != null ? _f : 0;
+      if (want > cur) npc.buildings[b.id] = { level: rt.seeded ? cur + 1 : want, unlocked: true };
+    }
+    out.lastBuildingAtMs = now;
+  }
+  const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
+  const stock = productionHours(npc, stockHours);
+  for (const res of COMMON_RESOURCES2) {
+    const want = (_g = stock[res]) != null ? _g : 0;
+    const cur = (_h = npc.resources[res]) != null ? _h : 0;
+    if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
+  }
+  const xpTarget = warlordTargetXp(d, ref);
+  const xp = (_i = npc.xp) != null ? _i : 0;
+  const xpStep = Math.ceil(xpTarget * WARLORD_RULES.xpGrowthPerHour * hours2);
+  npc.xp = xp < xpTarget ? rt.seeded ? Math.min(xpTarget, xp + xpStep) : xpTarget : xp;
+  const seasonTarget = Math.round((ref.medianSeasonXp || 0) * tierFactor(d));
+  npc.seasonXp = Math.max((_j = npc.seasonXp) != null ? _j : 0, rt.seeded ? Math.min(seasonTarget, ((_k = npc.seasonXp) != null ? _k : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
+  npc.resourcesUpdatedAtMs = now;
+  out.seeded = true;
+  out.lastTickMs = now;
+  return out;
+}
+function shatterWarlord(npc, loss = WARLORD_RULES.vendetta.powerLoss) {
+  var _a;
+  for (const [id, st] of Object.entries((_a = npc.units) != null ? _a : {})) {
+    if (st.count > 0) npc.units[id] = __spreadProps(__spreadValues({}, st), { count: Math.floor(st.count * (1 - loss)) });
+  }
+}
+function warlordCanTarget(d, npc, t, now) {
+  var _a, _b, _c, _d, _e, _f;
+  const p = t.player;
+  if (p.npc || ((_a = p.xp) != null ? _a : 0) < WARLORD_RULES.minTargetXp || onVacation(p, now)) return false;
+  if (!t.reprisal && now - t.lastWarlordHitMs < WARLORD_RULES.targetCooldownHours * 36e5) return false;
+  const check = checkAttackAllowed({
+    now,
+    attackerUid: npc.uid,
+    attackerXp: 0,
+    defenderUid: p.uid,
+    defenderXp: (_b = p.xp) != null ? _b : 0,
+    defenderCreatedAtMs: p.createdAtMs,
+    defenderHasAttacked: ((_c = p.lastAttackAtMs) != null ? _c : 0) > 0,
+    lastAttackOnTargetMs: t.lastAttackOnTargetMs,
+    defenderAscendedAtMs: p.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(p),
+    lastDefenderDefeatMs: (_d = p.lastDefeatAtMs) != null ? _d : null
+  });
+  if (!check.allowed) return false;
+  if (d.personality === "opportunist" && !t.reprisal) {
+    const beaten = ((_e = p.lastDefeatAtMs) != null ? _e : 0) > 0 && now - ((_f = p.lastDefeatAtMs) != null ? _f : 0) <= WARLORD_RULES.opportunistDefeatHours * 36e5;
+    const prod = productionHours(p, WARLORD_RULES.opportunistStockHours);
+    const rich = COMMON_RESOURCES2.some((res) => {
+      var _a2, _b2, _c2, _d2;
+      return ((_a2 = prod[res]) != null ? _a2 : 0) > 0 && ((_c2 = (_b2 = p.resources) == null ? void 0 : _b2[res]) != null ? _c2 : 0) >= ((_d2 = prod[res]) != null ? _d2 : 0);
+    });
+    if (!beaten && !rich) return false;
+  }
+  return true;
+}
+function composeWarlordFleet(npc, target, random = Math.random) {
+  var _a, _b, _c, _d;
+  const defense = homeDefensePower((_a = target.units) != null ? _a : {}, (_b = target.techLevels) != null ? _b : {});
+  const goal = Math.max(1, defense) * (WARLORD_RULES.attackPowerMin + (WARLORD_RULES.attackPowerMax - WARLORD_RULES.attackPowerMin) * random());
+  const ships = OFFENSIVE_UNITS.filter((id) => {
+    var _a2, _b2;
+    return id !== "sonde_espionnage" && ((_b2 = (_a2 = npc.units[id]) == null ? void 0 : _a2.count) != null ? _b2 : 0) > 0;
+  }).map((id) => {
+    var _a2;
+    return { id, per: computeFleetPower(npc.units, (_a2 = npc.techLevels) != null ? _a2 : {}, { [id]: 1 }, ["attack"]) };
+  }).filter((s) => s.per > 0).sort((a, b) => b.per - a.per);
+  const fleet = {};
+  let power = 0;
+  for (const s of ships) {
+    if (power >= goal) break;
+    const have = (_d = (_c = npc.units[s.id]) == null ? void 0 : _c.count) != null ? _d : 0;
+    const need = Math.min(have, Math.ceil((goal - power) / s.per));
+    if (need > 0) {
+      fleet[s.id] = need;
+      power += need * s.per;
+    }
+  }
+  if (power < Math.max(1, defense) * WARLORD_RULES.attackPowerMin) return null;
+  return fleet;
+}
+function pickWarlordTarget(d, npc, candidates, now, random = Math.random) {
+  const ok = candidates.filter((t) => warlordCanTarget(d, npc, t, now));
+  const ordered = [...ok.filter((t) => t.reprisal), ...ok.filter((t) => !t.reprisal).sort(() => random() - 0.5)];
+  for (const t of ordered) {
+    const fleet = composeWarlordFleet(npc, t.player, random);
+    if (fleet) return { target: t, fleet };
+  }
+  return null;
+}
+function nextAttackDelayMs(random = Math.random, settings = config.settings) {
+  const freq = settings.attackFrequency > 0 ? settings.attackFrequency : 0;
+  if (freq <= 0) return 7 * 864e5;
+  const h = WARLORD_RULES.attackEveryHours + (random() * 2 - 1) * WARLORD_RULES.attackJitterHours;
+  return Math.round(h / freq * 36e5);
+}
+function warlordTravelMs(random = Math.random) {
+  return Math.round((WARLORD_RULES.travelMinHours + (WARLORD_RULES.travelMaxHours - WARLORD_RULES.travelMinHours) * random()) * 36e5);
+}
+function warlordLootCap(target) {
+  return Object.values(productionHours(target, WARLORD_RULES.lootCapHours)).reduce((a, b) => a + (b != null ? b : 0), 0);
+}
+function capLoot(loot, cap) {
+  const total2 = Object.values(loot).reduce((a, b) => a + (b != null ? b : 0), 0);
+  if (!(cap >= 0) || total2 <= cap || total2 <= 0) return loot;
+  const k = cap / total2;
+  return Object.fromEntries(Object.entries(loot).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * k)]));
+}
+function warlordOffer(npc, random = Math.random) {
+  var _a;
+  const stocked = COMMON_RESOURCES2.filter((r) => {
+    var _a2, _b;
+    return ((_b = (_a2 = npc.resources) == null ? void 0 : _a2[r]) != null ? _b : 0) > 1e3;
+  });
+  if (stocked.length === 0) return null;
+  const giveRes = stocked[Math.floor(random() * stocked.length)];
+  const others = COMMON_RESOURCES2.filter((r) => r !== giveRes);
+  const wantRes = others[Math.floor(random() * others.length)];
+  const giveAmount = Math.max(500, Math.floor(((_a = npc.resources[giveRes]) != null ? _a : 0) * (0.1 + 0.15 * random())));
+  const rate = getTradeRate(giveRes, wantRes);
+  const wantAmount = Math.max(1, Math.round(giveAmount * rate * (1 + (random() * 2 - 1) * WARLORD_RULES.marketSpread)));
+  return { giveRes, giveAmount, wantRes, wantAmount };
+}
+function nextMarketDelayMs(random = Math.random) {
+  return Math.round(24 / WARLORD_RULES.marketOffersPerDay * (0.6 + 0.8 * random()) * 36e5);
+}
+function warlordLine(d, key, pseudo, random = Math.random) {
+  var _a, _b;
+  const lines = (_b = (_a = d.lines) == null ? void 0 : _a[key]) != null ? _b : [];
+  if (lines.length === 0) return null;
+  return lines[Math.floor(random() * lines.length)].split("{pseudo}").join(pseudo);
+}
+function nearestWarlord(uid, defs) {
+  let best = null;
+  let bestD = Infinity;
+  for (const d of defs) {
+    const dist = distanceBetween(uid, warlordUid(d.id));
+    if (dist < bestD) {
+      bestD = dist;
+      best = d;
+    }
+  }
+  return best;
+}
+function warlordsState(raw) {
+  var _a, _b, _c, _d;
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    byId: __spreadValues({}, (_a = r.byId) != null ? _a : {}),
+    hits: __spreadValues({}, (_b = r.hits) != null ? _b : {}),
+    contacted: __spreadValues({}, (_c = r.contacted) != null ? _c : {}),
+    lastMsg: __spreadValues({}, (_d = r.lastMsg) != null ? _d : {}),
+    vendettas: Array.isArray(r.vendettas) ? [...r.vendettas] : [],
+    reprisals: Array.isArray(r.reprisals) ? [...r.reprisals] : []
+  };
+}
+function canMessage(state, warlordId, uid, now) {
+  var _a;
+  return now - ((_a = state.lastMsg[`${warlordId}:${uid}`]) != null ? _a : 0) >= WARLORD_RULES.messageEveryHours * 36e5;
+}
+function activeVendetta(state, warlordId, now) {
+  var _a;
+  return (_a = state.vendettas.find((v) => v.warlordId === warlordId && v.status === "active" && now < v.endsAtMs)) != null ? _a : null;
+}
+function openVendetta(state, d, opener, scope, npc, rt, now) {
+  var _a;
+  if (rt && rt.absentUntilMs > now) throw new GameActionError(`${d.name} a quitt\xE9 le secteur : reviens apr\xE8s son retour.`);
+  if (activeVendetta(state, d.id, now)) throw new GameActionError(`Une vendetta est d\xE9j\xE0 ouverte contre ${d.name}.`);
+  if (state.vendettas.some((v2) => v2.status === "active" && now < v2.endsAtMs && v2.ownerUid === opener.uid)) throw new GameActionError("Tu m\xE8nes d\xE9j\xE0 une vendetta : termine-la d'abord.");
+  if (scope === "alliance" && !opener.allianceId) throw new GameActionError("Rejoins une alliance pour ouvrir une vendetta d'alliance.");
+  const goal = Math.max(1e3, Math.round(warlordFleetPower(npc) * WARLORD_RULES.vendetta.goalFactor));
+  const v = {
+    id: `${d.id}-${now}`,
+    warlordId: d.id,
+    ownerUid: opener.uid,
+    ownerPseudo: opener.pseudo,
+    allianceId: scope === "alliance" ? String((_a = opener.allianceId) != null ? _a : "") : "",
+    startedAtMs: now,
+    endsAtMs: now + WARLORD_RULES.vendetta.durationHours * 36e5,
+    goal,
+    dealt: 0,
+    contributions: {},
+    status: "active"
+  };
+  state.vendettas.push(v);
+  return v;
+}
+function inVendetta(v, uid, allianceId) {
+  return v.ownerUid === uid || !!v.allianceId && v.allianceId === allianceId;
+}
+function recordVendettaDamage(state, warlordId, uid, allianceId, power, now) {
+  var _a;
+  const v = activeVendetta(state, warlordId, now);
+  if (!v || !(power > 0) || !inVendetta(v, uid, allianceId)) return null;
+  v.dealt += Math.round(power);
+  v.contributions[uid] = ((_a = v.contributions[uid]) != null ? _a : 0) + Math.round(power);
+  if (v.dealt >= v.goal) {
+    v.status = "won";
+    v.finishedAtMs = now;
+    return v;
+  }
+  return null;
+}
+function vendettaWinners(v) {
+  return Object.entries(v.contributions).filter(([uid, n]) => n >= v.goal * WARLORD_RULES.vendetta.minShare || uid === v.ownerUid && n > 0).map(([uid]) => uid);
+}
+function vendettaTitle(d) {
+  return `Tombeur de ${d.name.split(",")[0]}`;
+}
+function settleVendettas(state, now) {
+  const lost = [];
+  for (const v of state.vendettas) {
+    if (v.status === "active" && now >= v.endsAtMs) {
+      v.status = "lost";
+      v.finishedAtMs = now;
+      lost.push(v);
+      state.reprisals.push({ warlordId: v.warlordId, uid: v.ownerUid, dueAtMs: now });
+    }
+  }
+  state.vendettas = state.vendettas.filter((v) => {
+    var _a;
+    return v.status === "active" || now - ((_a = v.finishedAtMs) != null ? _a : v.endsAtMs) < 30 * 864e5;
+  });
+  return lost;
+}
+function warlordPublic(d, npc, rt, state, now) {
+  var _a;
+  const o = warlordOrigin(d.origin);
+  const v = activeVendetta(state, d.id, now);
+  return {
+    id: d.id,
+    uid: warlordUid(d.id),
+    name: d.name,
+    origin: d.origin,
+    originLabel: o.label,
+    personality: d.personality,
+    tier: d.tier,
+    portrait: d.portrait,
+    emblem: d.emblem,
+    fallbackArt: o.art,
+    color: o.color,
+    bio: d.bio,
+    power: npc ? empirePower(npc) : 0,
+    absentUntilMs: (_a = rt == null ? void 0 : rt.absentUntilMs) != null ? _a : 0,
+    vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null
+  };
+}
+
+// src/game/attack.ts
+function performAttack(input) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E;
+  const { now, attackerUid, defenderUid, defender } = input;
+  const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
+    now,
+    attackerUid,
+    attackerXp: (_a = input.attacker.xp) != null ? _a : 0,
+    defenderUid,
+    defenderXp: (_b = defender.xp) != null ? _b : 0,
+    defenderCreatedAtMs: defender.createdAtMs,
+    defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
+    lastAttackOnTargetMs: input.lastAttackOnTargetMs,
+    defenderAscendedAtMs: defender.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(defender),
+    defenderVacationUntilMs: onVacation(defender, now) ? (_d = defender.vacation) == null ? void 0 : _d.untilMs : void 0,
+    defenderIsWarlord: !!defender.npc,
+    lastDefenderDefeatMs: (_e = defender.lastDefeatAtMs) != null ? _e : null
+  });
+  if (!check.allowed) return { ok: false, message: (_f = check.message) != null ? _f : "Attaque impossible." };
+  const fleet = {};
+  for (const [unitId, raw] of Object.entries((_g = input.fleet) != null ? _g : {})) {
+    const qty = Math.floor(Number(raw));
+    if (qty <= 0) continue;
+    if (!OFFENSIVE_UNITS.includes(unitId)) return { ok: false, message: "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es." };
+    fleet[unitId] = qty;
+  }
+  if (Object.keys(fleet).length === 0) return { ok: false, message: "S\xE9lectionne au moins une unit\xE9 \xE0 envoyer." };
+  const flushed = flushState(
+    __spreadProps(__spreadValues({}, input.attacker), { buildings: withMissingBuildings(input.attacker.buildings, input.attacker.resources) }),
+    input.attackerQueues,
+    now
+  );
+  const attacker = flushed.player;
+  if (input.inFlight) {
+    for (const [unitId, qty] of Object.entries(fleet)) {
+      const state = (_h = attacker.units[unitId]) != null ? _h : { level: 1, count: 0 };
+      attacker.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
+    }
+  }
+  for (const [unitId, qty] of Object.entries(fleet)) {
+    if (((_j = (_i = attacker.units[unitId]) == null ? void 0 : _i.count) != null ? _j : 0) < qty) {
+      return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
+    }
+  }
+  const flushedDefender = flushState(__spreadProps(__spreadValues({}, defender), { buildings: withMissingBuildings(defender.buildings, defender.resources) }), input.defenderQueues, now);
+  const owner = flushedDefender.player;
+  const colony = input.colonyId ? colonyOf(owner, input.colonyId) : void 0;
+  if (input.colonyId && !colony) return { ok: false, message: "Cette colonie n'existe plus." };
+  const def3 = colony ? colonyView(owner, colony) : owner;
+  const posture = postureEffects((_k = def3.posture) == null ? void 0 : _k.id);
+  const formation = formationEffects(input.formation);
+  const atkMods = playerModifiers(attacker);
+  const defMods = playerModifiers(owner);
+  const assault = Math.max(0, Math.min(50, Number((_l = input.boosts) == null ? void 0 : _l.assault) || 0)) / 100;
+  const armor = consumeArmor(owner, now) / 100;
+  const combat = resolveCombat(__spreadProps(__spreadValues({}, formation), {
+    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault),
+    cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
+    defenderPowerFactor: 1 + defMods.defense + armor,
+    defenseFactor: posture.defenseFactor,
+    homeFleetFactor: posture.homeFleetFactor,
+    lootMultiplier: lootFactor(now),
+    garrisons: (_m = input.garrisons) != null ? _m : [],
+    garrisonFactor: ALLIANCE_RULES.garrisonPower,
+    attackerUnits: attacker.units,
+    attackerTechLevels: attacker.techLevels,
+    attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
+    fleet,
+    defenderUnits: (_n = def3.units) != null ? _n : {},
+    defenderTechLevels: (_o = def3.techLevels) != null ? _o : {},
+    defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
+    defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
+    // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
+    defenderResources: Object.fromEntries(
+      Object.entries((_p = def3.resources) != null ? _p : {}).map(([res, amount2]) => [res, Math.max(0, (amount2 != null ? amount2 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
+    )
+  }));
+  const aegis = combat.outcome === "attacker_win" && Object.values((_q = combat.loot) != null ? _q : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
+  if (aegis) combat.loot = {};
+  if (input.lootCap !== void 0 && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap);
+  for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
+    if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
+  }
+  const survivors = {};
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_r = combat.attackerLosses[unitId]) != null ? _r : 0));
+  if (input.inFlight) {
+    for (const [unitId, qty] of Object.entries(survivors)) {
+      if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
+    }
+  }
+  for (const [res, amt] of Object.entries((_s = combat.loot) != null ? _s : {})) {
+    if (!input.inFlight) {
+      attacker.resources[res] = ((_t = attacker.resources[res]) != null ? _t : 0) + (amt != null ? amt : 0);
+      bumpStat(attacker, "loot", amt != null ? amt : 0);
+    }
+    def3.resources[res] = Math.max(0, ((_u = def3.resources[res]) != null ? _u : 0) - (amt != null ? amt : 0));
+  }
+  for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
+    if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
+  }
+  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
+  const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
+  if (combat.outcome === "attacker_win") {
+    if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
+    attacker.victories = ((_v = attacker.victories) != null ? _v : 0) + 1;
+  } else if (combat.outcome === "defender_win") attacker.defeats = ((_w = attacker.defeats) != null ? _w : 0) + 1;
+  applyXpDelta(attacker, xp.attackerXp, now);
+  attacker.lastAttackAtMs = now;
+  if (combat.outcome === "defender_win") owner.victories = ((_x = owner.victories) != null ? _x : 0) + 1;
+  else if (combat.outcome === "attacker_win") {
+    owner.defeats = ((_y = owner.defeats) != null ? _y : 0) + 1;
+    if (colony) colony.lastDefeatAtMs = now;
+    else if (!owner.npc) owner.lastDefeatAtMs = now;
+  }
+  applyXpDelta(owner, defenderXpDelta, now);
+  if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
+  if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
+  if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+  if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
+  grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
+  const outcomeTitle = {
+    attacker_win: "Victoire !",
+    defender_win: "D\xE9faite\u2026",
+    draw: "Match nul"
+  };
+  const notifications = [
+    ...flushed.notifications,
+    {
+      kind: "combat-attacker",
+      title: (_z = outcomeTitle[combat.outcome]) != null ? _z : "Rapport de combat",
+      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      createdAtMs: now,
+      read: false
+    }
+  ];
+  const defenderTitle = {
+    attacker_win: "Tu as perdu ce combat...",
+    defender_win: "Attaque repouss\xE9e !",
+    draw: "Match nul."
+  };
+  const defenderNotifications = [
+    ...flushedDefender.notifications,
+    {
+      kind: "combat-defender",
+      title: (_A = defenderTitle[combat.outcome]) != null ? _A : "Rapport de combat",
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
+      createdAtMs: now,
+      read: false
+    }
+  ];
+  const report = {
+    attackerUid,
+    attackerPseudo: input.attacker.pseudo,
+    defenderUid,
+    defenderPseudo: def3.pseudo,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: combat.attackerLosses,
+    attackerRecovered: combat.attackerRecovered,
+    defenderLosses: combat.defenderLosses,
+    defenderRecovered: combat.defenderRecovered,
+    loot: combat.loot,
+    defenderProcessed: false,
+    attackerXpDelta: xp.attackerXp,
+    defenderXpDelta,
+    defenderApplied: true,
+    garrisons: ((_B = input.garrisons) != null ? _B : []).map((g, i) => {
+      var _a2, _b2;
+      return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
+    }),
+    attackerFleet: fleet,
+    planetId: colony ? colony.id : ""
+  };
+  return {
+    ok: true,
+    attacker,
+    attackerQueues: flushed.queues,
+    notifications,
+    defender: owner,
+    defenderQueues: flushedDefender.queues,
+    defenderNotifications,
+    report,
+    combat,
+    survivors,
+    loot: (_C = combat.loot) != null ? _C : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_D = combat.garrisonLosses) != null ? _D : []], (_E = eventDebrisPercent(now)) != null ? _E : DEBRIS_RULES.percent)
+  };
+}
+
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level2 = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level2(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level2(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level2(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c, _d, _e, _f;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount2] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
+// src/game/profile.ts
+var PROFILE_RULES = { mottoMax: 60 };
+var FREE_BANNERS = [
+  { id: "nebula", label: "N\xE9buleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
+  { id: "aurore", label: "Aurore", gradient: "linear-gradient(120deg,#0a1a1a 0%,#0f4d45 50%,#5ef2b066 100%)", hint: "Offerte" },
+  { id: "braise", label: "Braise", gradient: "linear-gradient(120deg,#1a0a06 0%,#5c1f0e 50%,#ff7a4566 100%)", hint: "Offerte" },
+  { id: "abysse", label: "Abysse", gradient: "linear-gradient(120deg,#07060f 0%,#2a1450 50%,#a78bfa66 100%)", hint: "Offerte" }
+];
+function leviathanKills(p) {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a.leviathanKills) || 0;
+}
+function bannerOptions(p) {
+  var _a, _b, _c, _d;
+  const kesh = bountyState(p);
+  return [
+    ...FREE_BANNERS.map((b) => __spreadProps(__spreadValues({}, b), { unlocked: true })),
+    ...FACTIONS.filter((f) => f.banner || f.art).map((f) => ({
+      id: `faction:${f.id}`,
+      label: f.name,
+      image: f.banner || f.art,
+      hint: `Faire tomber ${f.lair.name}`,
+      unlocked: pirateState(p, f.id).lairsTaken > 0
+    })),
+    { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
+    { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
+    // v4.1 : parrainage et passes de saison terminés.
+    { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'\xE0 Bronze I", unlocked: ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0 },
+    ...((_d = (_c = p.seasonPass) == null ? void 0 : _c.completed) != null ? _d : []).map((seasonId, i) => ({
+      id: `pass:${seasonId}`,
+      label: `Passe ${seasonLabel(seasonId)}`,
+      gradient: PASS_GRADIENTS[i % PASS_GRADIENTS.length],
+      hint: "Terminer le passe de saison",
+      unlocked: true
+    }))
+  ];
+}
+var PASS_GRADIENTS = [
+  "linear-gradient(120deg,#05101a 0%,#0e4d6b 40%,#4be8ff 70%,#a78bfa 100%)",
+  "linear-gradient(120deg,#140514 0%,#5c0e4d 40%,#ff5df0 70%,#ffd86b 100%)",
+  "linear-gradient(120deg,#05140c 0%,#0e5c3a 40%,#5ef2b0 70%,#4be8ff 100%)"
+];
+function emblemOptions(p) {
+  const kesh = bountyState(p);
+  return [
+    { id: "rank", label: "Insigne de rang", hint: "Offert", unlocked: true },
+    ...FACTIONS.filter((f) => f.emblem).map((f) => ({
+      id: `faction:${f.id}`,
+      label: `Sceau ${f.name}`,
+      image: f.emblem,
+      hint: `Faire tomber ${f.lair.name}`,
+      unlocked: pirateState(p, f.id).lairsTaken > 0
+    })),
+    { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
+    { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 }
+  ];
+}
+function profileStyle(p) {
+  var _a, _b, _c, _d;
+  const raw = (_a = p.profileStyle) != null ? _a : {};
+  return { banner: String((_b = raw.banner) != null ? _b : "nebula"), emblem: String((_c = raw.emblem) != null ? _c : "rank"), motto: String((_d = raw.motto) != null ? _d : "") };
+}
+function sanitizeMotto(text) {
+  return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
+}
+function setProfileStyle(player, input) {
+  const req = input && typeof input === "object" ? input : {};
+  const current2 = profileStyle(player);
+  const next = __spreadValues({}, current2);
+  if (req.banner !== void 0) {
+    const opt = bannerOptions(player).find((o) => o.id === req.banner);
+    if (!opt) throw new GameActionError("Banni\xE8re inconnue.");
+    if (!opt.unlocked) throw new GameActionError(`Banni\xE8re verrouill\xE9e : ${opt.hint.toLowerCase()}.`);
+    next.banner = opt.id;
+  }
+  if (req.emblem !== void 0) {
+    const opt = emblemOptions(player).find((o) => o.id === req.emblem);
+    if (!opt) throw new GameActionError("Embl\xE8me inconnu.");
+    if (!opt.unlocked) throw new GameActionError(`Embl\xE8me verrouill\xE9 : ${opt.hint.toLowerCase()}.`);
+    next.emblem = opt.id;
+  }
+  if (req.motto !== void 0) next.motto = sanitizeMotto(req.motto);
+  player.profileStyle = next;
+  return next;
+}
+function publicShowcase(p) {
+  var _a, _b;
+  const style = profileStyle(p);
+  const banner = (_a = bannerOptions(p).find((o) => o.id === style.banner && o.unlocked)) != null ? _a : __spreadProps(__spreadValues({}, FREE_BANNERS[0]), { unlocked: true });
+  const emblem = emblemOptions(p).find((o) => o.id === style.emblem && o.unlocked);
+  const st = commandersState(p);
+  return {
+    banner: banner.image ? { image: banner.image } : { gradient: banner.gradient },
+    emblem: (_b = emblem == null ? void 0 : emblem.image) != null ? _b : null,
+    motto: style.motto,
+    commanders: st.active.map((id) => {
+      var _a2, _b2;
+      return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
+    }),
+    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity }))
+  };
+}
+
+// src/game/actions.ts
+var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
+var MAX_QTY = 1e5;
+function positiveInt(value, label2) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label2} invalide.`);
+  return n;
+}
+function pay(player, cost, now, spending = true) {
+  if (!canAffordAll(player.resources, cost)) throw new GameActionError("Ressources insuffisantes.");
+  let total2 = 0;
+  for (const [res, val] of Object.entries(cost)) {
+    player.resources[res] -= val != null ? val : 0;
+    total2 += val != null ? val : 0;
+  }
+  recordContract(player, "spend", total2, now);
+  if (spending) bumpStat(player, "spent", total2);
+}
+function hangarUsed(units, away, category) {
+  var _a;
+  let used = 0;
+  for (const [id, u] of Object.entries(units)) {
+    const def3 = findUnit(id);
+    if ((def3 == null ? void 0 : def3.category) === category) used += ((_a = u == null ? void 0 : u.count) != null ? _a : 0) * def3.hangarSpace;
+  }
+  for (const [id, n] of Object.entries(away)) {
+    const def3 = findUnit(id);
+    if ((def3 == null ? void 0 : def3.category) === category) used += (n > 0 ? n : 0) * def3.hangarSpace;
+  }
+  return used;
+}
+var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+function applyAction(s, action) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+  const { player, queues, now } = s;
+  if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
+    throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
+  }
+  switch (action == null ? void 0 : action.type) {
+    case "sync": {
+      const elapsedMs = Math.max(0, now - (s.preFlushPlayer.resourcesUpdatedAtMs || now));
+      const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1e3 + 5, 300);
+      player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
+      if (!onVacation(player, now)) passDailyLogin(player, now);
+      const resourceGains = {};
+      for (const key of Object.keys(player.resources)) {
+        const delta = ((_a = player.resources[key]) != null ? _a : 0) - ((_b = s.preFlushPlayer.resources[key]) != null ? _b : 0);
+        if (delta > 0) resourceGains[key] = delta;
+      }
+      const summary = { elapsedMs, resourceGains, notifications: s.flushNotifications };
+      return summary;
+    }
+    case "unlockBuilding": {
+      const info = BUILDING_UNLOCK_COST[action.buildingId];
+      const state = player.buildings[action.buildingId];
+      if (!info || !state) throw new GameActionError("Ce b\xE2timent se d\xE9bloque via le Labo.");
+      if (state.unlocked) throw new GameActionError("D\xE9j\xE0 d\xE9bloqu\xE9.");
+      const cost = {};
+      if ("multi" in info) info.resources.forEach((r) => cost[r.resource] = r.amount);
+      else cost[info.resource] = info.amount;
+      pay(player, cost, now);
+      state.unlocked = true;
+      return void 0;
+    }
+    case "upgradeBuilding": {
+      const def3 = findBuilding(action.buildingId);
+      const state = player.buildings[action.buildingId];
+      if (!def3 || !state) throw new GameActionError("B\xE2timent inconnu.");
+      if (!state.unlocked && !def3.startsUnlocked) throw new GameActionError("Ce b\xE2timent n'est pas d\xE9bloqu\xE9.");
+      if (queues.buildingUpgrades[def3.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
+      if (state.level >= def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+      const nextLevel = state.level + 1;
+      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
+      queues.buildingUpgrades[def3.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) * 1e3 };
+      recordContract(player, "upgrade_building", 1, now);
+      return void 0;
+    }
+    case "buildUnits": {
+      const unit = findUnit(action.unitId);
+      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
+      const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
+      if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
+      const category = unit.category;
+      const built = hangarUsed(player.units, s.unitsAway, category);
+      const reserved = queues.unitQueues[category].reduce((sum3, item) => {
+        var _a2, _b2;
+        return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
+      }, 0);
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+        throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
+      }
+      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
+      recordContract(player, "build_units", qty, now);
+      const queue = queues.unitQueues[category];
+      const wasEmpty = queue.length === 0;
+      for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
+      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels) * 1e3;
+      return void 0;
+    }
+    case "sellUnits": {
+      const unit = findUnit(action.unitId);
+      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
+      const qty = positiveInt(action.qty, "Quantit\xE9");
+      if (((_h = (_g = player.units[unit.id]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
+      player.units[unit.id].count -= qty;
+      player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
+      player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
+      return void 0;
+    }
+    case "research": {
+      const tech = findTech(action.techId);
+      if (!tech) throw new GameActionError("Technologie inconnue.");
+      const nextLevel = ((_i = player.techLevels[tech.id]) != null ? _i : 0) + 1;
+      if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Pr\xE9requis non remplis.");
+      if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
+      if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
+        throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
+      }
+      pay(player, getTechCost(tech, nextLevel), now);
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3 });
+      recordContract(player, "research", 1, now);
+      const hour = parisHour(now);
+      if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
+      return void 0;
+    }
+    case "mission": {
+      const mission = MISSIONS[action.missionKey];
+      if (!mission) throw new GameActionError("Mission inconnue.");
+      if (queues.activeMissions.some((m) => m.key === mission.key)) throw new GameActionError("Mission d\xE9j\xE0 en cours.");
+      if (!hasPrerequisites(mission, player.units)) throw new GameActionError("Pr\xE9requis non remplis.");
+      queues.activeMissions.push({ key: mission.key, endTime: now + mission.duration * 1e3 });
+      return void 0;
+    }
+    case "trade": {
+      const { sellId, buyId } = action;
+      if (!RESOURCE_IDS2.has(sellId) || !RESOURCE_IDS2.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
+      const amount2 = positiveInt(action.amount, "Montant");
+      if (((_j = player.resources[sellId]) != null ? _j : 0) < amount2) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
+      const gained = Math.floor(amount2 * getTradeRate(sellId, buyId));
+      player.resources[sellId] -= amount2;
+      player.resources[buyId] = ((_k = player.resources[buyId]) != null ? _k : 0) + gained;
+      bumpStat(player, "traded", amount2);
+      grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
+      return gained;
+    }
+    case "claimContract": {
+      const claimed = claimContract(player, String((_l = action.contractId) != null ? _l : ""), now);
+      bumpStat(player, "contracts");
+      addPassPoints(player, "contract", now);
+      grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
+      return claimed;
+    }
+    case "rerollContract":
+      return rerollContract(player, String((_m = action.contractId) != null ? _m : ""), now);
+    case "setTitle":
+      setActiveTitle(player, String((_n = action.title) != null ? _n : ""));
+      return player.activeTitle;
+    case "claimOnboarding":
+      return claimOnboarding(player, String((_o = action.stepId) != null ? _o : ""));
+    case "setPosture":
+      return setPosture(player, action.posture, now);
+    case "hideOnboarding":
+      setOnboardingHidden(player, action.hidden === true);
+      return player.onboarding;
+    case "ascend":
+      ascend(player, queues, now);
+      return { ascensions: player.ascensions };
+    case "colonize":
+      return startColonization(player, action.name, now);
+    case "colonyUpgrade":
+      return upgradeColonyBuilding(player, String((_p = action.colonyId) != null ? _p : ""), String((_q = action.buildingId) != null ? _q : ""), now);
+    case "colonyDefense":
+      return buildColonyDefense(player, String((_r = action.colonyId) != null ? _r : ""), String((_s = action.unitId) != null ? _s : ""), action.qty, now);
+    case "colonyRename":
+      renameColony(player, String((_t = action.colonyId) != null ? _t : ""), action.name);
+      return void 0;
+    case "commanderRecruit": {
+      const method = action.method === "production" ? "production" : "amber";
+      const def3 = recruitCommander(
+        player,
+        action.commanderId,
+        (m) => {
+          if (m === "production") {
+            pay(player, productionHours(player, COMMANDER_RULES.recruitProductionHours), now);
+            return;
+          }
+          const st = bountyState(player);
+          if (st.amber < COMMANDER_RULES.recruitAmber) throw new GameActionError(`Il faut ${COMMANDER_RULES.recruitAmber} Ambre de Ruche (primes Kesh'Vaar).`);
+          st.amber -= COMMANDER_RULES.recruitAmber;
+          player.bounties = st;
+        },
+        method
+      );
+      return { id: def3.id };
+    }
+    case "commanderAssign":
+      assignCommanders(player, action.ids, now);
+      return void 0;
+    case "commanderTrain":
+      return { level: trainCommander(player, action.commanderId) };
+    case "synthCraft":
+      return craftCapsule(player, action.capsule, action.level, now);
+    case "synthActivate":
+      return { pct: activateCapsule(player, action.capsule, action.level, now) };
+    case "relicEquip":
+      equipRelic(player, action.slot, action.relicId);
+      return void 0;
+    case "relicFuse":
+      return fuseRelics(player, action.template, action.rarity, now);
+    case "relicRecycle": {
+      const out = recycleRelic(player, action.relicId);
+      const st = bountyState(player);
+      st.amber += out.amber;
+      player.bounties = st;
+      return { amber: out.amber };
+    }
+    case "setProfileStyle":
+      return setProfileStyle(player, action.style);
+    case "passClaim":
+      return { gained: claimPassTier(player, action.tier, now) };
+    case "vacationEnd":
+      endVacation(player, queues, now, true);
+      return true;
+    default:
+      throw new GameActionError("Action inconnue.");
+  }
+}
+function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
+  const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
+  const flushed = flushState(preFlushPlayer, queuesIn, now);
+  const result = applyAction(
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
+    action
+  );
+  return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
+}
+function performGift(sender, senderQueues, recipient, recipientQueues, rawResources, now) {
+  var _a;
+  if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources \xE0 toi-m\xEAme !");
+  const resources = {};
+  for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
+    const n = Math.floor(Number(raw));
+    if (!RESOURCE_IDS2.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
+    if (n > 0) resources[res] = n;
+  }
+  if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
+  const s = flushState(__spreadProps(__spreadValues({}, sender), { buildings: withMissingBuildings(sender.buildings, sender.resources) }), senderQueues, now);
+  const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings, recipient.resources) }), recipientQueues, now);
+  pay(s.player, resources, now, false);
+  recordContract(s.player, "gift", 1, now);
+  for (const [res, amt] of Object.entries(resources)) {
+    r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + (amt != null ? amt : 0);
+  }
+  r.notifications.push({
+    kind: "gift",
+    title: "Ressources re\xE7ues !",
+    message: `${sender.pseudo} t'a envoy\xE9 des ressources.`,
+    createdAtMs: now,
+    read: false
+  });
+  return {
+    sender: s.player,
+    senderQueues: s.queues,
+    senderNotifications: s.notifications,
+    recipient: r.player,
+    recipientQueues: r.queues,
+    recipientNotifications: r.notifications,
+    resources
+  };
+}
+function newPlayerProfile(uid, rawPseudo, now) {
+  const pseudo = String(rawPseudo != null ? rawPseudo : "").trim().replace(/\s+/g, " ").slice(0, 30) || "Joueur";
+  const player = __spreadProps(__spreadValues({}, defaultPlayerState(uid, pseudo)), { createdAtMs: now, resourcesUpdatedAtMs: now });
+  return { player, queues: defaultQueues() };
+}
+function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
+  var _a, _b, _c, _d, _e, _f;
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  for (const [unitId, lost] of Object.entries((_a = report.defenderLosses) != null ? _a : {})) {
+    if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - (Number(lost) || 0));
+  }
+  for (const [res, amt] of Object.entries((_b = report.loot) != null ? _b : {})) {
+    const key = res;
+    if (RESOURCE_IDS2.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
+  }
+  if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
+  else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
+  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now);
+  const title = { attacker_win: "Tu as perdu ce combat...", defender_win: "Attaque repouss\xE9e !", draw: "Match nul." };
+  notifications.push({
+    kind: "combat-defender",
+    title: (_f = title[report.outcome]) != null ? _f : "Rapport de combat",
+    message: `Attaque de ${report.attackerPseudo}.`,
+    createdAtMs: now,
+    read: false
+  });
+  return { player, queues, notifications };
+}
+function applyLegacyGift(playerIn, queuesIn, gift, now) {
+  var _a, _b;
+  const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
+    const n = Math.floor(Number(amt));
+    if (RESOURCE_IDS2.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  }
+  notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
+  return { player, queues, notifications };
+}
+
+// src/game/analytics.ts
+var HOUR7 = 36e5;
+var DAY5 = 24 * HOUR7;
+function median2(values) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+var round1 = (n) => Math.round(n * 10) / 10;
+function topCounts(values, limit) {
+  const counts = /* @__PURE__ */ new Map();
+  values.forEach((v) => {
+    var _a;
+    return counts.set(v, ((_a = counts.get(v)) != null ? _a : 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([pseudo, count2]) => ({ pseudo, count: count2 }));
+}
+function computeGameStats(players, queues, reports, now, windowDays = 7, balanceDays = 30) {
+  const n = players.length;
+  const lastSeen = (p) => {
+    var _a;
+    return (_a = p.resourcesUpdatedAtMs) != null ? _a : 0;
+  };
+  const families = /* @__PURE__ */ new Map();
+  players.forEach((p) => {
+    var _a, _b;
+    const family = getRank((_a = p.xp) != null ? _a : 0).family;
+    families.set(family, ((_b = families.get(family)) != null ? _b : 0) + 1);
+  });
+  const rates = players.map((p) => {
+    var _a, _b;
+    return getProductionRatesPerSecond((_a = p.buildings) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {});
+  });
+  const buildings = BUILDINGS.map((b) => {
+    const levels = players.map((p) => {
+      var _a;
+      return effectiveBuildingLevel((_a = p.buildings) != null ? _a : {}, b.id);
+    });
+    return {
+      id: b.id,
+      name: b.name,
+      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
+      maxLevel: b.maxLevel,
+      unlockedPct: pct3(levels.filter((l) => l > 0).length, n),
+      maxedPct: pct3(levels.filter((l) => l >= b.maxLevel).length, n)
+    };
+  });
+  const technologies = TECHNOLOGIES.map((t) => {
+    const levels = players.map((p) => {
+      var _a, _b;
+      return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
+    });
+    return {
+      id: t.id,
+      name: t.nom,
+      researchedPct: pct3(levels.filter((l) => l > 0).length, n),
+      avgLevel: round1(levels.reduce((a, l) => a + l, 0) / Math.max(1, n)),
+      maxLevel: t.maxLevel
+    };
+  });
+  const units = UNITS.map((u) => {
+    const owned = players.map((p) => {
+      var _a;
+      return (_a = p.units) == null ? void 0 : _a[u.id];
+    });
+    return {
+      id: u.id,
+      name: u.name,
+      total: owned.reduce((a, s) => {
+        var _a;
+        return a + ((_a = s == null ? void 0 : s.count) != null ? _a : 0);
+      }, 0),
+      ownersPct: pct3(owned.filter((s) => {
+        var _a;
+        return ((_a = s == null ? void 0 : s.count) != null ? _a : 0) > 0;
+      }).length, n),
+      unlockedPct: pct3(owned.filter((s) => {
+        var _a;
+        return ((_a = s == null ? void 0 : s.level) != null ? _a : 0) > 0;
+      }).length, n)
+    };
+  });
+  const missionCounts = /* @__PURE__ */ new Map();
+  queues.forEach((q) => {
+    var _a;
+    return ((_a = q.activeMissions) != null ? _a : []).forEach((m) => {
+      var _a2;
+      return missionCounts.set(m.key, ((_a2 = missionCounts.get(m.key)) != null ? _a2 : 0) + 1);
+    });
+  });
+  const missions = Object.values(MISSIONS).map((m) => {
+    var _a;
+    return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
+  }).sort((a, b) => b.running - a.running);
+  const since = now - windowDays * DAY5;
+  const recent = reports.filter((r) => {
+    var _a;
+    return ((_a = r.timestamp) != null ? _a : 0) >= since;
+  });
+  const outcomes = { attacker_win: 0, defender_win: 0, draw: 0 };
+  recent.forEach((r) => {
+    if (r.outcome in outcomes) outcomes[r.outcome]++;
+  });
+  const perDay = Array.from({ length: windowDays }, (_, i) => {
+    const start = now - (windowDays - i) * DAY5;
+    const d = new Date(start + DAY5);
+    return {
+      day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY5).length
+    };
+  });
+  const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
+    var _a;
+    return Object.values((_a = r.loot) != null ? _a : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
+  });
+  const stats = {
+    generatedAt: now,
+    players: {
+      total: n,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY5).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY5).length,
+      new7d: players.filter((p) => {
+        var _a;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY5;
+      }).length,
+      medianPlaytimeHours: round1(median2(players.map((p) => {
+        var _a;
+        return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
+      }))),
+      ranks: [...families.entries()].map(([label2, count2]) => ({ label: label2, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
+      medianXp: median2(players.map((p) => {
+        var _a;
+        return (_a = p.xp) != null ? _a : 0;
+      })),
+      topXp: [...players].sort((a, b) => {
+        var _a, _b;
+        return ((_a = b.xp) != null ? _a : 0) - ((_b = a.xp) != null ? _b : 0);
+      }).slice(0, 5).map((p) => {
+        var _a;
+        return { pseudo: p.pseudo, xp: (_a = p.xp) != null ? _a : 0 };
+      })
+    },
+    economy: {
+      resources: RESOURCE_LIST.map((r) => {
+        const amounts = players.map((p) => {
+          var _a, _b;
+          return (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
+        });
+        return {
+          id: r.id,
+          name: r.name,
+          median: Math.floor(median2(amounts)),
+          total: Math.floor(amounts.reduce((a, v) => a + v, 0)),
+          medianRate: round1(median2(rates.map((rt) => {
+            var _a;
+            return (_a = rt[r.id]) != null ? _a : 0;
+          })))
+        };
+      })
+    },
+    buildings,
+    technologies,
+    units,
+    missions,
+    combat: {
+      windowDays,
+      attacks: recent.length,
+      outcomes,
+      perDay,
+      avgLoot: lootTotals.length ? Math.round(lootTotals.reduce((a, v) => a + v, 0) / lootTotals.length) : 0,
+      topAttackers: topCounts(recent.map((r) => r.attackerPseudo), 5),
+      mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
+    },
+    balance: computeBalance(players, reports, now, balanceDays),
+    endgame: computeEndgame(players, queues, reports, now, balanceDays),
+    insights: []
+  };
+  stats.insights = computeInsights(stats);
+  return stats;
+}
+function computeEndgame(players, queues, reports, now, windowDays) {
+  const since = now - windowDays * DAY5;
+  const recent = reports.filter((r) => {
+    var _a;
+    return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
+  });
+  const avg = (values) => values.length ? round1(values.reduce((a, v) => a + v, 0) / values.length) : 0;
+  const techs = TECHNOLOGIES.filter((t) => ENDGAME_TECH_IDS.includes(t.id)).map((t) => {
+    const holders = players.filter((p) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) > 0;
+    }).sort((a, b) => {
+      var _a, _b, _c, _d;
+      return ((_b = (_a = b.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) - ((_d = (_c = a.techLevels) == null ? void 0 : _c[t.id]) != null ? _d : 0);
+    });
+    return {
+      id: t.id,
+      name: t.nom,
+      researchers: holders.length,
+      inProgress: queues.filter((q) => {
+        var _a;
+        return ((_a = q.activeResearches) != null ? _a : []).some((r) => r.id === t.id);
+      }).length,
+      avgLevel: avg(holders.map((p) => {
+        var _a, _b;
+        return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
+      })),
+      maxLevel: t.maxLevel,
+      leaders: holders.slice(0, 3).map((p) => {
+        var _a, _b;
+        return `${p.pseudo} (${(_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0})`;
+      })
+    };
+  });
+  const buildings = BUILDINGS.filter((b) => b.endgame).map((b) => {
+    var _a, _b;
+    const levels = players.map((p) => {
+      var _a2;
+      return effectiveBuildingLevel((_a2 = p.buildings) != null ? _a2 : {}, b.id);
+    }).filter((l) => l > 0);
+    return {
+      id: b.id,
+      name: b.name,
+      builders: levels.length,
+      avgLevel: avg(levels),
+      maxLevel: b.maxLevel,
+      resource: (_b = (_a = b.production) == null ? void 0 : _a.resource) != null ? _b : null,
+      perHour: b.production ? Math.round(levels.reduce((a, l) => a + productionPerSecond(b.id, l), 0) * 3600) : 0
+    };
+  });
+  const units = UNITS.filter((u) => ENDGAME_TECH_IDS.includes(u.unlockTech)).map((u) => {
+    const owned = players.map((p) => {
+      var _a, _b, _c;
+      return (_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.count) != null ? _c : 0;
+    });
+    const used = recent.filter((r) => {
+      var _a, _b;
+      return ((_b = (_a = r.attackerFleet) == null ? void 0 : _a[u.id]) != null ? _b : 0) > 0;
+    });
+    return {
+      id: u.id,
+      name: u.name,
+      owners: owned.filter((c) => c > 0).length,
+      total: owned.reduce((a, c) => a + c, 0),
+      attacks: used.length,
+      winPct: pct3(used.filter((r) => r.outcome === "attacker_win").length, used.length)
+    };
+  });
+  return {
+    windowDays,
+    players: players.filter((p) => ENDGAME_TECH_IDS.some((id) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[id]) != null ? _b : 0) > 0;
+    })).length,
+    techs,
+    buildings,
+    units
+  };
+}
+function dominantUnit(fleet) {
+  var _a, _b;
+  let best = null;
+  let bestPower = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const power = ((_b = (_a = UNIT_BASE_STATS[id]) == null ? void 0 : _a.attack) != null ? _b : 0) * (qty || 0);
+    if (power > bestPower) {
+      best = id;
+      bestPower = power;
+    }
+  }
+  return best;
+}
+var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
+function computeBalance(players, reports, now, windowDays) {
+  var _a, _b;
+  const seen = (p) => {
+    var _a2;
+    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
+  };
+  const days = (ms) => Math.floor(ms / DAY5);
+  const since = now - windowDays * DAY5;
+  const recent = reports.filter((r) => {
+    var _a2;
+    return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
+  });
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY5 && now - seen(p) < 30 * DAY5).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const byFamily = /* @__PURE__ */ new Map();
+  players.forEach((p) => {
+    var _a2, _b2;
+    if (!p.createdAtMs) return;
+    const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY5]);
+  });
+  const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+  const dom = /* @__PURE__ */ new Map();
+  recent.forEach((r) => {
+    var _a2;
+    if (!r.attackerFleet || r.attackerUid === PIRATE_OWNER_UID) return;
+    const id = dominantUnit(r.attackerFleet);
+    if (!id) return;
+    const cur = (_a2 = dom.get(id)) != null ? _a2 : { attacks: 0, wins: 0 };
+    cur.attacks++;
+    if (r.outcome === "attacker_win") cur.wins++;
+    dom.set(id, cur);
+  });
+  const dominantUnits = [...dom.entries()].map(([id, v]) => {
+    var _a2, _b2;
+    return { id, name: (_b2 = (_a2 = UNITS.find((u) => u.id === id)) == null ? void 0 : _a2.name) != null ? _b2 : id, attacks: v.attacks, winPct: pct3(v.wins, v.attacks) };
+  }).sort((a, b) => b.attacks - a.attacks);
+  const factions2 = FACTIONS.map((f) => {
+    const raids = recent.filter((r) => r.attackerUid === PIRATE_OWNER_UID && r.attackerPseudo.includes(f.name));
+    const lairs = recent.filter((r) => r.defenderUid && factionOfLair(r.defenderUid) === f.id);
+    return {
+      id: f.id,
+      name: f.name,
+      raids: raids.length,
+      repelledPct: pct3(raids.filter((r) => r.outcome !== "attacker_win").length, raids.length),
+      lairAssaults: lairs.length,
+      lairWinPct: pct3(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
+    };
+  });
+  const active = players.filter((p) => now - seen(p) < 7 * DAY5);
+  const productionPerHour = Math.round(active.reduce((a, p) => {
+    var _a2, _b2;
+    return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
+  }, 0));
+  const anomalies = [];
+  for (const r of RESOURCE_LIST) {
+    for (const p of players) {
+      const amount2 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
+      if (amount2 < 1e6) continue;
+      const others = median2(players.filter((o) => o !== p).map((o) => {
+        var _a2, _b2;
+        return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
+      }));
+      const ratio = others > 0 ? amount2 / others : Infinity;
+      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount2), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
+    }
+  }
+  anomalies.sort((a, b) => b.amount - a.amount);
+  return {
+    windowDays,
+    activity: {
+      active1d: players.filter((p) => now - seen(p) < DAY5).length,
+      active7d: active.length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY5).length,
+      dormant
+    },
+    rankAge,
+    dominantUnits,
+    factions: factions2,
+    flows: {
+      productionPerHour,
+      spentTotal: players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.spent) != null ? _b2 : 0);
+      }, 0),
+      lootWindow: recent.filter((r) => r.attackerUid !== PIRATE_OWNER_UID).reduce((a, r) => a + sumValues(r.loot), 0),
+      tradedTotal: players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.traded) != null ? _b2 : 0);
+      }, 0),
+      marketTrades: Math.round(players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.marketTrades) != null ? _b2 : 0);
+      }, 0) / 2),
+      marketTax: players.reduce((a, p) => {
+        var _a2, _b2;
+        return a + ((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.marketTax) != null ? _b2 : 0);
+      }, 0)
+    },
+    anomalies: anomalies.slice(0, 10)
+  };
+}
+function computeInsights(s) {
+  const out = [];
+  if (s.players.total === 0) return out;
+  const shortList = (names) => names.length > 4 ? `${names.slice(0, 4).join(", ")} et ${names.length - 4} autre(s)` : names.join(", ");
+  const neverResearched = s.technologies.filter((t) => t.researchedPct === 0).map((t) => t.name);
+  if (neverResearched.length > 0) out.push(`Technologies que personne n'a recherch\xE9es : ${shortList(neverResearched)}.`);
+  for (const u of s.units) {
+    if (u.unlockedPct >= 30 && u.ownersPct === 0) out.push(`Unit\xE9 \xAB ${u.name} \xBB : d\xE9bloqu\xE9e par ${u.unlockedPct} % des joueurs mais jamais construite.`);
+  }
+  for (const b of s.buildings) {
+    if (b.maxedPct >= 50) out.push(`B\xE2timent \xAB ${b.name} \xBB : au niveau max chez ${b.maxedPct} % des joueurs \u2014 ajouter des niveaux ?`);
+  }
+  const idle = s.missions.filter((m) => m.running === 0).map((m) => m.name);
+  if (idle.length > 0 && idle.length < s.missions.length) out.push(`Missions lanc\xE9es par personne en ce moment : ${shortList(idle)}.`);
+  const { attacks, outcomes } = s.combat;
+  if (attacks >= 5 && outcomes.defender_win / attacks > 0.7) out.push("Les d\xE9fenseurs gagnent plus de 70 % des combats : l'attaque est peut-\xEAtre trop faible.");
+  if (attacks >= 5 && outcomes.attacker_win / attacks > 0.85) out.push("Les attaquants gagnent plus de 85 % des combats : la d\xE9fense est peut-\xEAtre trop faible.");
+  if (s.players.active7d > 0 && attacks === 0) out.push(`Aucun combat depuis ${s.combat.windowDays} jours.`);
+  if (s.players.total >= 5 && s.players.active7d / s.players.total < 0.4) out.push("Moins de 40 % des joueurs sont venus cette semaine.");
+  for (const u of s.balance.dominantUnits) {
+    if (u.attacks >= 5 && u.winPct >= 85) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : ${u.winPct} % de victoires sur ${u.attacks} attaques \u2014 trop efficace ?`);
+    if (u.attacks >= 5 && u.winPct <= 20) out.push(`Flottes domin\xE9es par \xAB ${u.name} \xBB : seulement ${u.winPct} % de victoires \u2014 trop faible ?`);
+  }
+  for (const f of s.balance.factions) {
+    if (f.raids >= 5 && f.repelledPct >= 90) out.push(`${f.name} : ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop faible ?`);
+    if (f.raids >= 5 && f.repelledPct <= 20) out.push(`${f.name} : seulement ${f.repelledPct} % des raids repouss\xE9s \u2014 faction trop forte ?`);
+  }
+  if (s.balance.anomalies.length > 0) out.push(`${s.balance.anomalies.length} stock(s) anormalement \xE9lev\xE9(s) \xE0 v\xE9rifier (section \xC9quilibrage).`);
+  return out;
+}
+
 // src/game/reset.ts
 var DEFAULT_RESET_OPTIONS = {
   xp: true,
@@ -7702,7 +8410,8 @@ var GAME_FIELDS = [
   "synthesis",
   "profileStyle",
   "seasonPass",
-  "referral"
+  "referral",
+  "vacation"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
@@ -7786,7 +8495,7 @@ function utcDayStart(now) {
 }
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords"];
 function withFixedUnits(units) {
   return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
 }
@@ -7814,12 +8523,13 @@ function defaultGameContent() {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
+    warlords: defaultWarlordsConfig(),
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
 var current = defaultGameContent();
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -7829,24 +8539,25 @@ function applyGameContent(overrides) {
     factions: (_e = overrides.factions) != null ? _e : defaults.factions,
     ranks: (_f = overrides.ranks) != null ? _f : defaults.ranks,
     achievements: (_g = overrides.achievements) != null ? _g : defaults.achievements,
+    warlords: (_h = overrides.warlords) != null ? _h : defaults.warlords,
     rules: {
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_i = (_h = overrides.rules) == null ? void 0 : _h.pvp) != null ? _i : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_k = (_j = overrides.rules) == null ? void 0 : _j.combat) != null ? _k : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_m = (_l = overrides.rules) == null ? void 0 : _l.economy) != null ? _m : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_o = (_n = overrides.rules) == null ? void 0 : _n.fleets) != null ? _o : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_q = (_p = overrides.rules) == null ? void 0 : _p.spy) != null ? _q : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_s = (_r = overrides.rules) == null ? void 0 : _r.debris) != null ? _s : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_u = (_t = overrides.rules) == null ? void 0 : _t.patrol) != null ? _u : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_w = (_v = overrides.rules) == null ? void 0 : _v.events) != null ? _w : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_y = (_x = overrides.rules) == null ? void 0 : _x.seasons) != null ? _y : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_A = (_z = overrides.rules) == null ? void 0 : _z.alliances) != null ? _A : {}),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_C = (_B = overrides.rules) == null ? void 0 : _B.pirates) != null ? _C : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_E = (_D = overrides.rules) == null ? void 0 : _D.market) != null ? _E : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_G = (_F = overrides.rules) == null ? void 0 : _F.expeditions) != null ? _G : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_J = (_I = (_H = overrides.rules) == null ? void 0 : _H.expeditions) == null ? void 0 : _I.weights) != null ? _J : {})
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_j = (_i = overrides.rules) == null ? void 0 : _i.pvp) != null ? _j : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_l = (_k = overrides.rules) == null ? void 0 : _k.combat) != null ? _l : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_n = (_m = overrides.rules) == null ? void 0 : _m.economy) != null ? _n : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_p = (_o = overrides.rules) == null ? void 0 : _o.fleets) != null ? _p : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_r = (_q = overrides.rules) == null ? void 0 : _q.spy) != null ? _r : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_t = (_s = overrides.rules) == null ? void 0 : _s.debris) != null ? _t : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_v = (_u = overrides.rules) == null ? void 0 : _u.patrol) != null ? _v : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_x = (_w = overrides.rules) == null ? void 0 : _w.events) != null ? _x : {}),
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_z = (_y = overrides.rules) == null ? void 0 : _y.seasons) != null ? _z : {}),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_B = (_A = overrides.rules) == null ? void 0 : _A.alliances) != null ? _B : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_D = (_C = overrides.rules) == null ? void 0 : _C.pirates) != null ? _D : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_F = (_E = overrides.rules) == null ? void 0 : _E.market) != null ? _F : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_H = (_G = overrides.rules) == null ? void 0 : _G.expeditions) != null ? _H : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_K = (_J = (_I = overrides.rules) == null ? void 0 : _I.expeditions) == null ? void 0 : _J.weights) != null ? _K : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_L = (_K = overrides.rules) == null ? void 0 : _K.leviathan) != null ? _L : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_N = (_M = overrides.rules) == null ? void 0 : _M.wars) != null ? _N : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_M = (_L = overrides.rules) == null ? void 0 : _L.leviathan) != null ? _M : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_O = (_N = overrides.rules) == null ? void 0 : _N.wars) != null ? _O : {})
     }
   };
   setBuildings(content.buildings);
@@ -7857,6 +8568,7 @@ function applyGameContent(overrides) {
   setFactions(content.factions);
   setRanks(content.ranks);
   setAchievements(content.achievements);
+  setWarlords(content.warlords);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -8115,12 +8827,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY5 = 864e5;
+var DAY6 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY5) * DAY5;
-  const startMs = midnight - (day + 6) % 7 * DAY5;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY5 };
+  const midnight = Math.floor(now / DAY6) * DAY6;
+  const startMs = midnight - (day + 6) % 7 * DAY6;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY6 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
@@ -8214,7 +8926,7 @@ var DIPLOMACY_RULES = {
   maxPacts: 3,
   messageMax: 500
 };
-var HOUR7 = 36e5;
+var HOUR8 = 36e5;
 function pactStatusAt(p, now) {
   return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
 }
@@ -8278,7 +8990,7 @@ function breakPact(pact, own, actorUid, now) {
   if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
   if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
   assertLeader(own, actorUid, "rompre un pacte");
-  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR7, brokenByTag: own.tag });
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR8, brokenByTag: own.tag });
 }
 function sanitizePactMessage(raw) {
   const text = String(raw != null ? raw : "").trim();
@@ -8346,7 +9058,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR8 = 36e5;
+var HOUR9 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES2.includes(res)) return 1;
@@ -8379,7 +9091,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR8);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR9);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {

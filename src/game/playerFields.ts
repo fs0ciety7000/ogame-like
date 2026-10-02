@@ -37,6 +37,7 @@ export const GAME_FIELDS = [
   "profileStyle",
   "seasonPass",
   "referral",
+  "vacation",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

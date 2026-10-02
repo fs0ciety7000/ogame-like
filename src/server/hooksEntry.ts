@@ -21,7 +21,7 @@ export { currentSeasonId, performSeasonReward, previousSeasonId, seasonRewardFor
 export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { parseResetOptions, resetPlayerState } from "@/game/reset";
-export { answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID, PIRATE_RULES, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";
+export { activeUltimatum, answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID, PIRATE_RULES, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
@@ -84,3 +84,38 @@ export { TUTORIAL_RAID } from "@/game/story";
 export function tutorialRaidPower(player: PlayerState): number {
   return Math.max(TUTORIAL_RAID_RULES.minPower, Math.round(homeDefensePower(player.units ?? {}, player.techLevels ?? {}) * TUTORIAL_RAID_RULES.powerPct));
 }
+export {
+  activeVendetta,
+  canMessage,
+  emptyRuntime,
+  empirePower,
+  findWarlord,
+  growWarlord,
+  inVendetta,
+  isWarlordUid,
+  lossesPower,
+  nearestWarlord,
+  nextAttackDelayMs,
+  nextMarketDelayMs,
+  openVendetta,
+  pickWarlordTarget,
+  recordVendettaDamage,
+  settleVendettas,
+  shatterWarlord,
+  vendettaTitle,
+  vendettaWinners,
+  WARLORD_RULES,
+  warlordByUid,
+  warlordFleetPower,
+  warlordLine,
+  warlordLootCap,
+  warlordOffer,
+  warlordPublic,
+  warlordReference,
+  warlordsConfig,
+  warlordsState,
+  warlordTravelMs,
+  warlordUid,
+} from "@/game/warlords";
+export { endVacation, onVacation, startVacation, VACATION_RULES } from "@/game/vacation";
+export { productionHours } from "@/game/pirates";

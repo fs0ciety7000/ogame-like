@@ -59,7 +59,7 @@ function loadPlayer(txApp, game, uid, missingMessage) {
 function savePlayer(txApp, game, loaded, player, queues) {
   // v3.8 : progression du défi hebdomadaire (écart des compteurs suivis).
   try {
-    recordChallengeProgress(txApp, game, toPlain(loaded.rec), player);
+    if (!player.npc) recordChallengeProgress(txApp, game, toPlain(loaded.rec), player);
   } catch (err) {
     console.log(`[cosmic] défi hebdomadaire : ${err}`);
   }
@@ -72,8 +72,16 @@ function savePlayer(txApp, game, loaded, player, queues) {
   txApp.save(loaded.queuesRec);
 }
 
+/** v4.2 : seigneur de guerre (enregistrement players marqué npc). */
+function isNpcUid(txApp, uid) {
+  if (!uid || String(uid).indexOf("npc") !== 0) return false;
+  const rec = findOrNull(txApp, "players", uid);
+  return !!rec && rec.getString("npc") !== "";
+}
+
 function notify(txApp, uid, notifications) {
   if (!notifications || notifications.length === 0) return;
+  if (isNpcUid(txApp, uid)) return;
   const collection = txApp.findCollectionByNameOrId("notifications");
   notifications.forEach((n) => {
     const rec = new Record(collection);
@@ -165,7 +173,7 @@ function logAdminAction(e, action, before, after) {
 
 /* ---------- Fiche publique (collection profiles) ---------- */
 
-const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs"];
+const PROFILE_FIELDS = ["pseudo", "xp", "seasonId", "seasonXp", "createdAtMs", "lastDefeatAtMs", "lastAttackAtMs", "allianceId", "activeTitle", "ascensions", "ascendedAtMs", "npc"];
 
 /** Recopie les champs publics d'un joueur dans sa fiche publique : la fiche
  *  complète (ressources, flotte…) n'est plus lisible par les autres. */
@@ -201,6 +209,13 @@ function syncProfile(app, player) {
   }
   if (current !== JSON.stringify(colonies)) {
     profile.set("planets", colonies);
+    changed = true;
+  }
+  // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
+  const vac = parseJsonField(player, "vacation", null);
+  const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;
+  if (profile.getInt("vacationUntilMs") !== vacUntil) {
+    profile.set("vacationUntilMs", vacUntil);
     changed = true;
   }
   // v3.7 : faits d'armes publics (titres, succès, combats, Léviathan, guerres).
@@ -637,7 +652,7 @@ function aggressionStats(txApp, uid, now, windowDays) {
 /** Passage périodique : listes des factions, ultimatums expirés (raids).
  *  `uid` : un seul joueur ; `force` : identifiant de la faction à forcer. */
 function processPirates(game, now, uid, force) {
-  const recs = uid ? [findOrNull($app, "players", uid)].filter(Boolean) : $app.findAllRecords("players");
+  const recs = uid ? [findOrNull($app, "players", uid)].filter(Boolean) : $app.findRecordsByFilter("players", "npc = ''", "", 0, 0);
   let changed = 0;
   recs.forEach((candidate) => {
     try {
@@ -646,6 +661,8 @@ function processPirates(game, now, uid, force) {
         const rec = txApp.findRecordById("players", candidate.id);
         const player = toPlain(rec);
         player.uid = rec.id;
+        // v4.2 : ni seigneurs de guerre ni joueurs en vacances.
+        if (player.npc || game.onVacation(player, now)) return;
         const hunter = game.FACTIONS.filter((f) => f.enabled && f.trigger.type === "aggression");
         const windowDays = hunter.reduce((m, f) => Math.max(m, f.trigger.windowDays || 0), 0);
         const aggression = hunter.length > 0 ? aggressionStats(txApp, rec.id, now, windowDays) : null;
@@ -710,7 +727,9 @@ function resolveAttackArrival(txApp, game, rec, now) {
     const gf = fleetFromRecord(g);
     return { fleetId: g.id, ownerUid: gf.ownerUid, ownerPseudo: gf.ownerPseudo, units: owner.units || {}, techLevels: owner.techLevels || {}, fleet: gf.units };
   });
-  const result = defender
+  // v4.2 : seigneur parti (vendetta perdue) : la flotte rentre sans combattre.
+  const absent = defender && defender.player.npc ? warlordAbsence(txApp, game, defenderUid, now) : null;
+  const result = defender && !absent
     ? game.performAttack({
         now,
         attackerUid: fleet.ownerUid,
@@ -727,6 +746,8 @@ function resolveAttackArrival(txApp, game, rec, now) {
         garrisons,
         formation: rec.getString("formation"),
         boosts: fleet.boosts || undefined,
+        // v4.2 : butin d'un seigneur plafonné à 6 h de production de sa cible.
+        lootCap: attacker.player.npc ? game.warlordLootCap(defender.player) : undefined,
       })
     : { ok: false };
   if (!result.ok) {
@@ -746,6 +767,12 @@ function resolveAttackArrival(txApp, game, rec, now) {
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+  // v4.2 : seigneurs de guerre (vendetta, répliques).
+  try {
+    warlordAfterCombat(txApp, game, attacker, defender, result, now);
+  } catch (err) {
+    console.log(`[cosmic] seigneurs après combat : ${err}`);
+  }
   // v3.2 : points de guerre si les deux alliances sont en guerre.
   scoreWarBattle(txApp, game, attacker.rec.getString("allianceId"), defender.rec.getString("allianceId"), attacker.player.pseudo, defender.player.pseudo, result.combat.outcome, result.loot, now);
 
@@ -877,8 +904,11 @@ function launchFleetRequest(e) {
     }
     // v3.5 : une attaque ou un espionnage peut viser une colonie (<uid>-c<n>).
     const colonyOwner = mission === "attack" || mission === "spy" ? game.colonyOwnerUid(targetUid) : null;
+    if (game.onVacation(attacker.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour lancer une flotte.");
     if (mission === "attack" || mission === "spy" || mission === "garrison") {
       if (!db.findOrNull(txApp, "players", colonyOwner || targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
+      const gone = warlordAbsence(txApp, game, targetUid, now);
+      if (gone) throw new BadRequestError(`${gone.name} a quitté le secteur après sa défaite : retour dans ${Math.ceil((gone.untilMs - now) / 3600000)} h.`);
       target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
@@ -998,7 +1028,7 @@ function closeSeason(game, now, seasonIdIn) {
     if (txApp.findRecordsByFilter("season_results", "seasonId = {:s}", "", 1, 0, { s: seasonId }).length > 0) return;
     applyContent(txApp, game);
     const entries = txApp
-      .findRecordsByFilter("players", "seasonId = {:s} || lastSeasonId = {:s}", "", 0, 0, { s: seasonId })
+      .findRecordsByFilter("players", "(seasonId = {:s} || lastSeasonId = {:s}) && npc = ''", "", 0, 0, { s: seasonId })
       .map((r) => {
         const p = toPlain(r);
         p.uid = r.id;
@@ -1260,7 +1290,7 @@ function adminReset(e) {
     targets = [rec.id];
   } else {
     if (String(req.confirm || "") !== "RESET") throw new BadRequestError("Confirmation incorrecte : tape RESET.");
-    targets = $app.findAllRecords("players").map((r) => r.id);
+    targets = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => r.id);
   }
 
   // Sauvegarde complète avant toute modification (annule le reset si elle échoue).
@@ -2042,7 +2072,7 @@ function leviathanTick(now) {
     }
     const win = game.leviathanWindow(now);
     if (win && (!state || state.id !== win.id) && (!state || state.status !== "active")) {
-      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
       state = game.spawnLeviathan(win, actives, state);
       changed = true;
       actives.forEach((p) => {
@@ -2077,7 +2107,7 @@ function adminLeviathan(e) {
     let state = readLeviathan(txApp, game);
     if (action === "start") {
       if (state && state.status === "active" && now < state.endMs) throw new BadRequestError("Le Léviathan est déjà là.");
-      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
       state = game.spawnLeviathan({ id: `lev-manual-${now}`, startMs: now, endMs: now + game.LEVIATHAN_RULES.durationHours * 3600000 }, actives, state);
     } else if (action === "stop") {
       if (!state || state.status !== "active") throw new BadRequestError("Aucun Léviathan en cours.");
@@ -2131,6 +2161,7 @@ function marketCreate(e) {
     applyContent(txApp, game);
     const now = Date.now();
     const seller = loadFlushed(txApp, game, uid);
+    if (game.onVacation(seller.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
     let offer;
     try {
@@ -2178,6 +2209,7 @@ function marketAccept(e) {
     if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
     const buyer = loadFlushed(txApp, game, uid);
     const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
     let res;
@@ -2198,6 +2230,14 @@ function marketAccept(e) {
         read: false,
       },
     ]));
+    // v4.2 : un marchand seigneur de guerre remercie (une fois par jour).
+    if (seller.player.npc) {
+      const lord = game.findWarlord(seller.player.npc);
+      if (lord) {
+        const st = readWarlordsState(txApp, game);
+        if (warlordSay(txApp, game, st, lord, Object.assign({}, buyer.player, { uid }), "market", now, false)) writeWarlordsState(txApp, st);
+      }
+    }
     rec.set("status", "filled");
     rec.set("buyerId", uid);
     rec.set("buyerPseudo", buyer.player.pseudo);
@@ -2684,7 +2724,7 @@ function scanAnomalies(now) {
   applyContent($app, game);
   const flagged = [];
   for (let page = 0; page < 20; page++) {
-    const recs = $app.findRecordsByFilter("players", "id != ''", "id", 200, page * 200);
+    const recs = $app.findRecordsByFilter("players", "npc = ''", "id", 200, page * 200);
     recs.forEach((r) => {
       const p = toPlain(r);
       const list = game.detectResourceAnomalies(p, since);
@@ -2814,6 +2854,21 @@ function messageSend(e) {
   const rec = new Record($app.findCollectionByNameOrId("private_messages"));
   rec.load({ fromUid: uid, fromPseudo: sender.getString("pseudo"), toUid: to, toPseudo: target.getString("pseudo"), text, createdAtMs: now, readAtMs: 0 });
   $app.save(rec);
+  // v4.2 : un seigneur de guerre répond par une réplique toute faite (une fois par jour).
+  if (target.getString("npc")) {
+    try {
+      applyContent($app, game);
+      const lord = game.findWarlord(target.getString("npc"));
+      if (lord) {
+        $app.runInTransaction((txApp) => {
+          const st = readWarlordsState(txApp, game);
+          if (warlordSay(txApp, game, st, lord, humanPlain(sender), "reply", now + 1, false)) writeWarlordsState(txApp, st);
+        });
+      }
+    } catch (_) {
+      /* facultatif */
+    }
+  }
   if (!pending) {
     try {
       notify($app, to, [{ kind: "message", title: `Message de ${sender.getString("pseudo")}`, message: text.length > 140 ? `${text.slice(0, 140)}…` : text, createdAtMs: now, read: false, link: `/game/messages?with=${uid}&pseudo=${encodeURIComponent(sender.getString("pseudo"))}` }]);
@@ -3048,7 +3103,7 @@ function challengeTick(now) {
 
     const week = game.weekWindow(now);
     if (!state.current && (!state.previous || state.previous.id !== week.id) && !game.isLeviathanWeek(now)) {
-      const active = txApp.countRecords("players", $dbx.exp("resourcesUpdatedAtMs >= {:since}", { since: now - game.CHALLENGE_RULES.activeDays * 86400000 }));
+      const active = txApp.countRecords("players", $dbx.exp("resourcesUpdatedAtMs >= {:since} AND npc = ''", { since: now - game.CHALLENGE_RULES.activeDays * 86400000 }));
       state = Object.assign({}, state, { current: game.startChallenge(now, active, state.previous ? state.previous.type : null) });
       changed = true;
     }
@@ -3213,7 +3268,7 @@ function eliteTick(now) {
     }
     const win = game.eliteWindow(now);
     if (!state || (state.id !== win.id && state.status !== "active")) {
-      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
       state = game.spawnElite(now, actives);
       changed = true;
     }
@@ -3555,4 +3610,468 @@ function victoryCardPage(e) {
   return e.html(200, html);
 }
 
-module.exports = { createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Seigneurs de guerre (v4.2) ---------- */
+
+const WARLORDS_STATE_KEY = "warlords_state";
+
+function readWarlordsState(txApp, game) {
+  let rec = null;
+  try {
+    rec = (txApp || $app).findFirstRecordByData("game_config", "key", WARLORDS_STATE_KEY);
+  } catch (_) {
+    rec = null;
+  }
+  return game.warlordsState(rec ? toPlain(rec).data : null);
+}
+
+function writeWarlordsState(txApp, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", WARLORDS_STATE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", WARLORDS_STATE_KEY);
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+function humanPlain(rec) {
+  const p = toPlain(rec);
+  p.uid = rec.id;
+  return p;
+}
+
+/** Message privé d'un seigneur (une fois par jour et par joueur, sauf `force`). */
+function warlordSay(txApp, game, state, d, human, key, now, force) {
+  if (!d || !human || human.npc) return false;
+  const prefs = human.notifPrefs || {};
+  if (prefs.warlords === false) return false;
+  if (!force && !game.canMessage(state, d.id, human.uid, now)) return false;
+  const text = game.warlordLine(d, key, human.pseudo || "commandant", Math.random);
+  if (!text) return false;
+  const from = game.warlordUid(d.id);
+  const rec = new Record(txApp.findCollectionByNameOrId("private_messages"));
+  rec.load({ fromUid: from, fromPseudo: d.name, toUid: human.uid, toPseudo: human.pseudo || "", text, createdAtMs: now, readAtMs: 0 });
+  txApp.save(rec);
+  state.lastMsg[`${d.id}:${human.uid}`] = now;
+  notify(txApp, human.uid, [{ kind: "message", title: `Message de ${d.name}`, message: text.length > 140 ? `${text.slice(0, 140)}…` : text, createdAtMs: now, read: false, link: `/game/messages?with=${from}&pseudo=${encodeURIComponent(d.name)}` }]);
+  return true;
+}
+
+/** Crée l'empire d'un seigneur s'il n'existe pas encore. */
+function ensureWarlordRecord(txApp, game, d, now) {
+  const uid = game.warlordUid(d.id);
+  let rec = findOrNull(txApp, "players", uid);
+  if (!rec) {
+    const profile = game.newPlayerProfile(uid, d.name, now);
+    rec = new Record(txApp.findCollectionByNameOrId("players"));
+    const data = Object.assign({}, profile.player, { id: uid, npc: d.id, createdAtMs: now - 30 * 86400000 });
+    delete data.uid;
+    rec.load(data);
+    txApp.save(rec);
+    if (!findOrNull(txApp, "queues", uid)) {
+      const q = new Record(txApp.findCollectionByNameOrId("queues"));
+      q.load(Object.assign({ id: uid }, profile.queues));
+      txApp.save(q);
+    }
+  } else if (rec.getString("pseudo") !== d.name || rec.getString("npc") !== d.id) {
+    rec.set("pseudo", d.name);
+    rec.set("npc", d.id);
+    txApp.save(rec);
+  }
+  return rec;
+}
+
+/** Retire un seigneur désactivé (empire, fiche, offres, flottes). */
+function removeWarlord(txApp, uid) {
+  const rec = findOrNull(txApp, "players", uid);
+  if (!rec) return false;
+  txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 50, 0, { u: uid }).forEach((o) => {
+    o.set("status", "cancelled");
+    txApp.save(o);
+  });
+  txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 50, 0, { u: uid }).forEach((f) => {
+    f.set("status", "done");
+    txApp.save(f);
+  });
+  ["queues", "profiles"].forEach((c) => {
+    const r = findOrNull(txApp, c, uid);
+    if (r) txApp.delete(r);
+  });
+  txApp.delete(rec);
+  return true;
+}
+
+/** Lancement d'une attaque de seigneur (trajet de 3 à 5 h). */
+function launchWarlordAttack(txApp, game, d, npc, pick, now) {
+  const target = loadPlayer(txApp, game, pick.target.player.uid);
+  // L'écart d'XP ne protège pas des seigneurs : ils choisissent eux-mêmes des cibles à leur portée.
+  const owner = Object.assign({}, npc.player, { xp: 0 });
+  const out = game.performLaunch({
+    mission: "attack",
+    now,
+    owner,
+    ownerQueues: npc.queues,
+    target: target.player,
+    fleet: pick.fleet,
+    lastAttackOnTargetMs: lastAttackOnTarget(txApp, npc.player.uid, target.player.uid),
+    atWar: false,
+  });
+  out.attacker.xp = npc.player.xp;
+  savePlayer(txApp, game, npc, out.attacker, out.attackerQueues);
+  const arrive = now + game.warlordTravelMs(Math.random);
+  const fleetRec = new Record(txApp.findCollectionByNameOrId("fleets"));
+  fleetRec.load(Object.assign({}, out.fleet, { arriveAtMs: arrive }));
+  fleetRec.set("formation", "balanced");
+  txApp.save(fleetRec);
+  const ships = Object.keys(pick.fleet).reduce((a, k) => a + pick.fleet[k], 0);
+  const minutes = Math.round((arrive - now) / 60000);
+  notify(txApp, target.player.uid, [
+    {
+      kind: "fleet",
+      title: "Flotte hostile en approche !",
+      message: `${d.name}, seigneur de guerre, t'envoie ${game.formatInt(ships)} vaisseaux : impact dans ${Math.floor(minutes / 60)} h ${minutes % 60} min. Renforce tes défenses !`,
+      createdAtMs: now,
+      read: false,
+    },
+  ]);
+  return fleetRec;
+}
+
+/** Vendetta gagnée : récompenses, seigneur affaibli et absent 7 jours. */
+function finishVendettaWon(txApp, game, state, d, v, now) {
+  const uid = game.warlordUid(d.id);
+  if (findOrNull(txApp, "players", uid)) {
+    const npc = loadPlayer(txApp, game, uid);
+    game.shatterWarlord(npc.player);
+    savePlayer(txApp, game, npc, npc.player, npc.queues);
+  }
+  const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+  rt.absentUntilMs = now + game.WARLORD_RULES.vendetta.awayDays * 86400000;
+  state.byId[d.id] = rt;
+  // Flottes encore en route vers lui : elles rentrent sans combattre.
+  txApp.findRecordsByFilter("fleets", 'targetUid = {:u} && status = "outbound"', "", 100, 0, { u: uid }).forEach((f) => {
+    f.set("status", "returning");
+    f.set("returnAtMs", now + Math.max(0, f.getFloat("arriveAtMs") - f.getFloat("departAtMs")));
+    f.set("outcome", "none");
+    txApp.save(f);
+  });
+  const title = game.vendettaTitle(d);
+  game.vendettaWinners(v).forEach((w) => {
+    if (!findOrNull(txApp, "players", w)) return;
+    const loaded = loadPlayer(txApp, game, w);
+    const p = loaded.player;
+    const relic = game.rollRelic(`vendetta:${d.id}`, now, Math.random, d.tier === "strong" ? "rare" : "common");
+    const kept = game.addRelic(p, relic);
+    if (!(p.titles || []).some((t) => t.label === title)) p.titles = (p.titles || []).concat([{ label: title, seasonId: "vendetta", rank: 1 }]);
+    game.addPassPoints(p, "vendetta", now);
+    savePlayer(txApp, game, loaded, p, loaded.queues);
+    notify(txApp, w, [
+      {
+        kind: "achievement",
+        title: "Vendetta gagnée !",
+        message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.`,
+        createdAtMs: now,
+        read: false,
+        link: "/game/seigneurs",
+      },
+    ]);
+  });
+  if (findOrNull(txApp, "players", v.ownerUid)) warlordSay(txApp, game, state, d, humanPlain(txApp.findRecordById("players", v.ownerUid)), "vendettaWon", now, true);
+}
+
+/** Après un combat impliquant un seigneur : vendetta, répliques. */
+function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
+  const atkDef = attacker.player.npc ? game.findWarlord(attacker.player.npc) : null;
+  const defDef = defender.player.npc ? game.findWarlord(defender.player.npc) : null;
+  if (!atkDef && !defDef) return;
+  const state = readWarlordsState(txApp, game);
+  const outcome = result.combat.outcome;
+  let won = null;
+  let lord = null;
+  if (defDef) {
+    lord = defDef;
+    const dealt = game.lossesPower(result.defender, result.combat.defenderLosses || {});
+    won = game.recordVendettaDamage(state, defDef.id, attacker.player.uid, attacker.rec.getString("allianceId"), dealt, now);
+    if (outcome === "attacker_win") warlordSay(txApp, game, state, defDef, humanPlain(attacker.rec), "raided", now, false);
+  } else if (atkDef) {
+    lord = atkDef;
+    const dealt = game.lossesPower(result.attacker, result.combat.attackerLosses || {});
+    won = game.recordVendettaDamage(state, atkDef.id, defender.player.uid, defender.rec.getString("allianceId"), dealt, now);
+    warlordSay(txApp, game, state, atkDef, humanPlain(defender.rec), outcome === "attacker_win" ? "won" : "repelled", now, false);
+  }
+  if (won) finishVendettaWon(txApp, game, state, lord, won, now);
+  writeWarlordsState(txApp, state);
+}
+
+/** Seigneur absent (vendetta perdue) : on ne peut ni l'attaquer ni l'espionner. */
+function warlordAbsence(txApp, game, uid, now) {
+  if (!uid || String(uid).indexOf("npc") !== 0) return null;
+  const d = game.warlordByUid(uid);
+  if (!d) return null;
+  const rt = readWarlordsState(txApp, game).byId[d.id];
+  return rt && rt.absentUntilMs > now ? { name: d.name, untilMs: rt.absentUntilMs } : null;
+}
+
+/** Tâche horaire : croissance, attaques, marché, premiers contacts, vendettas échues. */
+function warlordTick(now, opts) {
+  const game = loadGame();
+  const summary = { grown: 0, removed: 0, attacks: 0, offers: 0, contacts: 0, lost: 0 };
+  const forceAttack = opts && opts.forceAttack ? String(opts.forceAttack) : "";
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const cfg = game.warlordsConfig();
+    const state = readWarlordsState(txApp, game);
+    const humans = txApp
+      .findRecordsByFilter("players", "npc = '' && resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - game.WARLORD_RULES.activeDays * 86400000 })
+      .map(humanPlain);
+    const ref = game.warlordReference(humans);
+
+    // Vendettas échues : perdues, riposte programmée.
+    game.settleVendettas(state, now).forEach((v) => {
+      const d = game.findWarlord(v.warlordId);
+      summary.lost++;
+      if (!d || !findOrNull(txApp, "players", v.ownerUid)) return;
+      notify(txApp, v.ownerUid, [{ kind: "event", title: "Vendetta perdue", message: `${d.name} a tenu 72 h : il prépare sa riposte.`, createdAtMs: now, read: false, link: "/game/seigneurs" }]);
+      warlordSay(txApp, game, state, d, humanPlain(txApp.findRecordById("players", v.ownerUid)), "vendettaLost", now, true);
+    });
+
+    const active = [];
+    cfg.defs.forEach((d) => {
+      const uid = game.warlordUid(d.id);
+      try {
+        if (!cfg.settings.enabled || !d.enabled) {
+          if (removeWarlord(txApp, uid)) summary.removed++;
+          delete state.byId[d.id];
+          return;
+        }
+        ensureWarlordRecord(txApp, game, d, now);
+        const loaded = loadPlayer(txApp, game, uid);
+        const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+        const npc = flushed.player;
+        npc.npc = d.id;
+        const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+        if (rt.absentUntilMs > now) {
+          rt.lastTickMs = now;
+          state.byId[d.id] = rt;
+          savePlayer(txApp, game, loaded, npc, flushed.queues);
+          return;
+        }
+        state.byId[d.id] = game.growWarlord(npc, d, ref, rt, now);
+        savePlayer(txApp, game, loaded, npc, flushed.queues);
+        summary.grown++;
+        active.push(d);
+      } catch (err) {
+        console.log(`[cosmic] seigneur ${d.id} : ${err}`);
+      }
+    });
+
+    // Attaques (agressifs, opportunistes, ripostes de vendetta).
+    active.forEach((d) => {
+      const uid = game.warlordUid(d.id);
+      const rt = state.byId[d.id];
+      try {
+        const reprisals = state.reprisals.filter((r) => r.warlordId === d.id);
+        const attacks = d.personality === "aggressive" || d.personality === "opportunist";
+        const due = forceAttack === d.id || (attacks && cfg.settings.attackFrequency > 0 && now >= rt.nextAttackAtMs);
+        if (reprisals.length === 0 && !due) return;
+        const npc = loadPlayer(txApp, game, uid);
+        const pool = reprisals.length > 0 ? humans.filter((h) => reprisals.some((r) => r.uid === h.uid)) : humans;
+        const candidates = pool.map((p) => ({
+          player: p,
+          lastAttackOnTargetMs: lastAttackOnTarget(txApp, uid, p.uid),
+          lastWarlordHitMs: state.hits[p.uid] || 0,
+          reprisal: reprisals.some((r) => r.uid === p.uid),
+        }));
+        const pick = game.pickWarlordTarget(d, npc.player, candidates, now, Math.random);
+        // Une riposte qui ne trouve pas sa cible abandonne au bout de 48 h.
+        state.reprisals = state.reprisals.filter((r) => r.warlordId !== d.id || now - r.dueAtMs < 48 * 3600000);
+        if (!pick) {
+          if (due) rt.nextAttackAtMs = now + game.WARLORD_RULES.retryHours * 3600000;
+          return;
+        }
+        launchWarlordAttack(txApp, game, d, npc, pick, now);
+        state.hits[pick.target.player.uid] = now;
+        state.reprisals = state.reprisals.filter((r) => !(r.warlordId === d.id && r.uid === pick.target.player.uid));
+        if (due) rt.nextAttackAtMs = now + game.nextAttackDelayMs(Math.random);
+        summary.attacks++;
+      } catch (err) {
+        console.log(`[cosmic] attaque du seigneur ${d.id} : ${err}`);
+        rt.nextAttackAtMs = now + game.WARLORD_RULES.retryHours * 3600000;
+      }
+    });
+
+    // Marchands : offres au marché.
+    active
+      .filter((d) => d.personality === "merchant")
+      .forEach((d) => {
+        const uid = game.warlordUid(d.id);
+        const rt = state.byId[d.id];
+        if (now < rt.nextMarketAtMs) return;
+        rt.nextMarketAtMs = now + game.nextMarketDelayMs(Math.random);
+        try {
+          const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
+          if (open >= game.MARKET_RULES.maxOpenOffers) return;
+          const npc = loadPlayer(txApp, game, uid);
+          const wanted = game.warlordOffer(npc.player, Math.random);
+          if (!wanted) return;
+          const offer = game.createOffer(npc.player, wanted, open, now);
+          savePlayer(txApp, game, npc, npc.player, npc.queues);
+          const rec = new Record(txApp.findCollectionByNameOrId("market_offers"));
+          rec.load({
+            sellerId: uid,
+            sellerPseudo: d.name,
+            sellerAllianceId: "",
+            giveRes: offer.giveRes,
+            giveAmount: offer.giveAmount,
+            wantRes: offer.wantRes,
+            wantAmount: offer.wantAmount,
+            status: "open",
+            createdAtMs: now,
+            expiresAtMs: offer.expiresAtMs,
+            buyerId: "",
+            buyerPseudo: "",
+            filledAtMs: 0,
+            tax: 0,
+          });
+          txApp.save(rec);
+          summary.offers++;
+        } catch (err) {
+          console.log(`[cosmic] offre du seigneur ${d.id} : ${err}`);
+        }
+      });
+
+    // Premier contact : le seigneur le plus proche se présente aux joueurs arrivés à Bronze I.
+    if (active.length > 0) {
+      humans
+        .filter((h) => (h.xp || 0) >= game.WARLORD_RULES.minTargetXp && !state.contacted[h.uid])
+        .slice(0, 20)
+        .forEach((h) => {
+          const d = game.nearestWarlord(h.uid, active);
+          state.contacted[h.uid] = now;
+          if (d && warlordSay(txApp, game, state, d, h, "contact", now, true)) summary.contacts++;
+        });
+    }
+
+    // Ménage : touches et messages de plus de 7 jours.
+    const week = now - 7 * 86400000;
+    Object.keys(state.hits).forEach((k) => state.hits[k] < week && delete state.hits[k]);
+    Object.keys(state.lastMsg).forEach((k) => state.lastMsg[k] < week && delete state.lastMsg[k]);
+    writeWarlordsState(txApp, state);
+  });
+  return summary;
+}
+
+/** GET /api/cosmic/warlords — fiches publiques des seigneurs et vendettas en cours. */
+function warlordsList(e) {
+  const game = loadGame();
+  applyContent($app, game);
+  const now = Date.now();
+  const cfg = game.warlordsConfig();
+  const state = readWarlordsState($app, game);
+  const list = cfg.settings.enabled
+    ? cfg.defs
+        .filter((d) => d.enabled)
+        .map((d) => {
+          const rec = findOrNull($app, "players", game.warlordUid(d.id));
+          return game.warlordPublic(d, rec ? humanPlain(rec) : null, state.byId[d.id], state, now);
+        })
+    : [];
+  const history = state.vendettas.filter((v) => v.status !== "active").slice(-10);
+  return e.json(200, { warlords: list, history, rules: { vendetta: game.WARLORD_RULES.vendetta } });
+}
+
+/** POST /api/cosmic/warlords { action: "vendetta", warlordId, scope } */
+function warlordsRequest(e) {
+  const game = loadGame();
+  const req = body(e);
+  const uid = e.auth.id;
+  let out = null;
+  if (String(req.action || "") !== "vendetta") throw new BadRequestError("Action inconnue.");
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const d = game.findWarlord(String(req.warlordId || ""));
+    if (!d || !d.enabled || !game.warlordsConfig().settings.enabled) throw new NotFoundError("Seigneur introuvable.");
+    const npcUid = game.warlordUid(d.id);
+    if (!findOrNull(txApp, "players", npcUid)) throw new BadRequestError(`${d.name} n'est pas encore arrivé dans le secteur.`);
+    const state = readWarlordsState(txApp, game);
+    const me = loadFlushed(txApp, game, uid);
+    if (game.onVacation(me.player, now)) throw new BadRequestError("Tu es en vacances.");
+    me.player.allianceId = me.loaded.rec.getString("allianceId");
+    const cost = game.productionHours(me.player, game.WARLORD_RULES.vendetta.costHours);
+    Object.keys(cost).forEach((res) => {
+      if ((me.player.resources[res] || 0) < cost[res]) throw new BadRequestError(`Une vendetta coûte ${game.WARLORD_RULES.vendetta.costHours} h de production : il te manque des ressources.`);
+    });
+    const npc = loadPlayer(txApp, game, npcUid);
+    let v;
+    try {
+      v = game.openVendetta(state, d, me.player, req.scope === "alliance" ? "alliance" : "player", npc.player, state.byId[d.id], now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    Object.keys(cost).forEach((res) => (me.player.resources[res] -= cost[res]));
+    savePlayer(txApp, game, me.loaded, me.player, me.queues);
+    notify(txApp, uid, me.notifications);
+    if (v.allianceId) notifyAlliance(txApp, v.allianceId, "Vendetta d'alliance", `${me.player.pseudo} déclare une vendetta à ${d.name} : 72 h pour lui détruire ${game.formatInt(v.goal)} de puissance.`, now);
+    warlordSay(txApp, game, state, d, Object.assign({}, me.player, { uid }), "vendettaOpen", now, true);
+    writeWarlordsState(txApp, state);
+    out = v;
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/admin/warlords { action: "tick" | "attack" | "reset", warlordId } */
+function adminWarlords(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const action = String(req.action || "tick");
+  const id = String(req.warlordId || "");
+  if (action === "reset") {
+    $app.runInTransaction((txApp) => {
+      applyContent(txApp, game);
+      const d = game.findWarlord(id);
+      if (!d) throw new NotFoundError("Seigneur introuvable.");
+      removeWarlord(txApp, game.warlordUid(d.id));
+      const state = readWarlordsState(txApp, game);
+      delete state.byId[d.id];
+      writeWarlordsState(txApp, state);
+    });
+  }
+  const summary = warlordTick(Date.now(), action === "attack" ? { forceAttack: id } : null);
+  return e.json(200, summary);
+}
+
+/** POST /api/cosmic/vacation { days } — départ en vacances (le retour passe par l'action vacationEnd). */
+function vacationRequest(e) {
+  const game = loadGame();
+  const req = body(e);
+  const uid = e.auth.id;
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const me = loadFlushed(txApp, game, uid);
+    const fleetsAway = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 10, 0, { u: uid }).length;
+    const hostileIncoming = txApp.findRecordsByFilter("fleets", '(targetUid = {:u} || targetOwnerUid = {:u}) && status = "outbound" && (mission = "attack" || mission = "pirate")', "", 10, 0, { u: uid }).length;
+    const last = txApp.findRecordsByFilter("battle_reports", "defenderUid = {:u}", "-timestamp", 1, 0, { u: uid });
+    const ctx = {
+      fleetsAway,
+      hostileIncoming,
+      lastAttackedAtMs: last.length > 0 ? last[0].getFloat("timestamp") : 0,
+      ultimatum: !!game.activeUltimatum(me.player, now),
+    };
+    try {
+      out = game.startVacation(me.player, req.days, ctx, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, me.loaded, me.player, me.queues);
+    notify(txApp, uid, me.notifications);
+  });
+  return e.json(200, out);
+}
+
+module.exports = { warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
