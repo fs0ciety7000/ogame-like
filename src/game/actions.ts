@@ -35,6 +35,7 @@ import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
 import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel";
 import { setProfileStyle } from "@/game/profile";
 import { addSeenAnnouncements } from "@/game/announcements";
+import { addPlanned, removePlanned } from "@/game/buildPlan";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -79,7 +80,9 @@ export type GameAction =
   | { type: "relicRecycle"; relicId: string }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } }
   | { type: "passClaim"; tier: number }
-  | { type: "seenAnnouncements"; ids: string[] };
+  | { type: "seenAnnouncements"; ids: string[] }
+  | { type: "planBuilding"; buildingId: string }
+  | { type: "unplanBuilding"; index: number };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -283,6 +286,13 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "setPosture":
       return setPosture(player, action.posture, now);
+
+    case "planBuilding":
+      return addPlanned(player, queues, action.buildingId, now);
+
+    case "unplanBuilding":
+      removePlanned(queues, action.index);
+      return { plan: queues.buildPlan };
 
     case "seenAnnouncements":
       player.announcementsSeen = addSeenAnnouncements(player.announcementsSeen, action.ids);

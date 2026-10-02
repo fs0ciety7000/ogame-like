@@ -29,7 +29,9 @@ import {
 } from "@/game/buildings";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ECONOMY_RULES } from "@/game/economy";
-import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
+import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
+import { BuildPlanCard } from "@/components/game/BuildPlanCard";
+import { buildPlan, nextPlannedLevel, planSlots } from "@/game/buildPlan";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -69,13 +71,27 @@ export function BuildingsPage() {
     }
   };
 
+  const handlePlan = async (buildingId: BuildingId) => {
+    setPending(buildingId);
+    try {
+      await planBuilding(buildingId);
+      toast.success("Amélioration programmée.");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
+    } finally {
+      setPending(null);
+    }
+  };
+
   const now = Date.now();
+  const planFull = buildPlan(queues).length >= planSlots(player);
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
       <AscensionCard />
+      <BuildPlanCard player={player} queues={queues} now={now} />
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
         {BUILDINGS.map((building, index) => {
@@ -93,6 +109,13 @@ export function BuildingsPage() {
           const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * playerBuildTimeFactor(player, now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
+          const plannable = nextPlannedLevel(player, queues, building.id);
+          const planButton =
+            !isLocked && !planFull && plannable <= building.maxLevel ? (
+              <button type="button" disabled={pending === building.id} onClick={() => void handlePlan(building.id)} className="mt-1.5 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow/80 hover:text-cyan-glow hover:underline">
+                + Programmer niv. {plannable}
+              </button>
+            ) : null;
 
           return (
             <motion.div
@@ -231,6 +254,7 @@ export function BuildingsPage() {
                         <div className="mt-1.5 flex justify-end">
                           <CancelJobButton target={{ kind: "building", id: building.id }} compact />
                         </div>
+                        {planButton}
                       </div>
                     ) : level >= building.maxLevel ? (
                       <Button className="w-full" variant="secondary" disabled>
@@ -252,6 +276,7 @@ export function BuildingsPage() {
                         <Button variant="warn" className="w-full" disabled={pending === building.id} onClick={() => void handleUpgrade(building.id)}>
                           Améliorer → niv. {nextLevel}
                         </Button>
+                        {planButton}
                       </>
                     )}
                   </div>

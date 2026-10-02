@@ -166,6 +166,8 @@ export interface PlayerTitle {
 
 export interface QueuesState {
   buildingUpgrades: BuildingUpgrades;
+  /** v4.9 : améliorations programmées à la suite (file planifiée). */
+  buildPlan?: import("@/game/buildPlan").PlannedUpgrade[];
   unitQueues: UnitQueues;
   activeResearches: ActiveResearch[];
   activeMissions: ActiveMission[];

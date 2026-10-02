@@ -384,6 +384,15 @@ export function startBuildingUpgrade(_uid: string, buildingId: BuildingId) {
   return act({ type: "upgradeBuilding", buildingId });
 }
 
+/** v4.9 : file planifiée des bâtiments. */
+export function planBuilding(buildingId: string) {
+  return act({ type: "planBuilding", buildingId });
+}
+
+export function unplanBuilding(index: number) {
+  return act({ type: "unplanBuilding", index });
+}
+
 export function enqueueUnitBuild(_uid: string, unitId: string, qty: number) {
   return act({ type: "buildUnits", unitId, qty });
 }

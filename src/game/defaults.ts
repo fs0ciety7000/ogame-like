@@ -48,5 +48,6 @@ export function defaultQueues(): QueuesState {
     unitQueues: { attack: [], defense: [] },
     activeResearches: [],
     activeMissions: [],
+    buildPlan: [],
   };
 }

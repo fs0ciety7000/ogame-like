@@ -3820,6 +3820,100 @@ function endVacation(player, queues, at, early = false) {
   player.vacation = __spreadProps(__spreadValues({}, v), { endedAtMs: end });
 }
 
+// src/game/buildPlan.ts
+var BUILD_PLAN_RULES = {
+  slotBuilding: "fonderie_quantique",
+  /** Niveau de la Fonderie requis pour chaque emplacement (le 1er est offert). */
+  slotLevels: [0, 5, 10],
+  maxWaitHours: 24
+};
+function buildPlan(queues) {
+  return Array.isArray(queues.buildPlan) ? queues.buildPlan.filter((p) => p && typeof p.buildingId === "string") : [];
+}
+function planSlots(player) {
+  var _a;
+  const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
+  const level3 = (s == null ? void 0 : s.unlocked) ? (_a = s.level) != null ? _a : 0 : 0;
+  return BUILD_PLAN_RULES.slotLevels.filter((l) => level3 >= l).length;
+}
+function nextPlannedLevel(player, queues, buildingId) {
+  var _a, _b;
+  const current2 = (_b = (_a = player.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
+  const upgrading = queues.buildingUpgrades[buildingId] ? 1 : 0;
+  const planned = buildPlan(queues).filter((p) => p.buildingId === buildingId).length;
+  return current2 + upgrading + planned + 1;
+}
+function addPlanned(player, queues, buildingId, now) {
+  const def3 = findBuilding(String(buildingId));
+  const state = def3 ? player.buildings[def3.id] : void 0;
+  if (!def3 || !state) throw new GameActionError("B\xE2timent inconnu.");
+  if (!state.unlocked && !def3.startsUnlocked) throw new GameActionError("Ce b\xE2timent n'est pas d\xE9bloqu\xE9.");
+  const plan = buildPlan(queues);
+  const slots = planSlots(player);
+  if (plan.length >= slots) {
+    const next = BUILD_PLAN_RULES.slotLevels[slots];
+    throw new GameActionError(next !== void 0 ? `File pleine : l'emplacement suivant s'ouvre avec la Fonderie quantique niveau ${next}.` : "File pleine.");
+  }
+  const level3 = nextPlannedLevel(player, queues, def3.id);
+  if (level3 > def3.maxLevel) throw new GameActionError("Niveau maximum d\xE9j\xE0 atteint ou programm\xE9.");
+  const entry = { buildingId: def3.id, level: level3, addedAtMs: now };
+  queues.buildPlan = [...plan, entry];
+  return entry;
+}
+function removePlanned(queues, index) {
+  const plan = buildPlan(queues);
+  const i = Math.floor(Number(index));
+  if (!(i >= 0 && i < plan.length)) throw new GameActionError("Cette am\xE9lioration n'est plus programm\xE9e.");
+  const removed = plan[i];
+  queues.buildPlan = plan.filter((p, j) => j !== i && !(j > i && p.buildingId === removed.buildingId));
+}
+function advanceBuildPlan(player, queues, now, finishedAt = {}) {
+  var _a, _b, _c, _d;
+  const notes = [];
+  const keep = [];
+  for (const entry of buildPlan(queues)) {
+    const def3 = findBuilding(entry.buildingId);
+    const state = def3 ? player.buildings[def3.id] : void 0;
+    if (!def3 || !state || entry.level <= state.level || entry.level > def3.maxLevel) continue;
+    const busy = !!queues.buildingUpgrades[def3.id];
+    if (busy) {
+      keep.push(entry);
+      continue;
+    }
+    if (entry.level !== state.level + 1) {
+      if (keep.some((k) => k.buildingId === entry.buildingId)) keep.push(entry);
+      continue;
+    }
+    const cost = applyBuildingDiscount(getBuildingUpgradeCost(def3, entry.level), (_b = (_a = player.bonuses) == null ? void 0 : _a.buildingUpgradeDiscount) != null ? _b : 0);
+    if (canAffordAll(player.resources, cost)) {
+      let total2 = 0;
+      for (const [res, val] of Object.entries(cost)) {
+        player.resources[res] -= val != null ? val : 0;
+        total2 += val != null ? val : 0;
+      }
+      recordContract(player, "spend", total2, now);
+      bumpStat(player, "spent", total2);
+      const startAt = Math.min(now, (_c = finishedAt[def3.id]) != null ? _c : now);
+      queues.buildingUpgrades[def3.id] = {
+        endTime: startAt + Math.round(getBuildingUpgradeTime(def3, entry.level) * playerBuildTimeFactor(player, now)) * 1e3,
+        startedAtMs: startAt,
+        paid: cost
+      };
+      recordContract(player, "upgrade_building", 1, now);
+      notes.push({ kind: "building", title: "File planifi\xE9e", message: `${def3.name} niveau ${entry.level} : am\xE9lioration lanc\xE9e.`, createdAtMs: now, read: false });
+      continue;
+    }
+    const since = (_d = entry.waitingSinceMs) != null ? _d : now;
+    if (now - since > BUILD_PLAN_RULES.maxWaitHours * 36e5) {
+      notes.push({ kind: "building", title: "File planifi\xE9e", message: `${def3.name} niveau ${entry.level} retir\xE9 : ressources insuffisantes depuis ${BUILD_PLAN_RULES.maxWaitHours} h.`, createdAtMs: now, read: false });
+      continue;
+    }
+    keep.push(__spreadProps(__spreadValues({}, entry), { waitingSinceMs: since }));
+  }
+  queues.buildPlan = keep;
+  return notes;
+}
+
 // src/game/flush.ts
 function unitForTech(techId) {
   var _a;
@@ -3874,6 +3968,7 @@ function flushState(playerIn, queuesIn, now) {
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
   notifications.push(...advanceColonies(player, now));
+  const finishedAt = {};
   for (const buildingId of Object.keys(queues.buildingUpgrades)) {
     const entry = queues.buildingUpgrades[buildingId];
     if (!entry || entry.endTime > now) continue;
@@ -3889,8 +3984,10 @@ function flushState(playerIn, queuesIn, now) {
         read: false
       });
     }
+    finishedAt[buildingId] = entry.endTime;
     delete queues.buildingUpgrades[buildingId];
   }
+  notifications.push(...advanceBuildPlan(player, queues, now, finishedAt));
   ["attack", "defense"].forEach((category) => {
     const queue = queues.unitQueues[category];
     let guard = 0;
@@ -4221,7 +4318,8 @@ function defaultQueues() {
     buildingUpgrades: {},
     unitQueues: { attack: [], defense: [] },
     activeResearches: [],
-    activeMissions: []
+    activeMissions: [],
+    buildPlan: []
   };
 }
 
@@ -8731,6 +8829,11 @@ function applyAction(s, action) {
       return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
     case "setPosture":
       return setPosture(player, action.posture, now);
+    case "planBuilding":
+      return addPlanned(player, queues, action.buildingId, now);
+    case "unplanBuilding":
+      removePlanned(queues, action.index);
+      return { plan: queues.buildPlan };
     case "seenAnnouncements":
       player.announcementsSeen = addSeenAnnouncements(player.announcementsSeen, action.ids);
       return { seen: player.announcementsSeen.length };
@@ -9405,7 +9508,7 @@ var GAME_FIELDS = [
   "chronicle",
   "announcementsSeen"
 ];
-var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
+var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
 // src/game/market.ts
 var MARKET_RULES = {

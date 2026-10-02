@@ -43,4 +43,4 @@ export const GAME_FIELDS = [
   "announcementsSeen",
 ] as const;
 
-export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;
+export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"] as const;
