@@ -1,0 +1,71 @@
+name: Déploiement serveur
+
+# v4.8 : après chaque merge sur main, une fois la CI verte, le serveur
+# PocketBase fait lui-même : sauvegarde complète, schéma (pb_schema.json),
+# fiches publiques, puis hooks — tous pris au commit exact qui vient de passer.
+#
+# Secrets à créer (Settings → Secrets and variables → Actions) :
+#   COSMIC_PB_URL             ex. https://base.fs0ciety.org
+#   COSMIC_PB_ADMIN_EMAIL     superutilisateur PocketBase
+#   COSMIC_PB_ADMIN_PASSWORD
+# Sans ces secrets, le job s'arrête sans erreur.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sauvegarde, schéma et hooks
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    env:
+      PB_URL: ${{ secrets.COSMIC_PB_URL }}
+      PB_EMAIL: ${{ secrets.COSMIC_PB_ADMIN_EMAIL }}
+      PB_PASSWORD: ${{ secrets.COSMIC_PB_ADMIN_PASSWORD }}
+      REF: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Déployer
+        run: |
+          if [ -z "$PB_URL" ] || [ -z "$PB_EMAIL" ] || [ -z "$PB_PASSWORD" ]; then
+            echo "::notice::Secrets COSMIC_PB_* absents : déploiement serveur ignoré."
+            exit 0
+          fi
+          TOKEN=$(jq -n --arg i "$PB_EMAIL" --arg p "$PB_PASSWORD" '{identity:$i,password:$p}' \
+            | curl -sf -X POST "$PB_URL/api/collections/_superusers/auth-with-password" -H 'content-type: application/json' -d @- \
+            | jq -r .token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then echo "::error::Connexion au PocketBase refusée."; exit 1; fi
+          echo "::add-mask::$TOKEN"
+          deploy() {
+            curl -s -o report.json -w '%{http_code}' -X POST "$PB_URL/api/cosmic/admin/deploy" \
+              -H "Authorization: $TOKEN" -H 'content-type: application/json' -d "{\"ref\":\"$REF\"}"
+          }
+          STATUS=$(deploy)
+          if [ "$STATUS" = "404" ]; then
+            # Serveur trop ancien pour connaître cette route : hooks d'abord, puis nouvel essai.
+            echo "Route de déploiement absente : mise à jour des hooks, puis nouvel essai."
+            curl -sf -X POST "$PB_URL/api/cosmic/admin/update-hooks" -H "Authorization: $TOKEN" || true
+            for i in $(seq 1 12); do sleep 10; STATUS=$(deploy); [ "$STATUS" != "404" ] && break; done
+          fi
+          jq . report.json || cat report.json
+          {
+            echo "### Déploiement serveur ($REF)"
+            echo ""
+            jq -r '"- Sauvegarde : \(.backup // "—")\n- Schéma : \(.schema // "—") collections\n- Fiches publiques : \(.profiles // "—")\n- Hooks mis à jour : \((.hooks.updated // []) | join(", ") | if . == "" then "aucun" else . end)\n- Erreurs : \((.errors // []) | join(" ; ") | if . == "" then "aucune" else . end)"' report.json 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STATUS" != "200" ]; then echo "::error::Déploiement en erreur (HTTP $STATUS)."; exit 1; fi
+      - name: Vérifier que le serveur répond
+        if: env.PB_URL != ''
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf "$PB_URL/api/health" > /dev/null; then echo "Serveur en ligne."; exit 0; fi
+            sleep 5
+          done
+          echo "::error::Le serveur ne répond plus après le déploiement."; exit 1

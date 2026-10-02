@@ -50,9 +50,9 @@ function download(url) {
   return typeof res.raw === "string" && res.raw ? res.raw : toString(res.body);
 }
 
-/** { updated: [...], unchanged: [...], errors: [...] } */
-function syncHooks() {
-  const branch = $os.getenv("COSMIC_HOOKS_BRANCH") || "main";
+/** { updated: [...], unchanged: [...], errors: [...] }. `ref` : branche ou commit (défaut : main). */
+function syncHooks(ref) {
+  const branch = ref || $os.getenv("COSMIC_HOOKS_BRANCH") || "main";
   const report = { branch, updated: [], unchanged: [], errors: [] };
 
   const downloaded = [];
@@ -82,4 +82,71 @@ function syncHooks() {
   return report;
 }
 
-module.exports = { syncHooks, autoUpdateDisabled };
+/* ---------- v4.8 : déploiement complet en un appel ---------- */
+
+function stamp(now) {
+  const d = new Date(now);
+  const p = (n) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+}
+
+/**
+ * Sauvegarde, schéma (pb_schema.json), fiches publiques, puis hooks — dans
+ * cet ordre, et on s'arrête à la première étape qui échoue (sauf fiches).
+ * `ref` : branche ou commit du dépôt (un commit évite le cache de GitHub).
+ */
+function deployUpdate(e, ref) {
+  const branch = ref || $os.getenv("COSMIC_HOOKS_BRANCH") || "main";
+  const report = { ref: branch, backup: null, schema: null, profiles: null, hooks: null, errors: [] };
+
+  // 1. Sauvegarde complète (base + fichiers), restaurable depuis l'admin PocketBase.
+  const name = `avant_maj_${stamp(Date.now())}.zip`;
+  try {
+    $app.createBackup(e.request.context(), name);
+    report.backup = name;
+  } catch (err) {
+    report.errors.push(`sauvegarde : ${err}`);
+    return report;
+  }
+
+  // 2. Schéma : collections et champs ajoutés ou modifiés, rien n'est supprimé.
+  try {
+    const raw = download(`${REPO_RAW}/${branch}/pocketbase/pb_schema.json`);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("schéma vide");
+    $app.importCollectionsByMarshaledJSON(raw, false);
+    report.schema = parsed.length;
+  } catch (err) {
+    report.errors.push(`schéma : ${err}`);
+    return report;
+  }
+
+  // 3. Fiches publiques (nouveaux champs recopiés), non bloquant.
+  try {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    let n = 0;
+    $app.findAllRecords("players").forEach((rec) => {
+      try {
+        db.syncProfile($app, rec);
+        n++;
+      } catch (_) {
+        /* fiche suivante */
+      }
+    });
+    report.profiles = n;
+  } catch (err) {
+    report.errors.push(`fiches publiques : ${err}`);
+  }
+
+  // 4. Hooks en dernier : PocketBase redémarre dès qu'un fichier change.
+  const disabled = autoUpdateDisabled();
+  if (disabled) {
+    report.hooks = { branch, updated: [], unchanged: [], errors: [`mise à jour ${disabled}`] };
+    return report;
+  }
+  report.hooks = syncHooks(branch);
+  report.hooks.errors.forEach((x) => report.errors.push(`hooks : ${x}`));
+  return report;
+}
+
+module.exports = { syncHooks, autoUpdateDisabled, deployUpdate };

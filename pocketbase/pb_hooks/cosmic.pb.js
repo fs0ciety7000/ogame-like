@@ -708,3 +708,16 @@ cronAdd("cosmic_seasonboss", "*/5 * * * *", () => {
     console.log(`[cosmic] boss de saison : ${err}`);
   }
 });
+
+/* ---------- v4.8 : déploiement complet (admin ou GitHub Actions) ---------- */
+
+/** POST /api/cosmic/admin/deploy { ref? } : sauvegarde, schéma, fiches publiques, hooks. */
+routerAdd("POST", "/api/cosmic/admin/deploy", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const ref = String((db.body(e) || {}).ref || "");
+  if (ref && !/^[A-Za-z0-9._\/-]{1,60}$/.test(ref)) throw new BadRequestError("Référence invalide.");
+  const report = require(`${__hooks}/cosmic_sync.js`).deployUpdate(e, ref);
+  console.log(`[cosmic] déploiement ${report.ref} : sauvegarde ${report.backup}, ${report.schema} collections, ${report.profiles} fiches, hooks ${report.hooks ? report.hooks.updated.join(",") || "inchangés" : "—"}${report.errors.length ? `, erreurs : ${report.errors.join(" ; ")}` : ""}`);
+  return e.json(report.errors.length > 0 ? 500 : 200, report);
+});
