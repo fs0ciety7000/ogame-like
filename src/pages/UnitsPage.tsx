@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,9 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
+import { hangarUsed } from "@/game/actions";
+import { unitsAwayOf } from "@/game/fleets";
+import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { unitStat } from "@/game/combat";
@@ -30,6 +33,8 @@ export function UnitsPage() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<string | null>(null);
+  const fleets = useFleetStore((s) => s.fleets);
+  const away = useMemo(() => (uid ? unitsAwayOf(fleets, uid) : {}), [fleets, uid]);
 
   if (!player || !queues) return null;
 
@@ -38,11 +43,9 @@ export function UnitsPage() {
 
   // Places occupées dans le hangar : unités construites + unités en file
   // (déjà réservées, même calcul que enqueueUnitBuild côté service).
-  const built = (category: "attack" | "defense") =>
-    Object.entries(player.units).reduce((sum, [id, u]) => {
-      const def = findUnit(id);
-      return def?.category === category ? sum + u.count * def.hangarSpace : sum;
-    }, 0);
+  // v3.9.1 : les vaisseaux en mission comptent aussi (ils reviendront).
+  const built = (category: "attack" | "defense") => hangarUsed(player.units, away, category);
+  const awaySpace = (category: "attack" | "defense") => hangarUsed({}, away, category);
   const reserved = (category: "attack" | "defense") =>
     queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
 
@@ -110,6 +113,7 @@ export function UnitsPage() {
                 <p className="tabular-mono text-xs text-slate-500">
                   {formatNumber(b + r)} / {formatNumber(cap)} places
                   {r > 0 && <span className="text-mint-glow"> (dont {formatNumber(r)} en file)</span>}
+                  {awaySpace(cat) > 0 && <span className="text-gold-glow"> (dont {formatNumber(awaySpace(cat))} en vol)</span>}
                 </p>
               </div>
             </Card>
