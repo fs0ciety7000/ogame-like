@@ -237,6 +237,12 @@
         "type": "json",
         "required": false,
         "maxSize": 20000
+      },
+      {
+        "name": "bounties",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
       }
     ],
     "indexes": [

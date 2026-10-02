@@ -44,6 +44,20 @@ export interface EconomyInput {
   /** v3.4 : ascensions (bonus de production) et date de la dernière (entretien suspendu). */
   ascensions?: number;
   ascendedAtMs?: number;
+  /** v3.9 : Gelée de la Reine (production boostée jusqu'à boostUntilMs). */
+  bounties?: { boostUntilMs?: number } | null;
+}
+
+/** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
+export const KESH_BOOST_PCT = 0.2;
+
+function boostUntil(input: EconomyInput): number {
+  const v = Number(input.bounties?.boostUntilMs);
+  return Number.isFinite(v) ? v : 0;
+}
+
+function boostAt(input: EconomyInput, at: number): number {
+  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
 }
 
 /** Énergie consommée par seconde par les unités construites. */
@@ -73,9 +87,9 @@ export interface EconomySnapshot {
 }
 
 /** Production brute, avec les bonus d'événement donnés. */
-function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>): Partial<Resources> {
+function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>, boost = 1): Partial<Resources> {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
@@ -85,7 +99,7 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 
 /** `now` : applique les bonus de l'événement en cours à cet instant. */
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
-  const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now));
+  const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now), now === undefined ? 1 : boostAt(input, now));
   const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const energyNet = (gross.energy ?? 0) - upkeep;
@@ -122,20 +136,26 @@ export function advanceResources(input: EconomyInput, elapsedSeconds: number, st
   let at = startMs;
   // v3.4 : l'entretien de flotte reprend à la fin de la suspension d'ascension.
   const freeUntil = upkeepFreeUntil(input);
-  const cuts = [...eventBoundaries(startMs, endMs), ...(freeUntil > startMs && freeUntil < endMs ? [freeUntil] : []), endMs].sort((a, b) => a - b);
+  const boostEnd = boostUntil(input);
+  const cuts = [
+    ...eventBoundaries(startMs, endMs),
+    ...(freeUntil > startMs && freeUntil < endMs ? [freeUntil] : []),
+    ...(boostEnd > startMs && boostEnd < endMs ? [boostEnd] : []),
+    endMs,
+  ].sort((a, b) => a - b);
   for (const cut of cuts) {
     if (cut <= at) continue;
-    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at), at < freeUntil);
+    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at), at < freeUntil, boostAt(input, at));
     at = cut;
   }
   return resources as Resources;
 }
 
-function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>, upkeepFree = false): Resources {
+function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>, upkeepFree = false, boost = 1): Resources {
   const out = { ...input.resources } as Resources;
   if (elapsedSeconds <= 0) return out;
 
-  const gross = boostedRates(input, multipliers);
+  const gross = boostedRates(input, multipliers, boost);
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);

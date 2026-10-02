@@ -12,7 +12,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
 
 export const CHALLENGE_KEY = "challenge";
 
-export type ChallengeType = "raids" | "missions" | "units" | "market" | "expeditions";
+export type ChallengeType = "raids" | "missions" | "units" | "market" | "expeditions" | "bounties";
 
 export const CHALLENGE_TYPES: Record<ChallengeType, { label: string; unit: string; perActive: number }> = {
   raids: { label: "Repousser les raids des factions", unit: "raids repoussés", perActive: 3 },
@@ -20,6 +20,7 @@ export const CHALLENGE_TYPES: Record<ChallengeType, { label: string; unit: strin
   units: { label: "Construire des unités", unit: "unités", perActive: 400 },
   market: { label: "Faire vivre le marché", unit: "ressources échangées", perActive: 2_000_000 },
   expeditions: { label: "Explorer l'inconnu", unit: "expéditions", perActive: 6 },
+  bounties: { label: "Remplir les primes de l'Essaim", unit: "primes", perActive: 8 },
 };
 
 export const CHALLENGE_RULES = {
@@ -107,6 +108,7 @@ export function challengeMetrics(player: Pick<PlayerState, "stats" | "pirates">)
     units: s.unitsBuilt ?? 0,
     market: s.marketVolume ?? 0,
     expeditions: s.expeditions ?? 0,
+    bounties: s.bounties ?? 0,
   };
 }
 

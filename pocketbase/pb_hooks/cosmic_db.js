@@ -244,7 +244,21 @@ function profileFeats(player) {
     expeditions: Number(stats.expeditions) || 0,
     leviathanKills: Number(stats.leviathanKills) || 0,
     warsWon: Number(stats.warsWon) || 0,
+    bounties: Number(stats.bounties) || 0,
+    kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}),
   };
+}
+
+/** v3.9 : rang dans l'Essaim, cosmétiques et Voile de chitine (fiche publique). */
+function keshFeats(b) {
+  const owned = Array.isArray(b.owned) ? b.owned : [];
+  const rep = Number(b.reputation) || 0;
+  const ranks = [0, 10, 30, 70, 150];
+  let rank = 1;
+  ranks.forEach((at, i) => {
+    if (rep >= at) rank = i + 1;
+  });
+  return { rank: rep > 0 ? rank : 0, frame: owned.indexOf("frame") >= 0, emblem: owned.indexOf("emblem") >= 0, shieldUntilMs: Number(b.shieldUntilMs) || 0 };
 }
 
 function deleteProfile(app, playerId) {
@@ -337,6 +351,8 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "expedition") return expeditionStep(txApp, game, rec, now, 1);
   if (mission === "leviathan") return leviathanArrival(txApp, game, rec, now);
   if (mission === "transport") return transportArrival(txApp, game, rec, now);
+  if (mission === "bounty") return bountyArrival(txApp, game, rec, now);
+  if (mission === "elite") return eliteArrival(txApp, game, rec, now);
   if (mission === "garrison") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
@@ -367,6 +383,17 @@ function resolveSpyArrival(txApp, game, rec, now) {
     rec.set("status", spy ? "returning" : "done");
     rec.set("returnAtMs", spy ? now + tripMs : null);
     rec.set("outcome", "none");
+    txApp.save(rec);
+    return;
+  }
+  // v3.9 : Brouilleur d'essaim de la cible, les sondes rentrent bredouilles.
+  if (game.useJammer(target.player)) {
+    savePlayer(txApp, game, target, target.player, target.queues);
+    notify(txApp, fleet.ownerUid, [{ kind: "spy", title: "Sondes brouillées", message: `Un brouilleur kesh'vaar protège ${fleet.targetPseudo} : tes sondes rentrent sans rapport.`, createdAtMs: now, read: false }]);
+    notify(txApp, targetUid, [{ kind: "spy-detected", title: "Espionnage brouillé", message: `Ton brouilleur d'essaim a aveuglé les sondes de ${fleet.ownerPseudo}.`, createdAtMs: now, read: false }]);
+    rec.set("outcome", "jammed");
+    rec.set("status", "returning");
+    rec.set("returnAtMs", now + tripMs);
     txApp.save(rec);
     return;
   }
@@ -783,9 +810,22 @@ function launchFleetRequest(e) {
   const body = db.body(e);
   const mission = String(body.mission || "attack");
   const fleet = body.fleet && typeof body.fleet === "object" ? body.fleet : {};
-  const targetUid = mission === "patrol" || mission === "expedition" ? attackerUid : mission === "leviathan" ? "leviathan" : mission === "transport" ? String(body.colonyId || "") : String(body.targetUid || "");
+  const targetUid =
+    mission === "patrol" || mission === "expedition"
+      ? attackerUid
+      : mission === "leviathan"
+        ? "leviathan"
+        : mission === "transport"
+          ? String(body.colonyId || "")
+          : mission === "bounty"
+            ? body.bountyId
+              ? `bounty_${body.bountyId}`
+              : ""
+            : mission === "elite"
+              ? "bounty_elite"
+              : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -828,6 +868,14 @@ function launchFleetRequest(e) {
         throw db.asHttpError(game, err);
       }
     }
+    let elite = null;
+    if (mission === "elite") {
+      try {
+        elite = game.checkEliteLaunch(readElite(txApp, game), attacker.player, now);
+      } catch (err) {
+        throw db.asHttpError(game, err);
+      }
+    }
     let out;
     try {
       out = game.performLaunch({
@@ -850,6 +898,8 @@ function launchFleetRequest(e) {
         expeditionsToday,
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
         transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
+        bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
+        eliteName: elite ? game.describeElite(elite).name : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -862,10 +912,11 @@ function launchFleetRequest(e) {
     // v3.5 : propriétaire de la colonie visée (il voit l'attaque approcher).
     if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
-    if (mission === "attack" || mission === "lair" || mission === "expedition" || mission === "leviathan") rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    if (["attack", "lair", "expedition", "leviathan", "bounty", "elite"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
     txApp.save(rec);
     // Léviathan : le délai entre deux assauts part du lancement.
     if (leviathan) writeLeviathan(txApp, leviathan);
+    if (elite) writeElite(txApp, game, elite);
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet);
   });
 
@@ -2639,6 +2690,7 @@ function messageSend(e) {
   const sender = findOrNull($app, "players", uid);
   const target = findOrNull($app, "players", to);
   if (!sender || !target) throw new NotFoundError("Joueur introuvable.");
+  assertKeshEmojis(game, sender, text);
   if ($app.findRecordsByFilter("message_blocks", "ownerUid = {:to} && blockedUid = {:uid}", "", 1, 0, { to, uid }).length > 0) {
     throw new BadRequestError("Ce joueur ne reçoit pas tes messages.");
   }
@@ -2767,6 +2819,7 @@ function diplomacyRequest(e) {
       if (req.action === "message") {
         if (!game.pactOpen(pact, now)) throw new BadRequestError("Ce canal est fermé.");
         const text = game.sanitizePactMessage(req.text);
+        assertKeshEmojis(game, findOrNull(txApp, "players", uid), text);
         const msg = new Record(txApp.findCollectionByNameOrId("pact_messages"));
         msg.load({ pactId: pact.id, allianceA: pact.allianceA, allianceB: pact.allianceB, authorUid: uid, authorPseudo: pseudo, authorTag: own.tag, text, createdAtMs: now });
         txApp.save(msg);
@@ -2894,4 +2947,218 @@ function challengeTick(now) {
   });
 }
 
-module.exports = { requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Chasseurs de primes Kesh'Vaar (v3.9) ---------- */
+
+/** Emojis Kesh'Vaar : réservés aux détenteurs du pack. */
+function assertKeshEmojis(game, playerRec, text) {
+  if (!playerRec || String(text || "").indexOf(":kesh_") < 0) return;
+  try {
+    game.assertKeshEmojis({ bounties: parseJsonField(playerRec, "bounties", {}) }, String(text));
+  } catch (err) {
+    throw asHttpError(game, err);
+  }
+}
+
+/** Tchat d'alliance (création directe) : même contrôle des emojis. */
+function allianceMessageCreate(e) {
+  const game = loadGame();
+  if (e.auth) assertKeshEmojis(game, findOrNull($app, "players", e.auth.id), e.record.getString("text"));
+  e.next();
+}
+
+function readElite(txApp, game) {
+  try {
+    const rec = (txApp || $app).findFirstRecordByData("game_config", "key", game.ELITE_KEY);
+    return game.normalizeElite(toPlain(rec).data);
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeElite(txApp, game, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.ELITE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.ELITE_KEY);
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+/** Arrivée d'une flotte de prime : combat contre le fugitif. */
+function bountyArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const loaded = loadPlayer(txApp, game, fleet.ownerUid);
+  const player = loaded.player;
+  // Les vaisseaux sont partis : on les remet « à bord » le temps du combat.
+  Object.keys(fleet.units).forEach((id) => {
+    const st = player.units[id] || { level: 1, count: 0 };
+    player.units[id] = Object.assign({}, st, { count: st.count + fleet.units[id] });
+  });
+  const out = game.resolveBountyHunt(player, loaded.queues, game.bountyIdOf(fleet.targetUid), fleet.units, rec.getFloat("power"), now, rec.getString("formation"));
+  Object.keys(fleet.units).forEach((id) => {
+    if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
+  });
+  savePlayer(txApp, game, loaded, out.player, out.queues);
+  notify(txApp, fleet.ownerUid, out.notifications);
+  const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
+  report.load(out.report);
+  txApp.save(report);
+  const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
+  rec.set("units", out.survivors);
+  rec.set("reportId", report.id);
+  rec.set("outcome", out.combat.outcome);
+  rec.set("status", anyLeft ? "returning" : "done");
+  rec.set("returnAtMs", anyLeft ? now + tripMs : null);
+  txApp.save(rec);
+}
+
+/** Arrivée sur la proie d'élite : dégâts, pertes, retour. */
+function eliteArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const backAt = now + game.ELITE_RULES.flightMinutes * 60000;
+  if (!findOrNull(txApp, "players", fleet.ownerUid)) {
+    rec.set("status", "done");
+    txApp.save(rec);
+    return;
+  }
+  const state = readElite(txApp, game);
+  const owner = loadPlayer(txApp, game, fleet.ownerUid);
+  if (!state) {
+    rec.set("status", "returning");
+    rec.set("returnAtMs", backAt);
+    txApp.save(rec);
+    return;
+  }
+  const res = game.resolveEliteAssault(state, owner.player, fleet.units, rec.getString("formation"), now);
+  rec.set("units", res.survivors);
+  rec.set("status", "returning");
+  rec.set("returnAtMs", backAt);
+  rec.set("outcome", res.killed ? "attacker_win" : "draw");
+  txApp.save(rec);
+  const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
+  const name = game.describeElite(state).name;
+  notify(txApp, fleet.ownerUid, [
+    {
+      kind: "bounty",
+      title: res.killed ? `Coup de grâce sur ${name} !` : `Assaut sur ${name}`,
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "La proie n'était plus là : la flotte rentre.",
+      createdAtMs: now,
+      read: false,
+      link: "/game/primes",
+    },
+  ]);
+  let next = res.state;
+  if (res.killed) next = distributeElite(txApp, game, next, now);
+  writeElite(txApp, game, next);
+}
+
+/** Récompenses de la proie d'élite (une seule fois). */
+function distributeElite(txApp, game, state, now) {
+  if (state.rewarded || state.status === "active") return state;
+  game.eliteRanking(state).forEach((c) => {
+    if (!findOrNull(txApp, "players", c.uid)) return;
+    const loaded = loadPlayer(txApp, game, c.uid);
+    const reward = game.grantEliteReward(state, loaded.player, now);
+    savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+    notify(txApp, c.uid, [game.eliteNotice(state, reward, now)]);
+  });
+  return Object.assign({}, state, { rewarded: true });
+}
+
+/** Tâche planifiée : nouvelle proie chaque lundi, fuite à l'échéance. */
+function eliteTick(now) {
+  const game = loadGame();
+  let state = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    state = readElite(txApp, game);
+    let changed = false;
+    if (state) {
+      const closed = game.closeElite(state, now);
+      if (closed !== state) {
+        state = closed;
+        changed = true;
+      }
+      if (state.status !== "active" && !state.rewarded) {
+        state = distributeElite(txApp, game, state, now);
+        changed = true;
+      }
+    }
+    const win = game.eliteWindow(now);
+    if (!state || (state.id !== win.id && state.status !== "active")) {
+      const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
+      state = game.spawnElite(now, actives);
+      changed = true;
+    }
+    if (changed) writeElite(txApp, game, state);
+  });
+  return state;
+}
+
+/** POST /api/cosmic/bounty { action: "buy" | "exchange" | "beacon", item?, amount?, fleetId?, buildingId? } */
+function bountyRequest(e) {
+  const game = loadGame();
+  const req = body(e);
+  const uid = e.auth.id;
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const player = flushed.player;
+    const queues = flushed.queues;
+    try {
+      if (req.action === "buy") {
+        out = game.buyShopItem(player, queues, req.item, now, req.buildingId ? String(req.buildingId) : undefined);
+      } else if (req.action === "exchange") {
+        out = { gain: game.exchangeAmber(player, req.amount, now) };
+      } else if (req.action === "beacon") {
+        const rec = findOrNull(txApp, "fleets", String(req.fleetId || ""));
+        if (!rec) throw new game.GameActionError("Flotte introuvable.");
+        const wasStatus = rec.getString("status");
+        const fleet = game.beaconReturn(fleetFromRecord(rec), uid, now);
+        game.useBeacon(player);
+        if (fleet.mission === "bounty" && wasStatus === "outbound") game.releaseBounty(player, game.bountyIdOf(fleet.targetUid));
+        const done = game.completeFleetReturn(player, fleet, now);
+        notify(txApp, uid, done.notifications);
+        rec.set("status", "done");
+        rec.set("recalled", fleet.recalled);
+        rec.set("returnAtMs", now);
+        if (wasStatus === "stationed") rec.set("stationedUntilMs", now);
+        txApp.save(rec);
+        out = { message: "Balise activée : ta flotte est rentrée." };
+      } else throw new game.GameActionError("Action inconnue.");
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, loaded, player, queues);
+    notify(txApp, uid, flushed.notifications);
+  });
+  return e.json(200, out || {});
+}
+
+/** Rappel d'une flotte de prime : le contrat redevient disponible. */
+function releaseBountyOnRecall(txApp, game, fleet) {
+  if (fleet.mission !== "bounty" || !findOrNull(txApp, "players", fleet.ownerUid)) return;
+  const loaded = loadPlayer(txApp, game, fleet.ownerUid);
+  game.releaseBounty(loaded.player, game.bountyIdOf(fleet.targetUid));
+  savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+}
+
+/** POST /api/cosmic/admin/elite { now? } — tâche de la proie d'élite (tests, administration). */
+function adminElite(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, eliteTick(Number(body(e).now) || Date.now()));
+}
+
+module.exports = { bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

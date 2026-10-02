@@ -56,6 +56,8 @@ __export(hooksEntry_exports, {
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   DIPLOMACY_RULES: () => DIPLOMACY_RULES,
+  ELITE_KEY: () => ELITE_KEY,
+  ELITE_RULES: () => ELITE_RULES,
   EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
@@ -86,17 +88,23 @@ __export(hooksEntry_exports, {
   applyLegacyGift: () => applyLegacyGift,
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
+  assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
+  bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
+  buyShopItem: () => buyShopItem,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
   challengeRewardees: () => challengeRewardees,
   challengeTier: () => challengeTier,
+  checkEliteLaunch: () => checkEliteLaunch,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
+  closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
   collectDebris: () => collectDebris,
   colonyOwnerUid: () => colonyOwnerUid,
@@ -110,11 +118,16 @@ __export(hooksEntry_exports, {
   defaultQueues: () => defaultQueues,
   describeAmount: () => describeAmount,
   describeAnomalies: () => describeAnomalies,
+  describeElite: () => describeElite,
   describeGain: () => describeGain,
   detectResourceAnomalies: () => detectResourceAnomalies,
+  eliteNotice: () => eliteNotice,
+  eliteRanking: () => eliteRanking,
+  eliteWindow: () => eliteWindow,
   endGarrison: () => endGarrison,
   errorKey: () => errorKey,
   errorQuotaKey: () => errorQuotaKey,
+  exchangeAmber: () => exchangeAmber,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   findFaction: () => findFaction,
@@ -124,6 +137,7 @@ __export(hooksEntry_exports, {
   formatInt: () => formatInt,
   githubIssueBody: () => githubIssueBody,
   grantChallengeReward: () => grantChallengeReward,
+  grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
@@ -135,6 +149,7 @@ __export(hooksEntry_exports, {
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
   normalizeChallengeState: () => normalizeChallengeState,
+  normalizeElite: () => normalizeElite,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
@@ -156,11 +171,14 @@ __export(hooksEntry_exports, {
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recyclerCapacity: () => recyclerCapacity,
   refundOffer: () => refundOffer,
+  releaseBounty: () => releaseBounty,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
+  resolveBountyHunt: () => resolveBountyHunt,
+  resolveEliteAssault: () => resolveEliteAssault,
   resolveExpeditionChoice: () => resolveExpeditionChoice,
   resolveLairAssault: () => resolveLairAssault,
   resolveLeviathanAssault: () => resolveLeviathanAssault,
@@ -175,10 +193,13 @@ __export(hooksEntry_exports, {
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
+  spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
   startChallenge: () => startChallenge,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  useBeacon: () => useBeacon,
+  useJammer: () => useJammer,
   utcDayStart: () => utcDayStart,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
@@ -1180,6 +1201,20 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
 }
 
 // src/game/units.ts
+var KESH_HUNTER_UNIT = {
+  id: "traqueur_kesh",
+  name: "Traqueur Kesh",
+  image: "/assets/units/traqueur_kesh.webp",
+  maxLevel: 1,
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
+  cost: { scrap: 6e3, energy: 3e3 },
+  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
+  category: "attack",
+  unlockTech: "",
+  hangarSpace: 25,
+  blueprint: true
+};
+var KESH_PVE_BONUS = 0.5;
 var UNIT_LEVEL_BONUS_DEFAULT = 5;
 var DEFAULT_UNITS = [
   {
@@ -1355,7 +1390,8 @@ var DEFAULT_UNITS = [
     category: "defense",
     unlockTech: "tech18",
     hangarSpace: 20
-  }
+  },
+  KESH_HUNTER_UNIT
 ];
 var UNITS = [];
 var UNIT_BASE_STATS = {};
@@ -1541,6 +1577,15 @@ var ECONOMY_RULES = {
   missionRareProductionRef: 5e5
 };
 var COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var KESH_BOOST_PCT = 0.2;
+function boostUntil(input) {
+  var _a;
+  const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
+  return Number.isFinite(v) ? v : 0;
+}
+function boostAt(input, at) {
+  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+}
 function getFleetUpkeep(units, techLevels2) {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units != null ? units : {})) {
@@ -1551,10 +1596,10 @@ function getFleetUpkeep(units, techLevels2) {
   }
   return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
 }
-function boostedRates(input, multipliers) {
+function boostedRates(input, multipliers, boost = 1) {
   var _a, _b;
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
   if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res] && m) gross[res] = ((_b = gross[res]) != null ? _b : 0) * m;
@@ -1572,19 +1617,25 @@ function advanceResources(input, elapsedSeconds, startMs) {
   let resources = input.resources;
   let at = startMs;
   const freeUntil = upkeepFreeUntil(input);
-  const cuts = [...eventBoundaries(startMs, endMs), ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [], endMs].sort((a, b) => a - b);
+  const boostEnd = boostUntil(input);
+  const cuts = [
+    ...eventBoundaries(startMs, endMs),
+    ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
+    ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
+    endMs
+  ].sort((a, b) => a - b);
   for (const cut of cuts) {
     if (cut <= at) continue;
-    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil);
+    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil, boostAt(input, at));
     at = cut;
   }
   return resources;
 }
-function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false) {
+function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, boost = 1) {
   var _a, _b, _c, _d;
   const out = __spreadValues({}, input.resources);
   if (elapsedSeconds <= 0) return out;
-  const gross = boostedRates(input, multipliers);
+  const gross = boostedRates(input, multipliers, boost);
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = getStorageCapacity(input.buildings, input.techLevels);
   const capOf = (res) => COMMON_RESOURCES.includes(res) ? capacity : Infinity;
@@ -1917,6 +1968,14 @@ function computeFleetPower(units, techLevels2, fleet, stats) {
     total2 += value * qty;
   }
   return total2;
+}
+function pveAttackFactor(units, techLevels2, fleet) {
+  var _a;
+  const hunters = (_a = fleet[KESH_HUNTER_UNIT.id]) != null ? _a : 0;
+  if (!(hunters > 0)) return 1;
+  const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
+  if (!(all > 0)) return 1;
+  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
 }
 function computeFullPower(units, techLevels2, idList, stats) {
   let total2 = 0;
@@ -2637,7 +2696,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
   const fx = formationEffects(formation);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
     // v3.3 : Batterie de siège de l'alliance.
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),
@@ -3660,6 +3719,557 @@ function deliverToColony(colony, cargo) {
   for (const [r, n] of Object.entries(cargo)) colony.resources[r] = ((_a = colony.resources[r]) != null ? _a : 0) + (n != null ? n : 0);
 }
 
+// src/game/bounties.ts
+var BOUNTY_RULES = {
+  dailyLimit: 4,
+  refreshHours: 8,
+  /** Un échec laisse la prime ouverte une fois de plus. */
+  retries: 1,
+  /** +10 % d'Ambre par rang au-delà du premier. */
+  amberPerRank: 0.1,
+  tiers: {
+    1: { label: "Traque", pct: 0.5, minMinutes: 20, maxMinutes: 40, xp: 60, amber: 10, rep: 1, floor: 200, minRank: 1 },
+    2: { label: "Chasse", pct: 0.8, minMinutes: 40, maxMinutes: 60, xp: 120, amber: 25, rep: 2, floor: 500, minRank: 1 },
+    3: { label: "Proie majeure", pct: 1.1, minMinutes: 60, maxMinutes: 90, xp: 250, amber: 60, rep: 4, floor: 1200, minRank: 3 },
+    4: { label: "\xC9lite", pct: 1.25, minMinutes: 75, maxMinutes: 90, xp: 400, amber: 120, rep: 6, floor: 3e3, minRank: 5 }
+  },
+  ranks: [
+    { name: "Larve", at: 0 },
+    { name: "\xC9claireur", at: 10 },
+    { name: "Traqueur", at: 30 },
+    { name: "Lame de l'Essaim", at: 70 },
+    { name: "Main de la Reine", at: 150 }
+  ],
+  exchange: { rarePerAmber: 40, weeklyCap: 100 }
+};
+var FUGITIVES = [
+  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
+  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
+  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
+  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
+  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
+  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
+  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
+  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
+  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
+  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
+  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
+  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
+  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
+  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
+  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
+  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
+  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
+  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
+  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
+  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
+  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
+  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
+];
+var ELITE_FUGITIVES = [
+  { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
+  { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
+  { name: "L'Archiviste P\xE2le", factionId: "inquisition", crime: "d\xE9tient le dernier \u0153uf de la Reine" },
+  { name: "Moloch-7", factionId: "meute", crime: "a d\xE9vor\xE9 trois nids en une nuit" },
+  { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
+  { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
+];
+function emptyBountyState() {
+  return {
+    amber: 0,
+    amberEarned: 0,
+    reputation: 0,
+    board: [],
+    slot: -1,
+    day: "",
+    doneToday: 0,
+    completed: 0,
+    failed: 0,
+    exchangeWeek: "",
+    exchanged: 0,
+    boostUntilMs: 0,
+    jammers: 0,
+    beacons: 0,
+    shieldUntilMs: 0,
+    shieldBoughtAtMs: 0,
+    owned: []
+  };
+}
+function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+function bountyState(player) {
+  var _a;
+  const raw = (_a = player.bounties) != null ? _a : {};
+  const base = emptyBountyState();
+  return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
+    amber: Math.max(0, num(raw.amber)),
+    amberEarned: num(raw.amberEarned),
+    reputation: num(raw.reputation),
+    board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
+    slot: raw.slot === void 0 ? -1 : num(raw.slot),
+    doneToday: num(raw.doneToday),
+    owned: Array.isArray(raw.owned) ? raw.owned.map(String) : []
+  });
+}
+function bountyRank(reputation) {
+  let rank2 = 1;
+  BOUNTY_RULES.ranks.forEach((r, i) => {
+    if (reputation >= r.at) rank2 = i + 1;
+  });
+  return rank2;
+}
+function rankName(rank2) {
+  return BOUNTY_RULES.ranks[Math.max(0, Math.min(BOUNTY_RULES.ranks.length - 1, rank2 - 1))].name;
+}
+function amberFor(tier, rank2) {
+  return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
+}
+var HOUR3 = 36e5;
+var DAY3 = 24 * HOUR3;
+function boardSlot(now) {
+  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR3));
+}
+function boardTiers(rank2) {
+  if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
+  if (rank2 >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
+  return [1, 2, 2];
+}
+function generateBoard(uid, slot, rank2, exclude = []) {
+  const rand = seededRandom(`${uid}:bounty:${slot}`);
+  const used = new Set(exclude);
+  return boardTiers(rank2).map((tier, i) => {
+    let fugitive = Math.floor(rand() * FUGITIVES.length);
+    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
+    used.add(fugitive);
+    const t = BOUNTY_RULES.tiers[tier];
+    const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
+    return { id: `${slot}-${i}`, tier, fugitive, minutes, status: "open", tries: 0 };
+  });
+}
+function refreshBounties(st, uid, now) {
+  const day = contractDay(now);
+  if (st.day !== day) {
+    st.day = day;
+    st.doneToday = 0;
+  }
+  const slot = boardSlot(now);
+  if (st.slot !== slot) {
+    const hunting = st.board.filter((c) => c.status === "hunting");
+    st.board = [...hunting, ...generateBoard(uid, slot, bountyRank(st.reputation), hunting.map((c) => c.fugitive))];
+    st.slot = slot;
+  }
+  return st;
+}
+function hunterPower(player) {
+  var _a, _b;
+  return computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+}
+function fugitivePower(tier, player) {
+  const t = BOUNTY_RULES.tiers[tier];
+  return Math.round(Math.max(t.floor, hunterPower(player) * t.pct));
+}
+function bountyTarget(contract) {
+  return `bounty_${contract.id}`;
+}
+function startBounty(player, contractId, now) {
+  var _a;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
+  if (contract.status !== "open") throw new GameActionError("Une flotte traque d\xE9j\xE0 ce fugitif.");
+  if (st.doneToday >= BOUNTY_RULES.dailyLimit) throw new GameActionError(`${BOUNTY_RULES.dailyLimit} primes par jour : l'Essaim te recontactera demain.`);
+  if (bountyRank(st.reputation) < BOUNTY_RULES.tiers[contract.tier].minRank) throw new GameActionError("Ton rang dans l'Essaim est trop bas pour cette prime.");
+  const power = fugitivePower(contract.tier, player);
+  contract.status = "hunting";
+  st.doneToday += 1;
+  player.bounties = st;
+  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
+}
+function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
+  var _a, _b, _c, _d, _e, _f;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
+  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
+  const fx = formationEffects(formation);
+  const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    attackerUnits: player.units,
+    attackerTechLevels: player.techLevels,
+    attackerRepairPct: getRepairPercent(player.buildings),
+    fleet,
+    defenderUnits: {},
+    defenderTechLevels: {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderPowerOverride: power
+  }));
+  const survivors = {};
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0));
+  const notifications = [...flushed.notifications];
+  const success = combat.outcome === "attacker_win";
+  const t = BOUNTY_RULES.tiers[tier];
+  let amber = 0;
+  let xp = 0;
+  if (success) {
+    const rankBefore = bountyRank(st.reputation);
+    amber = amberFor(tier, rankBefore);
+    xp = t.xp;
+    st.amber += amber;
+    st.amberEarned += amber;
+    st.reputation += t.rep;
+    st.completed += 1;
+    st.board = st.board.filter((c) => c.id !== contractId);
+    applyXpDelta(player, xp, now);
+    bumpStat(player, "bounties");
+    player.victories = ((_e = player.victories) != null ? _e : 0) + 1;
+    notifications.push(note3(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
+    const rankAfter = bountyRank(st.reputation);
+    if (rankAfter > rankBefore) {
+      notifications.push(note3(`Nouveau rang : ${rankName(rankAfter)}`, rankUpMessage(rankAfter), now));
+    }
+  } else {
+    st.failed += 1;
+    player.defeats = ((_f = player.defeats) != null ? _f : 0) + 1;
+    if (contract) {
+      contract.tries += 1;
+      if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
+      else contract.status = "open";
+    }
+    const retry = !!contract && contract.tries <= BOUNTY_RULES.retries;
+    notifications.push(note3(`${fugitive.name} s'est \xE9chapp\xE9`, `Ta flotte n'a pas pu le ma\xEEtriser.${retry ? " La prime reste ouverte une derni\xE8re fois." : " Le contrat est perdu."}`, now));
+  }
+  player.bounties = st;
+  const report = {
+    attackerUid: player.uid,
+    attackerPseudo: player.pseudo,
+    defenderUid: `bounty_${contractId}`,
+    defenderPseudo: fugitive.name,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: combat.attackerLosses,
+    attackerRecovered: combat.attackerRecovered,
+    defenderLosses: {},
+    defenderRecovered: {},
+    loot: null,
+    defenderProcessed: true,
+    defenderApplied: true,
+    attackerXpDelta: xp,
+    defenderXpDelta: 0,
+    attackerFleet: fleet
+  };
+  return { player, queues: flushed.queues, combat, survivors, report, notifications, success, amber, xp };
+}
+function releaseBounty(player, contractId) {
+  const st = bountyState(player);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (contract && contract.status === "hunting") contract.status = "open";
+  player.bounties = st;
+}
+function rankUpMessage(rank2) {
+  if (rank2 === BOUNTY_RULES.tiers[3].minRank) return "L'Essaim te confie d\xE9sormais les proies majeures (\u2605\u2605\u2605).";
+  if (rank2 === BOUNTY_RULES.tiers[4].minRank) return "La Reine elle-m\xEAme te reconna\xEEt : les primes d'\xE9lite (\u2605\u2605\u2605\u2605) te sont ouvertes.";
+  return `L'Essaim te verse ${Math.round(BOUNTY_RULES.amberPerRank * (rank2 - 1) * 100)} % d'Ambre en plus par prime.`;
+}
+function note3(title, message, now) {
+  return { kind: "bounty", title, message, createdAtMs: now, read: false, link: "/game/primes" };
+}
+var BOUNTY_SHOP_RULES = {
+  acceleratorMinutes: 60,
+  boostPct: KESH_BOOST_PCT,
+  boostHours: 24,
+  maxCharges: 3,
+  shieldHours: 6,
+  shieldCooldownDays: 7,
+  title: "Chasseur de l'Essaim"
+};
+var SHOP_ITEMS = [
+  { id: "accelerator", name: "Acc\xE9l\xE9rateur de chantier", price: 30, group: "consumable", description: "Une construction de b\xE2timent en cours se termine 1 h plus t\xF4t." },
+  { id: "boost", name: "Gel\xE9e de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
+  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage re\xE7u \xE9choue : les sondes rentrent sans rapport. 3 en r\xE9serve au plus." },
+  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
+  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
+  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre les PNJ." },
+  { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
+  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
+  { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
+  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." }
+];
+function findShopItem(id) {
+  return SHOP_ITEMS.find((i) => i.id === id);
+}
+var ONE_TIME = ["blueprint", "title", "frame", "emblem", "emojis"];
+function owns(st, id) {
+  return st.owned.includes(id);
+}
+function shopBlocker(player, item, now, queues) {
+  var _a;
+  const st = bountyState(player);
+  if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "D\xE9j\xE0 acquis.";
+  if (item.id === "jammer" && st.jammers >= BOUNTY_SHOP_RULES.maxCharges || item.id === "beacon" && st.beacons >= BOUNTY_SHOP_RULES.maxCharges) {
+    return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
+  }
+  if (item.id === "shield") {
+    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY3;
+    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY3)} j.`;
+  }
+  if (item.id === "accelerator" && queues && !Object.values((_a = queues.buildingUpgrades) != null ? _a : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
+  if (st.amber < item.price) return "Pas assez d'Ambre.";
+  return null;
+}
+function buyShopItem(player, queues, itemId, now, buildingId) {
+  var _a, _b, _c, _d, _e, _f;
+  const item = findShopItem(itemId);
+  if (!item) throw new GameActionError("Objet inconnu.");
+  const blocker = shopBlocker(player, item, now, queues);
+  if (blocker) throw new GameActionError(blocker);
+  const st = bountyState(player);
+  let message = `${item.name} : acquis.`;
+  switch (item.id) {
+    case "accelerator": {
+      const entries = Object.entries((_a = queues.buildingUpgrades) != null ? _a : {}).filter(([, u]) => u && u.endTime > now);
+      const chosen = (_b = entries.find(([id]) => id === buildingId)) != null ? _b : entries.sort((a, b) => a[1].endTime - b[1].endTime)[0];
+      const entry = chosen[1];
+      entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 6e4);
+      message = "Chantier acc\xE9l\xE9r\xE9 d'une heure.";
+      break;
+    }
+    case "boost":
+      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR3;
+      message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
+      break;
+    case "jammer":
+      st.jammers += 1;
+      message = "Brouilleur en place : le prochain espionnage \xE9chouera.";
+      break;
+    case "beacon":
+      st.beacons += 1;
+      message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
+      break;
+    case "shield":
+      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR3;
+      st.shieldBoughtAtMs = now;
+      message = "Voile de chitine actif pendant 6 h.";
+      break;
+    case "blueprint":
+      player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_d = (_c = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _c.count) != null ? _d : 0 };
+      message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
+      break;
+    case "title":
+      if (!((_e = player.titles) != null ? _e : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
+        player.titles = [...(_f = player.titles) != null ? _f : [], { label: BOUNTY_SHOP_RULES.title, seasonId: "kesh", rank: 1 }];
+      }
+      player.activeTitle = BOUNTY_SHOP_RULES.title;
+      break;
+  }
+  if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
+  st.amber -= item.price;
+  player.bounties = st;
+  return { message };
+}
+function weekId(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY3) * DAY3;
+  return new Date(midnight - (day + 6) % 7 * DAY3).toISOString().slice(0, 10);
+}
+function exchangeAmber(player, amountIn, now) {
+  var _a;
+  const amount2 = Math.floor(Number(amountIn));
+  if (!(amount2 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
+  const st = bountyState(player);
+  const week = weekId(now);
+  if (st.exchangeWeek !== week) {
+    st.exchangeWeek = week;
+    st.exchanged = 0;
+  }
+  if (amount2 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
+  if (amount2 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
+  const gain = {};
+  for (const r of RESOURCE_LIST) {
+    if (r.rarity !== "rare") continue;
+    gain[r.id] = amount2 * BOUNTY_RULES.exchange.rarePerAmber;
+    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
+  }
+  st.amber -= amount2;
+  st.exchanged += amount2;
+  player.bounties = st;
+  return gain;
+}
+function shieldUntil(player) {
+  var _a;
+  return num((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
+}
+function dropShield(player, now) {
+  const st = bountyState(player);
+  if (st.shieldUntilMs > now) {
+    st.shieldUntilMs = now;
+    player.bounties = st;
+  }
+}
+function useJammer(player) {
+  const st = bountyState(player);
+  if (st.jammers <= 0) return false;
+  st.jammers -= 1;
+  player.bounties = st;
+  return true;
+}
+function useBeacon(player) {
+  const st = bountyState(player);
+  if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
+  st.beacons -= 1;
+  player.bounties = st;
+}
+var KESH_EMOJIS = [
+  { code: "kesh_gg", url: "/assets/bounties/emoji-gg.webp" },
+  { code: "kesh_ok", url: "/assets/bounties/emoji-ok.webp" },
+  { code: "kesh_joie", url: "/assets/bounties/emoji-joie.webp" },
+  { code: "kesh_top", url: "/assets/bounties/emoji-top.webp" }
+];
+function assertKeshEmojis(player, text) {
+  if (!/:kesh_[a-z]+:/.test(text)) return;
+  if (KESH_EMOJIS.some((e) => text.includes(`:${e.code}:`)) && !owns(bountyState(player), "emojis")) {
+    throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
+  }
+}
+var ELITE_KEY = "bounty_elite";
+var ELITE_RULES = {
+  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs. */
+  hpFactor: 1,
+  minHp: 5e4,
+  /** Un assaut toutes les N heures par joueur. */
+  cooldownHours: 12,
+  flightMinutes: 45,
+  lossPct: 0.1,
+  /** Rang minimal dans l'Essaim. */
+  minRank: 2,
+  /** Part minimale des points de structure pour être récompensé. */
+  minShare: 5e-3,
+  killed: { xp: 300, amber: 150, rep: 8 },
+  failed: { xp: 100, amber: 50, rep: 3 }
+};
+function eliteWindow(now) {
+  const id = weekId(now);
+  const startMs = Date.parse(`${id}T00:00:00Z`);
+  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY3 };
+}
+function normalizeElite(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(num(r.maxHp) > 0)) return null;
+  return {
+    id: String(r.id),
+    fugitive: num(r.fugitive),
+    startMs: num(r.startMs),
+    endMs: num(r.endMs),
+    maxHp: num(r.maxHp),
+    hp: num(r.hp),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    endedAtMs: num(r.endedAtMs),
+    rewarded: !!r.rewarded,
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
+  };
+}
+function spawnElite(now, activePlayers) {
+  const w = eliteWindow(now);
+  let h = 0;
+  for (const c of w.id) h = h * 31 + c.charCodeAt(0) >>> 0;
+  const total2 = activePlayers.reduce((sum3, p) => sum3 + hunterPower(p), 0);
+  const maxHp = Math.round(Math.max(ELITE_RULES.minHp, total2 * ELITE_RULES.hpFactor));
+  return { id: w.id, fugitive: h % ELITE_FUGITIVES.length, startMs: w.startMs, endMs: w.endMs, maxHp, hp: maxHp, status: "active", endedAtMs: 0, rewarded: false, contributions: {} };
+}
+function eliteActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+function eliteReadyAt(state, uid) {
+  var _a, _b;
+  const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
+  return last ? last + ELITE_RULES.cooldownHours * HOUR3 : 0;
+}
+function checkEliteLaunch(state, player, now) {
+  var _a;
+  if (!state || !eliteActive(state, now)) throw new GameActionError("Aucune proie d'\xE9lite \xE0 traquer en ce moment.");
+  if (bountyRank(bountyState(player).reputation) < ELITE_RULES.minRank) throw new GameActionError(`Il faut le rang ${rankName(ELITE_RULES.minRank)} dans l'Essaim pour traquer la proie d'\xE9lite.`);
+  const ready = eliteReadyAt(state, player.uid);
+  if (ready > now) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil((ready - now) / 6e4)} min.`);
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: 0 };
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, lastLaunchMs: now }) }) });
+}
+function resolveEliteAssault(state, player, fleet, formation, now) {
+  var _a;
+  const fx = formationEffects(formation);
+  const power = Math.round(
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet)
+  );
+  const active = eliteActive(state, now);
+  const damage = active ? Math.min(state.hp, power) : 0;
+  const repair = getRepairPercent(player.buildings);
+  const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
+  const survivors = {};
+  const lost = {};
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const gone = raw - Math.floor(raw * repair);
+    if (gone > 0) lost[id] = gone;
+    survivors[id] = qty - gone;
+  }
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
+  const hp = state.hp - damage;
+  const killed = active && hp <= 0;
+  return {
+    state: __spreadProps(__spreadValues({}, state), {
+      hp: Math.max(0, hp),
+      status: killed ? "killed" : state.status,
+      endedAtMs: killed ? now : state.endedAtMs,
+      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
+    }),
+    damage,
+    survivors,
+    lost,
+    killed
+  };
+}
+function closeElite(state, now) {
+  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
+  return state;
+}
+function eliteRanking(state) {
+  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => ({ uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })).sort((a, b) => b.damage - a.damage);
+}
+function eliteRewardees(state) {
+  if (state.status === "active") return [];
+  return eliteRanking(state).filter((c) => c.damage >= state.maxHp * ELITE_RULES.minShare).map((c) => c.uid);
+}
+function grantEliteReward(state, player, now) {
+  if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
+  const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
+  const st = bountyState(player);
+  st.amber += r.amber;
+  st.amberEarned += r.amber;
+  st.reputation += r.rep;
+  player.bounties = st;
+  applyXpDelta(player, r.xp, now);
+  return { xp: r.xp, amber: r.amber };
+}
+function describeElite(state) {
+  return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
+}
+function eliteNotice(state, reward, now) {
+  const f = describeElite(state);
+  return note3(
+    state.status === "killed" ? `${f.name} est tomb\xE9` : `${f.name} s'est enfui`,
+    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
+    now
+  );
+}
+
 // src/game/debris.ts
 var DEBRIS_RULES = {
   /** Part du coût (ferraille, énergie) des vaisseaux détruits. */
@@ -3803,6 +4413,10 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
+  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+    const until = ctx.defenderShieldUntilMs;
+    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
+  }
   if (ctx.defenderAscendedAtMs) {
     const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
     if (now < until) {
@@ -3844,6 +4458,7 @@ function performAttack(input) {
     defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(defender),
     lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null
   });
   if (!check.allowed) return { ok: false, message: (_e = check.message) != null ? _e : "Attaque impossible." };
@@ -4434,8 +5049,8 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 }
 
 // src/game/analytics.ts
-var HOUR3 = 36e5;
-var DAY3 = 24 * HOUR3;
+var HOUR4 = 36e5;
+var DAY4 = 24 * HOUR4;
 function median(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -4529,7 +5144,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY3;
+  const since = now - windowDays * DAY4;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -4539,11 +5154,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY3;
-    const d = new Date(start + DAY3);
+    const start = now - (windowDays - i) * DAY4;
+    const d = new Date(start + DAY4);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY3).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY4).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -4554,11 +5169,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY3).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY3).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY4).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY4).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY3;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY4;
       }).length,
       medianPlaytimeHours: round1(median(players.map((p) => {
         var _a;
@@ -4616,7 +5231,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
   return stats;
 }
 function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY3;
+  const since = now - windowDays * DAY4;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
@@ -4714,19 +5329,19 @@ function computeBalance(players, reports, now, windowDays) {
     var _a2;
     return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
   };
-  const days = (ms) => Math.floor(ms / DAY3);
-  const since = now - windowDays * DAY3;
+  const days = (ms) => Math.floor(ms / DAY4);
+  const since = now - windowDays * DAY4;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY3 && now - seen(p) < 30 * DAY3).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY4 && now - seen(p) < 30 * DAY4).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY3]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY4]);
   });
   const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -4756,7 +5371,7 @@ function computeBalance(players, reports, now, windowDays) {
       lairWinPct: pct3(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY3);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY4);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -4778,9 +5393,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY3).length,
+      active1d: players.filter((p) => now - seen(p) < DAY4).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY3).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY4).length,
       dormant
     },
     rankAge,
@@ -5092,7 +5707,7 @@ var WAR_RULES = {
   title: "Vainqueurs",
   titleDays: 7
 };
-var HOUR4 = 36e5;
+var HOUR5 = 36e5;
 function warStatusAt(war, now) {
   if (war.status === "ended") return "ended";
   if (now < war.startMs) return "preparing";
@@ -5120,15 +5735,15 @@ function declareWar(input) {
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === target.id || w.defenderId === target.id))) throw new GameActionError(`[${target.tag}] est d\xE9j\xE0 en guerre.`);
   const lastPair = input.wars.filter((w) => w.attackerId === own.id && w.defenderId === target.id || w.attackerId === target.id && w.defenderId === own.id).reduce((a, w) => Math.max(a, w.endedAtMs || w.endMs), 0);
-  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR4 - now;
-  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR4))} jour(s).`);
+  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR5 - now;
+  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR5))} jour(s).`);
   const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
   if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
     throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
   }
   treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
   treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
-  const startMs = now + WAR_RULES.prepHours * HOUR4;
+  const startMs = now + WAR_RULES.prepHours * HOUR5;
   return {
     own: __spreadProps(__spreadValues({}, own), { treasury }),
     war: {
@@ -5142,7 +5757,7 @@ function declareWar(input) {
       declaredByPseudo: input.actorPseudo,
       declaredAtMs: now,
       startMs,
-      endMs: startMs + WAR_RULES.durationHours * HOUR4,
+      endMs: startMs + WAR_RULES.durationHours * HOUR5,
       status: "preparing",
       scoreAttacker: 0,
       scoreDefender: 0,
@@ -5227,7 +5842,7 @@ var LEVIATHAN_RULES = {
   title: "Fl\xE9au du L\xE9viathan",
   titleDays: 7
 };
-var HOUR5 = 36e5;
+var HOUR6 = 36e5;
 function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
@@ -5250,7 +5865,7 @@ function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
   const w = weekendWindow(now);
   if (!w.firstOfMonth) return null;
-  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR5;
+  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR6;
   if (now < w.startMs || now >= endMs) return null;
   return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
 }
@@ -5258,7 +5873,7 @@ function nextLeviathanStart(now) {
   if (!EVENT_RULES.bossMonthly) return null;
   for (let i = 0; i < 6; i++) {
     const w = weekendWindow(now, i);
-    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR5 > now) return w.startMs;
+    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR6 > now) return w.startMs;
   }
   return null;
 }
@@ -5281,14 +5896,14 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   var _a, _b;
   if (!state || !isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR5 - now : 0;
+  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR6 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
 function resolveLeviathanAssault(state, player, fleet, formation, now) {
   var _a;
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = getRepairPercent(player.buildings);
@@ -5356,7 +5971,7 @@ var TIMELINE_MAX = 120;
 function recordLeviathanTimeline(state, now) {
   if (!isActive(state, now)) return state;
   const last = state.timeline[state.timeline.length - 1];
-  if (last && now - last.t < HOUR5) return state;
+  if (last && now - last.t < HOUR6) return state;
   return __spreadProps(__spreadValues({}, state), { timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) });
 }
 function resizeLeviathan(state, maxHp, now) {
@@ -5594,6 +6209,7 @@ function launchFleet(input) {
     defenderHasAttacked: ((_c = defender.lastAttackAtMs) != null ? _c : 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(defender),
     lastDefenderDefeatMs: (_d = defender.lastDefeatAtMs) != null ? _d : null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 36e5 : void 0
   });
@@ -5611,6 +6227,7 @@ function launchFleet(input) {
   const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
+  dropShield(attacker, now);
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));
   const total2 = Object.values(units).reduce((a, b) => a + b, 0);
   return {
@@ -5647,7 +6264,7 @@ function recallFleet(fleet, uid, now) {
   if (fleet.status === "stationed") {
     return __spreadProps(__spreadValues({}, fleet), { status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) });
   }
-  if (fleet.mission === "expedition" || fleet.mission === "leviathan") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
@@ -5681,6 +6298,10 @@ function returnMessage(fleet, lootTotal) {
       return { title: "Retour du L\xE9viathan", message: "Les survivants de l'assaut sur le L\xE9viathan sont rentr\xE9s." };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
+    case "bounty":
+      return fleet.recalled ? { title: "Traque abandonn\xE9e", message: `Ta flotte lanc\xE9e sur ${fleet.targetPseudo} est rentr\xE9e : la prime reste au tableau.` } : { title: "Chasseurs rentr\xE9s", message: `Ta flotte lanc\xE9e sur ${fleet.targetPseudo} est de retour.` };
+    case "elite":
+      return { title: "Retour de la traque d'\xE9lite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "transport":
       return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatri\xE9es de ${fleet.targetPseudo}.` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
     case "garrison":
@@ -5700,7 +6321,7 @@ function returnMessage(fleet, lootTotal) {
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -5735,7 +6356,11 @@ function performLaunch(req) {
       defenderNotifications: []
     };
   } else if (mission === "transport") out = launchTransport(owner, req.fleet, (_j = req.transport) != null ? _j : {}, now);
-  else throw new GameActionError("Mission inconnue.");
+  else if (mission === "bounty") out = launchBounty(owner, (_k = req.bountyId) != null ? _k : "", req.fleet, now);
+  else if (mission === "elite") {
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'\xE9lite.");
+    out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: (_l = req.eliteName) != null ? _l : "Proie d'\xE9lite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 6e4), defenderNotifications: [] };
+  } else throw new GameActionError("Mission inconnue.");
   const counter = { spy: "spies", patrol: "patrols", garrison: "garrisons" }[mission];
   if (counter) bumpStat(out.attacker, counter);
   return __spreadProps(__spreadValues({}, out), { attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
@@ -5914,6 +6539,28 @@ function launchLair(owner, target, raw, now) {
     defenderNotifications: []
   };
 }
+function launchBounty(owner, contractId, raw, now) {
+  const { contract, power, fugitive } = startBounty(owner, contractId, now);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent chasser.");
+  return {
+    attacker: owner,
+    fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: bountyTarget(contract), pseudo: fugitive.name }, "bounty", units, now, now + contract.minutes * 6e4)), { power, factionId: fugitive.factionId }),
+    defenderNotifications: []
+  };
+}
+function bountyIdOf(targetUid) {
+  return targetUid.startsWith("bounty_") ? targetUid.slice("bounty_".length) : "";
+}
+var ELITE_TARGET = "bounty_elite";
+function beaconReturn(fleet, uid, now) {
+  if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
+  if (!["outbound", "returning", "stationed"].includes(fleet.status)) throw new GameActionError("Cette flotte n'est plus en vol.");
+  if (fleet.mission === "expedition" || (fleet.mission === "leviathan" || fleet.mission === "elite") && fleet.status === "outbound") {
+    throw new GameActionError("La balise ne peut pas ramener cette flotte.");
+  }
+  const recalled = fleet.status === "outbound" ? true : fleet.recalled;
+  return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled, returnAtMs: now });
+}
 var LAIR_DISTANCE = 60;
 function stationGarrison(fleet) {
   var _a;
@@ -6032,7 +6679,8 @@ var GAME_FIELDS = [
   "ascensions",
   "ascendedAtMs",
   "colonies",
-  "colonizing"
+  "colonizing",
+  "bounties"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"];
 
@@ -6117,6 +6765,9 @@ function utcDayStart(now) {
 
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules"];
+function withFixedUnits(units) {
+  return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
+}
 var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
@@ -6150,7 +6801,7 @@ function applyGameContent(overrides) {
   const defaults = defaultGameContent();
   const content = {
     buildings: (_a = overrides.buildings) != null ? _a : defaults.buildings,
-    units: (_b = overrides.units) != null ? _b : defaults.units,
+    units: withFixedUnits((_b = overrides.units) != null ? _b : defaults.units),
     technologies: (_c = overrides.technologies) != null ? _c : defaults.technologies,
     missions: (_d = overrides.missions) != null ? _d : defaults.missions,
     factions: (_e = overrides.factions) != null ? _e : defaults.factions,
@@ -6427,7 +7078,8 @@ var CHALLENGE_TYPES = {
   missions: { label: "Terminer des missions", unit: "missions", perActive: 25 },
   units: { label: "Construire des unit\xE9s", unit: "unit\xE9s", perActive: 400 },
   market: { label: "Faire vivre le march\xE9", unit: "ressources \xE9chang\xE9es", perActive: 2e6 },
-  expeditions: { label: "Explorer l'inconnu", unit: "exp\xE9ditions", perActive: 6 }
+  expeditions: { label: "Explorer l'inconnu", unit: "exp\xE9ditions", perActive: 6 },
+  bounties: { label: "Remplir les primes de l'Essaim", unit: "primes", perActive: 8 }
 };
 var CHALLENGE_RULES = {
   /** Part minimale de l'objectif pour être récompensé. */
@@ -6441,22 +7093,22 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY4 = 864e5;
+var DAY5 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY4) * DAY4;
-  const startMs = midnight - (day + 6) % 7 * DAY4;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY4 };
+  const midnight = Math.floor(now / DAY5) * DAY5;
+  const startMs = midnight - (day + 6) % 7 * DAY5;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY5 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
   const next = nextLeviathanStart(w.startMs);
   return next !== null && next >= w.startMs && next < w.endMs;
 }
-function pickChallengeType(weekId, previous) {
+function pickChallengeType(weekId2, previous) {
   const types = Object.keys(CHALLENGE_TYPES);
   let h = 0;
-  for (const c of weekId) h = h * 31 + c.charCodeAt(0) >>> 0;
+  for (const c of weekId2) h = h * 31 + c.charCodeAt(0) >>> 0;
   let type = types[h % types.length];
   if (type === previous) type = types[(h + 1) % types.length];
   return type;
@@ -6477,7 +7129,7 @@ function startChallenge(now, activePlayers, previous) {
   };
 }
 function challengeMetrics(player) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g;
   const s = (_a = player.stats) != null ? _a : {};
   const pirates = (_b = player.pirates) != null ? _b : {};
   const raids = Object.values(pirates).reduce((a, p) => a + (Number(p == null ? void 0 : p.repelled) || 0), 0);
@@ -6486,7 +7138,8 @@ function challengeMetrics(player) {
     missions: (_c = s.missions) != null ? _c : 0,
     units: (_d = s.unitsBuilt) != null ? _d : 0,
     market: (_e = s.marketVolume) != null ? _e : 0,
-    expeditions: (_f = s.expeditions) != null ? _f : 0
+    expeditions: (_f = s.expeditions) != null ? _f : 0,
+    bounties: (_g = s.bounties) != null ? _g : 0
   };
 }
 function addContribution(ch, uid, pseudo, amount2, now) {
@@ -6539,7 +7192,7 @@ var DIPLOMACY_RULES = {
   maxPacts: 3,
   messageMax: 500
 };
-var HOUR6 = 36e5;
+var HOUR7 = 36e5;
 function pactStatusAt(p, now) {
   return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
 }
@@ -6603,7 +7256,7 @@ function breakPact(pact, own, actorUid, now) {
   if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
   if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
   assertLeader(own, actorUid, "rompre un pacte");
-  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR6, brokenByTag: own.tag });
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR7, brokenByTag: own.tag });
 }
 function sanitizePactMessage(raw) {
   const text = String(raw != null ? raw : "").trim();
@@ -6671,7 +7324,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR7 = 36e5;
+var HOUR8 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES.includes(res)) return 1;
@@ -6704,7 +7357,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR7);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR8);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {

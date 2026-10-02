@@ -8,7 +8,7 @@ export const NOTIFICATION_CATEGORIES: { id: NotificationCategory; label: string;
   { id: "all", label: "Tout", kinds: null },
   { id: "build", label: "Chantiers", kinds: ["building", "research", "unit"] },
   { id: "war", label: "Combats et flottes", kinds: ["combat-attacker", "combat-defender", "fleet", "spy", "spy-detected", "debris"] },
-  { id: "rewards", label: "Missions et récompenses", kinds: ["mission", "achievement", "gift", "season", "event"] },
+  { id: "rewards", label: "Missions et récompenses", kinds: ["mission", "bounty", "achievement", "gift", "season", "event"] },
   { id: "social", label: "Alliance et système", kinds: ["alliance", "message", "system", "report"] },
 ];
 
@@ -25,6 +25,7 @@ const KIND_WORDS: Partial<Record<NotificationKind, [string, string]>> = {
   research: ["recherche", "recherches"],
   unit: ["unité", "unités"],
   mission: ["mission", "missions"],
+  bounty: ["prime", "primes"],
   achievement: ["succès", "succès"],
   "combat-attacker": ["combat", "combats"],
   "combat-defender": ["attaque subie", "attaques subies"],
@@ -59,6 +60,7 @@ const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
   research: "/game/labo",
   unit: "/game/unites",
   mission: "/game/missions",
+  bounty: "/game/primes",
   "combat-attacker": "/game/combats",
   "combat-defender": "/game/combats",
   spy: "/game/combats",

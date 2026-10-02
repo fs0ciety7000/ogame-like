@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FileText } from "lucide-react";
 import { useEmojiStore } from "@/services/emojiService";
 import { splitCustomEmojis } from "@/game/emojis";
+import { KESH_EMOJIS } from "@/game/bounties";
 
 /* Texte de message (v3.8) : les liens de rapports partagés deviennent des
    boutons, les autres liens http(s) restent cliquables, les emojis
@@ -15,7 +16,7 @@ function WithEmojis({ text }: { text: string }) {
   const emojis = useEmojiStore((s) => s.emojis);
   return (
     <>
-      {splitCustomEmojis(text, emojis).map((t, i) =>
+      {splitCustomEmojis(text, [...emojis, ...KESH_EMOJIS]).map((t, i) =>
         t.type === "text" ? (
           <Fragment key={i}>{t.text}</Fragment>
         ) : (

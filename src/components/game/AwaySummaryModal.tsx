@@ -15,6 +15,7 @@ const KIND_LABEL: Record<NotificationKind, string> = {
   "combat-defender": "Attaque subie",
   achievement: "Succès débloqué",
   "spy-detected": "Tentative d'espionnage détectée",
+  bounty: "Prime Kesh'Vaar",
   spy: "Rapport d'espionnage",
   debris: "Champ de débris",
   season: "Fin de saison",

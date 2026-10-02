@@ -1,5 +1,5 @@
 import { DEFAULT_BUILDINGS, setBuildings, type BuildingDef } from "@/game/buildings";
-import { DEFAULT_UNITS, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
+import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
@@ -63,6 +63,12 @@ export interface GameContent {
 export type ContentSection = keyof GameContent;
 export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules"];
 
+/** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
+ *  liste des unités a été personnalisée avant son arrivée. */
+function withFixedUnits(units: UnitDef[]): UnitDef[] {
+  return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
+}
+
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
@@ -105,7 +111,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   const defaults = defaultGameContent();
   const content: GameContent = {
     buildings: overrides.buildings ?? defaults.buildings,
-    units: overrides.units ?? defaults.units,
+    units: withFixedUnits(overrides.units ?? defaults.units),
     technologies: overrides.technologies ?? defaults.technologies,
     missions: overrides.missions ?? defaults.missions,
     factions: overrides.factions ?? defaults.factions,
@@ -212,7 +218,7 @@ export function validateGameContent(content: GameContent): string[] {
   checkIds("Unités", content.units.map((u) => u.id));
   for (const u of content.units) {
     const label = `Unité ${u.name || u.id}`;
-    if (!techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
+    if (!u.blueprint && !techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
     if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
     if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);

@@ -19,6 +19,8 @@ import { STAFF_KEY } from "@/game/staff";
 import { applyStaffRecord } from "@/services/staffService";
 import { LEVIATHAN_KEY } from "@/game/leviathan";
 import { applyLeviathanRecord } from "@/services/leviathanService";
+import { ELITE_KEY } from "@/game/bounties";
+import { applyEliteRecord } from "@/services/bountyService";
 
 /* =====================================================
    Contenu du jeu (bâtiments, unités, technos, missions, règles) stocké
@@ -48,6 +50,7 @@ function applyRecords(records: ConfigRecord[]) {
   applyMaintenanceRecord(records.find((r) => (r.key as string) === MAINTENANCE_KEY)?.data ?? null);
   applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
   applyLeviathanRecord(records.find((r) => (r.key as string) === LEVIATHAN_KEY)?.data ?? null);
+  applyEliteRecord(records.find((r) => (r.key as string) === ELITE_KEY)?.data ?? null);
   applyBannersRecord(records.find((r) => (r.key as string) === BANNERS_KEY)?.data ?? null);
   applyChallengeRecord(records.find((r) => (r.key as string) === CHALLENGE_KEY)?.data ?? null);
   applyEmojisRecord(records.find((r) => (r.key as string) === EMOJIS_KEY)?.data ?? null);

@@ -247,6 +247,8 @@ routerAdd(
       rec.set("recalled", true);
       rec.set("returnAtMs", next.returnAtMs);
       txApp.save(rec);
+      // v3.9 : une prime rappelée redevient disponible au tableau.
+      db.releaseBountyOnRecall(txApp, game, next);
       response = db.toPlain(rec);
     });
     return e.json(200, response);
@@ -569,3 +571,23 @@ onRecordAfterDeleteSuccess((e) => {
   require(`${__hooks}/cosmic_db.js`).deleteProfile(e.app, e.record.id);
   e.next();
 }, "players");
+
+/* ---------- Chasseurs de primes Kesh'Vaar (v3.9) ---------- */
+
+/** POST /api/cosmic/bounty { action: "buy" | "exchange" | "beacon", ... } — Comptoir de la Ruche et balise. */
+routerAdd("POST", "/api/cosmic/bounty", (e) => require(`${__hooks}/cosmic_db.js`).bountyRequest(e), $apis.requireAuth("users"));
+
+/** POST /api/cosmic/admin/elite { now? } — lance la tâche de la proie d'élite tout de suite. */
+routerAdd("POST", "/api/cosmic/admin/elite", (e) => require(`${__hooks}/cosmic_db.js`).adminElite(e), $apis.requireAuth("users", "_superusers"));
+
+// Proie d'élite : nouvelle chaque lundi, fuite et récompenses à l'échéance.
+cronAdd("cosmic_elite", "*/10 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).eliteTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] proie d'élite : ${err}`);
+  }
+});
+
+// Tchat d'alliance : emojis Kesh'Vaar réservés aux détenteurs du pack.
+onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).allianceMessageCreate(e), "alliance_messages");

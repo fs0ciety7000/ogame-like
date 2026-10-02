@@ -16,6 +16,7 @@ import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
+import { bountyTarget, dropShield, ELITE_RULES, shieldUntil, startBounty } from "@/game/bounties";
 import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
 /* =====================================================
@@ -47,7 +48,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -60,6 +61,8 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   expedition: "Expédition",
   leviathan: "Assaut du Léviathan",
   transport: "Transport",
+  bounty: "Chasse à la prime",
+  elite: "Proie d'élite",
 };
 
 export interface Fleet {
@@ -196,6 +199,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(defender),
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
   });
@@ -214,8 +218,9 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
   const speed = fleetSpeed(attacker.units, units);
   const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1000;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
-  // Attaquer lève sa propre protection débutant, dès le décollage.
+  // Attaquer lève sa propre protection débutant, dès le décollage (et le Voile de chitine).
   attacker.lastAttackAtMs = now;
+  dropShield(attacker, now);
 
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 60000));
   const total = Object.values(units).reduce((a, b) => a + b, 0);
@@ -257,7 +262,7 @@ export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
     // Garnison : elle quitte l'allié et rentre (durée du trajet aller).
     return { ...fleet, status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) };
   }
-  if (fleet.mission === "expedition" || fleet.mission === "leviathan") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus être rappelée.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est déjà au contact.");
   return { ...fleet, status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) };
@@ -294,6 +299,12 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
       return { title: "Retour du Léviathan", message: "Les survivants de l'assaut sur le Léviathan sont rentrés." };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
+    case "bounty":
+      return fleet.recalled
+        ? { title: "Traque abandonnée", message: `Ta flotte lancée sur ${fleet.targetPseudo} est rentrée : la prime reste au tableau.` }
+        : { title: "Chasseurs rentrés", message: `Ta flotte lancée sur ${fleet.targetPseudo} est de retour.` };
+    case "elite":
+      return { title: "Retour de la traque d'élite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
     case "transport":
       return fleet.transport?.direction === "collect" && !fleet.recalled
         ? { title: "Transport rentré", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatriées de ${fleet.targetPseudo}.` : `Rien à rapatrier de ${fleet.targetPseudo}.` }
@@ -350,6 +361,9 @@ export interface LaunchRequest {
   targetColonyId?: string;
   /** v3.5 : transport (colonie, sens, chargement). */
   transport?: { colonyId?: unknown; direction?: unknown; cargo?: unknown };
+  /** v3.9 : contrat de prime visé, ou nom de la proie d'élite. */
+  bountyId?: string;
+  eliteName?: string;
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
@@ -389,6 +403,11 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
     };
   }
   else if (mission === "transport") out = launchTransport(owner, req.fleet, req.transport ?? {}, now);
+  else if (mission === "bounty") out = launchBounty(owner, req.bountyId ?? "", req.fleet, now);
+  else if (mission === "elite") {
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'élite.");
+    out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: req.eliteName ?? "Proie d'élite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 60_000), defenderNotifications: [] };
+  }
   else throw new GameActionError("Mission inconnue.");
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
@@ -592,6 +611,37 @@ export function launchLair(owner: PlayerState, target: string, raw: Record<strin
     fleet: { ...newFleet(owner, { uid: lairUid(faction!.id), pseudo: faction!.lair.name }, "lair", units, now, arriveAtMs), power, factionId: faction!.id },
     defenderNotifications: [],
   };
+}
+
+/** v3.9 : chasse à la prime. La puissance du fugitif est fixée au départ,
+ *  sur toute la flotte à quai (vaisseaux envoyés compris). */
+export function launchBounty(owner: PlayerState, contractId: string, raw: Record<string, unknown>, now: number): LaunchOutput {
+  const { contract, power, fugitive } = startBounty(owner, contractId, now);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent chasser.");
+  return {
+    attacker: owner,
+    fleet: { ...newFleet(owner, { uid: bountyTarget(contract), pseudo: fugitive.name }, "bounty", units, now, now + contract.minutes * 60_000), power, factionId: fugitive.factionId },
+    defenderNotifications: [],
+  };
+}
+
+/** Contrat visé par une flotte de prime (targetUid = bounty_<id>). */
+export function bountyIdOf(targetUid: string): string {
+  return targetUid.startsWith("bounty_") ? targetUid.slice("bounty_".length) : "";
+}
+
+export const ELITE_TARGET = "bounty_elite";
+
+/** v3.9 : Balise de repli. La flotte rentre aussitôt (rappelée si elle
+ *  n'avait pas encore atteint sa cible). */
+export function beaconReturn(fleet: Fleet, uid: string, now: number): Fleet {
+  if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
+  if (!["outbound", "returning", "stationed"].includes(fleet.status)) throw new GameActionError("Cette flotte n'est plus en vol.");
+  if (fleet.mission === "expedition" || ((fleet.mission === "leviathan" || fleet.mission === "elite") && fleet.status === "outbound")) {
+    throw new GameActionError("La balise ne peut pas ramener cette flotte.");
+  }
+  const recalled = fleet.status === "outbound" ? true : fleet.recalled;
+  return { ...fleet, status: "returning", recalled, returnAtMs: now };
 }
 
 /** Distance fixe jusqu'au repaire (aux confins de la carte). */

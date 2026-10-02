@@ -12,6 +12,7 @@ const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }
   "combat-defender": { level: "WARN", className: "text-ember-glow" },
   achievement: { level: "UNLOCK", className: "text-gold-glow" },
   "spy-detected": { level: "ALERT", className: "text-ember-glow" },
+  bounty: { level: "HUNT", className: "text-gold-glow" },
   spy: { level: "INTEL", className: "text-cyan-glow" },
   debris: { level: "INFO", className: "text-slate-300" },
   season: { level: "SAISON", className: "text-gold-glow" },

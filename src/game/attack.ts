@@ -1,4 +1,5 @@
 import { colonyOf, colonyView } from "@/game/colonies";
+import { shieldUntil } from "@/game/bounties";
 import { bumpStat, setStat } from "@/game/stats";
 import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -83,6 +84,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderHasAttacked: (defender.lastAttackAtMs ?? 0) > 0,
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
+    defenderShieldUntilMs: shieldUntil(defender),
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };

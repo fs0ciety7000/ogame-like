@@ -43,6 +43,7 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   "combat-defender": { icon: "🛡️", sound: playAlert },
   achievement: { icon: "🏆", sound: playUnlock },
   "spy-detected": { icon: "🔍", sound: playAlert },
+  bounty: { icon: "🐝", sound: playUnlock },
   spy: { icon: "🛰️", sound: playConfirm },
   debris: { icon: "♻️", sound: playConfirm },
   season: { icon: "🏆", sound: playUnlock },
