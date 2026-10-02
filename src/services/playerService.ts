@@ -54,6 +54,7 @@ function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | nu
     unitQueues: (record.unitQueues as QueuesState["unitQueues"]) ?? defaults.unitQueues,
     activeResearches: (record.activeResearches as QueuesState["activeResearches"]) ?? defaults.activeResearches,
     activeMissions: (record.activeMissions as QueuesState["activeMissions"]) ?? defaults.activeMissions,
+    buildPlan: (record.buildPlan as QueuesState["buildPlan"]) ?? [],
   };
 }
 

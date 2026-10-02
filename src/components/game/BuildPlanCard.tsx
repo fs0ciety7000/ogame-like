@@ -53,7 +53,9 @@ export function BuildPlanCard({ player, queues, now }: { player: PlayerState; qu
               ? `ressources insuffisantes · retiré dans ${formatDuration(Math.max(0, p.waitingSinceMs + BUILD_PLAN_RULES.maxWaitHours * 3600_000 - now) / 1000)}`
               : upgrading
                 ? "après le chantier en cours"
-                : "en attente du niveau précédent";
+                : p.level > (player.buildings[p.buildingId]?.level ?? 0) + 1
+                  ? "en attente du niveau précédent"
+                  : "lancement dès que possible";
             return (
               <li key={`${p.buildingId}-${p.level}`} className="flex items-center gap-2 border border-white/5 bg-white/[0.02] px-2 py-1.5 text-xs">
                 <span className="font-mono text-slate-500">{i + 1}.</span>

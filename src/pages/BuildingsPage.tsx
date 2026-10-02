@@ -111,7 +111,8 @@ export function BuildingsPage() {
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
           const plannable = nextPlannedLevel(player, queues, building.id);
           const planButton =
-            !isLocked && !planFull && plannable <= building.maxLevel ? (
+            // Utile quand le chantier est occupé ou que les ressources manquent ; sinon, « Améliorer » suffit.
+            !isLocked && !planFull && plannable <= building.maxLevel && (activeUpgrade || !Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0))) ? (
               <button type="button" disabled={pending === building.id} onClick={() => void handlePlan(building.id)} className="mt-1.5 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow/80 hover:text-cyan-glow hover:underline">
                 + Programmer niv. {plannable}
               </button>
@@ -126,7 +127,7 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert")}>
+              <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert", building.endgame && "legendary-frame")}>
                 <HudBrackets className="border-gold-glow/70" />
                 <LevelPulse level={level} />
                 <div className="relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-1">
@@ -149,7 +150,10 @@ export function BuildingsPage() {
                     {!isLocked && <TierBadge level={level} />}
                   </div>
                   <div className="min-w-0">
-                    <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                    <span className="flex flex-wrap gap-1.5">
+                      <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                      {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
+                    </span>
                     <h3 className="hud-title mt-2 text-[17px] text-white [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>

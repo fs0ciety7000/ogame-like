@@ -2377,6 +2377,84 @@ function adminBackupStatus(e) {
   return e.json(200, backupStatus());
 }
 
+/* ---------- v4.9 : sauvegardes depuis l'administration ---------- */
+
+function backupStamp(now) {
+  const d = new Date(now);
+  const p = (n) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+}
+
+/** GET /api/cosmic/admin/backups/list — sauvegardes présentes sur le serveur. */
+function adminBackupList(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const out = [];
+  const fsys = $app.newBackupsFilesystem();
+  try {
+    const list = fsys.list("");
+    for (let i = 0; i < list.length; i++) {
+      const key = String(list[i].key || "");
+      if (!key.endsWith(".zip")) continue;
+      out.push({ key, size: Number(list[i].size) || 0, modifiedAtMs: new Date(String(list[i].modTime)).getTime() });
+    }
+  } finally {
+    fsys.close();
+  }
+  out.sort((a, b) => b.modifiedAtMs - a.modifiedAtMs);
+  return e.json(200, out);
+}
+
+/** GET /api/cosmic/admin/backups/download?key=… — téléchargement d'une sauvegarde. */
+function adminBackupDownload(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const key = String(e.request.url.query().get("key") || "");
+  if (!/^[A-Za-z0-9._-]{1,120}\.zip$/.test(key)) throw new BadRequestError("Sauvegarde inconnue.");
+  const fsys = $app.newBackupsFilesystem();
+  try {
+    if (!fsys.exists(key)) throw new NotFoundError("Sauvegarde introuvable.");
+    fsys.serve(e.response, e.request, key, key);
+  } finally {
+    fsys.close();
+  }
+  return null;
+}
+
+/**
+ * POST /api/cosmic/admin/backups/r2 { create? } — sauvegarde à l'instant
+ * (facultatif), puis lance la copie vers Cloudflare R2 (workflow GitHub
+ * « Copie vers Cloudflare R2 » : sauvegardes PocketBase et illustrations).
+ * Variables : COSMIC_GITHUB_TOKEN (droit « Actions : écriture »),
+ * COSMIC_DEPLOY_REPO (défaut : fs0ciety7000/ogame-like).
+ */
+function adminBackupToR2(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const req = body(e);
+  const out = { backup: null, dispatched: false, message: "" };
+  if (req.create !== false) {
+    const name = `manuelle_${backupStamp(Date.now())}.zip`;
+    $app.createBackup(e.request.context(), name);
+    out.backup = name;
+  }
+  const token = $os.getenv("COSMIC_GITHUB_TOKEN");
+  const repo = $os.getenv("COSMIC_DEPLOY_REPO") || "fs0ciety7000/ogame-like";
+  if (!token) {
+    out.message = "Sauvegarde faite. Copie vers R2 non lancée : variable COSMIC_GITHUB_TOKEN absente (elle se fera à 3 h 30).";
+    return e.json(200, out);
+  }
+  const res = $http.send({
+    url: `https://api.github.com/repos/${repo}/actions/workflows/r2-backup.yml/dispatches`,
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "cosmic-empires" },
+    body: JSON.stringify({ ref: "main" }),
+    timeout: 20,
+  });
+  out.dispatched = res.statusCode === 204;
+  out.message = out.dispatched
+    ? "Copie vers R2 lancée : sauvegardes PocketBase et illustrations (quelques minutes, suivi dans GitHub Actions)."
+    : `Sauvegarde faite, mais GitHub a refusé de lancer la copie (HTTP ${res.statusCode}) : le jeton doit avoir le droit « Actions : écriture ».`;
+  return e.json(200, out);
+}
+
 /** Vérification quotidienne : alerte l'équipe si la dernière sauvegarde est trop ancienne. */
 function checkBackups(now) {
   const st = backupStatus();
@@ -4864,4 +4942,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
