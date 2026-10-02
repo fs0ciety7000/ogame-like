@@ -103,6 +103,8 @@ function triggerText(f: FactionDef): string {
       return `Vise les savants : ${t.threshold ?? 0} niveaux de technologies ou plus et une recherche terminée ces ${t.windowDays} derniers jours.`;
     case "hoard":
       return `Vise les coffres pleins : entrepôts remplis à ${t.threshold ?? 0} % ou plus.`;
+    case "singularity":
+      return `Vise les empires les plus avancés : ${t.threshold ?? 0} niveaux cumulés ou plus dans les technologies de fin de partie (Métallurgie quantique, Cortex neuronal…).`;
     case "expansion":
       return `Vise les empires qui grandissent vite : ${t.threshold ?? 0} niveaux de bâtiments gagnés en ${t.windowDays} jours.`;
     default:
@@ -124,6 +126,13 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
 
   return (
     <Card className={cn("overflow-hidden p-0", a.border)}>
+      {faction.banner && (
+        <div className="relative h-36 overflow-hidden border-b border-white/5 sm:h-44">
+          <img src={assetUrl(faction.banner)} alt={faction.lair.name} className="h-full w-full object-cover" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-transparent to-transparent" />
+          <p className={cn("absolute bottom-2 left-4 font-mono text-[11px] uppercase tracking-[0.18em]", a.text)}>{faction.lair.name}</p>
+        </div>
+      )}
       <div className="grid md:grid-cols-[minmax(0,18rem)_1fr]">
         <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
         <div className="flex flex-col gap-3 p-5">

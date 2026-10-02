@@ -37,7 +37,13 @@ export const TECH_GRID: Record<string, { col: number; row: number }> = {
   tech15: { col: 3, row: 5 },
   tech16: { col: 4, row: 5 },
   tech18: { col: 5, row: 4 },
-  tech19: { col: 6, row: 4.5 },
+  // v3.6 : fin de partie, entre le Canon plasma / l'Intercepteur et l'Étoile noire.
+  tech23: { col: 4, row: 3 },
+  tech21: { col: 5, row: 2 },
+  tech25: { col: 5, row: 3 },
+  tech22: { col: 6, row: 1 },
+  tech24: { col: 6, row: 4 },
+  tech19: { col: 7, row: 4.5 },
 };
 
 export interface TechLane {

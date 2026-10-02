@@ -37,7 +37,7 @@ const veteran = (patch: Partial<PlayerState> = {}): PlayerState =>
     resources: { ...defaultPlayerState("p", "P").resources, scrap: 1_000_000, energy: 1_000_000, nano: 1_000_000, data: 1_000_000, reinforcedSteel: 50_000, aiFragment: 50_000 },
     ...patch,
   }) as PlayerState;
-const ALL = ["varan", "gravhorn", "inquisition", "cartel", "meute"];
+const ALL = ["varan", "gravhorn", "inquisition", "cartel", "meute", "choeur"];
 /** Factions déjà passées (date d'inscription échue) ; les autres sont mises en sommeil. */
 const listed = (ids: string[], extra: Partial<ReturnType<typeof pirateState>> = {}): FactionStates =>
   Object.fromEntries(
@@ -231,6 +231,16 @@ describe("Factions hostiles", () => {
   it("counts a raid suffered while the fleet was on patrol", () => {
     const p = veteran({ pirates: listed(["varan"]) });
     expect(resolvePirateRaid(varan, p, defaultQueues(), 1000, [], NOW, { evading: true }).player.stats?.evasions).toBe(1);
+  });
+
+  it("the Silent Choir only answers to endgame research (v3.6)", () => {
+    const p = veteran({ pirates: listed(["choeur"]) });
+    p.techLevels = { ...p.techLevels, tech21: 3, tech22: 4 };
+    expect(pirateTick(p, NOW).changed).toBe(false); // 7 niveaux seulement
+    p.techLevels = { ...p.techLevels, tech23: 1 };
+    const out = pirateTick(p, NOW);
+    expect(activeUltimatum(p, NOW)?.faction.id).toBe("choeur");
+    expect(out.notifications[0].message).toMatch(/Archonte Vesper/);
   });
 
   it("validates faction definitions", () => {

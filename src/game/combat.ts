@@ -43,11 +43,14 @@ export const COMBAT_RULES = {
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
 export function getShieldPercent(buildings: Buildings, allianceBonus = 0): number {
   let levels = 0;
+  let extra = 0;
   for (const b of BUILDINGS) {
     if (b.effect?.type === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+    // v3.6 : Générateur de bouclier planétaire, au-delà du plafond des hangars.
+    if (b.effect?.type === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
   }
   // Le Bouclier fédéral (alliance) s'ajoute et repousse d'autant le plafond.
-  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus);
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
 }
 const RARE_RESOURCES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 const COMMON_RESOURCES: ResourceId[] = ["scrap", "energy", "nano", "data"];
