@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { toast } from "sonner";
 import { Clock, Globe2, Hammer, Package, Rocket, Shield, Truck, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -289,6 +290,9 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                   <div>
                     <p className="text-[11px] text-cyan-glow">Niveau {running.level} — fin dans {formatDuration(Math.max(0, Math.floor((running.endTime - now) / 1000)))}</p>
                     <Progress value={100 - ((running.endTime - now) / Math.max(1, colonyUpgradeSeconds(player, id, running.level, now) * 1000)) * 100} className="mt-1" />
+                    <div className="mt-1 flex justify-end">
+                      <CancelJobButton target={{ kind: "colonyBuilding", colonyId: colony.id }} compact />
+                    </div>
                   </div>
                 ) : level >= max ? (
                   <p className="text-[11px] text-mint-glow">Niveau maximum d'une colonie.</p>
@@ -336,8 +340,9 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                 .join(" · ")}
         </p>
         {colony.defenseJob ? (
-          <p className="text-[11px] text-cyan-glow">
+          <p className="flex flex-wrap items-center gap-2 text-[11px] text-cyan-glow">
             {formatCompact(colony.defenseJob.qty)} {findUnit(colony.defenseJob.unitId)?.name} en construction — fin dans {formatDuration(Math.max(0, Math.floor((colony.defenseJob.endTime - now) / 1000)))}
+            <CancelJobButton target={{ kind: "colonyDefense", colonyId: colony.id }} compact />
           </p>
         ) : defenses.length === 0 ? (
           <p className="text-[11px] text-slate-500">Débloque des défenses sur ta planète mère pour en construire ici.</p>

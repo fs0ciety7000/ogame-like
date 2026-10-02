@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Play, RotateCcw, Save, Sword, Trash2 } from "lucide-react";
+import { ChevronDown, Handshake, Play, RotateCcw, Save, Sword, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,9 @@ export function WarlordsPanel() {
     setBusy(true);
     try {
       const s = await adminCall(action, id);
-      toast.success(`Tâche lancée : ${s.grown ?? 0} seigneur(s) à jour, ${s.attacks ?? 0} attaque(s), ${s.offers ?? 0} offre(s), ${s.contacts ?? 0} contact(s).`);
+      if (action === "coalitionStart") toast.success("Coalition lancée : tous les joueurs sont prévenus.");
+      else if (action === "coalitionStop") toast.success("Coalition arrêtée (comptée comme un échec).");
+      else toast.success(`Tâche lancée : ${s.grown ?? 0} seigneur(s) à jour, ${s.attacks ?? 0} attaque(s), ${s.offers ?? 0} offre(s), ${s.contacts ?? 0} contact(s).`);
       await refreshLive();
     } catch (err) {
       toast.error((err as { response?: { message?: string } })?.response?.message ?? "Action impossible.");
@@ -78,6 +80,9 @@ export function WarlordsPanel() {
         <h2 className="font-display text-base text-white">Seigneurs de guerre</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => confirm("Arrêter la coalition en cours ? Elle compte comme un échec.") && void run("coalitionStop")}>
+            Arrêter la coalition
+          </Button>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run("tick")}>
             <Play className="mr-1 h-3.5 w-3.5" /> Lancer la tâche maintenant
           </Button>
@@ -159,6 +164,9 @@ export function WarlordsPanel() {
                 <div className="flex flex-wrap gap-2 sm:col-span-2">
                   <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => void run("attack", d.id)}>
                     <Sword className="mr-1 h-3.5 w-3.5" /> Forcer une attaque
+                  </Button>
+                  <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => confirm(`Lancer une coalition de 5 jours contre ${d.name} ?`) && void run("coalitionStart", d.id)}>
+                    <Handshake className="mr-1 h-3.5 w-3.5" /> Lancer une coalition
                   </Button>
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => confirm(`Recréer ${d.name} de zéro ?`) && void run("reset", d.id)}>
                     <Trash2 className="mr-1 h-3.5 w-3.5" /> Recréer l'empire

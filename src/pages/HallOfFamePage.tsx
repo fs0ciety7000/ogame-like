@@ -90,6 +90,7 @@ export function HallOfFamePage() {
     warBonuses,
   ).slice(0, 3);
   const live = players
+    .filter((p) => !p.npc)
     .map((p) => ({ ...p, sxp: p.seasonId === season ? p.seasonXp : 0 }))
     .filter((p) => p.sxp > 0)
     .sort((a, b) => b.sxp - a.sxp)

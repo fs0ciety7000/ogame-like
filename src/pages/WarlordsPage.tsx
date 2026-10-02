@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { CoalitionCard } from "@/components/game/CoalitionCard";
+import type { Coalition } from "@/game/coalition";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -46,13 +48,15 @@ export function WarlordsPage() {
   const [vendetta, setVendetta] = useState<WarlordPublic | null>(null);
   const [scope, setScope] = useState<"player" | "alliance">("player");
   const [busy, setBusy] = useState(false);
+  const [coalition, setCoalition] = useState<Coalition | null>(null);
 
   const reload = async () => {
     try {
       const view = await fetchWarlords();
       setList(view.warlords);
       setHistory(view.history);
-      useWarlordsStore.setState({ list: view.warlords, loadedAtMs: Date.now() });
+      useWarlordsStore.setState({ list: view.warlords, loadedAtMs: Date.now(), coalition: view.coalition ?? null });
+      setCoalition(view.coalition ?? null);
     } catch {
       setList([]);
     }
@@ -90,6 +94,8 @@ export function WarlordsPage() {
         title="Seigneurs de guerre"
         description="Dix empires tenus par le jeu. Ils grandissent avec le secteur, attaquent parfois, commercent, et répondent à qui les provoque. Pille-les, espionne-les, ou déclare-leur une vendetta."
       />
+
+      {coalition && list && <CoalitionCard coalition={coalition} warlords={list} uid={player?.uid ?? ""} />}
 
       {mine?.vendetta && (
         <Card className="flex flex-wrap items-center gap-4 border-danger-glow/40 p-4">

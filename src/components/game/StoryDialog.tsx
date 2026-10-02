@@ -8,6 +8,9 @@ import { chapterOf, OUTRO_LINES, RAID_LINES, STORY_SPEAKERS, storyText, type Sto
 import { assetUrl } from "@/lib/assets";
 import { useAnnouncementPending } from "@/components/game/Announcement";
 import type { PlayerState } from "@/types/game";
+import { coalitionPhase, coalitionScene, type Coalition } from "@/game/coalition";
+import { findWarlord } from "@/game/warlords";
+import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 
 /* v4.1 : dialogues du tutoriel scénarisé (Vashka, Varan), une fois chacun. */
 
@@ -55,7 +58,25 @@ function chronicleScene(player: PlayerState, seen: string[]): { id: string; titl
   return null;
 }
 
+/** v4.7 : mini-arc d'une coalition (ouverture, mi-parcours, dénouement), une fois chaque scène. */
+function coalitionArcScene(player: PlayerState, co: Coalition | null, seen: string[]): { id: string; title: string; lines: StoryLine[] } | null {
+  if (!co || (onboardingEligible(player) && !onboardingState(player).hidden)) return null;
+  const d = findWarlord(co.warlordId);
+  if (!d) return null;
+  const now = Date.now();
+  if (co.status !== "active" && now - (co.finishedAtMs ?? co.endsAtMs) > 3 * 24 * 3600_000) return null;
+  const phase = coalitionPhase(co);
+  const id = `${co.id}-${phase}`;
+  if (seen.includes(id)) return null;
+  const titles = { open: "Coalition · L'appel de l'Essaim", mid: "Coalition · Mi-parcours", won: "Coalition · Victoire", lost: "Coalition · Échec" };
+  return { id, title: `${titles[phase]} · ${d.name}`, lines: coalitionScene(co, d, phase) };
+}
+
 export function StoryDialog({ player }: { player: PlayerState }) {
+  const coalition = useWarlordsStore((s) => s.coalition);
+  useEffect(() => {
+    void loadWarlords().catch(() => undefined);
+  }, []);
   const [state, setState] = useState(() => readSeen(player.uid));
   // Laisse passer d'abord une éventuelle annonce plein écran.
   const [ready, setReady] = useState(false);
@@ -64,7 +85,10 @@ export function StoryDialog({ player }: { player: PlayerState }) {
     const t = setTimeout(() => setReady(true), 1600);
     return () => clearTimeout(t);
   }, []);
-  const scene = useMemo(() => (state.off ? null : pendingScene(player, state.seen)) ?? chronicleScene(player, state.seen), [player, state]);
+  const scene = useMemo(
+    () => (state.off ? null : pendingScene(player, state.seen)) ?? chronicleScene(player, state.seen) ?? coalitionArcScene(player, coalition, state.seen),
+    [player, state, coalition],
+  );
   if (!scene || !ready || announcing) return null;
   const close = () => {
     const next = { ...state, seen: [...state.seen, scene.id] };
@@ -83,7 +107,7 @@ export function StoryDialog({ player }: { player: PlayerState }) {
 export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabel = "Compris" }: { title: string; lines: StoryLine[]; pseudo: string; onClose: () => void; onSkipAll?: () => void; doneLabel?: string }) {
   const [index, setIndex] = useState(0);
   const line = lines[Math.min(index, lines.length - 1)];
-  const sp = STORY_SPEAKERS[line.speaker] ?? STORY_SPEAKERS.vashka;
+  const sp = line.as ?? STORY_SPEAKERS[line.speaker] ?? STORY_SPEAKERS.vashka;
   const last = index >= lines.length - 1;
 
   return (
@@ -92,7 +116,7 @@ export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabe
         <div className="flex flex-col sm:flex-row">
           <AnimatePresence mode="wait">
             <motion.img
-              key={line.speaker}
+              key={sp.name}
               src={assetUrl(sp.image)}
               alt={sp.name}
               initial={{ opacity: 0, x: -12 }}

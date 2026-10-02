@@ -45,6 +45,29 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.7-coalitions",
+    eyebrow: "Mise à jour 4.7 · Coalitions",
+    title: "Le secteur fait front",
+    text: "Quand un seigneur de guerre devient trop fort, tout le secteur se ligue contre lui : cinq jours pour le briser ensemble. Et si tu t'es trompé de chantier, tu peux maintenant l'annuler.",
+    factions: [],
+    tone: "danger",
+    art: "/assets/story/varan.webp",
+    artMobile: "/assets/warlords/zharkesh.webp",
+    emblem: "/assets/warlords/zharkesh-sceau.webp",
+    spotlight: {
+      image: "/assets/bounties/vashka.webp",
+      name: "Vashka",
+      role: "Matriarche-Chasseuse",
+      quote: "Un seigneur trop gros pour un seul empire ? Alors frappons tous ensemble.",
+    },
+    features: [
+      { title: "Coalitions", text: "Seigneur 1,5 × plus fort que le meilleur joueur pendant 48 h : 5 jours pour le briser, +50 points, reliques épiques.", to: "/game/seigneurs", image: "/assets/warlords/brannoc-sceau.webp" },
+      { title: "Annuler un chantier", text: "100 % la première minute, sinon 80 % du temps restant : bâtiments, Labo, unités, colonies.", to: "/game/batiments" },
+      { title: "Chroniques d'hiver", text: "Janvier à mars : Kragmor, le Chœur brisé et les racines de Maru.", to: "/game/passe", image: "/assets/warlords/maru.webp" },
+    ],
+    cta: { label: "Voir les seigneurs", to: "/game/seigneurs" },
+  },
+  {
     id: "v4.6-social",
     eyebrow: "Mise à jour 4.6 · Social",
     title: "Un boss pour ton alliance",

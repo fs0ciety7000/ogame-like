@@ -707,3 +707,8 @@ export function claimChronicleEpisode(episode: number) {
 export function claimPassTier(tier: number) {
   return act<{ gained: string[] }>({ type: "passClaim", tier });
 }
+
+/** v4.7 : annule un chantier (remboursement calculé par le serveur). */
+export function cancelJob(target: import("@/game/cancel").CancelTarget) {
+  return act<import("@/game/cancel").CancelQuote>({ type: "cancel", target });
+}

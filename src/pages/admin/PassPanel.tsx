@@ -25,6 +25,7 @@ const POINT_LABELS: Record<string, string> = {
   seasonBoss: "Participation au boss de saison",
   allianceBoss: "Boss d'alliance abattu",
   allianceBossTry: "Participation au boss d'alliance",
+  coalition: "Coalition gagnée contre un seigneur",
 };
 
 const KINDS: { value: PassReward["kind"]; label: string }[] = [

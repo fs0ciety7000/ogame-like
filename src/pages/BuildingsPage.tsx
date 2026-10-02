@@ -1,4 +1,5 @@
 import { playerBuildTimeFactor } from "@/game/bonuses";
+import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -227,6 +228,9 @@ export function BuildingsPage() {
                           <span className="text-slate-400">{formatDuration((activeUpgrade.endTime - now) / 1000)}</span>
                         </div>
                         <Progress value={100 - ((activeUpgrade.endTime - now) / (time * 1000)) * 100} />
+                        <div className="mt-1.5 flex justify-end">
+                          <CancelJobButton target={{ kind: "building", id: building.id }} compact />
+                        </div>
                       </div>
                     ) : level >= building.maxLevel ? (
                       <Button className="w-full" variant="secondary" disabled>
