@@ -251,12 +251,12 @@ export function PlayersPage() {
                 </span>
                 <img src={getRankIcon(displayXp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
                 <div className="min-w-0">
-                  <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
-                    <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 truncate text-left hover:text-cyan-glow">
+                  <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
+                    <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 max-w-full truncate text-left hover:text-cyan-glow">
                       <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} />
                     </button>
                     <AscensionStars count={p.ascensions} />
-                    <StaffBadge uid={p.uid} />
+                    <StaffBadge uid={p.uid} compact />
                     {isProtected && (
                       <span title={attackCheck?.message} className="flex items-center text-mint-glow">
                         <ShieldCheck className="h-3.5 w-3.5" />
