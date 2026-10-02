@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { SeasonGlow } from "@/components/layout/SeasonGlow";
+import { TierUpOverlay } from "@/components/fx/TierUpOverlay";
+import { useAmbience } from "@/hooks/useAmbience";
+import { checkTierUps } from "@/store/tierUpStore";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { ResourceHud } from "@/components/layout/ResourceHud";
@@ -90,7 +93,7 @@ function MusicToggle() {
 function SfxToggle() {
   const enabled = useSfxStore((s) => s.enabled);
   return (
-    <HeaderButton title={enabled ? "Couper les bips" : "Activer les bips"} onClick={() => toggleSfx()}>
+    <HeaderButton title={enabled ? "Couper les sons" : "Activer les sons"} onClick={() => toggleSfx()}>
       {enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 opacity-50" />}
     </HeaderButton>
   );
@@ -111,6 +114,12 @@ export function AppShell() {
   useGameSync(user?.uid ?? null);
   useDirectorySync(!!user);
   useRankCelebration(player);
+  useAmbience();
+  const tierUid = user?.uid;
+  const tierBuildings = player?.buildings;
+  useEffect(() => {
+    if (tierUid && tierBuildings) checkTierUps(tierUid, tierBuildings);
+  }, [tierUid, tierBuildings]);
   useAllianceUnread(user?.uid ?? null, player);
   const uidForMessages = user?.uid ?? null;
   useEffect(() => (uidForMessages ? subscribeMyMessages(uidForMessages) : undefined), [uidForMessages]);
@@ -146,6 +155,7 @@ export function AppShell() {
       <SchematicGrid />
       <Nebula />
       <SeasonGlow />
+      <TierUpOverlay />
       <Starfield count={80} />
       <NavBar />
 

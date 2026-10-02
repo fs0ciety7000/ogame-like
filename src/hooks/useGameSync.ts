@@ -26,7 +26,7 @@ import { setSyncedFromServer, startConnectionListeners } from "@/store/connectio
 import { combatDisplayFromReport, combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
 import { setFleets } from "@/store/fleetStore";
 import { showAwaySummary } from "@/store/awaySummaryStore";
-import { playAlert, playConfirm, playUnlock } from "@/lib/sfx";
+import { playAlert, playAttackAlert, playBuildDone, playConfirm, playMessage, playSpyAlert, playUnlock } from "@/lib/sfx";
 import type { GameNotification, NotificationKind } from "@/types/game";
 
 const HEARTBEAT_MS = 20_000;
@@ -35,14 +35,14 @@ const HEARTBEAT_MS = 20_000;
 const AWAY_SUMMARY_THRESHOLD_MS = 3 * 60 * 1000;
 
 const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => void }> = {
-  building: { icon: "🏗️", sound: playConfirm },
-  research: { icon: "🔬", sound: playConfirm },
+  building: { icon: "🏗️", sound: playBuildDone },
+  research: { icon: "🔬", sound: playBuildDone },
   unit: { icon: "🚀", sound: playConfirm },
   mission: { icon: "🧭", sound: playConfirm },
   "combat-attacker": { icon: "⚔️", sound: playConfirm },
   "combat-defender": { icon: "🛡️", sound: playAlert },
   achievement: { icon: "🏆", sound: playUnlock },
-  "spy-detected": { icon: "🔍", sound: playAlert },
+  "spy-detected": { icon: "🔍", sound: playSpyAlert },
   bounty: { icon: "🐝", sound: playUnlock },
   spy: { icon: "🛰️", sound: playConfirm },
   debris: { icon: "♻️", sound: playConfirm },
@@ -50,9 +50,9 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   alliance: { icon: "🤝", sound: playConfirm },
   event: { icon: "🎉", sound: playConfirm },
   gift: { icon: "🎁", sound: playConfirm },
-  fleet: { icon: "🛸", sound: playAlert },
+  fleet: { icon: "🛸", sound: playAttackAlert },
   report: { icon: "🔧", sound: playConfirm },
-  message: { icon: "✉️", sound: playConfirm },
+  message: { icon: "✉️", sound: playMessage },
   system: { icon: "✨", sound: playConfirm },
 };
 
