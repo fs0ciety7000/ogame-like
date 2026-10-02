@@ -25,7 +25,28 @@ export interface UnitDef {
   buildTime?: number;
   /** Attaque et défense gagnées par niveau au-delà du premier (défaut : UNIT_LEVEL_BONUS_DEFAULT). */
   levelBonus?: number;
+  /** v3.9 : débloquée par un plan du Comptoir Kesh'Vaar (pas de techno). */
+  blueprint?: boolean;
 }
+
+/** v3.9 : vaisseau des Kesh'Vaar, plan acheté au Comptoir de la Ruche.
+ *  Toujours présent, même si la liste des unités est personnalisée. */
+export const KESH_HUNTER_UNIT: UnitDef = {
+  id: "traqueur_kesh",
+  name: "Traqueur Kesh",
+  image: "/assets/units/traqueur_kesh.webp",
+  maxLevel: 1,
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
+  cost: { scrap: 6000, energy: 3000 },
+  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
+  category: "attack",
+  unlockTech: "",
+  hangarSpace: 25,
+  blueprint: true,
+};
+
+/** Bonus d'attaque du Traqueur contre les PNJ (factions, primes, Léviathan). */
+export const KESH_PVE_BONUS = 0.5;
 
 /** Gain d'attaque et de défense par niveau, pour les unités qui n'en précisent pas. */
 export const UNIT_LEVEL_BONUS_DEFAULT = 5;
@@ -205,6 +226,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech18",
     hangarSpace: 20,
   },
+  KESH_HUNTER_UNIT,
 ];
 
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */

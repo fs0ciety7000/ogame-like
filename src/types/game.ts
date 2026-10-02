@@ -111,6 +111,8 @@ export interface PlayerState {
   /** v3.5 : colonies (stocks séparés) et vaisseau colonial en route. */
   colonies?: import("@/game/colonies").Colony[];
   colonizing?: import("@/game/colonies").Colonizing | null;
+  /** v3.9 : chasseurs de primes (Ambre, réputation, contrats, Comptoir). */
+  bounties?: import("@/game/bounties").BountyState;
 }
 
 export interface SeasonResult {
@@ -285,6 +287,7 @@ export type NotificationKind =
   | "fleet"
   | "report"
   | "message"
+  | "bounty"
   | "system";
 
 export interface GameNotification {
@@ -294,4 +297,6 @@ export interface GameNotification {
   message: string;
   createdAtMs: number;
   read: boolean;
+  /** v3.8 : page à ouvrir au clic (sinon, page associée au type). */
+  link?: string;
 }

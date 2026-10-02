@@ -5,6 +5,7 @@ import { ArrowLeft, Ban, Check, CheckCheck, Loader2, Mail, Search, Send } from "
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
@@ -155,7 +156,7 @@ export function MessagesPage() {
                 </span>
                 <span className="truncate text-xs text-slate-500">
                   {c.last.fromUid === uid ? "Toi : " : ""}
-                  {c.last.text}
+                  <LinkifiedText text={c.last.text} />
                 </span>
               </button>
             ))}
@@ -189,7 +190,7 @@ export function MessagesPage() {
                   return (
                     <div key={m.id} className={cn("max-w-[85%] px-3 py-2 text-sm", mine ? "self-end bg-cyan-glow/15 text-slate-100" : "self-start bg-white/[0.06] text-slate-200")}>
                       <p className="whitespace-pre-wrap break-words">
-                        <LinkifiedText text={m.text} />
+                        <LinkifiedText text={m.text} jumbo />
                       </p>
                       <p className={cn("mt-1 flex items-center gap-1 text-[10px] text-slate-500", mine && "justify-end")}>
                         {timeLabel(m.createdAtMs)}
@@ -222,6 +223,7 @@ export function MessagesPage() {
                     placeholder="Ton message… (Entrée pour envoyer)"
                     className="min-h-[2.75rem] flex-1 resize-y border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-glow/60 focus:outline-none"
                   />
+                  <EmojiPicker onPick={(e) => setDraft((d) => (d + e).slice(0, MESSAGE_RULES.maxLength))} />
                   <Button type="submit" size="icon" disabled={sending || !draft.trim()} aria-label="Envoyer">
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>

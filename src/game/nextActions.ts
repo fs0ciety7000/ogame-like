@@ -3,6 +3,7 @@ import { economySnapshot } from "@/game/economy";
 import { MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
+import { BOUNTY_RULES, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
 import type { PlayerState, QueuesState } from "@/types/game";
 
@@ -12,7 +13,7 @@ import type { PlayerState, QueuesState } from "@/types/game";
    premières cartes.
 ===================================================== */
 
-export type NextActionKind = "outage" | "contracts" | "storage" | "build" | "research" | "mission" | "units" | "fleet";
+export type NextActionKind = "outage" | "contracts" | "storage" | "build" | "research" | "mission" | "units" | "fleet" | "bounty";
 
 export interface NextAction {
   kind: NextActionKind;
@@ -68,6 +69,12 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
 
   const ships = OFFENSIVE_UNITS.reduce((a, id) => a + (player.units[id]?.count ?? 0), 0);
   const flying = fleets.some((f) => f.ownerUid === player.uid && (f.status === "outbound" || f.status === "returning" || f.status === "stationed"));
+  // v3.9 : primes Kesh'Vaar encore possibles aujourd'hui.
+  const bounties = viewBounties(player, now);
+  const left = BOUNTY_RULES.dailyLimit - bounties.doneToday;
+  if (ships > 0 && left > 0 && bounties.board.some((c) => c.status === "open")) {
+    out.push({ kind: "bounty", priority: 6, title: "Primes de l'Essaim", text: `${left} prime${left > 1 ? "s" : ""} possible${left > 1 ? "s" : ""} aujourd'hui : XP et Ambre de Ruche.`, to: "/game/primes" });
+  }
   if (ships > 0 && !flying) out.push({ kind: "fleet", priority: 7, title: "Flotte à quai", text: `${ships.toLocaleString("fr-FR")} vaisseaux attendent des ordres.`, to: "/game/galaxie" });
 
   return out.sort((a, b) => a.priority - b.priority);

@@ -26,12 +26,51 @@ export interface Announcement {
   /** Illustration de fond quand l'annonce ne présente pas de factions. */
   art?: string;
   artMobile?: string;
-  /** Nouveautés présentées en cartes cliquables. */
-  features?: { title: string; text: string; to: string }[];
+  /** Nouveautés présentées en cartes cliquables (icône facultative). */
+  features?: { title: string; text: string; to: string; image?: string }[];
   cta: { label: string; to: string };
+  /** v3.9 : teinte de l'annonce (menace rouge par défaut, ambre pour un allié). */
+  tone?: "danger" | "gold";
+  /** v3.9 : portrait mis en avant à droite (bureau), avec sa légende. */
+  spotlight?: { image: string; name: string; role: string; quote: string };
+  /** v3.9 : nouvelle monnaie présentée en encart. */
+  currency?: { icon: string; name: string; text: string };
+  /** v3.9 : emblème affiché à côté du surtitre. */
+  emblem?: string;
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "v3.9-les-keshvaar",
+    eyebrow: "Mise à jour 3.9 · Nouvelle faction alliée",
+    title: "L'Essaim Kesh'Vaar recrute des chasseurs",
+    text: "Leur Ruche-Mère a été pillée, leur Reine est tombée, ses œufs vendus aux quatre coins du secteur. Les Kesh'Vaar ont juré de retrouver chaque coupable — et ils paient en Ambre de Ruche les commandants qui chassent pour eux.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/bounties/hunters.webp",
+    artMobile: "/assets/bounties/vashka.webp",
+    emblem: "/assets/bounties/emblem.webp",
+    spotlight: {
+      image: "/assets/bounties/vashka.webp",
+      name: "Vashka",
+      role: "Matriarche-Chasseuse",
+      quote: "Rapporte-nous leurs noms, commandant. L'Essaim n'oublie ni ses morts, ni ses chasseurs.",
+    },
+    currency: {
+      icon: "/assets/bounties/amber.webp",
+      name: "Ambre de Ruche",
+      text: "Nouvelle monnaie, gagnée uniquement par les primes. Ni achetable, ni échangeable entre joueurs.",
+    },
+    features: [
+      { title: "Tableau des primes", text: "3 fugitifs toutes les 8 h, 4 primes par jour : de ★ Traque à ★★★★ Élite, XP et Ambre à la clé.", to: "/game/primes" },
+      { title: "Proie d'élite", text: "Chaque lundi, un grand fugitif pour tout le serveur : 300 XP et 150 Ambre s'il tombe.", to: "/game/primes" },
+      { title: "Comptoir de la Ruche", text: "Accélérateur, Gelée de la Reine (+20 %), brouilleur, balise de repli, Voile de chitine…", to: "/game/primes" },
+      { title: "Traqueur Kesh", text: "Un vaisseau organique rapide, +50 % d'attaque contre les factions et les fugitifs.", to: "/game/primes", image: "/assets/units/traqueur_kesh.webp" },
+      { title: "Rangs de l'Essaim", text: "De Larve à Main de la Reine : plus d'Ambre par prime et des proies plus prestigieuses.", to: "/game/primes", image: "/assets/bounties/emblem.webp" },
+      { title: "Emojis Kesh'Vaar", text: "Quatre emojis exclusifs pour les discussions, et un cadre de chitine pour ta fiche.", to: "/game/primes", image: "/assets/bounties/emoji-ok.webp" },
+    ],
+    cta: { label: "Rejoindre la traque", to: "/game/primes" },
+  },
   {
     id: "v3.2-le-leviathan-arrive",
     eyebrow: "Mise à jour 3.2 · Le grand déploiement",
@@ -111,6 +150,7 @@ export function AnnouncementDialog() {
   }, [uid, threatened]);
 
   if (!current || !uid) return null;
+  const gold = current.tone === "gold";
   const factions = current.factions.map((id) => FACTIONS.find((f) => f.id === id && f.enabled)).filter((f) => !!f);
   const close = () => {
     markSeen(`${uid}:${current.id}`);
@@ -144,6 +184,21 @@ export function AnnouncementDialog() {
           </div>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/75 to-space-950/0" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-space-950/80 to-transparent" />
+          {current.spotlight && (
+            <motion.figure
+              className="absolute right-8 top-8 z-10 hidden w-44 flex-col gap-2 lg:flex"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <img src={assetUrl(current.spotlight.image)} alt={current.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_rgba(255,180,60,0.35)]" />
+              <figcaption className="border border-gold-glow/30 bg-space-950/85 p-2 backdrop-blur-sm">
+                <p className="font-display text-sm text-gold-glow">{current.spotlight.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{current.spotlight.role}</p>
+                <p className="mt-1 text-[11px] italic leading-snug text-slate-300">« {current.spotlight.quote} »</p>
+              </figcaption>
+            </motion.figure>
+          )}
 
           {/* Texte */}
           <motion.div
@@ -152,11 +207,31 @@ export function AnnouncementDialog() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.75 }}
           >
-            <p className="hud-eyebrow flex items-center gap-2 text-danger-glow">
-              <Skull className="h-3.5 w-3.5 animate-pulse" /> {current.eyebrow}
+            <p className={cn("hud-eyebrow flex items-center gap-2", gold ? "text-gold-glow" : "text-danger-glow")}>
+              {current.emblem ? <img src={assetUrl(current.emblem)} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,190,80,0.5)]" /> : <Skull className="h-3.5 w-3.5 animate-pulse" />} {current.eyebrow}
             </p>
             <DialogTitle className="text-3xl leading-tight md:text-5xl">{current.title}</DialogTitle>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-200 md:text-base">{current.text}</p>
+            {current.currency && (
+              <motion.div
+                className="flex max-w-xl items-center gap-3 border border-gold-glow/40 bg-space-950/80 p-3 backdrop-blur-sm"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.85 }}
+              >
+                <motion.img
+                  src={assetUrl(current.currency.icon)}
+                  alt=""
+                  className="h-12 w-12 shrink-0 drop-shadow-[0_0_14px_rgba(255,170,60,0.6)]"
+                  animate={{ y: [0, -4, 0], rotate: [0, 4, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <div>
+                  <p className="font-display text-sm text-gold-glow">{current.currency.name}</p>
+                  <p className="text-[11px] leading-snug text-slate-300">{current.currency.text}</p>
+                </div>
+              </motion.div>
+            )}
             {current.features && (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {current.features.map((f, i) => (
@@ -167,13 +242,19 @@ export function AnnouncementDialog() {
                       close();
                       navigate(f.to);
                     }}
-                    className="rounded-lg border border-cyan-glow/25 bg-space-950/75 p-3 text-left backdrop-blur-sm transition-colors hover:border-cyan-glow/60"
+                    className={cn(
+                      "flex items-start gap-2.5 rounded-lg border bg-space-950/75 p-3 text-left backdrop-blur-sm transition-colors",
+                      gold ? "border-gold-glow/25 hover:border-gold-glow/60" : "border-cyan-glow/25 hover:border-cyan-glow/60",
+                    )}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.9 + i * 0.08 }}
                   >
-                    <p className="font-display text-sm text-cyan-glow">{f.title}</p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-slate-300">{f.text}</p>
+                    {f.image && <img src={assetUrl(f.image)} alt="" className="h-10 w-10 shrink-0 object-contain" />}
+                    <span>
+                      <span className={cn("block font-display text-sm", gold ? "text-gold-glow" : "text-cyan-glow")}>{f.title}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-slate-300">{f.text}</span>
+                    </span>
                   </motion.button>
                 ))}
               </div>
@@ -199,7 +280,7 @@ export function AnnouncementDialog() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
-                variant="danger"
+                variant={gold ? "warn" : "danger"}
                 size="lg"
                 onClick={() => {
                   close();

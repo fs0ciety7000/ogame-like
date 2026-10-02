@@ -58,7 +58,7 @@ export async function setBrowserNotifications(enabled: boolean): Promise<Browser
 }
 
 /** Affiche une notification système si l'onglet est caché. */
-export function showBrowserNotification(title: string, body: string, tag?: string) {
+export function showBrowserNotification(title: string, body: string, tag?: string, onClick?: () => void) {
   const { enabled } = useBrowserNotifyStore.getState();
   if (!enabled || !supported() || Notification.permission !== "granted") return;
   if (typeof document !== "undefined" && !document.hidden) return;
@@ -66,6 +66,7 @@ export function showBrowserNotification(title: string, body: string, tag?: strin
     const n = new Notification(title, { body, tag, icon: "/assets/logo/favicon-64.png" });
     n.onclick = () => {
       window.focus();
+      onClick?.();
       n.close();
     };
   } catch {

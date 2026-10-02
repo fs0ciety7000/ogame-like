@@ -19,7 +19,8 @@ import {
 import { pb } from "@/lib/pocketbase";
 import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
 import { setBellOpen, setNotifications } from "@/store/notificationStore";
-import { summarizeKinds, URGENT_KINDS } from "@/lib/notificationCategories";
+import { notificationLink, summarizeKinds, URGENT_KINDS } from "@/lib/notificationCategories";
+import { useNavigate } from "react-router-dom";
 import { showBrowserNotification } from "@/store/browserNotifyStore";
 import { setSyncedFromServer, startConnectionListeners } from "@/store/connectionStore";
 import { combatDisplayFromReport, combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
@@ -42,6 +43,7 @@ const NOTIFICATION_STYLE: Record<NotificationKind, { icon: string; sound: () => 
   "combat-defender": { icon: "🛡️", sound: playAlert },
   achievement: { icon: "🏆", sound: playUnlock },
   "spy-detected": { icon: "🔍", sound: playAlert },
+  bounty: { icon: "🐝", sound: playUnlock },
   spy: { icon: "🛰️", sound: playConfirm },
   debris: { icon: "♻️", sound: playConfirm },
   season: { icon: "🏆", sound: playUnlock },
@@ -85,6 +87,10 @@ export function useGameSync(uid: string | null) {
   const processingGifts = useRef<Set<string>>(new Set());
   const lastHeartbeatAt = useRef<number>(Date.now());
   const seenNotificationIds = useRef<Set<string> | null>(null);
+  // Navigation depuis les toasts (référence stable pour l'abonnement).
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     startConnectionListeners();
@@ -131,8 +137,11 @@ export function useGameSync(uid: string | null) {
       const showOne = (item: (typeof fresh)[number]) => {
         const emoji = NOTIFICATION_STYLE[item.kind]?.icon;
         const icon = emoji ? createElement(EmojiIcon, { emoji, className: "h-5 w-5" }) : undefined;
-        if (item.kind === "achievement") toast.success(item.title, { description: item.message, icon, duration: 6000 });
-        else toast(item.title, { description: item.message, icon });
+        // v3.8 : « Voir » ouvre la page concernée (conversation, rapport…).
+        const link = notificationLink(item);
+        const action = link ? { label: "Voir", onClick: () => navigateRef.current(link) } : undefined;
+        if (item.kind === "achievement") toast.success(item.title, { description: item.message, icon, duration: 6000, action });
+        else toast(item.title, { description: item.message, icon, action });
       };
       // Un seul son par rafale : celui de l'alerte la plus importante.
       const loudest = fresh.find((n) => URGENT_KINDS.includes(n.kind)) ?? fresh[fresh.length - 1];
@@ -141,7 +150,8 @@ export function useGameSync(uid: string | null) {
       if (fresh.length <= 3) {
         fresh.forEach((item) => {
           showOne(item);
-          showBrowserNotification(`${NOTIFICATION_STYLE[item.kind]?.icon ?? ""} ${item.title}`.trim(), item.message, item.id);
+          const link = notificationLink(item);
+          showBrowserNotification(`${NOTIFICATION_STYLE[item.kind]?.icon ?? ""} ${item.title}`.trim(), item.message, item.id, link ? () => navigateRef.current(link) : undefined);
         });
         return;
       }

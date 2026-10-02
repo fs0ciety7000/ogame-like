@@ -1,5 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
-import { computeFleetPower, computeFullPower } from "@/game/combat";
+import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import { EVENT_RULES, weekendWindow } from "@/game/events";
@@ -138,7 +138,7 @@ export function resolveLeviathanAssault(
   now: number,
 ): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = getRepairPercent(player.buildings);

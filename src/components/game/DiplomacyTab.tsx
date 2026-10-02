@@ -4,6 +4,7 @@ import { Handshake, MessagesSquare, Send, ShieldCheck, Timer, X } from "lucide-r
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { EmptyState } from "@/components/ui/hud";
 import { IconSelect } from "@/components/ui/icon-select";
 import { LinkifiedText } from "@/components/ui/linkified-text";
@@ -51,7 +52,7 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
             <span className="text-slate-300">{m.authorPseudo}</span> <span className="text-[10px] text-slate-600">{timeAgo(m.createdAtMs)}</span>
             <br />
             <span className="whitespace-pre-wrap break-words text-slate-200">
-              <LinkifiedText text={m.text} />
+              <LinkifiedText text={m.text} jumbo />
             </span>
           </p>
         ))}
@@ -65,6 +66,7 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
         }}
       >
         <Input value={text} maxLength={DIPLOMACY_RULES.messageMax} onChange={(e) => setText(e.target.value)} placeholder="Message aux deux alliances…" className="h-9 flex-1" />
+        <EmojiPicker onPick={(e) => setText((t) => (t + e).slice(0, DIPLOMACY_RULES.messageMax))} />
         <Button type="submit" size="icon" disabled={busy || !text.trim()} aria-label="Envoyer">
           <Send className="h-4 w-4" />
         </Button>

@@ -38,6 +38,6 @@ describe("weekly challenges", () => {
 
   it("reads the tracked counters from the player", () => {
     const m = challengeMetrics({ stats: { missions: 4, unitsBuilt: 10, marketVolume: 500, expeditions: 1 }, pirates: { varan: { repelled: 2 }, gravhorn: { repelled: 1 } } } as never);
-    expect(m).toEqual({ raids: 3, missions: 4, units: 10, market: 500, expeditions: 1 });
+    expect(m).toEqual({ raids: 3, missions: 4, units: 10, market: 500, expeditions: 1, bounties: 0 });
   });
 });

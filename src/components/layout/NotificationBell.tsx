@@ -1,17 +1,18 @@
 import { Bell } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
-import { inCategory, NOTIFICATION_CATEGORIES, type NotificationCategory } from "@/lib/notificationCategories";
+import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn, timeAgo } from "@/lib/utils";
 
 export function NotificationBell() {
   const items = useNotificationStore((s) => s.items);
   const open = useNotificationStore((s) => s.bellOpen);
   const uid = useAuthStore((s) => s.user?.uid);
+  const navigate = useNavigate();
   const [tab, setTab] = useState<NotificationCategory>("all");
   // Non-lues au moment de l'ouverture : elles restent en évidence pendant la
   // consultation, même si elles sont marquées lues aussitôt.
@@ -85,18 +86,31 @@ export function NotificationBell() {
         </div>
         <div className="flex flex-col gap-1 overflow-y-auto">
           {shown.length === 0 && <p className="px-3 py-4 text-sm text-slate-500">Rien dans cette catégorie pour l'instant.</p>}
-          {shown.map((n) => (
-            <div
+          {shown.map((n) => {
+            const link = notificationLink(n);
+            return (
+            <button
               key={n.id}
-              className={cn("rounded-lg px-3 py-2 text-sm", freshIds.has(n.id) ? "bg-cyan-glow/5 text-slate-100" : "text-slate-400")}
+              type="button"
+              disabled={!link}
+              onClick={() => {
+                if (!link) return;
+                setBellOpen(false);
+                navigate(link);
+              }}
+              className={cn(
+                "block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors enabled:hover:bg-white/5 disabled:cursor-default",
+                freshIds.has(n.id) ? "bg-cyan-glow/5 text-slate-100" : "text-slate-400",
+              )}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{n.title}</span>
                 <span className="shrink-0 text-[11px] text-slate-500">{timeAgo(n.createdAtMs)}</span>
               </div>
               <p className="mt-0.5 text-xs text-slate-400">{n.message}</p>
-            </div>
-          ))}
+            </button>
+            );
+          })}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

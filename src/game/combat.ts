@@ -1,4 +1,4 @@
-import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, KESH_HUNTER_UNIT, KESH_PVE_BONUS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { techBonus } from "@/game/technologies";
 import type { Buildings, CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
@@ -98,6 +98,15 @@ export function computeFleetPower(
     total += value * qty;
   }
   return total;
+}
+
+/** v3.9 : multiplicateur d'attaque d'une flotte contre des PNJ (Traqueurs Kesh). */
+export function pveAttackFactor(units: Units, techLevels: TechLevels, fleet: Record<string, number>): number {
+  const hunters = fleet[KESH_HUNTER_UNIT.id] ?? 0;
+  if (!(hunters > 0)) return 1;
+  const all = computeFleetPower(units, techLevels, fleet, ["attack"]);
+  if (!(all > 0)) return 1;
+  return 1 + (KESH_PVE_BONUS * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"])) / all;
 }
 
 export function computeFullPower(
