@@ -54,6 +54,7 @@ function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | nu
     unitQueues: (record.unitQueues as QueuesState["unitQueues"]) ?? defaults.unitQueues,
     activeResearches: (record.activeResearches as QueuesState["activeResearches"]) ?? defaults.activeResearches,
     activeMissions: (record.activeMissions as QueuesState["activeMissions"]) ?? defaults.activeMissions,
+    buildPlan: (record.buildPlan as QueuesState["buildPlan"]) ?? [],
   };
 }
 
@@ -382,6 +383,15 @@ export function unlockBuilding(_uid: string, buildingId: BuildingId) {
 
 export function startBuildingUpgrade(_uid: string, buildingId: BuildingId) {
   return act({ type: "upgradeBuilding", buildingId });
+}
+
+/** v4.9 : file planifiée des bâtiments. */
+export function planBuilding(buildingId: string) {
+  return act({ type: "planBuilding", buildingId });
+}
+
+export function unplanBuilding(index: number) {
+  return act({ type: "unplanBuilding", index });
 }
 
 export function enqueueUnitBuild(_uid: string, unitId: string, qty: number) {

@@ -15,6 +15,7 @@ import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
 import { addPassPoints } from "@/game/seasonPass";
 import { endVacation, VACATION_RULES } from "@/game/vacation";
+import { advanceBuildPlan } from "@/game/buildPlan";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -94,6 +95,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   notifications.push(...advanceColonies(player, now));
 
   // --- Bâtiments en construction ---
+  const finishedAt: Record<string, number> = {};
   for (const buildingId of Object.keys(queues.buildingUpgrades) as (keyof typeof queues.buildingUpgrades)[]) {
     const entry = queues.buildingUpgrades[buildingId];
     if (!entry || entry.endTime > now) continue;
@@ -110,8 +112,11 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         read: false,
       });
     }
+    finishedAt[buildingId] = entry.endTime;
     delete queues.buildingUpgrades[buildingId];
   }
+  // v4.9 : file planifiée (la suite démarre dès la fin du chantier précédent).
+  notifications.push(...advanceBuildPlan(player, queues, now, finishedAt));
 
   // --- Files de production d'unités ---
   (["attack", "defense"] as const).forEach((category) => {

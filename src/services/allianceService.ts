@@ -208,3 +208,13 @@ export async function callAllianceBoss(): Promise<void> {
     throw new AllianceError((err as { response?: { message?: string } })?.response?.message || "Appel impossible.");
   }
 }
+
+/** v4.9 : rôle d'un membre (fondateur uniquement). */
+export async function setMemberRole(targetUid: string, role: "officer" | "diplomat" | "member") {
+  await allianceAction({ type: "setRole", targetUid, role });
+}
+
+/** v4.9 : vote de l'objectif du jour (fondateur et officiers, 6 h – 10 h). */
+export function voteAllianceDaily(index: number) {
+  return callGame<unknown>("alliance/daily", { vote: index });
+}

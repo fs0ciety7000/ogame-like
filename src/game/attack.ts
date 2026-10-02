@@ -4,7 +4,7 @@ import { onVacation } from "@/game/vacation";
 import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
 import { bumpStat, setStat } from "@/game/stats";
-import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { computeFullPower, getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -198,6 +198,9 @@ export function performAttack(input: AttackInput): AttackOutput {
     }
     def.resources[res as ResourceId] = Math.max(0, (def.resources[res as ResourceId] ?? 0) - (amt ?? 0));
   }
+  // v4.9 : puissance détruite de part et d'autre (objectifs du jour d'alliance).
+  bumpStat(attacker, "powerDestroyed", Math.round(lostPower(combat.defenderLosses, def.units, def.techLevels)));
+  bumpStat(def, "powerDestroyed", Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels)));
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
@@ -298,4 +301,10 @@ export function performAttack(input: AttackInput): AttackOutput {
     loot: combat.loot ?? {},
     debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(combat.garrisonLosses ?? [])], eventDebrisPercent(now) ?? DEBRIS_RULES.percent),
   };
+}
+
+/** Puissance (attaque + défense) des unités perdues. */
+function lostPower(losses: Record<string, number>, units: PlayerState["units"], techLevels: PlayerState["techLevels"]): number {
+  const lost = Object.fromEntries(Object.entries(losses).filter(([, n]) => n > 0).map(([id, n]) => [id, { level: units?.[id]?.level ?? 1, count: n }]));
+  return computeFullPower(lost, techLevels ?? {}, Object.keys(lost), ["attack", "defense"]);
 }

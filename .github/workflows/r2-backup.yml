@@ -1,0 +1,107 @@
+name: Copie vers Cloudflare R2
+
+# v4.9 : copie hors serveur, sur Cloudflare R2 (API S3) :
+#   - sauvegardes PocketBase  → s3://<bucket>/pocketbase/<nom>.zip
+#     (toutes celles qui n'y sont pas encore ; elles contiennent aussi les
+#     fichiers envoyés depuis l'administration) ;
+#   - illustrations du jeu     → s3://<bucket>/assets/ (public/assets).
+# Tous les jours à 3 h 30 (UTC), après chaque déploiement serveur, et à la main.
+#
+# Secrets (Settings → Secrets and variables → Actions) :
+#   R2_ENDPOINT          https://<id-du-compte>.r2.cloudflarestorage.com
+#   R2_BUCKET            cosmic
+#   R2_ACCESS_KEY_ID     jeton R2 « Object Read & Write » limité au bucket
+#   R2_SECRET_ACCESS_KEY
+#   COSMIC_PB_URL, COSMIC_PB_ADMIN_EMAIL, COSMIC_PB_ADMIN_PASSWORD (déjà créés)
+# Variable facultative (Settings → Variables) : R2_KEEP_DAYS (défaut 90) — les
+# sauvegardes plus anciennes sont supprimées de R2 (pas les illustrations).
+# Sans les secrets R2, le job s'arrête sans erreur.
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_run:
+    workflows: ["Déploiement serveur"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: r2-backup
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    name: Sauvegardes et illustrations vers R2
+    runs-on: ubuntu-latest
+    env:
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 ne gère pas les sommes de contrôle ajoutées par défaut par l'AWS CLI récent.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      PB_URL: ${{ secrets.COSMIC_PB_URL }}
+      PB_EMAIL: ${{ secrets.COSMIC_PB_ADMIN_EMAIL }}
+      PB_PASSWORD: ${{ secrets.COSMIC_PB_ADMIN_PASSWORD }}
+    steps:
+      - name: Vérifier la configuration
+        id: cfg
+        run: |
+          if [ -z "$R2_ENDPOINT" ] || [ -z "$R2_BUCKET" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::notice::Secrets R2_* absents : copie vers R2 ignorée."
+            echo "ok=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok == '1'
+        with:
+          sparse-checkout: public/assets
+
+      - name: Illustrations (public/assets)
+        if: steps.cfg.outputs.ok == '1'
+        run: |
+          aws s3 sync public/assets "s3://$R2_BUCKET/assets" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          echo "- Illustrations : $(find public/assets -type f | wc -l) fichiers synchronisés" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Sauvegardes PocketBase
+        if: steps.cfg.outputs.ok == '1' && env.PB_URL != ''
+        run: |
+          TOKEN=$(jq -n --arg i "$PB_EMAIL" --arg p "$PB_PASSWORD" '{identity:$i,password:$p}' \
+            | curl -sf -X POST "$PB_URL/api/collections/_superusers/auth-with-password" -H 'content-type: application/json' -d @- \
+            | jq -r .token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then echo "::error::Connexion au PocketBase refusée."; exit 1; fi
+          echo "::add-mask::$TOKEN"
+          aws s3 ls "s3://$R2_BUCKET/pocketbase/" --endpoint-url "$R2_ENDPOINT" | awk '{print $4}' > remote.txt || true
+          curl -sf "$PB_URL/api/backups" -H "Authorization: $TOKEN" | jq -r '.[].key' > local.txt
+          COPIED=0
+          while read -r KEY; do
+            [ -z "$KEY" ] && continue
+            if grep -qxF "$KEY" remote.txt; then continue; fi
+            FT=$(curl -sf -X POST "$PB_URL/api/files/token" -H "Authorization: $TOKEN" | jq -r .token)
+            curl -sf -o "$KEY" "$PB_URL/api/backups/$KEY?token=$FT"
+            aws s3 cp "$KEY" "s3://$R2_BUCKET/pocketbase/$KEY" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+            rm -f "$KEY"
+            COPIED=$((COPIED + 1))
+            echo "Copiée : $KEY"
+          done < local.txt
+          echo "- Sauvegardes PocketBase : $COPIED nouvelle(s) copiée(s), $(wc -l < local.txt) sur le serveur" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ménage (sauvegardes de plus de R2_KEEP_DAYS jours)
+        if: steps.cfg.outputs.ok == '1'
+        env:
+          KEEP_DAYS: ${{ vars.R2_KEEP_DAYS || '90' }}
+        run: |
+          LIMIT=$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%d)
+          # Format de « aws s3 ls » : AAAA-MM-JJ HH:MM:SS taille nom
+          aws s3 ls "s3://$R2_BUCKET/pocketbase/" --endpoint-url "$R2_ENDPOINT" | while read -r DAY TIME SIZE KEY; do
+            [ -z "$KEY" ] && continue
+            if [[ "$DAY" < "$LIMIT" ]]; then
+              aws s3 rm "s3://$R2_BUCKET/pocketbase/$KEY" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+              echo "Supprimée : $KEY ($DAY)"
+            fi
+          done
+          echo "- Ménage : sauvegardes R2 antérieures au $LIMIT supprimées (conservation ${KEEP_DAYS} j)" >> "$GITHUB_STEP_SUMMARY"

@@ -829,3 +829,40 @@ body {
     break-inside: avoid;
   }
 }
+
+/* v4.9 : cadre « légendaire » des bâtiments de fin de partie : liseré doré
+   animé et halo chaud. */
+.legendary-frame {
+  border-color: color-mix(in srgb, var(--color-gold-glow) 70%, transparent) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-gold-glow) 35%, transparent),
+    0 0 22px -4px color-mix(in srgb, var(--color-gold-glow) 55%, transparent),
+    inset 0 0 30px -12px color-mix(in srgb, var(--color-gold-glow) 45%, transparent);
+  background-image: linear-gradient(160deg, color-mix(in srgb, var(--color-gold-glow) 9%, transparent), transparent 45%);
+}
+.legendary-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid transparent;
+  background: linear-gradient(110deg, transparent 30%, color-mix(in srgb, var(--color-gold-glow) 85%, white) 50%, transparent 70%) border-box;
+  background-size: 250% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: legendary-sweep 4.5s linear infinite;
+}
+@keyframes legendary-sweep {
+  from {
+    background-position: 125% 0;
+  }
+  to {
+    background-position: -125% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .legendary-frame::after {
+    animation: none;
+  }
+}

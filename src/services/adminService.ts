@@ -236,3 +236,31 @@ export async function adminManageAdmin(action: "add" | "remove" | "role", uid: s
     throw new Error(data?.message || "Action impossible.");
   }
 }
+
+/* ---------- v4.9 : sauvegardes (liste, téléchargement, copie vers R2) ---------- */
+
+export interface BackupFile {
+  key: string;
+  size: number;
+  modifiedAtMs: number;
+}
+
+export function adminListBackups(): Promise<BackupFile[]> {
+  return pb.send<BackupFile[]>("/api/cosmic/admin/backups/list", { method: "GET" });
+}
+
+/** Télécharge une sauvegarde (requête authentifiée, puis fichier proposé au navigateur). */
+export async function adminDownloadBackup(key: string): Promise<void> {
+  const res = await fetch(pb.buildURL(`/api/cosmic/admin/backups/download?key=${encodeURIComponent(key)}`), { headers: { Authorization: pb.authStore.token } });
+  if (!res.ok) throw new Error(`Téléchargement refusé (HTTP ${res.status}).`);
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = key;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+}
+
+export function adminBackupToR2(): Promise<{ backup: string | null; dispatched: boolean; message: string }> {
+  return pb.send("/api/cosmic/admin/backups/r2", { method: "POST", body: {} });
+}

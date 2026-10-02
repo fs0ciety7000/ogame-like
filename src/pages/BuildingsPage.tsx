@@ -29,7 +29,9 @@ import {
 } from "@/game/buildings";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ECONOMY_RULES } from "@/game/economy";
-import { GameActionError, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
+import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
+import { BuildPlanCard } from "@/components/game/BuildPlanCard";
+import { buildPlan, nextPlannedLevel, planSlots } from "@/game/buildPlan";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -69,13 +71,27 @@ export function BuildingsPage() {
     }
   };
 
+  const handlePlan = async (buildingId: BuildingId) => {
+    setPending(buildingId);
+    try {
+      await planBuilding(buildingId);
+      toast.success("Amélioration programmée.");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
+    } finally {
+      setPending(null);
+    }
+  };
+
   const now = Date.now();
+  const planFull = buildPlan(queues).length >= planSlots(player);
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
       <AscensionCard />
+      <BuildPlanCard player={player} queues={queues} now={now} />
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
         {BUILDINGS.map((building, index) => {
@@ -93,6 +109,14 @@ export function BuildingsPage() {
           const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * playerBuildTimeFactor(player, now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
+          const plannable = nextPlannedLevel(player, queues, building.id);
+          const planButton =
+            // Utile quand le chantier est occupé ou que les ressources manquent ; sinon, « Améliorer » suffit.
+            !isLocked && !planFull && plannable <= building.maxLevel && (activeUpgrade || !Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0))) ? (
+              <button type="button" disabled={pending === building.id} onClick={() => void handlePlan(building.id)} className="mt-1.5 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow/80 hover:text-cyan-glow hover:underline">
+                + Programmer niv. {plannable}
+              </button>
+            ) : null;
 
           return (
             <motion.div
@@ -103,7 +127,7 @@ export function BuildingsPage() {
               transition={{ duration: 0.3, delay: index * 0.04 }}
               whileHover={{ y: -3 }}
             >
-              <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert")}>
+              <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert", building.endgame && "legendary-frame")}>
                 <HudBrackets className="border-gold-glow/70" />
                 <LevelPulse level={level} />
                 <div className="relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-1">
@@ -126,7 +150,10 @@ export function BuildingsPage() {
                     {!isLocked && <TierBadge level={level} />}
                   </div>
                   <div className="min-w-0">
-                    <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                    <span className="flex flex-wrap gap-1.5">
+                      <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                      {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
+                    </span>
                     <h3 className="hud-title mt-2 text-[17px] text-white [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -231,6 +258,7 @@ export function BuildingsPage() {
                         <div className="mt-1.5 flex justify-end">
                           <CancelJobButton target={{ kind: "building", id: building.id }} compact />
                         </div>
+                        {planButton}
                       </div>
                     ) : level >= building.maxLevel ? (
                       <Button className="w-full" variant="secondary" disabled>
@@ -252,6 +280,7 @@ export function BuildingsPage() {
                         <Button variant="warn" className="w-full" disabled={pending === building.id} onClick={() => void handleUpgrade(building.id)}>
                           Améliorer → niv. {nextLevel}
                         </Button>
+                        {planButton}
                       </>
                     )}
                   </div>
