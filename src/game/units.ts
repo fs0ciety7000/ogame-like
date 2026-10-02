@@ -118,6 +118,33 @@ export const DEFAULT_UNITS: UnitDef[] = [
     // par niveau que les autres (15 800 ATK/DEF au niveau 10).
     levelBonus: 1700,
   },
+  // v3.6 : unités de fin de partie.
+  {
+    id: "croiseur_nova",
+    name: "Croiseur Nova",
+    image: "/assets/units/croiseur_nova.webp",
+    maxLevel: 10,
+    description: "Croiseur de ligne propulsé par un cœur d'antimatière. Assez rapide pour frapper, assez blindé pour encaisser.",
+    cost: { scrap: 15000, energy: 9000 },
+    stats: { attaque: 1500, defense: 1000, vitesse: 6, cargo: 300 },
+    category: "attack",
+    unlockTech: "tech24",
+    hangarSpace: 20,
+    levelBonus: 250,
+  },
+  {
+    id: "lance_gravitationnelle",
+    name: "Lance gravitationnelle",
+    image: "/assets/units/lance_gravitationnelle.webp",
+    maxLevel: 10,
+    description: "Projecteur orbital qui écrase les coques ennemies sous un puits de gravité.",
+    cost: { scrap: 18000, energy: 12000 },
+    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech25",
+    hangarSpace: 8,
+    levelBonus: 150,
+  },
   {
     id: "roquette",
     name: "Roquette",

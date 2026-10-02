@@ -906,6 +906,12 @@
         "type": "number",
         "required": false,
         "onlyInt": true
+      },
+      {
+        "name": "reason",
+        "type": "text",
+        "required": false,
+        "max": 300
       }
     ],
     "indexes": [

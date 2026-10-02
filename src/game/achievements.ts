@@ -58,7 +58,8 @@ export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji
 /* ---------- mesures ---------- */
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
-const buildingLevels = (p: PlayerState) => BUILDINGS.map((b) => p.buildings?.[b.id]?.level ?? 0);
+// v3.6 : les bâtiments de fin de partie (niveau 10 au plus) ne comptent pas.
+const buildingLevels = (p: PlayerState) => BUILDINGS.filter((b) => !b.endgame).map((b) => p.buildings?.[b.id]?.level ?? 0);
 const techLevels = (p: PlayerState) => TECHNOLOGIES.map((t) => p.techLevels?.[t.id] ?? 0);
 const factions = (p: PlayerState) => Object.entries(factionStates(p));
 const pct = (n: number, d: number) => (d > 0 ? Math.floor((n / d) * 100) : 0);

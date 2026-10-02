@@ -31,7 +31,7 @@ describe("techTreeLayout", () => {
 
   it("walks the full prerequisite chain", () => {
     expect([...techAncestors("tech16")].sort()).toEqual(["tech1", "tech15", "tech3", "tech5", "tech7"].sort());
-    expect(techDependents("tech16")).toEqual(new Set(["tech18", "tech19"]));
+    expect(techDependents("tech16")).toEqual(new Set(["tech18", "tech19", "tech21", "tech25"]));
   });
 });
 

@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -225,6 +226,8 @@ export function PlayersPage() {
                   ? p.seasonXp
                   : 0
                 : p.xp;
+            // Rang et insigne suivent l'XP affichée (et donc l'ordre du classement) :
+            // en saison, le rang de saison, pas celui de l'XP totale.
             return (
               <div
                 key={p.uid}
@@ -241,10 +244,10 @@ export function PlayersPage() {
                 >
                   {String(p.rank).padStart(2, "0")}
                 </span>
-                <img src={getRankIcon(p.xp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
+                <img src={getRankIcon(displayXp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
                 <div className="min-w-0">
                   <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
-                    <span className="truncate">{p.pseudo}</span>
+                    <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className="truncate" />
                     <AscensionStars count={p.ascensions} />
                     <StaffBadge uid={p.uid} />
                     {isProtected && (
@@ -256,7 +259,7 @@ export function PlayersPage() {
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     {p.activeTitle && <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>}
                     <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
-                      {getRankLabel(p.xp)} · {formatNumber(displayXp)} XP
+                      {getRankLabel(displayXp)} · {formatNumber(displayXp)} XP{mode === "season" ? " de saison" : ""}
                     </span>
                   </div>
                 </div>

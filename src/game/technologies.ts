@@ -55,6 +55,9 @@ export interface TechDef {
   treePos?: { col: number; row: number };
 }
 
+/** v3.6 : technologies de fin de partie (déclencheur « singularité » du Chœur Silencieux). */
+export const ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
+
 /** Valeur par niveau des effets chiffrés, si la techno n'en précise pas. */
 export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
   energy_efficiency: 0.1,
@@ -125,6 +128,12 @@ export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech15", nom: "Canon à impulsion", desc: "Débloque le Canon à impulsion, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
   { id: "tech16", nom: "Canon plasma", desc: "Débloque le Canon plasma, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
   { id: "tech18", nom: "Intercepteur", desc: "Débloque l'Intercepteur, puis l'améliore : +5 attaque et +5 défense par niveau.", maxLevel: 10, baseCost: { scrap: 1000, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  // v3.6 : technologies de fin de partie, entre le Canon plasma / l'Intercepteur et l'Étoile noire.
+  { id: "tech21", nom: "Métallurgie quantique", desc: "Alliages stabilisés à l'échelle quantique : +2 % de défense des unités par niveau. Débloque la Fonderie quantique.", maxLevel: 10, baseCost: { scrap: 200_000, nano: 100_000, reinforcedSteel: 400, cyberModule: 200 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unit_defense", value: 0.02 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech2: 8, tech16: 3 } },
+  { id: "tech22", nom: "Cortex neuronal", desc: "Réseaux de calcul organiques : −2 % de temps de recherche et +1 contre-espionnage par niveau. Débloque le Synthétiseur neuronal.", maxLevel: 10, baseCost: { data: 300_000, energy: 150_000, aiFragment: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "research_time", value: 0.02 }, { type: "counter_spy", value: 1 }, { type: "unlock_buildings" }], prereq: { tech1: 17, tech20: 6, tech18: 3 } },
+  { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'énergie, protéger les stocks : +1 point de stock à l'abri du pillage par niveau. Débloque le Générateur de bouclier planétaire.", maxLevel: 10, baseCost: { energy: 300_000, nano: 200_000, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
+  { id: "tech24", nom: "Propulsion à antimatière", desc: "Débloque le Croiseur Nova, puis l'améliore (+250 attaque et défense par niveau). −2 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 400_000, energy: 400_000, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
+  { id: "tech25", nom: "Lance gravitationnelle", desc: "Débloque la Lance gravitationnelle, puis l'améliore : +150 attaque et défense par niveau.", maxLevel: 10, baseCost: { nano: 400_000, data: 300_000, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
   { id: "tech19", nom: "Étoile noire", desc: "Débloque l'Étoile noire, puis l'améliore : +1 700 attaque et +1 700 défense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } },
 ];
 

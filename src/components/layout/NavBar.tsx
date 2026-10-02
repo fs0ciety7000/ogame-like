@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useState } from "react";
 import { isActive } from "@/game/leviathan";
@@ -129,7 +130,7 @@ function CommanderCard() {
         <img src={getRankIcon(player.xp)} alt="" className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_30%,transparent)] transition-transform group-hover:scale-105" />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-[0.04em] text-white">
-            <span className="truncate">{player.pseudo}</span>
+            <PlayerName uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="truncate" />
             <AscensionStars count={player.ascensions} />
             <StaffBadge uid={player.uid} compact />
           </p>
