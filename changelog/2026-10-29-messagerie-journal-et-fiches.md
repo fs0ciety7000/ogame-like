@@ -26,6 +26,10 @@ Trois nouveautés pour suivre ce qui se passe dans la galaxie et parler aux autr
 - **Toute la galaxie est visible**, quel que soit l'écran. Sur les écrans larges, la carte était rognée en haut et en bas : les empires proches des bords (dont Vince et Gollum) n'apparaissaient pas.
 - Une marge autour de la carte garde les empires posés tout au bord entièrement visibles.
 
+## Attaques plus rapides
+- Le trajet d'une attaque entre joueurs dure désormais **90 minutes au plus**, le retour aussi. Une flotte lente ne met plus 5 à 7 h pour atteindre un empire éloigné.
+- La fenêtre d'attaque indique quel vaisseau **fixe l'allure** de la flotte (le plus lent) et le temps de trajet sans lui.
+
 ## Améliorations
 - **Bandeaux d'annonce** : l'équipe peut afficher en haut du site une annonce, un évènement, une alerte ou un message urgent, fixe ou défilant, avec liens et emojis. Un bandeau peut être masqué, sauf s'il est urgent.
 - **Colonies** : les vraies icônes de ressources remplacent les emojis, et le choix des défenses affiche l'image des unités.

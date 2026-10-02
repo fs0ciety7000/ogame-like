@@ -5515,7 +5515,9 @@ var FLEET_RULES = {
   /** Minutes par unité de distance, divisées par la vitesse de la flotte. */
   minutesPerDistance: 3,
   /** Côté de la carte de la galaxie (distance max ≈ 141). */
-  mapSize: 100
+  mapSize: 100,
+  /** v3.7 : durée maximale du trajet d'une attaque, en minutes (0 = aucune). */
+  maxAttackMinutes: 90
 };
 var PATROL_RULES = {
   minMinutes: 30,
@@ -5543,6 +5545,11 @@ function fleetSpeed(units, fleet) {
 }
 function travelSeconds(distance, speed, factor = 1) {
   return Math.round(factor * (FLEET_RULES.baseMinutes + distance * FLEET_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+}
+function attackTravelSeconds(distance, speed, factor = 1) {
+  const seconds = travelSeconds(distance, speed, factor);
+  const cap = FLEET_RULES.maxAttackMinutes;
+  return cap > 0 ? Math.min(seconds, Math.round(cap * 60)) : seconds;
 }
 function launchFleet(input) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -5572,7 +5579,7 @@ function launchFleet(input) {
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));

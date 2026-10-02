@@ -11,7 +11,7 @@ import { debrisTotal, type DebrisField } from "@/game/debris";
 import { GarrisonDialog, RecycleDialog } from "@/components/game/MissionDialogs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { formatCoords, galaxyCoords } from "@/game/galaxy";
-import { distanceBetween, FLEET_RULES, fleetProgress, mapPosition, travelSeconds } from "@/game/fleets";
+import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetProgress, mapPosition } from "@/game/fleets";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { getRankLabel } from "@/game/ranks";
 import { formatCompact, formatDuration, timeAgo } from "@/lib/utils";
@@ -183,7 +183,7 @@ export function GalaxyPage() {
     if (speeds.length === 0) return { distance: distanceBetween(uid, selected.uid), fast: null, slow: null };
     const distance = distanceBetween(uid, selected.uid);
     const f = allianceFlightFactor(me.allianceResearch, me.techLevels);
-    return { distance, fast: travelSeconds(distance, Math.max(...speeds), f), slow: travelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
+    return { distance, fast: attackTravelSeconds(distance, Math.max(...speeds), f), slow: attackTravelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
   }, [uid, me, selected, selectedIsMine]);
 
   const k = view.k;

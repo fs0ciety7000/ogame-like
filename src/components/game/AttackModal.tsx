@@ -3,14 +3,14 @@ import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Clock, Rocket } from "lucide-react";
+import { Clock, Rocket, Snail } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
-import { distanceBetween, fleetSpeed, travelSeconds } from "@/game/fleets";
+import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -40,7 +40,13 @@ export function AttackModal({
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, v]) => v > 0));
   const hasShips = Object.keys(selected).length > 0;
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const flight = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
+  const factor = player ? allianceFlightFactor(player.allianceResearch, player.techLevels) : 1;
+  const flight = player && hasShips ? attackTravelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
+  const uncapped = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
+  // v3.7 : le ou les vaisseaux qui fixent l'allure, et le trajet sans eux.
+  const slow = player && hasShips ? slowestUnits(player.units, selected) : null;
+  const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
+  const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
 
   const handleConfirm = async () => {
     if (!uid || !player || !target) return;
@@ -108,13 +114,32 @@ export function AttackModal({
                   {flight !== null ? (
                     <span>
                       Temps de vol : <strong className="tabular-mono text-slate-200">{formatDuration(flight)}</strong> (arrivée vers{" "}
-                      {new Date(Date.now() + flight * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}) — le
-                      vaisseau le plus lent fixe l'allure.
+                      {new Date(Date.now() + flight * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })})
+                      {uncapped !== null && uncapped > flight && <> — plafonné à {FLEET_RULES.maxAttackMinutes} min</>}.
                     </span>
                   ) : (
                     <span>Choisis tes vaisseaux pour connaître le temps de vol.</span>
                   )}
                 </p>
+                {slow && flight !== null && (
+                  <p className="flex items-start gap-1.5">
+                    <Snail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ember-glow" />
+                    <span>
+                      Allure fixée par : <strong className="text-ember-glow">{slowNames}</strong> (vitesse {slow.speed}).{" "}
+                      {flightWithout !== null ? (
+                        flightWithout < flight ? (
+                          <>
+                            Sans {slow.ids.length > 1 ? "eux" : "lui"} : <strong className="tabular-mono text-slate-200">{formatDuration(flightWithout)}</strong> (vitesse {slow.speedWithout}).
+                          </>
+                        ) : (
+                          <>Les retirer ne raccourcit pas le trajet.</>
+                        )
+                      ) : (
+                        <>Ajoute des vaisseaux plus rapides pour comparer.</>
+                      )}
+                    </span>
+                  </p>
+                )}
                 <p>
                   <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet, player.techLevels))}</strong>{" "}
                   ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources communes et{" "}
