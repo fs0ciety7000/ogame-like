@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 
 /* =====================================================
@@ -34,8 +35,16 @@ function write(uid: string, presets: FleetPreset[]) {
 
 export const useFleetPresetStore = create<{ byUid: Record<string, FleetPreset[]> }>(() => ({ byUid: {} }));
 
+const EMPTY: FleetPreset[] = [];
+
 export function useFleetPresets(uid: string | null | undefined): FleetPreset[] {
-  return useFleetPresetStore((s) => (uid ? (s.byUid[uid] ?? read(uid)) : []));
+  const stored = useFleetPresetStore((s) => (uid ? s.byUid[uid] : undefined));
+  // Première lecture : chargées depuis l'appareil, puis gardées dans le store
+  // (une référence stable, sinon le sélecteur relancerait le rendu sans fin).
+  useEffect(() => {
+    if (uid && stored === undefined) useFleetPresetStore.setState((s) => ({ byUid: { ...s.byUid, [uid]: read(uid) } }));
+  }, [uid, stored]);
+  return stored ?? EMPTY;
 }
 
 function set(uid: string, presets: FleetPreset[]) {
