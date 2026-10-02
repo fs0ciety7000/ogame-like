@@ -7825,6 +7825,8 @@ function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
 function performGift(sender, senderQueues, recipient, recipientQueues, rawResources, now) {
   var _a;
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources \xE0 toi-m\xEAme !");
+  if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau \xE0 un seigneur de guerre.");
+  if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
   const resources = {};
   for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
     const n = Math.floor(Number(raw));

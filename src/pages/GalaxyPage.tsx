@@ -25,6 +25,7 @@ import { FleetsPanel } from "@/components/game/FleetsPanel";
 import type { Alliance } from "@/types/game";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
+import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 
 const SIZE = FLEET_RULES.mapSize;
 /** Marge autour de la carte : les empires posés au bord restent entiers. */
@@ -352,7 +353,7 @@ export function GalaxyPage() {
                 const isSelf = b.uid === uid;
                 const isSelected = b.uid === selectedUid;
                 const dim = query.length > 0 && !b.pseudo.toLowerCase().includes(query);
-                const color = isSelf ? "var(--color-gold-glow)" : allianceColor(b.allianceId);
+                const color = isSelf ? "var(--color-gold-glow)" : b.npc ? "var(--color-ember-glow)" : allianceColor(b.allianceId);
                 const showLabel = k >= 1.8 || isSelf || isSelected || (query && !dim);
                 const tag = b.allianceId ? allianceById.get(b.allianceId)?.tag : undefined;
                 return (
@@ -366,7 +367,12 @@ export function GalaxyPage() {
                     <circle r={3 / k} fill="transparent" />
                     {isSelf && <circle r={2.4 / k} fill="none" stroke={color} strokeOpacity={0.5} strokeWidth={0.3 / k} className="animate-pulse-slow" />}
                     {isSelected && <circle r={2 / k} fill="none" stroke="white" strokeOpacity={0.9} strokeWidth={0.3 / k} />}
-                    <circle r={(isSelf ? 1.3 : 1) / k} fill={color} style={{ filter: `drop-shadow(0 0 ${1.5 / k}px ${color})` }} />
+                    {b.npc ? (
+                      // v4.2 : seigneur de guerre, en losange.
+                      <rect x={-1.1 / k} y={-1.1 / k} width={2.2 / k} height={2.2 / k} transform="rotate(45)" fill={color} style={{ filter: `drop-shadow(0 0 ${1.8 / k}px ${color})` }} />
+                    ) : (
+                      <circle r={(isSelf ? 1.3 : 1) / k} fill={color} style={{ filter: `drop-shadow(0 0 ${1.5 / k}px ${color})` }} />
+                    )}
                     {showLabel && (
                       <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "#cbd5e1"}>
                         {tag ? `[${tag}] ` : ""}
@@ -421,6 +427,8 @@ export function GalaxyPage() {
                   ) : (
                     <>
                       {selected.pseudo} <StaffBadge uid={selected.uid} className="ml-1 align-middle" />
+                      {"npc" in selected && selected.npc && <NpcBadge className="ml-1 align-middle" />}
+                      {"vacationUntilMs" in selected && (selected.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={selected.vacationUntilMs!} className="ml-1 align-middle" />}
                     </>
                   )}
                   {selectedIsMine && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
@@ -484,9 +492,11 @@ export function GalaxyPage() {
                   <Button variant="outline" size="icon" title="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
-                    <Gift className="h-4 w-4" />
-                  </Button>
+                  {!("npc" in selected && selected.npc) && (
+                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                      <Gift className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               )}
             </Card>

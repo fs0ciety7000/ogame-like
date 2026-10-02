@@ -396,6 +396,8 @@ export function performGift(
   now: number,
 ): GiftOutput {
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
+  if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau à un seigneur de guerre.");
+  if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const [res, raw] of Object.entries(rawResources ?? {})) {
     const n = Math.floor(Number(raw));

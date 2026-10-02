@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -53,6 +53,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/simulateur", label: "Simulateur", icon: Calculator },
       { to: "/game/marche", label: "Marché", icon: Store },
       { to: "/game/menaces", label: "Menaces", icon: Skull },
+      { to: "/game/seigneurs", label: "Seigneurs", icon: Crown },
       { to: "/game/leviathan", label: "Léviathan", icon: Fish },
       { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/alliance", label: "Alliance", icon: Flag },
