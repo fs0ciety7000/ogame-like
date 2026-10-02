@@ -119,3 +119,14 @@ export {
 } from "@/game/warlords";
 export { endVacation, onVacation, startVacation, VACATION_RULES } from "@/game/vacation";
 export { productionHours } from "@/game/pirates";
+export {
+  bossMonthOf,
+  checkSeasonBossLaunch,
+  chronicleMonthId,
+  chroniclesConfig,
+  grantSeasonBossReward,
+  SEASON_BOSS_KEY,
+  SEASON_BOSS_RULES,
+  seasonBossWindow,
+  spawnSeasonBoss,
+} from "@/game/chronicles";

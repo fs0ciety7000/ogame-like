@@ -130,6 +130,8 @@ export interface PlayerState {
   npc?: string;
   /** v4.2 : mode vacances. */
   vacation?: import("@/game/vacation").VacationState | null;
+  /** v4.3 : épisodes des Chroniques du mois et sceaux de boss gagnés. */
+  chronicle?: import("@/game/chronicles").ChronicleState;
 }
 
 export interface SeasonResult {

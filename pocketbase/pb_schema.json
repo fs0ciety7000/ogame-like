@@ -312,6 +312,13 @@
         "required": false,
         "maxSize": 2000,
         "id": "json1012305937"
+      },
+      {
+        "name": "chronicle",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000,
+        "id": "json9201033483"
       }
     ],
     "indexes": [

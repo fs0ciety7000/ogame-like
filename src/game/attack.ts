@@ -1,3 +1,4 @@
+import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
 import { onVacation } from "@/game/vacation";
 import { capLoot } from "@/game/warlords";
@@ -222,6 +223,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
   if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
 

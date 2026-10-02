@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ONBOARDING_STEPS, onboardingEligible, onboardingState } from "@/game/onboarding";
+import { chronicleOf, unlockedEpisodes } from "@/game/chronicles";
 import { chapterOf, OUTRO_LINES, RAID_LINES, STORY_SPEAKERS, storyText, type StoryLine } from "@/game/story";
 import { assetUrl } from "@/lib/assets";
 import { useAnnouncementPending } from "@/components/game/Announcement";
@@ -41,9 +42,21 @@ function pendingScene(player: PlayerState, seen: string[]): { id: string; title:
   return null;
 }
 
+/** v4.3 : épisode des Chroniques ouvert et pas encore vu (après le tutoriel). */
+function chronicleScene(player: PlayerState, seen: string[]): { id: string; title: string; lines: StoryLine[] } | null {
+  const now = Date.now();
+  const month = chronicleOf(now);
+  if (!month || (onboardingEligible(player) && !onboardingState(player).hidden)) return null;
+  const open = unlockedEpisodes(now);
+  for (let i = 0; i < open; i++) {
+    const id = `chron-${month.id}-${i}`;
+    if (!seen.includes(id)) return { id, title: `Chroniques · ${month.title} · Épisode ${i + 1} : ${month.episodes[i].title}`, lines: month.episodes[i].lines };
+  }
+  return null;
+}
+
 export function StoryDialog({ player }: { player: PlayerState }) {
   const [state, setState] = useState(() => readSeen(player.uid));
-  const [index, setIndex] = useState(0);
   // Laisse passer d'abord une éventuelle annonce plein écran.
   const [ready, setReady] = useState(false);
   const announcing = useAnnouncementPending((s) => s.pending);
@@ -51,11 +64,8 @@ export function StoryDialog({ player }: { player: PlayerState }) {
     const t = setTimeout(() => setReady(true), 1600);
     return () => clearTimeout(t);
   }, []);
-  const scene = useMemo(() => (state.off ? null : pendingScene(player, state.seen)), [player, state]);
-  useEffect(() => setIndex(0), [scene?.id]);
+  const scene = useMemo(() => (state.off ? null : pendingScene(player, state.seen)) ?? chronicleScene(player, state.seen), [player, state]);
   if (!scene || !ready || announcing) return null;
-  const line = scene.lines[Math.min(index, scene.lines.length - 1)];
-  const sp = STORY_SPEAKERS[line.speaker];
   const close = () => {
     const next = { ...state, seen: [...state.seen, scene.id] };
     writeSeen(player.uid, next);
@@ -66,10 +76,18 @@ export function StoryDialog({ player }: { player: PlayerState }) {
     writeSeen(player.uid, next);
     setState(next);
   };
-  const last = index >= scene.lines.length - 1;
+  return <SceneDialog key={scene.id} title={scene.title} lines={scene.lines} pseudo={player.pseudo} onClose={close} onSkipAll={skipAll} doneLabel={scene.id === "outro" ? "Merci, Vashka" : "Compris"} />;
+}
+
+/** v4.3 : une scène dialoguée (tutoriel, Chroniques). */
+export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabel = "Compris" }: { title: string; lines: StoryLine[]; pseudo: string; onClose: () => void; onSkipAll?: () => void; doneLabel?: string }) {
+  const [index, setIndex] = useState(0);
+  const line = lines[Math.min(index, lines.length - 1)];
+  const sp = STORY_SPEAKERS[line.speaker] ?? STORY_SPEAKERS.vashka;
+  const last = index >= lines.length - 1;
 
   return (
-    <Dialog open onOpenChange={(o) => !o && close()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl overflow-hidden p-0">
         <div className="flex flex-col sm:flex-row">
           <AnimatePresence mode="wait">
@@ -85,24 +103,28 @@ export function StoryDialog({ player }: { player: PlayerState }) {
             />
           </AnimatePresence>
           <div className="flex flex-1 flex-col gap-3 p-5">
-            <p className="hud-eyebrow text-[10px] text-slate-500">{scene.title}</p>
+            <p className="hud-eyebrow text-[10px] text-slate-500">{title}</p>
             <DialogTitle className="text-lg" style={{ color: sp.color }}>
               {sp.name}
             </DialogTitle>
             <p className="-mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">{sp.role}</p>
             <AnimatePresence mode="wait">
               <motion.p key={index} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="min-h-[5.5rem] text-[15px] leading-relaxed text-slate-200">
-                « {storyText(line, player.pseudo)} »
+                « {storyText(line, pseudo)} »
               </motion.p>
             </AnimatePresence>
             <div className="mt-auto flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs text-slate-500">
-                {index + 1} / {scene.lines.length}
+                {index + 1} / {lines.length}
               </span>
-              <button type="button" className="ml-auto text-xs text-slate-500 hover:text-slate-300" onClick={skipAll}>
-                Passer l'histoire
-              </button>
-              <Button onClick={() => (last ? close() : setIndex((i) => i + 1))}>{last ? (scene.id === "outro" ? "Merci, Vashka" : "Compris") : "Suite"}</Button>
+              {onSkipAll && (
+                <button type="button" className="ml-auto text-xs text-slate-500 hover:text-slate-300" onClick={onSkipAll}>
+                  Passer l'histoire
+                </button>
+              )}
+              <Button className={onSkipAll ? "" : "ml-auto"} onClick={() => (last ? onClose() : setIndex((i) => i + 1))}>
+                {last ? doneLabel : "Suite"}
+              </Button>
             </div>
           </div>
         </div>

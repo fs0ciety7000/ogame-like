@@ -15,6 +15,7 @@ import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
+import { SeasonGlow } from "@/components/layout/SeasonGlow";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { ResourceHud } from "@/components/layout/ResourceHud";
@@ -144,6 +145,7 @@ export function AppShell() {
     <div className="relative flex min-h-screen w-full flex-col pb-20 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
       <SchematicGrid />
       <Nebula />
+      <SeasonGlow />
       <Starfield count={80} />
       <NavBar />
 

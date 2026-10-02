@@ -40,6 +40,7 @@ const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ 
 const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
 const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
 const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
+const SeasonBossPage = lazy(() => import("@/pages/SeasonBossPage").then((m) => ({ default: m.SeasonBossPage })));
 const WarlordsPage = lazy(() => import("@/pages/WarlordsPage").then((m) => ({ default: m.WarlordsPage })));
 const SeasonPassPage = lazy(() => import("@/pages/SeasonPassPage").then((m) => ({ default: m.SeasonPassPage })));
 const CommandPage = lazy(() => import("@/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
@@ -89,6 +90,7 @@ export default function App() {
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />
                 <Route path="seigneurs" element={<WarlordsPage />} />
+                <Route path="boss" element={<SeasonBossPage />} />
                 <Route path="succes" element={<AchievementsPage />} />
                 <Route path="alliance" element={<AlliancePage />} />
                 <Route path="profil" element={<ProfilePage />} />

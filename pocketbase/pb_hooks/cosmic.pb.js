@@ -661,3 +661,15 @@ cronAdd("cosmic_warlords", "37 * * * *", () => {
     console.log(`[cosmic] seigneurs : ${err}`);
   }
 });
+
+/* ---------- Chroniques : boss de saison (v4.3) ---------- */
+
+routerAdd("POST", "/api/cosmic/admin/seasonboss", (e) => require(`${__hooks}/cosmic_db.js`).adminSeasonBoss(e), $apis.requireAuth("users", "_superusers"));
+
+cronAdd("cosmic_seasonboss", "*/5 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).seasonBossTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] boss de saison : ${err}`);
+  }
+});

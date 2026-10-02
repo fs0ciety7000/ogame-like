@@ -18,6 +18,8 @@ import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
 import { GameActionError, hideOnboarding, syncPlayer } from "@/services/playerService";
 import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
+import { chronicleOf } from "@/game/chronicles";
+import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -405,6 +407,8 @@ function HelpCard() {
 
 function ThemeCard() {
   const theme = useThemeStore((s) => s.theme);
+  const skin = useSeasonSkinStore((s) => s.enabled);
+  const month = chronicleOf(Date.now());
   return (
     <Card>
       <CardHeader>
@@ -438,6 +442,17 @@ function ThemeCard() {
           ))}
         </div>
         <p className="mt-3 text-xs text-slate-500">Le choix s'applique tout de suite et reste mémorisé sur cet appareil.</p>
+        {month && (
+          <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+            <span>
+              <span className="flex items-center gap-2 text-slate-200">
+                <span className="h-3 w-3 rounded-full" style={{ background: month.theme.accent }} /> Habillage de saison : {month.theme.label}
+              </span>
+              <span className="text-xs text-slate-500">Halo et nébuleuses aux couleurs de la chronique du mois.</span>
+            </span>
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={skin} onChange={(e) => setSeasonSkin(e.target.checked)} />
+          </label>
+        )}
       </CardContent>
     </Card>
   );

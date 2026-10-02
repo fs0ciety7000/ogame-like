@@ -1,3 +1,5 @@
+import { defaultChroniclesConfig, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
+import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
@@ -61,10 +63,13 @@ export interface GameContent {
   rules: GameRules;
   /** v4.2 : seigneurs de guerre (réglages et fiches). */
   warlords: WarlordsConfig;
+  /** v4.3 : passe de saison (paliers et points) et chroniques mensuelles. */
+  seasonPass: SeasonPassConfig;
+  chronicles: ChroniclesConfig;
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -99,6 +104,8 @@ export function defaultGameContent(): GameContent {
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
     warlords: defaultWarlordsConfig(),
+    seasonPass: defaultSeasonPassConfig(),
+    chronicles: defaultChroniclesConfig(),
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
@@ -122,6 +129,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     ranks: overrides.ranks ?? defaults.ranks,
     achievements: overrides.achievements ?? defaults.achievements,
     warlords: overrides.warlords ?? defaults.warlords,
+    seasonPass: overrides.seasonPass ?? defaults.seasonPass,
+    chronicles: overrides.chronicles ?? defaults.chronicles,
     rules: {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
@@ -154,6 +163,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setRanks(content.ranks);
   setAchievements(content.achievements);
   setWarlords(content.warlords);
+  setSeasonPass(content.seasonPass);
+  setChronicles(content.chronicles);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -273,6 +284,8 @@ export function validateGameContent(content: GameContent): string[] {
   }
   errors.push(...validateFactions(content.factions ?? []));
   errors.push(...validateWarlords(content.warlords));
+  errors.push(...validateSeasonPass(content.seasonPass));
+  errors.push(...validateChronicles(content.chronicles));
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
 
