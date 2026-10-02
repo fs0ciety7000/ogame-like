@@ -13,6 +13,10 @@ import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { applyXpDelta } from "@/game/seasons";
 import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { consumeArmor } from "@/game/synthesis";
+import { consumeAegis } from "@/game/relics";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -46,6 +50,8 @@ export interface AttackInput {
   colonyId?: string;
   /** Garnisons alliées stationnées chez le défenseur (v1.9). */
   garrisons?: (CombatGarrison & { fleetId: string; ownerUid: string; ownerPseudo: string })[];
+  /** v4.0 : capsules embarquées au lancement (bonus en %). */
+  boosts?: { assault?: number };
 }
 
 export type AttackOutput =
@@ -131,8 +137,17 @@ export function performAttack(input: AttackInput): AttackOutput {
   const def = colony ? colonyView(owner, colony) : owner;
 
   const posture = postureEffects(def.posture?.id);
+  // v4.0 : officiers, reliques et capsules (stimulant d'assaut, carapace).
+  const formation = formationEffects(input.formation);
+  const atkMods = playerModifiers(attacker);
+  const defMods = playerModifiers(owner);
+  const assault = Math.max(0, Math.min(50, Number(input.boosts?.assault) || 0)) / 100;
+  const armor = consumeArmor(owner, now) / 100;
   const combat = resolveCombat({
-    ...formationEffects(input.formation),
+    ...formation,
+    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault),
+    cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
+    defenderPowerFactor: 1 + defMods.defense + armor,
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     lootMultiplier: lootFactor(now),
@@ -140,17 +155,21 @@ export function performAttack(input: AttackInput): AttackOutput {
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
-    attackerRepairPct: getRepairPercent(attacker.buildings),
+    attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
     fleet,
     defenderUnits: def.units ?? {},
     defenderTechLevels: def.techLevels ?? {},
-    defenderRepairPct: getRepairPercent(def.buildings),
+    defenderRepairPct: withRepairBonus(getRepairPercent(def.buildings), owner),
     defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch))]),
     ),
   });
+
+  // Égide de la Reine : la première défaite de la semaine n'est pas pillée.
+  const aegis = combat.outcome === "attacker_win" && Object.values(combat.loot ?? {}).some((n) => (n ?? 0) > 0) && consumeAegis(owner, now);
+  if (aegis) combat.loot = {};
 
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
@@ -193,6 +212,8 @@ export function performAttack(input: AttackInput): AttackOutput {
   applyXpDelta(owner, defenderXpDelta, now);
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
+  if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+  grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
 
   const outcomeTitle: Record<string, string> = {
     attacker_win: "Victoire !",
@@ -220,7 +241,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-defender",
       title: defenderTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}`,
       createdAtMs: now,
       read: false,
     },

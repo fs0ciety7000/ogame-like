@@ -31,6 +31,9 @@ export const GAME_FIELDS = [
   "colonies",
   "colonizing",
   "bounties",
+  "commanders",
+  "relics",
+  "synthesis",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

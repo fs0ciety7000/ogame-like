@@ -1,4 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
@@ -138,10 +139,10 @@ export function resolveLeviathanAssault(
   now: number,
 ): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = getRepairPercent(player.buildings);
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};

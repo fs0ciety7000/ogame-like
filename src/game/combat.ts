@@ -192,6 +192,8 @@ export function resolveCombat(params: {
   attackerLossFactor?: number;
   cargoFactor?: number;
   defenseFactor?: number;
+  /** v4.0 : bonus de défense du joueur défenseur (officiers, reliques, carapace). */
+  defenderPowerFactor?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const shield = Math.max(0, Math.min(0.95, params.defenderShieldPct ?? 0));
@@ -203,7 +205,7 @@ export function resolveCombat(params: {
   const garrisonFactor = params.garrisonFactor ?? 0.5;
   const garrisonPower = garrisons.reduce((sum, g) => sum + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
   const homeFactor = params.homeFleetFactor ?? COMBAT_RULES.homeFleetDefenseFactor;
-  const defenderPower = params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, params.defenseFactor ?? 1) + garrisonPower;
+  const defenderPower = (params.defenderPowerOverride ?? homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, params.defenseFactor ?? 1) + garrisonPower) * Math.max(0, params.defenderPowerFactor ?? 1);
 
   const totalPower = attackerPower + defenderPower;
   const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;

@@ -1,4 +1,6 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
@@ -332,10 +334,10 @@ export function resolveBountyHunt(
   const fx = formationEffects(formation);
   const combat = resolveCombat({
     ...fx,
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
-    attackerRepairPct: getRepairPercent(player.buildings),
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
     defenderUnits: {},
     defenderTechLevels: {},
@@ -361,6 +363,7 @@ export function resolveBountyHunt(
     st.board = st.board.filter((c) => c.id !== contractId);
     applyXpDelta(player, xp, now);
     bumpStat(player, "bounties");
+    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(note(`${fugitive.name} capturé !`, `Prime « ${t.label} » remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
     const rankAfter = bountyRank(st.reputation);
@@ -716,11 +719,11 @@ export function resolveEliteAssault(
 ): { state: EliteHunt; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
   const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
   );
   const active = eliteActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = getRepairPercent(player.buildings);
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};

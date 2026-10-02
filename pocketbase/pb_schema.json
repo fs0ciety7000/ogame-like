@@ -255,6 +255,24 @@
         "required": false,
         "max": 64,
         "presentable": false
+      },
+      {
+        "name": "commanders",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
+      },
+      {
+        "name": "relics",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
+      },
+      {
+        "name": "synthesis",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
       }
     ],
     "indexes": [
@@ -587,6 +605,11 @@
         "type": "json",
         "required": false,
         "maxSize": 2000000
+      },
+      {
+        "name": "anomaly",
+        "type": "bool",
+        "required": false
       }
     ],
     "indexes": [
@@ -1093,6 +1116,24 @@
         "type": "text",
         "required": false,
         "max": 40
+      },
+      {
+        "name": "boosts",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
+      },
+      {
+        "name": "trueUnits",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "hidden": true
+      },
+      {
+        "name": "anomaly",
+        "type": "bool",
+        "required": false
       }
     ],
     "indexes": [

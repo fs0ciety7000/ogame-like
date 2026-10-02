@@ -8,6 +8,7 @@ import { formatInt } from "@/game/format";
 import { allianceCounterSpy } from "@/game/alliances";
 import type { PlayerState, QueuesState, ResourceId, SpyReport, SpyReportData } from "@/types/game";
 import { techBonus } from "@/game/technologies";
+import { playerModifiers } from "@/game/modifiers";
 
 /* =====================================================
    Espionnage à niveaux (v1.7) : des sondes partent vers la cible. À
@@ -47,12 +48,13 @@ export const SPY_RULES = {
 export const SPY_TIER_LABELS = ["Brouillé", "Ressources", "Flotte et défenses", "Bâtiments et technologies", "Files et flottes en vol"];
 
 /** Niveau d'Espionnage d'un joueur (la techno qui améliore les sondes). */
-export function espionageLevel(player: Pick<PlayerState, "techLevels">): number {
+export function espionageLevel(player: Pick<PlayerState, "techLevels"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
   const tech = UNIT_TO_TECH[SPY_RULES.probeUnitId] ?? "tech20";
-  return Math.max(0, Number(player.techLevels?.[tech]) || 0);
+  // v4.0 : Espionne en poste et Œil de Vesper.
+  return Math.max(0, Number(player.techLevels?.[tech]) || 0) + playerModifiers(player).spyLevel;
 }
 
-export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch">): number {
+export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
   const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
   return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy"));
@@ -172,7 +174,7 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
   const counter = counterEspionage(target);
   const score = spyScore(level, counter, probes);
   const tier = spyTier(score);
-  const detected = (input.random ?? Math.random)() < detectionChance(level, counter);
+  const detected = (input.random ?? Math.random)() < Math.min(0.95, detectionChance(level, counter) + playerModifiers(owner).detection);
 
   const report: Omit<SpyReport, "id"> = {
     spyUid: spy.uid,
