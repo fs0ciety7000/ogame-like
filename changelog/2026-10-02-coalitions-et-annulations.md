@@ -35,3 +35,6 @@ Un secteur qui s'unit contre les seigneurs trop forts, des chantiers qu'on peut 
 - **Février, « Le Chœur brisé »** : le Chœur rallume la cathédrale d'Ilyon. Boss : **la Cathédrale d'Ilyon**.
 - **Mars, « Les Racines de Maru »** : le culte du Léviathan fait pousser son idole. Boss : **l'Avatar du Prophète**.
 - Deux nouvelles voix : **Kragmor Corne-Fendue** et **le Prophète Maru**.
+
+## Classements
+- Les seigneurs de guerre n'apparaissent plus dans les classements **total** et **saison** ni dans le classement en direct du Panthéon. Ils restent attaquables depuis la page **Seigneurs** et la galaxie.

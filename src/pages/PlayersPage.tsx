@@ -131,7 +131,8 @@ export function PlayersPage() {
   // saison se fait ici côté client (top 100 déjà chargé) plutôt que via
   // un second abonnement temps réel.
   const ranked = useMemo(() => {
-    const sorted = [...players].sort((a, b) =>
+    // Les seigneurs de guerre (PNJ) ne sont pas classés.
+    const sorted = players.filter((p) => !p.npc).sort((a, b) =>
       mode === "season"
         ? (b.seasonId === season ? b.seasonXp : 0) -
           (a.seasonId === season ? a.seasonXp : 0)
