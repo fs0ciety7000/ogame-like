@@ -40,3 +40,12 @@ export function acceptMarketOffer(id: string) {
 export function cancelMarketOffer(id: string) {
   return callGame<MarketOffer>("market/cancel", { id });
 }
+
+/** v4.8 : échanges conclus des 30 derniers jours (historique des prix). */
+export async function fetchMarketTrades(days = 30): Promise<Pick<MarketOffer, "giveRes" | "giveAmount" | "wantRes" | "wantAmount" | "filledAtMs">[]> {
+  return pb.collection("market_offers").getFullList({
+    filter: pb.filter('status = "filled" && filledAtMs > {:since}', { since: Date.now() - days * 86400_000 }),
+    fields: "giveRes,giveAmount,wantRes,wantAmount,filledAtMs",
+    sort: "filledAtMs",
+  });
+}
