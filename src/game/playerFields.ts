@@ -35,6 +35,8 @@ export const GAME_FIELDS = [
   "relics",
   "synthesis",
   "profileStyle",
+  "seasonPass",
+  "referral",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions"] as const;

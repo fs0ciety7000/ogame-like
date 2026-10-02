@@ -1,5 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { RANKS } from "@/game/ranks";
+import { TUTORIAL_RAID, TUTORIAL_TITLE } from "@/game/story";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -16,6 +17,8 @@ export interface OnboardingState {
   claimed: string[];
   /** Le joueur a masqué la carte (il peut la rouvrir depuis les Réglages). */
   hidden?: boolean;
+  /** v4.1 : raid scripté de Varan (« due » : à lancer par le serveur, « sent » : lancé). */
+  tutorialRaid?: "due" | "sent";
 }
 
 export interface OnboardingStep {
@@ -126,7 +129,8 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
 
 export function onboardingState(p: Pick<PlayerState, "onboarding">): OnboardingState {
   const raw = p.onboarding;
-  return { claimed: Array.isArray(raw?.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: raw?.hidden === true };
+  const tutorialRaid = raw?.tutorialRaid === "due" || raw?.tutorialRaid === "sent" ? raw.tutorialRaid : undefined;
+  return { claimed: Array.isArray(raw?.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: raw?.hidden === true, ...(tutorialRaid ? { tutorialRaid } : {}) };
 }
 
 /** Le joueur suit-il la prise en main ? (débutant, ou déjà commencée et pas finie) */
@@ -154,7 +158,14 @@ export function claimOnboarding(player: PlayerState, stepId: string): Partial<Re
     player.titles = [...(player.titles ?? []), { label: step.title, seasonId: "onboarding", rank: 1 }];
     if (!player.activeTitle) player.activeTitle = step.title;
   }
-  player.onboarding = { ...st, claimed: [...st.claimed, step.id] };
+  const claimed = [...st.claimed, step.id];
+  // v4.1 : roquettes installées, Varan envoie son avant-garde (lancée par le serveur).
+  const tutorialRaid = st.tutorialRaid ?? (step.id === TUTORIAL_RAID.trigger ? "due" : undefined);
+  player.onboarding = { ...st, claimed, ...(tutorialRaid ? { tutorialRaid } : {}) };
+  // Tutoriel terminé : titre « Recrue de Vashka ».
+  if (claimed.length >= ONBOARDING_STEPS.length && !(player.titles ?? []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(player.titles ?? []), { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
   return step.reward;
 }
 

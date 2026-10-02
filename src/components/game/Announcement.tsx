@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { create } from "zustand";
 import { Skull } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,35 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "v4.1-saison",
+    eyebrow: "Mise à jour 4.1 · Passe de saison",
+    title: "Chaque jour de jeu compte",
+    text: "Un passe gratuit de 30 paliers qui se remplit avec ton activité, des amis à recruter, des victoires à afficher partout. Et pour les nouveaux venus, Vashka raconte elle-même leurs premiers pas.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/bounties/hunters.webp",
+    artMobile: "/assets/bounties/vashka.webp",
+    emblem: "/assets/bounties/amber.webp",
+    spotlight: {
+      image: "/assets/bounties/vashka.webp",
+      name: "Vashka",
+      role: "Matriarche-Chasseuse",
+      quote: "L'Essaim récompense ceux qui reviennent. Chaque jour, commandant.",
+    },
+    currency: {
+      icon: "/assets/bounties/amber.webp",
+      name: "Passe gratuit",
+      text: "30 paliers ce mois-ci : production, 370 Ambre, Dossiers, capsules, une relique rare puis épique, bannière et titre de saison.",
+    },
+    features: [
+      { title: "Passe de saison", text: "Contrats, primes, raids repoussés, victoires, Léviathan, connexion du jour : 40 points par palier.", to: "/game/passe", image: "/assets/relics/couronne_essaim.webp" },
+      { title: "Parrainage", text: "Ton lien d'invitation : 150 Ambre et la bannière « Recruteur » quand ton filleul atteint Bronze I, 100 Ambre pour lui.", to: "/game/profil", image: "/assets/bounties/emoji-ok.webp" },
+      { title: "Carte de victoire", text: "Un combat gagné devient une image à télécharger ou un lien qui s'affiche en aperçu sur Discord et WhatsApp.", to: "/game/combats", image: "/assets/bounties/emoji-top.webp" },
+      { title: "Tutoriel raconté", text: "Les dix objectifs de départ deviennent trois chapitres, avec un premier raid de Varan à repousser.", to: "/game", image: "/assets/story/varan.webp" },
+    ],
+    cta: { label: "Ouvrir le passe", to: "/game/passe" },
+  },
   {
     id: "v4.0-commandement",
     eyebrow: "Mise à jour 4.0 · Commandement",
@@ -161,6 +191,9 @@ const CLIP = [
   "polygon(14% 0, 100% 0, 100% 100%, 0 100%)",
 ];
 
+/** v4.1 : une annonce est en attente ou ouverte (le tutoriel raconté attend son tour). */
+export const useAnnouncementPending = create<{ pending: boolean }>(() => ({ pending: false }));
+
 export function AnnouncementDialog() {
   const player = usePlayerStore((s) => s.player);
   const navigate = useNavigate();
@@ -176,6 +209,7 @@ export function AnnouncementDialog() {
       (a) => !seen.includes(`${uid}:${a.id}`) && (a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled))),
     );
     if (!next) return;
+    useAnnouncementPending.setState({ pending: true });
     const timer = setTimeout(() => setCurrent(next), 1200);
     return () => clearTimeout(timer);
   }, [uid, threatened]);
@@ -186,6 +220,7 @@ export function AnnouncementDialog() {
   const close = () => {
     markSeen(`${uid}:${current.id}`);
     setCurrent(null);
+    useAnnouncementPending.setState({ pending: false });
   };
 
   return (

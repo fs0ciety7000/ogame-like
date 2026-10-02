@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
+import { passState, passTier } from "@/game/seasonPass";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -44,6 +45,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { to: "/game/missions", label: "Missions", icon: MapPin },
       { to: "/game/primes", label: "Primes", icon: Crosshair },
+      { to: "/game/passe", label: "Passe", icon: Ticket },
       { to: "/game/galaxie", label: "Galaxie", icon: Orbit },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
@@ -78,6 +80,12 @@ function useBadge(to: string): number {
   const reportsUnread = useReportBadges((s) => s.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();
+  const passClaimable = usePlayerStore((s) => {
+    if (!s.player) return 0;
+    const st = passState(s.player, Date.now());
+    return Math.max(0, passTier(st.points) - st.claimed.length);
+  });
+  if (to === "/game/passe") return passClaimable;
   if (to === "/game/messages") return messagesUnread;
   if (to === "/game/leviathan") return leviathan && isActive(leviathan, Date.now()) ? 1 : 0;
   return to === "/game/alliance" ? allianceUnread : to === "/game/nouveautes" ? changelogUnread : to === "/game/signalements" ? reportsUnread : 0;

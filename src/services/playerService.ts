@@ -683,3 +683,9 @@ export function recycleRelic(relicId: string) {
 export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }
+
+/* ---------- v4.1 : passe de saison ---------- */
+
+export function claimPassTier(tier: number) {
+  return act<{ gained: string[] }>({ type: "passClaim", tier });
+}

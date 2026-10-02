@@ -89,6 +89,14 @@ routerAdd(
       } catch (err) {
         throw db.asHttpError(game, err);
       }
+      // v4.1 : tutoriel, les roquettes sont prêtes, Varan envoie son avant-garde.
+      const ob = out.player.onboarding || {};
+      if (ob.tutorialRaid === "due") {
+        const now = Date.now();
+        const R = game.TUTORIAL_RAID;
+        db.createPirateRaid(txApp, game, out.player, { factionId: R.factionId, power: game.tutorialRaidPower(out.player), arriveAtMs: now + R.delayMinutes * 60000 });
+        out.player.onboarding = Object.assign({}, ob, { tutorialRaid: "sent" });
+      }
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
       response = { result: out.result === undefined ? null : out.result };
@@ -610,3 +618,27 @@ routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
 routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
 routerAdd("POST", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
+
+/* ---------- Parrainage (v4.1) ---------- */
+
+routerAdd("POST", "/api/cosmic/referral", (e) => require(`${__hooks}/cosmic_db.js`).referralRequest(e), $apis.requireAuth("users"));
+
+cronAdd("cosmic_referrals", "23 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).referralTick(Date.now());
+    if (n > 0) console.log(`[cosmic] parrainage : ${n} récompense(s)`);
+  } catch (err) {
+    console.log(`[cosmic] parrainage : ${err}`);
+  }
+});
+
+/* ---------- Carte de victoire (v4.1) : page d'aperçu pour les réseaux ---------- */
+
+routerAdd("GET", "/api/cosmic/carte/{id}", (e) => require(`${__hooks}/cosmic_db.js`).victoryCardPage(e));
+
+/* Parrainage : déclenchement manuel par l'équipe (et pour les tests). */
+routerAdd("POST", "/api/cosmic/admin/referrals", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { rewarded: db.referralTick(Date.now()) });
+}, $apis.requireAuth("users", "_superusers"));

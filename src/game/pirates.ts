@@ -1,6 +1,7 @@
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { addPassPoints } from "@/game/seasonPass";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -690,6 +691,7 @@ export function resolvePirateRaid(
     st.raidsWon += 1;
     st.repelled += 1;
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
+    addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
@@ -797,6 +799,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     st.notoriety = 0;
     st.lairsTaken += 1;
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
+    addPassPoints(player, "victory", now);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(
       note(

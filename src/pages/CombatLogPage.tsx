@@ -6,7 +6,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
-import { Eye, Sword, Shield, ShieldAlert } from "lucide-react";
+import { Eye, Sword, Shield, ShieldAlert, Trophy } from "lucide-react";
+import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
+import { victoryCardFromReport } from "@/lib/victoryCardFromReport";
+import { usePlayerStore } from "@/store/playerStore";
+import { useAllianceTag } from "@/store/directoryStore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -63,6 +67,10 @@ export function CombatLogPage() {
   const [reports, setReports] = useState<BattleReport[]>([]);
   const [spyReports, setSpyReports] = useState<SpyReport[]>([]);
   const [openSpy, setOpenSpy] = useState<string | null>(null);
+  // v4.1 : carte de victoire.
+  const player = usePlayerStore((s) => s.player);
+  const allianceTag = useAllianceTag(player?.uid, player?.allianceId) ?? undefined;
+  const [card, setCard] = useState<{ input: ReturnType<typeof victoryCardFromReport>; target: string } | null>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -76,6 +84,7 @@ export function CombatLogPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Archives" title="Journal de combat" description="Historique des attaques lancées et reçues." />
+      <VictoryCardDialog card={card?.input ?? null} target={card?.target ?? "/game"} onClose={() => setCard(null)} />
 
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
@@ -135,6 +144,16 @@ export function CombatLogPage() {
 
               <span className="tabular-mono shrink-0 text-xs text-slate-500">{timeAgo(toMillis(report.timestamp))}</span>
               </button>
+              {result === "victory" && (
+                <button
+                  type="button"
+                  title="Carte de victoire"
+                  className="flex shrink-0 items-center gap-1 px-2 py-2 text-xs text-gold-glow transition-colors hover:text-white"
+                  onClick={() => player && setCard({ input: victoryCardFromReport(report, player, allianceTag), target: `/game/rapport/${report.id}` })}
+                >
+                  <Trophy className="h-3.5 w-3.5" />
+                </button>
+              )}
               <ShareButton kind="battle" id={report.id} />
             </motion.div>
           );

@@ -28,6 +28,7 @@ import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
+import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { setProfileStyle } from "@/game/profile";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
@@ -68,7 +69,8 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
-  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } };
+  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } }
+  | { type: "passClaim"; tier: number };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -129,6 +131,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       // Temps de jeu déclaré par le navigateur, borné par le temps réellement écoulé.
       const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1000 + 5, 300);
       player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
+      // v4.1 : connexion du jour pour le passe de saison.
+      passDailyLogin(player, now);
       const resourceGains: Partial<Record<ResourceId, number>> = {};
       for (const key of Object.keys(player.resources) as ResourceId[]) {
         const delta = (player.resources[key] ?? 0) - (s.preFlushPlayer.resources[key] ?? 0);
@@ -241,6 +245,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "claimContract": {
       const claimed = claimContract(player, String(action.contractId ?? ""), now);
       bumpStat(player, "contracts");
+      addPassPoints(player, "contract", now);
       grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
       return claimed;
     }
@@ -329,6 +334,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
+
+    case "passClaim":
+      return { gained: claimPassTier(player, action.tier, now) };
 
     default:
       throw new GameActionError("Action inconnue.");
