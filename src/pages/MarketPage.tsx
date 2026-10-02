@@ -1,3 +1,4 @@
+import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -24,18 +25,6 @@ function Amount({ res, n, className }: { res: string; n: number; className?: str
     <span className={cn("inline-flex items-center gap-1 font-mono tabular-nums", className)} title={`${formatNumber(n)} ${resName(res)}`}>
       <ResourceIcon id={res} className="h-4 w-4" /> {formatCompact(n)}
     </span>
-  );
-}
-
-function ResourceSelect({ value, onChange, label }: { value: ResourceId; onChange: (r: ResourceId) => void; label: string }) {
-  return (
-    <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as ResourceId)} className="h-9 min-w-0 flex-1 border border-cyan-glow/20 bg-space-900 px-2 text-sm text-slate-200">
-      {RESOURCE_LIST.map((r) => (
-        <option key={r.id} value={r.id}>
-          {r.name}
-        </option>
-      ))}
-    </select>
   );
 }
 
@@ -104,7 +93,7 @@ export function MarketPage() {
           <div className="flex flex-col gap-2">
             <p className="hud-eyebrow text-[10px] text-slate-500">Je donne</p>
             <div className="flex gap-2">
-              <ResourceSelect value={giveRes} onChange={setGiveRes} label="Ressource donnée" />
+              <ResourceSelect value={giveRes} onChange={setGiveRes} ariaLabel="Ressource donnée" className="min-w-0 flex-1" size="sm" />
               <Input type="number" min={0} value={giveAmount || ""} placeholder="0" onChange={(e) => setGiveAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité donnée" />
             </div>
             <button type="button" className="self-end font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setGiveAmount(Math.floor(have(giveRes)))}>
@@ -112,7 +101,7 @@ export function MarketPage() {
             </button>
             <p className="hud-eyebrow text-[10px] text-slate-500">Contre</p>
             <div className="flex gap-2">
-              <ResourceSelect value={wantRes} onChange={setWantRes} label="Ressource demandée" />
+              <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource demandée" className="min-w-0 flex-1" size="sm" />
               <Input type="number" min={0} value={wantAmount || ""} placeholder="0" onChange={(e) => setWantAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité demandée" />
             </div>
           </div>
@@ -162,14 +151,7 @@ export function MarketPage() {
         <Card className="flex flex-col gap-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="hud-title text-sm">Offres disponibles</h2>
-            <select aria-label="Filtrer par ressource" value={filter} onChange={(e) => setFilter(e.target.value)} className="ml-auto h-8 border border-cyan-glow/20 bg-space-900 px-2 text-xs text-slate-300">
-              <option value="">Toutes les ressources</option>
-              {RESOURCE_LIST.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+            <ResourceSelect<string> value={filter} onChange={setFilter} ariaLabel="Filtrer par ressource" allLabel="Toutes les ressources" size="sm" className="ml-auto w-52" />
           </div>
           {others.length === 0 ? (
             <EmptyState icon={<Store className="h-5 w-5" />} title="Aucune offre">Publie la première !</EmptyState>

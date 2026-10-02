@@ -1,3 +1,4 @@
+import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -113,32 +114,12 @@ export function ResourcesPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Je vends</label>
-              <select
-                value={sellId}
-                onChange={(e) => setSellId(e.target.value as ResourceId)}
-                className="h-10 w-full border border-cyan-glow/15 bg-space-900/80 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/60"
-              >
-                {RESOURCE_LIST.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.emoji} {r.name}
-                  </option>
-                ))}
-              </select>
+              <ResourceSelect value={sellId} onChange={setSellId} ariaLabel="Ressource vendue" className="w-full" />
             </div>
 
             <div>
               <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Je reçois</label>
-              <select
-                value={buyId}
-                onChange={(e) => setBuyId(e.target.value as ResourceId)}
-                className="h-10 w-full border border-cyan-glow/15 bg-space-900/80 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/60"
-              >
-                {RESOURCE_LIST.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.emoji} {r.name}
-                  </option>
-                ))}
-              </select>
+              <ResourceSelect value={buyId} onChange={setBuyId} ariaLabel="Ressource reçue" className="w-full" />
             </div>
 
             <div>

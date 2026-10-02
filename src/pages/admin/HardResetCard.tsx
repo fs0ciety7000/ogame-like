@@ -1,3 +1,4 @@
+import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { RotateCcw } from "lucide-react";
@@ -103,7 +104,9 @@ export function HardResetCard() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {RESOURCE_LIST.map((r) => (
             <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
-              {r.emoji} {r.name}
+              <span>
+                <ResourceIcon id={r.id} /> {r.name}
+              </span>
               <Input
                 type="number"
                 min={0}

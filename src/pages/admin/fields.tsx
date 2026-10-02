@@ -4,13 +4,15 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RESOURCE_LIST } from "@/game/resources";
+import { IconSelect } from "@/components/ui/icon-select";
+import { ResourceIcon } from "@/components/ui/game-icon";
 import { adminUploadAsset } from "@/services/adminService";
 import { cn } from "@/lib/utils";
 
 /* Champs de formulaire de l'administration : chacun reçoit une valeur et
  * un onChange, sans état propre (l'éditeur parent tient le brouillon). */
 
-export function Field({ label, hint, children, className }: { label: string; hint?: string; children: ReactNode; className?: string }) {
+export function Field({ label, hint, children, className }: { label: ReactNode; hint?: string; children: ReactNode; className?: string }) {
   return (
     <label className={cn("flex flex-col gap-1", className)}>
       <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
@@ -73,7 +75,7 @@ export function NumberField({
   step,
   optional,
 }: {
-  label: string;
+  label: ReactNode;
   value: number | undefined;
   onChange: (v: number | undefined) => void;
   hint?: string;
@@ -108,10 +110,18 @@ export function SelectField<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; icon?: ReactNode }[];
   onChange: (v: T) => void;
   hint?: string;
 }) {
+  // Options illustrées (ressources…) : liste déroulante avec icônes.
+  if (options.some((o) => o.icon)) {
+    return (
+      <Field label={label} hint={hint}>
+        <IconSelect value={value} onChange={onChange} options={options} ariaLabel={label} />
+      </Field>
+    );
+  }
   return (
     <Field label={label} hint={hint}>
       <select
@@ -153,7 +163,7 @@ export function KeyNumberMapField({
   label: string;
   value: Record<string, number> | undefined;
   onChange: (v: Record<string, number>) => void;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; icon?: ReactNode }[];
   hint?: string;
   valueLabel?: string;
 }) {
@@ -167,17 +177,26 @@ export function KeyNumberMapField({
         {entries.length === 0 && <p className="text-xs text-slate-500">Aucun.</p>}
         {entries.map(([key, num], i) => (
           <div key={key} className="flex items-center gap-2">
-            <select
-              value={key}
-              onChange={(e) => set(entries.map((en, j) => (j === i ? [e.target.value, en[1]] : en)))}
-              className="h-9 min-w-0 flex-1 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100"
-            >
-              {[options.find((o) => o.value === key) ?? { value: key, label: `${key} (inconnu)` }, ...unused].map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            {options.some((o) => o.icon) ? (
+              <IconSelect
+                value={key}
+                onChange={(v) => set(entries.map((en, j) => (j === i ? [v, en[1]] : en)))}
+                options={[options.find((o) => o.value === key) ?? { value: key, label: `${key} (inconnu)` }, ...unused]}
+                className="h-9 flex-1"
+              />
+            ) : (
+              <select
+                value={key}
+                onChange={(e) => set(entries.map((en, j) => (j === i ? [e.target.value, en[1]] : en)))}
+                className="h-9 min-w-0 flex-1 border border-cyan-glow/15 bg-space-900/80 px-2 text-sm text-slate-100"
+              >
+                {[options.find((o) => o.value === key) ?? { value: key, label: `${key} (inconnu)` }, ...unused].map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            )}
             <Input
               type="number"
               step="any"
@@ -207,7 +226,7 @@ export function KeyNumberMapField({
   );
 }
 
-export const RESOURCE_OPTIONS = RESOURCE_LIST.map((r) => ({ value: r.id as string, label: `${r.emoji} ${r.name}` }));
+export const RESOURCE_OPTIONS = RESOURCE_LIST.map((r) => ({ value: r.id as string, label: r.name, icon: <ResourceIcon id={r.id} /> }));
 
 export function ResourceMapField(props: {
   label: string;

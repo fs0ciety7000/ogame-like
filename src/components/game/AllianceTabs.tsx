@@ -64,11 +64,19 @@ const LOG_LABEL: Record<AllianceLog["kind"], string> = {
   kick: "a exclu",
 };
 
-function amountsText(res: Amounts | null | undefined): string {
-  return Object.entries(res ?? {})
-    .filter(([, v]) => (v ?? 0) > 0)
-    .map(([k, v]) => `${RESOURCE_LIST.find((r) => r.id === k)?.emoji ?? k} ${formatCompact(v ?? 0)}`)
-    .join(" · ");
+/** Montants avec les vraies icônes de ressources. */
+function AmountsText({ res }: { res: Amounts | null | undefined }) {
+  const entries = Object.entries(res ?? {}).filter(([, v]) => (v ?? 0) > 0);
+  return (
+    <>
+      {entries.map(([k, v], i) => (
+        <span key={k} className="whitespace-nowrap">
+          {i > 0 && " · "}
+          <ResourceIcon id={k} /> {formatCompact(v ?? 0)}
+        </span>
+      ))}
+    </>
+  );
 }
 
 /** Trésor : stock, dépôt, versements (fondateur et officiers) et journal. */
@@ -159,7 +167,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
               {l.actorPseudo && <strong className="text-slate-100">{l.actorPseudo} </strong>}
               {LOG_LABEL[l.kind] ?? l.kind} {l.targetPseudo && <strong className="text-slate-100">{l.targetPseudo} </strong>}
               {l.text && <span>{l.text} </span>}
-              {l.resources && <span className="text-slate-400">{amountsText(l.resources)}</span>}
+              {l.resources && <span className="text-slate-400"><AmountsText res={l.resources} /></span>}
             </li>
           ))}
         </ul>
@@ -222,7 +230,7 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
             ) : (
               <>
                 <p className="text-[11px] text-slate-500">
-                  Niveau {next} : {amountsText(cost)} · {formatDuration(allianceResearchSeconds(next))}
+                  Niveau {next} : <AmountsText res={cost} /> · {formatDuration(allianceResearchSeconds(next))}
                 </p>
                 {canStart && (
                   <Button size="sm" variant="outline" className="self-start" disabled={busy || !!active || !affordable} onClick={() => void start(r.id)}>
@@ -317,7 +325,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
                       <span className="tabular-mono">{Math.floor((totalFunded / Math.max(1, totalCost)) * 100)} %</span>
                     </div>
                     <Progress value={(totalFunded / Math.max(1, totalCost)) * 100} className="mt-1" />
-                    <p className="mt-1 text-[11px] text-slate-500">Reste : {amountsText(missing)}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Reste : <AmountsText res={missing} /></p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => setOpen(open === p.id ? null : p.id)}>

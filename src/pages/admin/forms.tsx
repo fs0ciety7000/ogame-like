@@ -1,3 +1,4 @@
+import { ResourceIcon } from "@/components/ui/game-icon";
 import { Button } from "@/components/ui/button";
 import {
   getBuildingUpgradeCost,
@@ -574,7 +575,7 @@ export function MissionForm({ value: m, onChange, isNew }: { value: MissionDef; 
         Rentabilité si relancée en boucle :{" "}
         {Object.entries(resources).map(([res, v]) => (
           <span key={res} className="mr-3">
-            {RESOURCE_OPTIONS.find((o) => o.value === res)?.label ?? res} <strong>{perHour(v)}</strong>/h
+            <ResourceIcon id={res} /> {RESOURCE_OPTIONS.find((o) => o.value === res)?.label ?? res} <strong>{perHour(v)}</strong>/h
           </span>
         ))}
         <span>

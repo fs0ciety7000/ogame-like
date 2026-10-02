@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadarScan } from "@/components/game/RadarScan";
 import { adminFetchStats } from "@/services/adminService";
-import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
+import { RESOURCE_LIST } from "@/game/resources";
+import { ResourceIcon } from "@/components/ui/game-icon";
 import { formatCompact, formatNumber } from "@/lib/utils";
 import type { GameStats } from "@/game/analytics";
 
@@ -174,7 +175,7 @@ export function StatsPanel() {
             {economy.resources.map((r) => (
               <div key={r.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 text-slate-300">
                 <span>
-                  {resourceEmoji(r.id)} {r.name}
+                  <ResourceIcon id={r.id} /> {r.name}
                 </span>
                 <span className="tabular-mono text-right">{formatCompact(r.median)}</span>
                 <span className="tabular-mono text-right text-mint-glow">{r.medianRate > 0 ? `+${formatCompact(r.medianRate)}/s` : "—"}</span>
