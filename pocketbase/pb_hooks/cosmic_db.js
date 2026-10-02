@@ -3522,4 +3522,35 @@ function referralTick(now) {
   return rewarded;
 }
 
-module.exports = { referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Carte de victoire (v4.1) ---------- */
+
+/** Page minimale avec balises Open Graph (aperçu Discord, WhatsApp…), puis
+ *  redirection vers le rapport dans le jeu. */
+function victoryCardPage(e) {
+  const id = String(e.request.pathValue("id") || "");
+  const rec = findOrNull($app, "victory_cards", id);
+  if (!rec) return e.html(404, "<!doctype html><meta charset=utf-8><title>Carte introuvable</title><p>Carte introuvable.</p>");
+  const base = (() => {
+    try {
+      return String($app.settings().meta.appURL || "").replace(/\/+$/, "");
+    } catch (_) {
+      return "";
+    }
+  })();
+  const host = "https://" + (e.request.host || "");
+  const image = `${host}/api/files/victory_cards/${rec.id}/${rec.getString("image")}`;
+  const target = base + (rec.getString("target") || "/");
+  const title = escapeHtml(rec.getString("title") || "Victoire");
+  const desc = escapeHtml(rec.getString("description") || "Cosmic Empires");
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${title}</title>
+<meta property="og:type" content="website"><meta property="og:site_name" content="Cosmic Empires">
+<meta property="og:title" content="${title}"><meta property="og:description" content="${desc}">
+<meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${image}">
+<meta http-equiv="refresh" content="0;url=${escapeHtml(target)}"></head>
+<body style="background:#03040a;color:#e2e8f0;font-family:sans-serif;text-align:center;padding:24px">
+<img src="${image}" alt="" style="max-width:100%;height:auto"><p><a style="color:#4be8ff" href="${escapeHtml(target)}">Ouvrir Cosmic Empires</a></p></body></html>`;
+  return e.html(200, html);
+}
+
+module.exports = { createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

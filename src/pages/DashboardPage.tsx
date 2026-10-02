@@ -10,6 +10,7 @@ import { formatNumber } from "@/lib/utils";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
+import { StoryDialog } from "@/components/game/StoryDialog";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
@@ -72,6 +73,7 @@ export function DashboardPage() {
       />
 
       <OnboardingChecklist player={player} />
+      <StoryDialog player={player} />
       <NextActionsCard />
 
       <Card className="flex flex-wrap items-center gap-6 p-6">

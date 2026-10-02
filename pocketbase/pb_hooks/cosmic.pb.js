@@ -89,6 +89,14 @@ routerAdd(
       } catch (err) {
         throw db.asHttpError(game, err);
       }
+      // v4.1 : tutoriel, les roquettes sont prêtes, Varan envoie son avant-garde.
+      const ob = out.player.onboarding || {};
+      if (ob.tutorialRaid === "due") {
+        const now = Date.now();
+        const R = game.TUTORIAL_RAID;
+        db.createPirateRaid(txApp, game, out.player, { factionId: R.factionId, power: game.tutorialRaidPower(out.player), arriveAtMs: now + R.delayMinutes * 60000 });
+        out.player.onboarding = Object.assign({}, ob, { tutorialRaid: "sent" });
+      }
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
       response = { result: out.result === undefined ? null : out.result };
@@ -623,3 +631,14 @@ cronAdd("cosmic_referrals", "23 * * * *", () => {
     console.log(`[cosmic] parrainage : ${err}`);
   }
 });
+
+/* ---------- Carte de victoire (v4.1) : page d'aperçu pour les réseaux ---------- */
+
+routerAdd("GET", "/api/cosmic/carte/{id}", (e) => require(`${__hooks}/cosmic_db.js`).victoryCardPage(e));
+
+/* Parrainage : déclenchement manuel par l'équipe (et pour les tests). */
+routerAdd("POST", "/api/cosmic/admin/referrals", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { rewarded: db.referralTick(Date.now()) });
+}, $apis.requireAuth("users", "_superusers"));

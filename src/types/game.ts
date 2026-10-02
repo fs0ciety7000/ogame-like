@@ -102,7 +102,7 @@ export interface PlayerState {
   /** Statistiques cumulées (v2.3), écrites par le serveur. */
   stats?: import("@/game/stats").PlayerStats;
   /** v2.9 : objectifs de prise en main réclamés. */
-  onboarding?: { claimed: string[]; hidden?: boolean };
+  onboarding?: { claimed: string[]; hidden?: boolean; tutorialRaid?: "due" | "sent" };
   /** v3.0 : posture de la base face aux attaques. */
   posture?: { id: "standard" | "bunker" | "riposte"; changedAtMs: number };
   /** v3.4 : nombre d'ascensions et date de la dernière. */

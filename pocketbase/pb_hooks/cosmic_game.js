@@ -75,6 +75,7 @@ __export(hooksEntry_exports, {
   REFERRAL_RULES: () => REFERRAL_RULES,
   SEASON_RULES: () => SEASON_RULES,
   STAFF_KEY: () => STAFF_KEY,
+  TUTORIAL_RAID: () => TUTORIAL_RAID,
   WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
   activeWarBetween: () => activeWarBetween,
@@ -214,6 +215,7 @@ __export(hooksEntry_exports, {
   startChallenge: () => startChallenge,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  tutorialRaidPower: () => tutorialRaidPower,
   unitsAwayOf: () => unitsAwayOf,
   utcDayStart: () => utcDayStart,
   warSeasonBonuses: () => warSeasonBonuses,
@@ -221,89 +223,6 @@ __export(hooksEntry_exports, {
   weekWindow: () => weekWindow
 });
 module.exports = __toCommonJS(hooksEntry_exports);
-
-// src/game/stats.ts
-function playerStats(player) {
-  var _a;
-  return (_a = player.stats) != null ? _a : {};
-}
-function bumpStat(player, key, n = 1) {
-  var _a, _b, _c;
-  if (!(n > 0)) return;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
-}
-function setStat(player, key, value) {
-  var _a;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value });
-}
-function recordThreat(player, factionId) {
-  var _a, _b, _c;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
-  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
-  player.stats = s;
-}
-function recordMission(player, day) {
-  var _a, _b, _c, _d;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
-  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
-  s.missionDay = day;
-  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
-  player.stats = s;
-}
-function parisHour(now) {
-  const d = new Date(now);
-  const y = d.getUTCFullYear();
-  const lastSunday = (month2) => {
-    const last = new Date(Date.UTC(y, month2 + 1, 0));
-    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
-  };
-  const summer = now >= lastSunday(2) && now < lastSunday(9);
-  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
-}
-
-// src/game/errors.ts
-var GameActionError = class extends Error {
-};
-
-// src/game/format.ts
-function formatInt(value) {
-  const n = Math.round(Number(value) || 0);
-  const digits = String(Math.abs(n));
-  let out = "";
-  for (let i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
-    out += digits[i];
-  }
-  return n < 0 ? `-${out}` : out;
-}
-
-// src/game/resources.ts
-var RESOURCE_LIST = [
-  { id: "scrap", name: "Ferraille", emoji: "\u{1F529}", rarity: "common" },
-  { id: "energy", name: "\xC9nergie instable", emoji: "\u26A1", rarity: "common" },
-  { id: "nano", name: "Nanocomposants", emoji: "\u{1F9EC}", rarity: "common" },
-  { id: "data", name: "Donn\xE9es anciennes", emoji: "\u{1F4E1}", rarity: "common" },
-  { id: "reinforcedSteel", name: "Acier renforc\xE9", emoji: "\u{1F6E0}\uFE0F", rarity: "rare" },
-  { id: "cyberModule", name: "Module cybern\xE9tique", emoji: "\u{1F9E9}", rarity: "rare" },
-  { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
-  { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
-];
-function getTradeRate(sellId, buyId) {
-  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
-  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
-  if (!sell || !buy) return 1;
-  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
-  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
-  return 1;
-}
-function canAffordAll(resources, costs) {
-  return Object.entries(costs).every(([res, val]) => {
-    var _a;
-    return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
-  });
-}
 
 // src/game/technologies.ts
 var ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
@@ -426,6 +345,860 @@ function checkPrereqs(tech, levels) {
   });
   return { valid: allValid, list };
 }
+
+// src/game/units.ts
+var KESH_HUNTER_UNIT = {
+  id: "traqueur_kesh",
+  name: "Traqueur Kesh",
+  image: "/assets/units/traqueur_kesh.webp",
+  maxLevel: 1,
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
+  cost: { scrap: 6e3, energy: 3e3 },
+  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
+  category: "attack",
+  unlockTech: "",
+  hangarSpace: 25,
+  blueprint: true
+};
+var KESH_PVE_BONUS = 0.5;
+var UNIT_LEVEL_BONUS_DEFAULT = 5;
+var DEFAULT_UNITS = [
+  {
+    id: "drone_recuperateur",
+    name: "Drone r\xE9cup\xE9rateur",
+    image: "/assets/units/drone_recuperateur.webp",
+    maxLevel: 10,
+    description: "Petit drone autonome con\xE7u pour r\xE9cup\xE9rer des ressources dispers\xE9es.",
+    cost: { scrap: 500, energy: 200 },
+    stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
+    category: "attack",
+    unlockTech: "tech9",
+    hangarSpace: 1
+  },
+  {
+    id: "sonde_espionnage",
+    name: "Sonde d'espionnage",
+    image: "/assets/units/sonde_espionnage.webp",
+    maxLevel: 10,
+    description: "Sonde furtive et tr\xE8s rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
+    cost: { scrap: 300, energy: 150 },
+    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech20",
+    hangarSpace: 1
+  },
+  {
+    id: "fregate",
+    name: "Fr\xE9gate",
+    image: "/assets/units/fregate.webp",
+    maxLevel: 10,
+    description: "Vaisseau polyvalent, \xE9quilibr\xE9 entre attaque et d\xE9fense.",
+    cost: { scrap: 1e3, energy: 500 },
+    stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
+    category: "attack",
+    unlockTech: "tech10",
+    hangarSpace: 1
+  },
+  {
+    id: "cargo",
+    name: "Cargo",
+    image: "/assets/units/cargo.webp",
+    maxLevel: 10,
+    description: "Transporteur massif con\xE7u pour d\xE9placer de grandes quantit\xE9s de ressources.",
+    cost: { scrap: 1200, energy: 300 },
+    stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
+    category: "attack",
+    unlockTech: "tech11",
+    hangarSpace: 1
+  },
+  {
+    id: "sentinelle",
+    name: "Sentinelle",
+    image: "/assets/units/sentinelle.webp",
+    maxLevel: 10,
+    description: "Unit\xE9 offensive sp\xE9cialis\xE9e dans la d\xE9tection et la protection.",
+    cost: { scrap: 800, energy: 400 },
+    stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech12",
+    hangarSpace: 1
+  },
+  {
+    id: "chasseur",
+    name: "Chasseur",
+    image: "/assets/units/chasseur.webp",
+    maxLevel: 10,
+    description: "Vaisseau rapide con\xE7u pour les attaques \xE9clairs.",
+    cost: { scrap: 1500, energy: 800 },
+    stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
+    category: "attack",
+    unlockTech: "tech13",
+    hangarSpace: 20
+  },
+  {
+    id: "etoile_noire",
+    name: "\xC9toile Noire",
+    image: "/assets/units/etoile_noire.webp",
+    maxLevel: 10,
+    description: "Arme ultime. Capacit\xE9 de destruction massive.",
+    cost: { scrap: 5e4, energy: 3e4 },
+    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
+    category: "attack",
+    unlockTech: "tech19",
+    hangarSpace: 200,
+    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
+    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
+    levelBonus: 1700
+  },
+  // v3.6 : unités de fin de partie.
+  {
+    id: "croiseur_nova",
+    name: "Croiseur Nova",
+    image: "/assets/units/croiseur_nova.webp",
+    maxLevel: 10,
+    description: "Croiseur de ligne propuls\xE9 par un c\u0153ur d'antimati\xE8re. Assez rapide pour frapper, assez blind\xE9 pour encaisser.",
+    cost: { scrap: 15e3, energy: 9e3 },
+    stats: { attaque: 1500, defense: 1e3, vitesse: 6, cargo: 300 },
+    category: "attack",
+    unlockTech: "tech24",
+    hangarSpace: 20,
+    levelBonus: 250
+  },
+  {
+    id: "lance_gravitationnelle",
+    name: "Lance gravitationnelle",
+    image: "/assets/units/lance_gravitationnelle.webp",
+    maxLevel: 10,
+    description: "Projecteur orbital qui \xE9crase les coques ennemies sous un puits de gravit\xE9.",
+    cost: { scrap: 18e3, energy: 12e3 },
+    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech25",
+    hangarSpace: 8,
+    levelBonus: 150
+  },
+  {
+    id: "roquette",
+    name: "Roquette",
+    image: "/assets/units/roquette.webp",
+    maxLevel: 10,
+    description: "Arme simple mais efficace pour saturer une zone.",
+    cost: { scrap: 200, energy: 100 },
+    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech14",
+    hangarSpace: 1
+  },
+  {
+    id: "canon_impulsion",
+    name: "Canon \xE0 impulsion",
+    image: "/assets/units/canon_impulsion.webp",
+    maxLevel: 10,
+    description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
+    cost: { scrap: 2e3, energy: 1200 },
+    stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech15",
+    hangarSpace: 1
+  },
+  {
+    id: "canon_plasma",
+    name: "Canon Plasma",
+    image: "/assets/units/canon_plasma.webp",
+    maxLevel: 10,
+    description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
+    cost: { scrap: 2500, energy: 1500 },
+    stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech16",
+    hangarSpace: 1
+  },
+  {
+    id: "batterie_aa",
+    name: "Batterie Anti-A\xE9rienne",
+    image: "/assets/units/batterie_aa.webp",
+    maxLevel: 10,
+    description: "D\xE9fense sp\xE9cialis\xE9e contre les unit\xE9s rapides et a\xE9riennes.",
+    cost: { scrap: 1800, energy: 900 },
+    stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech17",
+    hangarSpace: 1
+  },
+  {
+    id: "intercepteur",
+    name: "Intercepteur",
+    image: "/assets/units/intercepteur.webp",
+    maxLevel: 10,
+    description: "Vaisseau ultra-rapide con\xE7u pour intercepter les cibles prioritaires.",
+    cost: { scrap: 2e3, energy: 1200 },
+    stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
+    category: "defense",
+    unlockTech: "tech18",
+    hangarSpace: 20
+  },
+  KESH_HUNTER_UNIT
+];
+var UNITS = [];
+var UNIT_BASE_STATS = {};
+var UNIT_TO_TECH = {};
+var OFFENSIVE_UNITS = [];
+var DEFENSIVE_UNITS = [];
+function setUnits(defs) {
+  UNITS.splice(0, UNITS.length, ...defs);
+  for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
+  for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
+  for (const u of defs) {
+    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
+    if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
+  }
+  OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
+  DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
+}
+setUnits(DEFAULT_UNITS);
+function unitLevelBonus(u) {
+  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
+}
+function findUnit(id) {
+  return UNITS.find((u) => u.id === id);
+}
+function getUnitBuildTime(unit, techLevels2) {
+  const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
+  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
+  return techLevels2 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time"))) : base;
+}
+
+// src/game/format.ts
+function formatInt(value) {
+  const n = Math.round(Number(value) || 0);
+  const digits = String(Math.abs(n));
+  let out = "";
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
+    out += digits[i];
+  }
+  return n < 0 ? `-${out}` : out;
+}
+
+// src/game/resources.ts
+var RESOURCE_LIST = [
+  { id: "scrap", name: "Ferraille", emoji: "\u{1F529}", rarity: "common" },
+  { id: "energy", name: "\xC9nergie instable", emoji: "\u26A1", rarity: "common" },
+  { id: "nano", name: "Nanocomposants", emoji: "\u{1F9EC}", rarity: "common" },
+  { id: "data", name: "Donn\xE9es anciennes", emoji: "\u{1F4E1}", rarity: "common" },
+  { id: "reinforcedSteel", name: "Acier renforc\xE9", emoji: "\u{1F6E0}\uFE0F", rarity: "rare" },
+  { id: "cyberModule", name: "Module cybern\xE9tique", emoji: "\u{1F9E9}", rarity: "rare" },
+  { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
+  { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
+];
+function getTradeRate(sellId, buyId) {
+  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
+  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
+  if (!sell || !buy) return 1;
+  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
+  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
+  return 1;
+}
+function canAffordAll(resources, costs) {
+  return Object.entries(costs).every(([res, val]) => {
+    var _a;
+    return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
+  });
+}
+
+// src/game/buildings.ts
+var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
+var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
+function tier2(common, commonMax, rare, rareMax) {
+  return {
+    fromLevel: 11,
+    baseCost: __spreadValues(__spreadValues({}, common), rare),
+    maxCost: __spreadValues(__spreadValues({}, commonMax), rareMax),
+    baseSeconds: 3 * 3600,
+    secondsPerLevel: 3600
+  };
+}
+var extractorUpgrade = (rare) => ({
+  baseCost: { scrap: 50, energy: 20 },
+  maxCost: { scrap: 25e5, energy: 18e5 },
+  costFromLevel: 1,
+  secondsPerLevel: 600,
+  tier2: tier2({ scrap: 5e6, energy: 3e6 }, { scrap: 5e8, energy: 3e8 }, { [rare]: 2e4 }, { [rare]: 2e6 })
+});
+var hangarUpgrade = (rares) => ({
+  baseCost: { scrap: 300, energy: 150 },
+  maxCost: { scrap: 5e6, energy: 75e5 },
+  costFromLevel: 1,
+  secondsPerLevel: 900,
+  tier2: tier2(
+    { scrap: 8e6, energy: 8e6 },
+    { scrap: 7e8, energy: 7e8 },
+    { [rares[0]]: 15e3, [rares[1]]: 15e3 },
+    { [rares[0]]: 15e5, [rares[1]]: 15e5 }
+  )
+});
+var DEFAULT_BUILDINGS = [
+  {
+    id: "extracteur_ferraille",
+    name: "Extracteur de ferraille",
+    description: "R\xE9cup\xE8re automatiquement de la ferraille dans les d\xE9bris environnants.",
+    image: "/assets/buildings/extracteur_ferraille.webp",
+    maxLevel: 20,
+    startsUnlocked: true,
+    upgrade: extractorUpgrade("reinforcedSteel"),
+    production: { resource: "scrap", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "reacteur_instable",
+    name: "R\xE9acteur instable",
+    description: "G\xE9n\xE8re de l'\xE9nergie brute, au prix d'une certaine instabilit\xE9.",
+    image: "/assets/buildings/reacteur_instable.webp",
+    maxLevel: 20,
+    unlockCost: { scrap: 500 },
+    upgrade: extractorUpgrade("cyberModule"),
+    production: { resource: "energy", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "extracteur_nanocomposants",
+    name: "Extracteur de nanocomposants",
+    description: "Synth\xE9tise des nanocomposants \xE0 partir de mati\xE8res recycl\xE9es.",
+    image: "/assets/buildings/extracteur_nanocomposants.webp",
+    maxLevel: 20,
+    unlockCost: { energy: 500 },
+    upgrade: extractorUpgrade("syntheticNanites"),
+    production: { resource: "nano", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "archives_fracturees",
+    name: "Archives fractur\xE9es",
+    description: "Fouille des donn\xE9es anciennes dans des serveurs endommag\xE9s.",
+    image: "/assets/buildings/archives_fracturees.webp",
+    maxLevel: 20,
+    unlockCost: { nano: 500 },
+    upgrade: extractorUpgrade("aiFragment"),
+    production: { resource: "data", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "atelier_reparation",
+    name: "Atelier de r\xE9paration",
+    description: "R\xE9pare une partie des unit\xE9s perdues apr\xE8s chaque combat.",
+    image: "/assets/buildings/atelier_reparation.webp",
+    maxLevel: 20,
+    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
+    upgrade: {
+      baseCost: { nano: 1e3, data: 1e3 },
+      maxCost: { nano: 1e7, data: 95e5 },
+      costFromLevel: 2,
+      secondsPerLevel: 1200,
+      tier2: tier2(
+        { nano: 1e7, data: 1e7 },
+        { nano: 8e8, data: 8e8 },
+        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
+        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
+      )
+    },
+    // 5 % par niveau jusqu'au niveau 10 (50 %), puis 2 % par niveau (70 % au niveau 20).
+    effect: { type: "repair", perLevel: 0.05, max: 0.7, bonusFromLevel: 11, bonusPerLevel: 0.02 }
+  },
+  {
+    id: "hangar_attaque",
+    name: "Hangar d'attaque",
+    description: "Augmente la capacit\xE9 de stockage des unit\xE9s offensives.",
+    image: "/assets/buildings/hangar_attaque.webp",
+    maxLevel: 20,
+    unlockedByTech: "tech6",
+    upgrade: hangarUpgrade(["reinforcedSteel", "cyberModule"]),
+    effect: { type: "hangar", category: "attack", perLevel: 2e3 }
+  },
+  {
+    id: "hangar_defense",
+    name: "Hangar de d\xE9fense",
+    description: "Augmente la capacit\xE9 de stockage des unit\xE9s d\xE9fensives.",
+    image: "/assets/buildings/hangar_defense.webp",
+    maxLevel: 20,
+    unlockedByTech: "tech6",
+    upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
+    effect: { type: "hangar", category: "defense", perLevel: 2e3 }
+  },
+  {
+    id: "entrepot",
+    name: "Entrep\xF4t",
+    description: "Stocke les ressources communes. Plein, la production s'arr\xEAte ; une partie du stock est \xE0 l'abri du pillage.",
+    image: "/assets/buildings/entrepot.webp",
+    maxLevel: 20,
+    startsUnlocked: true,
+    upgrade: {
+      baseCost: { scrap: 2e4, energy: 1e4 },
+      maxCost: { scrap: 2e7, energy: 1e7 },
+      costFromLevel: 2,
+      secondsPerLevel: 600,
+      tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
+    },
+    effect: { type: "storage", base: 2e6, growth: 1.6 }
+  },
+  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
+  {
+    id: "fonderie_quantique",
+    name: "Fonderie quantique",
+    description: "Forge de l'acier renforc\xE9 \xE0 partir de mati\xE8re stabilis\xE9e \xE0 l'\xE9chelle quantique : une production continue de ressource rare.",
+    image: "/assets/buildings/fonderie_quantique.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech21",
+    upgrade: { baseCost: { scrap: 2e7, energy: 1e7, cyberModule: 2e4 }, maxCost: { scrap: 15e8, energy: 8e8, cyberModule: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "synthetiseur_neuronal",
+    name: "Synth\xE9tiseur neuronal",
+    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
+    image: "/assets/buildings/synthetiseur_neuronal.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech22",
+    upgrade: { baseCost: { data: 2e7, nano: 1e7, syntheticNanites: 2e4 }, maxCost: { data: 15e8, nano: 8e8, syntheticNanites: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "generateur_bouclier",
+    name: "G\xE9n\xE9rateur de bouclier plan\xE9taire",
+    description: "Un d\xF4me d'\xE9nergie hexagonal renforce le bouclier de la base au-del\xE0 de ce que permettent les hangars.",
+    image: "/assets/buildings/generateur_bouclier.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech23",
+    upgrade: { baseCost: { energy: 3e7, scrap: 2e7, reinforcedSteel: 2e4 }, maxCost: { energy: 2e9, scrap: 13e8, reinforcedSteel: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    effect: { type: "shield", perLevel: 5e-3, max: 0.05 }
+  }
+];
+var SYNTH_BUILDING_ID = "labo_synthese";
+var SYNTH_BUILDING = {
+  id: SYNTH_BUILDING_ID,
+  name: "Labo de synth\xE8se",
+  description: "Des cuves bouillonnantes o\xF9 m\xFBrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
+  image: "/assets/buildings/labo_synthese.webp",
+  maxLevel: 10,
+  endgame: true,
+  unlockCost: { scrap: 15e5, energy: 8e5, data: 3e5 },
+  upgrade: {
+    baseCost: { scrap: 4e5, energy: 25e4, data: 1e5 },
+    maxCost: { scrap: 15e7, energy: 9e7, data: 4e7 },
+    costFromLevel: 2,
+    secondsPerLevel: 5400
+  }
+};
+DEFAULT_BUILDINGS.push(SYNTH_BUILDING);
+function withFixedBuildings(defs) {
+  return defs.some((b) => b.id === SYNTH_BUILDING_ID) ? defs : [...defs, SYNTH_BUILDING];
+}
+var BUILDINGS = [];
+var LOCKABLE_BUILDINGS = [];
+var BUILDING_UNLOCK_COST = {};
+var PRODUCTION_RESOURCE_BY_BUILDING = {};
+function setBuildings(defs) {
+  var _a;
+  BUILDINGS.splice(0, BUILDINGS.length, ...defs);
+  LOCKABLE_BUILDINGS.splice(
+    0,
+    LOCKABLE_BUILDINGS.length,
+    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id)
+  );
+  for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
+  for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
+  for (const b of defs) {
+    const entries = Object.entries((_a = b.unlockCost) != null ? _a : {}).filter(([, v]) => (v != null ? v : 0) > 0);
+    const items = entries.map(([resource, amount2]) => {
+      var _a2, _b;
+      return { resource, amount: amount2, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
+    });
+    if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
+    else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
+    if (b.production) PRODUCTION_RESOURCE_BY_BUILDING[b.id] = b.production.resource;
+  }
+}
+setBuildings(DEFAULT_BUILDINGS);
+function findBuilding(id) {
+  return BUILDINGS.find((b) => b.id === id);
+}
+function productionPerSecond(buildingId, level3) {
+  var _a, _b, _c, _d;
+  if (level3 <= 0) return 0;
+  const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
+  return (_d = table[Math.min(level3, table.length) - 1]) != null ? _d : 0;
+}
+function geometricCost(baseCost, maxCost, fromLevel, toLevel, level3) {
+  var _a;
+  const steps = Math.max(1, toLevel - fromLevel);
+  const cost = {};
+  for (const [res, base] of Object.entries(baseCost)) {
+    const target = (_a = maxCost[res]) != null ? _a : base;
+    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
+    cost[res] = Math.floor(base * Math.pow(rate, level3 - fromLevel));
+  }
+  return cost;
+}
+function tierFor(building, level3) {
+  const t2 = building.upgrade.tier2;
+  return t2 && level3 >= t2.fromLevel ? t2 : null;
+}
+function getBuildingUpgradeCost(building, nextLevel) {
+  const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
+  const lastLevel = tier22 ? Math.min(building.maxLevel, tier22.fromLevel - 1) : building.maxLevel;
+  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
+}
+function applyBuildingDiscount(cost, discount) {
+  if (!discount) return cost;
+  const out = __spreadValues({}, cost);
+  for (const key of Object.keys(out)) {
+    const val = out[key];
+    if (typeof val === "number") {
+      out[key] = Math.max(0, Math.floor(val * (1 - discount)));
+    }
+  }
+  return out;
+}
+function getBuildingUpgradeTime(building, nextLevel) {
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
+  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
+}
+function getRepairPercent(buildings) {
+  var _a;
+  let pct4 = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
+    pct4 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  return pct4;
+}
+function repairPercentAt(effect, level3) {
+  var _a;
+  const from = effect.bonusFromLevel;
+  const base = from ? Math.min(level3, from - 1) * effect.perLevel : level3 * effect.perLevel;
+  const bonus = from ? Math.max(0, level3 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
+  return Math.max(0, Math.min(effect.max, base + bonus));
+}
+function getStorageCapacity(buildings, techLevels2) {
+  var _a;
+  let capacity = 0;
+  let hasStorage = false;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "storage") continue;
+    hasStorage = true;
+    capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
+}
+function storageCapacityAt(effect, level3) {
+  return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
+}
+function getUnitCapacity(buildings, category) {
+  var _a, _b, _c;
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
+    capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
+  }
+  return capacity;
+}
+function effectiveBuildingLevel(buildings, id) {
+  var _a;
+  const state = buildings[id];
+  return (state == null ? void 0 : state.unlocked) ? (_a = state.level) != null ? _a : 0 : 0;
+}
+function defaultBuildings() {
+  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
+}
+function withMissingBuildings(buildings, resources) {
+  var _a;
+  const out = __spreadValues({}, buildings != null ? buildings : {});
+  for (const b of BUILDINGS) {
+    if (out[b.id]) continue;
+    let level3 = 1;
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
+      const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
+        var _a2;
+        return (_a2 = resources[r.id]) != null ? _a2 : 0;
+      }));
+      while (level3 < b.maxLevel && storageCapacityAt(b.effect, level3) < biggest) level3++;
+    }
+    out[b.id] = { level: level3, unlocked: !!b.startsUnlocked };
+  }
+  return out;
+}
+
+// src/game/combat.ts
+var COMBAT_RULES = {
+  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
+  lootPercent: 0.08,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
+  lootPercentCommon: 0.1,
+  /** Bonus de puissance du défenseur, qui se bat chez lui. */
+  homeDefenseBonus: 0.15,
+  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
+  shieldPerLevel: 75e-4,
+  /** …plafonnée à cette valeur. */
+  shieldMax: 0.15,
+  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
+   *  puissance, et subissent la même part des pertes. Réglé pour viser
+   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
+  homeFleetDefenseFactor: 0.1,
+  /** Part des défenses détruites reconstruites gratuitement après le combat. */
+  defenseRebuildPct: 0.6,
+  /* v3.0 — formations d'attaque (choisies au lancement). */
+  /** Assaut : attaque +10 %, pertes subies +15 %. */
+  assaultAttack: 0.1,
+  assaultLosses: 0.15,
+  /** Prudente : attaque −10 %, pertes subies −25 %. */
+  cautiousAttack: -0.1,
+  cautiousLosses: -0.25,
+  /** Raid : attaque −15 %, cargaison +30 %. */
+  raidAttack: -0.15,
+  raidCargo: 0.3,
+  /* v3.0 — postures de la base (défenseur). */
+  /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
+  bunkerDefense: 0.08,
+  /** Riposte : vaisseaux à quai engagés à 25 %. */
+  riposteHomeFleet: 0.25,
+  /** Délai entre deux changements de posture (h). */
+  postureCooldownHours: 1
+};
+function getShieldPercent(buildings, allianceBonus = 0) {
+  var _a, _b;
+  let levels = 0;
+  let extra = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+    if (((_b = b.effect) == null ? void 0 : _b.type) === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
+  }
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
+}
+var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
+function fleetCargoCapacity(units, fleet, techLevels2) {
+  var _a, _b, _c;
+  let total2 = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const def2 = findUnit(id);
+    const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def2 || qty <= 0 || level3 <= 0) continue;
+    total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level3 * qty;
+  }
+  return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
+}
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+function unitStat(units, techLevels2, unitId, stat) {
+  var _a, _b, _c, _d;
+  const def2 = UNIT_BASE_STATS[unitId];
+  const base = (_a = def2 == null ? void 0 : def2[stat]) != null ? _a : 0;
+  const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
+  if (level3 <= 0) return 0;
+  let value = base + (level3 - 1) * ((_d = def2 == null ? void 0 : def2.perLevel) != null ? _d : 5);
+  if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
+  return value;
+}
+function computeFleetPower(units, techLevels2, fleet, stats) {
+  let total2 = 0;
+  for (const id in fleet) {
+    const qty = fleet[id];
+    if (qty <= 0) continue;
+    let value = 0;
+    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
+    total2 += value * qty;
+  }
+  return total2;
+}
+function pveAttackFactor(units, techLevels2, fleet) {
+  var _a;
+  const hunters = (_a = fleet[KESH_HUNTER_UNIT.id]) != null ? _a : 0;
+  if (!(hunters > 0)) return 1;
+  const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
+  if (!(all > 0)) return 1;
+  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
+}
+function computeFullPower(units, techLevels2, idList, stats) {
+  let total2 = 0;
+  idList.forEach((id) => {
+    var _a, _b;
+    const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
+    let value = 0;
+    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
+    total2 += value * count2;
+  });
+  return total2;
+}
+function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
+  return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
+}
+function resolveCombat(params) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
+  const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
+  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
+  const garrisons = (_d = params.garrisons) != null ? _d : [];
+  const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
+  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
+  const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
+  const defenderPower = ((_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower) * Math.max(0, (_i = params.defenderPowerFactor) != null ? _i : 1);
+  const totalPower = attackerPower + defenderPower;
+  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
+  let outcome;
+  if (attackerPower > defenderPower) outcome = "attacker_win";
+  else if (attackerPower < defenderPower) outcome = "defender_win";
+  else outcome = "draw";
+  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
+  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
+  let attackerLossPct, defenderLossPct;
+  if (outcome === "attacker_win") {
+    attackerLossPct = winnerLossPct;
+    defenderLossPct = loserLossPct;
+  } else if (outcome === "defender_win") {
+    attackerLossPct = loserLossPct;
+    defenderLossPct = winnerLossPct;
+  } else {
+    attackerLossPct = 0.3;
+    defenderLossPct = 0.3;
+  }
+  if (params.attackerLossFactor !== void 0) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
+  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
+  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
+  const attackerLosses = {};
+  const attackerRecovered = {};
+  for (const unitId in fleet) {
+    const sent = fleet[unitId];
+    const rawLost = Math.floor(sent * attackerLossPct);
+    const recovered = Math.floor(rawLost * attackerRepairPct);
+    const effectiveLost = rawLost - recovered;
+    if (rawLost > 0) {
+      attackerLosses[unitId] = effectiveLost;
+      attackerRecovered[unitId] = recovered;
+    }
+  }
+  const defenderLosses = {};
+  const defenderRecovered = {};
+  const defenderRebuilt = {};
+  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
+    var _a2, _b2;
+    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
+    const isDefense = DEFENSIVE_UNITS.includes(unitId);
+    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
+    if (rawLost <= 0) return;
+    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
+    defenderLosses[unitId] = rawLost - recovered;
+    defenderRecovered[unitId] = recovered;
+    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
+  });
+  const garrisonLosses = garrisons.map((g) => {
+    const lost = {};
+    for (const [unitId, qty] of Object.entries(g.fleet)) {
+      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
+      if (n > 0) lost[unitId] = Math.min(qty, n);
+    }
+    return lost;
+  });
+  const survivors = {};
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_k = params.cargoFactor) != null ? _k : 1));
+  let loot = null;
+  if (outcome === "attacker_win") {
+    const wanted = {};
+    let total2 = 0;
+    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
+      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const pct4 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
+      const amount2 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct4);
+      wanted[res] = amount2;
+      total2 += amount2;
+    }
+    const ratio = total2 > cargoCapacity ? cargoCapacity / total2 : 1;
+    loot = {};
+    const entries = Object.entries(wanted);
+    for (const [res, amount2] of entries) loot[res] = Math.floor(amount2 * ratio);
+    let left = Math.min(total2, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
+      var _a2;
+      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
+    }, 0);
+    const byRemainder = entries.map(([res, amount2]) => ({ res, frac: amount2 * ratio - Math.floor(amount2 * ratio) })).sort((a, b) => b.frac - a.frac);
+    for (const { res } of byRemainder) {
+      if (left <= 0) break;
+      if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
+        loot[res] = ((_p = loot[res]) != null ? _p : 0) + 1;
+        left--;
+      }
+    }
+  }
+  return {
+    outcome,
+    attackerPower,
+    defenderPower,
+    attackerLossPercent: attackerLossPct,
+    defenderLossPercent: defenderLossPct,
+    attackerLosses,
+    attackerRecovered,
+    defenderLosses,
+    defenderRecovered,
+    loot,
+    cargoCapacity,
+    shieldPercent: shield,
+    defenderRebuilt,
+    garrisonLosses,
+    garrisonPower
+  };
+}
+
+// src/game/story.ts
+var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
+var TUTORIAL_TITLE = "Recrue de Vashka";
+
+// src/game/stats.ts
+function playerStats(player) {
+  var _a;
+  return (_a = player.stats) != null ? _a : {};
+}
+function bumpStat(player, key, n = 1) {
+  var _a, _b, _c;
+  if (!(n > 0)) return;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
+}
+function setStat(player, key, value) {
+  var _a;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value });
+}
+function recordThreat(player, factionId) {
+  var _a, _b, _c;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
+  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
+  player.stats = s;
+}
+function recordMission(player, day) {
+  var _a, _b, _c, _d;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
+  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
+  s.missionDay = day;
+  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
+  player.stats = s;
+}
+function parisHour(now) {
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const lastSunday = (month2) => {
+    const last = new Date(Date.UTC(y, month2 + 1, 0));
+    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
+  };
+  const summer = now >= lastSunday(2) && now < lastSunday(9);
+  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
+}
+
+// src/game/errors.ts
+var GameActionError = class extends Error {
+};
 
 // src/game/alliances.ts
 var ALLIANCE_RULES = {
@@ -891,329 +1664,6 @@ function finishAllianceResearch(alliance, now) {
   return { alliance: built.alliance, memberships, notifications, logs };
 }
 
-// src/game/buildings.ts
-var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
-var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
-function tier2(common, commonMax, rare, rareMax) {
-  return {
-    fromLevel: 11,
-    baseCost: __spreadValues(__spreadValues({}, common), rare),
-    maxCost: __spreadValues(__spreadValues({}, commonMax), rareMax),
-    baseSeconds: 3 * 3600,
-    secondsPerLevel: 3600
-  };
-}
-var extractorUpgrade = (rare) => ({
-  baseCost: { scrap: 50, energy: 20 },
-  maxCost: { scrap: 25e5, energy: 18e5 },
-  costFromLevel: 1,
-  secondsPerLevel: 600,
-  tier2: tier2({ scrap: 5e6, energy: 3e6 }, { scrap: 5e8, energy: 3e8 }, { [rare]: 2e4 }, { [rare]: 2e6 })
-});
-var hangarUpgrade = (rares) => ({
-  baseCost: { scrap: 300, energy: 150 },
-  maxCost: { scrap: 5e6, energy: 75e5 },
-  costFromLevel: 1,
-  secondsPerLevel: 900,
-  tier2: tier2(
-    { scrap: 8e6, energy: 8e6 },
-    { scrap: 7e8, energy: 7e8 },
-    { [rares[0]]: 15e3, [rares[1]]: 15e3 },
-    { [rares[0]]: 15e5, [rares[1]]: 15e5 }
-  )
-});
-var DEFAULT_BUILDINGS = [
-  {
-    id: "extracteur_ferraille",
-    name: "Extracteur de ferraille",
-    description: "R\xE9cup\xE8re automatiquement de la ferraille dans les d\xE9bris environnants.",
-    image: "/assets/buildings/extracteur_ferraille.webp",
-    maxLevel: 20,
-    startsUnlocked: true,
-    upgrade: extractorUpgrade("reinforcedSteel"),
-    production: { resource: "scrap", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "reacteur_instable",
-    name: "R\xE9acteur instable",
-    description: "G\xE9n\xE8re de l'\xE9nergie brute, au prix d'une certaine instabilit\xE9.",
-    image: "/assets/buildings/reacteur_instable.webp",
-    maxLevel: 20,
-    unlockCost: { scrap: 500 },
-    upgrade: extractorUpgrade("cyberModule"),
-    production: { resource: "energy", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "extracteur_nanocomposants",
-    name: "Extracteur de nanocomposants",
-    description: "Synth\xE9tise des nanocomposants \xE0 partir de mati\xE8res recycl\xE9es.",
-    image: "/assets/buildings/extracteur_nanocomposants.webp",
-    maxLevel: 20,
-    unlockCost: { energy: 500 },
-    upgrade: extractorUpgrade("syntheticNanites"),
-    production: { resource: "nano", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "archives_fracturees",
-    name: "Archives fractur\xE9es",
-    description: "Fouille des donn\xE9es anciennes dans des serveurs endommag\xE9s.",
-    image: "/assets/buildings/archives_fracturees.webp",
-    maxLevel: 20,
-    unlockCost: { nano: 500 },
-    upgrade: extractorUpgrade("aiFragment"),
-    production: { resource: "data", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "atelier_reparation",
-    name: "Atelier de r\xE9paration",
-    description: "R\xE9pare une partie des unit\xE9s perdues apr\xE8s chaque combat.",
-    image: "/assets/buildings/atelier_reparation.webp",
-    maxLevel: 20,
-    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
-    upgrade: {
-      baseCost: { nano: 1e3, data: 1e3 },
-      maxCost: { nano: 1e7, data: 95e5 },
-      costFromLevel: 2,
-      secondsPerLevel: 1200,
-      tier2: tier2(
-        { nano: 1e7, data: 1e7 },
-        { nano: 8e8, data: 8e8 },
-        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
-        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
-      )
-    },
-    // 5 % par niveau jusqu'au niveau 10 (50 %), puis 2 % par niveau (70 % au niveau 20).
-    effect: { type: "repair", perLevel: 0.05, max: 0.7, bonusFromLevel: 11, bonusPerLevel: 0.02 }
-  },
-  {
-    id: "hangar_attaque",
-    name: "Hangar d'attaque",
-    description: "Augmente la capacit\xE9 de stockage des unit\xE9s offensives.",
-    image: "/assets/buildings/hangar_attaque.webp",
-    maxLevel: 20,
-    unlockedByTech: "tech6",
-    upgrade: hangarUpgrade(["reinforcedSteel", "cyberModule"]),
-    effect: { type: "hangar", category: "attack", perLevel: 2e3 }
-  },
-  {
-    id: "hangar_defense",
-    name: "Hangar de d\xE9fense",
-    description: "Augmente la capacit\xE9 de stockage des unit\xE9s d\xE9fensives.",
-    image: "/assets/buildings/hangar_defense.webp",
-    maxLevel: 20,
-    unlockedByTech: "tech6",
-    upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
-    effect: { type: "hangar", category: "defense", perLevel: 2e3 }
-  },
-  {
-    id: "entrepot",
-    name: "Entrep\xF4t",
-    description: "Stocke les ressources communes. Plein, la production s'arr\xEAte ; une partie du stock est \xE0 l'abri du pillage.",
-    image: "/assets/buildings/entrepot.webp",
-    maxLevel: 20,
-    startsUnlocked: true,
-    upgrade: {
-      baseCost: { scrap: 2e4, energy: 1e4 },
-      maxCost: { scrap: 2e7, energy: 1e7 },
-      costFromLevel: 2,
-      secondsPerLevel: 600,
-      tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
-    },
-    effect: { type: "storage", base: 2e6, growth: 1.6 }
-  },
-  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
-  {
-    id: "fonderie_quantique",
-    name: "Fonderie quantique",
-    description: "Forge de l'acier renforc\xE9 \xE0 partir de mati\xE8re stabilis\xE9e \xE0 l'\xE9chelle quantique : une production continue de ressource rare.",
-    image: "/assets/buildings/fonderie_quantique.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech21",
-    upgrade: { baseCost: { scrap: 2e7, energy: 1e7, cyberModule: 2e4 }, maxCost: { scrap: 15e8, energy: 8e8, cyberModule: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION }
-  },
-  {
-    id: "synthetiseur_neuronal",
-    name: "Synth\xE9tiseur neuronal",
-    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
-    image: "/assets/buildings/synthetiseur_neuronal.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech22",
-    upgrade: { baseCost: { data: 2e7, nano: 1e7, syntheticNanites: 2e4 }, maxCost: { data: 15e8, nano: 8e8, syntheticNanites: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION }
-  },
-  {
-    id: "generateur_bouclier",
-    name: "G\xE9n\xE9rateur de bouclier plan\xE9taire",
-    description: "Un d\xF4me d'\xE9nergie hexagonal renforce le bouclier de la base au-del\xE0 de ce que permettent les hangars.",
-    image: "/assets/buildings/generateur_bouclier.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech23",
-    upgrade: { baseCost: { energy: 3e7, scrap: 2e7, reinforcedSteel: 2e4 }, maxCost: { energy: 2e9, scrap: 13e8, reinforcedSteel: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    effect: { type: "shield", perLevel: 5e-3, max: 0.05 }
-  }
-];
-var SYNTH_BUILDING_ID = "labo_synthese";
-var SYNTH_BUILDING = {
-  id: SYNTH_BUILDING_ID,
-  name: "Labo de synth\xE8se",
-  description: "Des cuves bouillonnantes o\xF9 m\xFBrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
-  image: "/assets/buildings/labo_synthese.webp",
-  maxLevel: 10,
-  endgame: true,
-  unlockCost: { scrap: 15e5, energy: 8e5, data: 3e5 },
-  upgrade: {
-    baseCost: { scrap: 4e5, energy: 25e4, data: 1e5 },
-    maxCost: { scrap: 15e7, energy: 9e7, data: 4e7 },
-    costFromLevel: 2,
-    secondsPerLevel: 5400
-  }
-};
-DEFAULT_BUILDINGS.push(SYNTH_BUILDING);
-function withFixedBuildings(defs) {
-  return defs.some((b) => b.id === SYNTH_BUILDING_ID) ? defs : [...defs, SYNTH_BUILDING];
-}
-var BUILDINGS = [];
-var LOCKABLE_BUILDINGS = [];
-var BUILDING_UNLOCK_COST = {};
-var PRODUCTION_RESOURCE_BY_BUILDING = {};
-function setBuildings(defs) {
-  var _a;
-  BUILDINGS.splice(0, BUILDINGS.length, ...defs);
-  LOCKABLE_BUILDINGS.splice(
-    0,
-    LOCKABLE_BUILDINGS.length,
-    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id)
-  );
-  for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
-  for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
-  for (const b of defs) {
-    const entries = Object.entries((_a = b.unlockCost) != null ? _a : {}).filter(([, v]) => (v != null ? v : 0) > 0);
-    const items = entries.map(([resource, amount2]) => {
-      var _a2, _b;
-      return { resource, amount: amount2, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
-    });
-    if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
-    else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
-    if (b.production) PRODUCTION_RESOURCE_BY_BUILDING[b.id] = b.production.resource;
-  }
-}
-setBuildings(DEFAULT_BUILDINGS);
-function findBuilding(id) {
-  return BUILDINGS.find((b) => b.id === id);
-}
-function productionPerSecond(buildingId, level3) {
-  var _a, _b, _c, _d;
-  if (level3 <= 0) return 0;
-  const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
-  return (_d = table[Math.min(level3, table.length) - 1]) != null ? _d : 0;
-}
-function geometricCost(baseCost, maxCost, fromLevel, toLevel, level3) {
-  var _a;
-  const steps = Math.max(1, toLevel - fromLevel);
-  const cost = {};
-  for (const [res, base] of Object.entries(baseCost)) {
-    const target = (_a = maxCost[res]) != null ? _a : base;
-    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
-    cost[res] = Math.floor(base * Math.pow(rate, level3 - fromLevel));
-  }
-  return cost;
-}
-function tierFor(building, level3) {
-  const t2 = building.upgrade.tier2;
-  return t2 && level3 >= t2.fromLevel ? t2 : null;
-}
-function getBuildingUpgradeCost(building, nextLevel) {
-  const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
-  const t2 = tierFor(building, nextLevel);
-  if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
-  const lastLevel = tier22 ? Math.min(building.maxLevel, tier22.fromLevel - 1) : building.maxLevel;
-  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
-}
-function applyBuildingDiscount(cost, discount) {
-  if (!discount) return cost;
-  const out = __spreadValues({}, cost);
-  for (const key of Object.keys(out)) {
-    const val = out[key];
-    if (typeof val === "number") {
-      out[key] = Math.max(0, Math.floor(val * (1 - discount)));
-    }
-  }
-  return out;
-}
-function getBuildingUpgradeTime(building, nextLevel) {
-  const t2 = tierFor(building, nextLevel);
-  if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
-  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
-}
-function getRepairPercent(buildings) {
-  var _a;
-  let pct4 = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    pct4 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
-  }
-  return pct4;
-}
-function repairPercentAt(effect, level3) {
-  var _a;
-  const from = effect.bonusFromLevel;
-  const base = from ? Math.min(level3, from - 1) * effect.perLevel : level3 * effect.perLevel;
-  const bonus = from ? Math.max(0, level3 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
-  return Math.max(0, Math.min(effect.max, base + bonus));
-}
-function getStorageCapacity(buildings, techLevels2) {
-  var _a;
-  let capacity = 0;
-  let hasStorage = false;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "storage") continue;
-    hasStorage = true;
-    capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
-  }
-  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
-}
-function storageCapacityAt(effect, level3) {
-  return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
-}
-function getUnitCapacity(buildings, category) {
-  var _a, _b, _c;
-  let capacity = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
-    capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
-  }
-  return capacity;
-}
-function effectiveBuildingLevel(buildings, id) {
-  var _a;
-  const state = buildings[id];
-  return (state == null ? void 0 : state.unlocked) ? (_a = state.level) != null ? _a : 0 : 0;
-}
-function defaultBuildings() {
-  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
-}
-function withMissingBuildings(buildings, resources) {
-  var _a;
-  const out = __spreadValues({}, buildings != null ? buildings : {});
-  for (const b of BUILDINGS) {
-    if (out[b.id]) continue;
-    let level3 = 1;
-    if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
-      const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
-        var _a2;
-        return (_a2 = resources[r.id]) != null ? _a2 : 0;
-      }));
-      while (level3 < b.maxLevel && storageCapacityAt(b.effect, level3) < biggest) level3++;
-    }
-    out[b.id] = { level: level3, unlocked: !!b.startsUnlocked };
-  }
-  return out;
-}
-
 // src/game/production.ts
 function getProductionBonus(techLevels2) {
   return techBonus(techLevels2, "energy_efficiency");
@@ -1233,228 +1683,6 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
     rates[resource] = Math.floor(base * (1 + bonus + techBonus(techLevels2, "resource_production", resource)));
   }
   return rates;
-}
-
-// src/game/units.ts
-var KESH_HUNTER_UNIT = {
-  id: "traqueur_kesh",
-  name: "Traqueur Kesh",
-  image: "/assets/units/traqueur_kesh.webp",
-  maxLevel: 1,
-  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
-  cost: { scrap: 6e3, energy: 3e3 },
-  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
-  category: "attack",
-  unlockTech: "",
-  hangarSpace: 25,
-  blueprint: true
-};
-var KESH_PVE_BONUS = 0.5;
-var UNIT_LEVEL_BONUS_DEFAULT = 5;
-var DEFAULT_UNITS = [
-  {
-    id: "drone_recuperateur",
-    name: "Drone r\xE9cup\xE9rateur",
-    image: "/assets/units/drone_recuperateur.webp",
-    maxLevel: 10,
-    description: "Petit drone autonome con\xE7u pour r\xE9cup\xE9rer des ressources dispers\xE9es.",
-    cost: { scrap: 500, energy: 200 },
-    stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
-    category: "attack",
-    unlockTech: "tech9",
-    hangarSpace: 1
-  },
-  {
-    id: "sonde_espionnage",
-    name: "Sonde d'espionnage",
-    image: "/assets/units/sonde_espionnage.webp",
-    maxLevel: 10,
-    description: "Sonde furtive et tr\xE8s rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
-    cost: { scrap: 300, energy: 150 },
-    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
-    category: "attack",
-    unlockTech: "tech20",
-    hangarSpace: 1
-  },
-  {
-    id: "fregate",
-    name: "Fr\xE9gate",
-    image: "/assets/units/fregate.webp",
-    maxLevel: 10,
-    description: "Vaisseau polyvalent, \xE9quilibr\xE9 entre attaque et d\xE9fense.",
-    cost: { scrap: 1e3, energy: 500 },
-    stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
-    category: "attack",
-    unlockTech: "tech10",
-    hangarSpace: 1
-  },
-  {
-    id: "cargo",
-    name: "Cargo",
-    image: "/assets/units/cargo.webp",
-    maxLevel: 10,
-    description: "Transporteur massif con\xE7u pour d\xE9placer de grandes quantit\xE9s de ressources.",
-    cost: { scrap: 1200, energy: 300 },
-    stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
-    category: "attack",
-    unlockTech: "tech11",
-    hangarSpace: 1
-  },
-  {
-    id: "sentinelle",
-    name: "Sentinelle",
-    image: "/assets/units/sentinelle.webp",
-    maxLevel: 10,
-    description: "Unit\xE9 offensive sp\xE9cialis\xE9e dans la d\xE9tection et la protection.",
-    cost: { scrap: 800, energy: 400 },
-    stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
-    category: "attack",
-    unlockTech: "tech12",
-    hangarSpace: 1
-  },
-  {
-    id: "chasseur",
-    name: "Chasseur",
-    image: "/assets/units/chasseur.webp",
-    maxLevel: 10,
-    description: "Vaisseau rapide con\xE7u pour les attaques \xE9clairs.",
-    cost: { scrap: 1500, energy: 800 },
-    stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
-    category: "attack",
-    unlockTech: "tech13",
-    hangarSpace: 20
-  },
-  {
-    id: "etoile_noire",
-    name: "\xC9toile Noire",
-    image: "/assets/units/etoile_noire.webp",
-    maxLevel: 10,
-    description: "Arme ultime. Capacit\xE9 de destruction massive.",
-    cost: { scrap: 5e4, energy: 3e4 },
-    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
-    category: "attack",
-    unlockTech: "tech19",
-    hangarSpace: 200,
-    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
-    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
-    levelBonus: 1700
-  },
-  // v3.6 : unités de fin de partie.
-  {
-    id: "croiseur_nova",
-    name: "Croiseur Nova",
-    image: "/assets/units/croiseur_nova.webp",
-    maxLevel: 10,
-    description: "Croiseur de ligne propuls\xE9 par un c\u0153ur d'antimati\xE8re. Assez rapide pour frapper, assez blind\xE9 pour encaisser.",
-    cost: { scrap: 15e3, energy: 9e3 },
-    stats: { attaque: 1500, defense: 1e3, vitesse: 6, cargo: 300 },
-    category: "attack",
-    unlockTech: "tech24",
-    hangarSpace: 20,
-    levelBonus: 250
-  },
-  {
-    id: "lance_gravitationnelle",
-    name: "Lance gravitationnelle",
-    image: "/assets/units/lance_gravitationnelle.webp",
-    maxLevel: 10,
-    description: "Projecteur orbital qui \xE9crase les coques ennemies sous un puits de gravit\xE9.",
-    cost: { scrap: 18e3, energy: 12e3 },
-    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech25",
-    hangarSpace: 8,
-    levelBonus: 150
-  },
-  {
-    id: "roquette",
-    name: "Roquette",
-    image: "/assets/units/roquette.webp",
-    maxLevel: 10,
-    description: "Arme simple mais efficace pour saturer une zone.",
-    cost: { scrap: 200, energy: 100 },
-    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech14",
-    hangarSpace: 1
-  },
-  {
-    id: "canon_impulsion",
-    name: "Canon \xE0 impulsion",
-    image: "/assets/units/canon_impulsion.webp",
-    maxLevel: 10,
-    description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
-    cost: { scrap: 2e3, energy: 1200 },
-    stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech15",
-    hangarSpace: 1
-  },
-  {
-    id: "canon_plasma",
-    name: "Canon Plasma",
-    image: "/assets/units/canon_plasma.webp",
-    maxLevel: 10,
-    description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
-    cost: { scrap: 2500, energy: 1500 },
-    stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech16",
-    hangarSpace: 1
-  },
-  {
-    id: "batterie_aa",
-    name: "Batterie Anti-A\xE9rienne",
-    image: "/assets/units/batterie_aa.webp",
-    maxLevel: 10,
-    description: "D\xE9fense sp\xE9cialis\xE9e contre les unit\xE9s rapides et a\xE9riennes.",
-    cost: { scrap: 1800, energy: 900 },
-    stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech17",
-    hangarSpace: 1
-  },
-  {
-    id: "intercepteur",
-    name: "Intercepteur",
-    image: "/assets/units/intercepteur.webp",
-    maxLevel: 10,
-    description: "Vaisseau ultra-rapide con\xE7u pour intercepter les cibles prioritaires.",
-    cost: { scrap: 2e3, energy: 1200 },
-    stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
-    category: "defense",
-    unlockTech: "tech18",
-    hangarSpace: 20
-  },
-  KESH_HUNTER_UNIT
-];
-var UNITS = [];
-var UNIT_BASE_STATS = {};
-var UNIT_TO_TECH = {};
-var OFFENSIVE_UNITS = [];
-var DEFENSIVE_UNITS = [];
-function setUnits(defs) {
-  UNITS.splice(0, UNITS.length, ...defs);
-  for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
-  for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
-  for (const u of defs) {
-    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
-    if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
-  }
-  OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
-  DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
-}
-setUnits(DEFAULT_UNITS);
-function unitLevelBonus(u) {
-  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
-}
-function findUnit(id) {
-  return UNITS.find((u) => u.id === id);
-}
-function getUnitBuildTime(unit, techLevels2) {
-  const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
-  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
-  return techLevels2 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time"))) : base;
 }
 
 // src/game/events.ts
@@ -2026,7 +2254,7 @@ var ECONOMY_RULES = {
   /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
   missionRareProductionRef: 5e5
 };
-var COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
 var KESH_BOOST_PCT = 0.2;
 function boostUntil(input) {
   var _a;
@@ -2100,7 +2328,7 @@ function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, 
   const gross = boostedRates(input, multipliers, boost);
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = storageCapacityOf(input);
-  const capOf = (res) => COMMON_RESOURCES.includes(res) ? capacity : Infinity;
+  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
   const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
   const energyStock = (_b = out.energy) != null ? _b : 0;
   let normalSeconds = elapsedSeconds;
@@ -2118,7 +2346,7 @@ function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, 
   return out;
 }
 function protectedAmount(buildings, res, techLevels2, allianceLevels) {
-  if (!COMMON_RESOURCES.includes(res)) return 0;
+  if (!COMMON_RESOURCES2.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
   const bastion = allianceBastionBonus(allianceLevels);
   const pct4 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
@@ -2129,10 +2357,10 @@ function rareRewardScale(player) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
   const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES.reduce((a, r) => {
+  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
     var _a2;
     return a + ((_a2 = rates[r]) != null ? _a2 : 0);
-  }, 0) / Math.max(1, COMMON_RESOURCES.length) * 3600;
+  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
   const ref = ECONOMY_RULES.missionRareProductionRef;
   const production = ref > 0 ? perHour / ref : 0;
   return Math.max(development, production);
@@ -2144,7 +2372,7 @@ function missionRewards(mission, player) {
   const out = {};
   for (const [res, fixed] of Object.entries(mission.reward)) {
     if (res === "xp") out.xp = fixed;
-    else if (COMMON_RESOURCES.includes(res)) {
+    else if (COMMON_RESOURCES2.includes(res)) {
       const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
       out[res] = Math.max(fixed, indexed);
     } else out[res] = Math.floor(fixed * rareScale);
@@ -2345,228 +2573,6 @@ function hasPrerequisites(mission, units) {
     var _a, _b;
     return ((_b = (_a = units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) >= req;
   });
-}
-
-// src/game/combat.ts
-var COMBAT_RULES = {
-  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
-  lootPercent: 0.08,
-  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
-  lootPercentCommon: 0.1,
-  /** Bonus de puissance du défenseur, qui se bat chez lui. */
-  homeDefenseBonus: 0.15,
-  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
-  shieldPerLevel: 75e-4,
-  /** …plafonnée à cette valeur. */
-  shieldMax: 0.15,
-  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
-   *  puissance, et subissent la même part des pertes. Réglé pour viser
-   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
-  homeFleetDefenseFactor: 0.1,
-  /** Part des défenses détruites reconstruites gratuitement après le combat. */
-  defenseRebuildPct: 0.6,
-  /* v3.0 — formations d'attaque (choisies au lancement). */
-  /** Assaut : attaque +10 %, pertes subies +15 %. */
-  assaultAttack: 0.1,
-  assaultLosses: 0.15,
-  /** Prudente : attaque −10 %, pertes subies −25 %. */
-  cautiousAttack: -0.1,
-  cautiousLosses: -0.25,
-  /** Raid : attaque −15 %, cargaison +30 %. */
-  raidAttack: -0.15,
-  raidCargo: 0.3,
-  /* v3.0 — postures de la base (défenseur). */
-  /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
-  bunkerDefense: 0.08,
-  /** Riposte : vaisseaux à quai engagés à 25 %. */
-  riposteHomeFleet: 0.25,
-  /** Délai entre deux changements de posture (h). */
-  postureCooldownHours: 1
-};
-function getShieldPercent(buildings, allianceBonus = 0) {
-  var _a, _b;
-  let levels = 0;
-  let extra = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
-    if (((_b = b.effect) == null ? void 0 : _b.type) === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
-  }
-  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
-}
-var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var COMMON_RESOURCES2 = ["scrap", "energy", "nano", "data"];
-function fleetCargoCapacity(units, fleet, techLevels2) {
-  var _a, _b, _c;
-  let total2 = 0;
-  for (const [id, qty] of Object.entries(fleet)) {
-    const def2 = findUnit(id);
-    const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def2 || qty <= 0 || level3 <= 0) continue;
-    total2 += ((_c = def2.stats.cargo) != null ? _c : 0) * level3 * qty;
-  }
-  return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
-}
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-function unitStat(units, techLevels2, unitId, stat) {
-  var _a, _b, _c, _d;
-  const def2 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def2 == null ? void 0 : def2[stat]) != null ? _a : 0;
-  const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
-  if (level3 <= 0) return 0;
-  let value = base + (level3 - 1) * ((_d = def2 == null ? void 0 : def2.perLevel) != null ? _d : 5);
-  if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
-  return value;
-}
-function computeFleetPower(units, techLevels2, fleet, stats) {
-  let total2 = 0;
-  for (const id in fleet) {
-    const qty = fleet[id];
-    if (qty <= 0) continue;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
-    total2 += value * qty;
-  }
-  return total2;
-}
-function pveAttackFactor(units, techLevels2, fleet) {
-  var _a;
-  const hunters = (_a = fleet[KESH_HUNTER_UNIT.id]) != null ? _a : 0;
-  if (!(hunters > 0)) return 1;
-  const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
-  if (!(all > 0)) return 1;
-  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
-}
-function computeFullPower(units, techLevels2, idList, stats) {
-  let total2 = 0;
-  idList.forEach((id) => {
-    var _a, _b;
-    const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
-    total2 += value * count2;
-  });
-  return total2;
-}
-function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
-  return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
-}
-function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
-  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
-  const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
-  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
-  const garrisons = (_d = params.garrisons) != null ? _d : [];
-  const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
-  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
-  const defenderPower = ((_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower) * Math.max(0, (_i = params.defenderPowerFactor) != null ? _i : 1);
-  const totalPower = attackerPower + defenderPower;
-  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
-  let outcome;
-  if (attackerPower > defenderPower) outcome = "attacker_win";
-  else if (attackerPower < defenderPower) outcome = "defender_win";
-  else outcome = "draw";
-  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
-  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
-  let attackerLossPct, defenderLossPct;
-  if (outcome === "attacker_win") {
-    attackerLossPct = winnerLossPct;
-    defenderLossPct = loserLossPct;
-  } else if (outcome === "defender_win") {
-    attackerLossPct = loserLossPct;
-    defenderLossPct = winnerLossPct;
-  } else {
-    attackerLossPct = 0.3;
-    defenderLossPct = 0.3;
-  }
-  if (params.attackerLossFactor !== void 0) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
-  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
-  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
-  const attackerLosses = {};
-  const attackerRecovered = {};
-  for (const unitId in fleet) {
-    const sent = fleet[unitId];
-    const rawLost = Math.floor(sent * attackerLossPct);
-    const recovered = Math.floor(rawLost * attackerRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      attackerLosses[unitId] = effectiveLost;
-      attackerRecovered[unitId] = recovered;
-    }
-  }
-  const defenderLosses = {};
-  const defenderRecovered = {};
-  const defenderRebuilt = {};
-  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
-    var _a2, _b2;
-    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
-    const isDefense = DEFENSIVE_UNITS.includes(unitId);
-    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
-    if (rawLost <= 0) return;
-    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
-    defenderLosses[unitId] = rawLost - recovered;
-    defenderRecovered[unitId] = recovered;
-    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
-  });
-  const garrisonLosses = garrisons.map((g) => {
-    const lost = {};
-    for (const [unitId, qty] of Object.entries(g.fleet)) {
-      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
-      if (n > 0) lost[unitId] = Math.min(qty, n);
-    }
-    return lost;
-  });
-  const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_k = params.cargoFactor) != null ? _k : 1));
-  let loot = null;
-  if (outcome === "attacker_win") {
-    const wanted = {};
-    let total2 = 0;
-    for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
-      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct4 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount2 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct4);
-      wanted[res] = amount2;
-      total2 += amount2;
-    }
-    const ratio = total2 > cargoCapacity ? cargoCapacity / total2 : 1;
-    loot = {};
-    const entries = Object.entries(wanted);
-    for (const [res, amount2] of entries) loot[res] = Math.floor(amount2 * ratio);
-    let left = Math.min(total2, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
-      var _a2;
-      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
-    }, 0);
-    const byRemainder = entries.map(([res, amount2]) => ({ res, frac: amount2 * ratio - Math.floor(amount2 * ratio) })).sort((a, b) => b.frac - a.frac);
-    for (const { res } of byRemainder) {
-      if (left <= 0) break;
-      if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
-        loot[res] = ((_p = loot[res]) != null ? _p : 0) + 1;
-        left--;
-      }
-    }
-  }
-  return {
-    outcome,
-    attackerPower,
-    defenderPower,
-    attackerLossPercent: attackerLossPct,
-    defenderLossPercent: defenderLossPct,
-    attackerLosses,
-    attackerRecovered,
-    defenderLosses,
-    defenderRecovered,
-    loot,
-    cargoCapacity,
-    shieldPercent: shield,
-    defenderRebuilt,
-    garrisonLosses,
-    garrisonPower
-  };
 }
 
 // src/game/formations.ts
@@ -3741,7 +3747,7 @@ function productionHours(player, h) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const out = {};
-  for (const res of COMMON_RESOURCES) {
+  for (const res of COMMON_RESOURCES2) {
     const n = Math.floor(((_a = rates[res]) != null ? _a : 0) * h * 3600);
     if (n > 0) out[res] = n;
   }
@@ -3770,14 +3776,14 @@ function raidPower(faction, player, notoriety) {
 function exposedStock(player) {
   var _a, _b, _c;
   const out = {};
-  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res, player.techLevels, player.allianceResearch));
+  for (const res of COMMON_RESOURCES2) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res, player.techLevels, player.allianceResearch));
   return out;
 }
 function storageFillPct(player) {
   var _a;
   const cap = getStorageCapacity((_a = player.buildings) != null ? _a : {}, player.techLevels);
   if (!(cap > 0)) return 0;
-  return Math.floor(Math.max(...COMMON_RESOURCES.map((r) => {
+  return Math.floor(Math.max(...COMMON_RESOURCES2.map((r) => {
     var _a2, _b;
     return (_b = (_a2 = player.resources) == null ? void 0 : _a2[r]) != null ? _b : 0;
   })) / cap * 100);
@@ -3972,7 +3978,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   const notifications = [...flushed.notifications];
   st.raidUntilMs = 0;
   if (combat.outcome === "attacker_win") {
-    const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
+    const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES2;
     for (const res of kinds) {
       const exposed = Math.max(0, ((_e = player.resources[res]) != null ? _e : 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
       const taken = Math.floor(exposed * faction.raid.lootPct);
@@ -4411,7 +4417,7 @@ function achievementReward(a, player) {
   if (!(a.rewardHours > 0)) return {};
   const rates = getProductionRatesPerSecond((_a = player.buildings) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {});
   const out = {};
-  for (const res of COMMON_RESOURCES) {
+  for (const res of COMMON_RESOURCES2) {
     const n = Math.floor(((_c = rates[res]) != null ? _c : 0) * a.rewardHours * 3600);
     if (n > 0) out[res] = n;
   }
@@ -4888,7 +4894,7 @@ function colonyBuildingIds() {
   return BUILDINGS.filter((b) => {
     var _a, _b;
     const res = PRODUCTION_RESOURCE_BY_BUILDING[b.id];
-    if (res && COMMON_RESOURCES.includes(res)) return true;
+    if (res && COMMON_RESOURCES2.includes(res)) return true;
     if (((_a = b.effect) == null ? void 0 : _a.type) === "storage") return true;
     return ((_b = b.effect) == null ? void 0 : _b.type) === "hangar" && b.effect.category === "defense";
   }).map((b) => b.id);
@@ -4953,7 +4959,7 @@ function foundColony(uid, job, at) {
   const buildings = {};
   for (const id of colonyBuildingIds()) buildings[id] = { level: 1, unlocked: true };
   const resources = emptyResources();
-  for (const res of COMMON_RESOURCES) resources[res] = COLONY_RULES.startStock;
+  for (const res of COMMON_RESOURCES2) resources[res] = COLONY_RULES.startStock;
   return { id: colonyId(uid, job.slot), slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null };
 }
 function economyInput(colony, player) {
@@ -5579,7 +5585,8 @@ var ONBOARDING_STEPS = [
 ];
 function onboardingState(p) {
   const raw = p.onboarding;
-  return { claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true };
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
 }
 function onboardingEligible(p) {
   var _a;
@@ -5588,7 +5595,7 @@ function onboardingEligible(p) {
   return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
 }
 function claimOnboarding(player, stepId) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e, _f;
   const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
   if (!step) throw new GameActionError("Objectif inconnu.");
   if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
@@ -5600,7 +5607,12 @@ function claimOnboarding(player, stepId) {
     player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
     if (!player.activeTitle) player.activeTitle = step.title;
   }
-  player.onboarding = __spreadProps(__spreadValues({}, st), { claimed: [...st.claimed, step.id] });
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
   return step.reward;
 }
 function setOnboardingHidden(player, hidden) {
@@ -8336,8 +8348,8 @@ var ANOMALY_RULES = {
 var HOUR8 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
-  if (COMMON_RESOURCES.includes(res)) return 1;
-  return 1 / getTradeRate(COMMON_RESOURCES[0], res);
+  if (COMMON_RESOURCES2.includes(res)) return 1;
+  return 1 / getTradeRate(COMMON_RESOURCES2[0], res);
 }
 function stockValue(r) {
   return ALL.reduce((a, res) => {
@@ -8348,7 +8360,7 @@ function stockValue(r) {
 function anomalyThreshold(player, hours2) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES.reduce((a, res) => {
+  const perHour = COMMON_RESOURCES2.reduce((a, res) => {
     var _a2;
     return a + ((_a2 = rates[res]) != null ? _a2 : 0);
   }, 0) * 3600;
@@ -8442,4 +8454,8 @@ function grantReferral(sponsor, recruit, now) {
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {
   return flushState(__spreadProps(__spreadValues({}, player), { buildings: withMissingBuildings(player.buildings, player.resources) }), queues, now);
+}
+function tutorialRaidPower(player) {
+  var _a, _b;
+  return Math.max(TUTORIAL_RAID.minPower, Math.round(homeDefensePower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}) * TUTORIAL_RAID.powerPct));
 }

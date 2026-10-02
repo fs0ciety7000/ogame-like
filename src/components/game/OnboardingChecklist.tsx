@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { HudMeter } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { onboardingEligible, onboardingProgress, onboardingState } from "@/game/onboarding";
+import { chapterOf, STORY_CHAPTERS } from "@/game/story";
 import { claimOnboarding, GameActionError, hideOnboarding } from "@/services/playerService";
 import { cn, formatCompact } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -21,6 +22,8 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
   const claimedCount = steps.filter((s) => s.claimed).length;
   // Objectif courant : le premier non réclamé ; les suivants restent visibles en résumé.
   const next = steps.find((s) => !s.claimed);
+  // v4.1 : chapitre en cours du tutoriel scénarisé.
+  const chapter = chapterOf(steps.filter((s) => s.claimed).map((s) => s.step.id));
 
   const claim = async (id: string) => {
     setBusy(id);
@@ -51,8 +54,8 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
             <X className="h-4 w-4" />
           </button>
           <div>
-            <p className="hud-eyebrow text-[10px] text-slate-500">Prise en main</p>
-            <h2 className="hud-title text-lg">Premiers pas du commandant</h2>
+            <p className="hud-eyebrow text-[10px] text-slate-500">{chapter ? `Prise en main · Chapitre ${chapter.id} / ${STORY_CHAPTERS.length}` : "Prise en main"}</p>
+            <h2 className="hud-title text-lg">{chapter ? chapter.title : "Premiers pas du commandant"}</h2>
             <div className="mt-2 flex items-center gap-3">
               <HudMeter percent={(claimedCount / steps.length) * 100} className="flex-1" />
               <span className="font-mono text-xs text-slate-400">
