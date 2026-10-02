@@ -11,6 +11,7 @@ const PALETTES: [string, Palette][] = [
   ["/game/unites", ["var(--color-danger-glow)", "var(--color-ember-glow)", "var(--color-cyan-glow)"]],
   ["/game/labo", ["#8b5cf6", "var(--color-cyan-glow)", "var(--color-mint-glow)"]],
   ["/game/missions", ["var(--color-mint-glow)", "var(--color-cyan-glow)", "var(--color-gold-glow)"]],
+  ["/game/etat-major", ["#a78bfa", "var(--color-gold-glow)", "var(--color-cyan-glow)"]],
   ["/game/primes", ["var(--color-gold-glow)", "var(--color-ember-glow)", "#8b5cf6"]],
   ["/game/galaxie", ["#6366f1", "#ec4899", "var(--color-cyan-glow)"]],
   ["/game/joueurs", ["var(--color-danger-glow)", "#6366f1", "var(--color-cyan-glow)"]],

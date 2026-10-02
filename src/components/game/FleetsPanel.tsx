@@ -66,7 +66,7 @@ function fleetSummary(fleet: Fleet): string {
   return Object.entries(fleet.units ?? {})
     .filter(([, n]) => n > 0)
     .map(([id, n]) => `${formatCompact(n)} ${findUnit(id)?.name ?? id}`)
-    .join(", ");
+    .join(", ") + (fleet.decoyed ? " · leurre actif" : "");
 }
 
 /** Flottes du joueur (aller, retour) et flottes hostiles en approche. */
@@ -163,6 +163,11 @@ export function FleetsPanel({
                 ? `${findFaction(f.factionId ?? "varan")?.name ?? "Faction hostile"}${findFaction(f.factionId ?? "varan")?.raid.target === "fleet" ? " · vise ta flotte à quai" : ""} · puissance ${formatCompact(f.power ?? 0)}`
                 : fleetSummary(f)}
             </p>
+            {f.anomaly && (
+              <p className="mt-1 text-[11px] font-semibold text-violet-300">
+                ⚗ Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.
+              </p>
+            )}
             <div className="mt-1.5 flex items-center gap-2">
               <Progress
                 value={fleetProgress(f, now) * 100}

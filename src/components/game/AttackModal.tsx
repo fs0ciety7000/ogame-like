@@ -25,6 +25,9 @@ import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { GameIcon } from "@/components/ui/game-icon";
+import { playerModifiers } from "@/game/modifiers";
+import { CAPSULES, capsulePct, synthesisState } from "@/game/synthesis";
+import { FlaskConical } from "lucide-react";
 
 /** Envoi d'une flotte d'attaque : le combat aura lieu à son arrivée. */
 export function AttackModal({
@@ -39,6 +42,9 @@ export function AttackModal({
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formation, setFormation] = useState<FormationId>("balanced");
+  // v4.0 : capsules du Labo de synthèse (niveau choisi, 0 = aucune).
+  const [assault, setAssault] = useState(0);
+  const [decoy, setDecoy] = useState(0);
   const presets = useFleetPresets(uid);
   // v3.8 : estimation d'après le dernier rapport d'espionnage sur la cible.
   const [spy, setSpy] = useState<SpyReport | null>(null);
@@ -72,9 +78,9 @@ export function AttackModal({
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
   const estimate = useMemo(
-    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation) : null),
+    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
-    [player, fleet, spy, formation],
+    [player, fleet, spy, formation, assault],
   );
 
   const handleConfirm = async () => {
@@ -85,7 +91,10 @@ export function AttackModal({
     }
     setSubmitting(true);
     try {
-      const sent = await sendFleet(target.uid, selected, "attack", { formation });
+      const capsules = { ...(assault ? { assault } : {}), ...(decoy ? { decoy } : {}) };
+      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(assault || decoy ? { capsules } : {}) });
+      setAssault(0);
+      setDecoy(0);
       setFleet({});
       onClose();
       triggerWarpEffect();
@@ -220,6 +229,39 @@ export function AttackModal({
               )}
 
               <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
+
+              {/* v4.0 : capsules du Labo de synthèse */}
+              {(() => {
+                const stock = synthesisState(player).stock;
+                const rows = (["assault", "decoy"] as const).filter((t) => stock[t].length > 0);
+                if (rows.length === 0) return null;
+                return (
+                  <div className="mt-3 flex flex-col gap-1.5 border border-violet-400/25 bg-violet-400/[0.05] px-3 py-2 text-xs">
+                    <p className="flex items-center gap-1.5 text-violet-300">
+                      <FlaskConical className="h-3.5 w-3.5" /> Capsules embarquées (invisibles à l'espionnage)
+                    </p>
+                    {rows.map((type) => {
+                      const value = type === "assault" ? assault : decoy;
+                      const set = type === "assault" ? setAssault : setDecoy;
+                      const levels = [...new Set(stock[type])].sort((a, b) => b - a);
+                      return (
+                        <div key={type} className="flex flex-wrap items-center gap-1.5">
+                          <span className="w-36 text-slate-300">{CAPSULES[type].name}</span>
+                          <button type="button" onClick={() => set(0)} className={value === 0 ? "border border-white/30 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-500"}>
+                            Aucune
+                          </button>
+                          {levels.map((l) => (
+                            <button key={l} type="button" onClick={() => set(l)} className={value === l ? "border border-violet-300 bg-violet-400/20 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-400"}>
+                              {capsulePct(l)} %
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {decoy > 0 && <p className="text-slate-500">{CAPSULES.decoy.description(capsulePct(decoy))}</p>}
+                  </div>
+                );
+              })()}
 
               {/* v3.8 : estimation du combat */}
               <div className="mt-3 border border-white/10 bg-black/20 px-3 py-2 text-xs">

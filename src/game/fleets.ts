@@ -1,4 +1,6 @@
 import { bumpStat } from "@/game/stats";
+import { takeLaunchCapsules, type LaunchCapsules } from "@/game/synthesis";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { launchExpedition } from "@/game/expeditions";
 import { WAR_RULES } from "@/game/wars";
 import { LEVIATHAN_RULES } from "@/game/leviathan";
@@ -95,6 +97,10 @@ export interface Fleet {
   targetOwnerUid?: string | null;
   /** v3.5 : transport entre la planète mère et une colonie. */
   transport?: TransportState | null;
+  /** v4.0 : l'Espionne du défenseur a flairé une anomalie chimique (capsules à bord). */
+  anomaly?: boolean;
+  /** v4.0 (affichage) : flotte leurrée par son propriétaire. */
+  decoyed?: boolean;
 }
 
 /** v3.5 : la flotte vise ce joueur (planète mère ou une de ses colonies). */
@@ -363,10 +369,13 @@ export interface LaunchRequest {
   transport?: { colonyId?: unknown; direction?: unknown; cargo?: unknown };
   /** v3.9 : contrat de prime visé, ou nom de la proie d'élite. */
   bountyId?: string;
+  /** v4.0 : capsules du Labo de synthèse embarquées (attaque de joueur). */
+  capsules?: unknown;
+  random?: () => number;
   eliteName?: string;
 }
 
-export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
+export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: LaunchCapsules | null; attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
   const mission = req.mission ?? "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -409,9 +418,19 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { attackerQueu
     out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: req.eliteName ?? "Proie d'élite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 60_000), defenderNotifications: [] };
   }
   else throw new GameActionError("Mission inconnue.");
+  // v4.0 : stimulant d'assaut et brouilleur d'approche (joueur contre joueur seulement).
+  let capsules: LaunchCapsules | null = null;
+  if (mission === "attack" && req.capsules) {
+    capsules = takeLaunchCapsules(out.attacker, req.capsules, out.fleet.units, OFFENSIVE_UNITS.filter((id) => id !== SPY_RULES.probeUnitId), req.random);
+    if (capsules.fakeUnits) {
+      const fakeTotal = Object.values(capsules.fakeUnits).reduce((a, b) => a + b, 0);
+      out.defenderNotifications = out.defenderNotifications.map((n) => ({ ...n, message: n.message.replace(/t'envoie [\d\s\u202f\u00a0.,]+ vaisseaux/, `t'envoie ${formatInt(fakeTotal)} vaisseaux`) }));
+    }
+  }
+  if (mission === "spy") grantCommanderXp(out.attacker, "spy", COMMANDER_XP.spyLaunched);
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
-  return { ...out, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+  return { ...out, capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
 }
 
 /** Copie de la cible avec ses colonies rattrapées (colonisation arrivée). */

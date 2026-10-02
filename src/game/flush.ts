@@ -11,6 +11,8 @@ import { bumpStat, recordMission, setStat } from "@/game/stats";
 import { contractDay } from "@/game/contracts";
 import { formatInt } from "@/game/format";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -72,6 +74,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     const def = findBuilding(buildingId);
     if (def) {
       player.buildings[buildingId].level += 1;
+      grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
       notifications.push({
         kind: "building",
         title: "Construction terminée",
@@ -131,6 +134,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       player.techLevels[tech.id] = nextLevel;
       applyTechEffect(player, tech.id, nextLevel);
       setStat(player, "lastResearchAtMs", entry.endTime);
+      grantCommanderXp(player, "engineer", COMMANDER_XP.researchDone);
       notifications.push({
         kind: "research",
         title: "Recherche terminée",
@@ -163,6 +167,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       }
     }
     recordContract(player, "missions", 1, now);
+    grantCommanderXp(player, "steward", COMMANDER_XP.missionDone);
     recordMission(player, contractDay(entry.endTime));
     notifications.push({
       kind: "mission",
@@ -173,6 +178,18 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     });
   }
   queues.activeMissions = stillActiveMissions;
+
+  // --- v4.0 : capsule du Labo de synthèse terminée ---
+  const capsule = advanceSynthesis(player, now);
+  if (capsule) {
+    notifications.push({
+      kind: "building",
+      title: "Capsule prête",
+      message: `${CAPSULES[capsule.type].name} (niveau ${capsule.level}) rejoint la réserve du Labo de synthèse.`,
+      createdAtMs: now,
+      read: false,
+    });
+  }
 
   // --- Succès ---
   const newAchievements = checkNewAchievements(player);

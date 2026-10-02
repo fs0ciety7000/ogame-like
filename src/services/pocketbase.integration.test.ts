@@ -1349,6 +1349,21 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(pact).toMatchObject({ status: "proposed", allianceA: X.id, allianceB: Y.id });
       await expect(ds.diplomacy("accept", { pactId: pact.id })).rejects.toThrow("invitée");
       await ds.diplomacy("message", { pactId: pact.id, text: "On signe ?" });
+      await ds.diplomacy("message", { pactId: pact.id, text: "Réponse attendue." });
+      // v4.0 : l'autre alliance est prévenue, une seule fois par salve.
+      const pactNotes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && link="/game/alliance?onglet=diplomatie&pacte=${pact.id}"` });
+      expect(pactNotes).toHaveLength(1);
+      expect(pactNotes[0]).toMatchObject({ kind: "alliance", title: `Canal diplomatique [${X.tag}]` });
+      expect(pactNotes[0].message).toContain("On signe ?");
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && link~"pacte=${pact.id}"` })).toHaveLength(0);
+      // Réglage : le joueur coupe le canal diplomatique, plus rien n'arrive.
+      await admin.collection("notifications").delete(pactNotes[0].id);
+      const bClient = new PocketBase(PB_TEST_URL!);
+      await bClient.collection("users").authWithPassword(B.email, B.pw);
+      await bClient.collection("players").update(bId, { notifPrefs: { pactMessages: false } });
+      await ds.diplomacy("message", { pactId: pact.id, text: "Toujours là ?" });
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && link~"pacte=${pact.id}"` })).toHaveLength(0);
+      await bClient.collection("players").update(bId, { notifPrefs: null });
 
       await loginPlayer(B.email, B.pw);
       expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
@@ -1528,6 +1543,99 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(await good.text()).toMatch(/plus nos nouvelles/);
     expect((await snap(bId)).emailOptOut).toBe(true);
     await admin.collection("players").update(bId, { emailOptOut: false, mailToken: "" });
+  });
+
+  it("v4.0 command: commanders, synthesis capsules (decoy hidden from the target) and relics", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const fleets: string[] = [];
+    try {
+      // Commandants : le premier est offert, le suivant se paie en Ambre ; le navigateur ne peut rien écrire.
+      await loginPlayer(B.email, B.pw);
+      await expect(pb.collection("players").update(bId, { commanders: { roster: { admiral: { xp: 99999 } }, active: ["admiral"] } })).rejects.toMatchObject({ status: 403 });
+      await admin.collection("players").update(bId, {
+        commanders: null, relics: null, synthesis: null,
+        bounties: { ...(bBefore.bounties ?? {}), amber: 400 },
+        buildings: { ...bBefore.buildings, labo_synthese: { level: 3, unlocked: true } },
+        units: { ...bBefore.units, chasseur: { level: 1, count: 30 } },
+        resources: RICH, createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, allianceId: "", xp: aBefore.xp,
+      });
+      expect(await ps.recruitCommander("admiral", "amber")).toEqual({ id: "admiral" });
+      expect((await snap(bId)).bounties.amber).toBe(400);
+      await ps.recruitCommander("spy", "amber");
+      let b = await snap(bId);
+      expect(b.bounties.amber).toBe(250);
+      expect(b.commanders.active).toEqual(["admiral", "spy"]);
+      await expect(ps.recruitCommander("admiral", "amber")).rejects.toThrow(/déjà/);
+      await expect(ps.assignCommanders(["admiral", "spy", "steward"])).rejects.toThrow(/postes|recruté/);
+      await bs.buyBountyItem("dossier");
+      expect((await ps.trainCommander("admiral")).level).toBeGreaterThan(1);
+
+      // Labo de synthèse : synthèse payée, capsules en réserve (fin forcée par l'équipe).
+      const crafted = await ps.craftCapsule("assault", 3);
+      expect(crafted.level).toBe(3);
+      await expect(ps.craftCapsule("decoy", 4)).rejects.toThrow(/niveau 3/);
+      b = await snap(bId);
+      await admin.collection("players").update(bId, { synthesis: { ...b.synthesis, crafting: { ...b.synthesis.crafting, endsAtMs: Date.now() - 1000 } } });
+      await ps.syncPlayer("");
+      b = await snap(bId);
+      expect(b.synthesis.stock.assault).toEqual([3]);
+      await admin.collection("players").update(bId, { synthesis: { ...b.synthesis, stock: { ...b.synthesis.stock, decoy: [2], veil: [1] } } });
+      expect((await ps.activateCapsule("veil")).pct).toBe(5);
+
+      // Attaque avec stimulant et leurre : la cible voit une fausse flotte, le serveur combat avec la vraie.
+      await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, allianceId: "" });
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}"` })) await admin.collection("battle_reports").delete(r.id);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && targetUid="${aId}"` })) await admin.collection("fleets").delete(f.id);
+      const sent = await ps.sendFleet(aId, { chasseur: 20 }, "attack", { capsules: { assault: 3, decoy: 2 } });
+      fleets.push(sent.id);
+      b = await snap(bId);
+      expect(b.synthesis.stock.assault).toEqual([]);
+      expect(b.synthesis.decoys[sent.id]).toEqual({ chasseur: 20 });
+      const raw = await admin.collection("fleets").getOne(sent.id);
+      expect(raw.trueUnits).toEqual({ chasseur: 20 });
+      expect(raw.boosts).toEqual({ assault: 15, decoy: 10 });
+      await loginPlayer(A.email, A.pw);
+      const seen = await pb.collection("fleets").getOne(sent.id);
+      expect(seen.trueUnits).toBeUndefined();
+      expect(seen.boosts).toBeUndefined();
+      expect(Object.values(seen.units as Record<string, number>).reduce((x, y) => x + y, 0)).toBeGreaterThan(0);
+      await loginPlayer(B.email, B.pw);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.reportId).not.toBe("");
+      expect(landed.trueUnits ?? null).toBeNull();
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.attackerFleet).toEqual({ chasseur: 20 });
+      expect((await snap(bId)).synthesis.decoys[sent.id]).toBeUndefined();
+
+      // Reliques : fusion de trois communes, équipement, recyclage contre de l'Ambre.
+      const item = (id: string, rarity = "common") => ({ id, template: "engrenage_varan", rarity, foundAtMs: Date.now(), source: "test" });
+      await admin.collection("players").update(bId, { relics: { items: [item("r1"), item("r2"), item("r3"), item("r4")], slots: [], aegisWeek: "" } });
+      const fused = await ps.fuseRelics("engrenage_varan", "common");
+      expect(fused.rarity).toBe("rare");
+      await ps.equipRelic(0, fused.id);
+      await expect(ps.recycleRelic(fused.id)).rejects.toThrow(/Retire/);
+      const amber = (await snap(bId)).bounties.amber;
+      expect((await ps.recycleRelic("r4")).amber).toBe(5);
+      b = await snap(bId);
+      expect(b.bounties.amber).toBe(amber + 5);
+      expect(b.relics.slots[0]).toBe(fused.id);
+      expect(b.relics.items).toHaveLength(1);
+
+      // Profil : bannière verrouillée refusée, devise nettoyée, vitrine publique.
+      await expect(ps.saveProfileStyle({ banner: "leviathan" })).rejects.toThrow(/verrouillée/);
+      await ps.saveProfileStyle({ banner: "abysse", motto: "Personne ne passe." });
+      const pub = await pb.collection("profiles").getOne(bId);
+      expect(pub.feats.showcase.motto).toBe("Personne ne passe.");
+      expect(pub.feats.showcase.commanders.map((c: { id: string }) => c.id)).toEqual(["admiral", "spy"]);
+      expect(pub.feats.showcase.relics).toEqual([{ template: "engrenage_varan", rarity: "rare" }]);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(bId, { units: bBefore.units, resources: bBefore.resources, buildings: bBefore.buildings, bounties: bBefore.bounties, commanders: null, relics: null, synthesis: null, profileStyle: null, xp: bBefore.xp });
+      await admin.collection("players").update(aId, { units: aBefore.units, resources: aBefore.resources });
+    }
   });
 
   it("exposes public feats on the profile sheet", async () => {

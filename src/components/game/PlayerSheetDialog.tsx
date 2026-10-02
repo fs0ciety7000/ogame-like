@@ -12,6 +12,8 @@ import { leviathanRanking } from "@/game/leviathan";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { seasonLabel } from "@/game/seasons";
 import { cn, formatNumber } from "@/lib/utils";
+import { findCommander } from "@/game/commanders";
+import { describeRelic, findTemplate, rarityInfo } from "@/game/relics";
 
 /* Fiche publique détaillée d'un joueur (v3.7) : rang, colonies, faits
    d'armes, titres, saisons passées et participation au Léviathan. */
@@ -56,9 +58,22 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={cn("max-w-xl", feats?.kesh?.frame && "kesh-frame")}>
+        {/* v4.0 : bannière choisie par le joueur */}
+        {feats?.showcase && (
+          <div
+            aria-hidden
+            className="-mx-6 -mt-6 mb-1 h-24 bg-cover bg-center"
+            style={
+              feats.showcase.banner.image
+                ? { backgroundImage: `linear-gradient(180deg, transparent 30%, var(--color-space-900, #070a14) 100%), url(${assetUrl(feats.showcase.banner.image)})` }
+                : { background: feats.showcase.banner.gradient }
+            }
+          />
+        )}
         <div className="flex items-center gap-3 pr-6">
           <img src={getRankIcon(entry?.xp ?? 0)} alt="" className="h-14 w-14 shrink-0 object-contain" />
-          {feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
+          {feats?.showcase?.emblem && <img src={assetUrl(feats.showcase.emblem)} alt="" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.25)]" />}
+          {!feats?.showcase?.emblem && feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
           <div className="min-w-0">
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
               <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} />
@@ -86,6 +101,33 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
 
         {sheet && entry && (
           <div className="mt-4 flex flex-col gap-4">
+            {feats?.showcase?.motto && <p className="border-l-2 border-cyan-glow/40 pl-3 text-sm italic text-slate-300">« {feats.showcase.motto} »</p>}
+
+            {feats?.showcase && (feats.showcase.commanders.length > 0 || feats.showcase.relics.length > 0) && (
+              <section>
+                <p className="hud-eyebrow mb-2 text-slate-400">État-major</p>
+                <div className="flex flex-wrap gap-2">
+                  {feats.showcase.commanders.map((c) => {
+                    const def = findCommander(c.id);
+                    return (
+                      <span key={c.id} className="flex items-center gap-2 border border-cyan-glow/20 bg-white/[0.02] py-1 pl-1 pr-2.5 text-xs text-slate-300">
+                        <img src={assetUrl(def?.portrait ?? "")} alt="" className="h-8 w-7 object-cover" />
+                        <span>
+                          <span className="block text-white">{def?.name}</span>
+                          {def?.title} · niv. {c.level}
+                        </span>
+                      </span>
+                    );
+                  })}
+                  {feats.showcase.relics.map((r, i) => (
+                    <span key={i} title={describeRelic(r)} className="flex items-center gap-1.5 border px-2 py-1 text-xs" style={{ borderColor: `${rarityInfo(r.rarity).color}55`, color: rarityInfo(r.rarity).color }}>
+                      <img src={assetUrl(`/assets/relics/${r.template}.webp`)} alt="" className="h-6 w-6 object-contain" />
+                      {findTemplate(r.template)?.name}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
             {sinceLabel(entry.createdAtMs) && <p className="text-xs text-slate-500">Commandant depuis le {sinceLabel(entry.createdAtMs)}.</p>}
 
             {feats && (

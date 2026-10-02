@@ -1,4 +1,6 @@
 import { resolveCombat, computeFleetPower } from "@/game/combat";
+import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
@@ -146,11 +148,13 @@ function pickEvent(random: () => number): ExpeditionEventKind {
 /** Combat de la flotte d'expédition contre une puissance fixe. Les pertes sont retirées de la flotte. */
 function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number): { won: boolean; lost: number } {
   const fleetPower = computeFleetPower(player.units, player.techLevels, fleet.units, ["attack"]);
+  const fx = formationEffects(fleet.expedition.formation);
   const combat = resolveCombat({
-    ...formationEffects(fleet.expedition.formation),
+    ...fx,
+    attackFactor: fx.attackFactor * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
-    attackerRepairPct: getRepairPercent(player.buildings),
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet: fleet.units,
     defenderUnits: {},
     defenderTechLevels: {},
@@ -261,14 +265,20 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
 }
 
 /** Fin de l'expédition : XP créditée (les survivants et le butin rentrent via completeFleetReturn). */
-export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, now: number): NewNotification {
+export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, now: number, random: () => number = Math.random): NewNotification {
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour);
   applyXpDelta(player, xp, now);
   bumpStat(player, "expeditions");
+  // v4.0 : une relique, parfois (5 % à 2 h, jusqu'à 15 % à 8 h).
+  let relic = "";
+  if (random() < expeditionRelicChance(fleet.expedition.hours)) {
+    const item = rollRelic("expedition", now, random);
+    if (addRelic(player, item)) relic = ` Relique trouvée : ${relicLabel(item)} !`;
+  }
   return {
     kind: "fleet",
-    title: "Expédition terminée",
-    message: `Ta flotte est rentrée : ${describeGain(fleet.loot ?? {})} et +${xp} XP.`,
+    title: relic ? "Expédition terminée : relique !" : "Expédition terminée",
+    message: `Ta flotte est rentrée : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}`,
     createdAtMs: now,
     read: false,
   };

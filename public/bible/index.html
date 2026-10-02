@@ -310,6 +310,32 @@
   .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)); gap: 8px; margin-top: 16px; }
   .gallery img { aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); background: var(--panel); }
 
+  /* ---------- commandement (4.0) ---------- */
+  .cmd-shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; }
+  .officers { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+  .officers figure { border: 1px solid var(--line); background: #000; position: relative; overflow: hidden; aspect-ratio: 4 / 5; }
+  .officers img { width: 100%; height: 100%; object-fit: cover; }
+  .officers figcaption { position: absolute; inset: auto 0 0 0; padding: 30px 10px 10px; background: linear-gradient(transparent, rgba(3, 4, 10, 0.95)); }
+  .officers b { display: block; font: 700 14px/1.1 var(--f-display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--oc); }
+  .officers span { font-size: 11.5px; color: var(--fg-2); }
+  .relics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr)); gap: 10px; margin-top: 16px; }
+  .relics figure { border: 1px solid var(--rc, var(--line)); background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rc) 22%, transparent), transparent 70%), var(--panel); padding: 10px 8px; text-align: center; }
+  .relics img { width: 72px; height: 72px; object-fit: contain; margin: 0 auto 6px; }
+  .relics b { display: block; font-size: 11.5px; color: var(--fg); line-height: 1.2; }
+  .relics span { font: 500 10px var(--f-mono); color: var(--rc); text-transform: uppercase; letter-spacing: 0.08em; }
+  .capsules { display: grid; grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 16px; align-items: stretch; }
+  .capsules figure { border: 1px solid var(--line); background: var(--panel); padding: 12px; text-align: center; }
+  .capsules img { height: 110px; width: auto; object-fit: contain; margin: 0 auto 8px; }
+  .capsules .lab img { height: 170px; }
+  .capsules b { display: block; font: 700 13px var(--f-display); text-transform: uppercase; letter-spacing: 0.05em; color: var(--cc, var(--accent)); }
+  .capsules span { font-size: 11.5px; color: var(--fg-2); }
+  @media (max-width: 900px) {
+    .cmd-shots { grid-template-columns: minmax(0, 1fr); }
+    .officers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .capsules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .capsules .lab { grid-column: span 2; }
+  }
+
   /* ---------- coulisses ---------- */
   .backstage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; }
 
@@ -353,6 +379,7 @@
     <li><a href="#themes">Thèmes</a></li>
     <li><a href="#composants">Composants</a></li>
     <li><a href="#storyboard">Storyboard</a></li>
+    <li><a href="#commandement">4.0</a></li>
     <li><a href="#mobile">Mobile</a></li>
     <li><a href="#rangs">Rangs</a></li>
     <li><a href="#icones">Icônes</a></li>
@@ -366,7 +393,7 @@
   <!-- ============ HERO ============ -->
   <section class="hero reveal">
     <div>
-      <p class="eyebrow">Bible visuelle · version 2.7</p>
+      <p class="eyebrow">Bible visuelle · version 4.0</p>
       <h1>Cosmic Empires<small>Poste de commandement</small></h1>
       <p class="motto">Bâtis. Conquiers. <em>Règne.</em></p>
       <p class="lead">
@@ -377,10 +404,10 @@
       <div class="facts">
         <div><b class="mono">4</b><span>thèmes</span></div>
         <div><b class="mono">28</b><span>rangs</span></div>
-        <div><b class="mono">69</b><span>succès</span></div>
-        <div><b class="mono">5</b><span>factions</span></div>
-        <div><b class="mono">8</b><span>ressources</span></div>
-        <div><b class="mono">12</b><span>unités</span></div>
+        <div><b class="mono">72</b><span>succès</span></div>
+        <div><b class="mono">7</b><span>factions</span></div>
+        <div><b class="mono">5</b><span>officiers</span></div>
+        <div><b class="mono">13</b><span>reliques</span></div>
       </div>
     </div>
     <div class="monitor">
@@ -403,19 +430,24 @@
       <figure class="w2 h2"><img src="/assets/story/cartel.webp" alt="Cartel Néon" loading="lazy" /><span class="label">Cartel Néon</span></figure>
       <div class="word">HUD tactique</div>
       <figure class="contain h2"><img src="/assets/ranks/maitre1.webp" alt="Emblème Maître I" loading="lazy" /><span class="label">Maître I</span></figure>
-      <figure class="contain"><img src="/assets/units/fregate.webp" alt="Frégate" loading="lazy" /><span class="label">Frégate</span></figure>
+      <figure class="contain"><img src="/bible/art/fregate.webp" alt="Frégate" loading="lazy" /><span class="label">Frégate</span></figure>
       <figure class="w2 h2"><img src="/assets/story/inquisition.webp" alt="Inquisition de l'Aube Blanche" loading="lazy" /><span class="label">Inquisition</span></figure>
-      <figure class="contain"><img src="/assets/buildings/reacteur_instable.webp" alt="Réacteur instable" loading="lazy" /><span class="label">Réacteur</span></figure>
+      <figure class="contain"><img src="/bible/art/reacteur_instable.webp" alt="Réacteur instable" loading="lazy" /><span class="label">Réacteur</span></figure>
       <div class="word alt">Énergie instable</div>
       <figure class="contain"><img src="/assets/icons/nano.webp" alt="Nanocomposants" loading="lazy" /><span class="label">Nanocomposants</span></figure>
       <figure class="w2"><img src="/assets/story/varan.webp" alt="Confrérie du Vide" loading="lazy" style="object-position: center 30%" /><span class="label">Confrérie du Vide</span></figure>
       <div class="swatches"><i style="background:#4be8ff"></i><i style="background:#a78bfa"></i><i style="background:#4aff9c"></i><i style="background:#ffd86b"></i><i style="background:#ff7a45"></i></div>
-      <figure class="contain"><img src="/assets/units/etoile_noire.webp" alt="Étoile noire" loading="lazy" /><span class="label">Étoile noire</span></figure>
+      <figure class="contain"><img src="/bible/art/etoile_noire.webp" alt="Étoile noire" loading="lazy" /><span class="label">Étoile noire</span></figure>
       <figure class="w2 h2"><img src="/assets/maintenance/operator.webp" alt="Opérateur en intervention" loading="lazy" /><span class="label">Maintenance</span></figure>
       <figure class="contain"><img src="/assets/ranks/elite.webp" alt="Emblème Élite" loading="lazy" /><span class="label">Élite</span></figure>
       <div class="word">Ferraille &amp; signaux</div>
-      <figure class="contain"><img src="/assets/buildings/extracteur_ferraille.webp" alt="Extracteur de ferraille" loading="lazy" /><span class="label">Extracteur</span></figure>
+      <figure class="contain"><img src="/bible/art/extracteur_ferraille.webp" alt="Extracteur de ferraille" loading="lazy" /><span class="label">Extracteur</span></figure>
       <figure class="contain"><img src="/assets/achievements/legendaire.webp" alt="Cadre de succès légendaire" loading="lazy" /><span class="label">Succès légendaire</span></figure>
+      <figure class="w2 h2"><img src="/assets/commanders/admiral.webp" alt="Amiral Rhys Calder" loading="lazy" style="object-position: center 25%" /><span class="label">Rhys Calder</span></figure>
+      <figure class="contain"><img src="/assets/relics/couronne_essaim.webp" alt="Couronne de l'Essaim" loading="lazy" /><span class="label">Relique légendaire</span></figure>
+      <div class="word alt">Capsules interdites</div>
+      <figure class="w2"><img src="/assets/bounties/hunters.webp" alt="Chasseurs Kesh'Vaar" loading="lazy" style="object-position: center 35%" /><span class="label">Kesh'Vaar</span></figure>
+      <figure class="contain"><img src="/bible/art/labo_synthese.webp" alt="Labo de synthèse" loading="lazy" /><span class="label">Labo de synthèse</span></figure>
     </div>
   </section>
 
@@ -588,25 +620,73 @@
         <h2>Le parcours d'un commandant</h2>
         <p class="lead">De la connexion à la conquête : les écrans dans l'ordre où un joueur les découvre. Clique sur une capture pour l'agrandir.</p>
       </div>
-      <span class="tag">Captures réelles · v2.7</span>
+      <span class="tag">Captures réelles · v4.0</span>
     </div>
     <div class="story">
       <figure><img class="shot" src="/bible/shots/login.webp" alt="Écran de connexion" loading="lazy" /><figcaption><b>Connexion</b>Bâtis. Conquiers. Règne. Création d'empire en une minute.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-accueil.webp" alt="Poste de commandement" loading="lazy" /><figcaption><b>Poste de commandement</b>La planète grandit avec l'empire ; contrats du jour et prochaines fins.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-accueil.webp" alt="Poste de commandement" loading="lazy" /><figcaption><b>Poste de commandement</b>« Que faire maintenant ? », planète vivante, flottes en vol et menaces.</figcaption></figure>
       <figure><img class="shot" src="/bible/shots/d-ressources.webp" alt="Ressources" loading="lazy" /><figcaption><b>Ressources</b>Quatre ressources communes, quatre rares, un comptoir d'échange.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-batiments.webp" alt="Bâtiments" loading="lazy" /><figcaption><b>Bâtiments</b>Niveaux à crans, production actuelle → suivante, paliers bronze à légendaire.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-batiments.webp" alt="Bâtiments" loading="lazy" /><figcaption><b>Bâtiments</b>Illustrations de production, paliers bronze à légendaire, Ascension.</figcaption></figure>
       <figure><img class="shot" src="/bible/shots/d-labo.webp" alt="Laboratoire" loading="lazy" /><figcaption><b>Laboratoire</b>Arbre de technologies et effets par niveau.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-unites.webp" alt="Unités" loading="lazy" /><figcaption><b>Chantier naval</b>Vaisseaux sur grille holographique, ATK / DEF / VIT / CAP en jauges.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-missions.webp" alt="Missions" loading="lazy" /><figcaption><b>Missions</b>Patrouilles, collectes et expéditions ; prérequis cochés ou barrés.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-galaxie.webp" alt="Carte galactique" loading="lazy" /><figcaption><b>Carte galactique</b>Secteurs, flottes en vol, champs de débris à recycler.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-joueurs.webp" alt="Classement" loading="lazy" /><figcaption><b>Classement</b>Rangs, titres et badges d'équipe ; espionner, attaquer, aider.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-menaces.webp" alt="Menaces" loading="lazy" /><figcaption><b>Menaces</b>Cinq factions hostiles, chacune avec ses raisons d'attaquer.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-unites.webp" alt="Unités" loading="lazy" /><figcaption><b>Chantier naval</b>Posture de la base, hangars, ATK / DEF / VIT / CAP en jauges.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-missions.webp" alt="Missions" loading="lazy" /><figcaption><b>Missions</b>Contrats du jour, missions, expéditions narratives.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-primes.webp" alt="Primes Kesh'Vaar" loading="lazy" /><figcaption><b>Primes</b>L'Essaim Kesh'Vaar paie en Ambre : fugitifs, proie d'élite, Comptoir.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-galaxie.webp" alt="Carte galactique" loading="lazy" /><figcaption><b>Carte galactique</b>Secteurs, flottes en vol, champs de débris, attaques en approche.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-colonies.webp" alt="Colonies" loading="lazy" /><figcaption><b>Colonies</b>Stocks séparés, bâtiments et défenses propres, transports.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-joueurs.webp" alt="Classement" loading="lazy" /><figcaption><b>Classement</b>Rangs, alliances, titres ; espionner, attaquer, aider.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-attaque.webp" alt="Envoi d'une attaque" loading="lazy" /><figcaption><b>Envoi d'une flotte</b>Estimation du combat, formation, capsules du Labo de synthèse.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-combats.webp" alt="Journal de combat" loading="lazy" /><figcaption><b>Journal de combat</b>Rapports de combat et d'espionnage, partageables par lien.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-simulateur.webp" alt="Simulateur" loading="lazy" /><figcaption><b>Simulateur</b>La formule exacte des combats, contre un joueur ou un rapport.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-menaces.webp" alt="Menaces" loading="lazy" /><figcaption><b>Menaces</b>Six factions hostiles, chacune avec ses raisons d'attaquer.</figcaption></figure>
       <figure><img class="shot" src="/bible/shots/d-ultimatum.webp" alt="Ultimatum du Cartel Néon" loading="lazy" /><figcaption><b>Ultimatum</b>Payer le tribut ou refuser et préparer ses défenses.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-alliance.webp" alt="Alliances" loading="lazy" /><figcaption><b>Alliances</b>Trésor commun, recherches, garnisons chez les alliés.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-palmares.webp" alt="Palmarès" loading="lazy" /><figcaption><b>Palmarès</b>Saisons mensuelles, podium et récompenses de fin de mois.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-succes.webp" alt="Succès" loading="lazy" /><figcaption><b>Succès</b>69 succès en paliers bronze, argent, or et légendaire.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-profil.webp" alt="Profil" loading="lazy" /><figcaption><b>Profil</b>Échelle des rangs, titres, victoires et temps de jeu.</figcaption></figure>
-      <figure><img class="shot" src="/bible/shots/d-reglages.webp" alt="Réglages" loading="lazy" /><figcaption><b>Réglages</b>Choix du thème, notifications du navigateur, compte.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-leviathan.webp" alt="Léviathan" loading="lazy" /><figcaption><b>Léviathan</b>Un boss pour tout le serveur, récompenses selon les dégâts.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-marche.webp" alt="Marché" loading="lazy" /><figcaption><b>Marché</b>Offres entre joueurs, fourchette de prix, taxe réduite entre alliés.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-alliance.webp" alt="Alliances" loading="lazy" /><figcaption><b>Alliances</b>Canal, trésor commun, recherches, projets, garnisons.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-diplomatie.webp" alt="Diplomatie" loading="lazy" /><figcaption><b>Diplomatie</b>Pactes de non-agression et canal partagé entre alliances.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-guerre.webp" alt="Guerre d'alliance" loading="lazy" /><figcaption><b>Guerre</b>Déclaration, préparation, points de guerre et récompenses.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-messages.webp" alt="Messagerie" loading="lazy" /><figcaption><b>Messagerie</b>Messages privés, accusés de lecture, blocage.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-palmares.webp" alt="Palmarès" loading="lazy" /><figcaption><b>Palmarès</b>Saisons mensuelles, podium et classement des alliances.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-succes.webp" alt="Succès" loading="lazy" /><figcaption><b>Succès</b>72 succès en paliers bronze, argent, or et légendaire.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-journal.webp" alt="Journal d'empire" loading="lazy" /><figcaption><b>Journal d'empire</b>Tout ce qui est arrivé à l'empire, filtré par thème.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-profil.webp" alt="Profil" loading="lazy" /><figcaption><b>Profil</b>Rang, bannière, emblème et devise de la fiche publique.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-reglages.webp" alt="Réglages" loading="lazy" /><figcaption><b>Réglages</b>Thèmes, aide en jeu, notifications, nouvelles par e-mail.</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ============ COMMANDEMENT (4.0) ============ -->
+  <section id="commandement">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">06 · Commandement</p>
+        <h2>Officiers, reliques et capsules</h2>
+        <p class="lead">La mise à jour 4.0 donne un État-major à chaque empire : cinq officiers qui progressent en faisant leur métier, des reliques arrachées aux confins du secteur et un laboratoire qui distille des capsules invisibles à l'espionnage.</p>
+      </div>
+      <span class="tag">Nouveau · v4.0</span>
+    </div>
+    <div class="cmd-shots">
+      <figure><img class="shot" src="/bible/shots/d-annonce.webp" alt="Annonce de la mise à jour 4.0" loading="lazy" /><figcaption><b>Annonce</b>Chaque grande mise à jour s'ouvre sur une fenêtre illustrée.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-etat-major.webp" alt="État-major : commandants" loading="lazy" /><figcaption><b>Commandants</b>Postes, niveaux, XP, recrutement en Ambre ou en production.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-reliques.webp" alt="État-major : reliques" loading="lazy" /><figcaption><b>Reliques</b>Emplacements, raretés, fusion et recyclage en Ambre.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-synthese.webp" alt="État-major : Labo de synthèse" loading="lazy" /><figcaption><b>Labo de synthèse</b>Synthèse, réserve, carapace et brouilleur actifs.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-fiche.webp" alt="Fiche publique d'un joueur" loading="lazy" /><figcaption><b>Fiche publique</b>Bannière, emblème, devise, officiers en poste et reliques équipées.</figcaption></figure>
+      <figure><img class="shot" src="/bible/shots/d-attaque.webp" alt="Fenêtre d'attaque avec capsules" loading="lazy" /><figcaption><b>Capsules à l'attaque</b>Stimulant d'assaut et leurre embarqués au lancement.</figcaption></figure>
+    </div>
+    <div class="officers">
+      <figure style="--oc:#ff7a45"><img src="/assets/commanders/admiral.webp" alt="Rhys Calder" loading="lazy" /><figcaption><b>Rhys Calder</b><span>Amiral · attaque</span></figcaption></figure>
+      <figure style="--oc:#4be8ff"><img src="/assets/commanders/strategist.webp" alt="Ilsa Varga" loading="lazy" /><figcaption><b>Ilsa Varga</b><span>Stratège · défense</span></figcaption></figure>
+      <figure style="--oc:#ffd86b"><img src="/assets/commanders/engineer.webp" alt="Noor Halim" loading="lazy" /><figcaption><b>Noor Halim</b><span>Ingénieure · chantiers et recherche</span></figcaption></figure>
+      <figure style="--oc:#a78bfa"><img src="/assets/commanders/spy.webp" alt="Sable" loading="lazy" /><figcaption><b>Sable</b><span>Espionne · sondes et anomalies</span></figcaption></figure>
+      <figure style="--oc:#5ef2b0"><img src="/assets/commanders/steward.webp" alt="Oswin Tarr" loading="lazy" /><figcaption><b>Oswin Tarr</b><span>Intendant · production</span></figcaption></figure>
+    </div>
+    <p class="icons-sub">Reliques</p>
+    <div class="relics" id="relics"></div>
+    <p class="icons-sub">Labo de synthèse et capsules</p>
+    <div class="capsules">
+      <figure class="lab"><img src="/bible/art/labo_synthese.webp" alt="Labo de synthèse" loading="lazy" /><b>Labo de synthèse</b><span>10 niveaux · 5 % par niveau</span></figure>
+      <figure style="--cc:#ff7a45"><img src="/assets/capsules/assault.webp" alt="" loading="lazy" /><b>Stimulant</b><span>+ attaque, une attaque</span></figure>
+      <figure style="--cc:#4be8ff"><img src="/assets/capsules/armor.webp" alt="" loading="lazy" /><b>Carapace</b><span>+ défense, 12 h</span></figure>
+      <figure style="--cc:#a78bfa"><img src="/assets/capsules/decoy.webp" alt="" loading="lazy" /><b>Leurre</b><span>fausse flotte en approche</span></figure>
+      <figure style="--cc:#5ef2b0"><img src="/assets/capsules/veil.webp" alt="" loading="lazy" /><b>Voile</b><span>rapports d'espionnage faussés</span></figure>
     </div>
   </section>
 
@@ -614,7 +694,7 @@
   <section id="mobile">
     <div class="section-head">
       <div>
-        <p class="eyebrow">06 · Mobile</p>
+        <p class="eyebrow">07 · Mobile</p>
         <h2>Dans la poche</h2>
         <p class="lead">Barre d'onglets en bas, menu en grille, jauges compactes. Les mêmes panneaux, réorganisés pour le pouce.</p>
       </div>
@@ -624,8 +704,11 @@
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-batiments.webp" alt="Bâtiments mobile" loading="lazy" /></div><figcaption><b>Bâtiments</b></figcaption></figure>
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-unites.webp" alt="Unités mobile" loading="lazy" /></div><figcaption><b>Unités</b></figcaption></figure>
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-missions.webp" alt="Missions mobile" loading="lazy" /></div><figcaption><b>Missions</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-etat-major.webp" alt="État-major mobile" loading="lazy" /></div><figcaption><b>État-major</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-primes.webp" alt="Primes mobile" loading="lazy" /></div><figcaption><b>Primes</b></figcaption></figure>
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-menu.webp" alt="Menu mobile" loading="lazy" /></div><figcaption><b>Menu</b>Toutes les sections en grille.</figcaption></figure>
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-netrunner.webp" alt="Thème Netrunner sur mobile" loading="lazy" /></div><figcaption><b>Netrunner</b></figcaption></figure>
+      <figure><div class="frame"><img class="shotm" src="/bible/shots/m-holo.webp" alt="Thème Holo sur mobile" loading="lazy" /></div><figcaption><b>Holo</b></figcaption></figure>
       <figure><div class="frame"><img class="shotm" src="/bible/shots/m-maintenance.webp" alt="Maintenance sur mobile" loading="lazy" /></div><figcaption><b>Maintenance</b></figcaption></figure>
     </div>
   </section>
@@ -634,7 +717,7 @@
   <section id="rangs">
     <div class="section-head">
       <div>
-        <p class="eyebrow">07 · Rangs</p>
+        <p class="eyebrow">08 · Rangs</p>
         <h2>28 emblèmes de progression</h2>
         <p class="lead">Dix familles, de Fer à Élite. Chaque emblème gagne en matière, en lumière et en ornements ; les seuils d'XP s'écartent à mesure qu'on monte.</p>
       </div>
@@ -646,7 +729,7 @@
   <section id="icones">
     <div class="section-head">
       <div>
-        <p class="eyebrow">08 · Icônes</p>
+        <p class="eyebrow">09 · Icônes</p>
         <h2>Objets plutôt qu'emojis</h2>
         <p class="lead">28 illustrations en vue trois-quarts, détourées, lisibles de 20 à 64 px. Elles remplacent les emojis dans tout le jeu.</p>
       </div>
@@ -661,9 +744,9 @@
   <section id="univers">
     <div class="section-head">
       <div>
-        <p class="eyebrow">09 · Univers</p>
+        <p class="eyebrow">10 · Univers</p>
         <h2>Factions, flotte, infrastructures</h2>
-        <p class="lead">Les antagonistes ont un visage, la flotte et les bâtiments une matière. Les cadres de succès montent en prestige du bronze au légendaire.</p>
+        <p class="lead">Six factions hostiles et un allié ont un visage, la flotte et les bâtiments une matière (illustrations de production). Les cadres de succès montent en prestige du bronze au légendaire.</p>
       </div>
     </div>
     <div class="factions">
@@ -671,7 +754,10 @@
       <figure class="faction" style="--fc:#ffd86b"><img src="/assets/story/gravhorn.webp" alt="" loading="lazy" /><div><b>Syndicat Gravhorn</b><span>Oggrath le Pisteur · chasse les agresseurs</span></div></figure>
       <figure class="faction" style="--fc:#e2e8f0"><img src="/assets/story/inquisition.webp" alt="" loading="lazy" /><div><b>Inquisition de l'Aube Blanche</b><span>Haut-Juge Séraphin Vol · traque le savoir</span></div></figure>
       <figure class="faction" style="--fc:#ff5df0"><img src="/assets/story/cartel.webp" alt="" loading="lazy" /><div><b>Cartel Néon</b><span>Madame Vashti Kor · flaire les coffres pleins</span></div></figure>
-      <figure class="faction" style="--fc:#4aff9c"><img src="/assets/story/meute.webp" alt="" loading="lazy" /><div><b>Meute d'Ysgrim</b><span>Ysgrim Crocs-de-Fer · chasse les ambitieux</span></div></figure>
+      <figure class="faction" style="--fc:#ff7a45"><img src="/assets/story/meute.webp" alt="" loading="lazy" /><div><b>Meute d'Ysgrim</b><span>Ysgrim Crocs-de-Fer · chasse les ambitieux</span></div></figure>
+      <figure class="faction" style="--fc:#4aff9c"><img src="/assets/story/choeur.webp" alt="" loading="lazy" /><div><b>Le Chœur Silencieux</b><span>L'Archonte Vesper · traque les singularités</span></div></figure>
+      <figure class="faction" style="--fc:#ffd86b"><img src="/assets/bounties/vashka.webp" alt="" loading="lazy" style="object-position: center 20%" /><div><b>Essaim Kesh'Vaar</b><span>Vashka, Matriarche-Chasseuse · alliée, paie en Ambre</span></div></figure>
+      <figure class="faction" style="--fc:#ff5d6c"><img src="/assets/leviathan/leviathan-portrait.webp" alt="" loading="lazy" /><div><b>Le Léviathan</b><span>Boss mondial · un mois sur deux</span></div></figure>
     </div>
     <div class="medals">
       <figure class="panel"><img src="/assets/achievements/bronze.webp" alt="" loading="lazy" /><figcaption><b>Bronze</b>Premiers pas</figcaption></figure>
@@ -686,7 +772,7 @@
   <section id="coulisses">
     <div class="section-head">
       <div>
-        <p class="eyebrow">10 · Coulisses</p>
+        <p class="eyebrow">11 · Coulisses</p>
         <h2>Maintenance, support, administration</h2>
         <p class="lead">Les écrans que les joueurs voient rarement, soignés comme les autres : une page d'attente illustrée et animée, un espace de signalement, une console pour l'équipe.</p>
       </div>
@@ -703,8 +789,8 @@
 </main>
 
 <footer>
-  <span>Cosmic Empires · bible visuelle · v2.7.0</span>
-  <span>Captures réalisées sur le jeu réel, thème Tactique sauf mention</span>
+  <span>Cosmic Empires · bible visuelle · v4.0.0</span>
+  <span>Captures du jeu réel (v4.0) avec le contenu et les illustrations de production, sur un monde de démonstration · thème Tactique sauf mention</span>
 </footer>
 
 <dialog id="viewer" aria-label="Capture agrandie">
@@ -748,13 +834,24 @@
   document.getElementById("icons-res").innerHTML = RES.map(tile).join("");
   document.getElementById("icons-ui").innerHTML = UI.map(tile).join("");
 
+  // Illustrations de production (contenu personnalisé dans l'administration).
   const ART = [
-    "/assets/units/drone_recuperateur", "/assets/units/sonde_espionnage", "/assets/units/fregate", "/assets/units/cargo", "/assets/units/roquette", "/assets/units/chasseur", "/assets/units/sentinelle", "/assets/units/batterie_aa",
-    "/assets/units/canon_impulsion", "/assets/units/canon_plasma", "/assets/units/intercepteur", "/assets/units/etoile_noire",
-    "/assets/buildings/extracteur_ferraille", "/assets/buildings/reacteur_instable", "/assets/buildings/extracteur_nanocomposants", "/assets/buildings/archives_fracturees",
-    "/assets/buildings/atelier_reparation", "/assets/buildings/hangar_attaque", "/assets/buildings/hangar_defense", "/assets/buildings/entrepot",
+    "drone_recuperateur", "sonde_espionnage", "fregate", "cargo", "chasseur", "intercepteur", "croiseur_nova", "etoile_noire", "lance_gravitationnelle", "traqueur_kesh",
+    "roquette", "sentinelle", "batterie_aa", "canon_impulsion", "canon_plasma",
+    "extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees", "atelier_reparation", "hangar_attaque", "hangar_defense", "entrepot",
+    "fonderie_quantique", "synthetiseur_neuronal", "generateur_bouclier", "labo_synthese",
+  ].map((id) => `/bible/art/${id}`);
+  document.getElementById("gallery").innerHTML = ART.map((p) => `<img src="${p}.webp" alt="${p.split("/").pop().replace(/_/g, " ")}" loading="lazy" />`).join("");
+
+  const RELICS = [
+    ["engrenage_varan", "Engrenage de Varan", "attaque"], ["ecaille_leviathan", "Écaille de Léviathan", "défense"], ["noyau_forge", "Noyau de forge", "construction"],
+    ["codex_aube", "Codex de l'Aube", "recherche"], ["matrice_reparation", "Matrice de réparation", "réparation"], ["soute_pliee", "Soute pliée", "soute"],
+    ["oeil_vesper", "Œil de Vesper", "espionnage"], ["racine_ferraille", "Racine de ferraille", "ferraille"], ["cellule_stellaire", "Cellule stellaire", "énergie"],
+    ["essaim_nanites", "Essaim de nanites", "nanocomposants"], ["cristal_memoriel", "Cristal mémoriel", "données"],
+    ["couronne_essaim", "Couronne de l'Essaim", "légendaire"], ["egide_reine", "Égide de la Reine", "légendaire"],
   ];
-  document.getElementById("gallery").innerHTML = ART.map((p) => `<img src="${p}.webp" alt="${p.split("/")[1].replace(/_/g, " ")}" loading="lazy" />`).join("");
+  document.getElementById("relics").innerHTML = RELICS.map(([id, name, use]) =>
+    `<figure style="--rc:${use === "légendaire" ? "#ffd86b" : "#4be8ff"}"><img src="/assets/relics/${id}.webp" alt="" loading="lazy" /><b>${name}</b><span>${use}</span></figure>`).join("");
 
   // Thèmes : onglets
   const themeImg = document.getElementById("theme-img");

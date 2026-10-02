@@ -231,6 +231,31 @@ export const DEFAULT_BUILDINGS: BuildingDef[] = [
   },
 ];
 
+/** v4.0 : Labo de synthèse (capsules, voir synthesis.ts). Toujours présent,
+ *  même si la liste des bâtiments a été personnalisée avant son arrivée ;
+ *  hors condition d'Ascension et conservé à l'Ascension. */
+export const SYNTH_BUILDING_ID = "labo_synthese";
+export const SYNTH_BUILDING: BuildingDef = {
+  id: SYNTH_BUILDING_ID,
+  name: "Labo de synthèse",
+  description: "Des cuves bouillonnantes où mûrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
+  image: "/assets/buildings/labo_synthese.webp",
+  maxLevel: 10,
+  endgame: true,
+  unlockCost: { scrap: 1_500_000, energy: 800_000, data: 300_000 },
+  upgrade: {
+    baseCost: { scrap: 400_000, energy: 250_000, data: 100_000 },
+    maxCost: { scrap: 150_000_000, energy: 90_000_000, data: 40_000_000 },
+    costFromLevel: 2,
+    secondsPerLevel: 5_400,
+  },
+};
+DEFAULT_BUILDINGS.push(SYNTH_BUILDING);
+
+export function withFixedBuildings(defs: BuildingDef[]): BuildingDef[] {
+  return defs.some((b) => b.id === SYNTH_BUILDING_ID) ? defs : [...defs, SYNTH_BUILDING];
+}
+
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */
 
 export const BUILDINGS: BuildingDef[] = [];

@@ -1,4 +1,7 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
@@ -332,10 +335,10 @@ export function resolveBountyHunt(
   const fx = formationEffects(formation);
   const combat = resolveCombat({
     ...fx,
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
-    attackerRepairPct: getRepairPercent(player.buildings),
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
     defenderUnits: {},
     defenderTechLevels: {},
@@ -361,6 +364,7 @@ export function resolveBountyHunt(
     st.board = st.board.filter((c) => c.id !== contractId);
     applyXpDelta(player, xp, now);
     bumpStat(player, "bounties");
+    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(note(`${fugitive.name} capturé !`, `Prime « ${t.label} » remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
     const rankAfter = bountyRank(st.reputation);
@@ -424,7 +428,7 @@ function note(title: string, message: string, now: number): NewNotification {
 
 /* ---------- Comptoir de la Ruche ---------- */
 
-export type ShopItemId = "accelerator" | "boost" | "jammer" | "beacon" | "shield" | "blueprint" | "title" | "frame" | "emblem" | "emojis";
+export type ShopItemId = "accelerator" | "boost" | "jammer" | "beacon" | "shield" | "dossier" | "blueprint" | "title" | "frame" | "emblem" | "emojis";
 
 export interface ShopItem {
   id: ShopItemId;
@@ -450,6 +454,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage reçu échoue : les sondes rentrent sans rapport. 3 en réserve au plus." },
   { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ramène aussitôt une flotte en vol à la base, avec sa cargaison. 3 en réserve au plus." },
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le lève." },
+  { id: "dossier", name: "Dossier d'entraînement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, même hors poste (page Commandants)." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre les PNJ." },
   { id: "title", name: "Titre « Chasseur de l'Essaim »", price: 120, group: "cosmetic", description: "Un titre à afficher à côté de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambré autour de ta fiche publique." },
@@ -516,6 +521,10 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
       st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR;
       st.shieldBoughtAtMs = now;
       message = "Voile de chitine actif pendant 6 h.";
+      break;
+    case "dossier":
+      addDossiers(player, 1);
+      message = "Dossier d'entraînement rangé : remets-le à un officier depuis la page Commandants.";
       break;
     case "blueprint":
       player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: player.units[KESH_HUNTER_UNIT.id]?.count ?? 0 };
@@ -716,11 +725,11 @@ export function resolveEliteAssault(
 ): { state: EliteHunt; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
   const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
   );
   const active = eliteActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = getRepairPercent(player.buildings);
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};
@@ -769,7 +778,7 @@ export function eliteRewardees(state: EliteHunt): string[] {
 }
 
 /** Récompense d'un participant (appliquée à `player`). */
-export function grantEliteReward(state: EliteHunt, player: PlayerState, now: number): { xp: number; amber: number } {
+export function grantEliteReward(state: EliteHunt, player: PlayerState, now: number, random: () => number = Math.random): { xp: number; amber: number; relic?: string } {
   if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
   const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
   const st = bountyState(player);
@@ -778,6 +787,11 @@ export function grantEliteReward(state: EliteHunt, player: PlayerState, now: num
   st.reputation += r.rep;
   player.bounties = st;
   applyXpDelta(player, r.xp, now);
+  // v4.0 : proie abattue, une relique rare au moins pour chaque chasseur récompensé.
+  if (state.status === "killed") {
+    const item = rollRelic("elite", now, random, "rare");
+    if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
+  }
   return { xp: r.xp, amber: r.amber };
 }
 
@@ -785,11 +799,13 @@ export function describeElite(state: EliteHunt): Fugitive {
   return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
 }
 
-export function eliteNotice(state: EliteHunt, reward: { xp: number; amber: number }, now: number): NewNotification {
+export function eliteNotice(state: EliteHunt, reward: { xp: number; amber: number; relic?: string }, now: number): NewNotification {
   const f = describeElite(state);
   return note(
     state.status === "killed" ? `${f.name} est tombé` : `${f.name} s'est enfui`,
-    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.` : "Ta part des dégâts était trop faible pour une récompense.",
+    reward.amber > 0
+      ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}`
+      : "Ta part des dégâts était trop faible pour une récompense.",
     now,
   );
 }

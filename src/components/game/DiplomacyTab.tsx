@@ -10,7 +10,8 @@ import { IconSelect } from "@/components/ui/icon-select";
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { subscribeAlliances } from "@/services/allianceService";
-import { diplomacy, subscribePactMessages, subscribePacts, type PactMessage } from "@/services/diplomacyService";
+import { diplomacy, markPactRead, subscribePactMessages, subscribePacts, usePactUnreadStore, type PactMessage } from "@/services/diplomacyService";
+import { useSearchParams } from "react-router-dom";
 import { DIPLOMACY_RULES, involves, pactOpen, pactStatusAt, type AlliancePact } from "@/game/diplomacy";
 import { cn, formatDuration, timeAgo } from "@/lib/utils";
 import type { Alliance } from "@/types/game";
@@ -27,6 +28,8 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => subscribePactMessages(pact.id, setMessages), [pact.id]);
+  // Canal ouvert : tout ce qui s'y affiche est lu.
+  useEffect(() => markPactRead(uid, pact.id), [uid, pact.id, messages.length]);
   useEffect(() => bottom.current?.scrollIntoView({ block: "end" }), [messages.length]);
 
   const send = async () => {
@@ -75,8 +78,9 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
   );
 }
 
-function PactCard({ pact, own, uid, canLead }: { pact: AlliancePact; own: Alliance; uid: string; canLead: boolean }) {
-  const [open, setOpen] = useState(false);
+function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: AlliancePact; own: Alliance; uid: string; canLead: boolean; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const unread = usePactUnreadStore((s) => s.unread[pact.id] ?? 0);
   const [busy, setBusy] = useState(false);
   const now = Date.now();
   const status = pactStatusAt(pact, now);
@@ -136,6 +140,7 @@ function PactCard({ pact, own, uid, canLead }: { pact: AlliancePact; own: Allian
           )}
           <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
             <MessagesSquare className="h-3.5 w-3.5" /> Canal
+            {unread > 0 && !open && <span className="ml-1 min-w-4 rounded-full bg-ember-glow px-1 text-[10px] font-bold leading-4 text-space-950">{unread}</span>}
           </Button>
         </div>
       </div>
@@ -157,6 +162,9 @@ export function DiplomacyTab({ alliance, uid, canLead }: { alliance: Alliance; u
   const [alliances, setAlliances] = useState<Alliance[]>([]);
   const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
+  // Lien d'une notification : ouvre directement le canal de ce pacte.
+  const [params] = useSearchParams();
+  const focusPact = params.get("pacte");
   useEffect(() => subscribePacts(setPacts), []);
   useEffect(() => subscribeAlliances(setAlliances), []);
   const now = Date.now();
@@ -207,7 +215,7 @@ export function DiplomacyTab({ alliance, uid, canLead }: { alliance: Alliance; u
           Propose un pacte à une alliance voisine pour sécuriser tes arrières.
         </EmptyState>
       ) : (
-        mine.map((p) => <PactCard key={p.id} pact={p} own={alliance} uid={uid} canLead={canLead} />)
+        mine.map((p) => <PactCard key={p.id} pact={p} own={alliance} uid={uid} canLead={canLead} initiallyOpen={p.id === focusPact} />)
       )}
     </div>
   );

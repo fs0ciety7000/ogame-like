@@ -6,7 +6,8 @@ import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
 import { allianceBastionBonus, allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor, upkeepFreeUntil } from "@/game/ascension";
-import type { Buildings, ResourceId, Resources, TechLevels, Units } from "@/types/game";
+import type { Buildings, PlayerState, ResourceId, Resources, TechLevels, Units } from "@/types/game";
+import { playerModifiers } from "@/game/modifiers";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
 /* =====================================================
@@ -46,6 +47,9 @@ export interface EconomyInput {
   ascendedAtMs?: number;
   /** v3.9 : Gelée de la Reine (production boostée jusqu'à boostUntilMs). */
   bounties?: { boostUntilMs?: number } | null;
+  /** v4.0 : officiers (Intendant) et reliques de production. */
+  commanders?: PlayerState["commanders"];
+  relics?: PlayerState["relics"];
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -58,6 +62,13 @@ function boostUntil(input: EconomyInput): number {
 
 function boostAt(input: EconomyInput, at: number): number {
   return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+}
+
+/** Capacité de l'entrepôt, Intendant en poste compris (v4.0). */
+export function storageCapacityOf(input: EconomyInput): number {
+  const base = getStorageCapacity(input.buildings, input.techLevels);
+  const bonus = input.commanders ? playerModifiers(input).storage : 0;
+  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
 }
 
 /** Énergie consommée par seconde par les unités construites. */
@@ -91,6 +102,14 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
   const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
+  // v4.0 : Intendant en poste et reliques de production.
+  if (input.commanders || input.relics) {
+    const mods = playerModifiers(input);
+    for (const res of Object.keys(gross) as ResourceId[]) {
+      const f = 1 + mods.productionAll + (mods.production[res] ?? 0);
+      if (f !== 1) gross[res] = (gross[res] ?? 0) * f;
+    }
+  }
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
   }
@@ -101,7 +120,7 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
   const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now), now === undefined ? 1 : boostAt(input, now));
   const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
-  const capacity = getStorageCapacity(input.buildings, input.techLevels);
+  const capacity = storageCapacityOf(input);
   const energyNet = (gross.energy ?? 0) - upkeep;
   const outage = energyNet < 0 && (input.resources.energy ?? 0) <= 0;
   const factor = outage ? ECONOMY_RULES.outageProductionFactor : 1;
@@ -157,7 +176,7 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
 
   const gross = boostedRates(input, multipliers, boost);
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
-  const capacity = getStorageCapacity(input.buildings, input.techLevels);
+  const capacity = storageCapacityOf(input);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
 
   // Énergie : production moins entretien. Si elle baisse, on calcule
