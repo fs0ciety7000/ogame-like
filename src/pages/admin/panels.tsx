@@ -669,6 +669,7 @@ export function PlayersPanel() {
   const [draft, setDraft] = useState<AdminPlayer | null>(null);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState("");
   const content = useMemo(() => currentGameContent(), []);
 
   const reload = async () => {
@@ -684,7 +685,13 @@ export function PlayersPanel() {
   useEffect(() => {
     const p = players.find((x) => x.id === selectedId);
     setDraft(p ? structuredClone(p) : null);
+    setReason("");
   }, [selectedId, players]);
+  // v3.5.1 : un motif est exigé dès que l'état de jeu du joueur change.
+  const original = players.find((x) => x.id === selectedId);
+  const gameStateChanged =
+    !!draft && !!original && (["xp", "seasonXp", "resources", "buildings", "units", "techLevels"] as const).some((f) => JSON.stringify(draft[f] ?? null) !== JSON.stringify(original[f] ?? null));
+  const reasonMissing = gameStateChanged && reason.trim().length < 5;
 
   const filtered = players.filter((p) => !search || p.pseudo?.toLowerCase().includes(search.toLowerCase()));
   const set = (patch: Partial<AdminPlayer>) => setDraft((d) => (d ? { ...d, ...patch } : d));
@@ -700,7 +707,7 @@ export function PlayersPanel() {
         buildings: draft.buildings,
         units: draft.units,
         techLevels: draft.techLevels,
-      });
+      }, reason.trim());
       toast.success(`${draft.pseudo} mis à jour.`);
       await reload();
     } catch (err) {
@@ -756,11 +763,17 @@ export function PlayersPanel() {
                 >
                   <Trash2 className="mr-1 h-3.5 w-3.5" /> Vider les files
                 </Button>
-                <Button size="sm" disabled={busy} onClick={() => void save()}>
+                <Button size="sm" disabled={busy || reasonMissing} onClick={() => void save()}>
                   <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer
                 </Button>
               </div>
             </div>
+            {gameStateChanged && (
+              <label className="flex flex-col gap-1 text-xs text-gold-glow">
+                Motif de la modification (obligatoire, consigné au journal)
+                <Input value={reason} maxLength={300} placeholder="Ex. : compensation du bug de flotte du 02/10" onChange={(e) => setReason(e.target.value)} className="h-8" />
+              </label>
+            )}
 
             <Section title="Expérience">
               <NumberField label="XP totale" value={draft.xp} min={0} step={1} onChange={(v) => set({ xp: v ?? 0 })} />

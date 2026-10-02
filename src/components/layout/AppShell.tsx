@@ -1,3 +1,4 @@
+import { useDirectorySync } from "@/store/directoryStore";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
@@ -103,6 +104,7 @@ export function AppShell() {
   const location = useLocation();
 
   useGameSync(user?.uid ?? null);
+  useDirectorySync(!!user);
   useRankCelebration(player);
   useAllianceUnread(user?.uid ?? null, player);
   useReportBadgeSync(user?.uid ?? null, isAdmin);

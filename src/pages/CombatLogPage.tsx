@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
@@ -52,7 +53,7 @@ export function CombatLogPage() {
         {reports.map((report, index) => {
           if (!uid) return null;
           const isAttacker = report.attackerUid === uid;
-          const opponent = isAttacker ? report.defenderPseudo : report.attackerPseudo;
+          const opponent = isAttacker ? <PlayerName uid={report.defenderUid} pseudo={report.defenderPseudo} /> : <PlayerName uid={report.attackerUid} pseudo={report.attackerPseudo} />;
           const result = outcomeForViewer(report.outcome, isAttacker);
           const myPower = isAttacker ? report.attackerPower : report.defenderPower;
           const opponentPower = isAttacker ? report.defenderPower : report.attackerPower;

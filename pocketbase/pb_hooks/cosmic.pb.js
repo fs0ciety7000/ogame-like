@@ -497,6 +497,8 @@ onRecordCreateRequest(
 onRecordUpdateRequest(
   (e) => {
     const db = require(`${__hooks}/cosmic_db.js`);
+    // v3.5.1 : motif obligatoire pour toute édition de l'état de jeu d'un joueur.
+    db.requireAdminReason(e);
     const before = Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record.original()));
     e.next();
     db.logAdminAction(e, "update", before, Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record)));

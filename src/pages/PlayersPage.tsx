@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -244,7 +245,7 @@ export function PlayersPage() {
                 <img src={getRankIcon(p.xp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
                 <div className="min-w-0">
                   <p className="hud-title flex items-center gap-1.5 text-[17px] normal-case tracking-[0.03em] text-white">
-                    <span className="truncate">{p.pseudo}</span>
+                    <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className="truncate" />
                     <AscensionStars count={p.ascensions} />
                     <StaffBadge uid={p.uid} />
                     {isProtected && (

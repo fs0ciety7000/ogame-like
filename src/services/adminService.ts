@@ -52,8 +52,8 @@ export async function adminListPlayers(): Promise<AdminPlayer[]> {
 }
 
 /** Modifie un profil joueur (ressources, niveaux, XP…). */
-export async function adminUpdatePlayer(id: string, patch: Partial<PlayerState>) {
-  const data: Partial<PlayerState> = { ...patch };
+export async function adminUpdatePlayer(id: string, patch: Partial<PlayerState>, reason = "") {
+  const data: Partial<PlayerState> & { adminReason?: string } = { ...patch, adminReason: reason };
   delete data.uid;
   await pb.collection("players").update(id, data);
 }
@@ -81,7 +81,7 @@ export async function adminResetAllXp(onProgress?: (done: number, total: number)
   const players = await pb.collection("players").getFullList({ fields: "id" });
   let done = 0;
   for (const p of players) {
-    await pb.collection("players").update(p.id, { xp: 0, seasonXp: 0 });
+    await pb.collection("players").update(p.id, { xp: 0, seasonXp: 0, adminReason: "Remise à zéro de l'XP de tous les joueurs" });
     onProgress?.(++done, players.length);
   }
   return players.length;
@@ -175,6 +175,8 @@ export interface AdminLogEntry {
   recordId: string;
   recordLabel: string;
   changes: Record<string, unknown>;
+  /** v3.5.1 : motif donné pour une édition de joueur. */
+  reason?: string;
   createdAtMs: number;
 }
 

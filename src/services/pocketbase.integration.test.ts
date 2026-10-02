@@ -13,7 +13,7 @@ import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
-import { checkIsAdmin } from "@/services/adminService";
+import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
@@ -369,6 +369,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("admins").delete(bId);
     }
   }, 30_000);
+
+  it("v3.5.1 a game admin needs a reason to edit a player's game state", async () => {
+    await admin.collection("admins").create({ id: bId, note: "test" });
+    const before = await snap(aId);
+    try {
+      await expect(adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 })).rejects.toMatchObject({ status: 400 });
+      await adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 }, "Compensation de test");
+      expect((await snap(aId)).xp).toBe((before.xp ?? 0) + 1);
+      const log = await admin.collection("admin_logs").getFirstListItem(`recordId="${aId}" && reason != ""`, { sort: "-createdAtMs" });
+      expect(log.reason).toBe("Compensation de test");
+      // Sans changement de l'état de jeu (pseudo inchangé…), pas de motif requis.
+      await adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 });
+    } finally {
+      await admin.collection("players").update(aId, { xp: before.xp });
+      await admin.collection("admins").delete(bId);
+    }
+  });
 
   it("admin routes exist (statistics, season closing)", async () => {
     const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
@@ -1135,20 +1152,26 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const now = Date.now();
     const scan = await admin.collection("game_config").getFirstListItem('key="anomaly_scan"').catch(() => null);
     if (scan) await admin.collection("game_config").delete(scan.id);
+    const cleanupLogs: string[] = [];
     const base = { ...before!.resources };
     const jumped = { ...base, reinforcedSteel: (base.reinforcedSteel ?? 0) + 900_000_000 };
     try {
       await admin.collection("players").update(bId, { resources: jumped, resourcesUpdatedAtMs: now - 60_000, resourceHistory: [{ t: now - 3600_000, r: base }] });
+      const edit = await admin.collection("admin_logs").create({ actorId: "x", actorName: "Testeur", action: "update", targetCollection: "players", recordId: bId, recordLabel: "B", changes: { resources: { avant: 1, après: 2 } }, reason: "essai", createdAtMs: now - 90_000 });
+      cleanupLogs.push(edit.id);
       await expect(pb.send("/api/cosmic/admin/anomalies", { method: "POST" })).rejects.toMatchObject({ status: 403 });
       const res = await admin.send("/api/cosmic/admin/anomalies", { method: "POST" });
       expect(res.alerts).toBeGreaterThanOrEqual(1);
       const report = await admin.collection("reports").getFirstListItem(`autoKey="anomaly:${bId}"`);
       expect(report.category).toBe("account");
       expect(report.description).toMatch(/Acier renforcé \+900/);
+      expect(report.description).toMatch(/Édition admin par Testeur .* motif : essai/);
+      expect(report.title).toMatch(/édition admin/);
       expect((await admin.send("/api/cosmic/admin/anomalies", { method: "POST" })).alerts).toBe(0); // déjà analysé
     } finally {
       const reports = await admin.collection("reports").getFullList({ filter: `autoKey="anomaly:${bId}"` });
       for (const r of reports) await admin.collection("reports").delete(r.id);
+      for (const id of cleanupLogs) await admin.collection("admin_logs").delete(id).catch(() => undefined);
       await admin.collection("players").update(bId, { resources: before!.resources, resourceHistory: before!.resourceHistory ?? [] });
     }
   }, 60_000);

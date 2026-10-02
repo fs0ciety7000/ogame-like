@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
@@ -40,7 +41,7 @@ function Podium({ results, uid }: { results: SeasonResult[]; uid?: string }) {
             className="flex flex-col items-center gap-1 text-center"
           >
             <Icon className={cn("h-5 w-5", style.color)} />
-            <p className={cn("max-w-full truncate text-sm font-semibold", r.uid === uid ? "text-gold-glow" : "text-slate-100")}>{r.pseudo}</p>
+            <p className={cn("max-w-full truncate text-sm font-semibold", r.uid === uid ? "text-gold-glow" : "text-slate-100")}><PlayerName uid={r.uid} pseudo={r.pseudo} /></p>
             <p className="tabular-mono text-[11px] text-slate-400">{formatNumber(r.seasonXp)} XP</p>
             <div className={cn("flex w-full items-start justify-center rounded-t-lg border pt-1 font-display text-lg", style.ring, style.height, style.color)}>
               {r.rank}
@@ -122,7 +123,7 @@ export function HallOfFamePage() {
                 <span className={cn("hud-title w-8 text-lg tabular-nums", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[#e19b6d]" : "text-slate-600")}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")}>{p.pseudo}</span>
+                <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")} />
                 <StaffBadge uid={p.uid} compact />
                 <span className="tabular-mono ml-auto text-xs text-slate-400">{formatNumber(p.sxp)} XP</span>
               </li>
@@ -190,7 +191,7 @@ export function HallOfFamePage() {
                 {list.slice(3, 10).map((r) => (
                   <li key={r.id} className="flex items-center gap-2">
                     <span className="tabular-mono w-6 text-xs text-slate-500">#{r.rank}</span>
-                    <span className={r.uid === uid ? "text-gold-glow" : "text-slate-200"}>{r.pseudo}</span>
+                    <PlayerName uid={r.uid} pseudo={r.pseudo} className={r.uid === uid ? "text-gold-glow" : "text-slate-200"} />
                     <span className="tabular-mono ml-auto text-xs text-slate-400">{formatNumber(r.seasonXp)} XP</span>
                   </li>
                 ))}

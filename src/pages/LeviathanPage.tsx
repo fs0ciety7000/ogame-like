@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Crosshair, Skull, Trophy } from "lucide-react";
@@ -99,7 +100,7 @@ function Ranking({ state, uid }: { state: LeviathanState; uid: string }) {
         <li key={c.uid} className={cn("grid grid-cols-[2rem_1fr_auto] items-center gap-2 text-sm", c.uid === uid && "text-cyan-glow")}>
           <span className="font-mono text-xs text-slate-500">#{i + 1}</span>
           <span className="min-w-0">
-            <span className="block truncate">{c.pseudo}</span>
+            <PlayerName uid={c.uid} pseudo={c.pseudo} className="block truncate" />
             <span className="mt-0.5 block h-1 bg-white/5">
               <i className="block h-full bg-ember-glow" style={{ width: `${(c.damage / top) * 100}%` }} />
             </span>
