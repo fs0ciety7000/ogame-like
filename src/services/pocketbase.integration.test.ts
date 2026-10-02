@@ -1995,6 +1995,33 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(sheet.feats).toMatchObject({ victories: 3, missions: 5, warsWon: 1 });
   });
 
+  it("v4.9: build plan starts after the running upgrade, alliance daily objective proposed, voted and started", async () => {
+    // File planifiée : programmée derrière le chantier en cours.
+    await loginPlayer(B.email, B.pw);
+    await admin.collection("players").update(bId, { resources: RICH, vacation: null });
+    const q = await admin.collection("queues").getOne(bId);
+    await admin.collection("queues").update(bId, { buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] }, activeMissions: q.activeMissions ?? [], buildPlan: [] });
+    await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
+    await ps.planBuilding("extracteur_ferraille");
+    const plan = (await admin.collection("queues").getOne(bId)).buildPlan;
+    expect(plan).toHaveLength(1);
+    await ps.unplanBuilding(0);
+    expect((await admin.collection("queues").getOne(bId)).buildPlan).toHaveLength(0);
+
+    // Objectif du jour : propositions à 8 h (Paris), vote du fondateur, lancement à 11 h.
+    const day = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
+    const at = (h: number) => Date.parse(`${day}T${String(h - 2).padStart(2, "0")}:30:00Z`);
+    await admin.collection("alliances").update(allianceId, { daily: null });
+    await admin.send("/api/cosmic/admin/alliance-daily", { method: "POST", body: { now: at(8) } });
+    let daily = (await admin.collection("alliances").getOne(allianceId)).daily;
+    expect(daily.status).toBe("voting");
+    expect(daily.proposals).toHaveLength(3);
+    await admin.send("/api/cosmic/admin/alliance-daily", { method: "POST", body: { now: at(11) } });
+    daily = (await admin.collection("alliances").getOne(allianceId)).daily;
+    expect(daily.status === "active" || daily.status === "done").toBe(true);
+    expect(daily.chosen).toBe(0);
+  });
+
   it("v4.8: codex title refused below 100 %, filled trades and npc opponents readable", async () => {
     await loginPlayer(B.email, B.pw);
     await expect(pb.send("/api/cosmic/codex/claim", { method: "POST", body: {} })).rejects.toMatchObject({ status: 400 });

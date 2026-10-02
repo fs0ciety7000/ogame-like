@@ -844,6 +844,13 @@
         "type": "json",
         "required": false,
         "maxSize": 200000
+      },
+      {
+        "name": "daily",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "id": "json4900000002"
       }
     ],
     "indexes": [

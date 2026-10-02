@@ -721,3 +721,24 @@ routerAdd("POST", "/api/cosmic/admin/deploy", (e) => {
   console.log(`[cosmic] déploiement ${report.ref} : sauvegarde ${report.backup}, ${report.schema} collections, ${report.profiles} fiches, hooks ${report.hooks ? report.hooks.updated.join(",") || "inchangés" : "—"}${report.errors.length ? `, erreurs : ${report.errors.join(" ; ")}` : ""}`);
   return e.json(report.errors.length > 0 ? 500 : 200, report);
 });
+
+/* ---------- v4.9 : objectifs du jour d'alliance ---------- */
+
+cronAdd("cosmic_alliancedaily", "*/10 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).allianceDailyTick(Date.now());
+    if (n > 0) console.log(`[cosmic] objectifs du jour : ${n} alliance(s) mise(s) à jour`);
+  } catch (err) {
+    console.log(`[cosmic] objectifs du jour : ${err}`);
+  }
+});
+
+routerAdd("POST", "/api/cosmic/alliance/daily", (e) => require(`${__hooks}/cosmic_db.js`).allianceDailyVote(e), $apis.requireAuth("users"));
+
+/** POST /api/cosmic/admin/alliance-daily { now? } : passe de la tâche à la demande (administration, tests). */
+routerAdd("POST", "/api/cosmic/admin/alliance-daily", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const now = Number((db.body(e) || {}).now) || Date.now();
+  return e.json(200, { changed: db.allianceDailyTick(now) });
+});

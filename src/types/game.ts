@@ -269,7 +269,8 @@ export interface Alliance {
   memberPseudos: Record<string, string>;
   /** Officiers explicitement promus ; le fondateur (createdBy) n'y figure
    *  pas et quiconque d'autre est un simple membre par défaut. */
-  roles?: Record<string, "officer">;
+  /** v4.9 : « diplomat » (pactes et guerres, 2 au plus). */
+  roles?: Record<string, "officer" | "diplomat">;
   /** v1.9 : trésor commun, recherches et limite de versements du jour. */
   treasury?: Partial<Record<ResourceId, number>>;
   research?: Record<string, number>;
@@ -281,6 +282,8 @@ export interface Alliance {
   projectContributors?: Record<string, number>;
   /** v4.6 : boss d'alliance de la semaine (état du moteur du Léviathan). */
   boss?: unknown;
+  /** v4.9 : objectif du jour (propositions, vote, progression). */
+  daily?: unknown;
 }
 
 export interface AllianceLog {

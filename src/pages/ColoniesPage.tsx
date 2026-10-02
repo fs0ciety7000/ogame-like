@@ -443,6 +443,16 @@ function FoundColony({ player }: { player: PlayerState }) {
           <Rocket className="mr-1.5 h-4 w-4" /> Lancer le vaisseau colonial
         </Button>
       </div>
+      {/* v4.9 : ce qui bloque, dit clairement. */}
+      {(!ready || !affordable || !!player.colonizing) && (
+        <p className="text-xs text-ember-glow">
+          {player.colonizing
+            ? "Un vaisseau colonial est déjà en route."
+            : !ready
+              ? `Il manque ${next.levels - levels} niveau${next.levels - levels > 1 ? "x" : ""} de bâtiments (hors fin de partie) sur ta planète mère : extracteurs, réacteur, entrepôt, hangars, archives ou atelier.`
+              : "Ressources insuffisantes pour le vaisseau colonial."}
+        </p>
+      )}
     </Card>
   );
 }

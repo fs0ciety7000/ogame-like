@@ -47,6 +47,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
+  ALLIANCE_DAILY_RULES: () => ALLIANCE_DAILY_RULES,
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
@@ -98,6 +99,7 @@ __export(hooksEntry_exports, {
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceNextDueMs: () => allianceNextDueMs,
+  allianceRole: () => allianceRole,
   allianceStandings: () => allianceStandings,
   anomalyChance: () => anomalyChance,
   answerPact: () => answerPact,
@@ -148,6 +150,9 @@ __export(hooksEntry_exports, {
   consumeJammer: () => consumeJammer,
   createOffer: () => createOffer,
   currentSeasonId: () => currentSeasonId,
+  dailyMemberOf: () => dailyMemberOf,
+  dailyPhase: () => dailyPhase,
+  dailyTreasuryBonus: () => dailyTreasuryBonus,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
   defaultQueues: () => defaultQueues,
@@ -215,6 +220,7 @@ __export(hooksEntry_exports, {
   onVacation: () => onVacation,
   openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
+  parisDay: () => parisDay,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -228,11 +234,14 @@ __export(hooksEntry_exports, {
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
+  previousSummary: () => previousSummary,
   productionHours: () => productionHours,
+  proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
   readCoalitions: () => readCoalitions,
+  readDaily: () => readDaily,
   recallFleet: () => recallFleet,
   recordCoalitionDamage: () => recordCoalitionDamage,
   recordDecoy: () => recordDecoy,
@@ -272,14 +281,17 @@ __export(hooksEntry_exports, {
   spawnLeviathan: () => spawnLeviathan,
   spawnSeasonBoss: () => spawnSeasonBoss,
   startChallenge: () => startChallenge,
+  startDaily: () => startDaily,
   startVacation: () => startVacation,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   tutorialRaidPower: () => tutorialRaidPower,
   unitsAwayOf: () => unitsAwayOf,
+  updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
   vendettaTitle: () => vendettaTitle,
   vendettaWinners: () => vendettaWinners,
+  voteDaily: () => voteDaily,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
   warlordByUid: () => warlordByUid,
@@ -1664,6 +1676,10 @@ var ALLIANCE_RULES = {
     { id: "bastion", name: "Bastion f\xE9d\xE9ral", emoji: "\u{1F3F0}", description: "Met \xE0 l'abri du pillage une part suppl\xE9mentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5 }
   ]
 };
+var MAX_DIPLOMATS = 2;
+function canDiplomacy(role) {
+  return role === "founder" || role === "officer" || role === "diplomat";
+}
 var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
 function findAllianceResearch(id) {
   return ALLIANCE_RULES.researches.find((r) => r.id === id);
@@ -1672,7 +1688,8 @@ function allianceRole(alliance, uid) {
   var _a, _b;
   if (!((_a = alliance.members) == null ? void 0 : _a.includes(uid))) return null;
   if (alliance.createdBy === uid) return "founder";
-  return ((_b = alliance.roles) == null ? void 0 : _b[uid]) === "officer" ? "officer" : "member";
+  const r = (_b = alliance.roles) == null ? void 0 : _b[uid];
+  return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
 }
 function level(levels, id) {
   var _a;
@@ -1763,12 +1780,19 @@ function kickMember(alliance, actorUid, targetUid) {
   return removeMember(alliance, targetUid);
 }
 function setOfficer(alliance, actorUid, targetUid, officer) {
+  return setRole(alliance, actorUid, targetUid, officer ? "officer" : "member");
+}
+function setRole(alliance, actorUid, targetUid, role) {
   var _a;
-  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les officiers.");
+  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les r\xF4les.");
   if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de r\xF4le.");
+  if (role !== "officer" && role !== "diplomat" && role !== "member") throw new GameActionError("R\xF4le inconnu.");
   const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
-  if (officer) roles[targetUid] = "officer";
-  else delete roles[targetUid];
+  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= MAX_DIPLOMATS) {
+    throw new GameActionError(`${MAX_DIPLOMATS} diplomates au plus par alliance.`);
+  }
+  if (role === "member") delete roles[targetUid];
+  else roles[targetUid] = role;
   return __spreadProps(__spreadValues({}, alliance), { roles });
 }
 function parseAmounts(raw) {
@@ -1885,7 +1909,7 @@ function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
   if (!def3) throw new GameActionError("Projet inconnu.");
   const role = allianceRole(alliance, actor.uid);
   if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  if (source === "treasury" && role === "member") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le tr\xE9sor.");
+  if (source === "treasury" && role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le tr\xE9sor.");
   const state = projectState(alliance, def3.id);
   if (state.buildEndMs > 0) throw new GameActionError("Ce palier est d\xE9j\xE0 en construction.");
   const next = state.level + 1;
@@ -1963,7 +1987,7 @@ function note(title, message, now) {
   return { kind: "alliance", title, message, createdAtMs: now, read: false };
 }
 function performAllianceAction(input) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h;
   const { action, now, actor } = input;
   const alliance = input.alliance;
   const out = { alliance, actor, target: (_a = input.target) != null ? _a : null, memberships: {}, logs: [], notifications: {} };
@@ -2010,6 +2034,11 @@ function performAllianceAction(input) {
       out.alliance = setOfficer(alliance, actor.uid, String((_d = action.targetUid) != null ? _d : ""), action.type === "promote");
       return out;
     }
+    case "setRole": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setRole(alliance, actor.uid, String((_e = action.targetUid) != null ? _e : ""), action.role);
+      return out;
+    }
     case "deposit": {
       if (!alliance) throw new GameActionError("Alliance introuvable.");
       const amounts = parseAmounts(action.resources);
@@ -2024,14 +2053,14 @@ function performAllianceAction(input) {
       if (!target || target.uid !== action.targetUid) throw new GameActionError("Ce joueur est introuvable.");
       const amounts = parseAmounts(action.resources);
       out.alliance = distribute(alliance, actor.uid, target.uid, amounts, now);
-      for (const [res, amount2] of Object.entries(amounts)) target.resources[res] = ((_e = target.resources[res]) != null ? _e : 0) + amount2;
+      for (const [res, amount2] of Object.entries(amounts)) target.resources[res] = ((_f = target.resources[res]) != null ? _f : 0) + amount2;
       out.notifications[target.uid] = [note("Versement du tr\xE9sor", `${actor.pseudo} t'a vers\xE9 des ressources du tr\xE9sor de l'alliance.`, now)];
       log({ kind: "distribute", targetUid: target.uid, targetPseudo: target.pseudo, resources: amounts });
       return out;
     }
     case "research": {
       if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const started = startAllianceResearch(alliance, actor.uid, String((_f = action.researchId) != null ? _f : ""), now);
+      const started = startAllianceResearch(alliance, actor.uid, String((_g = action.researchId) != null ? _g : ""), now);
       out.alliance = started;
       const def3 = findAllianceResearch(started.activeResearch.id);
       log({ kind: "research", text: `${def3.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
@@ -2040,7 +2069,7 @@ function performAllianceAction(input) {
     case "project": {
       if (!alliance) throw new GameActionError("Alliance introuvable.");
       const source = action.source === "treasury" ? "treasury" : "self";
-      const res = fundAllianceProject(alliance, actor, String((_g = action.projectId) != null ? _g : ""), source, parseAmounts(action.resources), now);
+      const res = fundAllianceProject(alliance, actor, String((_h = action.projectId) != null ? _h : ""), source, parseAmounts(action.resources), now);
       out.alliance = res.alliance;
       const def3 = findAllianceProject(String(action.projectId));
       const next = projectState(alliance, def3.id).level + 1;
@@ -5264,7 +5293,9 @@ var PASS_POINTS = {
   allianceBoss: 40,
   allianceBossTry: 15,
   /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
-  coalition: 50
+  coalition: 50,
+  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
+  allianceDaily: 15
 };
 var PASS_TIERS = [
   [{ kind: "production", hours: 2 }],
@@ -6718,7 +6749,7 @@ function declareWar(input) {
   var _a, _b, _c, _d, _e, _f;
   const { own, target, now } = input;
   const role = allianceRole(own, input.actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent d\xE9clarer une guerre.");
+  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent d\xE9clarer une guerre.");
   if (own.id === target.id) throw new GameActionError("Tu ne peux pas d\xE9clarer la guerre \xE0 ta propre alliance.");
   if (((_a = target.members) != null ? _a : []).length < WAR_RULES.minMembers) throw new GameActionError(`Cette alliance compte moins de ${WAR_RULES.minMembers} membres.`);
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
@@ -6785,7 +6816,7 @@ function surrender(war, alliance, actorUid, actorPseudo, now) {
   if (!side) throw new GameActionError("Ton alliance ne participe pas \xE0 cette guerre.");
   if (!isRunning(war, now)) throw new GameActionError("Cette guerre est termin\xE9e.");
   const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent se rendre.");
+  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
   const winnerId = side === "attacker" ? war.defenderId : war.attackerId;
   return __spreadProps(__spreadValues({}, war), { status: "ended", winnerId, surrenderedBy: alliance.id, endedAtMs: now, log: [...war.log, { atMs: now, text: `${actorPseudo} rend les armes au nom de [${alliance.tag}].` }] });
 }
@@ -8291,6 +8322,8 @@ function performAttack(input) {
     }
     def3.resources[res] = Math.max(0, ((_u = def3.resources[res]) != null ? _u : 0) - (amt != null ? amt : 0));
   }
+  bumpStat(attacker, "powerDestroyed", Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels)));
+  bumpStat(def3, "powerDestroyed", Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels)));
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }
@@ -8387,6 +8420,13 @@ function performAttack(input) {
     loot: (_C = combat.loot) != null ? _C : {},
     debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_D = combat.garrisonLosses) != null ? _D : []], (_E = eventDebrisPercent(now)) != null ? _E : DEBRIS_RULES.percent)
   };
+}
+function lostPower(losses, units, techLevels2) {
+  const lost = Object.fromEntries(Object.entries(losses).filter(([, n]) => n > 0).map(([id, n]) => {
+    var _a, _b;
+    return [id, { level: (_b = (_a = units == null ? void 0 : units[id]) == null ? void 0 : _a.level) != null ? _b : 1, count: n }];
+  }));
+  return computeFullPower(lost, techLevels2 != null ? techLevels2 : {}, Object.keys(lost), ["attack", "defense"]);
 }
 
 // src/game/cancel.ts
@@ -8788,6 +8828,7 @@ function applyAction(s, action) {
       const paid = getTechCost(tech, nextLevel);
       pay(player, paid, now);
       queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3, startedAtMs: now, paid });
+      bumpStat(player, "researchStarted");
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
@@ -10050,7 +10091,7 @@ function bindingPactBetween(pacts, a, b, now) {
 }
 function assertLeader(alliance, uid, what) {
   const role = allianceRole(alliance, uid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError(`Seuls le fondateur et les officiers peuvent ${what}.`);
+  if (!canDiplomacy(role)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
 }
 function proposePact(input) {
   const { own, target, pacts, now } = input;
@@ -10534,6 +10575,127 @@ function grantCodexTitle(player, entries) {
   if (((_a = player.titles) != null ? _a : []).some((t) => t.label === CODEX_TITLE)) return false;
   player.titles = [...(_b = player.titles) != null ? _b : [], { label: CODEX_TITLE, seasonId: "codex", rank: 1 }];
   return true;
+}
+
+// src/game/allianceDaily.ts
+var ALLIANCE_DAILY_RULES = {
+  proposeHour: 6,
+  voteEndHour: 10,
+  /** Membre actif : connecté dans les 3 derniers jours. */
+  activeDays: 3,
+  treasuryHours: 4,
+  missionsPerMember: 4,
+  researchPerMember: 2,
+  powerPct: 0.02,
+  passPoints: 15,
+  rewardHours: 1,
+  treasuryPct: 0.1
+};
+var DAILY_KINDS = ["treasury", "missions", "power", "research"];
+var DAILY_STAT = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
+function dailyPhase(now) {
+  const h = parisHour(now);
+  if (h < ALLIANCE_DAILY_RULES.proposeHour) return "before";
+  return h < ALLIANCE_DAILY_RULES.voteEndHour ? "voting" : "active";
+}
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function proposeDaily(allianceId, day, members, now) {
+  var _a;
+  const R = ALLIANCE_DAILY_RULES;
+  const active = Math.max(1, members.filter((m) => m.active).length);
+  const resourceBase = {};
+  for (const m of members.filter((x) => x.active)) {
+    for (const [res, n] of Object.entries(m.production4h)) resourceBase[res] = ((_a = resourceBase[res]) != null ? _a : 0) + Math.round(n != null ? n : 0);
+  }
+  const treasuryTarget = Math.max(1e3, Object.values(resourceBase).reduce((a, b) => a + (b != null ? b : 0), 0));
+  const fleet = members.reduce((a, m) => a + m.fleetPower, 0);
+  const targets = {
+    treasury: treasuryTarget,
+    missions: R.missionsPerMember * active,
+    power: Math.max(500, Math.round(fleet * R.powerPct)),
+    research: R.researchPerMember * active
+  };
+  const skip = hash(`${allianceId}:${day}`) % DAILY_KINDS.length;
+  const proposals = DAILY_KINDS.filter((_, i) => i !== skip).map((kind) => ({ kind, target: targets[kind] }));
+  return { day, proposals, votes: {}, status: "voting", chosen: null, baseline: {}, progress: 0, contributions: {}, resourceBase, updatedAtMs: now };
+}
+function voteDaily(daily, uid, role, index, now) {
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers votent l'objectif du jour.");
+  if (daily.status !== "voting" || dailyPhase(now) !== "voting" || daily.day !== parisDay(now)) throw new GameActionError(`Le vote est ouvert de ${ALLIANCE_DAILY_RULES.proposeHour} h \xE0 ${ALLIANCE_DAILY_RULES.voteEndHour} h.`);
+  const i = Math.floor(Number(index));
+  if (!(i >= 0 && i < daily.proposals.length)) throw new GameActionError("Objectif inconnu.");
+  daily.votes = __spreadProps(__spreadValues({}, daily.votes), { [uid]: i });
+}
+function winningProposal(daily) {
+  const counts = daily.proposals.map((_, i) => Object.values(daily.votes).filter((v) => v === i).length);
+  let best = 0;
+  counts.forEach((c, i) => {
+    if (c > counts[best]) best = i;
+  });
+  return best;
+}
+function statOf(stats, kind) {
+  var _a;
+  return Number((_a = stats == null ? void 0 : stats[DAILY_STAT[kind]]) != null ? _a : 0) || 0;
+}
+function startDaily(daily, members, now) {
+  const chosen = winningProposal(daily);
+  const kind = daily.proposals[chosen].kind;
+  daily.chosen = chosen;
+  daily.status = "active";
+  daily.baseline = Object.fromEntries(members.map((m) => [m.uid, statOf(m.stats, kind)]));
+  daily.progress = 0;
+  daily.contributions = {};
+  daily.updatedAtMs = now;
+}
+function updateDailyProgress(daily, members, now) {
+  if (daily.status !== "active" || daily.chosen === null) return false;
+  const { kind, target } = daily.proposals[daily.chosen];
+  const contributions = {};
+  for (const m of members) {
+    if (daily.baseline[m.uid] === void 0) daily.baseline[m.uid] = statOf(m.stats, kind);
+    const delta = statOf(m.stats, kind) - daily.baseline[m.uid];
+    if (delta > 0) contributions[m.uid] = Math.round(delta);
+  }
+  daily.contributions = contributions;
+  daily.progress = Object.values(contributions).reduce((a, b) => a + b, 0);
+  daily.updatedAtMs = now;
+  if (daily.progress >= target) {
+    daily.status = "done";
+    daily.doneAtMs = now;
+    return true;
+  }
+  return false;
+}
+function dailyTreasuryBonus(daily) {
+  const out = {};
+  for (const [res, n] of Object.entries(daily.resourceBase)) {
+    const v = Math.floor((n != null ? n : 0) * ALLIANCE_DAILY_RULES.treasuryPct);
+    if (v > 0) out[res] = v;
+  }
+  return out;
+}
+function readDaily(raw) {
+  const d = raw;
+  return d && typeof d === "object" && typeof d.day === "string" && Array.isArray(d.proposals) ? d : null;
+}
+function previousSummary(daily) {
+  if (!daily) return void 0;
+  return { day: daily.day, kind: daily.chosen !== null ? daily.proposals[daily.chosen].kind : null, status: daily.status === "done" ? "done" : "failed" };
+}
+function dailyMemberOf(p, now) {
+  var _a, _b, _c;
+  return {
+    uid: p.uid,
+    active: now - lastActivity(p) < ALLIANCE_DAILY_RULES.activeDays * 864e5,
+    stats: (_a = p.stats) != null ? _a : {},
+    production4h: productionHours(p, ALLIANCE_DAILY_RULES.treasuryHours),
+    fleetPower: computeFullPower((_b = p.units) != null ? _b : {}, (_c = p.techLevels) != null ? _c : {}, OFFENSIVE_UNITS, ["attack"])
+  };
 }
 
 // src/server/hooksEntry.ts

@@ -11,7 +11,7 @@ import { isOnline } from "@/game/retention";
 import { useDirectoryStore } from "@/store/directoryStore";
 import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
-import { ChevronsDown, ChevronsUp, Crown, Shield, ShieldPlus, UserX } from "lucide-react";
+import { Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,12 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import {
   AllianceError,
+  setMemberRole,
   createAlliance,
-  demoteOfficer,
   joinAlliance,
   kickMember,
   leaveAlliance,
   markAllianceRead,
-  promoteToOfficer,
   sendAllianceMessage,
   sendTyping,
   subscribeAlliance,
@@ -36,9 +35,11 @@ import {
   subscribeAlliances,
 } from "@/services/allianceService";
 import { splitMentions } from "@/game/mentions";
-import { allianceRole, ALLIANCE_RULES } from "@/game/alliances";
+import { allianceRole, ALLIANCE_RULES, canDiplomacy } from "@/game/alliances";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WarTab } from "@/components/game/WarTab";
+import { AllianceDailyTab } from "@/components/game/AllianceDailyTab";
+import { AllianceCalendarTab } from "@/components/game/AllianceCalendarTab";
 import { AllianceRanking } from "@/components/game/AllianceRanking";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import {
@@ -223,27 +224,12 @@ function AllianceRoom({
     }
   };
 
-  const handlePromote = async (targetUid: string) => {
+  const handleRole = async (targetUid: string, role: "officer" | "diplomat" | "member") => {
     try {
-      await promoteToOfficer(uid, allianceId, targetUid);
-      toast.success("Membre promu officier.");
+      await setMemberRole(targetUid, role);
+      toast.success(role === "officer" ? "Membre promu officier." : role === "diplomat" ? "Membre nommé diplomate." : "Membre redevenu simple membre.");
     } catch (err) {
-      toast.error(
-        err instanceof AllianceError ? err.message : "Promotion impossible.",
-      );
-    }
-  };
-
-  const handleDemote = async (targetUid: string) => {
-    try {
-      await demoteOfficer(uid, allianceId, targetUid);
-      toast.success("Officier rétrogradé.");
-    } catch (err) {
-      toast.error(
-        err instanceof AllianceError
-          ? err.message
-          : "Rétrogradation impossible.",
-      );
+      toast.error(err instanceof Error ? err.message : "Changement de rôle impossible.");
     }
   };
 
@@ -270,6 +256,8 @@ function AllianceRoom({
     <Tabs defaultValue={tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"} className="flex flex-col gap-4">
       <TabsList className="self-start">
         <TabsTrigger value="membres">Membres et canal</TabsTrigger>
+        <TabsTrigger value="objectif">Objectif du jour</TabsTrigger>
+        <TabsTrigger value="calendrier">Calendrier</TabsTrigger>
         <TabsTrigger value="boss" className="inline-flex items-center gap-1.5">
           Boss {bossActive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger-glow" />}
         </TabsTrigger>
@@ -284,15 +272,21 @@ function AllianceRoom({
         </TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
+      <TabsContent value="objectif">
+        <AllianceDailyTab alliance={alliance} uid={uid} canVote={role === "founder" || role === "officer"} />
+      </TabsContent>
+      <TabsContent value="calendrier">
+        <AllianceCalendarTab alliance={alliance} />
+      </TabsContent>
       <TabsContent value="boss">{player && <AllianceBossTab alliance={alliance} player={player} />}</TabsContent>
       <TabsContent value="classement">
         <AllianceRanking currentId={alliance.id} />
       </TabsContent>
       <TabsContent value="diplomatie">
-        <DiplomacyTab alliance={alliance} uid={uid} canLead={role === "founder" || role === "officer"} />
+        <DiplomacyTab alliance={alliance} uid={uid} canLead={canDiplomacy(role)} />
       </TabsContent>
       <TabsContent value="guerre">
-        <WarTab alliance={alliance} canLead={role === "founder" || role === "officer"} />
+        <WarTab alliance={alliance} canLead={canDiplomacy(role)} />
       </TabsContent>
       <TabsContent value="tresor">
         <TreasuryTab
@@ -331,7 +325,9 @@ function AllianceRoom({
                     ? "founder"
                     : alliance.roles?.[m] === "officer"
                       ? "officer"
-                      : "member";
+                      : alliance.roles?.[m] === "diplomat"
+                        ? "diplomat"
+                        : "member";
                 return (
                   <li key={m} className="flex flex-col gap-1 border-b border-white/5 pb-1.5 last:border-0">
                     <span className="flex min-w-0 items-center gap-2">
@@ -343,6 +339,7 @@ function AllianceRoom({
                       <StaffBadge uid={m} compact />
                       {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}
                       {role === "officer" && <Shield className="h-3.5 w-3.5 shrink-0 text-cyan-glow" aria-label="Officier" />}
+                      {role === "diplomat" && <Handshake className="h-3.5 w-3.5 shrink-0 text-mint-glow" aria-label="Diplomate" />}
                     </span>
                     {/* Actions sur une seconde ligne : le pseudo reste toujours lisible. */}
                     {m !== uid && (
@@ -356,16 +353,18 @@ function AllianceRoom({
                         >
                           <ShieldPlus className="h-3 w-3" /> Renforcer
                         </Button>
-                        {isFounder &&
-                          (role === "officer" ? (
-                            <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px]" onClick={() => void handleDemote(m)}>
-                              <ChevronsDown className="h-3 w-3" /> Rétrograder
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px]" onClick={() => void handlePromote(m)}>
-                              <ChevronsUp className="h-3 w-3" /> Promouvoir
-                            </Button>
-                          ))}
+                        {isFounder && role !== "founder" && (
+                          <select
+                            value={role}
+                            onChange={(e) => void handleRole(m, e.target.value as "officer" | "diplomat" | "member")}
+                            className="h-6 border border-white/10 bg-space-900 px-1 text-[10px] text-slate-300"
+                            aria-label="Rôle"
+                          >
+                            <option value="member">Membre</option>
+                            <option value="officer">Officier</option>
+                            <option value="diplomat">Diplomate</option>
+                          </select>
+                        )}
                         {isFounder && (
                           <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px] text-danger-glow" onClick={() => void handleKick(m)}>
                             <UserX className="h-3 w-3" /> Exclure

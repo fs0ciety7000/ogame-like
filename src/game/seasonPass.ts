@@ -35,6 +35,8 @@ export const PASS_POINTS = {
   allianceBossTry: 15,
   /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
   coalition: 50,
+  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
+  allianceDaily: 15,
 };
 export type PassSource = keyof typeof PASS_POINTS;
 

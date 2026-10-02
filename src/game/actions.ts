@@ -238,6 +238,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const paid = getTechCost(tech, nextLevel);
       pay(player, paid, now);
       queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid });
+      bumpStat(player, "researchStarted");
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
