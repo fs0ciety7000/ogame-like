@@ -113,6 +113,8 @@ export function StatsPanel() {
         </Card>
       )}
 
+      {stats.retention && <RetentionPanels retention={stats.retention} />}
+
       <div className="grid gap-3 lg:grid-cols-3">
         <Panel title="Répartition des rangs">
           {players.ranks.map((r) => (
@@ -398,5 +400,100 @@ function EndgamePanel({ endgame }: { endgame: GameStats["endgame"] }) {
         </div>
       </div>
     </Panel>
+  );
+}
+
+/* ---------- v4.5 : rétention ---------- */
+
+function RetentionPanels({ retention }: { retention: NonNullable<GameStats["retention"]> }) {
+  const { daily, active, cohorts, funnel, dropoff, trackingSince, recentPlayers } = retention;
+  const maxActive = Math.max(1, ...daily.map((d) => d.active));
+  const dayLabel = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <Panel title="Rétention · joueurs actifs par jour (30 j)" className="lg:col-span-2">
+        <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-4">
+          {[
+            ["Actifs 24 h", active.d1],
+            ["Actifs 7 j", active.d7],
+            ["Actifs 30 j", active.d30],
+            ["Inscrits", active.total],
+          ].map(([label, value]) => (
+            <div key={label as string} className="border border-white/5 bg-white/[0.02] p-2">
+              <p className="font-display text-xl text-white">{value}</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
+            </div>
+          ))}
+        </div>
+        {trackingSince ? (
+          <>
+            <div className="flex h-28 items-end gap-[2px]" role="img" aria-label="Joueurs actifs par jour sur 30 jours">
+              {daily.map((d) => (
+                <div key={d.day} className="group relative flex h-full flex-1 items-end">
+                  <div
+                    className="w-full rounded-t-[4px] bg-cyan-glow/70 transition-colors group-hover:bg-cyan-glow"
+                    style={{ height: `${Math.max(d.active > 0 ? 3 : 0, (d.active / maxActive) * 100)}%` }}
+                  />
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap border border-white/10 bg-space-950 px-2 py-1 text-[11px] text-slate-200 group-hover:block">
+                    {dayLabel(d.day)} · {d.active} actif{d.active > 1 ? "s" : ""} · {d.signups} inscription{d.signups > 1 ? "s" : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between font-mono text-[10px] text-slate-500">
+              <span>{dayLabel(daily[0].day)}</span>
+              <span>suivi depuis le {dayLabel(trackingSince)}</span>
+              <span>{dayLabel(daily[daily.length - 1].day)}</span>
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-slate-500">Le suivi jour par jour commence avec cette version : les premières barres apparaîtront dès les prochaines connexions.</p>
+        )}
+      </Panel>
+
+      <Panel title="Rétention · cohortes d'inscrits par semaine">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">
+              <th className="py-1 font-normal">Semaine du</th>
+              <th className="py-1 text-right font-normal">Inscrits</th>
+              <th className="py-1 text-right font-normal" title="Revenus le lendemain de l'inscription">J+1</th>
+              <th className="py-1 text-right font-normal" title="Revenus au moins une fois 7 jours ou plus après l'inscription">J+7</th>
+              <th className="py-1 text-right font-normal" title="Vus ces 3 derniers jours">Encore là</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cohorts.map((c) => (
+              <tr key={c.week} className="border-t border-white/5 text-slate-300">
+                <td className="py-1">{dayLabel(c.week)}</td>
+                <td className="py-1 text-right tabular-nums">{c.signups}</td>
+                <td className="py-1 text-right tabular-nums">{c.d1Pct === null ? "—" : `${c.d1Pct} %`}</td>
+                <td className="py-1 text-right tabular-nums">{c.d7Pct === null ? "—" : `${c.d7Pct} %`}</td>
+                <td className="py-1 text-right tabular-nums">{c.signups ? `${c.activeNowPct} %` : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-[11px] text-slate-500">« — » : pas encore mesurable (suivi trop récent ou cohorte trop jeune).</p>
+      </Panel>
+
+      <Panel title={`Prise en main · ${recentPlayers} inscrit${recentPlayers > 1 ? "s" : ""} sur 60 jours`}>
+        <div className="flex flex-col gap-1.5">
+          {funnel.map((f) => (
+            <Bar key={f.id} label={f.label} value={f.reached} max={Math.max(1, recentPlayers)} display={`${f.pct} %`} title={`${f.reached} joueur(s)`} />
+          ))}
+        </div>
+        {dropoff.length > 0 && (
+          <div className="border-t border-white/5 pt-2">
+            <p className="mb-1 text-[11px] text-slate-400">Inactifs depuis 3 jours : dernier objectif non atteint</p>
+            <div className="flex flex-col gap-1.5">
+              {dropoff.map((d) => (
+                <Bar key={d.id} label={d.label} value={d.count} max={Math.max(1, ...dropoff.map((x) => x.count))} display={String(d.count)} color="var(--color-ember-glow)" />
+              ))}
+            </div>
+          </div>
+        )}
+      </Panel>
+    </div>
   );
 }

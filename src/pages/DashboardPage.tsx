@@ -1,12 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { usePlayerStore } from "@/store/playerStore";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS } from "@/game/units";
 import { unitStat } from "@/game/combat";
 import { economySnapshot } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatNumber } from "@/lib/utils";
+import { Fragment, useState, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { StatTile } from "@/components/ui/hud";
+import { QueueStrip } from "@/components/game/QueueStrip";
+import { DASHBOARD_SECTIONS, defaultLayout, moveSection, setDashboardLayout, toggleSection, useDashboardLayout, type DashboardSection } from "@/lib/dashboardLayout";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
@@ -34,6 +40,8 @@ export function DashboardPage() {
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
   const fleets = useFleetStore((s) => s.fleets);
+  const layout = useDashboardLayout();
+  const [customizing, setCustomizing] = useState(false);
 
   if (!player) return null;
 
@@ -64,19 +72,10 @@ export function DashboardPage() {
   const maxBuildingLevels = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
   const developmentPercent = maxBuildingLevels > 0 ? Math.round((totalBuildingLevels / maxBuildingLevels) * 100) : 0;
 
-  return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        eyebrow="Cosmic Empires / Commandement"
-        title={`Bienvenue, ${player.pseudo}`}
-        description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
-      />
-
-      <OnboardingChecklist player={player} />
-      <StoryDialog player={player} />
-      <NextActionsCard />
-
-      <Card className="flex flex-wrap items-center gap-6 p-6">
+  const sections: Record<DashboardSection, ReactNode> = {
+    next: <NextActionsCard />,
+    planet: (
+      <Card className="flex flex-wrap items-center gap-6 p-4 sm:p-5">
         <HomePlanet buildings={player.buildings} life={planetLife} />
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
@@ -89,16 +88,17 @@ export function DashboardPage() {
           </div>
         </div>
       </Card>
-
-      <FleetsPanel hideWhenEmpty />
-
-      <LeviathanBanner />
-      <ChallengeCard />
-      <EventCard />
+    ),
+    fleets: <FleetsPanel hideWhenEmpty />,
+    leviathan: <LeviathanBanner />,
+    challenge: <ChallengeCard />,
+    event: <EventCard />,
+    contracts: (
       <div id="contrats" className="scroll-mt-24">
         <ContractsCard />
       </div>
-
+    ),
+    economy: (
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -125,41 +125,81 @@ export function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-
         <div className="lg:col-span-2">
           <UpcomingTimeline queues={queues} now={now} />
         </div>
       </div>
-
-      <div className="relative -m-2 grid gap-4 p-2 sm:grid-cols-2 xl:grid-cols-4">
-        <CornerBrackets />
-        <Card>
-          <CardHeader>
-            <CardTitle>Puissance d'attaque</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display tabular-nums text-mint-glow">{formatNumber(attackPower)}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Puissance défensive</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display tabular-nums text-cyan-glow">{formatNumber(defensePower)}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Victoires</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display tabular-nums text-slate-100">{player.victories}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Défaites</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-display tabular-nums text-slate-100">{player.defeats}</CardContent>
-        </Card>
+    ),
+    power: (
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatTile label="Puissance d'attaque" value={formatCompact(attackPower)} tone="var(--color-mint-glow)" />
+        <StatTile label="Puissance défensive" value={formatCompact(defensePower)} tone="var(--color-cyan-glow)" />
+        <StatTile label="Victoires" value={player.victories} tone="var(--color-gold-glow)" />
+        <StatTile label="Défaites" value={player.defeats} tone="var(--color-danger-glow)" />
       </div>
+    ),
+    log: <SystemLogPanel />,
+  };
 
-      <SystemLogPanel />
+  return (
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        eyebrow="Cosmic Empires / Commandement"
+        title={`Bienvenue, ${player.pseudo}`}
+        description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
+      />
+      <QueueStrip queues={queues} now={now} />
+
+      <OnboardingChecklist player={player} />
+      <StoryDialog player={player} />
+
+      {layout.order
+        .filter((id) => !layout.hidden.includes(id))
+        .map((id) => (
+          <Fragment key={id}>{sections[id]}</Fragment>
+        ))}
+
+      <div className="flex justify-center">
+        <Button variant="ghost" size="sm" onClick={() => setCustomizing(true)}>
+          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> Personnaliser l'accueil
+        </Button>
+      </div>
+      <DashboardCustomizer open={customizing} onClose={() => setCustomizing(false)} />
     </div>
+  );
+}
+
+function DashboardCustomizer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const layout = useDashboardLayout();
+  const label = (id: DashboardSection) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.label ?? id;
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogTitle>Personnaliser l'accueil</DialogTitle>
+        <DialogDescription>Remonte ce qui compte pour toi, masque le reste. Mémorisé sur cet appareil.</DialogDescription>
+        <div className="mt-3 flex flex-col gap-1.5">
+          {layout.order.map((id, i) => {
+            const hidden = layout.hidden.includes(id);
+            return (
+              <div key={id} className={cn("flex items-center gap-2 border border-white/10 bg-white/[0.02] px-2 py-1.5 text-sm", hidden && "opacity-50")}>
+                <span className="flex-1 text-slate-200">{label(id)}</span>
+                <button type="button" title="Monter" disabled={i === 0} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, -1))}>
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button type="button" title="Descendre" disabled={i === layout.order.length - 1} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, 1))}>
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+                <button type="button" title={hidden ? "Afficher" : "Masquer"} className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
+                  {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <Button variant="ghost" size="sm" className="mt-3" onClick={() => setDashboardLayout(defaultLayout())}>
+          <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Disposition par défaut
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -9,6 +9,9 @@ import { accent } from "@/components/game/PirateUltimatum";
 import { activeUltimatum, FACTIONS } from "@/game/pirates";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
+import { scheduledAnnouncements, type AnnouncementSettings, type CustomAnnouncement } from "@/game/announcements";
+import { previewAnnouncement, useAnnouncementPreview, useAnnouncementSettings } from "@/services/announcementService";
+import { useContentStore } from "@/services/contentService";
 import { cn } from "@/lib/utils";
 
 /* =====================================================
@@ -41,6 +44,22 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "v4.5-confort",
+    eyebrow: "Mise à jour 4.5 · Confort",
+    title: "Ton poste de commandement, à ta façon",
+    text: "Épingle tes pages favorites dans la barre du bas, réorganise l'accueil, et garde toujours un œil sur tes chantiers. Sur téléphone, les fenêtres montent du bas et se ferment d'un glissement.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/buildings/hangar_attaque.webp",
+    artMobile: "/assets/buildings/synthetiseur_neuronal.webp",
+    features: [
+      { title: "Barre du bas sur mesure", text: "Menu Plus → Épingler : choisis tes 4 pages.", to: "/game" },
+      { title: "File de chantier", text: "Construction, recherche, chantier naval, mission : toujours en haut de l'accueil.", to: "/game" },
+      { title: "Accueil personnalisable", text: "Remonte, descends ou masque chaque carte.", to: "/game" },
+    ],
+    cta: { label: "Personnaliser", to: "/game" },
+  },
   {
     id: "v4.4-spectacle",
     eyebrow: "Mise à jour 4.4 · Spectacle",
@@ -267,31 +286,52 @@ const CLIP = [
 /** v4.1 : une annonce est en attente ou ouverte (le tutoriel raconté attend son tour). */
 export const useAnnouncementPending = create<{ pending: boolean }>(() => ({ pending: false }));
 
+/** v4.5 : annonce créée dans l'administration, au format des annonces du code. */
+function fromCustom(c: CustomAnnouncement): Announcement {
+  return { id: c.id, eyebrow: c.eyebrow, title: c.title, text: c.text, factions: [], art: c.art, artMobile: c.artMobile, tone: c.tone, features: c.features, cta: c.cta };
+}
+
+/** Toutes les annonces connues (créées dans l'admin puis celles du code), sans calendrier. */
+export function allAnnouncements(settings: AnnouncementSettings): Announcement[] {
+  return [...settings.custom.map(fromCustom), ...ANNOUNCEMENTS];
+}
+
 export function AnnouncementDialog() {
   const player = usePlayerStore((s) => s.player);
   const navigate = useNavigate();
   const [current, setCurrent] = useState<Announcement | null>(null);
   const uid = player?.uid;
   const threatened = player ? !!activeUltimatum(player, Date.now()) : false;
+  const settings = useAnnouncementSettings();
+  const contentLoaded = useContentStore((s) => s.loaded);
+  const previewId = useAnnouncementPreview((s) => s.id);
+  const preview = previewId ? allAnnouncements(settings).find((a) => a.id === previewId) ?? null : null;
 
   useEffect(() => {
     // Pas par-dessus un ultimatum : l'annonce attendra le prochain chargement.
-    if (!uid || threatened) return;
+    // v4.5 : on attend le calendrier des annonces (game_config) avant de choisir.
+    if (!uid || threatened || !contentLoaded || current) return;
     const seen = readSeen();
-    const next = ANNOUNCEMENTS.find(
+    const next = scheduledAnnouncements(ANNOUNCEMENTS, settings, Date.now(), fromCustom).find(
       (a) => !seen.includes(`${uid}:${a.id}`) && (a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled))),
     );
     if (!next) return;
     useAnnouncementPending.setState({ pending: true });
     const timer = setTimeout(() => setCurrent(next), 1200);
     return () => clearTimeout(timer);
-  }, [uid, threatened]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une annonce par chargement : `current` ne relance pas le choix
+  }, [uid, threatened, contentLoaded, settings]);
 
-  if (!current || !uid) return null;
-  const gold = current.tone === "gold";
-  const factions = current.factions.map((id) => FACTIONS.find((f) => f.id === id && f.enabled)).filter((f) => !!f);
+  const shown = preview ?? current;
+  if (!shown || !uid) return null;
+  const gold = shown.tone === "gold";
+  const factions = shown.factions.map((id) => FACTIONS.find((f) => f.id === id && f.enabled)).filter((f) => !!f);
   const close = () => {
-    markSeen(`${uid}:${current.id}`);
+    if (preview) {
+      previewAnnouncement(null);
+      return;
+    }
+    markSeen(`${uid}:${shown.id}`);
     setCurrent(null);
     useAnnouncementPending.setState({ pending: false });
   };
@@ -300,10 +340,10 @@ export function AnnouncementDialog() {
     <Dialog open onOpenChange={(o) => !o && close()}>
       <DialogContent className="max-h-[94vh] max-w-5xl overflow-hidden overflow-y-auto border-0 p-0 sm:w-[94vw]">
         <div className="relative flex min-h-[78vh] flex-col justify-end overflow-hidden bg-space-950">
-          {current.art && (
+          {shown.art && (
             <motion.picture className="absolute inset-x-0 top-0 h-[70%] sm:h-[62%]" initial={{ opacity: 0, scale: 1.08 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
-              {current.artMobile && <source media="(max-width: 640px)" srcSet={assetUrl(current.artMobile)} />}
-              <img src={assetUrl(current.art)} alt="" className="h-full w-full object-cover object-[center_75%]" />
+              {shown.artMobile && <source media="(max-width: 640px)" srcSet={assetUrl(shown.artMobile)} />}
+              <img src={assetUrl(shown.art)} alt="" className="h-full w-full object-cover object-[center_75%]" />
             </motion.picture>
           )}
           {/* Illustrations en bandes obliques */}
@@ -323,18 +363,18 @@ export function AnnouncementDialog() {
           </div>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/75 to-space-950/0" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-space-950/80 to-transparent" />
-          {current.spotlight && (
+          {shown.spotlight && (
             <motion.figure
               className="absolute right-8 top-8 z-10 hidden w-44 flex-col gap-2 lg:flex"
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              <img src={assetUrl(current.spotlight.image)} alt={current.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_rgba(255,180,60,0.35)]" />
+              <img src={assetUrl(shown.spotlight.image)} alt={shown.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_rgba(255,180,60,0.35)]" />
               <figcaption className="border border-gold-glow/30 bg-space-950/85 p-2 backdrop-blur-sm">
-                <p className="font-display text-sm text-gold-glow">{current.spotlight.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{current.spotlight.role}</p>
-                <p className="mt-1 text-[11px] italic leading-snug text-slate-300">« {current.spotlight.quote} »</p>
+                <p className="font-display text-sm text-gold-glow">{shown.spotlight.name}</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{shown.spotlight.role}</p>
+                <p className="mt-1 text-[11px] italic leading-snug text-slate-300">« {shown.spotlight.quote} »</p>
               </figcaption>
             </motion.figure>
           )}
@@ -347,11 +387,11 @@ export function AnnouncementDialog() {
             transition={{ duration: 0.7, delay: 0.75 }}
           >
             <p className={cn("hud-eyebrow flex items-center gap-2", gold ? "text-gold-glow" : "text-danger-glow")}>
-              {current.emblem ? <img src={assetUrl(current.emblem)} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,190,80,0.5)]" /> : <Skull className="h-3.5 w-3.5 animate-pulse" />} {current.eyebrow}
+              {shown.emblem ? <img src={assetUrl(shown.emblem)} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,190,80,0.5)]" /> : <Skull className="h-3.5 w-3.5 animate-pulse" />} {shown.eyebrow}
             </p>
-            <DialogTitle className="text-3xl leading-tight md:text-5xl">{current.title}</DialogTitle>
-            <p className="max-w-2xl text-sm leading-relaxed text-slate-200 md:text-base">{current.text}</p>
-            {current.currency && (
+            <DialogTitle className="text-3xl leading-tight md:text-5xl">{shown.title}</DialogTitle>
+            <p className="max-w-2xl text-sm leading-relaxed text-slate-200 md:text-base">{shown.text}</p>
+            {shown.currency && (
               <motion.div
                 className="flex max-w-xl items-center gap-3 border border-gold-glow/40 bg-space-950/80 p-3 backdrop-blur-sm"
                 initial={{ opacity: 0, x: -16 }}
@@ -359,21 +399,21 @@ export function AnnouncementDialog() {
                 transition={{ delay: 0.85 }}
               >
                 <motion.img
-                  src={assetUrl(current.currency.icon)}
+                  src={assetUrl(shown.currency.icon)}
                   alt=""
                   className="h-12 w-12 shrink-0 drop-shadow-[0_0_14px_rgba(255,170,60,0.6)]"
                   animate={{ y: [0, -4, 0], rotate: [0, 4, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 />
                 <div>
-                  <p className="font-display text-sm text-gold-glow">{current.currency.name}</p>
-                  <p className="text-[11px] leading-snug text-slate-300">{current.currency.text}</p>
+                  <p className="font-display text-sm text-gold-glow">{shown.currency.name}</p>
+                  <p className="text-[11px] leading-snug text-slate-300">{shown.currency.text}</p>
                 </div>
               </motion.div>
             )}
-            {current.features && (
+            {shown.features && (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {current.features.map((f, i) => (
+                {shown.features.map((f, i) => (
                   <motion.button
                     key={f.title}
                     type="button"
@@ -423,10 +463,10 @@ export function AnnouncementDialog() {
                 size="lg"
                 onClick={() => {
                   close();
-                  navigate(current.cta.to);
+                  navigate(shown.cta.to);
                 }}
               >
-                {current.cta.label}
+                {shown.cta.label}
               </Button>
               <Button variant="ghost" size="lg" onClick={close}>
                 Plus tard
