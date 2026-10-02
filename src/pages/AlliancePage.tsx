@@ -2,7 +2,7 @@ import { DiplomacyTab } from "@/components/game/DiplomacyTab";
 import { useSearchParams } from "react-router-dom";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
-const ALLIANCE_TABS = ["membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
+const ALLIANCE_TABS = ["objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useRef, useState } from "react";
 import { AllianceBossTab } from "@/components/game/AllianceBossTab";

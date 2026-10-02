@@ -46,6 +46,23 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.9-alliance",
+    eyebrow: "Mise à jour 4.9 · Organisation",
+    title: "Chaque matin, un cap commun",
+    text: "À 6 h, ton alliance reçoit trois objectifs ; les officiers choisissent, tout le monde s'y met avant minuit. Et tes chantiers s'enchaînent seuls grâce à la file planifiée, même quand tu dors.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/buildings/fonderie_quantique.webp",
+    artMobile: "/assets/buildings/fonderie_quantique.webp",
+    emblem: "/assets/warlords/ilyon-sceau.webp",
+    features: [
+      { title: "Objectif du jour", text: "Vote des officiers de 6 h à 10 h : +15 points, 1 h de production, 10 % au trésor.", to: "/game/alliance?onglet=objectif" },
+      { title: "File planifiée", text: "Jusqu'à 3 améliorations programmées, lancées seules (Fonderie quantique 5 et 10).", to: "/game/batiments", image: "/assets/buildings/fonderie_quantique.webp" },
+      { title: "Diplomates et calendrier", text: "Deux diplomates pour les pactes et les guerres, et tous les rendez-vous de l'alliance.", to: "/game/alliance?onglet=calendrier" },
+    ],
+    cta: { label: "Voir l'objectif du jour", to: "/game/alliance?onglet=objectif" },
+  },
+  {
     id: "v4.8-codex",
     eyebrow: "Mise à jour 4.8 · Archives",
     title: "Le secteur a sa mémoire",
