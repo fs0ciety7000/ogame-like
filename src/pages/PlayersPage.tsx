@@ -11,7 +11,7 @@ import {
   ShieldPlus,
   Mail,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ export function PlayersPage() {
   const [mode, setMode] = useState<LeaderboardMode>("total");
   const uid = useAuthStore((s) => s.user?.uid);
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const [spyTarget, setSpyTarget] = useState<{
     uid: string;
     pseudo: string;
@@ -72,6 +73,18 @@ export function PlayersPage() {
   >({});
 
   useEffect(() => subscribeLeaderboard(setPlayers), []);
+  // v3.8 : ouverture depuis la recherche globale (?fiche=uid, ?mode=alliances).
+  useEffect(() => {
+    const fiche = params.get("fiche");
+    const wanted = params.get("mode");
+    if (wanted === "alliances" || wanted === "season" || wanted === "total") setMode(wanted);
+    if (fiche) {
+      const p = players.find((x) => x.uid === fiche);
+      setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
+    }
+    if (fiche || wanted) setParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lecture unique des paramètres
+  }, [params]);
   // Mes attaques des 2 dernières heures (délai avant de réattaquer une cible),
   // rechargées à chaque fermeture de la fenêtre d'attaque.
   useEffect(() => {
