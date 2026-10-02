@@ -2,9 +2,13 @@ import { DiplomacyTab } from "@/components/game/DiplomacyTab";
 import { useSearchParams } from "react-router-dom";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
-const ALLIANCE_TABS = ["membres", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
+const ALLIANCE_TABS = ["membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
 import { LinkifiedText } from "@/components/ui/linkified-text";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AllianceBossTab } from "@/components/game/AllianceBossTab";
+import { normalizeAllianceBoss } from "@/game/allianceBoss";
+import { isOnline } from "@/game/retention";
+import { useDirectoryStore } from "@/store/directoryStore";
 import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { ChevronsDown, ChevronsUp, Crown, Shield, ShieldPlus, UserX } from "lucide-react";
@@ -25,7 +29,9 @@ import {
   markAllianceRead,
   promoteToOfficer,
   sendAllianceMessage,
+  sendTyping,
   subscribeAlliance,
+  subscribeTyping,
   subscribeAllianceMessages,
   subscribeAlliances,
 } from "@/services/allianceService";
@@ -173,6 +179,16 @@ function AllianceRoom({
   } | null>(null);
 
   useEffect(() => subscribeAlliance(allianceId, setAlliance), [allianceId]);
+  // v4.6 : présence, « … écrit » et défilement vers le dernier message.
+  const lastActiveOf = useDirectoryStore((s) => s.lastActiveOf);
+  const player = usePlayerStore((s) => s.player);
+  const [typing, setTyping] = useState<string[]>([]);
+  useEffect(() => subscribeTyping(allianceId, uid, setTyping), [allianceId, uid]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length]);
   useEffect(
     () => subscribeAllianceMessages(allianceId, setMessages),
     [allianceId],
@@ -245,12 +261,18 @@ function AllianceRoom({
   if (!alliance) return null;
 
   const isFounder = uid === alliance.createdBy;
+  const bossState = normalizeAllianceBoss(alliance.boss);
+  const bossActive = !!bossState && bossState.status === "active" && Date.now() < bossState.endMs && bossState.hp > 0;
+  const online = (m: string) => m === uid || isOnline(lastActiveOf[m], Date.now());
   const role = allianceRole(alliance, uid);
 
   return (
     <Tabs defaultValue={tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"} className="flex flex-col gap-4">
       <TabsList className="self-start">
         <TabsTrigger value="membres">Membres et canal</TabsTrigger>
+        <TabsTrigger value="boss" className="inline-flex items-center gap-1.5">
+          Boss {bossActive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger-glow" />}
+        </TabsTrigger>
         <TabsTrigger value="tresor">Trésor</TabsTrigger>
         <TabsTrigger value="recherches">Recherches</TabsTrigger>
         <TabsTrigger value="projets">Projets</TabsTrigger>
@@ -262,6 +284,7 @@ function AllianceRoom({
         </TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
+      <TabsContent value="boss">{player && <AllianceBossTab alliance={alliance} player={player} />}</TabsContent>
       <TabsContent value="classement">
         <AllianceRanking currentId={alliance.id} />
       </TabsContent>
@@ -312,7 +335,10 @@ function AllianceRoom({
                 return (
                   <li key={m} className="flex flex-col gap-1 border-b border-white/5 pb-1.5 last:border-0">
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-glow" />
+                      <span
+                        className={cn("h-2 w-2 shrink-0 rounded-full", online(m) ? "bg-mint-glow shadow-[0_0_6px_var(--color-mint-glow)]" : "bg-slate-600")}
+                        title={online(m) ? "En ligne" : lastActiveOf[m] ? `Vu ${timeAgo(lastActiveOf[m])}` : "Hors ligne"}
+                      />
                       <span className="truncate">{alliance.memberPseudos[m] ?? "?"}</span>
                       <StaffBadge uid={m} compact />
                       {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}
@@ -366,7 +392,7 @@ function AllianceRoom({
 
           <Card className="flex flex-col p-4">
             <p className="hud-eyebrow mb-3 text-slate-500">Canal d'alliance</p>
-            <div className="max-h-96 flex-1 space-y-3 overflow-y-auto">
+            <div ref={scrollRef} className="max-h-96 flex-1 space-y-3 overflow-y-auto">
               {messages.length === 0 && (
                 <p className="text-sm text-slate-500">
                   Aucun message pour l'instant.
@@ -396,10 +422,16 @@ function AllianceRoom({
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex gap-2">
+            <p className="mt-2 h-4 text-[11px] italic text-slate-400" aria-live="polite">
+              {typing.length > 0 && `${typing.join(", ")} ${typing.length > 1 ? "écrivent" : "écrit"}…`}
+            </p>
+            <div className="mt-1 flex gap-2">
               <Input
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  if (e.target.value.trim()) sendTyping();
+                }}
                 placeholder="Écrire un message…"
                 onKeyDown={(e) => e.key === "Enter" && void handleSend()}
               />

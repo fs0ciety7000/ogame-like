@@ -45,6 +45,28 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.6-social",
+    eyebrow: "Mise à jour 4.6 · Social",
+    title: "Un boss pour ton alliance",
+    text: "Chaque semaine, ton alliance peut appeler son propre boss et l'abattre en 24 h. Et chaque lundi, la Gazette du secteur raconte qui a brillé, qui a pillé, et qui est tombé.",
+    factions: [],
+    tone: "danger",
+    art: "/assets/story/gravhorn.webp",
+    artMobile: "/assets/story/varan.webp",
+    emblem: "/assets/leviathan/leviathan-emblem.webp",
+    currency: {
+      icon: "/assets/relics/egide_reine.webp",
+      name: "Boss d'alliance",
+      text: "Appelé par un officier, payé par le trésor : +40 points de passe et 2 h de production pour chaque membre qui a compté, relique rare pour le premier.",
+    },
+    features: [
+      { title: "Boss d'alliance", text: "Cuirassé Gravhorn, Nid-mère Kesh'Vaar, Croiseur de la Confrérie : un par semaine, 24 h pour l'abattre.", to: "/game/alliance?onglet=boss", image: "/assets/story/gravhorn.webp" },
+      { title: "La Gazette", text: "Chaque lundi à 9 h : boss, vendettas, guerres, progressions et casse de la semaine.", to: "/game/gazette" },
+      { title: "Canal vivant", text: "Point vert pour les membres en ligne, « … écrit » quand quelqu'un tape.", to: "/game/alliance" },
+    ],
+    cta: { label: "Voir le boss d'alliance", to: "/game/alliance?onglet=boss" },
+  },
+  {
     id: "v4.5-confort",
     eyebrow: "Mise à jour 4.5 · Confort",
     title: "Ton poste de commandement, à ta façon",

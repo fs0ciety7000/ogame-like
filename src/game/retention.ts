@@ -11,6 +11,21 @@ import type { PlayerState } from "@/types/game";
 
 const DAY = 24 * 3600_000;
 export const ACTIVITY_DAYS_KEPT = 60;
+/** v4.6 : « en ligne » = synchro réelle depuis moins de 5 min (écrite toutes les 2 min). */
+export const PRESENCE_WRITE_MS = 2 * 60_000;
+export const ONLINE_MS = 5 * 60_000;
+
+export function isOnline(lastActiveMs: number | undefined, now: number): boolean {
+  return !!lastActiveMs && now - lastActiveMs < ONLINE_MS;
+}
+
+/** Dernière activité réelle : présence, sinon dernier jour d'activité, sinon dernière mise à jour. */
+export function lastActivity(p: Pick<PlayerState, "lastActiveMs" | "stats" | "resourcesUpdatedAtMs">): number {
+  if (p.lastActiveMs) return p.lastActiveMs;
+  const days = p.stats?.activeDays;
+  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 3600_000;
+  return p.resourcesUpdatedAtMs ?? 0;
+}
 
 /** Jour calendaire de Paris (AAAA-MM-JJ). */
 export function parisDay(now: number): string {
@@ -50,7 +65,7 @@ const pct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 
 
 export function computeRetention(players: PlayerState[], now: number): RetentionStats {
   const today = parisDay(now);
-  const lastSeen = (p: PlayerState) => p.resourcesUpdatedAtMs ?? 0;
+  const lastSeen = (p: PlayerState) => Math.min(now, lastActivity(p));
   const days = (p: PlayerState) => new Set(p.stats?.activeDays ?? []);
   const signupDay = (p: PlayerState) => (p.createdAtMs ? parisDay(p.createdAtMs) : null);
 

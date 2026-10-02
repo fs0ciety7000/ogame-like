@@ -31,7 +31,7 @@ import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
-import { recordActiveDay } from "@/game/retention";
+import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
 import { setProfileStyle } from "@/game/profile";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
@@ -146,6 +146,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!onVacation(player, now)) passDailyLogin(player, now);
       // v4.5 : jour d'activité, pour le suivi de rétention (administration).
       recordActiveDay(player, now);
+      // v4.6 : présence (« en ligne »), réécrite au plus toutes les 2 min.
+      if (now - (player.lastActiveMs ?? 0) >= PRESENCE_WRITE_MS) player.lastActiveMs = now;
       const resourceGains: Partial<Record<ResourceId, number>> = {};
       for (const key of Object.keys(player.resources) as ResourceId[]) {
         const delta = (player.resources[key] ?? 0) - (s.preFlushPlayer.resources[key] ?? 0);

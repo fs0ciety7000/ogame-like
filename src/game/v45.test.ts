@@ -38,7 +38,7 @@ describe("v4.5 retention", () => {
   it("computes daily actives, D1/D7 cohorts and the onboarding drop-off", () => {
     const signup = NOW - 10 * DAY;
     const back = player("back", signup, NOW);
-    back.stats = { activeDays: [parisDay(signup), parisDay(signup + DAY), parisDay(signup + 8 * DAY)] };
+    back.stats = { activeDays: [parisDay(signup), parisDay(signup + DAY), parisDay(signup + 8 * DAY), parisDay(NOW)] };
     const gone = player("gone", signup, signup + 2 * 3600_000);
     gone.stats = { activeDays: [parisDay(signup)] };
     const r = computeRetention([back, gone], NOW);
@@ -50,6 +50,10 @@ describe("v4.5 retention", () => {
     expect(r.active).toMatchObject({ d1: 1, d7: 1, d30: 2, total: 2 });
     expect(r.recentPlayers).toBe(2);
     expect(r.dropoff[0]).toMatchObject({ id: "scrap3", count: 1 });
+    // v4.6 : la présence l'emporte sur la dernière mise à jour (tâches du serveur).
+    const touched = player("cron", signup, NOW);
+    touched.lastActiveMs = NOW - 3 * DAY;
+    expect(computeRetention([touched], NOW).active.d1).toBe(0);
   });
 });
 
