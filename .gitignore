@@ -13,3 +13,6 @@ firebase-debug.log
 # Migration Firebase -> PocketBase (secrets, jamais commités)
 migration-output/
 service-account*.json
+
+# PocketBase de la CI
+.pb

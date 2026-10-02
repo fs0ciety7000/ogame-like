@@ -793,6 +793,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(pb.send("/api/cosmic/admin/admins", { method: "GET" })).rejects.toMatchObject({ status: 403 });
     await expect(pb.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 403 });
     await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+    // Base vierge (CI) : un autre administrateur doit exister pour pouvoir retirer B.
+    const guardian = (await admin.collection("admins").getFullList()).length === 0 ? await admin.collection("admins").create({ id: aId, note: "test" }) : null;
     const added = await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId, note: "test", role: "developer" } });
     try {
       expect(added.admins.some((a: { id: string; note: string; role: string }) => a.id === bId && a.note === "test" && a.role === "developer")).toBe(true);
@@ -811,6 +813,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "add", uid: bId } })).rejects.toMatchObject({ status: 400 });
     } finally {
       await admin.send("/api/cosmic/admin/admins", { method: "POST", body: { action: "remove", uid: bId } });
+      if (guardian) await admin.collection("admins").delete(guardian.id);
     }
     const after = await snap(bId);
     expect(after.titles ?? []).toEqual([]);
