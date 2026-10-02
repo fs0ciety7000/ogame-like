@@ -126,6 +126,7 @@ export function WarlordsPage() {
                   <Portrait w={w} className="h-auto w-32 shrink-0 sm:w-40" />
                   <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
                     <div className="flex flex-wrap items-center gap-1.5">
+                      <img src={assetUrl(w.emblem)} alt="" className="h-8 w-8 object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
                       <h3 className="hud-title text-base normal-case tracking-[0.02em]" style={{ color: w.color }}>
                         {w.name}
                       </h3>

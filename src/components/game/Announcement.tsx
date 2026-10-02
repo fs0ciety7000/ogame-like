@@ -49,10 +49,10 @@ export const ANNOUNCEMENTS: Announcement[] = [
     factions: [],
     tone: "danger",
     art: "/assets/story/choeur.webp",
-    artMobile: "/assets/story/varan.webp",
-    emblem: "/assets/leviathan/leviathan-emblem.webp",
+    artMobile: "/assets/warlords/zharkesh.webp",
+    emblem: "/assets/warlords/brannoc-sceau.webp",
     spotlight: {
-      image: "/assets/story/varan.webp",
+      image: "/assets/warlords/brannoc.webp",
       name: "Brannoc Demi-Barbe",
       role: "Seigneur de guerre",
       quote: "Moi, je ne fais pas d'ultimatum. Je viens, c'est tout.",
