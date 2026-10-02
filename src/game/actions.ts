@@ -34,6 +34,7 @@ import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass"
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
 import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel";
 import { setProfileStyle } from "@/game/profile";
+import { addSeenAnnouncements } from "@/game/announcements";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -77,7 +78,8 @@ export type GameAction =
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } }
-  | { type: "passClaim"; tier: number };
+  | { type: "passClaim"; tier: number }
+  | { type: "seenAnnouncements"; ids: string[] };
 
 export interface AwaySummary {
   elapsedMs: number;
@@ -131,7 +133,7 @@ interface ActionState {
 }
 
 /** v4.2 : seules ces actions restent possibles pendant les vacances. */
-const VACATION_ACTIONS = new Set(["sync", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
 
 function applyAction(s: ActionState, action: GameAction): unknown {
   const { player, queues, now } = s;
@@ -281,6 +283,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "setPosture":
       return setPosture(player, action.posture, now);
+
+    case "seenAnnouncements":
+      player.announcementsSeen = addSeenAnnouncements(player.announcementsSeen, action.ids);
+      return { seen: player.announcementsSeen.length };
 
     case "hideOnboarding":
       setOnboardingHidden(player, action.hidden === true);

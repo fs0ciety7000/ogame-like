@@ -62,6 +62,8 @@ export async function registerPlayer(rawPseudo: string, email: string, password:
   // Rétablit le pseudo exact si useGameSync a créé le profil entre-temps
   // avec son nom de repli.
   await setPlayerPseudo(auth.record.id, pseudo);
+  // v4.7.1 : e-mail de vérification envoyé dès l'inscription (requis pour la récompense de parrainage).
+  void pb.collection("users").requestVerification(cleanEmail).catch(() => undefined);
   return auth.record;
 }
 

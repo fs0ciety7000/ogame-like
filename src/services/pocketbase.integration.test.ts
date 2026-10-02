@@ -1993,6 +1993,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(sheet.feats).toMatchObject({ victories: 3, missions: 5, warsWon: 1 });
   });
 
+  it("v4.7.1: closed announcements are kept on the account", async () => {
+    await loginPlayer(B.email, B.pw);
+    await admin.collection("players").update(bId, { announcementsSeen: null, vacation: null });
+    await ps.markAnnouncementsSeen(["v4.7-coalitions", "v4.6-social", "bad id!"]);
+    expect((await snap(bId)).announcementsSeen).toEqual(["v4.7-coalitions", "v4.6-social"]);
+    await ps.markAnnouncementsSeen(["v4.6-social"]);
+    expect((await snap(bId)).announcementsSeen).toEqual(["v4.7-coalitions", "v4.6-social"]);
+    // Parrainage : pseudo du parrain sans connexion, suivi des filleuls.
+    const anon = new PocketBase(PB_TEST_URL);
+    const name = await anon.send<{ pseudo: string }>(`/api/cosmic/referral/sponsor?id=${bId}`, { method: "GET" });
+    expect(name.pseudo).toBe((await snap(bId)).pseudo);
+    await expect(anon.send("/api/cosmic/referral/sponsor?id=npcbrannoc00000", { method: "GET" })).rejects.toMatchObject({ status: 404 });
+    const info = await pb.send<{ recruits: unknown[]; verified: boolean; rules: { rewardXp: number } }>("/api/cosmic/referral", { method: "GET" });
+    expect(Array.isArray(info.recruits)).toBe(true);
+    expect(info.rules.rewardXp).toBe(2000);
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);
