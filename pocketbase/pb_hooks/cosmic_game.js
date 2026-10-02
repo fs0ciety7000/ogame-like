@@ -4588,10 +4588,90 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
       mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
     },
     balance: computeBalance(players, reports, now, balanceDays),
+    endgame: computeEndgame(players, queues, reports, now, balanceDays),
     insights: []
   };
   stats.insights = computeInsights(stats);
   return stats;
+}
+function computeEndgame(players, queues, reports, now, windowDays) {
+  const since = now - windowDays * DAY3;
+  const recent = reports.filter((r) => {
+    var _a;
+    return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
+  });
+  const avg = (values) => values.length ? round1(values.reduce((a, v) => a + v, 0) / values.length) : 0;
+  const techs = TECHNOLOGIES.filter((t) => ENDGAME_TECH_IDS.includes(t.id)).map((t) => {
+    const holders = players.filter((p) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) > 0;
+    }).sort((a, b) => {
+      var _a, _b, _c, _d;
+      return ((_b = (_a = b.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) - ((_d = (_c = a.techLevels) == null ? void 0 : _c[t.id]) != null ? _d : 0);
+    });
+    return {
+      id: t.id,
+      name: t.nom,
+      researchers: holders.length,
+      inProgress: queues.filter((q) => {
+        var _a;
+        return ((_a = q.activeResearches) != null ? _a : []).some((r) => r.id === t.id);
+      }).length,
+      avgLevel: avg(holders.map((p) => {
+        var _a, _b;
+        return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
+      })),
+      maxLevel: t.maxLevel,
+      leaders: holders.slice(0, 3).map((p) => {
+        var _a, _b;
+        return `${p.pseudo} (${(_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0})`;
+      })
+    };
+  });
+  const buildings = BUILDINGS.filter((b) => b.endgame).map((b) => {
+    var _a, _b;
+    const levels = players.map((p) => {
+      var _a2;
+      return effectiveBuildingLevel((_a2 = p.buildings) != null ? _a2 : {}, b.id);
+    }).filter((l) => l > 0);
+    return {
+      id: b.id,
+      name: b.name,
+      builders: levels.length,
+      avgLevel: avg(levels),
+      maxLevel: b.maxLevel,
+      resource: (_b = (_a = b.production) == null ? void 0 : _a.resource) != null ? _b : null,
+      perHour: b.production ? Math.round(levels.reduce((a, l) => a + productionPerSecond(b.id, l), 0) * 3600) : 0
+    };
+  });
+  const units = UNITS.filter((u) => ENDGAME_TECH_IDS.includes(u.unlockTech)).map((u) => {
+    const owned = players.map((p) => {
+      var _a, _b, _c;
+      return (_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.count) != null ? _c : 0;
+    });
+    const used = recent.filter((r) => {
+      var _a, _b;
+      return ((_b = (_a = r.attackerFleet) == null ? void 0 : _a[u.id]) != null ? _b : 0) > 0;
+    });
+    return {
+      id: u.id,
+      name: u.name,
+      owners: owned.filter((c) => c > 0).length,
+      total: owned.reduce((a, c) => a + c, 0),
+      attacks: used.length,
+      winPct: pct3(used.filter((r) => r.outcome === "attacker_win").length, used.length)
+    };
+  });
+  return {
+    windowDays,
+    players: players.filter((p) => ENDGAME_TECH_IDS.some((id) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[id]) != null ? _b : 0) > 0;
+    })).length,
+    techs,
+    buildings,
+    units
+  };
 }
 function dominantUnit(fleet) {
   var _a, _b;
