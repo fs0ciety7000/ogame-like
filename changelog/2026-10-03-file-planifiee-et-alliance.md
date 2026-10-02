@@ -27,4 +27,4 @@ Programme tes prochains chantiers, fixe un objectif commun à ton alliance chaqu
 
 ## Administration
 - **Sauvegardes du serveur** (Outils) : liste, **téléchargement** d'une sauvegarde, et **« Sauvegarder vers R2 »** (sauvegarde immédiate puis copie sur Cloudflare R2).
-- Copie automatique chaque nuit vers **Cloudflare R2** : toutes les sauvegardes PocketBase (base et fichiers envoyés) et les illustrations du jeu.
+- Copie automatique chaque nuit vers **Cloudflare R2** : toutes les sauvegardes PocketBase (base et fichiers envoyés) et les illustrations du jeu. Les sauvegardes de plus de **90 jours** sont retirées de R2 (durée réglable).

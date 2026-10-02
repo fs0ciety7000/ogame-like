@@ -13,6 +13,8 @@ name: Copie vers Cloudflare R2
 #   R2_ACCESS_KEY_ID     jeton R2 « Object Read & Write » limité au bucket
 #   R2_SECRET_ACCESS_KEY
 #   COSMIC_PB_URL, COSMIC_PB_ADMIN_EMAIL, COSMIC_PB_ADMIN_PASSWORD (déjà créés)
+# Variable facultative (Settings → Variables) : R2_KEEP_DAYS (défaut 90) — les
+# sauvegardes plus anciennes sont supprimées de R2 (pas les illustrations).
 # Sans les secrets R2, le job s'arrête sans erreur.
 
 on:
@@ -87,3 +89,19 @@ jobs:
             echo "Copiée : $KEY"
           done < local.txt
           echo "- Sauvegardes PocketBase : $COPIED nouvelle(s) copiée(s), $(wc -l < local.txt) sur le serveur" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ménage (sauvegardes de plus de R2_KEEP_DAYS jours)
+        if: steps.cfg.outputs.ok == '1'
+        env:
+          KEEP_DAYS: ${{ vars.R2_KEEP_DAYS || '90' }}
+        run: |
+          LIMIT=$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%d)
+          # Format de « aws s3 ls » : AAAA-MM-JJ HH:MM:SS taille nom
+          aws s3 ls "s3://$R2_BUCKET/pocketbase/" --endpoint-url "$R2_ENDPOINT" | while read -r DAY TIME SIZE KEY; do
+            [ -z "$KEY" ] && continue
+            if [[ "$DAY" < "$LIMIT" ]]; then
+              aws s3 rm "s3://$R2_BUCKET/pocketbase/$KEY" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+              echo "Supprimée : $KEY ($DAY)"
+            fi
+          done
+          echo "- Ménage : sauvegardes R2 antérieures au $LIMIT supprimées (conservation ${KEEP_DAYS} j)" >> "$GITHUB_STEP_SUMMARY"
