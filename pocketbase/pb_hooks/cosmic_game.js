@@ -55,6 +55,7 @@ __export(hooksEntry_exports, {
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   COALITION_RULES: () => COALITION_RULES,
+  CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
@@ -135,6 +136,8 @@ __export(hooksEntry_exports, {
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
   coalitionRanking: () => coalitionRanking,
+  codexEntries: () => codexEntries,
+  codexProgress: () => codexProgress,
   collectDebris: () => collectDebris,
   colonyOwnerUid: () => colonyOwnerUid,
   compileGazette: () => compileGazette,
@@ -173,12 +176,14 @@ __export(hooksEntry_exports, {
   finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
   formatInt: () => formatInt,
+  foughtWarlords: () => foughtWarlords,
   gazetteDue: () => gazetteDue,
   gazetteState: () => gazetteState,
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
   grantCoalitionReward: () => grantCoalitionReward,
+  grantCodexTitle: () => grantCodexTitle,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
@@ -5814,6 +5819,11 @@ function unlockedEpisodes(now) {
   const { d } = parisDate(now);
   return d >= 22 ? 4 : d >= 15 ? 3 : d >= 8 ? 2 : 1;
 }
+function episodeUnlockMs(monthId, index) {
+  var _a;
+  const [y, m] = monthId.split("-").map(Number);
+  return parisLocalToUtc(Date.UTC(y, m - 1, (_a = [1, 8, 15, 22][index]) != null ? _a : 1));
+}
 function chronicleState(player, now) {
   var _a, _b;
   const raw = (_a = player.chronicle) != null ? _a : {};
@@ -10368,6 +10378,59 @@ function publishGazette(state, issue, players) {
     lastWeekId: issue.weekId,
     xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp]))
   };
+}
+
+// src/game/codex.ts
+var CODEX_TITLE = "Archiviste";
+function codexEntries(player, fought, now) {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  const out = [];
+  const threatened = new Set((_b = (_a = player.stats) == null ? void 0 : _a.threatenedBy) != null ? _b : []);
+  for (const f of FACTIONS.filter((x) => x.enabled)) {
+    out.push({ id: `faction:${f.id}`, category: "factions", name: f.name, subtitle: `${f.leader} \xB7 ${f.enforcer}`, image: (_c = f.emblem) != null ? _c : f.art, text: f.story, unlocked: threatened.has(f.id), color: f.color });
+  }
+  for (const d of warlordsConfig().defs.filter((x) => x.enabled)) {
+    out.push({ id: `warlord:${d.id}`, category: "warlords", name: d.name, subtitle: "Seigneur de guerre", image: d.portrait, text: d.bio, unlocked: fought.has(d.id) });
+  }
+  out.push({
+    id: "boss:leviathan",
+    category: "bosses",
+    name: "Le L\xE9viathan",
+    subtitle: "Boss mondial",
+    image: "/assets/leviathan/leviathan-portrait.webp",
+    text: "Une b\xEAte de la taille d'une lune qui remonte des abysses du secteur un week-end par mois. Tout le serveur frappe ensemble ; ceux qui frappent le plus fort repartent avec ses reliques.",
+    unlocked: ((_e = (_d = player.stats) == null ? void 0 : _d.leviathanKills) != null ? _e : 0) > 0
+  });
+  const currentMonth = chronicleMonthId(now);
+  const emblems = new Set((_g = (_f = player.chronicle) == null ? void 0 : _f.emblems) != null ? _g : []);
+  for (const m of chroniclesConfig().months) {
+    if (episodeUnlockMs(m.id, 0) > now) continue;
+    out.push({ id: `boss:${m.id}`, category: "bosses", name: m.boss.name, subtitle: `Boss de la chronique \xAB ${m.title} \xBB`, image: m.boss.image, text: m.boss.lore, unlocked: emblems.has(m.id) || m.id < currentMonth });
+    m.episodes.forEach((e, i) => {
+      if (episodeUnlockMs(m.id, i) > now) return;
+      out.push({ id: `chronicle:${m.id}:${i}`, category: "chronicles", name: e.title, subtitle: `${m.title} \xB7 \xE9pisode ${i + 1}`, image: m.boss.emblem, text: e.lines.map((l) => l.text).join("\n\n"), unlocked: true });
+    });
+  }
+  for (const u of UNITS) {
+    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_h = player.units) == null ? void 0 : _h[u.id]) });
+  }
+  return out;
+}
+function codexProgress(entries) {
+  const unlocked = entries.filter((e) => e.unlocked).length;
+  const total2 = entries.length;
+  return { unlocked, total: total2, pct: total2 > 0 ? Math.floor(unlocked / total2 * 100) : 0 };
+}
+function foughtWarlords(opponentUids) {
+  const byUid = new Map(warlordsConfig().defs.map((d) => [warlordUid(d.id), d.id]));
+  return new Set(opponentUids.map((u) => byUid.get(u)).filter((x) => !!x));
+}
+function grantCodexTitle(player, entries) {
+  var _a, _b;
+  if (codexProgress(entries).pct < 100) return false;
+  if (((_a = player.titles) != null ? _a : []).some((t) => t.label === CODEX_TITLE)) return false;
+  player.titles = [...(_b = player.titles) != null ? _b : [], { label: CODEX_TITLE, seasonId: "codex", rank: 1 }];
+  return true;
 }
 
 // src/server/hooksEntry.ts

@@ -27,6 +27,7 @@ const AchievementsPage = lazy(() => import("@/pages/AchievementsPage").then((m) 
 const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ default: m.ThreatsPage })));
 const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const CodexPage = lazy(() => import("@/pages/CodexPage").then((m) => ({ default: m.CodexPage })));
 const AnnouncementsPage = lazy(() => import("@/pages/AnnouncementsPage").then((m) => ({ default: m.AnnouncementsPage })));
 const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
 const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -104,6 +105,7 @@ export default function App() {
                 <Route path="messages" element={<MessagesPage />} />
                 <Route path="nouveautes" element={<ChangelogPage />} />
                 <Route path="annonces" element={<AnnouncementsPage />} />
+                <Route path="codex" element={<CodexPage />} />
                 <Route path="signalements" element={<ReportsPage />} />
               </Route>
             </Route>
