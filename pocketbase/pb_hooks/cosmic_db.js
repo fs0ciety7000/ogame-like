@@ -2655,7 +2655,7 @@ function messageSend(e) {
   $app.save(rec);
   if (!pending) {
     try {
-      notify($app, to, [{ kind: "message", title: `Message de ${sender.getString("pseudo")}`, message: text.length > 140 ? `${text.slice(0, 140)}…` : text, createdAtMs: now, read: false }]);
+      notify($app, to, [{ kind: "message", title: `Message de ${sender.getString("pseudo")}`, message: text.length > 140 ? `${text.slice(0, 140)}…` : text, createdAtMs: now, read: false, link: `/game/messages?with=${uid}&pseudo=${encodeURIComponent(sender.getString("pseudo"))}` }]);
     } catch (_) {
       /* facultatif */
     }

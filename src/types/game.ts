@@ -294,4 +294,6 @@ export interface GameNotification {
   message: string;
   createdAtMs: number;
   read: boolean;
+  /** v3.8 : page à ouvrir au clic (sinon, page associée au type). */
+  link?: string;
 }

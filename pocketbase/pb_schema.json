@@ -328,6 +328,13 @@
         "name": "read",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "link",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
       }
     ],
     "indexes": [

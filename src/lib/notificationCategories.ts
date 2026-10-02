@@ -52,3 +52,30 @@ export function summarizeKinds(kinds: NotificationKind[]): string {
   if (parts.length <= 1) return parts.join("");
   return `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
 }
+
+/** Page associée à chaque type de notification (clic dans la cloche, le journal, un toast). */
+const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
+  building: "/game/batiments",
+  research: "/game/labo",
+  unit: "/game/unites",
+  mission: "/game/missions",
+  "combat-attacker": "/game/combats",
+  "combat-defender": "/game/combats",
+  spy: "/game/combats",
+  "spy-detected": "/game/combats",
+  fleet: "/game/galaxie",
+  achievement: "/game/succes",
+  alliance: "/game/alliance",
+  message: "/game/messages",
+  debris: "/game/galaxie",
+  report: "/game/signalements",
+  season: "/game/palmares",
+  event: "/game",
+  gift: "/game/ressources",
+};
+
+/** Lien d'une notification : le sien (v3.8), sinon celui de son type. */
+export function notificationLink(n: { kind: NotificationKind; link?: string | null }): string | null {
+  if (n.link && n.link.startsWith("/game")) return n.link;
+  return KIND_LINKS[n.kind] ?? null;
+}

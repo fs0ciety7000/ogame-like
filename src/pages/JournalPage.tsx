@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { fetchNotificationHistory } from "@/services/playerService";
-import { inCategory, NOTIFICATION_CATEGORIES, summarizeKinds, type NotificationCategory } from "@/lib/notificationCategories";
+import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, summarizeKinds, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
 import type { GameNotification, NotificationKind } from "@/types/game";
 
@@ -45,21 +45,6 @@ function categoryOf(kind: NotificationKind): Exclude<NotificationCategory, "all"
   return (found ?? "social") as Exclude<NotificationCategory, "all">;
 }
 
-/** Liens vers la page où agir selon le type d'évènement. */
-const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
-  building: "/game/batiments",
-  research: "/game/labo",
-  unit: "/game/unites",
-  mission: "/game/missions",
-  "combat-attacker": "/game/combats",
-  "combat-defender": "/game/combats",
-  spy: "/game/combats",
-  achievement: "/game/succes",
-  alliance: "/game/alliance",
-  message: "/game/messages",
-  debris: "/game/galaxie",
-  report: "/game/signalements",
-};
 
 function dayLabel(ms: number): string {
   const d = new Date(ms);
@@ -192,7 +177,7 @@ export function JournalPage() {
             {day.items.map((n) => {
               const style = CATEGORY_STYLE[categoryOf(n.kind)];
               const Icon = style.icon;
-              const link = KIND_LINKS[n.kind];
+              const link = notificationLink(n);
               const fresh = n.createdAtMs > lastVisit && lastVisit > 0;
               return (
                 <div key={n.id} className={cn("flex gap-3 px-3 py-2.5", fresh && "bg-cyan-glow/5")}>
