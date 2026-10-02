@@ -1371,6 +1371,45 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v3.8 weekly challenge: market trades count, closing pays participants and titles the top", async () => {
+    const existing = await admin.collection("game_config").getFirstListItem('key="challenge"').catch(() => null);
+    const now = Date.now();
+    const current = { id: "wk-test", type: "market", target: 1000, startMs: now - 1000, endMs: now + 3_600_000, total: 0, contributions: {}, status: "active", success: false };
+    const rec = existing
+      ? await admin.collection("game_config").update(existing.id, { data: { current, previous: null, titleHolder: null } })
+      : await admin.collection("game_config").create({ key: "challenge", data: { current, previous: null, titleHolder: null } });
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    try {
+      await admin.collection("players").update(aId, { resources: { ...aBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+      await admin.collection("players").update(bId, { resources: { ...bBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+      await loginPlayer(A.email, A.pw);
+      const offer = await pb.send("/api/cosmic/market/create", { method: "POST", body: { giveRes: "scrap", giveAmount: 20_000, wantRes: "energy", wantAmount: 20_000 } });
+      await loginPlayer(B.email, B.pw);
+      await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } });
+
+      let state = (await admin.collection("game_config").getOne(rec.id)).data;
+      expect(state.current.contributions[bId].amount).toBe(20_000);
+      expect(state.current.contributions[aId].amount).toBeGreaterThan(18_000); // reçu moins la taxe
+      const aiBefore = (await snap(bId)).resources.aiFragment ?? 0;
+
+      // Échéance passée : clôture, récompenses (palier 150 %) et titre.
+      await admin.collection("game_config").update(rec.id, { data: { ...state, current: { ...state.current, endMs: Date.now() - 1 } } });
+      state = await admin.send("/api/cosmic/admin/challenge", { method: "POST", body: {} });
+      expect(state.previous).toMatchObject({ id: "wk-test", status: "done", success: true });
+      expect((await snap(bId)).resources.aiFragment).toBe(aiBefore + 600);
+      expect(state.titleHolder.uid).toBe(bId);
+      expect((await snap(bId)).activeTitle).toBe("Pilier de la semaine");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title~"Défi de la semaine"` });
+      expect(notes.length).toBe(1);
+    } finally {
+      if (existing) await admin.collection("game_config").update(rec.id, { data: existing.data });
+      else await admin.collection("game_config").delete(rec.id);
+      await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+      for (const n of await admin.collection("notifications").getFullList({ filter: `title~"Défi de la semaine"` })) await admin.collection("notifications").delete(n.id);
+    }
+  });
+
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
     const sheet = await ps.fetchPlayerSheet(aId);

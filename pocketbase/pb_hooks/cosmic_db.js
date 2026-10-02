@@ -57,6 +57,12 @@ function loadPlayer(txApp, game, uid, missingMessage) {
 }
 
 function savePlayer(txApp, game, loaded, player, queues) {
+  // v3.8 : progression du défi hebdomadaire (écart des compteurs suivis).
+  try {
+    recordChallengeProgress(txApp, game, toPlain(loaded.rec), player);
+  } catch (err) {
+    console.log(`[cosmic] défi hebdomadaire : ${err}`);
+  }
   game.GAME_FIELDS.forEach((field) => loaded.rec.set(field, player[field] === undefined ? null : player[field]));
   ["lastAttackAtMs", "lastDefeatAtMs"].forEach((field) => {
     if (player[field] !== undefined) loaded.rec.set(field, player[field]);
@@ -2792,4 +2798,100 @@ function diplomacyRequest(e) {
   return e.json(200, out);
 }
 
-module.exports = { requireAdminReason, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Défis hebdomadaires (v3.8) ---------- */
+
+function readChallengeState(txApp, game) {
+  try {
+    const rec = (txApp || $app).findFirstRecordByData("game_config", "key", game.CHALLENGE_KEY);
+    return game.normalizeChallengeState(toPlain(rec).data);
+  } catch (_) {
+    return game.normalizeChallengeState(null);
+  }
+}
+
+function writeChallengeState(txApp, game, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.CHALLENGE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.CHALLENGE_KEY);
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+/** Ajoute au défi en cours ce que le joueur vient d'accomplir. */
+function recordChallengeProgress(txApp, game, before, after) {
+  const b = game.challengeMetrics(before);
+  const a = game.challengeMetrics(after);
+  const deltas = {};
+  let any = false;
+  Object.keys(a).forEach((k) => {
+    const d = (a[k] || 0) - (b[k] || 0);
+    if (d > 0) {
+      deltas[k] = d;
+      any = true;
+    }
+  });
+  if (!any) return;
+  const state = readChallengeState(txApp, game);
+  const ch = state.current;
+  if (!ch || ch.status !== "active" || !deltas[ch.type]) return;
+  const now = Date.now();
+  const next = game.addContribution(ch, after.uid || before.id, after.pseudo || before.pseudo || "", deltas[ch.type], now);
+  if (next === ch) return;
+  writeChallengeState(txApp, game, Object.assign({}, state, { current: next }));
+}
+
+/** Tâche planifiée : clôture et récompenses, titre temporaire, nouveau défi. */
+function challengeTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    let state = readChallengeState(txApp, game);
+    let changed = false;
+
+    if (state.titleHolder && now >= state.titleHolder.untilMs) {
+      if (findOrNull(txApp, "players", state.titleHolder.uid)) {
+        const holder = loadPlayer(txApp, game, state.titleHolder.uid);
+        game.removeChallengeTitle(holder.player);
+        savePlayer(txApp, game, holder, holder.player, holder.queues);
+      }
+      state = Object.assign({}, state, { titleHolder: null });
+      changed = true;
+    }
+
+    const ch = state.current;
+    if (ch && ch.status === "active" && now >= ch.endMs) {
+      const tier = game.challengeTier(ch);
+      const done = Object.assign({}, ch, { status: "done", success: !!tier });
+      const label = game.CHALLENGE_TYPES[ch.type].label;
+      game.challengeRewardees(done).forEach((uid) => {
+        if (!findOrNull(txApp, "players", uid)) return;
+        const loaded = loadPlayer(txApp, game, uid);
+        game.grantChallengeReward(done, loaded.player);
+        savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Récompense versée : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.`, createdAtMs: now, read: false }]);
+      });
+      const top = game.challengeRanking(done)[0];
+      state = Object.assign({}, state, {
+        current: null,
+        previous: done,
+        titleHolder: tier && top ? { uid: top.uid, untilMs: now + game.CHALLENGE_RULES.titleDays * 86400000 } : state.titleHolder,
+      });
+      changed = true;
+    }
+
+    const week = game.weekWindow(now);
+    if (!state.current && (!state.previous || state.previous.id !== week.id) && !game.isLeviathanWeek(now)) {
+      const active = txApp.countRecords("players", $dbx.exp("resourcesUpdatedAtMs >= {:since}", { since: now - game.CHALLENGE_RULES.activeDays * 86400000 }));
+      state = Object.assign({}, state, { current: game.startChallenge(now, active, state.previous ? state.previous.type : null) });
+      changed = true;
+    }
+
+    if (changed) writeChallengeState(txApp, game, state);
+  });
+}
+
+module.exports = { requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

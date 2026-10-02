@@ -425,6 +425,24 @@ routerAdd("POST", "/api/cosmic/market/accept", (e) => require(`${__hooks}/cosmic
 routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic_db.js`).marketCancel(e), $apis.requireAuth("users"));
 
 // Offres expirées rendues à leur vendeur.
+/* ---------- Défis hebdomadaires (v3.8) ---------- */
+cronAdd("cosmic_challenge", "*/10 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).challengeTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] défi hebdomadaire : ${err}`);
+  }
+});
+
+/** POST /api/cosmic/admin/challenge — lance la tâche du défi tout de suite (tests, administration). */
+routerAdd("POST", "/api/cosmic/admin/challenge", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const body = db.body(e);
+  db.challengeTick(Number(body.now) || Date.now());
+  return e.json(200, db.readChallengeState($app, db.loadGame()));
+}, $apis.requireAuth("users", "_superusers"));
+
 cronAdd("cosmic_market", "*/5 * * * *", () => {
   try {
     const n = require(`${__hooks}/cosmic_db.js`).expireMarketOffers(Date.now());
