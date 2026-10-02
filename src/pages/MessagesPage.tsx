@@ -190,7 +190,7 @@ export function MessagesPage() {
                   return (
                     <div key={m.id} className={cn("max-w-[85%] px-3 py-2 text-sm", mine ? "self-end bg-cyan-glow/15 text-slate-100" : "self-start bg-white/[0.06] text-slate-200")}>
                       <p className="whitespace-pre-wrap break-words">
-                        <LinkifiedText text={m.text} />
+                        <LinkifiedText text={m.text} jumbo />
                       </p>
                       <p className={cn("mt-1 flex items-center gap-1 text-[10px] text-slate-500", mine && "justify-end")}>
                         {timeLabel(m.createdAtMs)}

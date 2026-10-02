@@ -379,7 +379,7 @@ function AllianceRoom({
                           seg.isMention && "font-medium text-gold-glow",
                         )}
                       >
-                        {seg.isMention ? seg.text : <LinkifiedText text={seg.text} />}
+                        {seg.isMention ? seg.text : <LinkifiedText text={seg.text} jumbo />}
                       </span>
                     ))}
                   </p>

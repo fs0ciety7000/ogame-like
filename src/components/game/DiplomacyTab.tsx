@@ -52,7 +52,7 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
             <span className="text-slate-300">{m.authorPseudo}</span> <span className="text-[10px] text-slate-600">{timeAgo(m.createdAtMs)}</span>
             <br />
             <span className="whitespace-pre-wrap break-words text-slate-200">
-              <LinkifiedText text={m.text} />
+              <LinkifiedText text={m.text} jumbo />
             </span>
           </p>
         ))}

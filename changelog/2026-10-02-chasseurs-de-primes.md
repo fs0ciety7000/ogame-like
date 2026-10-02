@@ -30,8 +30,9 @@ Une nouvelle faction **alliée** entre en scène : les **Kesh'Vaar**, un essaim 
 - **Prestige** : titre « Chasseur de l'Essaim », cadre de chitine et emblème sur ta fiche publique, **emojis Kesh'Vaar** exclusifs.
 
 ## Emojis du jeu
-- **31 nouveaux emojis** pour toutes les discussions : les visages des factions (Varan, le Silencieux, Oggrath, l'Unité Ambre, le Haut-Juge, Vashti Kor, Ysgrim, le Chaperon, l'Archonte, le Léviathan…), les ressources, l'Ambre et les insignes de gloire.
+- **63 nouveaux emojis** pour toutes les discussions, dont 32 **réactions des factions** en autocollants (Varan qui compte son or, le Haut-Juge qui s'indigne, Vashti qui envoie un bisou, Ysgrim qui hurle à la lune, l'Archonte qui fait « chut »…), plus les visages des factions (Varan, le Silencieux, Oggrath, l'Unité Ambre, le Haut-Juge, Vashti Kor, Ysgrim, le Chaperon, l'Archonte, le Léviathan…), les ressources, l'Ambre et les insignes de gloire.
 - Choisis-les dans le sélecteur 🙂 ou écris leur code, par exemple `:varan:` ou `:trophee:`.
+- Un message fait seulement de 1 à 3 emojis les affiche **en grand**.
 
 ## Aussi
 - Défis de la semaine : nouveau type « Remplir les primes de l'Essaim ».

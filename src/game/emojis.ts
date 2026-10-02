@@ -75,6 +75,23 @@ export const GAME_EMOJI_GROUPS: { label: string; emojis: CustomEmoji[] }[] = [
   },
 ];
 
+/** Réactions des factions (stickers, 4 variantes chacune). */
+const REACTIONS: [string, string][] = [
+  ["varan_or", "Varan compte son or"],
+  ["silencieux_bras", "Le Silencieux attend"],
+  ["gravhorn_mefiant", "Gravhorn méfiant"],
+  ["ambre_ok", "L'Unité Ambre approuve"],
+  ["juge_colere", "Le Haut-Juge s'indigne"],
+  ["vashti_bisou", "Vashti envoie un bisou"],
+  ["ysgrim_hurle", "Ysgrim hurle"],
+  ["archonte_chut", "L'Archonte : chut"],
+];
+
+GAME_EMOJI_GROUPS.splice(1, 0, {
+  label: "Réactions des factions",
+  emojis: REACTIONS.flatMap(([code, label]) => [1, 2, 3, 4].map((n) => e(`${code}_${n}`, label))),
+});
+
 export const GAME_EMOJIS: CustomEmoji[] = GAME_EMOJI_GROUPS.flatMap((g) => g.emojis);
 
 export function normalizeCustomEmojis(raw: unknown): CustomEmoji[] {
