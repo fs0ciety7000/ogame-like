@@ -99,6 +99,28 @@ function shortValue(value) {
 }
 
 /** Journal des actions d'administration (collection admin_logs). */
+/** Champs d'un joueur dont la modification par un administrateur exige un motif. */
+const REASON_FIELDS = ["resources", "units", "buildings", "techLevels", "xp", "seasonXp", "colonies"];
+
+function adminReason(e) {
+  try {
+    return String((e.requestInfo().body || {}).adminReason || "").trim().slice(0, 300);
+  } catch (_) {
+    return "";
+  }
+}
+
+/** Un administrateur du jeu (hors superutilisateur PocketBase) qui modifie
+ *  ressources, unités, bâtiments, technologies ou XP d'un joueur doit
+ *  donner un motif (champ adminReason de la requête, consigné au journal). */
+function requireAdminReason(e) {
+  if (e.record.collection().name !== "players" || e.hasSuperuserAuth() || !isGameAdmin(e)) return;
+  const before = toPlain(e.record.original());
+  const after = toPlain(e.record);
+  const changed = REASON_FIELDS.filter((f) => JSON.stringify(before[f]) !== JSON.stringify(after[f]));
+  if (changed.length > 0 && adminReason(e).length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins) pour modifier ce joueur.");
+}
+
 function logAdminAction(e, action, before, after) {
   try {
     if (!isGameAdmin(e)) return;
@@ -126,6 +148,7 @@ function logAdminAction(e, action, before, after) {
       recordId: record.id || "",
       recordLabel: labelField ? String(record[labelField] || "") : "",
       changes,
+      reason: adminReason(e),
       createdAtMs: Date.now(),
     });
     $app.save(log);
@@ -2454,7 +2477,32 @@ function scanAnomalies(now) {
   }
   const alerts = [];
   flagged.forEach((f) => {
-    const text = game.describeAnomalies(f.list);
+    // v3.5.1 : éditions admin sur la période d'un bond (auteur, champs, motif).
+    let byAdmin = false;
+    const text = f.list
+      .map((a) => {
+        const line = game.describeAnomalies([a]);
+        const logs = $app.findRecordsByFilter(
+          "admin_logs",
+          "recordId = {:u} && targetCollection = 'players' && action = 'update' && createdAtMs >= {:from} && createdAtMs <= {:to}",
+          "createdAtMs",
+          20,
+          0,
+          { u: f.uid, from: a.fromMs - 120000, to: a.toMs + 120000 },
+        );
+        const edits = logs
+          .map((l) => {
+            const fields = Object.keys(toPlain(l).changes || {}).filter((k) => REASON_FIELDS.indexOf(k) >= 0);
+            if (fields.length === 0) return "";
+            const at = new Date(l.getFloat("createdAtMs")).toISOString().slice(11, 16);
+            const reason = l.getString("reason");
+            return `  ↳ Édition admin par ${l.getString("actorName") || "?"} à ${at} UTC (${fields.join(", ")})${reason ? ` — motif : ${reason}` : " — sans motif"}.`;
+          })
+          .filter(Boolean);
+        if (edits.length > 0) byAdmin = true;
+        return [line].concat(edits).join("\n");
+      })
+      .join("\n");
     $app.runInTransaction((txApp) => {
       const autoKey = `anomaly:${f.uid}`;
       const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: autoKey })[0];
@@ -2476,7 +2524,7 @@ function scanAnomalies(now) {
       rec.set("reporterId", game.AUTO_REPORTER_ID);
       rec.set("reporterPseudo", "Système");
       rec.set("category", "account");
-      rec.set("title", `Ressources anormales : ${f.pseudo}`);
+      rec.set("title", `Ressources anormales : ${f.pseudo}${byAdmin ? " (édition admin)" : ""}`);
       rec.set("description", `Bonds de stock qu'aucune action normale n'explique. Vérifier le journal admin et le marché.\n\n${text}`);
       rec.set("context", { version: "", page: "", theme: "", userAgent: "", screen: "" });
       rec.set("status", "new");
@@ -2515,4 +2563,4 @@ function adminScanAnomalies(e) {
   return e.json(200, { alerts: scanAnomalies(Date.now()) });
 }
 
-module.exports = { scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { requireAdminReason, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

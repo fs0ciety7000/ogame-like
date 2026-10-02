@@ -109,7 +109,7 @@ function emptyResources(): Resources {
 }
 
 function homeLevels(player: Pick<PlayerState, "buildings">): number {
-  return BUILDINGS.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  return BUILDINGS.filter((b) => !b.endgame).reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
 }
 
 export function colonyFoundCost(): Partial<Record<ResourceId, number>> {

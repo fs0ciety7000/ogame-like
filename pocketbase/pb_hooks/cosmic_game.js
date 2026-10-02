@@ -246,6 +246,7 @@ function canAffordAll(resources, costs) {
 }
 
 // src/game/technologies.ts
+var ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
 var TECH_EFFECT_DEFAULTS = {
   energy_efficiency: 0.1,
   unit_attack: 0.1,
@@ -285,6 +286,12 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
   { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
   { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  // v3.6 : technologies de fin de partie, entre le Canon plasma / l'Intercepteur et l'Étoile noire.
+  { id: "tech21", nom: "M\xE9tallurgie quantique", desc: "Alliages stabilis\xE9s \xE0 l'\xE9chelle quantique : +2 % de d\xE9fense des unit\xE9s par niveau. D\xE9bloque la Fonderie quantique.", maxLevel: 10, baseCost: { scrap: 2e5, nano: 1e5, reinforcedSteel: 400, cyberModule: 200 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unit_defense", value: 0.02 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech2: 8, tech16: 3 } },
+  { id: "tech22", nom: "Cortex neuronal", desc: "R\xE9seaux de calcul organiques : \u22122 % de temps de recherche et +1 contre-espionnage par niveau. D\xE9bloque le Synth\xE9tiseur neuronal.", maxLevel: 10, baseCost: { data: 3e5, energy: 15e4, aiFragment: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "research_time", value: 0.02 }, { type: "counter_spy", value: 1 }, { type: "unlock_buildings" }], prereq: { tech1: 17, tech20: 6, tech18: 3 } },
+  { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'\xE9nergie, prot\xE9ger les stocks : +1 point de stock \xE0 l'abri du pillage par niveau. D\xE9bloque le G\xE9n\xE9rateur de bouclier plan\xE9taire.", maxLevel: 10, baseCost: { energy: 3e5, nano: 2e5, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
+  { id: "tech24", nom: "Propulsion \xE0 antimati\xE8re", desc: "D\xE9bloque le Croiseur Nova, puis l'am\xE9liore (+250 attaque et d\xE9fense par niveau). \u22122 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 4e5, energy: 4e5, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
+  { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
   { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
@@ -825,6 +832,7 @@ function finishAllianceResearch(alliance, now) {
 }
 
 // src/game/buildings.ts
+var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
 var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
 function tier2(common, commonMax, rare, rareMax) {
   return {
@@ -952,6 +960,40 @@ var DEFAULT_BUILDINGS = [
       tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
     },
     effect: { type: "storage", base: 2e6, growth: 1.6 }
+  },
+  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
+  {
+    id: "fonderie_quantique",
+    name: "Fonderie quantique",
+    description: "Forge de l'acier renforc\xE9 \xE0 partir de mati\xE8re stabilis\xE9e \xE0 l'\xE9chelle quantique : une production continue de ressource rare.",
+    image: "/assets/buildings/fonderie_quantique.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech21",
+    upgrade: { baseCost: { scrap: 2e7, energy: 1e7, cyberModule: 2e4 }, maxCost: { scrap: 15e8, energy: 8e8, cyberModule: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "synthetiseur_neuronal",
+    name: "Synth\xE9tiseur neuronal",
+    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
+    image: "/assets/buildings/synthetiseur_neuronal.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech22",
+    upgrade: { baseCost: { data: 2e7, nano: 1e7, syntheticNanites: 2e4 }, maxCost: { data: 15e8, nano: 8e8, syntheticNanites: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "generateur_bouclier",
+    name: "G\xE9n\xE9rateur de bouclier plan\xE9taire",
+    description: "Un d\xF4me d'\xE9nergie hexagonal renforce le bouclier de la base au-del\xE0 de ce que permettent les hangars.",
+    image: "/assets/buildings/generateur_bouclier.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech23",
+    upgrade: { baseCost: { energy: 3e7, scrap: 2e7, reinforcedSteel: 2e4 }, maxCost: { energy: 2e9, scrap: 13e8, reinforcedSteel: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    effect: { type: "shield", perLevel: 5e-3, max: 0.05 }
   }
 ];
 var BUILDINGS = [];
@@ -964,7 +1006,7 @@ function setBuildings(defs) {
   LOCKABLE_BUILDINGS.splice(
     0,
     LOCKABLE_BUILDINGS.length,
-    ...defs.filter((b) => b.production && !b.startsUnlocked).map((b) => b.id)
+    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id)
   );
   for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
   for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
@@ -1202,6 +1244,33 @@ var DEFAULT_UNITS = [
     // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
     // par niveau que les autres (15 800 ATK/DEF au niveau 10).
     levelBonus: 1700
+  },
+  // v3.6 : unités de fin de partie.
+  {
+    id: "croiseur_nova",
+    name: "Croiseur Nova",
+    image: "/assets/units/croiseur_nova.webp",
+    maxLevel: 10,
+    description: "Croiseur de ligne propuls\xE9 par un c\u0153ur d'antimati\xE8re. Assez rapide pour frapper, assez blind\xE9 pour encaisser.",
+    cost: { scrap: 15e3, energy: 9e3 },
+    stats: { attaque: 1500, defense: 1e3, vitesse: 6, cargo: 300 },
+    category: "attack",
+    unlockTech: "tech24",
+    hangarSpace: 20,
+    levelBonus: 250
+  },
+  {
+    id: "lance_gravitationnelle",
+    name: "Lance gravitationnelle",
+    image: "/assets/units/lance_gravitationnelle.webp",
+    maxLevel: 10,
+    description: "Projecteur orbital qui \xE9crase les coques ennemies sous un puits de gravit\xE9.",
+    cost: { scrap: 18e3, energy: 12e3 },
+    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech25",
+    hangarSpace: 8,
+    levelBonus: 150
   },
   {
     id: "roquette",
@@ -1778,12 +1847,14 @@ var COMBAT_RULES = {
   postureCooldownHours: 1
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
-  var _a;
+  var _a, _b;
   let levels = 0;
+  let extra = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+    if (((_b = b.effect) == null ? void 0 : _b.type) === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
   }
-  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus);
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
 }
 var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 var COMMON_RESOURCES2 = ["scrap", "energy", "nano", "data"];
@@ -2127,6 +2198,30 @@ var DEFAULT_FACTIONS = [
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
     lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
+  },
+  {
+    id: "choeur",
+    enabled: true,
+    name: "Le Ch\u0153ur Silencieux",
+    leader: "L'Archonte Vesper",
+    enforcer: "Les \xC9chos",
+    art: "/assets/story/choeur.webp",
+    banner: "/assets/story/choeur-banner.webp",
+    color: "mint",
+    story: "Il y a dix mille ans, une civilisation enti\xE8re s'est fondue en une seule conscience, puis s'est tue. Ses cath\xE9drales de cristal noir d\xE9rivent depuis aux confins de la galaxie, silencieuses.\n\nLes signaux de vos fonderies quantiques et de vos cortex neuronaux l'ont r\xE9veill\xE9e. Le Ch\u0153ur ne convoite pas vos coffres : il veut ce que vos laboratoires ont appris, et les fragments o\xF9 vous l'avez grav\xE9.\n\nL'Archonte Vesper, masque de porcelaine sans bouche et halo de glyphes, parle pour des milliers de voix. Ceux qui refusent entendent d'abord un murmure dans leurs transmissions\u2026 puis voient arriver les \xC9chos.",
+    ultimatum: {
+      title: "\xAB Ton esprit chante trop fort. \xBB",
+      quote: "{pseudo}\u2026 Nous t'entendons. Tes machines pensent, tes forges plient la mati\xE8re : tu chantes trop fort pour une si petite \xE9toile. Offre-nous ce que tu as appris, et nous resterons silencieux. Refuse, et les \xC9chos viendront l'apprendre eux-m\xEAmes.",
+      signature: "L'Archonte Vesper, pour le Ch\u0153ur",
+      payLabel: "Offrir le tribut"
+    },
+    trigger: { type: "singularity", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 7, threshold: 8 },
+    tribute: { basis: "production", hours: 8, plunderPct: 0, minHours: 0 },
+    answerHours: 12,
+    raidTravelHours: 2,
+    raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2e3, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
+    bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
+    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 5, pct: 1.5, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
   }
 ];
 var FACTIONS = [];
@@ -2322,6 +2417,12 @@ function pirateTick(player, now, options = {}) {
         break;
       case "hoard":
         triggered = active && storageFillPct(player) >= threshold;
+        break;
+      case "singularity":
+        triggered = active && ENDGAME_TECH_IDS.reduce((a, id) => {
+          var _a2, _b2;
+          return a + ((_b2 = (_a2 = player.techLevels) == null ? void 0 : _a2[id]) != null ? _b2 : 0);
+        }, 0) >= threshold;
         break;
       case "expansion": {
         if (!st.mark || now - st.mark.atMs > window) {
@@ -2586,7 +2687,7 @@ var TIER_REWARDS = {
   legendaire: { xp: 150, hours: 6 }
 };
 var sum = (xs) => xs.reduce((a, b) => a + b, 0);
-var buildingLevels = (p) => BUILDINGS.map((b) => {
+var buildingLevels = (p) => BUILDINGS.filter((b) => !b.endgame).map((b) => {
   var _a, _b, _c;
   return (_c = (_b = (_a = p.buildings) == null ? void 0 : _a[b.id]) == null ? void 0 : _b.level) != null ? _c : 0;
 });
@@ -3259,7 +3360,7 @@ function canAscend(player, queues, now) {
   var _a;
   const missing = BUILDINGS.filter((b) => {
     var _a2, _b;
-    return ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
+    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
   }).map((b) => {
     var _a2, _b;
     return {
@@ -3281,6 +3382,7 @@ function ascend(player, queues, now) {
   const check = canAscend(player, queues, now);
   if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
   for (const b of BUILDINGS) {
+    if (b.endgame) continue;
     const cur = player.buildings[b.id];
     player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
   }
@@ -3347,7 +3449,7 @@ function emptyResources() {
   return Object.fromEntries(RESOURCE_LIST.map((r) => [r.id, 0]));
 }
 function homeLevels(player) {
-  return BUILDINGS.reduce((a, b) => {
+  return BUILDINGS.filter((b) => !b.endgame).reduce((a, b) => {
     var _a, _b;
     return a + ((_b = (_a = player.buildings[b.id]) == null ? void 0 : _a.level) != null ? _b : 0);
   }, 0);

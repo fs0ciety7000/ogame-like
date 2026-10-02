@@ -34,7 +34,9 @@ describe("ascension", () => {
     const p = maxed();
     const before = economySnapshot(p).gross.scrap ?? 0;
     ascend(p, defaultQueues(), NOW);
-    expect(Object.values(p.buildings).every((b) => b.level === 1 && b.unlocked)).toBe(true);
+    expect(BUILDINGS.filter((b) => !b.endgame).every((b) => p.buildings[b.id].level === 1 && p.buildings[b.id].unlocked)).toBe(true);
+    // Bâtiments de fin de partie : conservés.
+    expect(p.buildings.fonderie_quantique.level).toBe(10);
     expect(p.resources.scrap).toBe(100);
     expect(p.resources.reinforcedSteel).toBe(0);
     expect(p.techLevels).toEqual({ tech1: 3 });

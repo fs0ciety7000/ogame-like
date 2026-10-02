@@ -49,6 +49,7 @@ function LogRow({ log }: { log: AdminLogEntry }) {
           {COLLECTION_LABEL[log.targetCollection] ?? log.targetCollection} {log.recordLabel && <strong className="text-slate-200">{log.recordLabel}</strong>}
         </span>
         {log.action === "update" && <span className="text-slate-500">— {fields.join(", ")}</span>}
+        {log.reason && <span className="w-full pl-6 text-[11px] italic text-gold-glow">Motif : {log.reason}</span>}
       </button>
       {open && (
         <div className="mt-2 space-y-1.5 pl-6">

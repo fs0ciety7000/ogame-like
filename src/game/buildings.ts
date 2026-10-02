@@ -17,7 +17,9 @@ export type BuildingEffect =
   /** Capacité du hangar (places) = perLevel × niveau. */
   | { type: "hangar"; category: "attack" | "defense"; perLevel: number }
   /** Entrepôt : capacité par ressource commune = base × growth^niveau. */
-  | { type: "storage"; base: number; growth: number };
+  | { type: "storage"; base: number; growth: number }
+  /** v3.6 : bouclier planétaire supplémentaire (perLevel × niveau, plafonné à max), au-delà du plafond des hangars. */
+  | { type: "shield"; perLevel: number; max: number };
 
 /** Second palier de coûts (niveaux ≥ fromLevel) : progression géométrique
  *  séparée, pour ne pas modifier les niveaux déjà atteints par les joueurs. */
@@ -42,6 +44,8 @@ export interface BuildingDef {
   maxLevel: number;
   /** Débloqué dès l'inscription. */
   startsUnlocked?: boolean;
+  /** v3.6 : bâtiment de fin de partie (hors condition d'Ascension, conservé à l'Ascension). */
+  endgame?: boolean;
   /** Coût de déblocage (bouton « Débloquer »). */
   unlockCost?: ResourceMap;
   /** Débloqué par une technologie (effet « unlock_buildings ») plutôt que par un coût. */
@@ -57,6 +61,8 @@ export interface BuildingDef {
 }
 
 // Niveaux 1 à 10 inchangés, puis +25 % par niveau jusqu'au niveau 20.
+// v3.6 : production des bâtiments de fin de partie (ressource rare, par seconde).
+const ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
 const PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
 
 /** Niveaux 11 à 20 : 3 h puis +1 h par niveau (12 h au niveau 20). */
@@ -189,6 +195,40 @@ export const DEFAULT_BUILDINGS: BuildingDef[] = [
     },
     effect: { type: "storage", base: 2_000_000, growth: 1.6 },
   },
+  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
+  {
+    id: "fonderie_quantique",
+    name: "Fonderie quantique",
+    description: "Forge de l'acier renforcé à partir de matière stabilisée à l'échelle quantique : une production continue de ressource rare.",
+    image: "/assets/buildings/fonderie_quantique.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech21",
+    upgrade: { baseCost: { scrap: 20_000_000, energy: 10_000_000, cyberModule: 20_000 }, maxCost: { scrap: 1_500_000_000, energy: 800_000_000, cyberModule: 2_000_000 }, costFromLevel: 2, secondsPerLevel: 10_800 },
+    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION },
+  },
+  {
+    id: "synthetiseur_neuronal",
+    name: "Synthétiseur neuronal",
+    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
+    image: "/assets/buildings/synthetiseur_neuronal.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech22",
+    upgrade: { baseCost: { data: 20_000_000, nano: 10_000_000, syntheticNanites: 20_000 }, maxCost: { data: 1_500_000_000, nano: 800_000_000, syntheticNanites: 2_000_000 }, costFromLevel: 2, secondsPerLevel: 10_800 },
+    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION },
+  },
+  {
+    id: "generateur_bouclier",
+    name: "Générateur de bouclier planétaire",
+    description: "Un dôme d'énergie hexagonal renforce le bouclier de la base au-delà de ce que permettent les hangars.",
+    image: "/assets/buildings/generateur_bouclier.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech23",
+    upgrade: { baseCost: { energy: 30_000_000, scrap: 20_000_000, reinforcedSteel: 20_000 }, maxCost: { energy: 2_000_000_000, scrap: 1_300_000_000, reinforcedSteel: 2_000_000 }, costFromLevel: 2, secondsPerLevel: 10_800 },
+    effect: { type: "shield", perLevel: 0.005, max: 0.05 },
+  },
 ];
 
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */
@@ -209,7 +249,7 @@ export function setBuildings(defs: BuildingDef[]) {
   LOCKABLE_BUILDINGS.splice(
     0,
     LOCKABLE_BUILDINGS.length,
-    ...defs.filter((b) => b.production && !b.startsUnlocked).map((b) => b.id),
+    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id),
   );
   for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
   for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];

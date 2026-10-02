@@ -1,3 +1,4 @@
+import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -27,7 +28,7 @@ import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "
 /** wealth : empires actifs ; aggression : victoires récentes contre des joueurs ;
  *  research : savoir accumulé et recherche récente ; hoard : entrepôts pleins ;
  *  expansion : niveaux de bâtiments gagnés sur la période. */
-export type FactionTrigger = "wealth" | "aggression" | "research" | "hoard" | "expansion";
+export type FactionTrigger = "wealth" | "aggression" | "research" | "hoard" | "expansion" | "singularity";
 export type RaidTarget = "base" | "fleet";
 
 export interface FactionDef {
@@ -38,6 +39,8 @@ export interface FactionDef {
   enforcer: string;
   /** Illustration (chemin public ou URL d'un fichier envoyé). */
   art: string;
+  /** v3.6 : scène large (repaire), affichée en tête de la carte de faction. */
+  banner?: string;
   /** Couleur d'accent : ember, gold, cyan, mint, danger. */
   color: string;
   /** Récit (paragraphes séparés par une ligne vide). */
@@ -225,6 +228,34 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
     lair: { name: "La Tanière du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+  },
+  {
+    id: "choeur",
+    enabled: true,
+    name: "Le Chœur Silencieux",
+    leader: "L'Archonte Vesper",
+    enforcer: "Les Échos",
+    art: "/assets/story/choeur.webp",
+    banner: "/assets/story/choeur-banner.webp",
+    color: "mint",
+    story:
+      "Il y a dix mille ans, une civilisation entière s'est fondue en une seule conscience, puis s'est tue. Ses cathédrales de cristal noir dérivent depuis aux confins de la galaxie, silencieuses.\n\n" +
+      "Les signaux de vos fonderies quantiques et de vos cortex neuronaux l'ont réveillée. Le Chœur ne convoite pas vos coffres : il veut ce que vos laboratoires ont appris, et les fragments où vous l'avez gravé.\n\n" +
+      "L'Archonte Vesper, masque de porcelaine sans bouche et halo de glyphes, parle pour des milliers de voix. Ceux qui refusent entendent d'abord un murmure dans leurs transmissions… puis voient arriver les Échos.",
+    ultimatum: {
+      title: "« Ton esprit chante trop fort. »",
+      quote:
+        "{pseudo}… Nous t'entendons. Tes machines pensent, tes forges plient la matière : tu chantes trop fort pour une si petite étoile. Offre-nous ce que tu as appris, et nous resterons silencieux. Refuse, et les Échos viendront l'apprendre eux-mêmes.",
+      signature: "L'Archonte Vesper, pour le Chœur",
+      payLabel: "Offrir le tribut",
+    },
+    trigger: { type: "singularity", minIntervalHours: 72, maxIntervalHours: 96, activeWithinHours: 72, minVictories: 0, windowDays: 7, threshold: 8 },
+    tribute: { basis: "production", hours: 8, plunderPct: 0, minHours: 0 },
+    answerHours: 12,
+    raidTravelHours: 2,
+    raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2000, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
+    bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
+    lair: { name: "La Cathédrale du Silence", raidsNeeded: 5, pct: 1.5, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
   },
 ];
 
@@ -489,6 +520,10 @@ export function pirateTick(
         break;
       case "hoard":
         triggered = active && storageFillPct(player) >= threshold;
+        break;
+      case "singularity":
+        // v3.6 : niveaux cumulés des technologies de fin de partie.
+        triggered = active && ENDGAME_TECH_IDS.reduce((a, id) => a + (player.techLevels?.[id] ?? 0), 0) >= threshold;
         break;
       case "expansion": {
         // Repère glissant : remis à zéro à la fin de chaque période.

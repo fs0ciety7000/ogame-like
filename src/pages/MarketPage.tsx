@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Clock, Store } from "lucide-react";
@@ -180,7 +181,7 @@ export function MarketPage() {
                 return (
                   <div key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
                     <span className="min-w-0 truncate text-xs text-slate-400">
-                      {o.sellerPseudo}
+                      <PlayerName uid={o.sellerId} pseudo={o.sellerPseudo} allianceId={o.sellerAllianceId || null} />
                       {ally && <HudTag tone="mint" className="ml-1.5">Allié</HudTag>}
                     </span>
                     <span className="flex items-center gap-2">

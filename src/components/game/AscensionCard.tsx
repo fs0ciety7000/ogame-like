@@ -34,8 +34,9 @@ export function AscensionCard() {
   if (!player) return null;
   const now = Date.now();
   const count = ascensionCount(player);
-  const levels = BUILDINGS.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
-  const maxLevels = BUILDINGS.reduce((a, b) => a + b.maxLevel, 0);
+  const base = BUILDINGS.filter((b) => !b.endgame);
+  const levels = base.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  const maxLevels = base.reduce((a, b) => a + b.maxLevel, 0);
   if (count === 0 && levels < maxLevels * 0.75) return null;
   const check = canAscend(player, queues, now);
   const shield = ascensionShieldUntil(player) - now;

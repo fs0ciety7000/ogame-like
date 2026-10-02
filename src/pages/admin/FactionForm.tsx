@@ -39,6 +39,9 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
         <div className="sm:col-span-2">
           <ImageField label="Illustration" value={f.art} onChange={(v) => set({ art: v })} />
         </div>
+        <div className="sm:col-span-2">
+          <ImageField label="Scène large (repaire, en tête de la page Menaces ; facultatif)" value={f.banner ?? ""} onChange={(v) => set({ banner: v || undefined })} />
+        </div>
         <TextAreaField label="Récit (paragraphes séparés par une ligne vide)" rows={6} value={f.story} onChange={(v) => set({ story: v })} />
       </Section>
 
@@ -60,6 +63,7 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
             { value: "research", label: "Savoir : niveaux de technos + recherche récente" },
             { value: "hoard", label: "Thésaurisation : entrepôts remplis" },
             { value: "expansion", label: "Expansion : niveaux de bâtiments gagnés" },
+            { value: "singularity", label: "Singularité : niveaux des technologies de fin de partie" },
           ]}
           onChange={(v) => trig({ type: v })}
         />

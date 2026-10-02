@@ -1,3 +1,4 @@
+import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -136,7 +137,7 @@ export function FleetsPanel({
           >
             <p className="flex items-center gap-1.5 text-xs font-semibold text-danger-glow">
               <AlertTriangle className="h-3.5 w-3.5" /> {f.mission === "pirate" ? "Raid du" : "Attaque de"}{" "}
-              {f.ownerPseudo} — impact dans {formatClock(left)}
+              <PlayerName uid={f.ownerUid} pseudo={f.ownerPseudo} /> — impact dans {formatClock(left)}
             </p>
             <p className="mt-1 text-[11px] text-slate-400">
               {f.mission === "pirate"
@@ -253,7 +254,7 @@ export function FleetsPanel({
           </p>
           {hosted.map((f) => (
             <p key={f.id} className="mt-1 text-slate-300">
-              {f.ownerPseudo} : {fleetSummary(f)}
+              <PlayerName uid={f.ownerUid} pseudo={f.ownerPseudo} /> : {fleetSummary(f)}
               <span className="text-slate-500">
                 {" "}
                 ·{" "}
