@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin } from "lucide-react";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -211,7 +211,31 @@ function Sidebar() {
 
 /* ---------- mobile : barre d'onglets + menu complet ---------- */
 
-const TAB_ITEMS = ["/game", "/game/batiments", "/game/unites", "/game/missions"];
+/** v4.5 : onglets épinglés par le joueur (4 au plus), mémorisés sur l'appareil. */
+const DEFAULT_TABS = ["/game", "/game/unites", "/game/galaxie", "/game/passe"];
+const TABS_KEY = "cosmic-empires:mobile-tabs";
+const MAX_TABS = 4;
+
+function readTabs(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TABS_KEY) ?? "null") as unknown;
+    if (Array.isArray(raw)) {
+      const valid = raw.filter((t): t is string => typeof t === "string" && ALL_NAV_ITEMS.some((i) => i.to === t)).slice(0, MAX_TABS);
+      if (valid.length > 0) return valid;
+    }
+  } catch {
+    /* valeurs par défaut */
+  }
+  return DEFAULT_TABS;
+}
+
+function saveTabs(tabs: string[]) {
+  try {
+    localStorage.setItem(TABS_KEY, JSON.stringify(tabs));
+  } catch {
+    /* non mémorisé */
+  }
+}
 
 function TabLink({ item }: { item: NavItem }) {
   const badge = useBadge(item.to);
@@ -236,19 +260,60 @@ function TabLink({ item }: { item: NavItem }) {
   );
 }
 
-function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onClose: () => void; tabs: string[]; onTabsChange: (tabs: string[]) => void }) {
+  const [editing, setEditing] = useState(false);
+  const toggle = (to: string) => {
+    if (tabs.includes(to)) {
+      if (tabs.length > 1) onTabsChange(tabs.filter((t) => t !== to));
+    } else if (tabs.length < MAX_TABS) onTabsChange([...tabs, to]);
+    else onTabsChange([...tabs.slice(1), to]);
+  };
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="!top-auto !bottom-0 !translate-y-0 max-h-[80vh] w-full max-w-none p-4 pb-6">
-        <DialogTitle className="hud-title text-base">Navigation</DialogTitle>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setEditing(false);
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="max-h-[80vh]">
+        <div className="flex items-center gap-3 pr-8">
+          <DialogTitle className="hud-title text-base">Navigation</DialogTitle>
+          <button
+            type="button"
+            onClick={() => setEditing((e) => !e)}
+            className={cn("ml-auto border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em]", editing ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-white/10 text-slate-400")}
+          >
+            {editing ? "Terminé" : "Épingler"}
+          </button>
+        </div>
+        {editing && <p className="mt-2 text-xs text-slate-400">Touche une page pour l'épingler dans la barre du bas ({tabs.length} / {MAX_TABS}).</p>}
         <div className="mt-3 flex flex-col gap-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
               <p className="hud-eyebrow mb-2 text-[10px] text-slate-500">{group.label}</p>
               <div className="grid grid-cols-3 gap-2">
-                {group.items.map((item) => (
-                  <MenuTile key={item.to} item={item} onClick={onClose} />
-                ))}
+                {group.items.map((item) =>
+                  editing ? (
+                    <button
+                      key={item.to}
+                      type="button"
+                      onClick={() => toggle(item.to)}
+                      className={cn(
+                        "hud-cut relative flex flex-col items-center gap-1.5 border px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.08em]",
+                        tabs.includes(item.to) ? "border-gold-glow/60 bg-gold-glow/10 text-gold-glow" : "border-white/10 bg-white/[0.02] text-slate-400",
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                      {tabs.includes(item.to) && <Pin className="absolute right-1.5 top-1.5 h-3 w-3" />}
+                    </button>
+                  ) : (
+                    <MenuTile key={item.to} item={item} onClick={onClose} />
+                  ),
+                )}
               </div>
             </div>
           ))}
@@ -283,12 +348,13 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
 
 function MobileTabBar() {
   const [open, setOpen] = useState(false);
+  const [tabIds, setTabIds] = useState(readTabs);
   const location = useLocation();
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
-  const tabs = TAB_ITEMS.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter(Boolean);
+  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter(Boolean);
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
     <>
@@ -310,10 +376,18 @@ function MobileTabBar() {
             <LayoutGrid className="h-5 w-5" />
             <Badge count={allianceUnread + changelogUnread + reportsUnread + messagesUnread} />
           </span>
-          Menu
+          Plus
         </button>
       </nav>
-      <MobileMenu open={open} onClose={() => setOpen(false)} />
+      <MobileMenu
+        open={open}
+        onClose={() => setOpen(false)}
+        tabs={tabIds}
+        onTabsChange={(next) => {
+          setTabIds(next);
+          saveTabs(next);
+        }}
+      />
     </>
   );
 }

@@ -48,6 +48,8 @@ export interface PlayerStats {
   /** v3.9 : primes Kesh'Vaar remplies. */
   bounties?: number;
   lastResearchAtMs?: number;
+  /** v4.5 : jours d'activité (AAAA-MM-JJ, heure de Paris), 60 derniers. */
+  activeDays?: string[];
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];
