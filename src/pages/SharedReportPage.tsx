@@ -53,11 +53,11 @@ function BattleView({ report }: { report: BattleReport }) {
         </div>
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Pertes attaquant</p>
-          <p className="tabular-mono text-sm text-white">{Math.round(report.attackerLossPercent)} %</p>
+          <p className="tabular-mono text-sm text-white">{Math.round(report.attackerLossPercent * 100)} %</p>
         </div>
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Pertes défenseur</p>
-          <p className="tabular-mono text-sm text-white">{Math.round(report.defenderLossPercent)} %</p>
+          <p className="tabular-mono text-sm text-white">{Math.round(report.defenderLossPercent * 100)} %</p>
         </div>
       </div>
       {loot.length > 0 && (

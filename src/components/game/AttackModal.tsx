@@ -246,8 +246,8 @@ export function AttackModal({
                           <span className="text-slate-500">· rapport {timeAgo(spy.timestamp)}</span>
                         </p>
                         <p className="text-slate-400">
-                          Tes pertes ≈ <strong className="text-slate-200">{Math.round(c.attackerLossPercent)} %</strong> · pertes adverses ≈{" "}
-                          <strong className="text-slate-200">{Math.round(c.defenderLossPercent)} %</strong>
+                          Tes pertes ≈ <strong className="text-slate-200">{Math.round(c.attackerLossPercent * 100)} %</strong> · pertes adverses ≈{" "}
+                          <strong className="text-slate-200">{Math.round(c.defenderLossPercent * 100)} %</strong>
                           {!win && Number.isFinite(estimate.winFactor) && estimate.winFactor > 1 && (
                             <> · il te faudrait environ ×{estimate.winFactor.toFixed(1)} de puissance</>
                           )}

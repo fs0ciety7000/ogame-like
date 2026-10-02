@@ -95,7 +95,7 @@ function SfxToggle() {
 }
 
 /** Pages hors navigation principale (barre d'outils). */
-const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages" };
+const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages", "/game/rapport": "Rapport partagé" };
 
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
@@ -134,7 +134,7 @@ export function AppShell() {
   // Code de secteur (décoratif, stable par joueur).
   const sectorCode = (user?.uid ?? "000000").slice(-6).toUpperCase().replace(/(.{3})/, "$1-");
   const currentLabel =
-    EXTRA_LABELS[location.pathname] ??
+    Object.entries(EXTRA_LABELS).find(([path]) => location.pathname.startsWith(path))?.[1] ??
     ALL_NAV_ITEMS.find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
   )?.label;
