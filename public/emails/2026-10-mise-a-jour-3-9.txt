@@ -1,7 +1,7 @@
 COSMIC EMPIRES · Mise à jour 3.9
 L'Essaim Kesh'Vaar recrute des chasseurs
 
-Commandant,
+Commandant {{PSEUDO}},
 
 Leur Ruche-Mère a été pillée, leur Reine est tombée, ses œufs ont été vendus aux quatre coins du secteur. Les Kesh'Vaar ont juré de retrouver chaque coupable, et ils paient en Ambre de Ruche les commandants qui chassent pour eux.
 

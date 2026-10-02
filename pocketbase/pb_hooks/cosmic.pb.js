@@ -534,6 +534,8 @@ onRecordCreateRequest(
 onRecordUpdateRequest(
   (e) => {
     const db = require(`${__hooks}/cosmic_db.js`);
+    // v3.9.2 : un joueur n'écrit lui-même que son pseudo et quelques préférences.
+    if (e.record.collection().name === "players") db.guardPlayerUpdate(e);
     // v3.5.1 : motif obligatoire pour toute édition de l'état de jeu d'un joueur.
     db.requireAdminReason(e);
     const before = Object.assign({ collectionName: e.record.collection().name }, db.toPlain(e.record.original()));
@@ -599,3 +601,12 @@ cronAdd("cosmic_elite", "*/10 * * * *", () => {
 
 // Tchat d'alliance : emojis Kesh'Vaar réservés aux détenteurs du pack.
 onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).allianceMessageCreate(e), "alliance_messages");
+
+/* ---------- Campagnes e-mail (v3.9.2) ---------- */
+
+/** POST /api/cosmic/admin/mail — décompte, envoi de test, envoi à tous (administrateurs). */
+routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db.js`).adminMail(e), $apis.requireAuth("users", "_superusers"));
+
+/** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
+routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
+routerAdd("POST", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));

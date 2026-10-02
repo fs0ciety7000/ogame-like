@@ -113,6 +113,8 @@ export interface PlayerState {
   colonizing?: import("@/game/colonies").Colonizing | null;
   /** v3.9 : chasseurs de primes (Ambre, réputation, contrats, Comptoir). */
   bounties?: import("@/game/bounties").BountyState;
+  /** v3.9.2 : ne plus recevoir les nouvelles du jeu par e-mail. */
+  emailOptOut?: boolean;
 }
 
 export interface SeasonResult {
