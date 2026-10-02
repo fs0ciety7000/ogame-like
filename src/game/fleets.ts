@@ -99,6 +99,8 @@ export interface Fleet {
   transport?: TransportState | null;
   /** v4.0 : l'Espionne du défenseur a flairé une anomalie chimique (capsules à bord). */
   anomaly?: boolean;
+  /** v4.0 (affichage) : flotte leurrée par son propriétaire. */
+  decoyed?: boolean;
 }
 
 /** v3.5 : la flotte vise ce joueur (planète mère ou une de ses colonies). */
