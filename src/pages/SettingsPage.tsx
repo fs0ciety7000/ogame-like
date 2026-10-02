@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { setEmailOptOut } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AlertTriangle, Bell, BellOff, ShieldCheck, ShieldAlert } from "lucide-react";
@@ -189,6 +190,40 @@ function BrowserNotificationsCard() {
   );
 }
 
+/** v3.9.2 : nouvelles du jeu par e-mail. */
+function EmailNewsCard() {
+  const player = usePlayerStore((s) => s.player);
+  const [busy, setBusy] = useState(false);
+  if (!player) return null;
+  const on = !player.emailOptOut;
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await setEmailOptOut(player.uid, on);
+      usePlayerStore.setState({ player: { ...player, emailOptOut: on } });
+      toast.success(on ? "Tu ne recevras plus nos nouvelles par e-mail." : "Nouvelles par e-mail réactivées.");
+    } catch {
+      toast.error("Réglage impossible pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Nouvelles par e-mail</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-slate-400">Les grandes mises à jour du jeu, quelques fois par mois au plus. Jamais de publicité.</p>
+        <Button variant={on ? "outline" : "primary"} disabled={busy} onClick={() => void toggle()}>
+          {on ? <BellOff className="mr-1.5 h-4 w-4" /> : <Bell className="mr-1.5 h-4 w-4" />}
+          {on ? "Ne plus recevoir" : "Recevoir les nouvelles"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Thème d'interface (propre à cet appareil). */
 function HelpCard() {
   const player = usePlayerStore((s) => s.player);
@@ -316,6 +351,7 @@ export function SettingsPage() {
       <ThemeCard />
       <HelpCard />
       <BrowserNotificationsCard />
+      <EmailNewsCard />
       <ChangePasswordCard />
       <DangerZoneCard />
     </div>

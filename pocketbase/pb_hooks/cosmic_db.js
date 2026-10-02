@@ -3161,4 +3161,155 @@ function adminElite(e) {
   return e.json(200, eliteTick(Number(body(e).now) || Date.now()));
 }
 
-module.exports = { bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Sécurité de la fiche joueur (v3.9.2) ---------- */
+
+/** Seuls ces champs s'écrivent directement par un joueur ; tout le reste
+ *  passe par les routes du serveur (actions de jeu). */
+const PLAYER_WRITABLE = ["pseudo", "allianceLastReadMs", "emailOptOut"];
+
+function guardPlayerUpdate(e) {
+  if (e.hasSuperuserAuth() || isGameAdmin(e)) return;
+  const sent = e.requestInfo().body || {};
+  const bad = Object.keys(sent).filter((k) => PLAYER_WRITABLE.indexOf(k) < 0);
+  if (bad.length > 0) throw new ForbiddenError("Ces informations ne se modifient qu'en jeu.");
+}
+
+/* ---------- Campagnes e-mail (v3.9.2) ---------- */
+
+/** Joueurs joignables : compte vérifié, nouvelles acceptées. */
+function mailRecipients(app) {
+  const out = [];
+  let optedOut = 0;
+  app.findRecordsByFilter("users", "verified = true", "", 0, 0, {}).forEach((u) => {
+    const player = findOrNull(app, "players", u.id);
+    if (!player) return;
+    if (player.getBool("emailOptOut")) {
+      optedOut += 1;
+      return;
+    }
+    const email = u.getString("email");
+    if (email) out.push({ email, player });
+  });
+  return { list: out, optedOut };
+}
+
+function unsubscribeUrl(player, apiUrl) {
+  let token = player.getString("mailToken");
+  if (!token) {
+    token = $security.randomString(32);
+    player.set("mailToken", token);
+    $app.save(player);
+  }
+  return `${apiUrl}/api/cosmic/unsubscribe?u=${encodeURIComponent(player.id)}&t=${encodeURIComponent(token)}`;
+}
+
+function personalize(str, pseudo, unsubUrl, html) {
+  return String(str || "")
+    .split("{{PSEUDO}}")
+    .join(html ? escapeHtml(pseudo) : pseudo)
+    .split("{{UNSUBSCRIBE_URL}}")
+    .join(unsubUrl);
+}
+
+/** POST /api/cosmic/admin/mail { action: "count" | "test" | "send", subject, html, text, apiUrl, confirm?, dryRun? } */
+function adminMail(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const req = body(e);
+  const action = String(req.action || "");
+  const recipients = mailRecipients($app);
+  if (action === "count") return e.json(200, { recipients: recipients.list.length, optedOut: recipients.optedOut, smtp: mailEnabled() });
+  const subject = String(req.subject || "").trim();
+  const html = String(req.html || "");
+  const text = String(req.text || "");
+  const apiUrl = String(req.apiUrl || "").replace(/\/+$/, "");
+  if (!subject || !html) throw new BadRequestError("Objet et contenu requis.");
+  if (!/^https?:\/\/[^\s]+$/.test(apiUrl)) throw new BadRequestError("Adresse du serveur invalide.");
+  const meta = $app.settings().meta;
+  const from = { address: meta.senderAddress, name: String(req.fromName || "").trim() || meta.senderName || "Cosmic Empires" };
+  const sendOne = (email, pseudo, player) => {
+    const url = player ? unsubscribeUrl(player, apiUrl) : `${apiUrl}/api/cosmic/unsubscribe`;
+    const message = new MailerMessage({
+      from,
+      to: [{ address: email }],
+      subject: personalize(subject, pseudo, url, false),
+      html: personalize(html, pseudo, url, true),
+      text: personalize(text, pseudo, url, false),
+      headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    });
+    $app.newMailClient().send(message);
+  };
+
+  if (action === "test") {
+    if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
+    const to = String(req.to || (e.auth ? e.auth.getString("email") : "")).trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw new BadRequestError("Adresse de test invalide.");
+    const player = e.auth ? findOrNull($app, "players", e.auth.id) : null;
+    try {
+      sendOne(to, player ? player.getString("pseudo") : "Commandant", player);
+    } catch (err) {
+      throw new BadRequestError(`Envoi impossible : ${err}`);
+    }
+    return e.json(200, { sent: 1, to });
+  }
+
+  if (action !== "send") throw new BadRequestError("Action inconnue.");
+  if (req.confirm !== "ENVOYER") throw new BadRequestError("Confirmation manquante.");
+  if (req.dryRun) return e.json(200, { sent: 0, failed: 0, recipients: recipients.list.length, dryRun: true });
+  if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
+  let sent = 0;
+  const failed = [];
+  recipients.list.forEach((r, i) => {
+    try {
+      sendOne(r.email, r.player.getString("pseudo"), r.player);
+      sent += 1;
+    } catch (err) {
+      failed.push(r.player.getString("pseudo"));
+      console.log(`[cosmic] campagne : échec pour ${r.player.id} : ${err}`);
+    }
+    // Limite du fournisseur (2 envois par seconde chez Resend).
+    if (i < recipients.list.length - 1) sleep(600);
+  });
+  try {
+    const log = new Record($app.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "create",
+      targetCollection: "emails",
+      recordId: "campagne",
+      recordLabel: `Campagne e-mail : ${subject}`,
+      changes: { envoyés: sent, échecs: failed.length },
+      createdAtMs: Date.now(),
+    });
+    $app.save(log);
+  } catch (_) {
+    /* journal facultatif */
+  }
+  return e.json(200, { sent, failed: failed.length, failedPseudos: failed });
+}
+
+/** GET/POST /api/cosmic/unsubscribe?u=&t= — lien de désinscription des e-mails. */
+function unsubscribe(e) {
+  const q = e.requestInfo().query || {};
+  const uid = String(q.u || "");
+  const token = String(q.t || "");
+  const player = uid ? findOrNull($app, "players", uid) : null;
+  const ok = !!player && token.length >= 16 && player.getString("mailToken") === token;
+  if (ok && !player.getBool("emailOptOut")) {
+    player.set("emailOptOut", true);
+    $app.save(player);
+  }
+  const appUrl = String($app.settings().meta.appURL || "").replace(/\/+$/, "");
+  const page =
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cosmic Empires</title></head>` +
+    `<body style="margin:0;background:#03040a;color:#cbd5e1;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center">` +
+    `<div style="max-width:420px;padding:32px;border:1px solid #12324a;background:#05070f;text-align:center">` +
+    `<div style="letter-spacing:4px;color:#fff;font-weight:bold">COSMIC EMPIRES</div>` +
+    (ok
+      ? `<p style="margin-top:20px;line-height:1.6">C'est noté, commandant : tu ne recevras plus nos nouvelles par e-mail.<br>Tu peux les réactiver à tout moment dans les <b>Réglages</b> du jeu.</p>`
+      : `<p style="margin-top:20px;line-height:1.6">Ce lien de désinscription n'est pas valide. Tu peux gérer tes e-mails depuis les <b>Réglages</b> du jeu.</p>`) +
+    `<p style="margin-top:24px"><a href="${escapeHtml(appUrl || "/")}" style="color:#4be8ff">Retourner en jeu →</a></p></div></body></html>`;
+  return e.html(200, page);
+}
+
+module.exports = { guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
