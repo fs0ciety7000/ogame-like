@@ -1,3 +1,4 @@
+import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
@@ -44,6 +45,7 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 
 export type GameAction =
   | { type: "vacationEnd" }
+  | { type: "chronicleClaim"; episode: number }
   | { type: "sync"; playtimeDeltaSeconds?: number }
   | { type: "unlockBuilding"; buildingId: string }
   | { type: "upgradeBuilding"; buildingId: string }
@@ -345,6 +347,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
+
+    case "chronicleClaim":
+      return { points: claimChronicle(player, action.episode, now) };
 
     case "vacationEnd":
       endVacation(player, queues, now, true);

@@ -190,8 +190,8 @@ export function FleetsPanel({
         const outbound = f.status === "outbound";
         const stationed = f.status === "stationed";
         const decision = f.status === "decision";
-        const recallable = f.mission !== "expedition" && f.mission !== "leviathan" && f.mission !== "elite";
-        const beaconable = beacons > 0 && f.mission !== "expedition" && !decision && !((f.mission === "leviathan" || f.mission === "elite") && outbound);
+        const recallable = f.mission !== "expedition" && f.mission !== "leviathan" && f.mission !== "seasonboss" && f.mission !== "elite";
+        const beaconable = beacons > 0 && f.mission !== "expedition" && !decision && !((f.mission === "leviathan" || f.mission === "seasonboss" || f.mission === "elite") && outbound);
         const at = decision
           ? (f.stationedUntilMs ?? now)
           : outbound

@@ -1,3 +1,4 @@
+import { ChroniclesCard } from "@/components/game/ChroniclesCard";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, Gift, Lock, Ticket } from "lucide-react";
@@ -19,6 +20,8 @@ const SOURCES: [keyof typeof PASS_POINTS, string][] = [
   ["contract", "Contrat du jour récupéré"],
   ["bounty", "Prime Kesh'Vaar remplie"],
   ["vendetta", "Vendetta gagnée contre un seigneur"],
+  ["chronicle", "Épisode des Chroniques terminé"],
+  ["seasonBoss", "Participation au boss de saison"],
   ["raidRepelled", "Raid de faction repoussé"],
   ["victory", "Combat gagné (attaque, défense, repaire)"],
   ["bossAssault", "Assaut sur le Léviathan ou la proie d'élite"],
@@ -80,7 +83,7 @@ export function SeasonPassPage() {
       <PageHeader
         eyebrow="Saison"
         title={`Passe de ${seasonLabel(st.seasonId)}`}
-        description="Gratuit pour tous : ton activité de chaque jour remplit 30 paliers de récompenses. Remise à zéro au début de chaque mois."
+        description={`Gratuit pour tous : ton activité de chaque jour remplit ${PASS_RULES.tiers} paliers de récompenses. Remise à zéro au début de chaque mois.`}
         right={
           claimable.length > 0 ? (
             <Button onClick={() => void claimAll()} disabled={busy !== null}>
@@ -89,6 +92,8 @@ export function SeasonPassPage() {
           ) : undefined
         }
       />
+
+      <ChroniclesCard />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Palier" value={`${tier} / ${PASS_RULES.tiers}`} sub={tier < PASS_RULES.tiers ? `${inTier} / ${PASS_RULES.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
