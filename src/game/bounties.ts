@@ -2,6 +2,7 @@ import { allianceSiegeFactor } from "@/game/alliances";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
+import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
@@ -365,6 +366,7 @@ export function resolveBountyHunt(
     applyXpDelta(player, xp, now);
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
+    addPassPoints(player, "bounty", now);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(note(`${fugitive.name} capturé !`, `Prime « ${t.label} » remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
     const rankAfter = bountyRank(st.reputation);

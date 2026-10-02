@@ -1994,7 +1994,9 @@ function leviathanArrival(txApp, game, rec, now) {
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
+    owner.rec.set("seasonPass", owner.player.seasonPass || null);
     txApp.save(owner.rec);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
@@ -3155,7 +3157,9 @@ function eliteArrival(txApp, game, rec, now) {
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
+    owner.rec.set("seasonPass", owner.player.seasonPass || null);
     txApp.save(owner.rec);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
@@ -3440,4 +3444,82 @@ function unsubscribe(e) {
   return e.html(200, page);
 }
 
-module.exports = { fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Parrainage (v4.1) ---------- */
+
+/** Le nouveau joueur déclare son parrain (lien ?parrain=<uid>). */
+function referralRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const sponsorId = String(body(e).sponsor || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    if (!findOrNull(txApp, "players", sponsorId)) throw new NotFoundError("Parrain introuvable.");
+    const recruit = loadPlayer(txApp, game, uid);
+    const sponsor = loadPlayer(txApp, game, sponsorId);
+    try {
+      game.linkReferrer(recruit.player, sponsor.player, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    recruit.rec.set("referral", recruit.player.referral);
+    txApp.save(recruit.rec);
+    notify(txApp, sponsorId, [{ kind: "alliance", title: "Nouveau filleul", message: `${recruit.player.pseudo} t'a choisi comme parrain. Récompense quand il atteindra Bronze I.`, createdAtMs: now, read: false, link: "/game/profil" }]);
+    out = { sponsor: sponsor.player.pseudo };
+  });
+  return e.json(200, out);
+}
+
+/** Tâche horaire : récompense les filleuls arrivés à Bronze I. */
+function referralTick(now) {
+  const game = loadGame();
+  let rewarded = 0;
+  $app.findRecordsByFilter("players", "referral ~ '\"rewarded\":false'", "", 200, 0).forEach((cand) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        const recruit = loadPlayer(txApp, game, cand.id);
+        const sponsorId = (recruit.player.referral || {}).by;
+        let verified = false;
+        try {
+          verified = txApp.findRecordById("users", cand.id).getBool("verified");
+        } catch (_) {
+          verified = false;
+        }
+        if (!sponsorId || !game.referralDue(recruit.player, verified, now)) return;
+        if (!findOrNull(txApp, "players", sponsorId)) {
+          recruit.player.referral = Object.assign({}, recruit.player.referral, { rewarded: true });
+          recruit.rec.set("referral", recruit.player.referral);
+          txApp.save(recruit.rec);
+          return;
+        }
+        const sponsor = loadPlayer(txApp, game, sponsorId);
+        const res = game.grantReferral(sponsor.player, recruit.player, now);
+        ["referral", "bounties"].forEach((f) => {
+          recruit.rec.set(f, recruit.player[f]);
+          sponsor.rec.set(f, sponsor.player[f]);
+        });
+        txApp.save(recruit.rec);
+        txApp.save(sponsor.rec);
+        const R = game.REFERRAL_RULES;
+        notify(txApp, cand.id, [{ kind: "achievement", title: "Parrainage récompensé", message: `Bronze I atteint : +${R.amberRecruit} Ambre de Ruche, offert par ton parrain ${sponsor.player.pseudo}.`, createdAtMs: now, read: false }]);
+        notify(txApp, sponsorId, [
+          {
+            kind: "achievement",
+            title: res.capped ? "Filleul arrivé à Bronze I" : "Parrainage récompensé",
+            message: res.capped
+              ? `${recruit.player.pseudo} a atteint Bronze I. Plafond de ${R.perMonth} récompenses ce mois-ci atteint : la prochaine viendra le mois prochain.`
+              : `${recruit.player.pseudo} a atteint Bronze I : +${R.amberSponsor} Ambre de Ruche et la bannière « Recruteur ».`,
+            createdAtMs: now,
+            read: false,
+          },
+        ]);
+        rewarded += 1;
+      });
+    } catch (err) {
+      console.log(`[cosmic] parrainage ${cand.id} : ${err}`);
+    }
+  });
+  return rewarded;
+}
+
+module.exports = { referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

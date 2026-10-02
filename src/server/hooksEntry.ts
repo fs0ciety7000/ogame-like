@@ -74,3 +74,5 @@ export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
 export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";
 export { publicShowcase } from "@/game/profile";
+export { addPassPoints } from "@/game/seasonPass";
+export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";

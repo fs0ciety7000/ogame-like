@@ -610,3 +610,16 @@ routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
 routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
 routerAdd("POST", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
+
+/* ---------- Parrainage (v4.1) ---------- */
+
+routerAdd("POST", "/api/cosmic/referral", (e) => require(`${__hooks}/cosmic_db.js`).referralRequest(e), $apis.requireAuth("users"));
+
+cronAdd("cosmic_referrals", "23 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).referralTick(Date.now());
+    if (n > 0) console.log(`[cosmic] parrainage : ${n} récompense(s)`);
+  } catch (err) {
+    console.log(`[cosmic] parrainage : ${err}`);
+  }
+});

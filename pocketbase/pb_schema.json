@@ -285,6 +285,18 @@
         "type": "json",
         "required": false,
         "maxSize": 2000
+      },
+      {
+        "name": "seasonPass",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
+      },
+      {
+        "name": "referral",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
       }
     ],
     "indexes": [

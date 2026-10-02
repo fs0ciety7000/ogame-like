@@ -13,6 +13,7 @@ import { formatInt } from "@/game/format";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
+import { addPassPoints } from "@/game/seasonPass";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -168,6 +169,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     }
     recordContract(player, "missions", 1, now);
     grantCommanderXp(player, "steward", COMMANDER_XP.missionDone);
+    addPassPoints(player, "mission", now);
     recordMission(player, contractDay(entry.endTime));
     notifications.push({
       kind: "mission",

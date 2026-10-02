@@ -3,6 +3,7 @@ import { bountyState, KESH } from "@/game/bounties";
 import { commanderLevel, commandersState, type CommanderId } from "@/game/commanders";
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { equippedRelics, type RelicRarity } from "@/game/relics";
+import { seasonLabel } from "@/game/seasons";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -30,7 +31,7 @@ export interface CosmeticOption {
 
 export const PROFILE_RULES = { mottoMax: 60 };
 
-type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle">>;
+type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass">>;
 
 const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [
   { id: "nebula", label: "Nébuleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
@@ -56,8 +57,23 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
     })),
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "Léviathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
+    // v4.1 : parrainage et passes de saison terminés.
+    { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'à Bronze I", unlocked: (p.referral?.recruits ?? 0) > 0 },
+    ...(p.seasonPass?.completed ?? []).map((seasonId, i) => ({
+      id: `pass:${seasonId}`,
+      label: `Passe ${seasonLabel(seasonId)}`,
+      gradient: PASS_GRADIENTS[i % PASS_GRADIENTS.length],
+      hint: "Terminer le passe de saison",
+      unlocked: true,
+    })),
   ];
 }
+
+const PASS_GRADIENTS = [
+  "linear-gradient(120deg,#05101a 0%,#0e4d6b 40%,#4be8ff 70%,#a78bfa 100%)",
+  "linear-gradient(120deg,#140514 0%,#5c0e4d 40%,#ff5df0 70%,#ffd86b 100%)",
+  "linear-gradient(120deg,#05140c 0%,#0e5c3a 40%,#5ef2b0 70%,#4be8ff 100%)",
+];
 
 export function emblemOptions(p: StylePlayer): CosmeticOption[] {
   const kesh = bountyState(p);

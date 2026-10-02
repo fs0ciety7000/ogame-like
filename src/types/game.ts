@@ -123,6 +123,9 @@ export interface PlayerState {
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;
+  /** v4.1 : passe de saison et parrainage. */
+  seasonPass?: import("@/game/seasonPass").PassState;
+  referral?: import("@/game/referral").ReferralState;
 }
 
 export interface SeasonResult {

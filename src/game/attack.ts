@@ -17,6 +17,7 @@ import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { consumeArmor } from "@/game/synthesis";
 import { consumeAegis } from "@/game/relics";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { addPassPoints } from "@/game/seasonPass";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -213,6 +214,8 @@ export function performAttack(input: AttackInput): AttackOutput {
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
   if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+  if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
 
   const outcomeTitle: Record<string, string> = {
