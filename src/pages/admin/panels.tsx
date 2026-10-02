@@ -1,3 +1,4 @@
+import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -792,7 +793,11 @@ export function PlayersPanel() {
               {RESOURCE_LIST.map((r) => (
                 <NumberField
                   key={r.id}
-                  label={`${r.emoji} ${r.name}`}
+                  label={
+                    <>
+                      <ResourceIcon id={r.id} /> {r.name}
+                    </>
+                  }
                   value={Math.floor(draft.resources?.[r.id] ?? 0)}
                   min={0}
                   step={1}

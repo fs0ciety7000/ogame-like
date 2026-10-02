@@ -1,3 +1,4 @@
+import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,14 +93,7 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
               {e.type === "resource_production" && (
                 <label className="flex flex-col gap-1">
                   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Ressource</span>
-                  <select value={e.target ?? ""} onChange={(ev) => patch(i, { target: ev.target.value || undefined })} className={SELECT}>
-                    <option value="">— choisir —</option>
-                    {RESOURCE_LIST.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
+<ResourceSelect<string> value={e.target ?? ""} onChange={(v) => patch(i, { target: v || undefined })} ariaLabel="Ressource" className="h-9" />
                 </label>
               )}
 
