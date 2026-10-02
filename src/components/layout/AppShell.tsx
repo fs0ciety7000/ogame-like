@@ -13,6 +13,7 @@ import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { SeasonGlow } from "@/components/layout/SeasonGlow";
@@ -31,6 +32,7 @@ import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
 import { useAllianceUnread } from "@/hooks/useAllianceUnread";
 import { subscribeMyMessages } from "@/services/messageService";
+import { claimPendingSponsor, pendingSponsor } from "@/services/referralService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
@@ -123,6 +125,10 @@ export function AppShell() {
   useAllianceUnread(user?.uid ?? null, player);
   const uidForMessages = user?.uid ?? null;
   useEffect(() => (uidForMessages ? subscribeMyMessages(uidForMessages) : undefined), [uidForMessages]);
+  // v4.7.1 : lien de parrainage pas encore déclaré (inscription interrompue, autre onglet…).
+  useEffect(() => {
+    if (uidForMessages && pendingSponsor()) void claimPendingSponsor().then((s) => s && toast.success(`Parrain enregistré : ${s}.`));
+  }, [uidForMessages]);
   useReportBadgeSync(user?.uid ?? null, isAdmin);
   const pendingReports = useReportBadges((s) => s.pendingNew);
 

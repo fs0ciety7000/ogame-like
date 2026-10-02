@@ -3556,6 +3556,35 @@ function referralRequest(e) {
   return e.json(200, out);
 }
 
+/** v4.7.1 : pseudo d'un parrain (page d'inscription, sans connexion). */
+function referralSponsorName(e) {
+  const id = String(e.request.url.query().get("id") || "");
+  if (!/^[a-z0-9]{6,30}$/i.test(id)) throw new BadRequestError("Lien de parrainage invalide.");
+  const rec = findOrNull($app, "players", id);
+  if (!rec || rec.getString("npc")) throw new NotFoundError("Parrain introuvable.");
+  return e.json(200, { pseudo: rec.getString("pseudo") });
+}
+
+/** v4.7.1 : mes filleuls et leur avancement, et mes propres conditions. */
+function referralInfo(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const now = Date.now();
+  const R = game.REFERRAL_RULES;
+  const isVerified = (id) => {
+    try {
+      return $app.findRecordById("users", id).getBool("verified");
+    } catch (_) {
+      return false;
+    }
+  };
+  const recruits = $app.findRecordsByFilter("players", "referral ~ {:q}", "-createdAtMs", 50, 0, { q: `"by":"${uid}"` }).map((r) => {
+    const ref = toPlain(r).referral || {};
+    return { pseudo: r.getString("pseudo"), xp: r.getInt("xp"), createdAtMs: r.getInt("createdAtMs"), verified: isVerified(r.id), rewarded: ref.rewarded === true };
+  });
+  return e.json(200, { recruits, verified: isVerified(uid), rules: { rewardXp: R.rewardXp, minAgeDays: R.minAgeDays }, now });
+}
+
 /** Tâche horaire : récompense les filleuls arrivés à Bronze I. */
 function referralTick(now) {
   const game = loadGame();
@@ -4697,4 +4726,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

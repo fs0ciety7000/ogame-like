@@ -9,7 +9,8 @@ import { accent } from "@/components/game/PirateUltimatum";
 import { activeUltimatum, FACTIONS } from "@/game/pirates";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
-import { scheduledAnnouncements, type AnnouncementSettings, type CustomAnnouncement } from "@/game/announcements";
+import { nextAnnouncement, scheduledAnnouncements, type AnnouncementSettings, type CustomAnnouncement } from "@/game/announcements";
+import { markAnnouncementsSeen } from "@/services/playerService";
 import { previewAnnouncement, useAnnouncementPreview, useAnnouncementSettings } from "@/services/announcementService";
 import { useContentStore } from "@/services/contentService";
 import { cn } from "@/lib/utils";
@@ -305,12 +306,19 @@ function readSeen(): string[] {
     return [];
   }
 }
-function markSeen(key: string) {
+function markSeen(keys: string[]) {
   try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), key])]));
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), ...keys])].slice(-300)));
   } catch {
-    /* stockage indisponible : l'annonce reviendra au prochain chargement */
+    /* stockage indisponible : le compte garde quand même la trace */
   }
+}
+
+/** v4.7.1 : annonces vues par ce joueur, sur le compte et sur cet appareil. */
+function seenIds(uid: string, account: string[] | undefined): string[] {
+  const prefix = `${uid}:`;
+  const local = readSeen().filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+  return [...new Set([...(account ?? []), ...local])];
 }
 
 /** Taglines courtes par type de déclencheur. */
@@ -344,7 +352,7 @@ export function allAnnouncements(settings: AnnouncementSettings): Announcement[]
 export function AnnouncementDialog() {
   const player = usePlayerStore((s) => s.player);
   const navigate = useNavigate();
-  const [current, setCurrent] = useState<Announcement | null>(null);
+  const [current, setCurrent] = useState<{ show: Announcement; markIds: string[] } | null>(null);
   const uid = player?.uid;
   const threatened = player ? !!activeUltimatum(player, Date.now()) : false;
   const settings = useAnnouncementSettings();
@@ -356,10 +364,10 @@ export function AnnouncementDialog() {
     // Pas par-dessus un ultimatum : l'annonce attendra le prochain chargement.
     // v4.5 : on attend le calendrier des annonces (game_config) avant de choisir.
     if (!uid || threatened || !contentLoaded || current) return;
-    const seen = readSeen();
-    const next = scheduledAnnouncements(ANNOUNCEMENTS, settings, Date.now(), fromCustom).find(
-      (a) => !seen.includes(`${uid}:${a.id}`) && (a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled))),
+    const list = scheduledAnnouncements(ANNOUNCEMENTS, settings, Date.now(), fromCustom).filter(
+      (a) => a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled)),
     );
+    const next = nextAnnouncement(list, seenIds(uid, usePlayerStore.getState().player?.announcementsSeen));
     if (!next) return;
     useAnnouncementPending.setState({ pending: true });
     const timer = setTimeout(() => setCurrent(next), 1200);
@@ -367,7 +375,7 @@ export function AnnouncementDialog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une annonce par chargement : `current` ne relance pas le choix
   }, [uid, threatened, contentLoaded, settings]);
 
-  const shown = preview ?? current;
+  const shown = preview ?? current?.show ?? null;
   if (!shown || !uid) return null;
   const gold = shown.tone === "gold";
   const factions = shown.factions.map((id) => FACTIONS.find((f) => f.id === id && f.enabled)).filter((f) => !!f);
@@ -376,7 +384,10 @@ export function AnnouncementDialog() {
       previewAnnouncement(null);
       return;
     }
-    markSeen(`${uid}:${shown.id}`);
+    // Celle-ci et toutes les plus anciennes : elles ne défileront plus une à une.
+    const ids = current?.markIds ?? [shown.id];
+    markSeen(ids.map((id) => `${uid}:${id}`));
+    void markAnnouncementsSeen(ids).catch(() => undefined);
     setCurrent(null);
     useAnnouncementPending.setState({ pending: false });
   };
