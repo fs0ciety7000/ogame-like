@@ -744,3 +744,49 @@ body {
     animation: none;
   }
 }
+
+/* ---------- Bandeaux d'annonce (v3.7) ---------- */
+@layer components {
+  .banner-marquee {
+    display: flex;
+    width: max-content;
+    animation: banner-marquee var(--banner-duration, 30s) linear infinite;
+  }
+  .banner-marquee:hover {
+    animation-play-state: paused;
+  }
+  .banner-scan {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--banner-color) 22%, transparent), transparent);
+    animation: banner-scan 4.5s ease-in-out infinite;
+  }
+}
+@keyframes banner-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes banner-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner-marquee {
+    animation: none;
+    width: auto;
+    flex-wrap: wrap;
+  }
+  .banner-marquee > :not(:first-child) {
+    display: none;
+  }
+  .banner-scan {
+    animation: none;
+    opacity: 0;
+  }
+}

@@ -1,3 +1,5 @@
+import { applyBannersRecord } from "@/services/bannerService";
+import { BANNERS_KEY } from "@/game/banners";
 import { create } from "zustand";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import {
@@ -42,6 +44,7 @@ function applyRecords(records: ConfigRecord[]) {
   applyMaintenanceRecord(records.find((r) => (r.key as string) === MAINTENANCE_KEY)?.data ?? null);
   applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
   applyLeviathanRecord(records.find((r) => (r.key as string) === LEVIATHAN_KEY)?.data ?? null);
+  applyBannersRecord(records.find((r) => (r.key as string) === BANNERS_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {

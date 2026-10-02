@@ -1,3 +1,4 @@
+import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -94,6 +95,9 @@ export function LoginPage() {
       <SchematicGrid />
       <Nebula />
       <Starfield count={160} />
+      <div className="absolute inset-x-0 top-0 z-30">
+        <AnnouncementBanners publicOnly />
+      </div>
 
       <div className="relative z-10 grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_420px]">
         <motion.div
