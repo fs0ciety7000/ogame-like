@@ -9,9 +9,12 @@ import type { PlayerState } from "@/types/game";
 export function useAllianceUnread(uid: string | null, player: PlayerState | null) {
   const allianceId = player?.allianceId ?? null;
   const lastReadMs = player?.allianceLastReadMs ?? 0;
+  // v4.0 : pastilles coupées dans les réglages.
+  const chatOn = player?.notifPrefs?.allianceChat !== false;
+  const pactOn = player?.notifPrefs?.pactMessages !== false;
 
   useEffect(() => {
-    if (!allianceId || !uid) {
+    if (!allianceId || !uid || !chatOn) {
       setAllianceUnreadCount(0);
       return;
     }
@@ -19,8 +22,8 @@ export function useAllianceUnread(uid: string | null, player: PlayerState | null
       const count = messages.filter((m) => m.createdAtMs > lastReadMs && m.authorUid !== uid).length;
       setAllianceUnreadCount(count);
     });
-  }, [allianceId, uid, lastReadMs]);
+  }, [allianceId, uid, lastReadMs, chatOn]);
 
   // v4.0 : messages du canal diplomatique (pastilles de l'onglet Diplomatie).
-  useEffect(() => (allianceId && uid ? subscribePactUnread(uid, allianceId) : undefined), [allianceId, uid]);
+  useEffect(() => (allianceId && uid && pactOn ? subscribePactUnread(uid, allianceId) : undefined), [allianceId, uid, pactOn]);
 }

@@ -39,3 +39,8 @@ export const mailSend = (m: MailBody) => call<{ sent: number; failed: number; fa
 export async function setEmailOptOut(uid: string, optOut: boolean) {
   await pb.collection("players").update(uid, { emailOptOut: optOut });
 }
+
+/** v4.0 : notifications d'alliance (canal, canal diplomatique, annonces). */
+export async function setNotifPrefs(uid: string, prefs: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean }) {
+  await pb.collection("players").update(uid, { notifPrefs: prefs });
+}

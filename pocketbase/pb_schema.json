@@ -250,6 +250,12 @@
         "required": false
       },
       {
+        "name": "notifPrefs",
+        "type": "json",
+        "required": false,
+        "maxSize": 500
+      },
+      {
         "name": "mailToken",
         "type": "text",
         "required": false,

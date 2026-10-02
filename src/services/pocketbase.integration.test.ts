@@ -1356,6 +1356,14 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(pactNotes[0]).toMatchObject({ kind: "alliance", title: `Canal diplomatique [${X.tag}]` });
       expect(pactNotes[0].message).toContain("On signe ?");
       expect(await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && link~"pacte=${pact.id}"` })).toHaveLength(0);
+      // Réglage : le joueur coupe le canal diplomatique, plus rien n'arrive.
+      await admin.collection("notifications").delete(pactNotes[0].id);
+      const bClient = new PocketBase(PB_TEST_URL!);
+      await bClient.collection("users").authWithPassword(B.email, B.pw);
+      await bClient.collection("players").update(bId, { notifPrefs: { pactMessages: false } });
+      await ds.diplomacy("message", { pactId: pact.id, text: "Toujours là ?" });
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && link~"pacte=${pact.id}"` })).toHaveLength(0);
+      await bClient.collection("players").update(bId, { notifPrefs: null });
 
       await loginPlayer(B.email, B.pw);
       expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });

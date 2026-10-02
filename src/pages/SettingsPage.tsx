@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { setEmailOptOut } from "@/services/mailService";
+import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AlertTriangle, Bell, BellOff, ShieldCheck, ShieldAlert } from "lucide-react";
@@ -224,6 +224,50 @@ function EmailNewsCard() {
   );
 }
 
+/** v4.0 : notifications d'alliance (canal, diplomatie, annonces). */
+const ALLIANCE_NOTIFS = [
+  { key: "allianceChat", label: "Messages du canal d'alliance", hint: "Pastille de messages non lus dans le menu." },
+  { key: "pactMessages", label: "Canal diplomatique", hint: "Notification quand une alliance liée par un pacte écrit." },
+  { key: "allianceEvents", label: "Annonces de l'alliance", hint: "Pactes proposés ou rompus, guerres, déclarations." },
+] as const;
+
+function AllianceNotifsCard() {
+  const player = usePlayerStore((s) => s.player);
+  const [busy, setBusy] = useState(false);
+  if (!player) return null;
+  const prefs = player.notifPrefs ?? {};
+  const toggle = async (key: (typeof ALLIANCE_NOTIFS)[number]["key"]) => {
+    const next = { ...prefs, [key]: prefs[key] === false };
+    setBusy(true);
+    try {
+      await setNotifPrefs(player.uid, next);
+      usePlayerStore.setState({ player: { ...player, notifPrefs: next } });
+    } catch {
+      toast.error("Réglage impossible pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notifications d'alliance</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {ALLIANCE_NOTIFS.map((n) => (
+          <label key={n.key} className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block text-slate-200">{n.label}</span>
+              <span className="text-xs text-slate-500">{n.hint}</span>
+            </span>
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={prefs[n.key] !== false} disabled={busy} onChange={() => void toggle(n.key)} />
+          </label>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Thème d'interface (propre à cet appareil). */
 function HelpCard() {
   const player = usePlayerStore((s) => s.player);
@@ -351,6 +395,7 @@ export function SettingsPage() {
       <ThemeCard />
       <HelpCard />
       <BrowserNotificationsCard />
+      <AllianceNotifsCard />
       <EmailNewsCard />
       <ChangePasswordCard />
       <DangerZoneCard />

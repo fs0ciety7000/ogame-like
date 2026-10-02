@@ -38,6 +38,7 @@ La plus grosse mise à jour depuis le lancement : ton empire a désormais un **�
 ## Diplomatie
 - Un message dans le **canal diplomatique** d'un pacte prévient désormais les membres des deux alliances : une notification par salve de messages (pas plus d'une toutes les 10 minutes), qui ouvre directement le bon canal.
 - Pastilles **« non lu »** sur l'onglet Diplomatie, sur le bouton Canal de chaque pacte et dans le menu Alliance.
+- Nouvelle carte **Notifications d'alliance** dans les Réglages : coupe à la carte la pastille du canal d'alliance, les notifications du canal diplomatique et les annonces (pactes, guerres).
 
 ## Une planète plus vivante
 - Sur l'accueil, ta planète montre le **jour et la nuit** (heure de Paris), les vapeurs du Labo de synthèse, tes boucliers de capsules, les insignes de tes officiers, l'aura d'une relique légendaire, tes flottes qui partent en mission et les échos des flottes hostiles en approche.

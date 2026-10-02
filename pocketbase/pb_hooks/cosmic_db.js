@@ -1611,7 +1611,7 @@ function notifyPactMessage(txApp, pact, authorUid, authorPseudo, authorTag, text
     if (!rec) return;
     const ownSide = allianceId === (authorTag === pact.tagA ? pact.allianceA : pact.allianceB);
     (allianceFromRecord(rec).members || []).forEach((uid) => {
-      if (uid === authorUid) return;
+      if (uid === authorUid || mutedNotif(txApp, uid, "pactMessages")) return;
       try {
         const recent = txApp.findRecordsByFilter("notifications", "player_id = {:u} && link = {:l} && read = false && createdAtMs > {:t}", "", 1, 0, { u: uid, l: link, t: now - 10 * 60000 });
         if (recent.length > 0) return;
@@ -1632,10 +1632,19 @@ function notifyPactMessage(txApp, pact, authorUid, authorPseudo, authorTag, text
   });
 }
 
+/** v4.0 : le joueur a coupé ce type de notification dans ses réglages. */
+function mutedNotif(txApp, uid, key) {
+  const rec = findOrNull(txApp, "players", uid);
+  if (!rec) return false;
+  const prefs = parseJsonField(rec, "notifPrefs", {}) || {};
+  return prefs[key] === false;
+}
+
 function notifyAlliance(txApp, allianceId, title, message, now) {
   const rec = findOrNull(txApp, "alliances", allianceId);
   if (!rec) return;
   (allianceFromRecord(rec).members || []).forEach((uid) => {
+    if (mutedNotif(txApp, uid, "allianceEvents")) return;
     try {
       notify(txApp, uid, [{ kind: "alliance", title, message, createdAtMs: now, read: false }]);
     } catch (_) {
@@ -3271,7 +3280,7 @@ function adminElite(e) {
 
 /** Seuls ces champs s'écrivent directement par un joueur ; tout le reste
  *  passe par les routes du serveur (actions de jeu). */
-const PLAYER_WRITABLE = ["pseudo", "allianceLastReadMs", "emailOptOut"];
+const PLAYER_WRITABLE = ["pseudo", "allianceLastReadMs", "emailOptOut", "notifPrefs"];
 
 function guardPlayerUpdate(e) {
   if (e.hasSuperuserAuth() || isGameAdmin(e)) return;
