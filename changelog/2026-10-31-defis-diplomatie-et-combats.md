@@ -1,7 +1,7 @@
 ---
 version: 3.8.0
 iteration: 36
-date: 2026-10-01
+date: 2026-10-02
 title: Défis de la semaine, diplomatie et combats mieux préparés
 ---
 Une mise à jour pour jouer ensemble… ou se préparer à s'affronter.

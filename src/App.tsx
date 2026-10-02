@@ -40,6 +40,7 @@ const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ 
 const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
 const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
 const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
+const BountiesPage = lazy(() => import("@/pages/BountiesPage").then((m) => ({ default: m.BountiesPage })));
 const MessagesPage = lazy(() => import("@/pages/MessagesPage").then((m) => ({ default: m.MessagesPage })));
 const SharedReportPage = lazy(() => import("@/pages/SharedReportPage").then((m) => ({ default: m.SharedReportPage })));
 const JournalPage = lazy(() => import("@/pages/JournalPage").then((m) => ({ default: m.JournalPage })));
@@ -78,6 +79,7 @@ export default function App() {
                 <Route path="simulateur" element={<SimulatorPage />} />
                 <Route path="marche" element={<MarketPage />} />
                 <Route path="leviathan" element={<LeviathanPage />} />
+                <Route path="primes" element={<BountiesPage />} />
                 <Route path="colonies" element={<ColoniesPage />} />
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />

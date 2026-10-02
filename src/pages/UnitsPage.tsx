@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
@@ -194,12 +195,21 @@ export function UnitsPage() {
                 <div className="relative flex flex-1 flex-col gap-3 p-4 pt-3">
                   <div>
                     <h3 className="hud-title text-xl text-white">{unit.name}</h3>
-                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked ? "" : unit.description}</p>
+                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint ? "" : unit.description}</p>
                   </div>
 
                   {isLocked ? (
                     <p className="text-sm text-slate-500">
-                      <GameIcon name="lock" /> Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
+                      <GameIcon name="lock" />{" "}
+                      {unit.blueprint ? (
+                        <>
+                          Plan vendu au <Link to="/game/primes" className="font-semibold text-gold-glow hover:underline">Comptoir de la Ruche</Link> (Kesh'Vaar).
+                        </>
+                      ) : (
+                        <>
+                          Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
+                        </>
+                      )}
                     </p>
                   ) : (
                     <>

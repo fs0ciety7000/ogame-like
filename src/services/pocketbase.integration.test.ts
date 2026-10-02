@@ -15,6 +15,8 @@ import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
 import * as srs from "@/services/sharedReportService";
 import * as ds from "@/services/diplomacyService";
+import * as bs from "@/services/bountyService";
+import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
@@ -1409,6 +1411,80 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       for (const n of await admin.collection("notifications").getFullList({ filter: `title~"Défi de la semaine"` })) await admin.collection("notifications").delete(n.id);
     }
   });
+
+  it("v3.9 bounties: hunt paid in amber, shop items, Kesh emojis, beacon and weekly elite", async () => {
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const fleets: string[] = [];
+    const elite = await admin.collection("game_config").getFirstListItem('key="bounty_elite"').catch(() => null);
+    try {
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 200 } }, resources: RICH, bounties: {} });
+      const board = viewBounties(await snap(bId), Date.now()).board;
+      const contract = board.find((c) => c.tier === 1)!;
+      const sent = await bs.sendBountyHunt(contract.id, { chasseur: 200 }, "balanced");
+      fleets.push(sent.id);
+      expect(sent).toMatchObject({ mission: "bounty", targetUid: `bounty_${contract.id}` });
+      await expect(bs.sendBountyHunt(contract.id, { chasseur: 1 }, "balanced")).rejects.toThrow(/déjà/);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await pb.collection("fleets").getOne(sent.id);
+      expect(landed.status).toBe("returning");
+      expect(landed.outcome).toBe("attacker_win");
+      let me = await snap(bId);
+      expect(bountyState(me)).toMatchObject({ amber: 10, reputation: 1, completed: 1, doneToday: 1 });
+      expect(me.stats.bounties).toBe(1);
+
+      // Comptoir : plan, emojis, échange, brouilleur, Voile de chitine.
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(me), amber: 1500 } });
+      await expect(ms.sendPrivateMessage(aId, "gg :kesh_gg:")).rejects.toThrow(/Comptoir/);
+      await bs.buyBountyItem("emojis");
+      await ms.sendPrivateMessage(aId, "gg :kesh_gg:");
+      await bs.buyBountyItem("blueprint");
+      await expect(bs.buyBountyItem("blueprint")).rejects.toThrow(/Déjà/);
+      const rare = (await snap(bId)).resources.aiFragment;
+      await bs.exchangeBountyAmber(10);
+      await bs.buyBountyItem("shield");
+      me = await snap(bId);
+      expect(me.units.traqueur_kesh.level).toBe(1);
+      expect(me.resources.aiFragment).toBe(rare + 400);
+      expect(bountyState(me).amber).toBe(1500 - 80 - 600 - 10 - 150);
+      const sheet = await ps.fetchPlayerSheet(bId);
+      expect((sheet.feats as unknown as { kesh: { shieldUntilMs: number } }).kesh.shieldUntilMs).toBeGreaterThan(Date.now());
+
+      // Balise de repli : la flotte rentre aussitôt, la prime redevient libre.
+      await bs.buyBountyItem("beacon");
+      // La première flotte est encore sur le retour : nouveaux vaisseaux à quai.
+      await admin.collection("players").update(bId, { units: { ...me.units, chasseur: { level: 1, count: 100 } } });
+      const other = viewBounties(me, Date.now()).board.find((c) => c.status === "open")!;
+      const hunt = await bs.sendBountyHunt(other.id, { chasseur: 10 }, "balanced");
+      fleets.push(hunt.id);
+      await bs.fireRecallBeacon(hunt.id);
+      expect((await pb.collection("fleets").getOne(hunt.id)).status).toBe("done");
+      me = await snap(bId);
+      expect(bountyState(me).board.find((c) => c.id === other.id)?.status).toBe("open");
+      expect(bountyState(me).beacons).toBe(0);
+
+      // Proie d'élite : créée par la tâche, rang 2 requis, dégâts enregistrés.
+      if (elite) await admin.collection("game_config").delete(elite.id);
+      const spawned = await admin.send("/api/cosmic/admin/elite", { method: "POST", body: {} });
+      expect(spawned.status).toBe("active");
+      await expect(bs.sendEliteAssault({ chasseur: 10 }, "balanced")).rejects.toThrow(/rang/);
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(me), reputation: 10 } });
+      const assault = await bs.sendEliteAssault({ chasseur: 50 }, "balanced");
+      fleets.push(assault.id);
+      await admin.collection("fleets").update(assault.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const cfg = await pb.collection("game_config").getFirstListItem('key="bounty_elite"');
+      expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
+      expect(cfg.data.hp).toBeLessThan(cfg.data.maxHp);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      const cfg = await admin.collection("game_config").getFirstListItem('key="bounty_elite"').catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      if (elite) await admin.collection("game_config").create({ key: "bounty_elite", data: elite.data });
+      await admin.collection("players").update(bId, { units: before!.units, resources: before!.resources, bounties: {}, stats: before!.stats ?? {}, titles: before!.titles ?? [], activeTitle: before!.activeTitle ?? "" });
+    }
+  }, 60_000);
 
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });

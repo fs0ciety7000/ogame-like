@@ -91,6 +91,8 @@ export interface AttackContext {
   defenderAscendedAtMs?: number;
   /** v3.2 : délai entre deux attaques sur la même cible (guerre d'alliance) ; défaut : règle JcJ. */
   attackCooldownMs?: number;
+  /** v3.9 : Voile de chitine du défenseur (Comptoir Kesh'Vaar), fin en ms. */
+  defenderShieldUntilMs?: number;
 }
 
 export type AttackBlockReason = "self" | "cooldown" | "shield" | "newbie" | "too_weak";
@@ -140,6 +142,11 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
         message: `Ce joueur vient d'être battu : bouclier actif encore ${formatWait(until - now)}.`,
       };
     }
+  }
+
+  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+    const until = ctx.defenderShieldUntilMs;
+    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
   }
 
   if (ctx.defenderAscendedAtMs) {

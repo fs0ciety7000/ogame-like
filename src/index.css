@@ -790,3 +790,15 @@ body {
     opacity: 0;
   }
 }
+
+/* v3.9 : cadre de chitine (cosmétique Kesh'Vaar) sur la fiche publique. */
+.kesh-frame {
+  border: 2px solid color-mix(in srgb, var(--color-gold-glow) 65%, transparent);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6) inset,
+    0 0 28px color-mix(in srgb, var(--color-gold-glow) 30%, transparent),
+    inset 0 0 40px color-mix(in srgb, var(--color-ember-glow) 12%, transparent);
+  background-image:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--color-gold-glow) 18%, transparent), transparent 35%),
+    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--color-ember-glow) 16%, transparent), transparent 35%);
+}

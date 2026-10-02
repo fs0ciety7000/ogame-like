@@ -1,7 +1,7 @@
 ---
 version: 3.6.0
 iteration: 33
-date: 2026-10-01
+date: 2026-10-02
 title: Fin de partie : nouvelles technologies, unités, bâtiments et le Chœur Silencieux
 ---
 Le Labo s'agrandit pour les empires les plus avancés, et une nouvelle menace se réveille.

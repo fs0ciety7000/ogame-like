@@ -74,7 +74,7 @@ function previousDay(day: string): string {
 }
 
 /** Hachage déterministe (uid + jour) : mêmes contrats sur le client et le serveur. */
-function seededRandom(seed: string) {
+export function seededRandom(seed: string) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
   return () => {

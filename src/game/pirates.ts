@@ -4,7 +4,7 @@ import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent, getStorageCapacity } from "@/game/buildings";
 import { bumpStat, recordThreat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, homeDefensePower, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { computeFullPower, getShieldPercent, homeDefensePower, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
@@ -763,7 +763,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   const combat = resolveCombat({
     ...fx,
     // v3.3 : Batterie de siège de l'alliance.
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: getRepairPercent(player.buildings),

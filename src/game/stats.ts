@@ -45,6 +45,8 @@ export interface PlayerStats {
   transports?: number;
   /** v3.7 : guerres d'alliance gagnées (fiche publique). */
   warsWon?: number;
+  /** v3.9 : primes Kesh'Vaar remplies. */
+  bounties?: number;
   lastResearchAtMs?: number;
 }
 

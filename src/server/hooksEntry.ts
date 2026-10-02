@@ -48,3 +48,25 @@ export function flushPlayer(player: PlayerState, queues: QueuesState, now: numbe
 }
 export { ANOMALY_RULES, describeAnomalies, detectResourceAnomalies } from "@/game/anomalies";
 export { colonyOwnerUid } from "@/game/colonies";
+export {
+  assertKeshEmojis,
+  buyShopItem,
+  checkEliteLaunch,
+  closeElite,
+  describeElite,
+  ELITE_KEY,
+  ELITE_RULES,
+  eliteNotice,
+  eliteRanking,
+  eliteWindow,
+  exchangeAmber,
+  grantEliteReward,
+  normalizeElite,
+  releaseBounty,
+  resolveBountyHunt,
+  resolveEliteAssault,
+  spawnElite,
+  consumeBeacon,
+  consumeJammer,
+} from "@/game/bounties";
+export { beaconReturn, bountyIdOf } from "@/game/fleets";
