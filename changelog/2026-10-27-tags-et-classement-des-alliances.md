@@ -18,3 +18,6 @@ Les alliances gagnent en visibilité.
 ## Pour l'équipe
 - Toute modification des ressources, unités, bâtiments, technologies ou de l'XP d'un joueur depuis l'administration exige un **motif**. Le motif est consigné au journal.
 - Les alertes de stocks anormaux indiquent quand un bond vient d'une édition par l'équipe : auteur, heure, champs modifiés et motif.
+
+## Correction
+- Classement des joueurs, onglet **Saison en cours** : le rang et l'insigne suivent maintenant l'XP de saison, comme l'ordre du classement. Avant, ils suivaient l'XP totale, si bien qu'un joueur pouvait apparaître devant un autre de rang supérieur.
