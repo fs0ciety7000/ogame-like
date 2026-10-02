@@ -22,7 +22,12 @@ Trois nouveautés pour suivre ce qui se passe dans la galaxie et parler aux autr
 - Dans **Joueurs**, clique sur un pseudo pour ouvrir sa fiche : rang, titre, ancienneté, colonies et faits d'armes (victoires, défaites, succès, missions, expéditions, Léviathans abattus, guerres gagnées, ascensions).
 - La fiche montre aussi les titres obtenus, les saisons passées et le classement du joueur dans le Léviathan en cours.
 
+## Carte galactique
+- **Toute la galaxie est visible**, quel que soit l'écran. Sur les écrans larges, la carte était rognée en haut et en bas : les empires proches des bords (dont Vince et Gollum) n'apparaissaient pas.
+- Une marge autour de la carte garde les empires posés tout au bord entièrement visibles.
+
 ## Améliorations
+- **Bandeaux d'annonce** : l'équipe peut afficher en haut du site une annonce, un évènement, une alerte ou un message urgent, fixe ou défilant, avec liens et emojis. Un bandeau peut être masqué, sauf s'il est urgent.
 - **Colonies** : les vraies icônes de ressources remplacent les emojis, et le choix des défenses affiche l'image des unités.
 - Le Chœur Silencieux a désormais son emblème.
 - Sur téléphone, les onglets (Alliance et autres) défilent au lieu d'élargir la page. La recherche de la galaxie et le choix de la cible de guerre sont lisibles.
