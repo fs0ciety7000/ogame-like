@@ -297,6 +297,21 @@
         "type": "json",
         "required": false,
         "maxSize": 2000
+      },
+      {
+        "name": "npc",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false,
+        "id": "text8982221121"
+      },
+      {
+        "name": "vacation",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000,
+        "id": "json1012305937"
       }
     ],
     "indexes": [
@@ -1258,6 +1273,21 @@
         "type": "json",
         "required": false,
         "maxSize": 20000
+      },
+      {
+        "name": "npc",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false,
+        "id": "text7131512386"
+      },
+      {
+        "name": "vacationUntilMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false,
+        "id": "number9906079824"
       }
     ],
     "indexes": [

@@ -93,6 +93,10 @@ export interface AttackContext {
   attackCooldownMs?: number;
   /** v3.9 : Voile de chitine du défenseur (Comptoir Kesh'Vaar), fin en ms. */
   defenderShieldUntilMs?: number;
+  /** v4.2 : fin des vacances du défenseur (ms), s'il est en vacances. */
+  defenderVacationUntilMs?: number;
+  /** v4.2 : un seigneur de guerre n'a pas de bouclier après une défaite. */
+  defenderIsWarlord?: boolean;
 }
 
 export type AttackBlockReason = "self" | "cooldown" | "shield" | "newbie" | "too_weak";
@@ -132,7 +136,11 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  if (ctx.lastDefenderDefeatMs !== null) {
+  if (ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
+    return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
+  }
+
+  if (ctx.lastDefenderDefeatMs !== null && !ctx.defenderIsWarlord) {
     const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
     if (now < until) {
       return {

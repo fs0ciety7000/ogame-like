@@ -1,4 +1,6 @@
 import { colonyOf, colonyView } from "@/game/colonies";
+import { onVacation } from "@/game/vacation";
+import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
 import { bumpStat, setStat } from "@/game/stats";
 import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
@@ -53,6 +55,8 @@ export interface AttackInput {
   garrisons?: (CombatGarrison & { fleetId: string; ownerUid: string; ownerPseudo: string })[];
   /** v4.0 : capsules embarquées au lancement (bonus en %). */
   boosts?: { assault?: number };
+  /** v4.2 : butin maximal (total), pour les attaques des seigneurs de guerre. */
+  lootCap?: number;
 }
 
 export type AttackOutput =
@@ -92,6 +96,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
     defenderShieldUntilMs: shieldUntil(defender),
+    defenderVacationUntilMs: onVacation(defender, now) ? defender.vacation?.untilMs : undefined,
+    defenderIsWarlord: !!defender.npc,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
@@ -171,6 +177,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   // Égide de la Reine : la première défaite de la semaine n'est pas pillée.
   const aegis = combat.outcome === "attacker_win" && Object.values(combat.loot ?? {}).some((n) => (n ?? 0) > 0) && consumeAegis(owner, now);
   if (aegis) combat.loot = {};
+  if (input.lootCap !== undefined && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap);
 
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
@@ -208,7 +215,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   else if (combat.outcome === "attacker_win") {
     owner.defeats = (owner.defeats ?? 0) + 1;
     if (colony) colony.lastDefeatAtMs = now;
-    else owner.lastDefeatAtMs = now;
+    else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
   applyXpDelta(owner, defenderXpDelta, now);
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);

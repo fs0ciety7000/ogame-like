@@ -42,6 +42,35 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.2-seigneurs",
+    eyebrow: "Mise à jour 4.2 · Seigneurs de guerre",
+    title: "Le secteur n'est plus vide",
+    text: "Dix seigneurs de guerre ont planté leur bannière dans la galaxie. Ils grandissent avec vous, pillent les imprudents, commercent avec les autres, et n'oublient jamais une offense. À vous de choisir : les ignorer, les piller… ou leur déclarer une vendetta.",
+    factions: [],
+    tone: "danger",
+    art: "/assets/story/varan.webp",
+    artMobile: "/assets/warlords/zharkesh.webp",
+    emblem: "/assets/warlords/brannoc-sceau.webp",
+    spotlight: {
+      image: "/assets/warlords/brannoc.webp",
+      name: "Brannoc Demi-Barbe",
+      role: "Seigneur de guerre",
+      quote: "Moi, je ne fais pas d'ultimatum. Je viens, c'est tout.",
+    },
+    currency: {
+      icon: "/assets/relics/egide_reine.webp",
+      name: "Vendetta",
+      text: "72 h pour détruire deux fois sa flotte : relique, titre « Tombeur de… », +40 points de passe, et le seigneur fuit 7 jours.",
+    },
+    features: [
+      { title: "Dix seigneurs", text: "Agressifs, opportunistes, bâtisseurs, marchands : badge PNJ, hors récompenses de classement.", to: "/game/seigneurs", image: "/assets/warlords/zharkesh-sceau.webp" },
+      { title: "Raids mesurés", text: "Une attaque par cible tous les 3 jours au plus, jamais sous Bronze I, 3 à 5 h de trajet, butin plafonné.", to: "/game/seigneurs", image: "/assets/warlords/tivrek-sceau.webp" },
+      { title: "Marché vivant", text: "Les marchands publient leurs offres chaque jour, à ±10 % du comptoir.", to: "/game/marche", image: "/assets/warlords/kragmor-sceau.webp" },
+      { title: "Mode vacances", text: "2 à 21 jours : base protégée, production à 25 %, chantiers en pause.", to: "/game/reglages" },
+    ],
+    cta: { label: "Voir les seigneurs", to: "/game/seigneurs" },
+  },
+  {
     id: "v4.1-saison",
     eyebrow: "Mise à jour 4.1 · Passe de saison",
     title: "Chaque jour de jeu compte",

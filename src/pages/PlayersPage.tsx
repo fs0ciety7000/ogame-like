@@ -39,6 +39,7 @@ import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
 import { GameIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
+import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
 
 type LeaderboardMode = "total" | "season" | "alliances";
@@ -239,6 +240,8 @@ export function PlayersPage() {
                   lastAttackOnTargetMs: myRecentAttacks[p.uid] ?? null,
                   defenderAscendedAtMs: p.ascendedAtMs,
                   lastDefenderDefeatMs: p.lastDefeatAtMs ?? null,
+                  defenderVacationUntilMs: p.vacationUntilMs,
+                  defenderIsWarlord: !!p.npc,
                 });
             const pact = !isSelf && me?.allianceId && p.allianceId ? bindingPactBetween(pacts, me.allianceId, p.allianceId, Date.now()) : null;
             if (pact && attackCheck) {
@@ -280,6 +283,8 @@ export function PlayersPage() {
                     </button>
                     <AscensionStars count={p.ascensions} />
                     <StaffBadge uid={p.uid} compact />
+                    {p.npc && <NpcBadge />}
+                    {(p.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={p.vacationUntilMs!} />}
                     {isProtected && (
                       <span title={attackCheck?.message} className="flex items-center text-mint-glow">
                         <ShieldCheck className="h-3.5 w-3.5" />
@@ -343,8 +348,8 @@ export function PlayersPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="Envoyer des ressources"
-                    disabled={isSelf}
+                    title={p.npc ? "On ne fait pas de cadeau à un seigneur de guerre" : "Envoyer des ressources"}
+                    disabled={isSelf || !!p.npc}
                     className="group relative"
                     onClick={() =>
                       setTradeTarget({ uid: p.uid, pseudo: p.pseudo })

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, ShieldCheck, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, Palmtree, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,9 @@ import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
-import { GameActionError, hideOnboarding } from "@/services/playerService";
+import { GameActionError, hideOnboarding, syncPlayer } from "@/services/playerService";
+import { endVacation, startVacation } from "@/services/warlordService";
+import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -229,6 +231,7 @@ const ALLIANCE_NOTIFS = [
   { key: "allianceChat", label: "Messages du canal d'alliance", hint: "Pastille de messages non lus dans le menu." },
   { key: "pactMessages", label: "Canal diplomatique", hint: "Notification quand une alliance liée par un pacte écrit." },
   { key: "allianceEvents", label: "Annonces de l'alliance", hint: "Pactes proposés ou rompus, guerres, déclarations." },
+  { key: "warlords", label: "Messages des seigneurs de guerre", hint: "Provocations et répliques des empires tenus par le jeu (une par jour au plus)." },
 ] as const;
 
 function AllianceNotifsCard() {
@@ -251,7 +254,7 @@ function AllianceNotifsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notifications d'alliance</CardTitle>
+        <CardTitle>Notifications de messages</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {ALLIANCE_NOTIFS.map((n) => (
@@ -263,6 +266,96 @@ function AllianceNotifsCard() {
             <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={prefs[n.key] !== false} disabled={busy} onChange={() => void toggle(n.key)} />
           </label>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+/** v4.2 : mode vacances (2 à 21 jours, production au quart, aucune attaque). */
+function VacationCard() {
+  const player = usePlayerStore((s) => s.player);
+  const [days, setDays] = useState(7);
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  if (!player) return null;
+  const now = Date.now();
+  const v = player.vacation;
+  const away = onVacation(player, now);
+  const canReturnAt = v ? v.startedAtMs + VACATION_RULES.minStayHours * 3600_000 : 0;
+  const lastEnd = v?.endedAtMs ?? v?.untilMs ?? 0;
+  const cooldownUntil = !away && lastEnd > 0 ? lastEnd + VACATION_RULES.cooldownDays * 86400_000 : 0;
+  const run = async (task: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try {
+      await task();
+      await syncPlayer(player.uid);
+      toast.success(ok);
+      setConfirm(false);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Action impossible pour le moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const fmt = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Palmtree className="h-4 w-4 text-cyan-glow" /> Mode vacances
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {away && v ? (
+          <>
+            <p className="text-slate-200">
+              Tu es en vacances jusqu'au <strong>{fmt(v.untilMs)}</strong>. Personne ne peut t'attaquer, ta production tourne à {Math.round(VACATION_RULES.productionFactor * 100)} % et tes chantiers sont en pause.
+            </p>
+            <Button variant="secondary" disabled={busy || now < canReturnAt} onClick={() => void run(() => endVacation(), "Bon retour, commandant !")}>
+              Revenir maintenant
+            </Button>
+            {now < canReturnAt && <p className="text-xs text-slate-500">Retour anticipé possible à partir du {fmt(canReturnAt)}.</p>}
+          </>
+        ) : (
+          <>
+            <p className="text-slate-400">
+              Tu pars quelques jours ? Déclare ton absence : aucune attaque (joueurs, seigneurs, factions), production à {Math.round(VACATION_RULES.productionFactor * 100)} %, constructions, recherches et missions gelées puis reprises à ton retour.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="h-9 border border-cyan-glow/30 bg-space-950 px-2 text-sm text-slate-200" aria-label="Durée des vacances">
+                {Array.from({ length: VACATION_RULES.maxDays - VACATION_RULES.minDays + 1 }, (_, i) => i + VACATION_RULES.minDays).map((d) => (
+                  <option key={d} value={d}>
+                    {d} jours
+                  </option>
+                ))}
+              </select>
+              <Button disabled={busy || cooldownUntil > now} onClick={() => setConfirm(true)}>
+                Partir en vacances
+              </Button>
+            </div>
+            {cooldownUntil > now && <p className="text-xs text-slate-500">Prochaines vacances possibles à partir du {fmt(cooldownUntil)}.</p>}
+            <p className="text-xs text-slate-500">
+              Il faut que toutes tes flottes soient à quai, sans flotte hostile en approche, sans ultimatum en cours, et ne pas avoir été attaqué dans les {VACATION_RULES.recentAttackHours} dernières heures. Retour anticipé après {VACATION_RULES.minStayHours} h, puis {VACATION_RULES.cooldownDays} jours d'attente avant les prochaines.
+            </p>
+          </>
+        )}
+        <Dialog open={confirm} onOpenChange={setConfirm}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Partir {days} jours ?</DialogTitle>
+            <p className="text-sm text-slate-300">
+              Pendant ce temps, tu ne pourras ni construire, ni lancer de flotte, ni échanger au marché. Ta base sera protégée de toute attaque jusqu'au {fmt(now + days * 86400_000)}.
+            </p>
+            <div className="mt-3 flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setConfirm(false)}>
+                Annuler
+              </Button>
+              <Button disabled={busy} onClick={() => void run(() => startVacation(days), "Bonnes vacances ! Ta base est protégée.")}>
+                Confirmer le départ
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
@@ -395,6 +488,7 @@ export function SettingsPage() {
       <ThemeCard />
       <HelpCard />
       <BrowserNotificationsCard />
+      <VacationCard />
       <AllianceNotifsCard />
       <EmailNewsCard />
       <ChangePasswordCard />

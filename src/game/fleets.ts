@@ -18,6 +18,7 @@ import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
+import { onVacation } from "@/game/vacation";
 import { bountyTarget, dropShield, ELITE_RULES, shieldUntil, startBounty } from "@/game/bounties";
 import { DEBRIS_RULES, debrisTotal, type DebrisField } from "@/game/debris";
 
@@ -206,6 +207,8 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     lastAttackOnTargetMs: input.lastAttackOnTargetMs,
     defenderAscendedAtMs: defender.ascendedAtMs,
     defenderShieldUntilMs: shieldUntil(defender),
+    defenderVacationUntilMs: onVacation(defender, now) ? defender.vacation?.untilMs : undefined,
+    defenderIsWarlord: !!defender.npc,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
   });

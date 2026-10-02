@@ -1,3 +1,7 @@
+import { Link } from "react-router-dom";
+import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
+import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
+import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
 import { useEffect, useState, type ReactNode } from "react";
 import { KESH, rankName } from "@/game/bounties";
 import { assetUrl } from "@/lib/assets";
@@ -54,6 +58,11 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
   const levIndex = target ? ranking.findIndex((r) => r.uid === target.uid) : -1;
   const feats = sheet?.feats;
   const entry = sheet?.entry;
+  const warlords = useWarlordsStore((st) => st.list);
+  const lord = entry?.npc ? warlords.find((w) => w.id === entry.npc) : undefined;
+  useEffect(() => {
+    if (entry?.npc) void loadWarlords().catch(() => undefined);
+  }, [entry?.npc]);
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
@@ -78,6 +87,8 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
               <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} />
               <AscensionStars count={entry?.ascensions} />
+              {entry?.npc && <NpcBadge />}
+              {(entry?.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={entry!.vacationUntilMs!} />}
             </DialogTitle>
             {entry && (
               <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow">
@@ -92,6 +103,17 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
           </div>
         </div>
 
+        {lord && (
+          <div className="mt-3 border-l-2 pl-3 text-xs leading-relaxed text-slate-400" style={{ borderColor: lord.color }}>
+            <p className="mb-1 uppercase tracking-[0.14em] text-slate-500">
+              {lord.originLabel} · {PERSONALITY_LABELS[lord.personality]} · {TIER_LABELS[lord.tier]}
+            </p>
+            {lord.bio}{" "}
+            <Link to="/game/seigneurs" onClick={onClose} className="text-cyan-glow hover:underline">
+              Voir les seigneurs de guerre
+            </Link>
+          </div>
+        )}
         {!sheet && !error && (
           <p className="mt-6 flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" /> Chargement de la fiche…

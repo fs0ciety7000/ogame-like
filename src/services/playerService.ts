@@ -260,6 +260,9 @@ export interface LeaderboardEntry {
   ascendedAtMs?: number;
   /** v3.5 : colonies publiques. */
   planets?: { id: string; name: string }[];
+  /** v4.2 : seigneur de guerre (identifiant du roster) et fin des vacances. */
+  npc?: string;
+  vacationUntilMs?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -277,10 +280,12 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     ascensions: (data.ascensions as number) || 0,
     ascendedAtMs: (data.ascendedAtMs as number) || undefined,
     planets: Array.isArray(data.planets) ? (data.planets as { id?: unknown; name?: unknown }[]).filter((c) => typeof c?.id === "string" && c.id).map((c) => ({ id: String(c.id), name: String(c.name ?? "Colonie") })) : [],
+    npc: (data.npc as string) || undefined,
+    vacationUntilMs: (data.vacationUntilMs as number) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -685,6 +690,11 @@ export function saveProfileStyle(style: { banner?: string; emblem?: string; mott
 }
 
 /* ---------- v4.1 : passe de saison ---------- */
+
+/** v4.2 : retour de vacances (anticipé, après 48 h). */
+export function endVacation() {
+  return act<boolean>({ type: "vacationEnd" });
+}
 
 export function claimPassTier(tier: number) {
   return act<{ gained: string[] }>({ type: "passClaim", tier });
