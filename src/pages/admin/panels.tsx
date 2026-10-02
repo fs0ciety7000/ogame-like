@@ -1,6 +1,6 @@
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
+import { Rocket, CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import {
+  adminDeploy,
+  type DeployReport,
   adminClearQueues,
   adminListPlayers,
   adminResetAllXp,
@@ -878,6 +880,23 @@ export function ToolsPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [updatingHooks, setUpdatingHooks] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [deployReport, setDeployReport] = useState<DeployReport | null>(null);
+
+  const deploy = async () => {
+    if (!confirm("Déployer la dernière version de main ? Une sauvegarde est faite d'abord, puis le schéma et les hooks sont mis à jour (le serveur redémarre quelques secondes).")) return;
+    setDeploying(true);
+    try {
+      const report = await adminDeploy();
+      setDeployReport(report);
+      if (report.errors.length > 0) toast.error(`Déploiement interrompu : ${report.errors.join(" · ")}`);
+      else toast.success(`Déployé. Sauvegarde ${report.backup}.`);
+    } catch (err) {
+      toast.error(`Impossible : ${(err as Error).message}`);
+    } finally {
+      setDeploying(false);
+    }
+  };
 
   const updateHooks = async () => {
     setUpdatingHooks(true);
@@ -957,9 +976,27 @@ export function ToolsPanel() {
           Le serveur récupère ses hooks (règles du jeu côté serveur) depuis la branche main du dépôt à chaque démarrage. Ce
           bouton le fait tout de suite, par exemple juste après un déploiement.
         </p>
-        <Button variant="outline" size="sm" className="self-start" disabled={updatingHooks} onClick={() => void updateHooks()}>
-          <CloudDownload className="mr-1 h-3.5 w-3.5" /> {updatingHooks ? "Mise à jour…" : "Mettre à jour les hooks"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={deploying || updatingHooks} onClick={() => void deploy()}>
+            <Rocket className="mr-1 h-3.5 w-3.5" /> {deploying ? "Déploiement…" : "Déployer la mise à jour"}
+          </Button>
+          <Button variant="outline" size="sm" disabled={updatingHooks || deploying} onClick={() => void updateHooks()}>
+            <CloudDownload className="mr-1 h-3.5 w-3.5" /> {updatingHooks ? "Mise à jour…" : "Hooks seulement"}
+          </Button>
+        </div>
+        <p className="text-[11px] text-slate-500">« Déployer » : sauvegarde complète, puis schéma, fiches publiques et hooks depuis main. Fait aussi automatiquement par GitHub Actions après chaque merge, si les secrets sont configurés.</p>
+        {deployReport && (
+          <ul className="space-y-0.5 border-t border-white/5 pt-2 text-[11px] text-slate-400">
+            <li>Version : <span className="font-mono text-slate-300">{deployReport.ref}</span></li>
+            <li>Sauvegarde : {deployReport.backup ?? "—"}</li>
+            <li>Schéma : {deployReport.schema !== null ? `${deployReport.schema} collections` : "—"}</li>
+            <li>Fiches publiques : {deployReport.profiles ?? "—"}</li>
+            <li>Hooks : {deployReport.hooks ? (deployReport.hooks.updated.length ? `mis à jour (${deployReport.hooks.updated.join(", ")})` : deployReport.hooks.errors[0] ?? "déjà à jour") : "—"}</li>
+            {deployReport.errors.map((e) => (
+              <li key={e} className="text-danger-glow">{e}</li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <PirateTriggerCard />
