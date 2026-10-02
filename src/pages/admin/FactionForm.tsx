@@ -42,6 +42,9 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
         <div className="sm:col-span-2">
           <ImageField label="Scène large (repaire, en tête de la page Menaces ; facultatif)" value={f.banner ?? ""} onChange={(v) => set({ banner: v || undefined })} />
         </div>
+        <div className="sm:col-span-2">
+          <ImageField label="Emblème (facultatif)" value={f.emblem ?? ""} onChange={(v) => set({ emblem: v || undefined })} />
+        </div>
         <TextAreaField label="Récit (paragraphes séparés par une ligne vide)" rows={6} value={f.story} onChange={(v) => set({ story: v })} />
       </Section>
 

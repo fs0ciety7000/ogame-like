@@ -507,6 +507,14 @@ export function RulesPanel() {
             hint="Temps de vol = durée fixe + distance × cette valeur ÷ vitesse du vaisseau le plus lent. Carte de 100 × 100."
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, minutesPerDistance: v ?? 0 } }))}
           />
+          <NumberField
+            label="Trajet maximal d'une attaque (min)"
+            value={rules.fleets.maxAttackMinutes}
+            min={0}
+            step={5}
+            hint="Plafond du trajet aller d'une attaque entre joueurs (le retour dure autant). 0 = pas de plafond."
+            onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, maxAttackMinutes: v ?? 0 } }))}
+          />
         </Section>
         <Section title="Espionnage">
           <NumberField

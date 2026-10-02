@@ -60,6 +60,7 @@ __export(hooksEntry_exports, {
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
+  MESSAGE_RULES: () => MESSAGE_RULES,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
   PVP_RULES: () => PVP_RULES,
@@ -79,6 +80,7 @@ __export(hooksEntry_exports, {
   applyLegacyGift: () => applyLegacyGift,
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
+  assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
@@ -148,6 +150,7 @@ __export(hooksEntry_exports, {
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
   sanitizeClientError: () => sanitizeClientError,
+  sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
   scoreBattle: () => scoreBattle,
   seasonRewardFor: () => seasonRewardFor,
@@ -2207,6 +2210,7 @@ var DEFAULT_FACTIONS = [
     enforcer: "Les \xC9chos",
     art: "/assets/story/choeur.webp",
     banner: "/assets/story/choeur-banner.webp",
+    emblem: "/assets/story/choeur-emblem.webp",
     color: "mint",
     story: "Il y a dix mille ans, une civilisation enti\xE8re s'est fondue en une seule conscience, puis s'est tue. Ses cath\xE9drales de cristal noir d\xE9rivent depuis aux confins de la galaxie, silencieuses.\n\nLes signaux de vos fonderies quantiques et de vos cortex neuronaux l'ont r\xE9veill\xE9e. Le Ch\u0153ur ne convoite pas vos coffres : il veut ce que vos laboratoires ont appris, et les fragments o\xF9 vous l'avez grav\xE9.\n\nL'Archonte Vesper, masque de porcelaine sans bouche et halo de glyphes, parle pour des milliers de voix. Ceux qui refusent entendent d'abord un murmure dans leurs transmissions\u2026 puis voient arriver les \xC9chos.",
     ultimatum: {
@@ -4584,10 +4588,90 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
       mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5)
     },
     balance: computeBalance(players, reports, now, balanceDays),
+    endgame: computeEndgame(players, queues, reports, now, balanceDays),
     insights: []
   };
   stats.insights = computeInsights(stats);
   return stats;
+}
+function computeEndgame(players, queues, reports, now, windowDays) {
+  const since = now - windowDays * DAY3;
+  const recent = reports.filter((r) => {
+    var _a;
+    return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
+  });
+  const avg = (values) => values.length ? round1(values.reduce((a, v) => a + v, 0) / values.length) : 0;
+  const techs = TECHNOLOGIES.filter((t) => ENDGAME_TECH_IDS.includes(t.id)).map((t) => {
+    const holders = players.filter((p) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) > 0;
+    }).sort((a, b) => {
+      var _a, _b, _c, _d;
+      return ((_b = (_a = b.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) - ((_d = (_c = a.techLevels) == null ? void 0 : _c[t.id]) != null ? _d : 0);
+    });
+    return {
+      id: t.id,
+      name: t.nom,
+      researchers: holders.length,
+      inProgress: queues.filter((q) => {
+        var _a;
+        return ((_a = q.activeResearches) != null ? _a : []).some((r) => r.id === t.id);
+      }).length,
+      avgLevel: avg(holders.map((p) => {
+        var _a, _b;
+        return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
+      })),
+      maxLevel: t.maxLevel,
+      leaders: holders.slice(0, 3).map((p) => {
+        var _a, _b;
+        return `${p.pseudo} (${(_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0})`;
+      })
+    };
+  });
+  const buildings = BUILDINGS.filter((b) => b.endgame).map((b) => {
+    var _a, _b;
+    const levels = players.map((p) => {
+      var _a2;
+      return effectiveBuildingLevel((_a2 = p.buildings) != null ? _a2 : {}, b.id);
+    }).filter((l) => l > 0);
+    return {
+      id: b.id,
+      name: b.name,
+      builders: levels.length,
+      avgLevel: avg(levels),
+      maxLevel: b.maxLevel,
+      resource: (_b = (_a = b.production) == null ? void 0 : _a.resource) != null ? _b : null,
+      perHour: b.production ? Math.round(levels.reduce((a, l) => a + productionPerSecond(b.id, l), 0) * 3600) : 0
+    };
+  });
+  const units = UNITS.filter((u) => ENDGAME_TECH_IDS.includes(u.unlockTech)).map((u) => {
+    const owned = players.map((p) => {
+      var _a, _b, _c;
+      return (_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.count) != null ? _c : 0;
+    });
+    const used = recent.filter((r) => {
+      var _a, _b;
+      return ((_b = (_a = r.attackerFleet) == null ? void 0 : _a[u.id]) != null ? _b : 0) > 0;
+    });
+    return {
+      id: u.id,
+      name: u.name,
+      owners: owned.filter((c) => c > 0).length,
+      total: owned.reduce((a, c) => a + c, 0),
+      attacks: used.length,
+      winPct: pct3(used.filter((r) => r.outcome === "attacker_win").length, used.length)
+    };
+  });
+  return {
+    windowDays,
+    players: players.filter((p) => ENDGAME_TECH_IDS.some((id) => {
+      var _a, _b;
+      return ((_b = (_a = p.techLevels) == null ? void 0 : _a[id]) != null ? _b : 0) > 0;
+    })).length,
+    techs,
+    buildings,
+    units
+  };
 }
 function dominantUnit(fleet) {
   var _a, _b;
@@ -5431,7 +5515,9 @@ var FLEET_RULES = {
   /** Minutes par unité de distance, divisées par la vitesse de la flotte. */
   minutesPerDistance: 3,
   /** Côté de la carte de la galaxie (distance max ≈ 141). */
-  mapSize: 100
+  mapSize: 100,
+  /** v3.7 : durée maximale du trajet d'une attaque, en minutes (0 = aucune). */
+  maxAttackMinutes: 90
 };
 var PATROL_RULES = {
   minMinutes: 30,
@@ -5459,6 +5545,11 @@ function fleetSpeed(units, fleet) {
 }
 function travelSeconds(distance, speed, factor = 1) {
   return Math.round(factor * (FLEET_RULES.baseMinutes + distance * FLEET_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
+}
+function attackTravelSeconds(distance, speed, factor = 1) {
+  const seconds = travelSeconds(distance, speed, factor);
+  const cap = FLEET_RULES.maxAttackMinutes;
+  return cap > 0 ? Math.min(seconds, Math.round(cap * 60)) : seconds;
 }
 function launchFleet(input) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -5488,7 +5579,7 @@ function launchFleet(input) {
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
   const minutes = Math.max(1, Math.round((arriveAtMs - now) / 6e4));
@@ -6278,6 +6369,24 @@ function addOccurrence(report, pseudo, now) {
 }
 function errorQuotaKey(uid, now) {
   return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
+}
+
+// src/game/messages.ts
+var MESSAGE_RULES = {
+  maxLength: 1e3,
+  /** Messages envoyés au plus par minute et par jour (anti-spam). */
+  perMinute: 8,
+  perDay: 300
+};
+function sanitizeMessageText(raw) {
+  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
+  return text;
+}
+function assertMessageQuota(lastMinute, lastDay) {
+  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
+  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
 // src/game/maintenance.ts

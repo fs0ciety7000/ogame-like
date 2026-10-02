@@ -23,11 +23,11 @@
     "id": "pbc_ce_players",
     "name": "players",
     "type": "base",
-    "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
-    "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "listRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "createRule": null,
-    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || @collection.admins.id ?= @request.auth.id",
-    "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "updateRule": "(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "fields": [
       {
         "name": "pseudo",
@@ -247,11 +247,11 @@
     "id": "pbc_ce_queues",
     "name": "queues",
     "type": "base",
-    "listRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
-    "viewRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "listRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "createRule": null,
-    "updateRule": "@collection.admins.id ?= @request.auth.id",
-    "deleteRule": "id = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "fields": [
       {
         "name": "buildingUpgrades",
@@ -785,9 +785,9 @@
     "type": "base",
     "listRule": "",
     "viewRule": "",
-    "createRule": "@collection.admins.id ?= @request.auth.id",
-    "updateRule": "@collection.admins.id ?= @request.auth.id",
-    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "fields": [
       {
         "name": "key",
@@ -813,9 +813,9 @@
     "type": "base",
     "listRule": "",
     "viewRule": "",
-    "createRule": "@collection.admins.id ?= @request.auth.id",
-    "updateRule": "@collection.admins.id ?= @request.auth.id",
-    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "fields": [
       {
         "name": "name",
@@ -847,8 +847,8 @@
     "id": "pbc_ce_admin_logs",
     "name": "admin_logs",
     "type": "base",
-    "listRule": "@collection.admins.id ?= @request.auth.id",
-    "viewRule": "@collection.admins.id ?= @request.auth.id",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "createRule": null,
     "updateRule": null,
     "deleteRule": null,
@@ -1161,6 +1161,12 @@
         "type": "json",
         "required": false,
         "maxSize": 20000
+      },
+      {
+        "name": "feats",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
       }
     ],
     "indexes": [
@@ -1365,11 +1371,11 @@
     "id": "pbc_ce_reports",
     "name": "reports",
     "type": "base",
-    "listRule": "reporterId = @request.auth.id || @collection.admins.id ?= @request.auth.id",
-    "viewRule": "reporterId = @request.auth.id || @collection.admins.id ?= @request.auth.id",
+    "listRule": "reporterId = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "reporterId = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "createRule": "@request.auth.id != \"\" && @request.body.reporterId = @request.auth.id",
     "updateRule": null,
-    "deleteRule": "@collection.admins.id ?= @request.auth.id",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "fields": [
       {
         "name": "reporterId",
@@ -1742,6 +1748,111 @@
       "CREATE INDEX idx_wars_status ON alliance_wars (status)",
       "CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)",
       "CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"
+    ]
+  },
+  {
+    "id": "pbc_ce_private_messages",
+    "name": "private_messages",
+    "type": "base",
+    "listRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "viewRule": "fromUid = @request.auth.id || toUid = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "fromUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "fromPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "toPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": false,
+        "max": 1000,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "readAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)",
+      "CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_message_blocks",
+    "name": "message_blocks",
+    "type": "base",
+    "listRule": "ownerUid = @request.auth.id",
+    "viewRule": "ownerUid = @request.auth.id",
+    "createRule": "@request.auth.id != \"\" && @request.body.ownerUid = @request.auth.id",
+    "updateRule": null,
+    "deleteRule": "ownerUid = @request.auth.id",
+    "fields": [
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "blockedUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "blockedPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"
     ]
   }
 ]

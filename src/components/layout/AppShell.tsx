@@ -2,6 +2,7 @@ import { useDirectorySync } from "@/store/directoryStore";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
+import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
 import { useReportBadges } from "@/services/reportService";
@@ -23,6 +24,7 @@ import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
 import { useRankCelebration } from "@/hooks/useRankCelebration";
 import { useAllianceUnread } from "@/hooks/useAllianceUnread";
+import { subscribeMyMessages } from "@/services/messageService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { CombatResultModal } from "@/components/game/CombatResultModal";
@@ -107,6 +109,8 @@ export function AppShell() {
   useDirectorySync(!!user);
   useRankCelebration(player);
   useAllianceUnread(user?.uid ?? null, player);
+  const uidForMessages = user?.uid ?? null;
+  useEffect(() => (uidForMessages ? subscribeMyMessages(uidForMessages) : undefined), [uidForMessages]);
   useReportBadgeSync(user?.uid ?? null, isAdmin);
   const pendingReports = useReportBadges((s) => s.pendingNew);
 
@@ -143,6 +147,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
         <MaintenanceBanner />
+        <AnnouncementBanners />
         <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
           <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">

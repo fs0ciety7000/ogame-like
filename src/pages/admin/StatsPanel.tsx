@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadarScan } from "@/components/game/RadarScan";
 import { adminFetchStats } from "@/services/adminService";
-import { resourceEmoji } from "@/game/resources";
+import { RESOURCE_LIST, resourceEmoji } from "@/game/resources";
 import { formatCompact, formatNumber } from "@/lib/utils";
 import type { GameStats } from "@/game/analytics";
 
@@ -230,6 +230,7 @@ export function StatsPanel() {
         </Panel>
 
         {stats.balance && <BalancePanels balance={stats.balance} />}
+        {stats.endgame && <EndgamePanel endgame={stats.endgame} />}
 
         <Panel title="Missions en cours" className="lg:col-span-2">
           <div className="grid gap-2 md:grid-cols-2">
@@ -339,5 +340,62 @@ function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
         )}
       </Panel>
     </>
+  );
+}
+
+function EndgamePanel({ endgame }: { endgame: GameStats["endgame"] }) {
+  const resName = (id: string | null) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id ?? "";
+  return (
+    <Panel title={`Fin de partie · ${endgame.players} joueur${endgame.players > 1 ? "s" : ""} engagé${endgame.players > 1 ? "s" : ""}`} className="lg:col-span-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="flex flex-col gap-1.5">
+          <p className="hud-eyebrow text-[10px] text-slate-500">Technologies 21 à 25</p>
+          {endgame.techs.map((t) => (
+            <div key={t.id} className="text-xs text-slate-300" title={t.leaders.join(", ")}>
+              <div className="flex justify-between gap-2">
+                <span className="truncate">{t.name}</span>
+                <span className="tabular-mono shrink-0 text-slate-400">
+                  {t.researchers} · niv. moy. {t.avgLevel}/{t.maxLevel}
+                  {t.inProgress > 0 && <span className="text-cyan-glow"> · {t.inProgress} en cours</span>}
+                </span>
+              </div>
+              {t.leaders.length > 0 && <p className="truncate text-[10px] text-slate-500">{t.leaders.join(" · ")}</p>}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="hud-eyebrow text-[10px] text-slate-500">Bâtiments</p>
+          {endgame.buildings.map((b) => (
+            <div key={b.id} className="text-xs text-slate-300">
+              <div className="flex justify-between gap-2">
+                <span className="truncate">{b.name}</span>
+                <span className="tabular-mono shrink-0 text-slate-400">
+                  {b.builders} · niv. moy. {b.avgLevel}/{b.maxLevel}
+                </span>
+              </div>
+              {b.resource && (
+                <p className="text-[10px] text-mint-glow">
+                  +{formatNumber(b.perHour)} {resName(b.resource)} / h (tous joueurs)
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="hud-eyebrow text-[10px] text-slate-500">Unités ({endgame.windowDays} j)</p>
+          {endgame.units.map((u) => (
+            <div key={u.id} className="text-xs text-slate-300">
+              <div className="flex justify-between gap-2">
+                <span className="truncate">{u.name}</span>
+                <span className="tabular-mono shrink-0 text-slate-400">
+                  {u.owners} joueur{u.owners > 1 ? "s" : ""} · {formatCompact(u.total)}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500">{u.attacks ? `${u.attacks} attaque${u.attacks > 1 ? "s" : ""} · ${u.winPct} % de victoires` : "Pas encore engagée en attaque"}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Panel>
   );
 }

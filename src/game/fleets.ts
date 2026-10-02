@@ -34,6 +34,8 @@ export const FLEET_RULES = {
   minutesPerDistance: 3,
   /** Côté de la carte de la galaxie (distance max ≈ 141). */
   mapSize: 100,
+  /** v3.7 : durée maximale du trajet d'une attaque, en minutes (0 = aucune). */
+  maxAttackMinutes: 90,
 };
 
 /** Mode fuite : durée d'une patrouille, en minutes. */
@@ -125,6 +127,24 @@ export function travelSeconds(distance: number, speed: number, factor = 1): numb
   return Math.round(factor * (FLEET_RULES.baseMinutes + (distance * FLEET_RULES.minutesPerDistance) / Math.max(1, speed)) * 60);
 }
 
+/** Trajet d'une attaque : comme travelSeconds, plafonné à maxAttackMinutes. */
+export function attackTravelSeconds(distance: number, speed: number, factor = 1): number {
+  const seconds = travelSeconds(distance, speed, factor);
+  const cap = FLEET_RULES.maxAttackMinutes;
+  return cap > 0 ? Math.min(seconds, Math.round(cap * 60)) : seconds;
+}
+
+/** Vaisseaux qui fixent l'allure de la flotte (les plus lents), et vitesse
+ *  de la flotte sans eux (null s'il ne reste rien). */
+export function slowestUnits(units: Units, fleet: Record<string, number>): { ids: string[]; speed: number; speedWithout: number | null } | null {
+  const ids = Object.keys(fleet).filter((id) => fleet[id] > 0);
+  if (ids.length === 0) return null;
+  const speed = fleetSpeed(units, fleet);
+  const slow = ids.filter((id) => fleetSpeed(units, { [id]: 1 }) === speed);
+  const rest = Object.fromEntries(ids.filter((id) => !slow.includes(id)).map((id) => [id, fleet[id]]));
+  return { ids: slow, speed, speedWithout: Object.keys(rest).length > 0 ? fleetSpeed(units, rest) : null };
+}
+
 /** Position d'une flotte sur son trajet (0 = départ, 1 = cible). */
 export function fleetProgress(fleet: Pick<Fleet, "status" | "departAtMs" | "arriveAtMs" | "returnAtMs" | "recalled">, now: number): number {
   if (fleet.status === "outbound") {
@@ -192,7 +212,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
   if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
 
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1000;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1000;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   // Attaquer lève sa propre protection débutant, dès le décollage.
   attacker.lastAttackAtMs = now;

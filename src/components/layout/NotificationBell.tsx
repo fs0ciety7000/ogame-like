@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
@@ -55,7 +56,12 @@ export function NotificationBell() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex max-h-[75vh] w-[min(26rem,calc(100vw-1rem))] flex-col">
-        <DropdownMenuLabel>Journal de bord</DropdownMenuLabel>
+        <div className="flex items-center justify-between pr-2">
+          <DropdownMenuLabel>Journal de bord</DropdownMenuLabel>
+          <Link to="/game/journal" onClick={() => setBellOpen(false)} className="text-[11px] text-cyan-glow/80 hover:text-cyan-glow">
+            Tout l'historique →
+          </Link>
+        </div>
         <div className="flex flex-wrap gap-1 px-1 pb-2" role="tablist">
           {NOTIFICATION_CATEGORIES.map((c) => {
             const count = items.filter((n) => freshIds.has(n.id) && inCategory(n.kind, c.id)).length;

@@ -23,6 +23,7 @@ const KIND_LABEL: Record<NotificationKind, string> = {
   gift: "Don reçu",
   fleet: "Flotte",
   report: "Signalement",
+  message: "Message privé",
   system: "Évènement",
 };
 

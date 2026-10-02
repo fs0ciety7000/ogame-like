@@ -1,9 +1,9 @@
-import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel, productionPerSecond } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { familyIndex, getRank } from "@/game/ranks";
 import { RESOURCE_LIST } from "@/game/resources";
-import { TECHNOLOGIES } from "@/game/technologies";
+import { ENDGAME_TECH_IDS, TECHNOLOGIES } from "@/game/technologies";
 import { UNIT_BASE_STATS, UNITS } from "@/game/units";
 import { FACTIONS, factionOfLair, PIRATE_OWNER_UID } from "@/game/pirates";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -58,6 +58,15 @@ export interface GameStats {
     flows: { productionPerHour: number; spentTotal: number; lootWindow: number; tradedTotal: number; marketTrades: number; marketTax: number };
     /** Stocks très au-dessus des autres joueurs (à vérifier). */
     anomalies: { pseudo: string; resource: string; amount: number; ratio: number }[];
+  };
+  /** v3.7 : contenu de fin de partie (technologies 21–25, bâtiments et unités associés). */
+  endgame: {
+    windowDays: number;
+    /** Joueurs ayant au moins une technologie de fin de partie. */
+    players: number;
+    techs: { id: string; name: string; researchers: number; inProgress: number; avgLevel: number; maxLevel: number; leaders: string[] }[];
+    buildings: { id: string; name: string; builders: number; avgLevel: number; maxLevel: number; resource: string | null; perHour: number }[];
+    units: { id: string; name: string; owners: number; total: number; attacks: number; winPct: number }[];
   };
   insights: string[];
 }
@@ -202,10 +211,70 @@ export function computeGameStats(
       mostAttacked: topCounts(recent.map((r) => r.defenderPseudo), 5),
     },
     balance: computeBalance(players, reports, now, balanceDays),
+    endgame: computeEndgame(players, queues, reports, now, balanceDays),
     insights: [],
   };
   stats.insights = computeInsights(stats);
   return stats;
+}
+
+function computeEndgame(
+  players: PlayerState[],
+  queues: Partial<QueuesState>[],
+  reports: Parameters<typeof computeGameStats>[2],
+  now: number,
+  windowDays: number,
+): GameStats["endgame"] {
+  const since = now - windowDays * DAY;
+  const recent = reports.filter((r) => (r.timestamp ?? 0) >= since && r.attackerUid !== PIRATE_OWNER_UID);
+  const avg = (values: number[]) => (values.length ? round1(values.reduce((a, v) => a + v, 0) / values.length) : 0);
+
+  const techs = TECHNOLOGIES.filter((t) => ENDGAME_TECH_IDS.includes(t.id)).map((t) => {
+    const holders = players.filter((p) => (p.techLevels?.[t.id] ?? 0) > 0).sort((a, b) => (b.techLevels?.[t.id] ?? 0) - (a.techLevels?.[t.id] ?? 0));
+    return {
+      id: t.id,
+      name: t.nom,
+      researchers: holders.length,
+      inProgress: queues.filter((q) => (q.activeResearches ?? []).some((r) => r.id === t.id)).length,
+      avgLevel: avg(holders.map((p) => p.techLevels?.[t.id] ?? 0)),
+      maxLevel: t.maxLevel,
+      leaders: holders.slice(0, 3).map((p) => `${p.pseudo} (${p.techLevels?.[t.id] ?? 0})`),
+    };
+  });
+
+  const buildings = BUILDINGS.filter((b) => b.endgame).map((b) => {
+    const levels = players.map((p) => effectiveBuildingLevel(p.buildings ?? {}, b.id)).filter((l) => l > 0);
+    return {
+      id: b.id,
+      name: b.name,
+      builders: levels.length,
+      avgLevel: avg(levels),
+      maxLevel: b.maxLevel,
+      resource: b.production?.resource ?? null,
+      perHour: b.production ? Math.round(levels.reduce((a, l) => a + productionPerSecond(b.id, l), 0) * 3600) : 0,
+    };
+  });
+
+  const units = UNITS.filter((u) => ENDGAME_TECH_IDS.includes(u.unlockTech)).map((u) => {
+    const owned = players.map((p) => p.units?.[u.id]?.count ?? 0);
+    const used = recent.filter((r) => (r.attackerFleet?.[u.id] ?? 0) > 0);
+    return {
+      id: u.id,
+      name: u.name,
+      owners: owned.filter((c) => c > 0).length,
+      total: owned.reduce((a, c) => a + c, 0),
+      attacks: used.length,
+      winPct: pct(used.filter((r) => r.outcome === "attacker_win").length, used.length),
+    };
+  });
+
+  return {
+    windowDays,
+    players: players.filter((p) => ENDGAME_TECH_IDS.some((id) => (p.techLevels?.[id] ?? 0) > 0)).length,
+    techs,
+    buildings,
+    units,
+  };
 }
 
 /** Unité qui pèse le plus dans la puissance d'attaque d'une flotte. */

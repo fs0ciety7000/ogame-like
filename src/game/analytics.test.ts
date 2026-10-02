@@ -47,3 +47,26 @@ describe("computeGameStats", () => {
     expect(s.insights.some((i) => i.includes("personne n'a recherchées"))).toBe(true);
   });
 });
+
+describe("endgame balance stats", () => {
+  it("tracks endgame techs, rare production and new units in combat", () => {
+    const base = defaultPlayerState("x", "x");
+    const rich = player("Vito", {
+      techLevels: { tech21: 3, tech24: 1 },
+      buildings: { ...base.buildings, fonderie_quantique: { level: 2, unlocked: true } },
+      units: { croiseur_nova: { level: 1, count: 40 } },
+    });
+    const q = defaultQueues();
+    q.activeResearches.push({ id: "tech22", endTime: NOW + 1000 });
+    const reports = [
+      { attackerUid: "Vito", attackerPseudo: "Vito", defenderPseudo: "A", outcome: "attacker_win" as const, timestamp: NOW - DAY, loot: null, attackerFleet: { croiseur_nova: 40 } },
+      { attackerUid: "Vito", attackerPseudo: "Vito", defenderPseudo: "B", outcome: "defender_win" as const, timestamp: NOW - DAY, loot: null, attackerFleet: { croiseur_nova: 10 } },
+    ];
+    const s = computeGameStats([rich, player("A")], [q], reports, NOW).endgame;
+    expect(s.players).toBe(1);
+    expect(s.techs.find((t) => t.id === "tech21")).toMatchObject({ researchers: 1, avgLevel: 3, leaders: ["Vito (3)"] });
+    expect(s.techs.find((t) => t.id === "tech22")).toMatchObject({ researchers: 0, inProgress: 1 });
+    expect(s.buildings.find((b) => b.id === "fonderie_quantique")).toMatchObject({ builders: 1, avgLevel: 2, resource: "reinforcedSteel", perHour: 3600 });
+    expect(s.units.find((u) => u.id === "croiseur_nova")).toMatchObject({ owners: 1, total: 40, attacks: 2, winPct: 50 });
+  });
+});

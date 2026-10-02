@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { MaintenanceOver, MaintenancePage } from "@/pages/MaintenancePage";
+
+// Page de maintenance chargée seulement quand elle sert.
+const MaintenancePage = lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenancePage })));
+const MaintenanceOver = lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenanceOver })));
 import { useAdminStatus, useMaintenanceStore } from "@/services/maintenanceService";
 import { useAuthStore } from "@/store/authStore";
 import { logout } from "@/services/authService";
@@ -30,17 +33,24 @@ export function MaintenanceGate({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, [loaded, state.enabled]);
 
-  if (reopening) return <MaintenanceOver />;
+  if (reopening)
+    return (
+      <Suspense fallback={null}>
+        <MaintenanceOver />
+      </Suspense>
+    );
   // Vérification du statut administrateur en cours : rien plutôt qu'un flash.
   if (loaded && state.enabled && user && admin === null) return null;
   if (blocked) {
     return (
-      <MaintenancePage
-        state={state}
-        account={user ? user.displayName || user.email : null}
-        onLogout={() => void logout()}
-        onAdminAccess={() => setAdminLogin(true)}
-      />
+      <Suspense fallback={null}>
+        <MaintenancePage
+          state={state}
+          account={user ? user.displayName || user.email : null}
+          onLogout={() => void logout()}
+          onAdminAccess={() => setAdminLogin(true)}
+        />
+      </Suspense>
     );
   }
   return (

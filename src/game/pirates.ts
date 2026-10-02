@@ -41,6 +41,8 @@ export interface FactionDef {
   art: string;
   /** v3.6 : scène large (repaire), affichée en tête de la carte de faction. */
   banner?: string;
+  /** v3.6 : emblème (sceau) de la faction. */
+  emblem?: string;
   /** Couleur d'accent : ember, gold, cyan, mint, danger. */
   color: string;
   /** Récit (paragraphes séparés par une ligne vide). */
@@ -237,6 +239,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     enforcer: "Les Échos",
     art: "/assets/story/choeur.webp",
     banner: "/assets/story/choeur-banner.webp",
+    emblem: "/assets/story/choeur-emblem.webp",
     color: "mint",
     story:
       "Il y a dix mille ans, une civilisation entière s'est fondue en une seule conscience, puis s'est tue. Ses cathédrales de cristal noir dérivent depuis aux confins de la galaxie, silencieuses.\n\n" +
