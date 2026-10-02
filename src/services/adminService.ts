@@ -143,6 +143,29 @@ export interface HooksUpdateReport {
   errors: string[];
 }
 
+/** v4.8 : rapport d'un déploiement complet (sauvegarde, schéma, fiches, hooks). */
+export interface DeployReport {
+  ref: string;
+  backup: string | null;
+  schema: number | null;
+  profiles: number | null;
+  hooks: HooksUpdateReport | null;
+  errors: string[];
+}
+
+/** v4.8 : sauvegarde + schéma + fiches publiques + hooks, depuis la branche main. */
+export async function adminDeploy(ref?: string): Promise<DeployReport> {
+  try {
+    return await pb.send<DeployReport>("/api/cosmic/admin/deploy", { method: "POST", body: ref ? { ref } : {} });
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+    const data = (err as { response?: Partial<DeployReport> & { message?: string } })?.response;
+    if (status === 500 && data && Array.isArray(data.errors)) return data as DeployReport;
+    if (status === 404) throw new Error("Route de déploiement absente : les hooks du serveur sont trop anciens (mets-les à jour une fois).");
+    throw new Error(data?.message || (err as Error).message);
+  }
+}
+
 /** Télécharge les hooks du serveur depuis GitHub (pb_hooks/cosmic_updater.pb.js). */
 export async function adminUpdateHooks(): Promise<HooksUpdateReport> {
   try {
