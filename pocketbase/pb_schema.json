@@ -1854,5 +1854,60 @@
     "indexes": [
       "CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"
     ]
+  },
+  {
+    "id": "pbc_ce_shared_reports",
+    "name": "shared_reports",
+    "type": "base",
+    "listRule": null,
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "ownerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "sourceId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"
+    ]
   }
 ]

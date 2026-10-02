@@ -2662,4 +2662,26 @@ function messageRead(e) {
   return e.json(200, { read: recs.length });
 }
 
-module.exports = { requireAdminReason, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Rapports partagés (v3.8) ---------- */
+
+/** POST /api/cosmic/reports/share { kind: "battle" | "spy", id } — instantané
+ *  lisible par tout joueur connecté qui a le lien (non listable). */
+function reportShare(e) {
+  const req = body(e);
+  const uid = e.auth.id;
+  const kind = req.kind === "spy" ? "spy" : "battle";
+  const sourceId = String(req.id || "");
+  const src = findOrNull($app, kind === "spy" ? "spy_reports" : "battle_reports", sourceId);
+  if (!src) throw new NotFoundError("Rapport introuvable.");
+  const allowed = kind === "spy" ? src.getString("spyUid") === uid : src.getString("attackerUid") === uid || src.getString("defenderUid") === uid;
+  if (!allowed) throw new ForbiddenError("Tu ne peux partager que tes propres rapports.");
+  const existing = $app.findRecordsByFilter("shared_reports", "ownerUid = {:uid} && sourceId = {:id}", "", 1, 0, { uid, id: sourceId })[0];
+  if (existing) return e.json(200, { id: existing.id });
+  const player = findOrNull($app, "players", uid);
+  const rec = new Record($app.findCollectionByNameOrId("shared_reports"));
+  rec.load({ ownerUid: uid, ownerPseudo: player ? player.getString("pseudo") : "", kind, sourceId, data: toPlain(src), createdAtMs: Date.now() });
+  $app.save(rec);
+  return e.json(200, { id: rec.id });
+}
+
+module.exports = { requireAdminReason, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

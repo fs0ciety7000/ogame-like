@@ -1,3 +1,4 @@
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
@@ -372,7 +373,7 @@ function AllianceRoom({
                           seg.isMention && "font-medium text-gold-glow",
                         )}
                       >
-                        {seg.text}
+                        {seg.isMention ? seg.text : <LinkifiedText text={seg.text} />}
                       </span>
                     ))}
                   </p>

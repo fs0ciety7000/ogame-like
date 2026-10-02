@@ -13,6 +13,7 @@ import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
+import * as srs from "@/services/sharedReportService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
@@ -1304,6 +1305,33 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await ms.sendPrivateMessage(bId, "Débloqué");
     for (const m of await admin.collection("private_messages").getFullList({ filter: `fromUid="${aId}"` })) await admin.collection("private_messages").delete(m.id);
     await loginPlayer(B.email, B.pw);
+  });
+
+  it("shares a battle report with any logged-in player who has the link", async () => {
+    const report = await admin.collection("battle_reports").create({
+      attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now(), outcome: "attacker_win",
+      attackerPower: 100, defenderPower: 50, attackerLossPercent: 10, defenderLossPercent: 60, loot: { scrap: 500 },
+    });
+    try {
+      await loginPlayer(A.email, A.pw);
+      const url = await srs.shareReport("battle", report.id);
+      const id = url.split("/").pop()!;
+      expect(await srs.shareReport("battle", report.id)).toBe(url); // même lien la deuxième fois
+      await loginPlayer(B.email, B.pw);
+      const shared = await srs.fetchSharedReport(id);
+      expect(shared).toMatchObject({ kind: "battle", ownerUid: aId, ownerPseudo: A.pseudo });
+      expect((shared.data as { loot: Record<string, number> }).loot.scrap).toBe(500);
+      // Pas de liste, et seul un participant partage.
+      await expect(pb.collection("shared_reports").getList(1, 10)).rejects.toBeTruthy();
+      await expect(new PocketBase(PB_TEST_URL!).collection("shared_reports").getOne(id)).rejects.toBeTruthy();
+      const other = await admin.collection("battle_reports").create({ attackerUid: "x", defenderUid: "y", timestamp: Date.now(), outcome: "draw" });
+      await expect(srs.shareReport("battle", other.id)).rejects.toThrow("propres rapports");
+      await admin.collection("battle_reports").delete(other.id);
+      await admin.collection("shared_reports").delete(id);
+    } finally {
+      await admin.collection("battle_reports").delete(report.id);
+      await loginPlayer(B.email, B.pw);
+    }
   });
 
   it("exposes public feats on the profile sheet", async () => {

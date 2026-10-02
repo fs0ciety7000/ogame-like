@@ -471,6 +471,7 @@ onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).reportCreateRequ
 /** POST /api/cosmic/reports/comment { id, text } · /seen { id } — joueur. */
 routerAdd("POST", "/api/cosmic/reports/error", (e) => require(`${__hooks}/cosmic_db.js`).reportClientError(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/comment", (e) => require(`${__hooks}/cosmic_db.js`).reportComment(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/reports/share", (e) => require(`${__hooks}/cosmic_db.js`).reportShare(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/seen", (e) => require(`${__hooks}/cosmic_db.js`).reportSeen(e), $apis.requireAuth("users"));
 /** Administration : mise à jour, options, issue GitHub. */
 routerAdd("POST", "/api/cosmic/admin/reports", (e) => require(`${__hooks}/cosmic_db.js`).adminReportUpdate(e), $apis.requireAuth("users", "_superusers"));
