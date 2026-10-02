@@ -230,8 +230,24 @@ export function UnitsPage() {
                                 Base {unit.stats.defense} + {(data.level - 1) * unitLevelBonus(unit)} (niveau) {defenseTechBonus > 0 && `× ${defenseTechBonus}% (tech Blindage avancé)`}
                               </TooltipContent>
                             </Tooltip>
-                            <StatBar label="VIT" value={unit.stats.vitesse * data.level} max={statMax.speed} color="var(--color-mint-glow)" />
-                            <StatBar label="CAP" value={unit.stats.cargo * data.level} max={statMax.cargo} color="var(--color-gold-glow)" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="cursor-help">
+                                  <StatBar label="VIT" value={unit.stats.vitesse * data.level} max={statMax.speed} color="var(--color-mint-glow)" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Base {unit.stats.vitesse} × niveau {data.level}. Une flotte avance à la vitesse de son vaisseau le plus lent.
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="cursor-help">
+                                  <StatBar label="CAP" value={unit.stats.cargo * data.level} max={statMax.cargo} color="var(--color-gold-glow)" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>Base {unit.stats.cargo} × niveau {data.level}.</TooltipContent>
+                            </Tooltip>
                           </div>
                         );
                       })()}
