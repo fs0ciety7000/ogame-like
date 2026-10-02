@@ -13,7 +13,7 @@ const OFF_KEY = "cosmic-empires:tips-off";
 
 export const PAGE_TIPS: Record<string, string> = {
   "/game/ressources": "Chaque bâtiment d'extraction produit en continu, même hors ligne. Surveille les jauges : un stock plein ne monte plus, et l'entrepôt met une partie à l'abri des pillards.",
-  "/game/batiments": "Améliorer un bâtiment augmente sa production ou son effet. Une seule amélioration à la fois : enchaîne-les sans laisser la file vide.",
+  "/game/batiments": "Améliorer un bâtiment augmente sa production ou son effet. Chaque bâtiment a son propre chantier ; « Programmer » prépare la suite, lancée seule dès que possible.",
   "/game/unites": "Les unités d'attaque partent en mission ou au combat ; les défenses protègent ta base. Chaque unité se débloque et s'améliore au Labo.",
   "/game/labo": "Les recherches débloquent les unités et donnent des bonus permanents (production, combat, vitesse…). Survole une technologie pour voir ses effets.",
   "/game/missions": "Envoie des unités en mission : elles reviennent avec des ressources et de l'XP. Les unités engagées ne défendent pas ta base pendant ce temps.",

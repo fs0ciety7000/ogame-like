@@ -1,4 +1,4 @@
-import { allianceRole } from "@/game/alliances";
+import { allianceRole, canDiplomacy } from "@/game/alliances";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import type { Alliance, CombatOutcome, ResourceId } from "@/types/game";
@@ -106,7 +106,7 @@ export function declareWar(input: {
 }): { war: Omit<AllianceWar, "id">; own: Alliance } {
   const { own, target, now } = input;
   const role = allianceRole(own, input.actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent déclarer une guerre.");
+  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent déclarer une guerre.");
   if (own.id === target.id) throw new GameActionError("Tu ne peux pas déclarer la guerre à ta propre alliance.");
   if ((target.members ?? []).length < WAR_RULES.minMembers) throw new GameActionError(`Cette alliance compte moins de ${WAR_RULES.minMembers} membres.`);
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est déjà en guerre.");
@@ -187,7 +187,7 @@ export function surrender(war: AllianceWar, alliance: Alliance, actorUid: string
   if (!side) throw new GameActionError("Ton alliance ne participe pas à cette guerre.");
   if (!isRunning(war, now)) throw new GameActionError("Cette guerre est terminée.");
   const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent se rendre.");
+  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
   const winnerId = side === "attacker" ? war.defenderId : war.attackerId;
   return { ...war, status: "ended", winnerId, surrenderedBy: alliance.id, endedAtMs: now, log: [...war.log, { atMs: now, text: `${actorPseudo} rend les armes au nom de [${alliance.tag}].` }] };
 }

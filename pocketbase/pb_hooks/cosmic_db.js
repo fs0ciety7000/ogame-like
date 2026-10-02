@@ -2377,6 +2377,84 @@ function adminBackupStatus(e) {
   return e.json(200, backupStatus());
 }
 
+/* ---------- v4.9 : sauvegardes depuis l'administration ---------- */
+
+function backupStamp(now) {
+  const d = new Date(now);
+  const p = (n) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+}
+
+/** GET /api/cosmic/admin/backups/list — sauvegardes présentes sur le serveur. */
+function adminBackupList(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const out = [];
+  const fsys = $app.newBackupsFilesystem();
+  try {
+    const list = fsys.list("");
+    for (let i = 0; i < list.length; i++) {
+      const key = String(list[i].key || "");
+      if (!key.endsWith(".zip")) continue;
+      out.push({ key, size: Number(list[i].size) || 0, modifiedAtMs: new Date(String(list[i].modTime)).getTime() });
+    }
+  } finally {
+    fsys.close();
+  }
+  out.sort((a, b) => b.modifiedAtMs - a.modifiedAtMs);
+  return e.json(200, out);
+}
+
+/** GET /api/cosmic/admin/backups/download?key=… — téléchargement d'une sauvegarde. */
+function adminBackupDownload(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const key = String(e.request.url.query().get("key") || "");
+  if (!/^[A-Za-z0-9._-]{1,120}\.zip$/.test(key)) throw new BadRequestError("Sauvegarde inconnue.");
+  const fsys = $app.newBackupsFilesystem();
+  try {
+    if (!fsys.exists(key)) throw new NotFoundError("Sauvegarde introuvable.");
+    fsys.serve(e.response, e.request, key, key);
+  } finally {
+    fsys.close();
+  }
+  return null;
+}
+
+/**
+ * POST /api/cosmic/admin/backups/r2 { create? } — sauvegarde à l'instant
+ * (facultatif), puis lance la copie vers Cloudflare R2 (workflow GitHub
+ * « Copie vers Cloudflare R2 » : sauvegardes PocketBase et illustrations).
+ * Variables : COSMIC_GITHUB_TOKEN (droit « Actions : écriture »),
+ * COSMIC_DEPLOY_REPO (défaut : fs0ciety7000/ogame-like).
+ */
+function adminBackupToR2(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const req = body(e);
+  const out = { backup: null, dispatched: false, message: "" };
+  if (req.create !== false) {
+    const name = `manuelle_${backupStamp(Date.now())}.zip`;
+    $app.createBackup(e.request.context(), name);
+    out.backup = name;
+  }
+  const token = $os.getenv("COSMIC_GITHUB_TOKEN");
+  const repo = $os.getenv("COSMIC_DEPLOY_REPO") || "fs0ciety7000/ogame-like";
+  if (!token) {
+    out.message = "Sauvegarde faite. Copie vers R2 non lancée : variable COSMIC_GITHUB_TOKEN absente (elle se fera à 3 h 30).";
+    return e.json(200, out);
+  }
+  const res = $http.send({
+    url: `https://api.github.com/repos/${repo}/actions/workflows/r2-backup.yml/dispatches`,
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "cosmic-empires" },
+    body: JSON.stringify({ ref: "main" }),
+    timeout: 20,
+  });
+  out.dispatched = res.statusCode === 204;
+  out.message = out.dispatched
+    ? "Copie vers R2 lancée : sauvegardes PocketBase et illustrations (quelques minutes, suivi dans GitHub Actions)."
+    : `Sauvegarde faite, mais GitHub a refusé de lancer la copie (HTTP ${res.statusCode}) : le jeton doit avoir le droit « Actions : écriture ».`;
+  return e.json(200, out);
+}
+
 /** Vérification quotidienne : alerte l'équipe si la dernière sauvegarde est trop ancienne. */
 function checkBackups(now) {
   const st = backupStatus();
@@ -4638,6 +4716,111 @@ function allianceBossTick(now) {
   return changed;
 }
 
+/* ---------- Objectifs du jour d'alliance (v4.9) ---------- */
+
+function dailyMembersOf(txApp, game, allianceRec, now) {
+  return (toPlain(allianceRec).members || [])
+    .map((uid) => {
+      const rec = findOrNull(txApp, "players", uid);
+      if (!rec) return null;
+      const p = toPlain(rec);
+      p.uid = uid;
+      return game.dailyMemberOf(p, now);
+    })
+    .filter((m) => !!m);
+}
+
+/** Objectif atteint : points de passe et production pour chaque contributeur, bonus du trésor. */
+function rewardAllianceDaily(txApp, game, allianceRec, daily, now) {
+  const R = game.ALLIANCE_DAILY_RULES;
+  Object.keys(daily.contributions || {}).forEach((uid) => {
+    if (!findOrNull(txApp, "players", uid)) return;
+    const owner = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    game.addPassPoints(flushed.player, "allianceDaily", now);
+    const gain = game.productionHours(flushed.player, R.rewardHours);
+    Object.keys(gain).forEach((r) => (flushed.player.resources[r] = (flushed.player.resources[r] || 0) + gain[r]));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    notify(txApp, uid, flushed.notifications.concat([
+      { kind: "alliance", title: "Objectif du jour atteint", message: `Ton alliance a rempli son objectif : +${R.passPoints} points de passe et ${R.rewardHours} h de production.`, createdAtMs: now, read: false, link: "/game/alliance" },
+    ]));
+  });
+  const bonus = game.dailyTreasuryBonus(daily);
+  if (Object.keys(bonus).length > 0) {
+    const treasury = toPlain(allianceRec).treasury || {};
+    Object.keys(bonus).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + bonus[r]));
+    allianceRec.set("treasury", treasury);
+  }
+  allianceBossLog(txApp, allianceRec.id, "", "", "Objectif du jour atteint : le trésor reçoit 10 % de la production de l'alliance.", Object.keys(bonus).length ? bonus : null);
+}
+
+/** Tâche (toutes les 10 min) : propositions à 6 h, fin du vote à 10 h, progression, récompenses. */
+function allianceDailyTick(now) {
+  const game = loadGame();
+  let changed = 0;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const today = game.parisDay(now);
+    const phase = game.dailyPhase(now);
+    txApp.findAllRecords("alliances").forEach((allianceRec) => {
+      let daily = game.readDaily(toPlain(allianceRec).daily);
+      const before = JSON.stringify(daily);
+      if (daily && daily.day !== today && (daily.status === "active" || daily.status === "voting")) daily.status = "failed";
+      const needsNew = (!daily || daily.day !== today) && phase !== "before";
+      if (!needsNew && !(daily && daily.day === today)) {
+        if (JSON.stringify(daily) !== before) {
+          allianceRec.set("daily", daily);
+          txApp.save(allianceRec);
+          changed++;
+        }
+        return;
+      }
+      const members = dailyMembersOf(txApp, game, allianceRec, now);
+      if (members.length === 0) return;
+      if (needsNew) {
+        const previous = game.previousSummary(daily);
+        daily = game.proposeDaily(allianceRec.id, today, members, now);
+        if (previous) daily.previous = previous;
+      }
+      if (daily.status === "voting" && phase === "active") game.startDaily(daily, members, now);
+      if (daily.status === "active" && game.updateDailyProgress(daily, members, now)) rewardAllianceDaily(txApp, game, allianceRec, daily, now);
+      if (JSON.stringify(daily) !== before) {
+        allianceRec.set("daily", daily);
+        txApp.save(allianceRec);
+        changed++;
+      }
+    });
+  });
+  return changed;
+}
+
+/** POST /api/cosmic/alliance/daily { vote: index } — fondateur et officiers, de 6 h à 10 h. */
+function allianceDailyVote(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    const player = findOrNull(txApp, "players", uid);
+    const allianceId = player ? player.getString("allianceId") : "";
+    const allianceRec = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+    if (!allianceRec) throw new BadRequestError("Tu n'as pas d'alliance.");
+    const alliance = toPlain(allianceRec);
+    const daily = game.readDaily(alliance.daily);
+    if (!daily) throw new BadRequestError("Pas encore d'objectif proposé aujourd'hui (à partir de 6 h).");
+    try {
+      game.voteDaily(daily, uid, game.allianceRole(alliance, uid), req.vote, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    allianceRec.set("daily", daily);
+    txApp.save(allianceRec);
+    out = daily;
+  });
+  return e.json(200, out);
+}
+
 /* ---------- Chat d'alliance : « … écrit » (v4.6) ---------- */
 
 /** POST /api/cosmic/alliance/typing — diffuse un signal éphémère aux
@@ -4759,4 +4942,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

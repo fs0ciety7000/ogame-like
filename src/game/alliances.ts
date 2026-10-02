@@ -74,7 +74,15 @@ export const ALLIANCE_RULES = {
   ] as AllianceProjectDef[],
 };
 
-export type AllianceRole = "founder" | "officer" | "member";
+export type AllianceRole = "founder" | "officer" | "diplomat" | "member";
+
+/** v4.9 : diplomates par alliance, au plus. */
+export const MAX_DIPLOMATS = 2;
+
+/** Peut signer et rompre les pactes, déclarer une guerre ou y répondre. */
+export function canDiplomacy(role: AllianceRole | null): boolean {
+  return role === "founder" || role === "officer" || role === "diplomat";
+}
 export type AllianceLevels = Record<string, number>;
 
 const RESOURCE_IDS = new Set<string>(RESOURCE_LIST.map((r) => r.id));
@@ -86,7 +94,8 @@ export function findAllianceResearch(id: string): AllianceResearchDef | undefine
 export function allianceRole(alliance: Pick<Alliance, "createdBy" | "members" | "roles">, uid: string): AllianceRole | null {
   if (!alliance.members?.includes(uid)) return null;
   if (alliance.createdBy === uid) return "founder";
-  return alliance.roles?.[uid] === "officer" ? "officer" : "member";
+  const r = alliance.roles?.[uid];
+  return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
 }
 
 function level(levels: AllianceLevels | undefined | null, id: string): number {
@@ -203,11 +212,20 @@ export function kickMember(alliance: Alliance, actorUid: string, targetUid: stri
 }
 
 export function setOfficer(alliance: Alliance, actorUid: string, targetUid: string, officer: boolean): Alliance {
-  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur gère les officiers.");
+  return setRole(alliance, actorUid, targetUid, officer ? "officer" : "member");
+}
+
+/** v4.9 : rôle d'un membre (officier, diplomate ou simple membre), par le fondateur. */
+export function setRole(alliance: Alliance, actorUid: string, targetUid: string, role: unknown): Alliance {
+  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur gère les rôles.");
   if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de rôle.");
+  if (role !== "officer" && role !== "diplomat" && role !== "member") throw new GameActionError("Rôle inconnu.");
   const roles = { ...(alliance.roles ?? {}) };
-  if (officer) roles[targetUid] = "officer";
-  else delete roles[targetUid];
+  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= MAX_DIPLOMATS) {
+    throw new GameActionError(`${MAX_DIPLOMATS} diplomates au plus par alliance.`);
+  }
+  if (role === "member") delete roles[targetUid];
+  else roles[targetUid] = role;
   return { ...alliance, roles };
 }
 
@@ -364,7 +382,7 @@ export function fundAllianceProject(
   if (!def) throw new GameActionError("Projet inconnu.");
   const role = allianceRole(alliance, actor.uid);
   if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  if (source === "treasury" && role === "member") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le trésor.");
+  if (source === "treasury" && role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le trésor.");
   const state = projectState(alliance, def.id);
   if (state.buildEndMs > 0) throw new GameActionError("Ce palier est déjà en construction.");
   const next = state.level + 1;
@@ -460,6 +478,7 @@ export type AllianceAction =
   | { type: "kick"; targetUid: string }
   | { type: "promote"; targetUid: string }
   | { type: "demote"; targetUid: string }
+  | { type: "setRole"; targetUid: string; role: string }
   | { type: "deposit"; resources: Record<string, unknown> }
   | { type: "distribute"; targetUid: string; resources: Record<string, unknown> }
   | { type: "research"; researchId: string }
@@ -549,6 +568,11 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
     case "demote": {
       if (!alliance) throw new GameActionError("Alliance introuvable.");
       out.alliance = setOfficer(alliance, actor.uid, String(action.targetUid ?? ""), action.type === "promote");
+      return out;
+    }
+    case "setRole": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setRole(alliance, actor.uid, String(action.targetUid ?? ""), action.role);
       return out;
     }
     case "deposit": {

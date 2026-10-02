@@ -493,6 +493,10 @@ cronAdd("cosmic_backup_check", "20 5 * * *", () => {
 
 /** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
 routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
+// v4.9 : liste, téléchargement et copie vers R2 depuis l'administration.
+routerAdd("GET", "/api/cosmic/admin/backups/list", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupList(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("GET", "/api/cosmic/admin/backups/download", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupDownload(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/backups/r2", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupToR2(e), $apis.requireAuth("users", "_superusers"));
 
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */
 routerAdd("POST", "/api/cosmic/admin/maintenance", (e) => require(`${__hooks}/cosmic_db.js`).adminMaintenance(e), $apis.requireAuth("users", "_superusers"));
@@ -720,4 +724,25 @@ routerAdd("POST", "/api/cosmic/admin/deploy", (e) => {
   const report = require(`${__hooks}/cosmic_sync.js`).deployUpdate(e, ref);
   console.log(`[cosmic] déploiement ${report.ref} : sauvegarde ${report.backup}, ${report.schema} collections, ${report.profiles} fiches, hooks ${report.hooks ? report.hooks.updated.join(",") || "inchangés" : "—"}${report.errors.length ? `, erreurs : ${report.errors.join(" ; ")}` : ""}`);
   return e.json(report.errors.length > 0 ? 500 : 200, report);
+});
+
+/* ---------- v4.9 : objectifs du jour d'alliance ---------- */
+
+cronAdd("cosmic_alliancedaily", "*/10 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).allianceDailyTick(Date.now());
+    if (n > 0) console.log(`[cosmic] objectifs du jour : ${n} alliance(s) mise(s) à jour`);
+  } catch (err) {
+    console.log(`[cosmic] objectifs du jour : ${err}`);
+  }
+});
+
+routerAdd("POST", "/api/cosmic/alliance/daily", (e) => require(`${__hooks}/cosmic_db.js`).allianceDailyVote(e), $apis.requireAuth("users"));
+
+/** POST /api/cosmic/admin/alliance-daily { now? } : passe de la tâche à la demande (administration, tests). */
+routerAdd("POST", "/api/cosmic/admin/alliance-daily", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const now = Number((db.body(e) || {}).now) || Date.now();
+  return e.json(200, { changed: db.allianceDailyTick(now) });
 });
