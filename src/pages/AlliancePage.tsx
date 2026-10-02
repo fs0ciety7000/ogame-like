@@ -7,6 +7,7 @@ import { ChevronsDown, ChevronsUp, Crown, Shield, ShieldPlus, UserX } from "luci
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -392,6 +393,7 @@ function AllianceRoom({
                 placeholder="Écrire un message…"
                 onKeyDown={(e) => e.key === "Enter" && void handleSend()}
               />
+              <EmojiPicker onPick={(e) => setText((t) => t + e)} />
               <Button onClick={() => void handleSend()}>Envoyer</Button>
             </div>
           </Card>

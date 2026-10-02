@@ -1,3 +1,5 @@
+import { applyEmojisRecord } from "@/services/emojiService";
+import { EMOJIS_KEY } from "@/game/emojis";
 import { applyChallengeRecord } from "@/services/challengeService";
 import { CHALLENGE_KEY } from "@/game/challenges";
 import { applyBannersRecord } from "@/services/bannerService";
@@ -48,6 +50,7 @@ function applyRecords(records: ConfigRecord[]) {
   applyLeviathanRecord(records.find((r) => (r.key as string) === LEVIATHAN_KEY)?.data ?? null);
   applyBannersRecord(records.find((r) => (r.key as string) === BANNERS_KEY)?.data ?? null);
   applyChallengeRecord(records.find((r) => (r.key as string) === CHALLENGE_KEY)?.data ?? null);
+  applyEmojisRecord(records.find((r) => (r.key as string) === EMOJIS_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {

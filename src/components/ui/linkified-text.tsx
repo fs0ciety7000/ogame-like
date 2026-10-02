@@ -1,18 +1,37 @@
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { FileText } from "lucide-react";
+import { useEmojiStore } from "@/services/emojiService";
+import { splitCustomEmojis } from "@/game/emojis";
 
 /* Texte de message (v3.8) : les liens de rapports partagés deviennent des
-   boutons, les autres liens http(s) restent cliquables. */
+   boutons, les autres liens http(s) restent cliquables, les emojis
+   personnalisés (:code:) s'affichent en image. */
 
 const LINK_RE = /(https?:\/\/[^\s]+|\/game\/rapport\/[a-z0-9]{6,30})/gi;
+
+/** Texte avec les emojis personnalisés (:code:) en images. */
+function WithEmojis({ text }: { text: string }) {
+  const emojis = useEmojiStore((s) => s.emojis);
+  return (
+    <>
+      {splitCustomEmojis(text, emojis).map((t, i) =>
+        t.type === "text" ? (
+          <Fragment key={i}>{t.text}</Fragment>
+        ) : (
+          <img key={i} src={t.emoji.url} alt={`:${t.emoji.code}:`} title={`:${t.emoji.code}:`} className="inline-block h-6 w-6 object-contain align-[-0.35em]" />
+        ),
+      )}
+    </>
+  );
+}
 
 export function LinkifiedText({ text }: { text: string }) {
   const parts = text.split(LINK_RE);
   return (
     <>
       {parts.map((part, i) => {
-        if (i % 2 === 0) return <Fragment key={i}>{part}</Fragment>;
+        if (i % 2 === 0) return <WithEmojis key={i} text={part} />;
         const report = part.match(/\/game\/rapport\/([a-z0-9]{6,30})/i);
         const sameSite = !part.startsWith("http") || part.startsWith(window.location.origin);
         if (report && sameSite) {
