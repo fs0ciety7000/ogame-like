@@ -1,7 +1,13 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, User } from "lucide-react";
+import { FlaskConical, Flag, Search, User } from "lucide-react";
+import { subscribeAlliances } from "@/services/allianceService";
+import { BUILDINGS } from "@/game/buildings";
+import { UNITS } from "@/game/units";
+import { TECHNOLOGIES } from "@/game/technologies";
+import { assetUrl } from "@/lib/assets";
+import type { Alliance } from "@/types/game";
 import { ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { closeCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
@@ -22,12 +28,18 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
+  const [alliances, setAlliances] = useState<Alliance[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setQuery("");
     setActiveIndex(0);
-    return subscribeLeaderboard(setPlayers);
+    const offPlayers = subscribeLeaderboard(setPlayers);
+    const offAlliances = subscribeAlliances(setAlliances);
+    return () => {
+      offPlayers();
+      offAlliances();
+    };
   }, [open]);
 
   const items = useMemo<PaletteItem[]>(() => {
@@ -52,12 +64,35 @@ export function CommandPalette() {
             label: p.pseudo,
             sublabel: getRankLabel(p.xp),
             icon: <User className="h-4 w-4 text-mint-glow" />,
-            run: () => navigate("/game/joueurs"),
+            run: () => navigate(`/game/joueurs?fiche=${p.uid}`),
           }))
       : [];
 
-    return [...navItems, ...playerItems];
-  }, [query, players, navigate]);
+    // v3.8 : alliances, unités, bâtiments et technologies.
+    const thumb = (src?: string) => (src ? <img src={assetUrl(src)} alt="" className="h-5 w-5 object-contain" /> : null);
+    const match = (label: string) => q.length >= 2 && label.toLowerCase().includes(q);
+    const allianceItems: PaletteItem[] = alliances
+      .filter((a) => match(a.name) || match(a.tag))
+      .slice(0, 4)
+      .map((a) => ({
+        key: `alliance-${a.id}`,
+        label: `[${a.tag}] ${a.name}`,
+        sublabel: `Alliance · ${a.members.length} membre${a.members.length > 1 ? "s" : ""}`,
+        icon: <Flag className="h-4 w-4 text-gold-glow" />,
+        run: () => navigate("/game/joueurs?mode=alliances"),
+      }));
+    const unitItems: PaletteItem[] = UNITS.filter((u) => match(u.name))
+      .slice(0, 4)
+      .map((u) => ({ key: `unit-${u.id}`, label: u.name, sublabel: "Unité", icon: thumb(u.image) ?? <User className="h-4 w-4" />, run: () => navigate("/game/unites") }));
+    const buildingItems: PaletteItem[] = BUILDINGS.filter((b) => match(b.name))
+      .slice(0, 4)
+      .map((b) => ({ key: `building-${b.id}`, label: b.name, sublabel: "Bâtiment", icon: thumb(b.image) ?? <User className="h-4 w-4" />, run: () => navigate("/game/batiments") }));
+    const techItems: PaletteItem[] = TECHNOLOGIES.filter((t) => match(t.nom))
+      .slice(0, 4)
+      .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-violet-glow" />, run: () => navigate("/game/labo") }));
+
+    return [...navItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
+  }, [query, players, alliances, navigate]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -83,7 +118,7 @@ export function CommandPalette() {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Naviguer ou rechercher un joueur…"
+              placeholder="Page, joueur, alliance, unité, bâtiment, technologie…"
               className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") {

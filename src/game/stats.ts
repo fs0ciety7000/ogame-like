@@ -25,6 +25,8 @@ export interface PlayerStats {
   /** v3.0 : échanges conclus au marché, et taxe payée (retirée du jeu). */
   marketTrades?: number;
   marketTax?: number;
+  /** v3.8 : ressources reçues au marché (défis hebdomadaires). */
+  marketVolume?: number;
   /** v3.1 : Léviathans abattus (participation), expéditions terminées. */
   leviathanKills?: number;
   expeditions?: number;

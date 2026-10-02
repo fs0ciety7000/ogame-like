@@ -1,3 +1,5 @@
+import { applyChallengeRecord } from "@/services/challengeService";
+import { CHALLENGE_KEY } from "@/game/challenges";
 import { applyBannersRecord } from "@/services/bannerService";
 import { BANNERS_KEY } from "@/game/banners";
 import { create } from "zustand";
@@ -45,6 +47,7 @@ function applyRecords(records: ConfigRecord[]) {
   applyStaffRecord(records.find((r) => (r.key as string) === STAFF_KEY)?.data ?? null);
   applyLeviathanRecord(records.find((r) => (r.key as string) === LEVIATHAN_KEY)?.data ?? null);
   applyBannersRecord(records.find((r) => (r.key as string) === BANNERS_KEY)?.data ?? null);
+  applyChallengeRecord(records.find((r) => (r.key as string) === CHALLENGE_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {
     if (CONTENT_SECTIONS.includes(r.key) && r.data) {

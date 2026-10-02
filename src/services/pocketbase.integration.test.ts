@@ -13,6 +13,8 @@ import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/
 import * as ps from "@/services/playerService";
 import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
+import * as srs from "@/services/sharedReportService";
+import * as ds from "@/services/diplomacyService";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
@@ -1304,6 +1306,108 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await ms.sendPrivateMessage(bId, "Débloqué");
     for (const m of await admin.collection("private_messages").getFullList({ filter: `fromUid="${aId}"` })) await admin.collection("private_messages").delete(m.id);
     await loginPlayer(B.email, B.pw);
+  });
+
+  it("shares a battle report with any logged-in player who has the link", async () => {
+    const report = await admin.collection("battle_reports").create({
+      attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now(), outcome: "attacker_win",
+      attackerPower: 100, defenderPower: 50, attackerLossPercent: 10, defenderLossPercent: 60, loot: { scrap: 500 },
+    });
+    try {
+      await loginPlayer(A.email, A.pw);
+      const url = await srs.shareReport("battle", report.id);
+      const id = url.split("/").pop()!;
+      expect(await srs.shareReport("battle", report.id)).toBe(url); // même lien la deuxième fois
+      await loginPlayer(B.email, B.pw);
+      const shared = await srs.fetchSharedReport(id);
+      expect(shared).toMatchObject({ kind: "battle", ownerUid: aId, ownerPseudo: A.pseudo });
+      expect((shared.data as { loot: Record<string, number> }).loot.scrap).toBe(500);
+      // Pas de liste, et seul un participant partage.
+      await expect(pb.collection("shared_reports").getList(1, 10)).rejects.toBeTruthy();
+      await expect(new PocketBase(PB_TEST_URL!).collection("shared_reports").getOne(id)).rejects.toBeTruthy();
+      const other = await admin.collection("battle_reports").create({ attackerUid: "x", defenderUid: "y", timestamp: Date.now(), outcome: "draw" });
+      await expect(srs.shareReport("battle", other.id)).rejects.toThrow("propres rapports");
+      await admin.collection("battle_reports").delete(other.id);
+      await admin.collection("shared_reports").delete(id);
+    } finally {
+      await admin.collection("battle_reports").delete(report.id);
+      await loginPlayer(B.email, B.pw);
+    }
+  });
+
+  it("v3.8 diplomacy: pact proposed, accepted, blocks attacks and war, shared channel, notice on break", async () => {
+    const before = { a: (await snap(aId)).allianceId ?? "", b: (await snap(bId)).allianceId ?? "" };
+    const X = await admin.collection("alliances").create({ name: "Pacte X", tag: `X${suffix.slice(0, 3)}`, createdBy: aId, createdAtMs: Date.now(), members: [aId], memberPseudos: { [aId]: A.pseudo }, roles: {} });
+    const Y = await admin.collection("alliances").create({ name: "Pacte Y", tag: `Y${suffix.slice(0, 3)}`, createdBy: bId, createdAtMs: Date.now(), members: [bId], memberPseudos: { [bId]: B.pseudo }, roles: {} });
+    await admin.collection("players").update(aId, { allianceId: X.id });
+    await admin.collection("players").update(bId, { allianceId: Y.id });
+    try {
+      await loginPlayer(A.email, A.pw);
+      const pact = await ds.diplomacy("propose", { targetAllianceId: Y.id });
+      expect(pact).toMatchObject({ status: "proposed", allianceA: X.id, allianceB: Y.id });
+      await expect(ds.diplomacy("accept", { pactId: pact.id })).rejects.toThrow("invitée");
+      await ds.diplomacy("message", { pactId: pact.id, text: "On signe ?" });
+
+      await loginPlayer(B.email, B.pw);
+      expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
+      expect((await ds.diplomacy("accept", { pactId: pact.id })).status).toBe("active");
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("Pacte de non-agression");
+      await expect(pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: X.id } })).rejects.toMatchObject({ status: 400 });
+
+      const ending = await ds.diplomacy("break", { pactId: pact.id });
+      expect(ending.status).toBe("ending");
+      expect(ending.endsAtMs).toBeGreaterThan(Date.now() + 23 * 3600_000);
+      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("préavis");
+      // Un tiers ne lit pas le canal.
+      await expect(new PocketBase(PB_TEST_URL!).collection("pact_messages").getFullList()).resolves.toHaveLength(0);
+    } finally {
+      for (const m of await admin.collection("pact_messages").getFullList({ filter: `allianceA="${X.id}"` })) await admin.collection("pact_messages").delete(m.id);
+      for (const p of await admin.collection("alliance_pacts").getFullList({ filter: `allianceA="${X.id}"` })) await admin.collection("alliance_pacts").delete(p.id);
+      await admin.collection("players").update(aId, { allianceId: before.a });
+      await admin.collection("players").update(bId, { allianceId: before.b });
+      await admin.collection("alliances").delete(X.id);
+      await admin.collection("alliances").delete(Y.id);
+      await loginPlayer(B.email, B.pw);
+    }
+  });
+
+  it("v3.8 weekly challenge: market trades count, closing pays participants and titles the top", async () => {
+    const existing = await admin.collection("game_config").getFirstListItem('key="challenge"').catch(() => null);
+    const now = Date.now();
+    const current = { id: "wk-test", type: "market", target: 1000, startMs: now - 1000, endMs: now + 3_600_000, total: 0, contributions: {}, status: "active", success: false };
+    const rec = existing
+      ? await admin.collection("game_config").update(existing.id, { data: { current, previous: null, titleHolder: null } })
+      : await admin.collection("game_config").create({ key: "challenge", data: { current, previous: null, titleHolder: null } });
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    try {
+      await admin.collection("players").update(aId, { resources: { ...aBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+      await admin.collection("players").update(bId, { resources: { ...bBefore!.resources, scrap: 1_000_000, energy: 1_000_000 } });
+      await loginPlayer(A.email, A.pw);
+      const offer = await pb.send("/api/cosmic/market/create", { method: "POST", body: { giveRes: "scrap", giveAmount: 20_000, wantRes: "energy", wantAmount: 20_000 } });
+      await loginPlayer(B.email, B.pw);
+      await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } });
+
+      let state = (await admin.collection("game_config").getOne(rec.id)).data;
+      expect(state.current.contributions[bId].amount).toBe(20_000);
+      expect(state.current.contributions[aId].amount).toBeGreaterThan(18_000); // reçu moins la taxe
+      const aiBefore = (await snap(bId)).resources.aiFragment ?? 0;
+
+      // Échéance passée : clôture, récompenses (palier 150 %) et titre.
+      await admin.collection("game_config").update(rec.id, { data: { ...state, current: { ...state.current, endMs: Date.now() - 1 } } });
+      state = await admin.send("/api/cosmic/admin/challenge", { method: "POST", body: {} });
+      expect(state.previous).toMatchObject({ id: "wk-test", status: "done", success: true });
+      expect((await snap(bId)).resources.aiFragment).toBe(aiBefore + 600);
+      expect(state.titleHolder.uid).toBe(bId);
+      expect((await snap(bId)).activeTitle).toBe("Pilier de la semaine");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title~"Défi de la semaine"` });
+      expect(notes.length).toBe(1);
+    } finally {
+      if (existing) await admin.collection("game_config").update(rec.id, { data: existing.data });
+      else await admin.collection("game_config").delete(rec.id);
+      await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
+      for (const n of await admin.collection("notifications").getFullList({ filter: `title~"Défi de la semaine"` })) await admin.collection("notifications").delete(n.id);
+    }
   });
 
   it("exposes public feats on the profile sheet", async () => {

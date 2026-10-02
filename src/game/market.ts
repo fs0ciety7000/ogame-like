@@ -116,6 +116,8 @@ export function acceptOffer(
   bumpStat(buyer, "marketTrades");
   bumpStat(seller, "marketTrades");
   bumpStat(seller, "marketTax", tax);
+  bumpStat(buyer, "marketVolume", offer.giveAmount);
+  bumpStat(seller, "marketVolume", offer.wantAmount - tax);
   return { tax, sameAlliance };
 }
 

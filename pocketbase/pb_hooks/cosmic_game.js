@@ -50,8 +50,12 @@ __export(hooksEntry_exports, {
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
+  CHALLENGE_KEY: () => CHALLENGE_KEY,
+  CHALLENGE_RULES: () => CHALLENGE_RULES,
+  CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
+  DIPLOMACY_RULES: () => DIPLOMACY_RULES,
   EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
@@ -70,10 +74,12 @@ __export(hooksEntry_exports, {
   WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
   activeWarBetween: () => activeWarBetween,
+  addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
   addReportComment: () => addReportComment,
   allianceNextDueMs: () => allianceNextDueMs,
   allianceStandings: () => allianceStandings,
+  answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
@@ -84,6 +90,12 @@ __export(hooksEntry_exports, {
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  bindingPactBetween: () => bindingPactBetween,
+  breakPact: () => breakPact,
+  challengeMetrics: () => challengeMetrics,
+  challengeRanking: () => challengeRanking,
+  challengeRewardees: () => challengeRewardees,
+  challengeTier: () => challengeTier,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   closeLeviathan: () => closeLeviathan,
   collectDebris: () => collectDebris,
@@ -111,8 +123,10 @@ __export(hooksEntry_exports, {
   flushPlayer: () => flushPlayer,
   formatInt: () => formatInt,
   githubIssueBody: () => githubIssueBody,
+  grantChallengeReward: () => grantChallengeReward,
   grantLeviathanReward: () => grantLeviathanReward,
   isFormation: () => isFormation,
+  isLeviathanWeek: () => isLeviathanWeek,
   isStaffRole: () => isStaffRole,
   leviathanRanking: () => leviathanRanking,
   leviathanWindow: () => leviathanWindow,
@@ -120,9 +134,11 @@ __export(hooksEntry_exports, {
   mergeDebris: () => mergeDebris,
   newPlayerProfile: () => newPlayerProfile,
   nextMaintenance: () => nextMaintenance,
+  normalizeChallengeState: () => normalizeChallengeState,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
+  pactOpen: () => pactOpen,
   parseResetOptions: () => parseResetOptions,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -135,10 +151,12 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pirateTick: () => pirateTick,
   previousSeasonId: () => previousSeasonId,
+  proposePact: () => proposePact,
   recallFleet: () => recallFleet,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recyclerCapacity: () => recyclerCapacity,
   refundOffer: () => refundOffer,
+  removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
@@ -152,16 +170,19 @@ __export(hooksEntry_exports, {
   sanitizeClientError: () => sanitizeClientError,
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
+  sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
   spawnLeviathan: () => spawnLeviathan,
+  startChallenge: () => startChallenge,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   utcDayStart: () => utcDayStart,
   warSeasonBonuses: () => warSeasonBonuses,
-  warTreasuryReward: () => warTreasuryReward
+  warTreasuryReward: () => warTreasuryReward,
+  weekWindow: () => weekWindow
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
@@ -5233,6 +5254,14 @@ function leviathanWindow(now) {
   if (now < w.startMs || now >= endMs) return null;
   return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
 }
+function nextLeviathanStart(now) {
+  if (!EVENT_RULES.bossMonthly) return null;
+  for (let i = 0; i < 6; i++) {
+    const w = weekendWindow(now, i);
+    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR5 > now) return w.startMs;
+  }
+  return null;
+}
 function isActive(state, now) {
   return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
 }
@@ -6071,6 +6100,8 @@ function acceptOffer(offer, buyer, seller, buysToday, now) {
   bumpStat(buyer, "marketTrades");
   bumpStat(seller, "marketTrades");
   bumpStat(seller, "marketTax", tax);
+  bumpStat(buyer, "marketVolume", offer.giveAmount);
+  bumpStat(seller, "marketVolume", offer.wantAmount - tax);
   return { tax, sameAlliance };
 }
 function refundOffer(offer, seller) {
@@ -6389,6 +6420,198 @@ function assertMessageQuota(lastMinute, lastDay) {
   if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
+// src/game/challenges.ts
+var CHALLENGE_KEY = "challenge";
+var CHALLENGE_TYPES = {
+  raids: { label: "Repousser les raids des factions", unit: "raids repouss\xE9s", perActive: 3 },
+  missions: { label: "Terminer des missions", unit: "missions", perActive: 25 },
+  units: { label: "Construire des unit\xE9s", unit: "unit\xE9s", perActive: 400 },
+  market: { label: "Faire vivre le march\xE9", unit: "ressources \xE9chang\xE9es", perActive: 2e6 },
+  expeditions: { label: "Explorer l'inconnu", unit: "exp\xE9ditions", perActive: 6 }
+};
+var CHALLENGE_RULES = {
+  /** Part minimale de l'objectif pour être récompensé. */
+  minShare: 0.01,
+  tiers: [
+    { at: 1, hours: 6, rare: 300 },
+    { at: 1.5, hours: 10, rare: 600 }
+  ],
+  title: "Pilier de la semaine",
+  titleDays: 7,
+  /** Joueur actif : vu dans les 7 derniers jours. */
+  activeDays: 7
+};
+var DAY4 = 864e5;
+function weekWindow(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY4) * DAY4;
+  const startMs = midnight - (day + 6) % 7 * DAY4;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY4 };
+}
+function isLeviathanWeek(now) {
+  const w = weekWindow(now);
+  const next = nextLeviathanStart(w.startMs);
+  return next !== null && next >= w.startMs && next < w.endMs;
+}
+function pickChallengeType(weekId, previous) {
+  const types = Object.keys(CHALLENGE_TYPES);
+  let h = 0;
+  for (const c of weekId) h = h * 31 + c.charCodeAt(0) >>> 0;
+  let type = types[h % types.length];
+  if (type === previous) type = types[(h + 1) % types.length];
+  return type;
+}
+function startChallenge(now, activePlayers, previous) {
+  const w = weekWindow(now);
+  const type = pickChallengeType(w.id, previous);
+  return {
+    id: w.id,
+    type,
+    target: CHALLENGE_TYPES[type].perActive * Math.max(1, activePlayers),
+    startMs: w.startMs,
+    endMs: w.endMs,
+    total: 0,
+    contributions: {},
+    status: "active",
+    success: false
+  };
+}
+function challengeMetrics(player) {
+  var _a, _b, _c, _d, _e, _f;
+  const s = (_a = player.stats) != null ? _a : {};
+  const pirates = (_b = player.pirates) != null ? _b : {};
+  const raids = Object.values(pirates).reduce((a, p) => a + (Number(p == null ? void 0 : p.repelled) || 0), 0);
+  return {
+    raids,
+    missions: (_c = s.missions) != null ? _c : 0,
+    units: (_d = s.unitsBuilt) != null ? _d : 0,
+    market: (_e = s.marketVolume) != null ? _e : 0,
+    expeditions: (_f = s.expeditions) != null ? _f : 0
+  };
+}
+function addContribution(ch, uid, pseudo, amount2, now) {
+  var _a, _b;
+  if (ch.status !== "active" || !(amount2 > 0) || now < ch.startMs || now >= ch.endMs) return ch;
+  const prev = (_b = (_a = ch.contributions[uid]) == null ? void 0 : _a.amount) != null ? _b : 0;
+  return __spreadProps(__spreadValues({}, ch), { total: ch.total + amount2, contributions: __spreadProps(__spreadValues({}, ch.contributions), { [uid]: { pseudo, amount: prev + amount2 } }) });
+}
+function challengeRanking(ch) {
+  return Object.entries(ch.contributions).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.amount - a.amount);
+}
+function challengeTier(ch) {
+  var _a;
+  const ratio = ch.target > 0 ? ch.total / ch.target : 0;
+  return (_a = [...CHALLENGE_RULES.tiers].reverse().find((t) => ratio >= t.at)) != null ? _a : null;
+}
+function challengeRewardees(ch) {
+  if (!challengeTier(ch)) return [];
+  return challengeRanking(ch).filter((c) => c.amount >= ch.target * CHALLENGE_RULES.minShare).map((c) => c.uid);
+}
+function grantChallengeReward(ch, player) {
+  var _a, _b, _c, _d;
+  const tier = challengeTier(ch);
+  if (!tier || !challengeRewardees(ch).includes(player.uid)) return {};
+  const gain = __spreadValues({}, productionHours(player, tier.hours));
+  for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = ((_a = gain[r.id]) != null ? _a : 0) + tier.rare;
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  if (((_c = challengeRanking(ch)[0]) == null ? void 0 : _c.uid) === player.uid) {
+    player.titles = [...((_d = player.titles) != null ? _d : []).filter((t) => t.label !== CHALLENGE_RULES.title), { label: CHALLENGE_RULES.title, seasonId: `challenge:${ch.id}`, rank: 1 }];
+    player.activeTitle = CHALLENGE_RULES.title;
+  }
+  return gain;
+}
+function removeChallengeTitle(player) {
+  var _a, _b;
+  player.titles = ((_a = player.titles) != null ? _a : []).filter((t) => t.label !== CHALLENGE_RULES.title);
+  if (player.activeTitle === CHALLENGE_RULES.title) player.activeTitle = (_b = player.titles[0]) == null ? void 0 : _b.label;
+}
+function normalizeChallengeState(raw) {
+  var _a, _b, _c;
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { current: (_a = r.current) != null ? _a : null, previous: (_b = r.previous) != null ? _b : null, titleHolder: (_c = r.titleHolder) != null ? _c : null };
+}
+
+// src/game/diplomacy.ts
+var DIPLOMACY_RULES = {
+  /** Préavis de rupture, en heures (le pacte protège encore). */
+  breakNoticeHours: 24,
+  /** Pactes simultanés (proposés, actifs ou en préavis) par alliance. */
+  maxPacts: 3,
+  messageMax: 500
+};
+var HOUR6 = 36e5;
+function pactStatusAt(p, now) {
+  return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
+}
+function pactBinds(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "active" || s === "ending";
+}
+function pactOpen(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "proposed" || s === "active" || s === "ending";
+}
+function involves(p, allianceId) {
+  return p.allianceA === allianceId || p.allianceB === allianceId;
+}
+function bindingPactBetween(pacts, a, b, now) {
+  var _a;
+  if (!a || !b || a === b) return null;
+  return (_a = pacts.find((p) => involves(p, a) && involves(p, b) && pactBinds(p, now))) != null ? _a : null;
+}
+function assertLeader(alliance, uid, what) {
+  const role = allianceRole(alliance, uid);
+  if (role !== "founder" && role !== "officer") throw new GameActionError(`Seuls le fondateur et les officiers peuvent ${what}.`);
+}
+function proposePact(input) {
+  const { own, target, pacts, now } = input;
+  assertLeader(own, input.actorUid, "proposer un pacte");
+  if (own.id === target.id) throw new GameActionError("Impossible de signer un pacte avec sa propre alliance.");
+  if (input.atWar) throw new GameActionError(`Vous \xEAtes en guerre contre [${target.tag}] : la paix d'abord.`);
+  if (pacts.some((p) => involves(p, own.id) && involves(p, target.id) && pactOpen(p, now))) throw new GameActionError(`Une relation est d\xE9j\xE0 en cours avec [${target.tag}].`);
+  const count2 = (id) => pacts.filter((p) => involves(p, id) && pactOpen(p, now)).length;
+  if (count2(own.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`${DIPLOMACY_RULES.maxPacts} pactes au plus par alliance.`);
+  if (count2(target.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`[${target.tag}] a d\xE9j\xE0 ${DIPLOMACY_RULES.maxPacts} pactes.`);
+  return {
+    allianceA: own.id,
+    allianceB: target.id,
+    tagA: own.tag,
+    tagB: target.tag,
+    nameA: own.name,
+    nameB: target.name,
+    status: "proposed",
+    proposedByUid: input.actorUid,
+    proposedByPseudo: input.actorPseudo,
+    createdAtMs: now,
+    acceptedAtMs: 0,
+    endsAtMs: 0,
+    brokenByTag: ""
+  };
+}
+function answerPact(pact, own, actorUid, answer, now) {
+  if (pactStatusAt(pact, now) !== "proposed") throw new GameActionError("Ce pacte n'est plus en attente.");
+  if (answer === "cancel") {
+    if (own.id !== pact.allianceA) throw new GameActionError("Seule l'alliance qui a propos\xE9 peut retirer sa proposition.");
+    assertLeader(own, actorUid, "retirer une proposition");
+    return __spreadProps(__spreadValues({}, pact), { status: "cancelled" });
+  }
+  if (own.id !== pact.allianceB) throw new GameActionError("Seule l'alliance invit\xE9e peut r\xE9pondre.");
+  assertLeader(own, actorUid, "r\xE9pondre \xE0 un pacte");
+  return answer === "accept" ? __spreadProps(__spreadValues({}, pact), { status: "active", acceptedAtMs: now }) : __spreadProps(__spreadValues({}, pact), { status: "declined" });
+}
+function breakPact(pact, own, actorUid, now) {
+  if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
+  if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
+  assertLeader(own, actorUid, "rompre un pacte");
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR6, brokenByTag: own.tag });
+}
+function sanitizePactMessage(raw) {
+  const text = String(raw != null ? raw : "").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > DIPLOMACY_RULES.messageMax) throw new GameActionError(`Message trop long (${DIPLOMACY_RULES.messageMax} caract\xE8res max).`);
+  return text;
+}
+
 // src/game/maintenance.ts
 var MAINTENANCE_KEY = "maintenance";
 var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
@@ -6448,7 +6671,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR6 = 36e5;
+var HOUR7 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES.includes(res)) return 1;
@@ -6481,7 +6704,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR6);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR7);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {

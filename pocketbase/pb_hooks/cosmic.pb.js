@@ -396,6 +396,8 @@ cronAdd("cosmic_maintenance", "* * * * *", () => {
 
 /** Guerres d'alliance (v3.2) : déclaration et reddition ; début et fin planifiés. */
 routerAdd("POST", "/api/cosmic/war", (e) => require(`${__hooks}/cosmic_db.js`).warRequest(e), $apis.requireAuth("users"));
+/** POST /api/cosmic/diplomacy — pactes de non-agression et canal partagé (v3.8). */
+routerAdd("POST", "/api/cosmic/diplomacy", (e) => require(`${__hooks}/cosmic_db.js`).diplomacyRequest(e), $apis.requireAuth("users"));
 cronAdd("cosmic_wars", "*/5 * * * *", () => {
   try {
     require(`${__hooks}/cosmic_db.js`).warTick(Date.now());
@@ -423,6 +425,24 @@ routerAdd("POST", "/api/cosmic/market/accept", (e) => require(`${__hooks}/cosmic
 routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic_db.js`).marketCancel(e), $apis.requireAuth("users"));
 
 // Offres expirées rendues à leur vendeur.
+/* ---------- Défis hebdomadaires (v3.8) ---------- */
+cronAdd("cosmic_challenge", "*/10 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).challengeTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] défi hebdomadaire : ${err}`);
+  }
+});
+
+/** POST /api/cosmic/admin/challenge — lance la tâche du défi tout de suite (tests, administration). */
+routerAdd("POST", "/api/cosmic/admin/challenge", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const body = db.body(e);
+  db.challengeTick(Number(body.now) || Date.now());
+  return e.json(200, db.readChallengeState($app, db.loadGame()));
+}, $apis.requireAuth("users", "_superusers"));
+
 cronAdd("cosmic_market", "*/5 * * * *", () => {
   try {
     const n = require(`${__hooks}/cosmic_db.js`).expireMarketOffers(Date.now());
@@ -471,6 +491,7 @@ onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).reportCreateRequ
 /** POST /api/cosmic/reports/comment { id, text } · /seen { id } — joueur. */
 routerAdd("POST", "/api/cosmic/reports/error", (e) => require(`${__hooks}/cosmic_db.js`).reportClientError(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/comment", (e) => require(`${__hooks}/cosmic_db.js`).reportComment(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/reports/share", (e) => require(`${__hooks}/cosmic_db.js`).reportShare(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/reports/seen", (e) => require(`${__hooks}/cosmic_db.js`).reportSeen(e), $apis.requireAuth("users"));
 /** Administration : mise à jour, options, issue GitHub. */
 routerAdd("POST", "/api/cosmic/admin/reports", (e) => require(`${__hooks}/cosmic_db.js`).adminReportUpdate(e), $apis.requireAuth("users", "_superusers"));

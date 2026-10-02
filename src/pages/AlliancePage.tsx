@@ -1,3 +1,5 @@
+import { DiplomacyTab } from "@/components/game/DiplomacyTab";
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { toast } from "sonner";
@@ -246,10 +248,14 @@ function AllianceRoom({
         <TabsTrigger value="projets">Projets</TabsTrigger>
         <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
         <TabsTrigger value="guerre">Guerre</TabsTrigger>
+        <TabsTrigger value="diplomatie">Diplomatie</TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
       <TabsContent value="classement">
         <AllianceRanking currentId={alliance.id} />
+      </TabsContent>
+      <TabsContent value="diplomatie">
+        <DiplomacyTab alliance={alliance} uid={uid} canLead={role === "founder" || role === "officer"} />
       </TabsContent>
       <TabsContent value="guerre">
         <WarTab alliance={alliance} canLead={role === "founder" || role === "officer"} />
@@ -372,7 +378,7 @@ function AllianceRoom({
                           seg.isMention && "font-medium text-gold-glow",
                         )}
                       >
-                        {seg.text}
+                        {seg.isMention ? seg.text : <LinkifiedText text={seg.text} />}
                       </span>
                     ))}
                   </p>
