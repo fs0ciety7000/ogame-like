@@ -2462,6 +2462,17 @@ function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   colony.building = { id: buildingId, level: level3 + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level3 + 1, now) * 1e3 };
   return colony.building;
 }
+function colonyDefenseHangar(colony) {
+  const used = Object.entries(colony.defenses).reduce((a, [id, s]) => {
+    var _a, _b;
+    return a + ((_b = (_a = findUnit(id)) == null ? void 0 : _a.hangarSpace) != null ? _b : 1) * s.count;
+  }, 0);
+  return { used, capacity: getUnitCapacity(colony.buildings, "defense") };
+}
+function colonyDefenseSeconds(player, unitId, qty) {
+  const unit = findUnit(unitId);
+  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) : 0;
+}
 function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   var _a, _b;
   const colony = colonyOf(player, colonyIdIn);
@@ -2472,13 +2483,10 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantit\xE9 invalide.");
   if (colony.defenseJob) throw new GameActionError("Des d\xE9fenses sont d\xE9j\xE0 en construction sur cette colonie.");
-  const used = Object.entries(colony.defenses).reduce((a, [id, s]) => {
-    var _a2, _b2;
-    return a + ((_b2 = (_a2 = findUnit(id)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1) * s.count;
-  }, 0);
-  if (used + qty * unit.hangarSpace > getUnitCapacity(colony.buildings, "defense")) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
+  const { used, capacity } = colonyDefenseHangar(colony);
+  if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
   payFrom(colony.resources, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, "ces d\xE9fenses");
-  colony.defenseJob = { unitId, qty, endTime: now + getUnitBuildTime(unit, player.techLevels) * qty * 1e3 };
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1e3 };
   return colony.defenseJob;
 }
 function renameColony(player, colonyIdIn, nameIn) {
