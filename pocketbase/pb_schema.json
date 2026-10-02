@@ -243,6 +243,18 @@
         "type": "json",
         "required": false,
         "maxSize": 50000
+      },
+      {
+        "name": "emailOptOut",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "mailToken",
+        "type": "text",
+        "required": false,
+        "max": 64,
+        "presentable": false
       }
     ],
     "indexes": [

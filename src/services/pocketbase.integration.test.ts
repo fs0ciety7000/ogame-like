@@ -1502,6 +1502,33 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v3.9.2 players only write their pseudo and preferences; mail tool and unsubscribe", async () => {
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.collection("players").update(bId, { bounties: { amber: 99999 } })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.collection("players").update(bId, { colonies: [] })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.collection("players").update(bId, { posture: { id: "bunker", changedAtMs: 0 } })).rejects.toMatchObject({ status: 403 });
+    await pb.collection("players").update(bId, { allianceLastReadMs: Date.now() });
+    await pb.collection("players").update(bId, { emailOptOut: true });
+    expect((await snap(bId)).emailOptOut).toBe(true);
+    await pb.collection("players").update(bId, { emailOptOut: false });
+    // Outil d'envoi : réservé à l'équipe, décompte et envoi « à blanc ».
+    await expect(pb.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "count" } })).rejects.toMatchObject({ status: 403 });
+    const count = await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "count" } });
+    expect(count.recipients).toBeGreaterThanOrEqual(0);
+    await expect(admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "send", subject: "x", html: "<p>x</p>", apiUrl: PB_TEST_URL } })).rejects.toMatchObject({ status: 400 });
+    const dry = await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "send", confirm: "ENVOYER", dryRun: true, subject: "x", html: "<p>x</p>", apiUrl: PB_TEST_URL } });
+    expect(dry.dryRun).toBe(true);
+    // Désinscription par lien : jeton exigé.
+    await admin.collection("players").update(bId, { mailToken: "jeton-de-test-1234567890" });
+    const bad = await fetch(`${PB_TEST_URL}/api/cosmic/unsubscribe?u=${bId}&t=faux-jeton-1234567890`);
+    expect(await bad.text()).toMatch(/pas valide/);
+    expect((await snap(bId)).emailOptOut).toBe(false);
+    const good = await fetch(`${PB_TEST_URL}/api/cosmic/unsubscribe?u=${bId}&t=jeton-de-test-1234567890`, { method: "POST" });
+    expect(await good.text()).toMatch(/plus nos nouvelles/);
+    expect((await snap(bId)).emailOptOut).toBe(true);
+    await admin.collection("players").update(bId, { emailOptOut: false, mailToken: "" });
+  });
+
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
     const sheet = await ps.fetchPlayerSheet(aId);

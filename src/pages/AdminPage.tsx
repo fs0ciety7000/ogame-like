@@ -22,6 +22,7 @@ import {
   type LucideIcon,
   Megaphone,
   Smile,
+  Mail,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -40,6 +41,7 @@ import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
 import { BannersPanel } from "@/pages/admin/BannersPanel";
 import { EmojisPanel } from "@/pages/admin/EmojisPanel";
+import { MailPanel } from "@/pages/admin/MailPanel";
 import { AdminsPanel } from "@/pages/admin/AdminsPanel";
 import { ReportsPanel } from "@/pages/admin/ReportsPanel";
 import { useReportBadges } from "@/services/reportService";
@@ -79,6 +81,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
       { id: "admins", label: "Administrateurs", icon: ShieldCheck, hint: "Qui a accès à cette console." },
@@ -170,6 +173,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="admins">
           <AdminsPanel />
+        </TabsContent>
+        <TabsContent value="mail">
+          <MailPanel />
         </TabsContent>
         <TabsContent value="emojis">
           <EmojisPanel />
