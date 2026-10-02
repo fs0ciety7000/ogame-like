@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
 import { GameIcon } from "@/components/ui/game-icon";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
+import { ReferralCard } from "@/components/game/ReferralCard";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -70,6 +71,8 @@ export function ProfilePage() {
       </Card>
 
       <ProfileStyleCard player={player} />
+
+      <ReferralCard player={player} />
 
       <RankLadder xp={player.xp} />
 

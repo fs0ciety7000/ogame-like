@@ -1,3 +1,5 @@
+import { homeDefensePower } from "@/game/combat";
+import { TUTORIAL_RAID as TUTORIAL_RAID_RULES } from "@/game/story";
 /* Point d'entrée compilé pour les hooks PocketBase (npm run build:hooks →
  * pocketbase/pb_hooks/cosmic_game.js). Uniquement de la logique pure :
  * les lectures/écritures en base sont faites par pb_hooks/cosmic.pb.js. */
@@ -74,3 +76,11 @@ export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
 export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";
 export { publicShowcase } from "@/game/profile";
+export { addPassPoints } from "@/game/seasonPass";
+export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";
+export { TUTORIAL_RAID } from "@/game/story";
+
+/** v4.1 : puissance du raid scripté de Varan (un quart de la défense, gagné à coup sûr). */
+export function tutorialRaidPower(player: PlayerState): number {
+  return Math.max(TUTORIAL_RAID_RULES.minPower, Math.round(homeDefensePower(player.units ?? {}, player.techLevels ?? {}) * TUTORIAL_RAID_RULES.powerPct));
+}

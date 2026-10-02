@@ -22,6 +22,7 @@ import {
   validatePseudo,
 } from "@/services/authService";
 import { pbConfigured } from "@/lib/pocketbase";
+import { claimPendingSponsor } from "@/services/referralService";
 
 type Mode = "login" | "register" | "forgot";
 
@@ -81,7 +82,8 @@ export function LoginPage() {
         await loginPlayer(values.pseudo, values.password);
       } else {
         await registerPlayer(values.pseudo, values.email, values.password);
-        toast.success("Empire créé avec succès !");
+        const sponsor = await claimPendingSponsor();
+        toast.success("Empire créé avec succès !", sponsor ? { description: `Parrain : ${sponsor}. Atteins Bronze I pour recevoir tous les deux de l'Ambre.` } : undefined);
       }
     } catch (err) {
       toast.error(translateAuthError(err));

@@ -16,6 +16,8 @@ import * as ms from "@/services/messageService";
 import * as srs from "@/services/sharedReportService";
 import * as ds from "@/services/diplomacyService";
 import * as bs from "@/services/bountyService";
+import * as rs from "@/services/referralService";
+import * as vcs from "@/services/victoryCardService";
 import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
@@ -1635,6 +1637,77 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
       await admin.collection("players").update(bId, { units: bBefore.units, resources: bBefore.resources, buildings: bBefore.buildings, bounties: bBefore.bounties, commanders: null, relics: null, synthesis: null, profileStyle: null, xp: bBefore.xp });
       await admin.collection("players").update(aId, { units: aBefore.units, resources: aBefore.resources });
+    }
+  });
+
+  it("v4.1 season pass, referral, scripted Varan raid and shareable victory card", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    try {
+      // Passe : connexion du jour comptée une fois, palier atteint réclamé une fois.
+      await loginPlayer(B.email, B.pw);
+      await expect(pb.collection("players").update(bId, { seasonPass: { points: 9999 } })).rejects.toMatchObject({ status: 403 });
+      await admin.collection("players").update(bId, { seasonPass: null, bounties: { ...(bBefore.bounties ?? {}), amber: 0 } });
+      await ps.syncPlayer("");
+      await ps.syncPlayer("");
+      let b = await snap(bId);
+      expect(b.seasonPass.points).toBe(5);
+      await expect(ps.claimPassTier(1)).rejects.toThrow(/pas encore/);
+      await admin.collection("players").update(bId, { seasonPass: { ...b.seasonPass, points: 80 } });
+      await ps.claimPassTier(2);
+      b = await snap(bId);
+      expect(b.bounties.amber).toBe(20);
+      expect(b.seasonPass.claimed).toEqual([2]);
+      await expect(ps.claimPassTier(2)).rejects.toThrow(/déjà/);
+
+      // Parrainage : B (compte récent) choisit A ; récompense à Bronze I, compte vérifié et âgé de 3 jours.
+      await admin.collection("players").update(bId, { referral: null, createdAtMs: Date.now() - 3600_000, xp: 0 });
+      await expect(rs.declareSponsor(bId)).rejects.toThrow(/propre parrain/);
+      expect((await rs.declareSponsor(aId)).sponsor).toBe(A.pseudo);
+      await expect(rs.declareSponsor(aId)).rejects.toThrow(/déjà/);
+      await admin.collection("players").update(aId, { referral: null, bounties: { ...(aBefore.bounties ?? {}), amber: 0 } });
+      const tick = () => admin.send<{ rewarded: number }>("/api/cosmic/admin/referrals", { method: "POST" });
+      expect((await tick()).rewarded).toBe(0);
+      await admin.collection("players").update(bId, { xp: 2000, createdAtMs: MONTH_AGO() });
+      await admin.collection("users").update(bId, { verified: true });
+      expect((await tick()).rewarded).toBe(1);
+      expect((await snap(aId)).bounties.amber).toBe(150);
+      expect((await snap(aId)).referral.recruits).toBe(1);
+      expect((await snap(bId)).bounties.amber).toBe(120);
+      expect((await tick()).rewarded).toBe(0);
+
+      // Tutoriel : les dix roquettes réclamées envoient l'avant-garde de Varan, une seule fois.
+      for (const f of await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" && ownerUid=""` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(bId, {
+        onboarding: { claimed: ["scrap3", "reactor3", "research", "drones5", "mission", "storage2"] },
+        units: { ...bBefore.units, roquette: { level: 1, count: 10 } },
+        allianceId: "",
+      });
+      await ps.claimOnboarding("rockets10");
+      b = await snap(bId);
+      expect(b.onboarding.tutorialRaid).toBe("sent");
+      const raids = await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` });
+      expect(raids).toHaveLength(1);
+      await ps.syncPlayer("");
+      expect(await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` })).toHaveLength(1);
+      for (const f of raids) await admin.collection("fleets").delete(f.id);
+
+      // Carte de victoire : image publique, page d'aperçu Open Graph, suppression par son auteur seul.
+      const jpeg = Uint8Array.from(atob("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=="), (c) => c.charCodeAt(0));
+      const link = await vcs.uploadVictoryCard(new Blob([jpeg], { type: "image/jpeg" }), "Victoire contre <Vorn>", "B · Pertes 0", "/game/rapport/xyz");
+      const id = link.split("/").pop()!;
+      const page = await fetch(link).then((r) => r.text());
+      expect(page).toContain('property="og:image"');
+      expect(page).toContain("Victoire contre &lt;Vorn&gt;");
+      expect(page).toContain("/game/rapport/xyz");
+      await loginPlayer(A.email, A.pw);
+      await expect(pb.collection("victory_cards").delete(id)).rejects.toBeTruthy();
+      await expect(pb.collection("victory_cards").create({ ownerUid: bId, title: "faux" })).rejects.toBeTruthy();
+      await loginPlayer(B.email, B.pw);
+      await pb.collection("victory_cards").delete(id);
+    } finally {
+      await admin.collection("players").update(bId, { units: bBefore.units, bounties: bBefore.bounties, seasonPass: null, referral: null, onboarding: bBefore.onboarding ?? null, xp: bBefore.xp, createdAtMs: bBefore.createdAtMs });
+      await admin.collection("players").update(aId, { bounties: aBefore.bounties, referral: null });
     }
   });
 

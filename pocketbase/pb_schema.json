@@ -285,6 +285,18 @@
         "type": "json",
         "required": false,
         "maxSize": 2000
+      },
+      {
+        "name": "seasonPass",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
+      },
+      {
+        "name": "referral",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
       }
     ],
     "indexes": [
@@ -2161,6 +2173,68 @@
     ],
     "indexes": [
       "CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_victory_cards",
+    "name": "victory_cards",
+    "type": "base",
+    "listRule": null,
+    "viewRule": "",
+    "createRule": "@request.auth.id != \"\" && @request.body.ownerUid = @request.auth.id",
+    "updateRule": null,
+    "deleteRule": "ownerUid = @request.auth.id",
+    "fields": [
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "target",
+        "type": "text",
+        "required": false,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "image",
+        "type": "file",
+        "required": true,
+        "maxSelect": 1,
+        "maxSize": 1048576,
+        "mimeTypes": [
+          "image/jpeg",
+          "image/webp",
+          "image/png"
+        ],
+        "thumbs": [],
+        "protected": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"
     ]
   }
 ]
