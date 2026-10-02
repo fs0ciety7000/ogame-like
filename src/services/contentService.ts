@@ -6,6 +6,8 @@ import { applyBannersRecord } from "@/services/bannerService";
 import { BANNERS_KEY } from "@/game/banners";
 import { ANNOUNCEMENTS_KEY } from "@/game/announcements";
 import { applyAnnouncementsRecord } from "@/services/announcementService";
+import { GAZETTE_KEY } from "@/game/gazette";
+import { applyGazetteRecord } from "@/services/gazetteService";
 import { create } from "zustand";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import {
@@ -58,6 +60,7 @@ function applyRecords(records: ConfigRecord[]) {
   applySeasonBossRecord(records.find((r) => (r.key as string) === SEASON_BOSS_KEY)?.data ?? null);
   applyBannersRecord(records.find((r) => (r.key as string) === BANNERS_KEY)?.data ?? null);
   applyAnnouncementsRecord(records.find((r) => (r.key as string) === ANNOUNCEMENTS_KEY)?.data ?? null);
+  applyGazetteRecord(records.find((r) => (r.key as string) === GAZETTE_KEY)?.data ?? null);
   applyChallengeRecord(records.find((r) => (r.key as string) === CHALLENGE_KEY)?.data ?? null);
   applyEmojisRecord(records.find((r) => (r.key as string) === EMOJIS_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};

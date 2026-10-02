@@ -23,6 +23,8 @@ const POINT_LABELS: Record<string, string> = {
   vendetta: "Vendetta gagnée",
   chronicle: "Épisode des Chroniques",
   seasonBoss: "Participation au boss de saison",
+  allianceBoss: "Boss d'alliance abattu",
+  allianceBossTry: "Participation au boss d'alliance",
 };
 
 const KINDS: { value: PassReward["kind"]; label: string }[] = [

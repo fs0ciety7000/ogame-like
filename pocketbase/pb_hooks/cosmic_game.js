@@ -46,6 +46,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/server/hooksEntry.ts
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
+  ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
@@ -62,6 +63,7 @@ __export(hooksEntry_exports, {
   EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
   GAME_FIELDS: () => GAME_FIELDS,
+  GAZETTE_KEY: () => GAZETTE_KEY,
   GameActionError: () => GameActionError,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
@@ -90,6 +92,8 @@ __export(hooksEntry_exports, {
   addPassPoints: () => addPassPoints,
   addRelic: () => addRelic,
   addReportComment: () => addReportComment,
+  allianceBossDef: () => allianceBossDef,
+  allianceBossRefund: () => allianceBossRefund,
   allianceNextDueMs: () => allianceNextDueMs,
   allianceStandings: () => allianceStandings,
   anomalyChance: () => anomalyChance,
@@ -111,11 +115,13 @@ __export(hooksEntry_exports, {
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
   buyShopItem: () => buyShopItem,
+  callAllianceBoss: () => callAllianceBoss,
   canMessage: () => canMessage,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
   challengeRewardees: () => challengeRewardees,
   challengeTier: () => challengeTier,
+  checkAllianceBossLaunch: () => checkAllianceBossLaunch,
   checkEliteLaunch: () => checkEliteLaunch,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
@@ -126,6 +132,7 @@ __export(hooksEntry_exports, {
   closeLeviathan: () => closeLeviathan,
   collectDebris: () => collectDebris,
   colonyOwnerUid: () => colonyOwnerUid,
+  compileGazette: () => compileGazette,
   completeFleetReturn: () => completeFleetReturn,
   computeGameStats: () => computeGameStats,
   concludeWar: () => concludeWar,
@@ -160,7 +167,10 @@ __export(hooksEntry_exports, {
   finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
   formatInt: () => formatInt,
+  gazetteDue: () => gazetteDue,
+  gazetteState: () => gazetteState,
   githubIssueBody: () => githubIssueBody,
+  grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
@@ -184,6 +194,7 @@ __export(hooksEntry_exports, {
   nextAttackDelayMs: () => nextAttackDelayMs,
   nextMaintenance: () => nextMaintenance,
   nextMarketDelayMs: () => nextMarketDelayMs,
+  normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeElite: () => normalizeElite,
   normalizeLeviathan: () => normalizeLeviathan,
@@ -208,6 +219,7 @@ __export(hooksEntry_exports, {
   productionHours: () => productionHours,
   proposePact: () => proposePact,
   publicShowcase: () => publicShowcase,
+  publishGazette: () => publishGazette,
   recallFleet: () => recallFleet,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
@@ -2204,10 +2216,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY9 = 864e5;
+  const DAY10 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY9) * DAY9;
-  return new Date(midnight - (day + 6) % 7 * DAY9).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY10) * DAY10;
+  return new Date(midnight - (day + 6) % 7 * DAY10).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -5119,7 +5131,10 @@ var PASS_POINTS = {
   vendetta: 40,
   /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
   chronicle: 40,
-  seasonBoss: 60
+  seasonBoss: 60,
+  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
+  allianceBoss: 40,
+  allianceBossTry: 15
 };
 var PASS_TIERS = [
   [{ kind: "production", hours: 2 }],
@@ -5752,6 +5767,400 @@ function bossEmblems(player) {
   return config.months.map((m) => ({ id: `boss:${m.id}`, label: `Sceau : ${m.boss.name}`, image: m.boss.emblem, unlocked: owned.has(m.id) }));
 }
 
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level2 = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level2(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level2(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level2(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c, _d, _e, _f;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount2] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
+// src/game/retention.ts
+var DAY6 = 24 * 36e5;
+var ACTIVITY_DAYS_KEPT = 60;
+var PRESENCE_WRITE_MS = 2 * 6e4;
+var ONLINE_MS = 5 * 6e4;
+function lastActivity(p) {
+  var _a, _b;
+  if (p.lastActiveMs) return p.lastActiveMs;
+  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
+  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
+  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
+}
+function parisDay(now) {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
+}
+function dayDiff(a, b) {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY6);
+}
+function recordActiveDay(player, now) {
+  var _a, _b, _c;
+  const day = parisDay(now);
+  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
+  if (days[days.length - 1] === day) return;
+  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
+}
+var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+function computeRetention(players, now) {
+  var _a, _b, _c;
+  const today = parisDay(now);
+  const lastSeen = (p) => Math.min(now, lastActivity(p));
+  const days = (p) => {
+    var _a2, _b2;
+    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
+  };
+  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
+  const allDays = players.flatMap((p) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
+  }).sort();
+  const trackingSince = (_a = allDays[0]) != null ? _a : null;
+  const daily = Array.from({ length: 30 }, (_, i) => {
+    const day = parisDay(now - (29 - i) * DAY6);
+    return {
+      day,
+      active: players.filter((p) => days(p).has(day)).length,
+      signups: players.filter((p) => signupDay(p) === day).length
+    };
+  });
+  const active = {
+    d1: players.filter((p) => now - lastSeen(p) < DAY6).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
+    total: players.length
+  };
+  const cohorts = Array.from({ length: 6 }, (_, i) => {
+    const end = now - i * 7 * DAY6;
+    const start = end - 7 * DAY6;
+    const members = players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
+    });
+    const tracked = trackingSince ? members.filter((p) => {
+      var _a2;
+      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
+    }) : [];
+    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
+    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
+    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
+    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    return {
+      week: parisDay(start),
+      signups: members.length,
+      d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
+      d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
+      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
+    };
+  }).reverse();
+  const recent = players.filter((p) => {
+    var _a2;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY6;
+  });
+  const funnel = ONBOARDING_STEPS.map((step) => {
+    const reached = recent.filter((p) => {
+      try {
+        return step.done(p);
+      } catch (e) {
+        return false;
+      }
+    }).length;
+    return { id: step.id, label: step.label, reached, pct: pct3(reached, recent.length) };
+  });
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY6);
+  const stopAt = /* @__PURE__ */ new Map();
+  for (const p of stalled) {
+    const step = ONBOARDING_STEPS.find((s) => {
+      try {
+        return !s.done(p);
+      } catch (e) {
+        return true;
+      }
+    });
+    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
+    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
+  }
+  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
+    var _a2, _b2;
+    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
+  }).sort((a, b) => b.count - a.count);
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length };
+}
+
+// src/game/allianceBoss.ts
+var ALLIANCE_BOSS_RULES = {
+  /** Structure : ce facteur × puissance d'attaque des membres actifs (7 j). */
+  hpFactor: 2.5,
+  minHp: 5e4,
+  durationHours: 24,
+  cooldownHours: 4,
+  flightMinutes: 20,
+  /** Coût d'appel : heures de production cumulée de tous les membres. */
+  costHours: 3,
+  /** Part du coût rendue au trésor si le boss tombe. */
+  refundPct: 0.5,
+  /** Part minimale des dégâts pour être récompensé. */
+  minSharePct: 0.05,
+  rewardHours: 2,
+  killPoints: 40,
+  failPoints: 15
+};
+var ALLIANCE_BOSSES = [
+  { id: "gravhorn", name: "Cuirass\xE9 Gravhorn", image: "/assets/story/gravhorn.webp", lore: "Un cuirass\xE9 du Syndicat, blind\xE9 comme un coffre-fort, venu saisir les dettes de ton alliance." },
+  { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
+  { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
+];
+var DAY7 = 24 * 36e5;
+var HOUR7 = 36e5;
+function allianceWeekId(now) {
+  const day = parisDay(now);
+  const t = Date.parse(`${day}T00:00:00Z`);
+  const dow = new Date(t).getUTCDay();
+  return new Date(t - (dow + 6) % 7 * DAY7).toISOString().slice(0, 10);
+}
+function allianceBossOfWeek(now) {
+  const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
+  const index = Math.floor(monday / (7 * DAY7));
+  return ALLIANCE_BOSSES[(index % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
+}
+function allianceBossDef(state) {
+  var _a;
+  return (_a = ALLIANCE_BOSSES.find((b) => b.id === state.bossId)) != null ? _a : ALLIANCE_BOSSES[0];
+}
+function normalizeAllianceBoss(raw) {
+  var _a, _b, _c;
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.maxHp) > 0)) return null;
+  return {
+    id: String(r.id),
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs) || 0,
+    maxHp: Number(r.maxHp),
+    hp: Math.max(0, Number(r.hp) || 0),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
+    endedAtMs: Number(r.endedAtMs) || 0,
+    rewarded: r.rewarded === true,
+    titleHolder: null,
+    timeline: Array.isArray(r.timeline) ? r.timeline : [],
+    weekId: String((_a = r.weekId) != null ? _a : ""),
+    bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
+    launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
+    cost: r.cost && typeof r.cost === "object" ? r.cost : {}
+  };
+}
+function allianceBossCost(members) {
+  var _a, _b;
+  const cost = {};
+  for (const m of members) {
+    for (const [res, n] of Object.entries(productionHours(m, ALLIANCE_BOSS_RULES.costHours))) cost[res] = ((_a = cost[res]) != null ? _a : 0) + n;
+  }
+  for (const k of Object.keys(cost)) cost[k] = Math.ceil((_b = cost[k]) != null ? _b : 0);
+  return cost;
+}
+function allianceBossHp(activeMembers) {
+  const power = activeMembers.reduce((a, p) => {
+    var _a, _b;
+    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  }, 0);
+  return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
+}
+function canCallAllianceBoss(alliance, uid) {
+  var _a;
+  return alliance.createdBy === uid || ((_a = alliance.roles) == null ? void 0 : _a[uid]) === "officer";
+}
+function callAllianceBoss(alliance, previous, members, activeMembers, uid, now) {
+  var _a, _b, _c;
+  if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
+  const weekId2 = allianceWeekId(now);
+  if (previous && previous.weekId === weekId2) throw new GameActionError("Le boss d'alliance a d\xE9j\xE0 \xE9t\xE9 appel\xE9 cette semaine (prochain lundi).");
+  const cost = allianceBossCost(members);
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_b = treasury[res]) != null ? _b : 0) < n) throw new GameActionError("Le tr\xE9sor de l'alliance ne suffit pas pour appeler le boss.");
+  }
+  for (const [res, n] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - n;
+  alliance.treasury = treasury;
+  const boss = allianceBossOfWeek(now);
+  const maxHp = allianceBossHp(activeMembers);
+  const endMs = now + ALLIANCE_BOSS_RULES.durationHours * HOUR7;
+  return { id: `ab-${weekId2}`, startMs: now, endMs, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [{ t: now, hp: maxHp }], weekId: weekId2, bossId: boss.id, launchedBy: uid, cost };
+}
+function checkAllianceBossLaunch(state, uid, pseudo, now) {
+  var _a, _b;
+  if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError("Aucun boss d'alliance \xE0 combattre en ce moment.");
+  const c = state.contributions[uid];
+  const wait = c ? c.lastLaunchMs + ALLIANCE_BOSS_RULES.cooldownHours * HOUR7 - now : 0;
+  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
+}
+function allianceBossRefund(state) {
+  if (state.status !== "killed") return {};
+  return Object.fromEntries(Object.entries(state.cost).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * ALLIANCE_BOSS_RULES.refundPct)]));
+}
+function grantAllianceBossReward(state, player, now, random = Math.random) {
+  var _a, _b, _c, _d;
+  const ranking = leviathanRanking(state);
+  const total2 = ranking.reduce((a, c) => a + c.damage, 0);
+  const mine = (_b = (_a = state.contributions[player.uid]) == null ? void 0 : _a.damage) != null ? _b : 0;
+  if (!(mine > 0)) return { points: 0, gain: {} };
+  if (state.status !== "killed") {
+    addPassPoints(player, "allianceBossTry", now);
+    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
+  }
+  if (mine < total2 * ALLIANCE_BOSS_RULES.minSharePct) {
+    addPassPoints(player, "allianceBossTry", now);
+    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
+  }
+  addPassPoints(player, "allianceBoss", now);
+  const gain = productionHours(player, ALLIANCE_BOSS_RULES.rewardHours);
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + n;
+  if (((_d = ranking[0]) == null ? void 0 : _d.uid) === player.uid) {
+    const item = rollRelic("allianceBoss", now, random, "rare");
+    if (addRelic(player, item)) return { points: ALLIANCE_BOSS_RULES.killPoints, gain, relic: relicLabel(item) };
+  }
+  return { points: ALLIANCE_BOSS_RULES.killPoints, gain };
+}
+
 // src/game/expeditions.ts
 var EXPEDITION_RULES = {
   minShips: 10,
@@ -6011,7 +6420,7 @@ var WAR_RULES = {
   title: "Vainqueurs",
   titleDays: 7
 };
-var HOUR7 = 36e5;
+var HOUR8 = 36e5;
 function warStatusAt(war, now) {
   if (war.status === "ended") return "ended";
   if (now < war.startMs) return "preparing";
@@ -6039,15 +6448,15 @@ function declareWar(input) {
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === target.id || w.defenderId === target.id))) throw new GameActionError(`[${target.tag}] est d\xE9j\xE0 en guerre.`);
   const lastPair = input.wars.filter((w) => w.attackerId === own.id && w.defenderId === target.id || w.attackerId === target.id && w.defenderId === own.id).reduce((a, w) => Math.max(a, w.endedAtMs || w.endMs), 0);
-  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR7 - now;
-  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR7))} jour(s).`);
+  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR8 - now;
+  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR8))} jour(s).`);
   const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
   if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
     throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
   }
   treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
   treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
-  const startMs = now + WAR_RULES.prepHours * HOUR7;
+  const startMs = now + WAR_RULES.prepHours * HOUR8;
   return {
     own: __spreadProps(__spreadValues({}, own), { treasury }),
     war: {
@@ -6061,7 +6470,7 @@ function declareWar(input) {
       declaredByPseudo: input.actorPseudo,
       declaredAtMs: now,
       startMs,
-      endMs: startMs + WAR_RULES.durationHours * HOUR7,
+      endMs: startMs + WAR_RULES.durationHours * HOUR8,
       status: "preparing",
       scoreAttacker: 0,
       scoreDefender: 0,
@@ -6594,7 +7003,7 @@ function recallFleet(fleet, uid, now) {
   if (fleet.status === "stationed") {
     return __spreadProps(__spreadValues({}, fleet), { status: "returning", stationedUntilMs: now, returnAtMs: now + (fleet.arriveAtMs - fleet.departAtMs) });
   }
-  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
+  if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
@@ -6627,6 +7036,7 @@ function returnMessage(fleet, lootTotal) {
     case "leviathan":
       return { title: "Retour du L\xE9viathan", message: "Les survivants de l'assaut sur le L\xE9viathan sont rentr\xE9s." };
     case "seasonboss":
+    case "allianceboss":
       return { title: "Retour de l'assaut", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "lair":
       return { title: "Retour du repaire", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
@@ -6653,7 +7063,7 @@ function returnMessage(fleet, lootTotal) {
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -6695,11 +7105,20 @@ function performLaunch(req) {
       fleet: newFleet(owner, { uid: "seasonboss", pseudo: (_j = req.eliteName) != null ? _j : "Boss de saison" }, "seasonboss", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
       defenderNotifications: []
     };
-  } else if (mission === "transport") out = launchTransport(owner, req.fleet, (_k = req.transport) != null ? _k : {}, now);
-  else if (mission === "bounty") out = launchBounty(owner, (_l = req.bountyId) != null ? _l : "", req.fleet, now);
+  } else if (mission === "allianceboss") {
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le boss d'alliance.");
+    if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
+    if (!owner.allianceId) throw new GameActionError("Il faut une alliance pour combattre son boss.");
+    out = {
+      attacker: owner,
+      fleet: newFleet(owner, { uid: `allianceboss:${owner.allianceId}`, pseudo: (_k = req.eliteName) != null ? _k : "Boss d'alliance" }, "allianceboss", units, now, now + ALLIANCE_BOSS_RULES.flightMinutes * 6e4),
+      defenderNotifications: []
+    };
+  } else if (mission === "transport") out = launchTransport(owner, req.fleet, (_l = req.transport) != null ? _l : {}, now);
+  else if (mission === "bounty") out = launchBounty(owner, (_m = req.bountyId) != null ? _m : "", req.fleet, now);
   else if (mission === "elite") {
     const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'\xE9lite.");
-    out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: (_m = req.eliteName) != null ? _m : "Proie d'\xE9lite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 6e4), defenderNotifications: [] };
+    out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: (_n = req.eliteName) != null ? _n : "Proie d'\xE9lite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 6e4), defenderNotifications: [] };
   } else throw new GameActionError("Mission inconnue.");
   let capsules = null;
   if (mission === "attack" && req.capsules) {
@@ -6905,7 +7324,7 @@ var ELITE_TARGET = "bounty_elite";
 function beaconReturn(fleet, uid, now) {
   if (fleet.ownerUid !== uid) throw new GameActionError("Cette flotte ne t'appartient pas.");
   if (!["outbound", "returning", "stationed"].includes(fleet.status)) throw new GameActionError("Cette flotte n'est plus en vol.");
-  if (fleet.mission === "expedition" || (fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "elite") && fleet.status === "outbound") {
+  if (fleet.mission === "expedition" || (fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") && fleet.status === "outbound") {
     throw new GameActionError("La balise ne peut pas ramener cette flotte.");
   }
   const recalled = fleet.status === "outbound" ? true : fleet.recalled;
@@ -7694,258 +8113,6 @@ function performAttack(input) {
   };
 }
 
-// src/game/onboarding.ts
-var ONBOARDING_RANK = "fer2";
-var ONBOARDING_TITLE = "Recrue";
-var level2 = (p, id) => {
-  var _a, _b, _c;
-  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
-};
-var count = (p, id) => {
-  var _a, _b, _c;
-  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
-};
-function onboardingRankXp() {
-  var _a, _b;
-  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
-}
-var ONBOARDING_STEPS = [
-  {
-    id: "scrap3",
-    label: "Extracteur de ferraille au niveau 3",
-    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
-    to: "/game/batiments",
-    reward: { scrap: 1e3, energy: 500 },
-    done: (p) => level2(p, "extracteur_ferraille") >= 3
-  },
-  {
-    id: "reactor3",
-    label: "R\xE9acteur au niveau 3",
-    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
-    to: "/game/batiments",
-    reward: { scrap: 1500, energy: 1e3 },
-    done: (p) => level2(p, "reacteur_instable") >= 3
-  },
-  {
-    id: "research",
-    label: "Lancer une premi\xE8re recherche",
-    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
-    to: "/game/labo",
-    reward: { nano: 2e3, data: 2e3 },
-    done: (p) => {
-      var _a;
-      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
-    }
-  },
-  {
-    id: "drones5",
-    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
-    hint: "Les drones ouvrent les premi\xE8res missions.",
-    to: "/game/unites",
-    reward: { scrap: 3e3 },
-    done: (p) => count(p, "drone_recuperateur") >= 5
-  },
-  {
-    id: "mission",
-    label: "Terminer une mission",
-    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
-    to: "/game/missions",
-    reward: { scrap: 5e3, energy: 2e3 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "storage2",
-    label: "Entrep\xF4t au niveau 2",
-    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
-    to: "/game/batiments",
-    reward: { scrap: 5e3, energy: 5e3 },
-    done: (p) => level2(p, "entrepot") >= 2
-  },
-  {
-    id: "rockets10",
-    label: "Installer 10 roquettes",
-    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
-    to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
-    done: (p) => count(p, "roquette") >= 10
-  },
-  {
-    id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
-    to: "/game/galaxie",
-    reward: { cyberModule: 30 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "alliance",
-    label: "Rejoindre ou cr\xE9er une alliance",
-    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
-    to: "/game/alliance",
-    reward: { scrap: 1e4, energy: 1e4 },
-    done: (p) => !!p.allianceId
-  },
-  {
-    id: "rank",
-    label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
-    title: ONBOARDING_TITLE,
-    done: (p) => {
-      var _a;
-      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
-    }
-  }
-];
-function onboardingState(p) {
-  const raw = p.onboarding;
-  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
-}
-function onboardingEligible(p) {
-  var _a;
-  const st = onboardingState(p);
-  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
-  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
-}
-function claimOnboarding(player, stepId) {
-  var _a, _b, _c, _d, _e, _f;
-  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
-  const st = onboardingState(player);
-  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount2] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
-  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
-    if (!player.activeTitle) player.activeTitle = step.title;
-  }
-  const claimed = [...st.claimed, step.id];
-  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
-  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
-  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return step.reward;
-}
-function setOnboardingHidden(player, hidden) {
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
-}
-
-// src/game/retention.ts
-var DAY6 = 24 * 36e5;
-var ACTIVITY_DAYS_KEPT = 60;
-function parisDay(now) {
-  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
-  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
-}
-function dayDiff(a, b) {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY6);
-}
-function recordActiveDay(player, now) {
-  var _a, _b, _c;
-  const day = parisDay(now);
-  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
-  if (days[days.length - 1] === day) return;
-  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
-}
-var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
-function computeRetention(players, now) {
-  var _a, _b, _c;
-  const today = parisDay(now);
-  const lastSeen = (p) => {
-    var _a2;
-    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
-  };
-  const days = (p) => {
-    var _a2, _b2;
-    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
-  };
-  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
-  const allDays = players.flatMap((p) => {
-    var _a2, _b2;
-    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
-  }).sort();
-  const trackingSince = (_a = allDays[0]) != null ? _a : null;
-  const daily = Array.from({ length: 30 }, (_, i) => {
-    const day = parisDay(now - (29 - i) * DAY6);
-    return {
-      day,
-      active: players.filter((p) => days(p).has(day)).length,
-      signups: players.filter((p) => signupDay(p) === day).length
-    };
-  });
-  const active = {
-    d1: players.filter((p) => now - lastSeen(p) < DAY6).length,
-    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
-    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
-    total: players.length
-  };
-  const cohorts = Array.from({ length: 6 }, (_, i) => {
-    const end = now - i * 7 * DAY6;
-    const start = end - 7 * DAY6;
-    const members = players.filter((p) => {
-      var _a2, _b2;
-      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
-    });
-    const tracked = trackingSince ? members.filter((p) => {
-      var _a2;
-      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
-    }) : [];
-    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
-    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
-    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
-    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
-    return {
-      week: parisDay(start),
-      signups: members.length,
-      d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
-      d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
-      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
-    };
-  }).reverse();
-  const recent = players.filter((p) => {
-    var _a2;
-    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY6;
-  });
-  const funnel = ONBOARDING_STEPS.map((step) => {
-    const reached = recent.filter((p) => {
-      try {
-        return step.done(p);
-      } catch (e) {
-        return false;
-      }
-    }).length;
-    return { id: step.id, label: step.label, reached, pct: pct3(reached, recent.length) };
-  });
-  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY6);
-  const stopAt = /* @__PURE__ */ new Map();
-  for (const p of stalled) {
-    const step = ONBOARDING_STEPS.find((s) => {
-      try {
-        return !s.done(p);
-      } catch (e) {
-        return true;
-      }
-    });
-    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
-    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
-  }
-  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
-    var _a2, _b2;
-    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
-  }).sort((a, b) => b.count - a.count);
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length };
-}
-
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60 };
 var FREE_BANNERS = [
@@ -8084,7 +8251,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -8096,9 +8263,10 @@ function applyAction(s, action) {
       player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
       if (!onVacation(player, now)) passDailyLogin(player, now);
       recordActiveDay(player, now);
+      if (now - ((_a = player.lastActiveMs) != null ? _a : 0) >= PRESENCE_WRITE_MS) player.lastActiveMs = now;
       const resourceGains = {};
       for (const key of Object.keys(player.resources)) {
-        const delta = ((_a = player.resources[key]) != null ? _a : 0) - ((_b = s.preFlushPlayer.resources[key]) != null ? _b : 0);
+        const delta = ((_b = player.resources[key]) != null ? _b : 0) - ((_c = s.preFlushPlayer.resources[key]) != null ? _c : 0);
         if (delta > 0) resourceGains[key] = delta;
       }
       const summary = { elapsedMs, resourceGains, notifications: s.flushNotifications };
@@ -8124,7 +8292,7 @@ function applyAction(s, action) {
       if (queues.buildingUpgrades[def3.id]) throw new GameActionError("Am\xE9lioration d\xE9j\xE0 en cours.");
       if (state.level >= def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0), now);
+      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_e = (_d = player.bonuses) == null ? void 0 : _d.buildingUpgradeDiscount) != null ? _e : 0), now);
       queues.buildingUpgrades[def3.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) * 1e3 };
       recordContract(player, "upgrade_building", 1, now);
       return void 0;
@@ -8133,7 +8301,7 @@ function applyAction(s, action) {
       const unit = findUnit(action.unitId);
       if (!unit) throw new GameActionError("Unit\xE9 invalide.");
       const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
-      if (((_f = (_e = player.units[unit.id]) == null ? void 0 : _e.level) != null ? _f : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
+      if (((_g = (_f = player.units[unit.id]) == null ? void 0 : _f.level) != null ? _g : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
       const category = unit.category;
       const built = hangarUsed(player.units, s.unitsAway, category);
       const reserved = queues.unitQueues[category].reduce((sum3, item) => {
@@ -8155,7 +8323,7 @@ function applyAction(s, action) {
       const unit = findUnit(action.unitId);
       if (!unit) throw new GameActionError("Unit\xE9 invalide.");
       const qty = positiveInt(action.qty, "Quantit\xE9");
-      if (((_h = (_g = player.units[unit.id]) == null ? void 0 : _g.count) != null ? _h : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
+      if (((_i = (_h = player.units[unit.id]) == null ? void 0 : _h.count) != null ? _i : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
       player.units[unit.id].count -= qty;
       player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
       player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
@@ -8164,7 +8332,7 @@ function applyAction(s, action) {
     case "research": {
       const tech = findTech(action.techId);
       if (!tech) throw new GameActionError("Technologie inconnue.");
-      const nextLevel = ((_i = player.techLevels[tech.id]) != null ? _i : 0) + 1;
+      const nextLevel = ((_j = player.techLevels[tech.id]) != null ? _j : 0) + 1;
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Pr\xE9requis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
@@ -8190,28 +8358,28 @@ function applyAction(s, action) {
       const { sellId, buyId } = action;
       if (!RESOURCE_IDS2.has(sellId) || !RESOURCE_IDS2.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
       const amount2 = positiveInt(action.amount, "Montant");
-      if (((_j = player.resources[sellId]) != null ? _j : 0) < amount2) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
+      if (((_k = player.resources[sellId]) != null ? _k : 0) < amount2) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
       const gained = Math.floor(amount2 * getTradeRate(sellId, buyId));
       player.resources[sellId] -= amount2;
-      player.resources[buyId] = ((_k = player.resources[buyId]) != null ? _k : 0) + gained;
+      player.resources[buyId] = ((_l = player.resources[buyId]) != null ? _l : 0) + gained;
       bumpStat(player, "traded", amount2);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return gained;
     }
     case "claimContract": {
-      const claimed = claimContract(player, String((_l = action.contractId) != null ? _l : ""), now);
+      const claimed = claimContract(player, String((_m = action.contractId) != null ? _m : ""), now);
       bumpStat(player, "contracts");
       addPassPoints(player, "contract", now);
       grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
       return claimed;
     }
     case "rerollContract":
-      return rerollContract(player, String((_m = action.contractId) != null ? _m : ""), now);
+      return rerollContract(player, String((_n = action.contractId) != null ? _n : ""), now);
     case "setTitle":
-      setActiveTitle(player, String((_n = action.title) != null ? _n : ""));
+      setActiveTitle(player, String((_o = action.title) != null ? _o : ""));
       return player.activeTitle;
     case "claimOnboarding":
-      return claimOnboarding(player, String((_o = action.stepId) != null ? _o : ""));
+      return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
     case "setPosture":
       return setPosture(player, action.posture, now);
     case "hideOnboarding":
@@ -8223,11 +8391,11 @@ function applyAction(s, action) {
     case "colonize":
       return startColonization(player, action.name, now);
     case "colonyUpgrade":
-      return upgradeColonyBuilding(player, String((_p = action.colonyId) != null ? _p : ""), String((_q = action.buildingId) != null ? _q : ""), now);
+      return upgradeColonyBuilding(player, String((_q = action.colonyId) != null ? _q : ""), String((_r = action.buildingId) != null ? _r : ""), now);
     case "colonyDefense":
-      return buildColonyDefense(player, String((_r = action.colonyId) != null ? _r : ""), String((_s = action.unitId) != null ? _s : ""), action.qty, now);
+      return buildColonyDefense(player, String((_s = action.colonyId) != null ? _s : ""), String((_t = action.unitId) != null ? _t : ""), action.qty, now);
     case "colonyRename":
-      renameColony(player, String((_t = action.colonyId) != null ? _t : ""), action.name);
+      renameColony(player, String((_u = action.colonyId) != null ? _u : ""), action.name);
       return void 0;
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";
@@ -8367,8 +8535,8 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 }
 
 // src/game/analytics.ts
-var HOUR8 = 36e5;
-var DAY7 = 24 * HOUR8;
+var HOUR9 = 36e5;
+var DAY8 = 24 * HOUR9;
 function median2(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -8387,10 +8555,7 @@ function topCounts(values, limit) {
 }
 function computeGameStats(players, queues, reports, now, windowDays = 7, balanceDays = 30) {
   const n = players.length;
-  const lastSeen = (p) => {
-    var _a;
-    return (_a = p.resourcesUpdatedAtMs) != null ? _a : 0;
-  };
+  const lastSeen = (p) => Math.min(now, lastActivity(p));
   const families = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a, _b;
@@ -8462,7 +8627,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY7;
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -8472,11 +8637,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY7;
-    const d = new Date(start + DAY7);
+    const start = now - (windowDays - i) * DAY8;
+    const d = new Date(start + DAY8);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY7).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY8).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -8487,11 +8652,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY7).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY7).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY8).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY8).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY7;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY8;
       }).length,
       medianPlaytimeHours: round1(median2(players.map((p) => {
         var _a;
@@ -8550,7 +8715,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
   return stats;
 }
 function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY7;
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
@@ -8644,23 +8809,20 @@ function dominantUnit(fleet) {
 var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v != null ? v : 0), 0);
 function computeBalance(players, reports, now, windowDays) {
   var _a, _b;
-  const seen = (p) => {
-    var _a2;
-    return (_a2 = p.resourcesUpdatedAtMs) != null ? _a2 : 0;
-  };
-  const days = (ms) => Math.floor(ms / DAY7);
-  const since = now - windowDays * DAY7;
+  const seen = (p) => Math.min(now, lastActivity(p));
+  const days = (ms) => Math.floor(ms / DAY8);
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY7 && now - seen(p) < 30 * DAY7).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY8 && now - seen(p) < 30 * DAY8).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY7]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY8]);
   });
   const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -8690,7 +8852,7 @@ function computeBalance(players, reports, now, windowDays) {
       lairWinPct: pct4(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY7);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY8);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -8712,9 +8874,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY7).length,
+      active1d: players.filter((p) => now - seen(p) < DAY8).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY7).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY8).length,
       dormant
     },
     rankAge,
@@ -8860,6 +9022,7 @@ var GAME_FIELDS = [
   "victories",
   "defeats",
   "playtimeSeconds",
+  "lastActiveMs",
   "resourcesUpdatedAtMs",
   "resourceHistory",
   "unlockedAchievements",
@@ -9307,12 +9470,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY8 = 864e5;
+var DAY9 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY8) * DAY8;
-  const startMs = midnight - (day + 6) % 7 * DAY8;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY8 };
+  const midnight = Math.floor(now / DAY9) * DAY9;
+  const startMs = midnight - (day + 6) % 7 * DAY9;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY9 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
@@ -9406,7 +9569,7 @@ var DIPLOMACY_RULES = {
   maxPacts: 3,
   messageMax: 500
 };
-var HOUR9 = 36e5;
+var HOUR10 = 36e5;
 function pactStatusAt(p, now) {
   return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
 }
@@ -9470,7 +9633,7 @@ function breakPact(pact, own, actorUid, now) {
   if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
   if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
   assertLeader(own, actorUid, "rompre un pacte");
-  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR9, brokenByTag: own.tag });
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR10, brokenByTag: own.tag });
 }
 function sanitizePactMessage(raw) {
   const text = String(raw != null ? raw : "").trim();
@@ -9538,7 +9701,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR10 = 36e5;
+var HOUR11 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES2.includes(res)) return 1;
@@ -9571,7 +9734,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR10);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR11);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {
@@ -9642,6 +9805,98 @@ function grantReferral(sponsor, recruit, now) {
     sponsor.referral = __spreadProps(__spreadValues({}, s), { recruits: ((_c = s.recruits) != null ? _c : 0) + 1, monthly: __spreadProps(__spreadValues({}, s.monthly), { [m]: ((_e = (_d = s.monthly) == null ? void 0 : _d[m]) != null ? _e : 0) + 1 }) });
   }
   return { capped };
+}
+
+// src/game/gazette.ts
+var GAZETTE_KEY = "gazette";
+var GAZETTE_RULES = { publishHour: 9, keepIssues: 8 };
+function gazetteState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    issues: Array.isArray(r.issues) ? r.issues.filter((i) => i && typeof i.id === "string") : [],
+    lastWeekId: typeof r.lastWeekId === "string" ? r.lastWeekId : "",
+    xpSnapshot: r.xpSnapshot && typeof r.xpSnapshot === "object" ? r.xpSnapshot : {}
+  };
+}
+function gazettePublishAt(now) {
+  const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
+  return parisLocalToUtc(monday + GAZETTE_RULES.publishHour * 36e5);
+}
+function gazetteDue(state, now) {
+  return state.lastWeekId !== allianceWeekId(now) && now >= gazettePublishAt(now);
+}
+function gazetteNumber(n) {
+  const v = Math.round(n);
+  const short = (x, unit) => `${(Math.round(x * 10) / 10).toString().replace(".", ",")} ${unit}`;
+  if (v >= 1e9) return short(v / 1e9, "Md");
+  if (v >= 1e6) return short(v / 1e6, "M");
+  if (v >= 1e4) return short(v / 1e3, "k");
+  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+var fmt = gazetteNumber;
+function compileGazette(input, number) {
+  const { now, sinceMs } = input;
+  const inWeek = (t) => t >= sinceMs && t < now;
+  const sections = [];
+  const bosses = input.bosses.filter((b) => inWeek(b.endedAtMs));
+  if (bosses.length > 0) {
+    sections.push({
+      kind: "boss",
+      title: "Les g\xE9ants de la semaine",
+      lines: bosses.map((b) => b.status === "killed" ? `${b.name} est tomb\xE9${b.top.length ? `. En premi\xE8re ligne : ${b.top.slice(0, 3).join(", ")}.` : "."}` : `${b.name} a r\xE9sist\xE9 et s'est retir\xE9.`)
+    });
+  }
+  const vendettas = input.vendettas.filter((v) => inWeek(v.finishedAtMs));
+  if (vendettas.length > 0) {
+    sections.push({
+      kind: "vendetta",
+      title: "Vendettas",
+      lines: vendettas.map((v) => v.won ? `${v.ownerPseudo} a fait plier ${v.warlordName}, qui fuit le secteur.` : `${v.warlordName} a tenu bon face \xE0 ${v.ownerPseudo}. La riposte approche.`)
+    });
+  }
+  const wars = input.wars.filter((w) => inWeek(w.endedAtMs));
+  if (wars.length > 0) {
+    sections.push({
+      kind: "war",
+      title: "Front des alliances",
+      lines: wars.map((w) => w.winnerTag ? `[${w.winnerTag}] remporte la guerre contre [${w.winnerTag === w.attackerTag ? w.defenderTag : w.attackerTag}].` : `[${w.attackerTag}] et [${w.defenderTag}] se quittent sur un match nul.`)
+    });
+  }
+  const hasSnapshot = Object.keys(input.xpSnapshot).length > 0;
+  const progress = input.players.map((p) => {
+    var _a, _b;
+    return { pseudo: p.pseudo, gain: hasSnapshot ? p.xp - ((_a = input.xpSnapshot[p.uid]) != null ? _a : p.xp) : (_b = p.seasonXp) != null ? _b : 0 };
+  }).filter((p) => p.gain > 0).sort((a, b) => b.gain - a.gain).slice(0, 3);
+  if (progress.length > 0) {
+    sections.push({
+      kind: "progress",
+      title: hasSnapshot ? "Ils ont le plus progress\xE9" : "En t\xEAte de la saison",
+      lines: progress.map((p, i) => `${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${p.pseudo} : +${fmt(p.gain)} XP`)
+    });
+  }
+  const raid = input.raids.filter((r) => inWeek(r.timestamp) && r.loot > 0).sort((a, b) => b.loot - a.loot)[0];
+  if (raid) {
+    sections.push({ kind: "raid", title: "Le casse de la semaine", lines: [`${raid.attackerPseudo} a vid\xE9 les coffres de ${raid.defenderPseudo} : ${fmt(raid.loot)} ressources emport\xE9es.`] });
+  }
+  const warlord = [...input.warlords].sort((a, b) => b.power - a.power)[0];
+  if (warlord) {
+    sections.push({ kind: "warlord", title: "Le seigneur \xE0 surveiller", lines: [`${warlord.name} aligne ${fmt(warlord.power)} de puissance. Prudence aux abords de son territoire.`] });
+  }
+  const newcomers = input.players.filter((p) => p.createdAtMs && inWeek(p.createdAtMs)).map((p) => p.pseudo);
+  if (newcomers.length > 0) {
+    sections.push({ kind: "newcomers", title: "Bienvenue aux nouveaux commandants", lines: [newcomers.slice(0, 12).join(", ") + (newcomers.length > 12 ? ` et ${newcomers.length - 12} autres` : "") + "."] });
+  }
+  const killed = bosses.find((b) => b.status === "killed");
+  const headline = killed ? `${killed.name} tombe sous les coups du secteur` : wars.find((w) => w.winnerTag) ? `[${wars.find((w) => w.winnerTag).winnerTag}] gagne sa guerre` : vendettas.find((v) => v.won) ? `${vendettas.find((v) => v.won).warlordName} humili\xE9 par ${vendettas.find((v) => v.won).ownerPseudo}` : raid ? `${raid.attackerPseudo} signe le casse de la semaine` : progress[0] ? `${progress[0].pseudo} file en t\xEAte` : "Semaine calme dans le secteur";
+  const weekId2 = allianceWeekId(now);
+  return { id: `gz-${weekId2}-${now}`, number, weekId: weekId2, publishedAtMs: now, fromMs: sinceMs, toMs: now, headline, sections };
+}
+function publishGazette(state, issue, players) {
+  return {
+    issues: [issue, ...state.issues.filter((i) => i.weekId !== issue.weekId)].slice(0, GAZETTE_RULES.keepIssues),
+    lastWeekId: issue.weekId,
+    xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp]))
+  };
 }
 
 // src/server/hooksEntry.ts

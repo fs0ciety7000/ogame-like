@@ -14,6 +14,7 @@ export const GAME_FIELDS = [
   "victories",
   "defeats",
   "playtimeSeconds",
+  "lastActiveMs",
   "resourcesUpdatedAtMs",
   "resourceHistory",
   "unlockedAchievements",

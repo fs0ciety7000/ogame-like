@@ -158,3 +158,53 @@ export async function demoteOfficer(_actorUid: string, _allianceId: string, targ
 export async function kickMember(_actorUid: string, _allianceId: string, targetUid: string) {
   await allianceAction({ type: "kick", targetUid });
 }
+
+/* ---------- v4.6 : « … écrit » et boss d'alliance ---------- */
+
+let lastTypingSent = 0;
+
+/** Signale qu'on écrit (au plus une fois toutes les 3 s). */
+export function sendTyping() {
+  const now = Date.now();
+  if (now - lastTypingSent < 3000) return;
+  lastTypingSent = now;
+  void pb.send("/api/cosmic/alliance/typing", { method: "POST" }).catch(() => undefined);
+}
+
+/** Membres en train d'écrire (signal éphémère, oublié après 5 s). */
+export function subscribeTyping(allianceId: string, selfUid: string, cb: (pseudos: string[]) => void): () => void {
+  const typing = new Map<string, { pseudo: string; at: number }>();
+  const emit = () => {
+    const now = Date.now();
+    for (const [uid, t] of typing) if (now - t.at > 5000) typing.delete(uid);
+    cb([...typing.values()].map((t) => t.pseudo));
+  };
+  let unsubscribe: (() => Promise<void>) | null = null;
+  let cancelled = false;
+  pb.realtime
+    .subscribe(`alliancetyping_${allianceId}`, (e: { uid?: string; pseudo?: string }) => {
+      if (!e?.uid || e.uid === selfUid) return;
+      typing.set(e.uid, { pseudo: String(e.pseudo ?? "?"), at: Date.now() });
+      emit();
+    })
+    .then((fn) => {
+      if (cancelled) void fn();
+      else unsubscribe = fn;
+    })
+    .catch(() => undefined);
+  const timer = setInterval(emit, 1500);
+  return () => {
+    cancelled = true;
+    clearInterval(timer);
+    void unsubscribe?.();
+  };
+}
+
+/** Le fondateur ou un officier appelle le boss d'alliance de la semaine. */
+export async function callAllianceBoss(): Promise<void> {
+  try {
+    await pb.send("/api/cosmic/allianceboss", { method: "POST", body: { action: "call" } });
+  } catch (err) {
+    throw new AllianceError((err as { response?: { message?: string } })?.response?.message || "Appel impossible.");
+  }
+}

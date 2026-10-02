@@ -120,6 +120,16 @@ export {
 export { endVacation, onVacation, startVacation, VACATION_RULES } from "@/game/vacation";
 export { productionHours } from "@/game/pirates";
 export {
+  ALLIANCE_BOSS_RULES,
+  allianceBossDef,
+  allianceBossRefund,
+  callAllianceBoss,
+  checkAllianceBossLaunch,
+  grantAllianceBossReward,
+  normalizeAllianceBoss,
+} from "@/game/allianceBoss";
+export { compileGazette, GAZETTE_KEY, gazetteDue, gazetteState, publishGazette } from "@/game/gazette";
+export {
   bossMonthOf,
   checkSeasonBossLaunch,
   chronicleMonthId,

@@ -1860,6 +1860,76 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v4.6 social: presence, alliance boss called and killed, typing signal, gazette", async () => {
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const bBefore = await snap(bId);
+    const gazetteRec = async () => admin.collection("game_config").getFirstListItem('key="gazette"').catch(() => null);
+    let allianceBossId = "";
+    try {
+      // A fonde (ou garde) une alliance ; B la rejoint.
+      let aAlliance = (await snap(aId)).allianceId as string;
+      if (!aAlliance) aAlliance = (await aClient.send<{ allianceId: string }>("/api/cosmic/alliance", { method: "POST", body: { type: "create", name: "Chasseurs de boss", tag: "bs" + suffix.slice(0, 2) } })).allianceId;
+      allianceBossId = aAlliance;
+      await loginPlayer(B.email, B.pw);
+      await al.leaveAlliance().catch(() => {});
+      await al.joinAlliance(bId, B.pseudo, aAlliance);
+      // Présence : la synchro du navigateur l'écrit, la fiche publique la recopie.
+      await admin.collection("players").update(bId, { lastActiveMs: 0, vacation: null });
+      await ps.syncPlayer("");
+      expect((await pb.collection("profiles").getOne(bId)).lastActiveMs).toBeGreaterThan(Date.now() - 60_000);
+      expect((await snap(bId)).stats.activeDays.length).toBeGreaterThan(0);
+
+      // Boss d'alliance : un simple membre ne peut pas l'appeler, le fondateur si.
+      await admin.collection("alliances").update(allianceBossId, { boss: null, treasury: { scrap: 1e12, energy: 1e12, nano: 1e12, data: 1e12 } });
+      await expect(al.callAllianceBoss()).rejects.toThrow(/fondateur et les officiers/);
+      await aClient.send("/api/cosmic/allianceboss", { method: "POST", body: { action: "call" } });
+      let alliance = await admin.collection("alliances").getOne(allianceBossId);
+      expect(alliance.boss.status).toBe("active");
+      expect(alliance.treasury.scrap).toBeLessThan(1e12);
+      await expect(aClient.send("/api/cosmic/allianceboss", { method: "POST", body: { action: "call" } })).rejects.toMatchObject({ status: 400 });
+      const treasuryAfterCall = alliance.treasury.scrap;
+
+      // Assaut de B sur un boss affaibli : il tombe, récompenses et remboursement.
+      await admin.collection("alliances").update(allianceBossId, { boss: { ...alliance.boss, hp: 1 } });
+      await admin.collection("players").update(bId, { units: { ...bBefore.units, chasseur: { level: 1, count: 50 } }, seasonPass: null, relics: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      const sent = await ps.callGame<{ id: string; arriveAtMs: number; departAtMs: number }>("fleet/send", { targetUid: "allianceboss", fleet: { chasseur: 50 }, mission: "allianceboss", formation: "balanced" });
+      expect(sent.arriveAtMs - sent.departAtMs).toBe(20 * 60_000);
+      await expect(ps.callGame("fleet/send", { targetUid: "allianceboss", fleet: { chasseur: 1 }, mission: "allianceboss" })).rejects.toThrow(/Prochain assaut/);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      alliance = await admin.collection("alliances").getOne(allianceBossId);
+      expect(alliance.boss.status).toBe("killed");
+      expect(alliance.boss.rewarded).toBe(true);
+      expect(alliance.treasury.scrap).toBeGreaterThan(treasuryAfterCall);
+      const after = await snap(bId);
+      expect(after.seasonPass.points).toBeGreaterThanOrEqual(40);
+      expect(after.relics?.items?.length ?? 0).toBeGreaterThan(0);
+
+      // « … écrit » : signal éphémère, rien n'est enregistré.
+      expect(await pb.send("/api/cosmic/alliance/typing", { method: "POST" })).toMatchObject({ ok: true });
+
+      // Gazette publiée par l'équipe : un numéro, une notification.
+      const old = await gazetteRec();
+      if (old) await admin.collection("game_config").delete(old.id);
+      await expect(pb.send("/api/cosmic/admin/gazette", { method: "POST" })).rejects.toMatchObject({ status: 403 });
+      const issue = await admin.send("/api/cosmic/admin/gazette", { method: "POST" });
+      expect(issue.number).toBe(1);
+      expect(issue.headline.length).toBeGreaterThan(5);
+      expect((await gazetteRec())!.data.issues).toHaveLength(1);
+      const notes = await pb.collection("notifications").getFullList({ filter: `player_id="${bId}" && title ~ "Gazette"` }).catch(() => []);
+      expect(notes.length).toBeGreaterThan(0);
+    } finally {
+      const g = await gazetteRec();
+      if (g) await admin.collection("game_config").delete(g.id);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      if (allianceBossId) await admin.collection("alliances").update(allianceBossId, { boss: null }).catch(() => {});
+      await al.leaveAlliance().catch(() => {});
+      await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, relics: null });
+    }
+  }, 60_000);
+
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
     const sheet = await ps.fetchPlayerSheet(aId);

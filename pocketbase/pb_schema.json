@@ -319,6 +319,12 @@
         "required": false,
         "maxSize": 5000,
         "id": "json9201033483"
+      },
+      {
+        "name": "lastActiveMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
@@ -818,6 +824,12 @@
         "type": "json",
         "required": false,
         "maxSize": 200000
+      },
+      {
+        "name": "boss",
+        "type": "json",
+        "required": false,
+        "maxSize": 200000
       }
     ],
     "indexes": [
@@ -1295,6 +1307,12 @@
         "required": false,
         "onlyInt": false,
         "id": "number9906079824"
+      },
+      {
+        "name": "lastActiveMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
