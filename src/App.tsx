@@ -1,16 +1,18 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
-import { LoginPage } from "@/pages/LoginPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
 // pour ne pas alourdir le bundle initial (écran de connexion) avec des
 // écrans que le joueur ne visitera peut-être pas tout de suite.
+// Pages publiques chargées à la demande : le formulaire de connexion
+// (react-hook-form) ne pèse plus sur le bundle du jeu.
+const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ResourcesPage = lazy(() => import("@/pages/ResourcesPage").then((m) => ({ default: m.ResourcesPage })));
 const BuildingsPage = lazy(() => import("@/pages/BuildingsPage").then((m) => ({ default: m.BuildingsPage })));
@@ -45,6 +47,7 @@ export default function App() {
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MaintenanceGate>
+          <Suspense fallback={null}>
           <Routes>
             <Route
               path="/"
@@ -87,6 +90,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </MaintenanceGate>
       </BrowserRouter>
 

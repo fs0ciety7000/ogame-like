@@ -2207,6 +2207,7 @@ var DEFAULT_FACTIONS = [
     enforcer: "Les \xC9chos",
     art: "/assets/story/choeur.webp",
     banner: "/assets/story/choeur-banner.webp",
+    emblem: "/assets/story/choeur-emblem.webp",
     color: "mint",
     story: "Il y a dix mille ans, une civilisation enti\xE8re s'est fondue en une seule conscience, puis s'est tue. Ses cath\xE9drales de cristal noir d\xE9rivent depuis aux confins de la galaxie, silencieuses.\n\nLes signaux de vos fonderies quantiques et de vos cortex neuronaux l'ont r\xE9veill\xE9e. Le Ch\u0153ur ne convoite pas vos coffres : il veut ce que vos laboratoires ont appris, et les fragments o\xF9 vous l'avez grav\xE9.\n\nL'Archonte Vesper, masque de porcelaine sans bouche et halo de glyphes, parle pour des milliers de voix. Ceux qui refusent entendent d'abord un murmure dans leurs transmissions\u2026 puis voient arriver les \xC9chos.",
     ultimatum: {

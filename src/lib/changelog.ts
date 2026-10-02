@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { CHANGELOG_INDEX } from "virtual:changelog-index";
 
 /* =====================================================
    Journal des mises à jour : un fichier Markdown par version dans
@@ -34,11 +35,6 @@ export interface ChangelogEntry {
   body: string;
 }
 
-const files = import.meta.glob("/changelog/*.md", { query: "?raw", import: "default", eager: true }) as Record<
-  string,
-  string
->;
-
 export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
   const match = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
   const meta: Record<string, string> = {};
@@ -60,13 +56,9 @@ export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
   };
 }
 
-export const CHANGELOG: ChangelogEntry[] = Object.entries(files)
-  .map(([path, raw]) => parseChangelogFile(path.split("/").pop()!.replace(/\.md$/, ""), raw))
-  // Plus récente d'abord : par itération, puis par nom de fichier.
-  .sort((a, b) => (b.iteration ?? 0) - (a.iteration ?? 0) || b.id.localeCompare(a.id));
-
-/** Version actuelle du jeu (celle de la dernière entrée du journal). */
-export const CURRENT_VERSION = CHANGELOG.find((e) => e.version)?.version ?? null;
+/** Version actuelle du jeu (celle de la dernière entrée du journal). Les
+ *  textes complets sont dans changelogEntries.ts (page Nouveautés). */
+export const CURRENT_VERSION = CHANGELOG_INDEX.find((e) => e.version)?.version ?? null;
 
 /* ---------- lu / non lu (par appareil) ---------- */
 
@@ -91,18 +83,18 @@ export function useUnreadChangelogCount(): number {
 /** Entrées publiées après `seen` (id de la dernière entrée vue). */
 export function isUnread(entryId: string, seen: string): boolean {
   if (!seen) return true;
-  const seenIndex = CHANGELOG.findIndex((e) => e.id === seen);
+  const seenIndex = CHANGELOG_INDEX.findIndex((e) => e.id === seen);
   // Entrée vue inconnue (fichier renommé) : on retombe sur l'ordre des noms.
   if (seenIndex < 0) return entryId > seen;
-  return CHANGELOG.findIndex((e) => e.id === entryId) < seenIndex;
+  return CHANGELOG_INDEX.findIndex((e) => e.id === entryId) < seenIndex;
 }
 
 function countUnread(seen: string): number {
-  return CHANGELOG.filter((e) => isUnread(e.id, seen)).length;
+  return CHANGELOG_INDEX.filter((e) => isUnread(e.id, seen)).length;
 }
 
 export function markChangelogSeen() {
-  const latest = CHANGELOG[0]?.id ?? "";
+  const latest = CHANGELOG_INDEX[0]?.id ?? "";
   try {
     localStorage.setItem(SEEN_KEY, latest);
   } catch {

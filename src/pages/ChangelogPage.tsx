@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Markdown } from "@/components/ui/markdown";
-import { CHANGELOG, CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
+import { CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
+import { CHANGELOG } from "@/lib/changelogEntries";
 
 function formatDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);

@@ -136,11 +136,14 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
       <div className="grid md:grid-cols-[minmax(0,18rem)_1fr]">
         <img src={assetUrl(faction.art)} alt={`${faction.leader} et ${faction.enforcer}`} className="h-64 w-full object-cover object-top md:h-full" />
         <div className="flex flex-col gap-3 p-5">
-          <div>
-            <p className={cn("hud-eyebrow", a.text)}>{faction.name}</p>
-            <p className="text-xs text-slate-500">
-              {faction.leader} · {faction.enforcer}
-            </p>
+          <div className="flex items-center gap-3">
+            {faction.emblem && <img src={assetUrl(faction.emblem)} alt="" className="h-11 w-11 rounded-full object-cover ring-1 ring-white/10" />}
+            <div>
+              <p className={cn("hud-eyebrow", a.text)}>{faction.name}</p>
+              <p className="text-xs text-slate-500">
+                {faction.leader} · {faction.enforcer}
+              </p>
+            </div>
           </div>
           {faction.story.split(/\n\s*\n/).map((para, i) => (
             <p key={i} className="text-sm leading-relaxed text-slate-300">
