@@ -18,6 +18,7 @@ import { cn, formatDuration } from "@/lib/utils";
 const SOURCES: [keyof typeof PASS_POINTS, string][] = [
   ["contract", "Contrat du jour récupéré"],
   ["bounty", "Prime Kesh'Vaar remplie"],
+  ["vendetta", "Vendetta gagnée contre un seigneur"],
   ["raidRepelled", "Raid de faction repoussé"],
   ["victory", "Combat gagné (attaque, défense, repaire)"],
   ["bossAssault", "Assaut sur le Léviathan ou la proie d'élite"],

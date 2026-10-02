@@ -23,6 +23,7 @@ import {
   Megaphone,
   Smile,
   Mail,
+  Crown,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -36,6 +37,7 @@ import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { newRank, RankForm } from "@/pages/admin/RankForm";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
+import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
@@ -72,6 +74,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "technologies", label: "Technologies", icon: FlaskConical, hint: "Arbre du Labo : effets et prérequis." },
       { id: "missions", label: "Missions", icon: Compass, hint: "Durées, prérequis et récompenses." },
       { id: "factions", label: "Factions", icon: Skull, hint: "Déclencheurs, tributs, raids et repaires." },
+      { id: "warlords", label: "Seigneurs", icon: Crown, hint: "Seigneurs de guerre : puissance, fréquence d'attaque, fiches et répliques." },
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
@@ -249,6 +252,9 @@ export function AdminPage() {
             createItem={newFaction}
             renderForm={(f, onChange, isNew) => <FactionForm value={f} onChange={onChange} isNew={isNew} />}
           />
+        </TabsContent>
+        <TabsContent value="warlords">
+          <WarlordsPanel />
         </TabsContent>
         <TabsContent value="ranks">
           <ContentEditor

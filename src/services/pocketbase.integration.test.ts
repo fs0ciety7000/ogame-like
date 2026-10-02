@@ -18,6 +18,7 @@ import * as ds from "@/services/diplomacyService";
 import * as bs from "@/services/bountyService";
 import * as rs from "@/services/referralService";
 import * as vcs from "@/services/victoryCardService";
+import * as ws from "@/services/warlordService";
 import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
@@ -1708,6 +1709,105 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     } finally {
       await admin.collection("players").update(bId, { units: bBefore.units, bounties: bBefore.bounties, seasonPass: null, referral: null, onboarding: bBefore.onboarding ?? null, xp: bBefore.xp, createdAtMs: bBefore.createdAtMs });
       await admin.collection("players").update(aId, { bounties: aBefore.bounties, referral: null });
+    }
+  });
+
+  it("v4.2 warlords: hourly tick, raid on a lord, vendetta, lord attack, replies and vacation", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const tick = (action = "tick", warlordId = "") => admin.send<Record<string, number>>("/api/cosmic/admin/warlords", { method: "POST", body: { action, warlordId } });
+    const stateRec = async () => admin.collection("game_config").getFirstListItem('key="warlords_state"');
+    try {
+      // Les dix empires apparaissent, marqués PNJ sur leur fiche publique.
+      await tick();
+      const lords = await admin.collection("players").getFullList({ filter: "npc != ''" });
+      expect(lords).toHaveLength(10);
+      await loginPlayer(B.email, B.pw);
+      const ossaya = await pb.collection("profiles").getOne("npcossaya000000");
+      expect(ossaya.npc).toBe("ossaya");
+      const view = await ws.fetchWarlords();
+      expect(view.warlords.map((w) => w.id)).toContain("maru");
+
+      // B pille Ossaya, affaiblie pour l'occasion : pas de bouclier, réplique en message.
+      await admin.collection("players").update("npcossaya000000", { units: { roquette: { level: 1, count: 5 } }, xp: 100000 });
+      await admin.collection("players").update(bId, {
+        units: { ...bBefore.units, chasseur: { level: 1, count: 80 } },
+        resources: RICH, createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, allianceId: "", vacation: null, xp: 5000,
+      });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      // Vendetta : coût prélevé, puis objectif ramené à presque rien pour la gagner en une attaque.
+      const before = (await snap(bId)).resources.scrap;
+      const v = await ws.declareVendetta("ossaya", "player");
+      expect(v.goal).toBeGreaterThan(0);
+      expect((await snap(bId)).resources.scrap).toBeLessThan(before);
+      await expect(ws.declareVendetta("ossaya", "player")).rejects.toThrow(/déjà/);
+      let st = await stateRec();
+      await admin.collection("game_config").update(st.id, { data: { ...st.data, vendettas: st.data.vendettas.map((x: { warlordId: string }) => (x.warlordId === "ossaya" ? { ...x, goal: 1 } : x)) } });
+      const sent = await ps.sendFleet("npcossaya000000", { chasseur: 80 }, "attack");
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.outcome).toBe("attacker_win");
+      expect((await snap("npcossaya000000")).lastDefeatAtMs || 0).toBe(0);
+      const b = await snap(bId);
+      expect(b.titles.map((t: { label: string }) => t.label)).toContain("Tombeur de Ossaya la Tisseuse");
+      expect(b.seasonPass.points).toBeGreaterThanOrEqual(40);
+      const msgs = await pb.collection("private_messages").getFullList({ filter: `fromUid="npcossaya000000" && toUid="${bId}"` });
+      expect(msgs.length).toBeGreaterThan(0);
+      // En fuite 7 jours : plus d'attaque possible.
+      await expect(ps.sendFleet("npcossaya000000", { chasseur: 1 }, "attack")).rejects.toThrow(/quitté le secteur/);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+
+      // Un message au seigneur reçoit une réplique toute faite ; pas de cadeau possible.
+      await ms.sendPrivateMessage("npcbrannoc00000", "Tu ne me fais pas peur.");
+      expect((await pb.collection("private_messages").getFullList({ filter: `fromUid="npcbrannoc00000" && toUid="${bId}"` })).length).toBe(1);
+      await expect(ps.sendResourceGift({ fromUid: bId, toUid: "npcbrannoc00000", resources: { scrap: 10 } } as Parameters<typeof ps.sendResourceGift>[0])).rejects.toThrow(/cadeau/);
+
+      // Attaque forcée de Brannoc contre A : trajet de 3 à 5 h, cible prévenue.
+      await admin.collection("players").update(aId, { xp: 6000, createdAtMs: MONTH_AGO(), lastAttackAtMs: Date.now() - 86400000, lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, units: { ...aBefore.units, roquette: { level: 1, count: 20 } } });
+      st = await stateRec();
+      const others = (await admin.collection("players").getFullList({ filter: "npc = ''", fields: "id" })).map((r) => r.id).filter((id) => id !== aId);
+      // Tous les autres comptes de test viennent « d'être attaqués » : seul A reste une cible.
+      await admin.collection("game_config").update(st.id, { data: { ...st.data, hits: Object.fromEntries(others.map((id) => [id, Date.now()])) } });
+      await tick("attack", "brannoc");
+      const raid = await admin.collection("fleets").getFirstListItem(`ownerUid="npcbrannoc00000" && targetUid="${aId}" && status="outbound"`);
+      const travel = raid.arriveAtMs - raid.departAtMs;
+      expect(travel).toBeGreaterThanOrEqual(3 * 3600000 - 1000);
+      expect(travel).toBeLessThanOrEqual(5 * 3600000 + 1000);
+      await admin.collection("fleets").delete(raid.id);
+
+      // Vacances de A : protégé, actions bloquées, retour anticipé après 48 h seulement.
+      await loginPlayer(A.email, A.pw);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${aId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `defenderUid="${aId}"` })) await admin.collection("battle_reports").update(r.id, { timestamp: Date.now() - 86400000 });
+      await expect(ws.startVacation(1)).rejects.toThrow(/entre 2 et 21/);
+      await ws.startVacation(3);
+      expect((await pb.collection("profiles").getOne(aId)).vacationUntilMs).toBeGreaterThan(Date.now() + 2 * 86400000);
+      await expect(ps.startBuildingUpgrade(aId, "extracteur_ferraille")).rejects.toThrow(/vacances/);
+      await expect(ws.endVacation()).rejects.toThrow(/48 h/);
+      await loginPlayer(B.email, B.pw);
+      await expect(ps.sendFleet(aId, { chasseur: 1 }, "attack")).rejects.toThrow(/vacances/);
+      await loginPlayer(A.email, A.pw);
+      const vac = (await snap(aId)).vacation;
+      await admin.collection("players").update(aId, { vacation: { ...vac, startedAtMs: vac.startedAtMs - 3 * 86400000 } });
+      await ws.endVacation();
+      expect((await snap(aId)).vacation.endedAtMs).toBeGreaterThan(0);
+
+      // Désactivés : les empires disparaissent à la tâche suivante.
+      const off = { ...defaultGameContent().warlords, settings: { ...defaultGameContent().warlords.settings, enabled: false } };
+      const existingCfg = await admin.collection("game_config").getFirstListItem('key="warlords"').catch(() => null);
+      if (existingCfg) await admin.collection("game_config").update(existingCfg.id, { data: off });
+      else await admin.collection("game_config").create({ key: "warlords", data: off });
+      await tick();
+      expect(await admin.collection("players").getFullList({ filter: "npc != ''" })).toHaveLength(0);
+    } finally {
+      const cfgRec = await admin.collection("game_config").getFirstListItem('key="warlords"').catch(() => null);
+      if (cfgRec) await admin.collection("game_config").delete(cfgRec.id);
+      await admin.collection("players").update(bId, { units: bBefore.units, resources: bBefore.resources, titles: bBefore.titles ?? null, relics: null, seasonPass: null, vacation: null, xp: bBefore.xp });
+      await admin.collection("players").update(aId, { units: aBefore.units, vacation: null, xp: aBefore.xp });
+      const st = await admin.collection("game_config").getFirstListItem('key="warlords_state"').catch(() => null);
+      if (st) await admin.collection("game_config").delete(st.id);
+      await loginPlayer(B.email, B.pw);
     }
   });
 

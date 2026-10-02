@@ -3,6 +3,7 @@ import { useDirectorySync } from "@/store/directoryStore";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
+import { VacationBanner } from "@/components/layout/VacationBanner";
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
@@ -148,6 +149,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
         <MaintenanceBanner />
+        <VacationBanner />
         <AnnouncementBanners />
         <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />

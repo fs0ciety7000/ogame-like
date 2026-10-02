@@ -1,3 +1,4 @@
+import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, startColonization, upgradeColonyBuilding } from "@/game/colonies";
@@ -42,6 +43,7 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 ===================================================== */
 
 export type GameAction =
+  | { type: "vacationEnd" }
   | { type: "sync"; playtimeDeltaSeconds?: number }
   | { type: "unlockBuilding"; buildingId: string }
   | { type: "upgradeBuilding"; buildingId: string }
@@ -123,16 +125,22 @@ interface ActionState {
   unitsAway: Record<string, number>;
 }
 
+/** v4.2 : seules ces actions restent possibles pendant les vacances. */
+const VACATION_ACTIONS = new Set(["sync", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+
 function applyAction(s: ActionState, action: GameAction): unknown {
   const { player, queues, now } = s;
+  if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action?.type))) {
+    throw new GameActionError("Tu es en vacances : reviens d'abord (Paramètres) pour jouer.");
+  }
   switch (action?.type) {
     case "sync": {
       const elapsedMs = Math.max(0, now - (s.preFlushPlayer.resourcesUpdatedAtMs || now));
       // Temps de jeu déclaré par le navigateur, borné par le temps réellement écoulé.
       const playtime = Math.min(Math.max(0, Number(action.playtimeDeltaSeconds) || 0), elapsedMs / 1000 + 5, 300);
       player.playtimeSeconds = (player.playtimeSeconds || 0) + Math.floor(playtime);
-      // v4.1 : connexion du jour pour le passe de saison.
-      passDailyLogin(player, now);
+      // v4.1 : connexion du jour pour le passe de saison (suspendue pendant les vacances).
+      if (!onVacation(player, now)) passDailyLogin(player, now);
       const resourceGains: Partial<Record<ResourceId, number>> = {};
       for (const key of Object.keys(player.resources) as ResourceId[]) {
         const delta = (player.resources[key] ?? 0) - (s.preFlushPlayer.resources[key] ?? 0);
@@ -338,6 +346,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
 
+    case "vacationEnd":
+      endVacation(player, queues, now, true);
+      return true;
+
     default:
       throw new GameActionError("Action inconnue.");
   }
@@ -384,6 +396,8 @@ export function performGift(
   now: number,
 ): GiftOutput {
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
+  if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau à un seigneur de guerre.");
+  if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const [res, raw] of Object.entries(rawResources ?? {})) {
     const n = Math.floor(Number(raw));

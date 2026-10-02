@@ -1,3 +1,4 @@
+import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
@@ -58,10 +59,12 @@ export interface GameContent {
   ranks: RankDef[];
   achievements: AchievementDef[];
   rules: GameRules;
+  /** v4.2 : seigneurs de guerre (réglages et fiches). */
+  warlords: WarlordsConfig;
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -95,6 +98,7 @@ export function defaultGameContent(): GameContent {
     factions: DEFAULT_FACTIONS,
     ranks: DEFAULT_RANKS,
     achievements: DEFAULT_ACHIEVEMENTS,
+    warlords: defaultWarlordsConfig(),
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
@@ -117,6 +121,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     factions: overrides.factions ?? defaults.factions,
     ranks: overrides.ranks ?? defaults.ranks,
     achievements: overrides.achievements ?? defaults.achievements,
+    warlords: overrides.warlords ?? defaults.warlords,
     rules: {
       pvp: { ...defaults.rules.pvp, ...(overrides.rules?.pvp ?? {}) },
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
@@ -148,6 +153,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setFactions(content.factions);
   setRanks(content.ranks);
   setAchievements(content.achievements);
+  setWarlords(content.warlords);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -266,6 +272,7 @@ export function validateGameContent(content: GameContent): string[] {
     checkResources(`${label} (récompense)`, res);
   }
   errors.push(...validateFactions(content.factions ?? []));
+  errors.push(...validateWarlords(content.warlords));
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
 

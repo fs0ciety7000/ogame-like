@@ -116,7 +116,7 @@ export interface PlayerState {
   /** v3.9.2 : ne plus recevoir les nouvelles du jeu par e-mail. */
   emailOptOut?: boolean;
   /** v4.0 : notifications d'alliance que le joueur veut recevoir (absent = oui). */
-  notifPrefs?: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean };
+  notifPrefs?: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean; warlords?: boolean };
   /** v4.0 : officiers, reliques et capsules du Labo de synthèse. */
   commanders?: import("@/game/commanders").CommandersState;
   relics?: import("@/game/relics").RelicsState;
@@ -126,6 +126,10 @@ export interface PlayerState {
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;
+  /** v4.2 : seigneur de guerre tenu par le jeu (identifiant du roster), vide pour un joueur. */
+  npc?: string;
+  /** v4.2 : mode vacances. */
+  vacation?: import("@/game/vacation").VacationState | null;
 }
 
 export interface SeasonResult {

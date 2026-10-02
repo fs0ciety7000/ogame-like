@@ -14,6 +14,7 @@ import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
 import { addPassPoints } from "@/game/seasonPass";
+import { endVacation, VACATION_RULES } from "@/game/vacation";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -55,6 +56,31 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   const player: PlayerState = structuredClone(playerIn);
   const queues: QueuesState = structuredClone(queuesIn);
   const notifications: NewNotification[] = [];
+
+  // --- v4.2 : vacances (production au quart, files gelées, décalées au retour) ---
+  const vac = player.vacation;
+  if (vac && !vac.endedAtMs && vac.startedAtMs <= now) {
+    const from = Math.max(player.resourcesUpdatedAtMs || now, vac.startedAtMs);
+    const to = Math.min(now, vac.untilMs);
+    if (to > from) {
+      const before = player.resources;
+      const after = advanceResources(player, (to - from) / 1000, from);
+      player.resources = Object.fromEntries(
+        Object.entries(after).map(([res, n]) => {
+          const old = before[res as ResourceId] ?? 0;
+          return [res, n > old ? old + (n - old) * VACATION_RULES.productionFactor : n];
+        }),
+      ) as PlayerState["resources"];
+      player.resourcesUpdatedAtMs = to;
+    }
+    if (now >= vac.untilMs) {
+      endVacation(player, queues, vac.untilMs);
+      notifications.push({ kind: "event", title: "Retour de vacances", message: "Tes vacances sont terminées : production et chantiers reprennent normalement.", createdAtMs: now, read: false });
+    } else {
+      recordResourceHistory(player, now);
+      return { player, queues, notifications };
+    }
+  }
 
   // --- Production continue ---
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1000);
