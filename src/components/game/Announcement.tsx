@@ -42,6 +42,34 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.3-chroniques",
+    eyebrow: "Mise à jour 4.3 · Chroniques",
+    title: "Chaque mois, une histoire",
+    text: "Quatre épisodes par mois, racontés par ceux qui font le secteur. Et le dernier week-end, le boss de la chronique surgit : tout le serveur frappe ensemble. En octobre, Varan a rouvert sa Liste.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/chronicles/2026-10-boss.webp",
+    artMobile: "/assets/chronicles/2026-10-boss.webp",
+    emblem: "/assets/chronicles/2026-10-sceau.webp",
+    spotlight: {
+      image: "/assets/bounties/vashka.webp",
+      name: "Vashka",
+      role: "Matriarche-Chasseuse",
+      quote: "Varan n'a pas digéré sa défaite. Il a rouvert la Liste, et ton nom est dessus.",
+    },
+    currency: {
+      icon: "/assets/chronicles/2026-10-sceau.webp",
+      name: "Boss de saison",
+      text: "Vendredi 30 octobre 18 h → dimanche 23 h : +60 points de passe pour tous, et s'il tombe, titre « Pourfendeur », sceau unique et relique épique pour le podium.",
+    },
+    features: [
+      { title: "Chroniques", text: "Un épisode le 1er, le 8, le 15 et le 22 : un dialogue, un objectif, +40 points de passe.", to: "/game/passe", image: "/assets/story/varan.webp" },
+      { title: "Boss de saison", text: "Le dernier week-end du mois, le Vaisseau-Liste de Varan. Assauts toutes les 4 h, classement des dégâts.", to: "/game/boss", image: "/assets/chronicles/2026-10-sceau.webp" },
+      { title: "Habillage du mois", text: "Une teinte par chronique sur le fond et la nébuleuse, à couper dans les Réglages.", to: "/game/reglages" },
+    ],
+    cta: { label: "Lire l'épisode 1", to: "/game/passe" },
+  },
+  {
     id: "v4.2-seigneurs",
     eyebrow: "Mise à jour 4.2 · Seigneurs de guerre",
     title: "Le secteur n'est plus vide",

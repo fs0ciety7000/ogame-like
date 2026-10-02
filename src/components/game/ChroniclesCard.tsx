@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 /* v4.3 : les quatre épisodes du mois, leur objectif et le boss de fin. */
 
-const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" });
 
 export function ChroniclesCard() {
   const player = usePlayerStore((s) => s.player);
