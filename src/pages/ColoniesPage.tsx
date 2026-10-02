@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Globe2, Hammer, Package, Rocket, Shield, Truck } from "lucide-react";
+import { Clock, Globe2, Hammer, Package, Rocket, Shield, Truck, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   advanceColonies,
   COLONY_RULES,
   colonyBuildingIds,
+  colonyDefenseHangar,
+  colonyDefenseSeconds,
   colonyFoundCost,
   colonyHourlyRates,
   colonyMaxLevel,
@@ -25,7 +27,7 @@ import {
   type Colony,
 } from "@/game/colonies";
 import { RESOURCE_LIST } from "@/game/resources";
-import { findUnit, OFFENSIVE_UNITS, UNITS } from "@/game/units";
+import { findUnit, getUnitBuildTime, OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import {
   buildColonyDefense,
@@ -156,6 +158,19 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
 
 /* ---------- une colonie ---------- */
 
+/** Ce que rapporte le niveau suivant d'un entrepôt ou d'un hangar de défense. */
+function effectLine(colony: Colony, player: PlayerState, id: string, level: number): string | null {
+  const def = findBuilding(id);
+  if (def?.effect?.type === "hangar" && def.effect.category === "defense") {
+    return `Hangar : ${formatCompact(level * def.effect.perLevel)} places → ${formatCompact((level + 1) * def.effect.perLevel)}`;
+  }
+  if (def?.effect?.type === "storage") {
+    const next = colonyStorage({ ...colony, buildings: { ...colony.buildings, [id]: { ...(colony.buildings[id] ?? { unlocked: true }), level: level + 1 } } }, player);
+    return `Stockage : ${formatCompact(colonyStorage(colony, player))} → ${formatCompact(next)} par ressource`;
+  }
+  return null;
+}
+
 function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState }) {
   const [busy, setBusy] = useState(false);
   const [transport, setTransport] = useState<"deliver" | "collect" | null>(null);
@@ -167,6 +182,22 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const storage = colonyStorage(colony, player);
   const inFlight = fleets.filter((f) => f.mission === "transport" && f.targetUid === colony.id && f.status !== "done");
   const defenses = UNITS.filter((u) => u.category === "defense" && (player.units[u.id]?.level ?? 0) > 0);
+  const hangar = colonyDefenseHangar(colony);
+  const free = Math.max(0, hangar.capacity - hangar.used);
+  const picked = defense.unitId ? findUnit(defense.unitId) : undefined;
+  const maxQty = picked
+    ? Math.max(
+        0,
+        Math.min(
+          Math.floor(free / Math.max(1, picked.hangarSpace)),
+          picked.cost.scrap > 0 ? Math.floor((colony.resources.scrap ?? 0) / picked.cost.scrap) : Infinity,
+          picked.cost.energy > 0 ? Math.floor((colony.resources.energy ?? 0) / picked.cost.energy) : Infinity,
+        ),
+      )
+    : 0;
+  const batchCost = picked ? { scrap: picked.cost.scrap * defense.qty, energy: picked.cost.energy * defense.qty } : {};
+  const batchSpace = picked ? picked.hangarSpace * defense.qty : 0;
+  const batchAffordable = Object.entries(batchCost).every(([r, n]) => (colony.resources[r as ResourceId] ?? 0) >= (n ?? 0));
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);
@@ -250,6 +281,10 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                     {level} / {max}
                   </span>
                 </div>
+                {(() => {
+                  const line = level < max ? effectLine(colony, player, id, level) : null;
+                  return line ? <p className="text-[11px] text-slate-400">{line}</p> : null;
+                })()}
                 {running ? (
                   <div>
                     <p className="text-[11px] text-cyan-glow">Niveau {running.level} — fin dans {formatDuration(Math.max(0, Math.floor((running.endTime - now) / 1000)))}</p>
@@ -259,8 +294,11 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                   <p className="text-[11px] text-mint-glow">Niveau maximum d'une colonie.</p>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className={cn("flex-1 text-[11px]", affordable ? "text-slate-400" : "text-ember-glow")}>
-                      <AmountsInline amounts={cost} /> · {formatDuration(colonyUpgradeSeconds(player, id, level + 1, now))}
+                    <span className={cn("flex flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]", affordable ? "text-slate-400" : "text-ember-glow")}>
+                      <AmountsInline amounts={cost} />
+                      <span className="inline-flex items-center gap-1 text-slate-300" title="Temps de construction">
+                        <Clock className="h-3.5 w-3.5" /> {formatDuration(colonyUpgradeSeconds(player, id, level + 1, now))}
+                      </span>
                     </span>
                     <Button size="sm" variant="outline" disabled={busy || !!colony.building || !affordable} onClick={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")}>
                       Niv. {level + 1}
@@ -277,6 +315,18 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <p className="hud-eyebrow mb-2 flex items-center gap-1.5 text-[10px] text-slate-500">
           <Shield className="h-3.5 w-3.5" /> Défenses de la colonie
         </p>
+        <div className="mb-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span className="inline-flex items-center gap-1">
+              <Warehouse className="h-3.5 w-3.5" /> Hangar de défense
+            </span>
+            <span className="tabular-mono">
+              {formatCompact(hangar.used)} / {formatCompact(hangar.capacity)} places
+            </span>
+          </div>
+          <Progress value={hangar.capacity > 0 ? (hangar.used / hangar.capacity) * 100 : 100} className="mt-1" />
+          {hangar.capacity === 0 && <p className="mt-1 text-[11px] text-ember-glow">Construis le hangar de défense de la colonie pour y placer des défenses.</p>}
+        </div>
         <p className="mb-2 text-xs text-slate-300">
           {Object.entries(colony.defenses).filter(([, s]) => s.count > 0).length === 0
             ? "Aucune défense pour l'instant."
@@ -308,19 +358,38 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                   <span className="flex flex-col">
                     <span>{u.name}</span>
                     <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
+                    <span className="font-mono text-[10px] text-slate-500">
+                      {formatDuration(getUnitBuildTime(u, player.techLevels))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
+                    </span>
                   </span>
                 </button>
               ))}
             </div>
             <Input type="number" min={0} value={defense.qty || ""} placeholder="Qté" onChange={(e) => setDefense((d) => ({ ...d, qty: Math.max(0, parseInt(e.target.value) || 0) }))} className="h-8 w-24" />
+            {picked && (
+              <button type="button" className="font-mono text-[10px] text-slate-500 hover:text-cyan-glow" title="Maximum (place et stock)" onClick={() => setDefense((d) => ({ ...d, qty: maxQty }))}>
+                max {formatCompact(maxQty)}
+              </button>
+            )}
             <Button
               size="sm"
               variant="outline"
-              disabled={busy || !defense.unitId || defense.qty <= 0}
+              disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable}
               onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), "Défenses en construction.")}
             >
               Construire
             </Button>
+            {picked && defense.qty > 0 && (
+              <p className="flex w-full flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+                <AmountsInline amounts={batchCost} className={batchAffordable ? "" : "text-ember-glow"} />
+                <span className="inline-flex items-center gap-1 text-slate-300" title="Temps de construction">
+                  <Clock className="h-3.5 w-3.5" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty))}
+                </span>
+                <span className={cn("inline-flex items-center gap-1", batchSpace > free ? "text-ember-glow" : "")}>
+                  <Warehouse className="h-3.5 w-3.5" /> {formatCompact(batchSpace)} / {formatCompact(free)} places libres
+                </span>
+              </p>
+            )}
           </div>
         )}
       </div>
