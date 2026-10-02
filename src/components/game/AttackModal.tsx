@@ -1,9 +1,17 @@
 import { allianceFlightFactor } from "@/game/alliances";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { simulateAgainstReport } from "@/game/simulator";
+import { lootFactor } from "@/game/events";
+import { SPY_TIER_LABELS } from "@/game/espionage";
+import { fetchLatestSpyReport } from "@/services/playerService";
+import { ResourceIcon } from "@/components/ui/game-icon";
+import { timeAgo, formatCompact } from "@/lib/utils";
+import type { SpyReport } from "@/types/game";
 import { toast } from "sonner";
-import { Clock, Rocket, Snail } from "lucide-react";
+import { Bookmark, Clock, Rocket, Snail, X } from "lucide-react";
+import { applyPreset, deleteFleetPreset, MAX_PRESETS, saveFleetPreset, useFleetPresets } from "@/lib/fleetPresets";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +39,22 @@ export function AttackModal({
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formation, setFormation] = useState<FormationId>("balanced");
+  const presets = useFleetPresets(uid);
+  // v3.8 : estimation d'après le dernier rapport d'espionnage sur la cible.
+  const [spy, setSpy] = useState<SpyReport | null>(null);
+  useEffect(() => {
+    setSpy(null);
+    if (!uid || !target) return;
+    let alive = true;
+    fetchLatestSpyReport(uid, target.uid)
+      .then((r) => alive && setSpy(r))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [uid, target]);
+  const [presetName, setPresetName] = useState("");
+  const owned = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, player?.units[id]?.count ?? 0]));
 
   const setQty = (id: string, owned: number, value: number) => {
     const clamped = Math.max(0, Math.min(owned, value));
@@ -47,6 +71,11 @@ export function AttackModal({
   const slow = player && hasShips ? slowestUnits(player.units, selected) : null;
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
+  const estimate = useMemo(
+    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
+    [player, fleet, spy, formation],
+  );
 
   const handleConfirm = async () => {
     if (!uid || !player || !target) return;
@@ -84,7 +113,28 @@ export function AttackModal({
             <RadarScan label={submitting ? "Décollage de la flotte…" : "Chargement…"} />
           ) : (
             <>
-              <div className="mt-4 space-y-2">
+              {/* v3.8 : compositions enregistrées */}
+              <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                <Bookmark className="h-3.5 w-3.5 text-slate-500" aria-hidden />
+                {presets.map((p) => (
+                  <span key={p.id} className="group inline-flex items-center border border-cyan-glow/25 bg-cyan-glow/5 text-xs">
+                    <button type="button" className="px-2 py-1 text-cyan-glow hover:bg-cyan-glow/10" title="Appliquer (dans la limite de tes vaisseaux)" onClick={() => setFleet(applyPreset(p, owned, OFFENSIVE_UNITS))}>
+                      {p.name}
+                    </button>
+                    <button type="button" aria-label={`Supprimer ${p.name}`} className="px-1 py-1 text-slate-500 hover:text-danger-glow" onClick={() => uid && deleteFleetPreset(uid, p.id)}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-white" onClick={() => setFleet(owned)}>
+                  Tout
+                </button>
+                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-white" onClick={() => setFleet({})}>
+                  Vider
+                </button>
+              </div>
+
+              <div className="mt-3 space-y-2">
                 {OFFENSIVE_UNITS.map((unitId) => {
                   const unit = findUnit(unitId);
                   const owned = player.units[unitId]?.count ?? 0;
@@ -152,7 +202,72 @@ export function AttackModal({
                 </p>
               </div>
 
+              {hasShips && uid && (
+                <form
+                  className="mt-3 flex items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveFleetPreset(uid, presetName || "Composition", selected);
+                    setPresetName("");
+                    toast.success("Composition enregistrée", { description: `Max ${MAX_PRESETS} ; un même nom remplace l'ancienne.` });
+                  }}
+                >
+                  <Input value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Nom (ex. Raid rapide)" maxLength={24} className="h-8 flex-1 text-xs" />
+                  <Button type="submit" variant="outline" size="sm">
+                    <Bookmark className="h-3.5 w-3.5" /> Enregistrer
+                  </Button>
+                </form>
+              )}
+
               <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
+
+              {/* v3.8 : estimation du combat */}
+              <div className="mt-3 border border-white/10 bg-black/20 px-3 py-2 text-xs">
+                {!spy || (spy.tier ?? 0) < 2 ? (
+                  <p className="text-slate-500">
+                    {spy ? `Dernier rapport trop sommaire (${SPY_TIER_LABELS[spy.tier ?? 0]}) : ` : "Aucun rapport d'espionnage : "}
+                    espionne la cible pour estimer l'issue du combat.
+                  </p>
+                ) : !estimate ? (
+                  <p className="text-slate-500">Choisis tes vaisseaux pour estimer le combat (rapport {timeAgo(spy.timestamp)}).</p>
+                ) : (
+                  (() => {
+                    const c = estimate.combat;
+                    const win = c.outcome === "attacker_win";
+                    const draw = c.outcome === "draw";
+                    const loot = Object.entries(c.loot ?? {}).filter(([, v]) => (v ?? 0) > 0);
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <p className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="hud-eyebrow text-[10px] text-slate-500">Estimation</span>
+                          <strong className={win ? "text-mint-glow" : draw ? "text-gold-glow" : "text-danger-glow"}>
+                            {win ? "Victoire probable" : draw ? "Égalité probable" : "Défaite probable"}
+                          </strong>
+                          <span className="text-slate-500">· rapport {timeAgo(spy.timestamp)}</span>
+                        </p>
+                        <p className="text-slate-400">
+                          Tes pertes ≈ <strong className="text-slate-200">{Math.round(c.attackerLossPercent * 100)} %</strong> · pertes adverses ≈{" "}
+                          <strong className="text-slate-200">{Math.round(c.defenderLossPercent * 100)} %</strong>
+                          {!win && Number.isFinite(estimate.winFactor) && estimate.winFactor > 1 && (
+                            <> · il te faudrait environ ×{estimate.winFactor.toFixed(1)} de puissance</>
+                          )}
+                        </p>
+                        {win && loot.length > 0 && (
+                          <p className="flex flex-wrap items-center gap-x-2 text-mint-glow">
+                            Butin ≈
+                            {loot.map(([res, n]) => (
+                              <span key={res} className="flex items-center gap-0.5">
+                                <ResourceIcon id={res} /> {formatCompact(n ?? 0)}
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-600">{estimate.notes[0]}</p>}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
 
               <Button className="mt-4 w-full" variant="danger" disabled={!hasShips} onClick={() => void handleConfirm()}>
                 <Rocket className="mr-1.5 h-4 w-4" /> Envoyer la flotte

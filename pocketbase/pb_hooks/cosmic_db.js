@@ -57,6 +57,12 @@ function loadPlayer(txApp, game, uid, missingMessage) {
 }
 
 function savePlayer(txApp, game, loaded, player, queues) {
+  // v3.8 : progression du défi hebdomadaire (écart des compteurs suivis).
+  try {
+    recordChallengeProgress(txApp, game, toPlain(loaded.rec), player);
+  } catch (err) {
+    console.log(`[cosmic] défi hebdomadaire : ${err}`);
+  }
   game.GAME_FIELDS.forEach((field) => loaded.rec.set(field, player[field] === undefined ? null : player[field]));
   ["lastAttackAtMs", "lastDefeatAtMs"].forEach((field) => {
     if (player[field] !== undefined) loaded.rec.set(field, player[field]);
@@ -799,6 +805,14 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
+    }
+    // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
+    if (mission === "attack" && target) {
+      const pact = bindingPact(txApp, game, attacker.rec.getString("allianceId"), target.allianceId, now);
+      if (pact) {
+        const tag = pact.allianceA === target.allianceId ? pact.tagA : pact.tagB;
+        throw new BadRequestError(`Pacte de non-agression avec [${tag}] : attaque impossible${pact.status === "ending" ? " jusqu'à la fin du préavis" : ""}.`);
+      }
     }
     let expeditionsActive = 0;
     let expeditionsToday = 0;
@@ -1559,6 +1573,7 @@ function warRequest(e) {
       const targetRec = findOrNull(txApp, "alliances", String(req.targetAllianceId || ""));
       if (!targetRec) throw new NotFoundError("Alliance introuvable.");
       const target = allianceFromRecord(targetRec);
+      if (bindingPact(txApp, game, own.id, target.id, now)) throw new BadRequestError(`Un pacte de non-agression vous lie à [${target.tag}] : rompez-le d'abord (préavis de ${game.DIPLOMACY_RULES.breakNoticeHours} h).`);
       let res;
       try {
         res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now });
@@ -2662,4 +2677,221 @@ function messageRead(e) {
   return e.json(200, { read: recs.length });
 }
 
-module.exports = { requireAdminReason, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- Rapports partagés (v3.8) ---------- */
+
+/** POST /api/cosmic/reports/share { kind: "battle" | "spy", id } — instantané
+ *  lisible par tout joueur connecté qui a le lien (non listable). */
+function reportShare(e) {
+  const req = body(e);
+  const uid = e.auth.id;
+  const kind = req.kind === "spy" ? "spy" : "battle";
+  const sourceId = String(req.id || "");
+  const src = findOrNull($app, kind === "spy" ? "spy_reports" : "battle_reports", sourceId);
+  if (!src) throw new NotFoundError("Rapport introuvable.");
+  const allowed = kind === "spy" ? src.getString("spyUid") === uid : src.getString("attackerUid") === uid || src.getString("defenderUid") === uid;
+  if (!allowed) throw new ForbiddenError("Tu ne peux partager que tes propres rapports.");
+  const existing = $app.findRecordsByFilter("shared_reports", "ownerUid = {:uid} && sourceId = {:id}", "", 1, 0, { uid, id: sourceId })[0];
+  if (existing) return e.json(200, { id: existing.id });
+  const player = findOrNull($app, "players", uid);
+  const rec = new Record($app.findCollectionByNameOrId("shared_reports"));
+  rec.load({ ownerUid: uid, ownerPseudo: player ? player.getString("pseudo") : "", kind, sourceId, data: toPlain(src), createdAtMs: Date.now() });
+  $app.save(rec);
+  return e.json(200, { id: rec.id });
+}
+
+/* ---------- Diplomatie (v3.8) ---------- */
+
+const PACT_FIELDS = ["allianceA", "allianceB", "tagA", "tagB", "nameA", "nameB", "status", "proposedByUid", "proposedByPseudo", "createdAtMs", "acceptedAtMs", "endsAtMs", "brokenByTag"];
+
+function pactJson(rec) {
+  const out = { id: rec.id };
+  PACT_FIELDS.forEach((f) => (out[f] = rec.get(f)));
+  return out;
+}
+
+function pactsOf(txApp, ids) {
+  const recs = [];
+  const seen = {};
+  ids.filter(Boolean).forEach((id) => {
+    txApp.findRecordsByFilter("alliance_pacts", "allianceA = {:id} || allianceB = {:id}", "", 100, 0, { id }).forEach((r) => {
+      if (!seen[r.id]) {
+        seen[r.id] = true;
+        recs.push(r);
+      }
+    });
+  });
+  return recs;
+}
+
+/** Pacte qui interdit les attaques entre deux alliances (ou null). */
+function bindingPact(txApp, game, allianceA, allianceB, now) {
+  if (!allianceA || !allianceB || allianceA === allianceB) return null;
+  return game.bindingPactBetween(pactsOf(txApp, [allianceA]).map(pactJson), allianceA, allianceB, now);
+}
+
+/** POST /api/cosmic/diplomacy { action: propose|accept|decline|cancel|break|message, ... } */
+function diplomacyRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    const player = findOrNull(txApp, "players", uid);
+    const allianceId = player ? player.getString("allianceId") : "";
+    if (!allianceId) throw new BadRequestError("Tu n'as pas d'alliance.");
+    const ownRec = findOrNull(txApp, "alliances", allianceId);
+    if (!ownRec) throw new BadRequestError("Alliance introuvable.");
+    const own = allianceFromRecord(ownRec);
+    const pseudo = player.getString("pseudo");
+    try {
+      if (req.action === "propose") {
+        const targetRec = findOrNull(txApp, "alliances", String(req.targetAllianceId || ""));
+        if (!targetRec) throw new NotFoundError("Alliance introuvable.");
+        const target = allianceFromRecord(targetRec);
+        const pacts = pactsOf(txApp, [own.id, target.id]).map(pactJson);
+        const atWar = !!activeWarRecord(txApp, game, own.id, target.id, now);
+        const pact = game.proposePact({ actorUid: uid, actorPseudo: pseudo, own, target, pacts, atWar, now });
+        const rec = new Record(txApp.findCollectionByNameOrId("alliance_pacts"));
+        rec.load(pact);
+        txApp.save(rec);
+        notifyAlliance(txApp, target.id, "Proposition de pacte", `[${own.tag}] ${own.name} propose un pacte de non-agression.`, now);
+        out = pactJson(rec);
+        return;
+      }
+      const rec = findOrNull(txApp, "alliance_pacts", String(req.pactId || ""));
+      if (!rec) throw new NotFoundError("Pacte introuvable.");
+      const pact = pactJson(rec);
+      if (pact.allianceA !== own.id && pact.allianceB !== own.id) throw new ForbiddenError("Ce pacte ne concerne pas ton alliance.");
+      const other = pact.allianceA === own.id ? pact.allianceB : pact.allianceA;
+      if (req.action === "message") {
+        if (!game.pactOpen(pact, now)) throw new BadRequestError("Ce canal est fermé.");
+        const text = game.sanitizePactMessage(req.text);
+        const msg = new Record(txApp.findCollectionByNameOrId("pact_messages"));
+        msg.load({ pactId: pact.id, allianceA: pact.allianceA, allianceB: pact.allianceB, authorUid: uid, authorPseudo: pseudo, authorTag: own.tag, text, createdAtMs: now });
+        txApp.save(msg);
+        out = toPlain(msg);
+        return;
+      }
+      let next;
+      if (req.action === "break") next = game.breakPact(pact, own, uid, now);
+      else if (req.action === "accept" || req.action === "decline" || req.action === "cancel") next = game.answerPact(pact, own, uid, req.action, now);
+      else throw new BadRequestError("Action inconnue.");
+      PACT_FIELDS.forEach((f) => rec.set(f, next[f]));
+      txApp.save(rec);
+      const label = `[${own.tag}] ${own.name}`;
+      if (req.action === "accept") {
+        notifyAlliance(txApp, own.id, "Pacte signé", `Pacte de non-agression avec [${pact.tagA}] ${pact.nameA}.`, now);
+        notifyAlliance(txApp, other, "Pacte signé", `${label} accepte votre pacte de non-agression.`, now);
+      } else if (req.action === "break") {
+        const h = game.DIPLOMACY_RULES.breakNoticeHours;
+        notifyAlliance(txApp, other, "Pacte rompu", `${label} rompt le pacte : il prend fin dans ${h} h.`, now);
+        notifyAlliance(txApp, own.id, "Pacte rompu", `${pseudo} a rompu le pacte : fin dans ${h} h.`, now);
+      } else if (req.action === "decline") {
+        notifyAlliance(txApp, other, "Pacte refusé", `${label} refuse votre proposition de pacte.`, now);
+      }
+      out = pactJson(rec);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+  });
+  return e.json(200, out);
+}
+
+/* ---------- Défis hebdomadaires (v3.8) ---------- */
+
+function readChallengeState(txApp, game) {
+  try {
+    const rec = (txApp || $app).findFirstRecordByData("game_config", "key", game.CHALLENGE_KEY);
+    return game.normalizeChallengeState(toPlain(rec).data);
+  } catch (_) {
+    return game.normalizeChallengeState(null);
+  }
+}
+
+function writeChallengeState(txApp, game, state) {
+  let rec;
+  try {
+    rec = txApp.findFirstRecordByData("game_config", "key", game.CHALLENGE_KEY);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", game.CHALLENGE_KEY);
+  }
+  rec.set("data", state);
+  txApp.save(rec);
+}
+
+/** Ajoute au défi en cours ce que le joueur vient d'accomplir. */
+function recordChallengeProgress(txApp, game, before, after) {
+  const b = game.challengeMetrics(before);
+  const a = game.challengeMetrics(after);
+  const deltas = {};
+  let any = false;
+  Object.keys(a).forEach((k) => {
+    const d = (a[k] || 0) - (b[k] || 0);
+    if (d > 0) {
+      deltas[k] = d;
+      any = true;
+    }
+  });
+  if (!any) return;
+  const state = readChallengeState(txApp, game);
+  const ch = state.current;
+  if (!ch || ch.status !== "active" || !deltas[ch.type]) return;
+  const now = Date.now();
+  const next = game.addContribution(ch, after.uid || before.id, after.pseudo || before.pseudo || "", deltas[ch.type], now);
+  if (next === ch) return;
+  writeChallengeState(txApp, game, Object.assign({}, state, { current: next }));
+}
+
+/** Tâche planifiée : clôture et récompenses, titre temporaire, nouveau défi. */
+function challengeTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    let state = readChallengeState(txApp, game);
+    let changed = false;
+
+    if (state.titleHolder && now >= state.titleHolder.untilMs) {
+      if (findOrNull(txApp, "players", state.titleHolder.uid)) {
+        const holder = loadPlayer(txApp, game, state.titleHolder.uid);
+        game.removeChallengeTitle(holder.player);
+        savePlayer(txApp, game, holder, holder.player, holder.queues);
+      }
+      state = Object.assign({}, state, { titleHolder: null });
+      changed = true;
+    }
+
+    const ch = state.current;
+    if (ch && ch.status === "active" && now >= ch.endMs) {
+      const tier = game.challengeTier(ch);
+      const done = Object.assign({}, ch, { status: "done", success: !!tier });
+      const label = game.CHALLENGE_TYPES[ch.type].label;
+      game.challengeRewardees(done).forEach((uid) => {
+        if (!findOrNull(txApp, "players", uid)) return;
+        const loaded = loadPlayer(txApp, game, uid);
+        game.grantChallengeReward(done, loaded.player);
+        savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Récompense versée : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.`, createdAtMs: now, read: false }]);
+      });
+      const top = game.challengeRanking(done)[0];
+      state = Object.assign({}, state, {
+        current: null,
+        previous: done,
+        titleHolder: tier && top ? { uid: top.uid, untilMs: now + game.CHALLENGE_RULES.titleDays * 86400000 } : state.titleHolder,
+      });
+      changed = true;
+    }
+
+    const week = game.weekWindow(now);
+    if (!state.current && (!state.previous || state.previous.id !== week.id) && !game.isLeviathanWeek(now)) {
+      const active = txApp.countRecords("players", $dbx.exp("resourcesUpdatedAtMs >= {:since}", { since: now - game.CHALLENGE_RULES.activeDays * 86400000 }));
+      state = Object.assign({}, state, { current: game.startChallenge(now, active, state.previous ? state.previous.type : null) });
+      changed = true;
+    }
+
+    if (changed) writeChallengeState(txApp, game, state);
+  });
+}
+
+module.exports = { requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

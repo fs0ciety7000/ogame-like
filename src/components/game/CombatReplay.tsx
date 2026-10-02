@@ -112,16 +112,37 @@ export function CombatReplay({
           }
         />
         {ship.destroyed && (
-          <motion.circle
-            cx={ship.x}
-            cy={ship.y}
-            fill="none"
-            stroke="var(--color-ember-glow)"
-            strokeWidth={1.5}
-            initial={{ r: 0, opacity: 0 }}
-            animate={{ r: [0, 9], opacity: [1, 0] }}
-            transition={{ delay: ship.boomDelay, duration: 0.5, ease: "easeOut" }}
-          />
+          <>
+            <motion.circle
+              cx={ship.x}
+              cy={ship.y}
+              fill="none"
+              stroke="var(--color-ember-glow)"
+              strokeWidth={1.5}
+              initial={{ r: 0, opacity: 0 }}
+              animate={{ r: [0, 9], opacity: [1, 0] }}
+              transition={{ delay: ship.boomDelay, duration: 0.5, ease: "easeOut" }}
+            />
+            {/* v3.8 : éclats projetés */}
+            {[0, 1, 2, 3, 4].map((k) => {
+              const a = (k / 5) * Math.PI * 2 + i;
+              return (
+                <motion.line
+                  key={k}
+                  x1={ship.x}
+                  y1={ship.y}
+                  x2={ship.x + Math.cos(a) * 1.6}
+                  y2={ship.y + Math.sin(a) * 1.6}
+                  stroke="var(--color-gold-glow)"
+                  strokeWidth={0.8}
+                  strokeLinecap="round"
+                  initial={{ opacity: 0, x: 0, y: 0 }}
+                  animate={{ opacity: [0, 1, 0], x: Math.cos(a) * 10, y: Math.sin(a) * 10 }}
+                  transition={{ delay: ship.boomDelay, duration: 0.6, ease: "easeOut" }}
+                />
+              );
+            })}
+          </>
         )}
       </g>
     );
@@ -147,9 +168,28 @@ export function CombatReplay({
               transition={{ delay: s.delay, duration: 0.35, times: [0, 0.5, 1] }}
             />
           ))}
+        {/* v3.8 : impacts */}
+        {!still &&
+          scene.shots.map((s, i) => (
+            <motion.circle
+              key={`hit${i}-${run}`}
+              cx={s.to.x}
+              cy={s.to.y}
+              fill={s.fromMe ? "var(--color-cyan-glow)" : "var(--color-danger-glow)"}
+              initial={{ r: 0, opacity: 0 }}
+              animate={{ r: [0, 3, 0], opacity: [0, 0.9, 0] }}
+              transition={{ delay: s.delay + 0.17, duration: 0.25 }}
+            />
+          ))}
 
-        {scene.mine.map((ship, i) => renderShip(ship, i, "left"))}
-        {scene.theirs.map((ship, i) => renderShip(ship, i, "right"))}
+        <motion.g
+          key={`shake-${run}`}
+          animate={still ? undefined : { x: [0, -1.6, 1.4, -1, 0.6, 0] }}
+          transition={{ delay: BOOM, duration: 0.45 }}
+        >
+          {scene.mine.map((ship, i) => renderShip(ship, i, "left"))}
+          {scene.theirs.map((ship, i) => renderShip(ship, i, "right"))}
+        </motion.g>
 
         {scene.theirs.length === 0 && (
           <text x={W - 70} y={H / 2} textAnchor="middle" className="fill-slate-500 text-[9px]">
@@ -178,6 +218,34 @@ export function CombatReplay({
           {banner}
         </motion.text>
       </svg>
+      {/* v3.8 : intégrité des flottes, qui baisse pendant l'échange de tirs */}
+      <div className="grid grid-cols-2 gap-3 px-2 pb-2">
+        {[
+          { label: "Toi", loss: myLossPercent, color: "var(--color-cyan-glow)" },
+          { label: "Adversaire", loss: opponentLossPercent, color: "var(--color-danger-glow)" },
+        ].map((b) => {
+          // Pertes en fraction (0,18 = 18 %).
+          const left = Math.max(0, 100 - Math.round(b.loss * 100));
+          return (
+            <div key={b.label}>
+              <div className="flex justify-between font-mono text-[9px] uppercase tracking-wider text-slate-500">
+                <span>Intégrité</span>
+                <span style={{ color: b.color }}>{left} %</span>
+              </div>
+              <div className="mt-0.5 h-1.5 overflow-hidden bg-white/5">
+                <motion.div
+                  key={`${b.label}-${run}`}
+                  className="h-full"
+                  style={{ background: b.color, boxShadow: `0 0 8px ${b.color}` }}
+                  initial={{ width: still ? `${left}%` : "100%" }}
+                  animate={{ width: `${left}%` }}
+                  transition={{ delay: still ? 0 : ENTER, duration: still ? 0 : FIRE + 0.4, ease: "easeIn" }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
       <div className="absolute inset-x-2 top-1.5 flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
         <span className="text-cyan-glow/80">Toi</span>
         <span className="text-danger-glow/80">Adversaire</span>
@@ -186,7 +254,7 @@ export function CombatReplay({
         <button
           type="button"
           onClick={() => setRun((n) => n + 1)}
-          className="absolute bottom-1.5 right-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-white/5 hover:text-slate-200"
+          className="absolute left-1/2 top-1 flex -translate-x-1/2 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-white/5 hover:text-slate-200"
         >
           <RotateCcw className="h-3 w-3" /> Rejouer
         </button>

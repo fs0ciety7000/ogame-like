@@ -1,3 +1,6 @@
+import { toast } from "sonner";
+import { Share2 } from "lucide-react";
+import { shareReport } from "@/services/sharedReportService";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -25,6 +28,34 @@ function outcomeForViewer(outcome: CombatOutcome, isAttacker: boolean): "victory
   if (outcome === "draw") return "draw";
   const won = isAttacker ? outcome === "attacker_win" : outcome === "defender_win";
   return won ? "victory" : "defeat";
+}
+
+/** v3.8 : copie un lien vers le rapport, à coller en message privé ou au canal d'alliance. */
+function ShareButton({ kind, id, withLabel }: { kind: "battle" | "spy"; id: string; withLabel?: boolean }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      title="Copier un lien de partage"
+      className="flex shrink-0 items-center gap-1 px-3 py-2 text-xs text-slate-400 transition-colors hover:text-cyan-glow disabled:opacity-50"
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const url = await shareReport(kind, id);
+          await navigator.clipboard?.writeText(url).catch(() => {});
+          toast.success("Lien copié", { description: "Colle-le dans un message privé ou le canal d'alliance." });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Partage impossible.");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <Share2 className="h-3.5 w-3.5" />
+      {withLabel && "Partager"}
+    </button>
+  );
 }
 
 export function CombatLogPage() {
@@ -59,14 +90,18 @@ export function CombatLogPage() {
           const opponentPower = isAttacker ? report.defenderPower : report.attackerPower;
 
           return (
-            <motion.button
+            <motion.div
               key={report.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2, delay: Math.min(index, 10) * 0.02 }}
-              onClick={() => showCombatResult(combatDisplayFromReportForViewer(report, uid))}
-              className="flex w-full items-center gap-3 p-3 text-left transition hover:bg-white/5"
+              className="flex items-center"
             >
+              <button
+                type="button"
+                onClick={() => showCombatResult(combatDisplayFromReportForViewer(report, uid))}
+                className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left transition hover:bg-white/5"
+              >
               {isAttacker ? (
                 <Sword className="h-4 w-4 shrink-0 text-cyan-glow" />
               ) : (
@@ -99,7 +134,9 @@ export function CombatLogPage() {
               </div>
 
               <span className="tabular-mono shrink-0 text-xs text-slate-500">{timeAgo(toMillis(report.timestamp))}</span>
-            </motion.button>
+              </button>
+              <ShareButton kind="battle" id={report.id} />
+            </motion.div>
           );
         })}
       </Card>
@@ -133,6 +170,9 @@ export function CombatLogPage() {
               {mine && openSpy === r.id && (
                 <div className="mt-3">
                   <SpyReportView report={r} />
+                  <div className="mt-2">
+                    <ShareButton kind="spy" id={r.id} withLabel />
+                  </div>
                   {(r.tier ?? 0) >= 2 && (
                     <Link to={`/game/simulateur?mode=player&rapport=${r.id}`} className="mt-2 inline-block font-mono text-[11px] uppercase tracking-[0.15em] text-cyan-glow hover:underline">
                       Simuler une attaque →

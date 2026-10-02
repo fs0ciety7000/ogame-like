@@ -1,3 +1,4 @@
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Ban, Check, CheckCheck, Loader2, Mail, Search, Send } from "lucide-react";
@@ -187,7 +188,9 @@ export function MessagesPage() {
                   const mine = m.fromUid === uid;
                   return (
                     <div key={m.id} className={cn("max-w-[85%] px-3 py-2 text-sm", mine ? "self-end bg-cyan-glow/15 text-slate-100" : "self-start bg-white/[0.06] text-slate-200")}>
-                      <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="whitespace-pre-wrap break-words">
+                        <LinkifiedText text={m.text} />
+                      </p>
                       <p className={cn("mt-1 flex items-center gap-1 text-[10px] text-slate-500", mine && "justify-end")}>
                         {timeLabel(m.createdAtMs)}
                         {mine && (m.readAtMs ? <CheckCheck className="h-3 w-3 text-cyan-glow" aria-label="Lu" /> : <Check className="h-3 w-3" aria-label="Envoyé" />)}
