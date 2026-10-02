@@ -29,6 +29,10 @@ Une nouvelle faction **alliée** entre en scène : les **Kesh'Vaar**, un essaim 
 - **Plan du Traqueur Kesh** : nouveau vaisseau rapide, **+50 % d'attaque contre les PNJ** (factions, repaires, primes, Léviathan).
 - **Prestige** : titre « Chasseur de l'Essaim », cadre de chitine et emblème sur ta fiche publique, **emojis Kesh'Vaar** exclusifs.
 
+## Emojis du jeu
+- **31 nouveaux emojis** pour toutes les discussions : les visages des factions (Varan, le Silencieux, Oggrath, l'Unité Ambre, le Haut-Juge, Vashti Kor, Ysgrim, le Chaperon, l'Archonte, le Léviathan…), les ressources, l'Ambre et les insignes de gloire.
+- Choisis-les dans le sélecteur 🙂 ou écris leur code, par exemple `:varan:` ou `:trophee:`.
+
 ## Aussi
 - Défis de la semaine : nouveau type « Remplir les primes de l'Essaim ».
 - L'accueil et la page Missions signalent les primes encore possibles.

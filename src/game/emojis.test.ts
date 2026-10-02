@@ -18,3 +18,17 @@ describe("custom emojis", () => {
     expect(splitCustomEmojis("rien ici", list)).toEqual([{ type: "text", text: "rien ici" }]);
   });
 });
+
+describe("game emojis", () => {
+  it("have valid unique codes and an image each", async () => {
+    const { GAME_EMOJIS, EMOJI_CODE_RE } = await import("@/game/emojis");
+    const { KESH_EMOJIS } = await import("@/game/bounties");
+    const { existsSync } = await import("node:fs");
+    const all = [...GAME_EMOJIS, ...KESH_EMOJIS];
+    expect(new Set(all.map((e) => e.code)).size).toBe(all.length);
+    for (const e of all) {
+      expect(e.code).toMatch(EMOJI_CODE_RE);
+      expect(existsSync(`public${e.url}`)).toBe(true);
+    }
+  });
+});

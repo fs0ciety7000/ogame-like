@@ -156,7 +156,7 @@ export function MessagesPage() {
                 </span>
                 <span className="truncate text-xs text-slate-500">
                   {c.last.fromUid === uid ? "Toi : " : ""}
-                  {c.last.text}
+                  <LinkifiedText text={c.last.text} />
                 </span>
               </button>
             ))}

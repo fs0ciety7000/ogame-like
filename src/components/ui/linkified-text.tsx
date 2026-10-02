@@ -2,7 +2,8 @@ import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { FileText } from "lucide-react";
 import { useEmojiStore } from "@/services/emojiService";
-import { splitCustomEmojis } from "@/game/emojis";
+import { GAME_EMOJIS, splitCustomEmojis } from "@/game/emojis";
+import { assetUrl } from "@/lib/assets";
 import { KESH_EMOJIS } from "@/game/bounties";
 
 /* Texte de message (v3.8) : les liens de rapports partagés deviennent des
@@ -16,11 +17,11 @@ function WithEmojis({ text }: { text: string }) {
   const emojis = useEmojiStore((s) => s.emojis);
   return (
     <>
-      {splitCustomEmojis(text, [...emojis, ...KESH_EMOJIS]).map((t, i) =>
+      {splitCustomEmojis(text, [...GAME_EMOJIS, ...KESH_EMOJIS, ...emojis]).map((t, i) =>
         t.type === "text" ? (
           <Fragment key={i}>{t.text}</Fragment>
         ) : (
-          <img key={i} src={t.emoji.url} alt={`:${t.emoji.code}:`} title={`:${t.emoji.code}:`} className="inline-block h-6 w-6 object-contain align-[-0.35em]" />
+          <img key={i} src={assetUrl(t.emoji.url)} alt={`:${t.emoji.code}:`} title={`:${t.emoji.code}:`} className="inline-block h-6 w-6 object-contain align-[-0.35em]" />
         ),
       )}
     </>

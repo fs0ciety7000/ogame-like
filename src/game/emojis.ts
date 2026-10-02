@@ -22,6 +22,61 @@ export const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
   { label: "Empire", emojis: ["🏆", "👑", "💎", "💰", "📈", "📉", "⏰", "🔧", "⚙️", "📦", "🎁", "🎉", "✅", "❌", "❓", "❗"] },
 ];
 
+/** Emojis du jeu (v3.9), disponibles pour tous : portraits des factions,
+ *  ressources, insignes. Images dans public/assets/emojis. */
+const e = (code: string, label: string): CustomEmoji => ({ code, url: `/assets/emojis/${code}.webp`, label });
+
+export const GAME_EMOJI_GROUPS: { label: string; emojis: CustomEmoji[] }[] = [
+  {
+    label: "Factions",
+    emojis: [
+      e("varan", "Capitaine Orsk Varan"),
+      e("silencieux", "Le Silencieux"),
+      e("gravhorn", "Oggrath le Pisteur"),
+      e("unite_ambre", "L'Unité Ambre"),
+      e("inquisiteur", "Haut-Juge Séraphin Vol"),
+      e("automate", "Automate de l'Aube Blanche"),
+      e("vashti", "Madame Vashti Kor"),
+      e("ysgrim", "Ysgrim Crocs-de-Fer"),
+      e("chaperon", "Le Chaperon"),
+      e("archonte", "L'Archonte Vesper"),
+      e("leviathan", "Le Léviathan"),
+    ],
+  },
+  {
+    label: "Empire",
+    emojis: [
+      e("ferraille", "Ferraille"),
+      e("energie", "Énergie"),
+      e("nano", "Nanocomposants"),
+      e("donnees", "Données anciennes"),
+      e("fragment_ia", "Fragment d'IA"),
+      e("ambre", "Ambre de Ruche"),
+      e("butin", "Butin"),
+      e("xp", "Expérience"),
+    ],
+  },
+  {
+    label: "Combat et gloire",
+    emojis: [
+      e("attaque", "Attaque"),
+      e("bouclier", "Bouclier"),
+      e("flotte", "Flotte"),
+      e("espion", "Espionnage"),
+      e("menace", "Menace"),
+      e("alliance", "Alliance"),
+      e("chasseur", "Chasseur"),
+      e("etoile_noire", "Étoile Noire"),
+      e("trophee", "Trophée"),
+      e("challenger", "Challenger"),
+      e("grand_maitre", "Grand maître"),
+      e("legende", "Légendaire"),
+    ],
+  },
+];
+
+export const GAME_EMOJIS: CustomEmoji[] = GAME_EMOJI_GROUPS.flatMap((g) => g.emojis);
+
 export function normalizeCustomEmojis(raw: unknown): CustomEmoji[] {
   if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();

@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminUploadAsset } from "@/services/adminService";
 import { saveCustomEmojis, useEmojiStore } from "@/services/emojiService";
-import { EMOJI_CODE_RE, MAX_CUSTOM_EMOJIS, type CustomEmoji } from "@/game/emojis";
+import { EMOJI_CODE_RE, GAME_EMOJIS, MAX_CUSTOM_EMOJIS, type CustomEmoji } from "@/game/emojis";
+import { KESH_EMOJIS } from "@/game/bounties";
+
+/** Codes des emojis intégrés au jeu (factions, ressources, Kesh'Vaar). */
+const RESERVED = new Set([...GAME_EMOJIS, ...KESH_EMOJIS].map((e) => e.code));
 
 /* Administration des emojis personnalisés (v3.8) : image + code, écrits
    :code: dans la messagerie, le tchat d'alliance et les canaux de pacte. */
@@ -24,8 +28,8 @@ export function EmojisPanel() {
     ? null
     : !EMOJI_CODE_RE.test(cleanCode)
       ? "2 à 24 caractères : lettres minuscules, chiffres, _"
-      : list.some((e) => e.code === cleanCode)
-        ? "Ce code existe déjà."
+      : list.some((e) => e.code === cleanCode) || RESERVED.has(cleanCode)
+        ? "Ce code existe déjà (emojis du jeu compris)."
         : null;
   const dirty = JSON.stringify(list) !== JSON.stringify(stored);
 
@@ -63,7 +67,8 @@ export function EmojisPanel() {
           <h3 className="hud-title text-sm text-white">Nouvel emoji</h3>
           <p className="mt-1 text-xs text-slate-400">
             Image carrée (PNG, WebP ou GIF, 128 px suffisent). Les joueurs l'écrivent <span className="font-mono text-cyan-glow">:code:</span> ou la choisissent dans le
-            sélecteur des discussions. {MAX_CUSTOM_EMOJIS} emojis au plus.
+            sélecteur des discussions. {MAX_CUSTOM_EMOJIS} emojis au plus. {GAME_EMOJIS.length} emojis du jeu (factions, ressources, insignes) sont déjà
+            intégrés.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
