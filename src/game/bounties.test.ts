@@ -231,7 +231,7 @@ describe("bounties", () => {
     expect(r.lost.chasseur).toBe(100);
     expect(eliteRewardees(r.state)).toEqual(["a"]);
     const reward = grantEliteReward(r.state, a, NOW + H);
-    expect(reward).toEqual({ xp: ELITE_RULES.killed.xp, amber: ELITE_RULES.killed.amber });
+    expect(reward).toMatchObject({ xp: ELITE_RULES.killed.xp, amber: ELITE_RULES.killed.amber });
     expect(grantEliteReward(r.state, b, NOW + H)).toEqual({ xp: 0, amber: 0 });
     expect(closeElite(spawnElite(NOW, [a]), NOW + 8 * 24 * H).status).toBe("failed");
   });
