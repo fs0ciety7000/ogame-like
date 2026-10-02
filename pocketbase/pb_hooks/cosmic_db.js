@@ -3226,8 +3226,9 @@ function adminMail(e) {
   if (!/^https?:\/\/[^\s]+$/.test(apiUrl)) throw new BadRequestError("Adresse du serveur invalide.");
   const meta = $app.settings().meta;
   const from = { address: meta.senderAddress, name: String(req.fromName || "").trim() || meta.senderName || "Cosmic Empires" };
-  const sendOne = (email, pseudo, player) => {
-    const url = player ? unsubscribeUrl(player, apiUrl) : `${apiUrl}/api/cosmic/unsubscribe`;
+  const sendOne = (email, pseudo, player, demo) => {
+    // Test : lien de démonstration (ne désinscrit personne).
+    const url = demo ? `${apiUrl}/api/cosmic/unsubscribe?demo=1` : unsubscribeUrl(player, apiUrl);
     const message = new MailerMessage({
       from,
       to: [{ address: email }],
@@ -3243,9 +3244,18 @@ function adminMail(e) {
     if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
     const to = String(req.to || (e.auth ? e.auth.getString("email") : "")).trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw new BadRequestError("Adresse de test invalide.");
-    const player = e.auth ? findOrNull($app, "players", e.auth.id) : null;
+    // Pseudo de l'équipier : sa fiche de jeu (compte joueur, ou même adresse que le superuser).
+    let player = e.auth ? findOrNull($app, "players", e.auth.id) : null;
+    if (!player && e.auth) {
+      try {
+        const user = $app.findFirstRecordByData("users", "email", e.auth.getString("email"));
+        player = findOrNull($app, "players", user.id);
+      } catch (_) {
+        player = null;
+      }
+    }
     try {
-      sendOne(to, player ? player.getString("pseudo") : "Commandant", player);
+      sendOne(to, player ? player.getString("pseudo") : "de test", player, true);
     } catch (err) {
       throw new BadRequestError(`Envoi impossible : ${err}`);
     }
@@ -3293,6 +3303,7 @@ function unsubscribe(e) {
   const q = e.requestInfo().query || {};
   const uid = String(q.u || "");
   const token = String(q.t || "");
+  const demo = String(q.demo || "") === "1";
   const player = uid ? findOrNull($app, "players", uid) : null;
   const ok = !!player && token.length >= 16 && player.getString("mailToken") === token;
   if (ok && !player.getBool("emailOptOut")) {
@@ -3305,7 +3316,9 @@ function unsubscribe(e) {
     `<body style="margin:0;background:#03040a;color:#cbd5e1;font-family:Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center">` +
     `<div style="max-width:420px;padding:32px;border:1px solid #12324a;background:#05070f;text-align:center">` +
     `<div style="letter-spacing:4px;color:#fff;font-weight:bold">COSMIC EMPIRES</div>` +
-    (ok
+    (demo
+      ? `<p style="margin-top:20px;line-height:1.6">Lien de démonstration (e-mail de test).<br>Dans les e-mails envoyés aux joueurs, ce lien les désinscrit en un clic.</p>`
+      : ok
       ? `<p style="margin-top:20px;line-height:1.6">C'est noté, commandant : tu ne recevras plus nos nouvelles par e-mail.<br>Tu peux les réactiver à tout moment dans les <b>Réglages</b> du jeu.</p>`
       : `<p style="margin-top:20px;line-height:1.6">Ce lien de désinscription n'est pas valide. Tu peux gérer tes e-mails depuis les <b>Réglages</b> du jeu.</p>`) +
     `<p style="margin-top:24px"><a href="${escapeHtml(appUrl || "/")}" style="color:#4be8ff">Retourner en jeu →</a></p></div></body></html>`;

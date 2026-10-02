@@ -1522,6 +1522,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await admin.collection("players").update(bId, { mailToken: "jeton-de-test-1234567890" });
     const bad = await fetch(`${PB_TEST_URL}/api/cosmic/unsubscribe?u=${bId}&t=faux-jeton-1234567890`);
     expect(await bad.text()).toMatch(/pas valide/);
+    expect(await (await fetch(`${PB_TEST_URL}/api/cosmic/unsubscribe?demo=1`)).text()).toMatch(/démonstration/);
     expect((await snap(bId)).emailOptOut).toBe(false);
     const good = await fetch(`${PB_TEST_URL}/api/cosmic/unsubscribe?u=${bId}&t=jeton-de-test-1234567890`, { method: "POST" });
     expect(await good.text()).toMatch(/plus nos nouvelles/);
