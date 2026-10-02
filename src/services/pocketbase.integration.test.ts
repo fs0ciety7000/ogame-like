@@ -27,6 +27,8 @@ import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
+import { fetchMarketTrades } from "@/services/marketService";
+import { fetchNpcOpponents } from "@/services/codexService";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -1991,6 +1993,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const sheet = await ps.fetchPlayerSheet(aId);
     expect(sheet.entry.pseudo).toBe(A.pseudo);
     expect(sheet.feats).toMatchObject({ victories: 3, missions: 5, warsWon: 1 });
+  });
+
+  it("v4.8: codex title refused below 100 %, filled trades and npc opponents readable", async () => {
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.send("/api/cosmic/codex/claim", { method: "POST", body: {} })).rejects.toMatchObject({ status: 400 });
+    const trades = await fetchMarketTrades();
+    expect(Array.isArray(trades)).toBe(true);
+    const opponents = await fetchNpcOpponents(bId);
+    expect(opponents.every((u) => u.startsWith("npc"))).toBe(true);
   });
 
   it("v4.7.1: closed announcements are kept on the account", async () => {

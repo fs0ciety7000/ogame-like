@@ -46,6 +46,23 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.8-codex",
+    eyebrow: "Mise à jour 4.8 · Archives",
+    title: "Le secteur a sa mémoire",
+    text: "Chaque faction croisée, chaque seigneur affronté, chaque boss abattu ajoute une fiche à ton Codex. Et au marché, les prix des trente derniers jours démasquent les offres trop belles pour être vraies.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/chronicles/2026-10-boss.webp",
+    artMobile: "/assets/warlords/brannoc.webp",
+    emblem: "/assets/leviathan/leviathan-emblem.webp",
+    features: [
+      { title: "Codex", text: "Fiches illustrées à débloquer en jouant. À 100 %, le titre « Archiviste ».", to: "/game/codex", image: "/assets/warlords/brannoc-sceau.webp" },
+      { title: "Prix du marché", text: "Courbe des 30 derniers jours par ressource, badge « Prix anormal ».", to: "/game/marche" },
+      { title: "Spectacle", text: "Intro de combat, colonies en orbite, portraits vivants, neige d'hiver.", to: "/game" },
+    ],
+    cta: { label: "Ouvrir le Codex", to: "/game/codex" },
+  },
+  {
     id: "v4.7-coalitions",
     eyebrow: "Mise à jour 4.7 · Coalitions",
     title: "Le secteur fait front",
