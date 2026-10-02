@@ -110,12 +110,14 @@ export function addSeenAnnouncements(current: string[] | undefined, ids: unknown
 }
 
 /**
- * Annonce à montrer : la première non vue de la liste de diffusion (les
- * plus récentes d'abord). Fermer une annonce marque aussi toutes celles qui
- * la suivent (plus anciennes) : pas de défilé des anciennes mises à jour.
+ * Annonce à montrer : la plus récente non vue, seulement si elle est plus
+ * récente que toutes celles déjà vues (liste de diffusion, les plus
+ * récentes d'abord). Fermer une annonce marque aussi toutes les plus
+ * anciennes : pas de défilé des anciennes mises à jour.
  */
 export function nextAnnouncement<T extends { id: string }>(list: T[], seen: string[]): { show: T; markIds: string[] } | null {
   const i = list.findIndex((a) => !seen.includes(a.id));
-  if (i < 0) return null;
+  const lastSeen = list.findIndex((a) => seen.includes(a.id));
+  if (i < 0 || (lastSeen >= 0 && lastSeen < i)) return null;
   return { show: list[i], markIds: list.slice(i).map((a) => a.id) };
 }

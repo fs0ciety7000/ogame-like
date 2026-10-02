@@ -11,6 +11,8 @@ describe("v4.7.1 : annonces vues sur le compte", () => {
     // Plus de défilé : une fois la 4.7 fermée, rien ne revient.
     expect(nextAnnouncement(list, ["v4.7", "v4.6", "v4.5"])).toBeNull();
     // Une nouvelle annonce en tête : seule elle s'affiche.
+    // Seule la plus récente a été vue : les anciennes ne s'affichent plus.
+    expect(nextAnnouncement(list, ["v4.7"])).toBeNull();
     expect(nextAnnouncement([{ id: "v4.8" }, ...list], ["v4.7", "v4.6", "v4.5"])).toEqual({ show: { id: "v4.8" }, markIds: ["v4.8", "v4.7", "v4.6", "v4.5"] });
   });
 

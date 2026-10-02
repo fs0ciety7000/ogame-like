@@ -1,8 +1,8 @@
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { Rocket, Eye, EyeOff } from "lucide-react";
+import { Rocket, Eye, EyeOff, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
@@ -22,7 +22,8 @@ import {
   validatePseudo,
 } from "@/services/authService";
 import { pbConfigured } from "@/lib/pocketbase";
-import { claimPendingSponsor } from "@/services/referralService";
+import { REFERRAL_RULES } from "@/game/referral";
+import { claimPendingSponsor, fetchSponsorName, pendingSponsor } from "@/services/referralService";
 
 type Mode = "login" | "register" | "forgot";
 
@@ -33,7 +34,13 @@ interface FormValues {
 }
 
 export function LoginPage() {
-  const [mode, setMode] = useState<Mode>("login");
+  // v4.7.1 : un lien de parrainage ouvre directement l'inscription.
+  const [mode, setMode] = useState<Mode>(() => (pendingSponsor() ? "register" : "login"));
+  const [sponsorName, setSponsorName] = useState<string | null>(null);
+  useEffect(() => {
+    const id = pendingSponsor();
+    if (id) void fetchSponsorName(id).then(setSponsorName);
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const {
@@ -83,7 +90,11 @@ export function LoginPage() {
       } else {
         await registerPlayer(values.pseudo, values.email, values.password);
         const sponsor = await claimPendingSponsor();
-        toast.success("Empire créé avec succès !", sponsor ? { description: `Parrain : ${sponsor}. Atteins Bronze I pour recevoir tous les deux de l'Ambre.` } : undefined);
+        toast.success("Empire créé avec succès !", {
+          description: sponsor
+            ? `Parrain : ${sponsor}. Confirme ton e-mail (lien envoyé) et atteins Bronze I : vous recevrez tous les deux de l'Ambre.`
+            : "Un lien de confirmation t'a été envoyé par e-mail.",
+        });
       }
     } catch (err) {
       toast.error(translateAuthError(err));
@@ -152,6 +163,15 @@ export function LoginPage() {
             <div className="mb-4 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
               Serveur PocketBase non configuré — copie <code>.env.example</code> en <code>.env.local</code> et renseigne{" "}
               <code>VITE_POCKETBASE_URL</code>.
+            </div>
+          )}
+
+          {sponsorName && mode === "register" && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
+              <UserPlus className="h-4 w-4 shrink-0" />
+              <span>
+                Invité par <strong>{sponsorName}</strong> : crée ton empire, confirme ton e-mail et atteins Bronze I pour recevoir {REFERRAL_RULES.amberRecruit} Ambre (ton parrain aussi).
+              </span>
             </div>
           )}
 

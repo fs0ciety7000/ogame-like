@@ -622,6 +622,9 @@ routerAdd("POST", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_d
 /* ---------- Parrainage (v4.1) ---------- */
 
 routerAdd("POST", "/api/cosmic/referral", (e) => require(`${__hooks}/cosmic_db.js`).referralRequest(e), $apis.requireAuth("users"));
+// v4.7.1 : pseudo du parrain (inscription) et suivi des filleuls.
+routerAdd("GET", "/api/cosmic/referral/sponsor", (e) => require(`${__hooks}/cosmic_db.js`).referralSponsorName(e));
+routerAdd("GET", "/api/cosmic/referral", (e) => require(`${__hooks}/cosmic_db.js`).referralInfo(e), $apis.requireAuth("users"));
 
 cronAdd("cosmic_referrals", "23 * * * *", () => {
   try {

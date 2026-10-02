@@ -1,5 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { markLeviathanSeen } from "@/store/leviathanSeenStore";
 import { toast } from "sonner";
 import { Crosshair, Skull, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -121,6 +122,8 @@ export function LeviathanPage() {
   const state = useLeviathan();
   const admin = useAdminStatus();
   const [open, setOpen] = useState(false);
+  // v4.7.1 : la pastille du menu s'efface une fois la page ouverte.
+  useEffect(() => markLeviathanSeen(state?.id), [state?.id]);
   if (!player) return null;
 
   const active = !!state && isActive(state, now);
