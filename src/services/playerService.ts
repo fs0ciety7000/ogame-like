@@ -227,6 +227,13 @@ export function subscribeNotifications(uid: string, cb: (items: GameNotification
   );
 }
 
+/** Une page de l'historique complet (page Journal d'empire). */
+export async function fetchNotificationHistory(uid: string, page: number, perPage = 50) {
+  const filter = pb.filter("player_id = {:uid}", { uid });
+  const res = await pb.collection("notifications").getList<GameNotification>(page, perPage, { filter, sort: "-createdAtMs" });
+  return { items: res.items, totalPages: res.totalPages, totalItems: res.totalItems };
+}
+
 export async function markNotificationRead(_uid: string, id: string) {
   await pb.collection("notifications").update(id, { read: true });
 }

@@ -40,6 +40,7 @@ const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ 
 const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
 const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
 const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
+const JournalPage = lazy(() => import("@/pages/JournalPage").then((m) => ({ default: m.JournalPage })));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 
 export default function App() {
@@ -83,6 +84,7 @@ export default function App() {
                 <Route path="profil" element={<ProfilePage />} />
                 <Route path="reglages" element={<SettingsPage />} />
                 <Route path="admin" element={<AdminPage />} />
+                <Route path="journal" element={<JournalPage />} />
                 <Route path="nouveautes" element={<ChangelogPage />} />
                 <Route path="signalements" element={<ReportsPage />} />
               </Route>

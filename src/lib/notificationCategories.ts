@@ -27,10 +27,17 @@ const KIND_WORDS: Partial<Record<NotificationKind, [string, string]>> = {
   mission: ["mission", "missions"],
   achievement: ["succès", "succès"],
   "combat-attacker": ["combat", "combats"],
+  "combat-defender": ["attaque subie", "attaques subies"],
+  "spy-detected": ["sonde détectée", "sondes détectées"],
+  fleet: ["alerte de flotte", "alertes de flotte"],
   spy: ["rapport d'espionnage", "rapports d'espionnage"],
   gift: ["don", "dons"],
   debris: ["recyclage", "recyclages"],
   alliance: ["message d'alliance", "messages d'alliance"],
+  season: ["annonce de saison", "annonces de saison"],
+  event: ["évènement", "évènements"],
+  report: ["réponse à un signalement", "réponses à des signalements"],
+  system: ["message système", "messages système"],
 };
 
 /** « 3 constructions, 2 recherches et 1 mission » */
