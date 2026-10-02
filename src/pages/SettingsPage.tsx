@@ -20,7 +20,7 @@ import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
 import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
-import { isWinter, setWinter, useWinterStore } from "@/lib/winter";
+import { isWinter, previewWinter, setWinter, useWinterStore } from "@/lib/winter";
 import { SFX_SAMPLES } from "@/lib/sfx";
 import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
@@ -453,7 +453,14 @@ function ThemeCard() {
             </span>
             <span className="text-xs text-slate-500">Neige légère sur le fond, du 1er décembre au 28 février{isWinter(Date.now()) ? "" : " (pas encore de saison)"}.</span>
           </span>
-          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={winter} onChange={(e) => setWinter(e.target.checked)} />
+          <span className="flex shrink-0 items-center gap-3">
+            {!isWinter(Date.now()) && (
+              <button type="button" className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline" onClick={(e) => (e.preventDefault(), previewWinter())}>
+                Aperçu
+              </button>
+            )}
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={winter} onChange={(e) => setWinter(e.target.checked)} />
+          </span>
         </label>
         {month && (
           <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">

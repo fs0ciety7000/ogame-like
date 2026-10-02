@@ -14,7 +14,13 @@ function initial(): boolean {
   }
 }
 
-export const useWinterStore = create<{ enabled: boolean }>(() => ({ enabled: initial() }));
+export const useWinterStore = create<{ enabled: boolean; preview: boolean }>(() => ({ enabled: initial(), preview: false }));
+
+/** Aperçu de 15 s hors saison (Réglages). */
+export function previewWinter() {
+  useWinterStore.setState({ preview: true });
+  setTimeout(() => useWinterStore.setState({ preview: false }), 15_000);
+}
 
 export function setWinter(enabled: boolean) {
   try {
@@ -32,5 +38,6 @@ export function isWinter(now: number): boolean {
 
 export function useWinterActive(): boolean {
   const enabled = useWinterStore((s) => s.enabled);
-  return enabled && isWinter(Date.now());
+  const preview = useWinterStore((s) => s.preview);
+  return preview || (enabled && isWinter(Date.now()));
 }

@@ -27,7 +27,7 @@ export function Snowfall() {
     };
     resize();
     const count = w < 640 ? 35 : 60;
-    const flakes = Array.from({ length: count }, () => ({ x: Math.random() * w, y: Math.random() * h, r: 0.6 + Math.random() * 1.8, vy: 0.25 + Math.random() * 0.6, phase: Math.random() * Math.PI * 2, a: 0.25 + Math.random() * 0.45 }));
+    const flakes = Array.from({ length: count }, () => ({ x: Math.random() * w, y: Math.random() * h, r: 0.9 + Math.random() * 2.1, vy: 0.25 + Math.random() * 0.6, phase: Math.random() * Math.PI * 2, a: 0.35 + Math.random() * 0.5 }));
     let raf = 0;
     let last = performance.now();
     const tick = (t: number) => {
@@ -67,5 +67,5 @@ export function Snowfall() {
   }, [active, reduce]);
 
   if (!active || reduce) return null;
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-0 h-full w-full" />;
+  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-[15] h-full w-full opacity-80" />;
 }

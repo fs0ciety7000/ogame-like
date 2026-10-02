@@ -50,7 +50,7 @@ export function CombatIntro({
               alt=""
               className="absolute h-24 w-24 object-contain drop-shadow-[0_0_18px_var(--color-cyan-glow)]"
               initial={{ x: "-45vw", rotate: -20, opacity: 0 }}
-              animate={{ x: [null, -46, -40], rotate: [null, 0, -6], opacity: 1 }}
+              animate={{ x: [null, -58, -64], rotate: [null, 0, -8], opacity: 1 }}
               transition={{ duration: 0.55, times: [0, 0.8, 1], ease: "easeIn" }}
             />
             <motion.img
@@ -58,7 +58,7 @@ export function CombatIntro({
               alt=""
               className="absolute h-24 w-24 object-contain drop-shadow-[0_0_18px_var(--color-danger-glow)]"
               initial={{ x: "45vw", rotate: 20, opacity: 0 }}
-              animate={{ x: [null, 46, 40], rotate: [null, 0, 6], opacity: 1 }}
+              animate={{ x: [null, 58, 64], rotate: [null, 0, 8], opacity: 1 }}
               transition={{ duration: 0.55, times: [0, 0.8, 1], ease: "easeIn" }}
             />
             <motion.span

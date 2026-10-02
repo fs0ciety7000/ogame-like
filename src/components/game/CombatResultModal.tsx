@@ -83,7 +83,7 @@ function LossList({ losses, recovered }: { losses: Record<string, number>; recov
 
 /** Blason affiché pour l'adversaire : seigneur, faction pirate, ou insigne générique. */
 function opponentEmblem(pseudo: string): string {
-  const lord = warlordsConfig().defs.find((d) => d.name === pseudo || d.name.split(",")[0] === pseudo);
+  const lord = warlordsConfig().defs.find((d) => d.name === pseudo || d.name.split(",")[0] === pseudo || d.name.startsWith(`${pseudo} `) || pseudo.startsWith(d.name.split(" ")[0]));
   if (lord) return lord.emblem;
   const faction = FACTIONS.find((f) => f.emblem && (f.name === pseudo || f.leader === pseudo || pseudo.includes(f.name)));
   if (faction?.emblem) return faction.emblem;
