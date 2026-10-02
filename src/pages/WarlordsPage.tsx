@@ -21,6 +21,8 @@ import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
+import { TiltPortrait } from "@/components/fx/TiltPortrait";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 
 /* v4.2 : les dix seigneurs de guerre, leurs vendettas et les actions possibles. */
@@ -129,7 +131,9 @@ export function WarlordsPage() {
             return (
               <motion.div key={w.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className={cn("relative flex h-full overflow-hidden p-0", gone && "opacity-60")} style={{ boxShadow: `inset 3px 0 0 ${w.color}` }}>
-                  <Portrait w={w} className="h-auto w-32 shrink-0 sm:w-40" />
+                  <TiltPortrait glow="var(--color-ember-glow)" className="w-32 shrink-0 sm:w-40">
+                    <Portrait w={w} className="h-full w-full" />
+                  </TiltPortrait>
                   <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <img src={assetUrl(w.emblem)} alt="" className="h-8 w-8 object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
@@ -142,7 +146,9 @@ export function WarlordsPage() {
                     <div className="flex flex-wrap gap-1.5 text-[11px]">
                       <span className={cn("border px-1.5 py-px", PERSONALITY_TONE[w.personality])}>{PERSONALITY_LABELS[w.personality]}</span>
                       <span className="border border-white/15 px-1.5 py-px text-slate-300">{TIER_LABELS[w.tier]}</span>
-                      <span className="border border-white/15 px-1.5 py-px font-mono text-slate-300">Puissance {formatNumber(w.power)}</span>
+                      <span className="border border-white/15 px-1.5 py-px font-mono text-slate-300">
+                        Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />
+                      </span>
                     </div>
                     <p className="line-clamp-3 text-xs leading-relaxed text-slate-400">{w.bio}</p>
                     {gone && (

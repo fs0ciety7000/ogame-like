@@ -7,14 +7,18 @@ export function AnimatedNumber({
   value,
   format = (v) => String(Math.floor(v)),
   className,
+  countUp = false,
 }: {
   value: number;
   format?: (value: number) => string;
   className?: string;
+  /** v4.8 : compte depuis 0 à l'apparition (statistiques mises en scène). */
+  countUp?: boolean;
 }) {
-  const motionValue = useMotionValue(value);
-  const [display, setDisplay] = useState(() => format(value));
-  const previous = useRef(value);
+  const motionValue = useMotionValue(countUp ? 0 : value);
+  const [display, setDisplay] = useState(() => format(countUp ? 0 : value));
+  const previous = useRef(countUp ? 0 : value);
+  const first = useRef(countUp);
 
   useMotionValueEvent(motionValue, "change", (latest) => setDisplay(format(latest)));
 
@@ -23,9 +27,10 @@ export function AnimatedNumber({
     // s'afficher immédiatement plutôt que de compter depuis 0.
     const jump = Math.abs(value - previous.current);
     const controls = animate(motionValue, value, {
-      duration: jump > 10000 ? 0 : 0.6,
+      duration: first.current ? 1.2 : jump > 10000 ? 0 : 0.6,
       ease: "easeOut",
     });
+    first.current = false;
     previous.current = value;
     return () => controls.stop();
   }, [value, motionValue]);

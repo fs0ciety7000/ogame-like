@@ -12,7 +12,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { fleetCargoCapacity } from "@/game/combat";
-import {
+import { homeLevels,
   advanceColonies,
   COLONY_RULES,
   colonyBuildingIds,
@@ -411,7 +411,9 @@ function FoundColony({ player }: { player: PlayerState }) {
   const [busy, setBusy] = useState(false);
   const next = nextColonySlot(player);
   if (!next) return null;
-  const levels = BUILDINGS.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  // v4.8 : même compte que le serveur (bâtiments de fin de partie exclus).
+  const levels = homeLevels(player);
+  const excluded = BUILDINGS.filter((b) => b.endgame).map((b) => b.name);
   const cost = colonyFoundCost();
   const affordable = Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0));
   const ready = levels >= next.levels;
@@ -426,6 +428,7 @@ function FoundColony({ player }: { player: PlayerState }) {
       </p>
       <p className={cn("text-xs", ready ? "text-mint-glow" : "text-slate-400")}>
         Niveaux de bâtiments cumulés : {levels} / {next.levels}
+        <span className="block text-[11px] text-slate-500">Hors bâtiments de fin de partie ({excluded.join(", ")}).</span>
       </p>
       <p className={cn("text-xs", affordable ? "text-slate-400" : "text-ember-glow")}>Vaisseau colonial : <AmountsInline amounts={cost} /></p>
       <div className="flex flex-wrap gap-2">
@@ -475,7 +478,7 @@ export function ColoniesPage() {
       {colonies.length === 0 && !raw.colonizing && (
         <Card>
           <EmptyState icon={<Globe2 className="h-6 w-6" />} title="Aucune colonie pour l'instant">
-            Développe ta planète mère jusqu'à {COLONY_RULES.levelsRequired[0]} niveaux de bâtiments cumulés pour fonder ta première colonie.
+            Développe ta planète mère jusqu'à {COLONY_RULES.levelsRequired[0]} niveaux de bâtiments cumulés (hors bâtiments de fin de partie) pour fonder ta première colonie.
           </EmptyState>
         </Card>
       )}

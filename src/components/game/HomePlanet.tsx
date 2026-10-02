@@ -132,7 +132,11 @@ export interface PlanetLife {
   incoming?: number;
   /** Heure locale (0-24) : position du terminateur jour/nuit. */
   hour?: number;
+  /** v4.8 : colonies, lunes en orbite lointaine (nom au survol). */
+  colonies?: string[];
 }
+
+const MOON_COLORS = ["#9fb4c7", "#c9a36b", "#7fc8a9", "#b49ad6", "#d98c7a"];
 
 export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Buildings; size?: number; life?: PlanetLife }) {
   const r = useBuildingRatios(buildings);
@@ -163,6 +167,7 @@ export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Bu
     life.legendary && "relique légendaire",
     (life.away ?? 0) > 0 && `${life.away} flotte(s) en mission`,
     (life.incoming ?? 0) > 0 && `${life.incoming} flotte(s) hostile(s) en approche`,
+    (life.colonies?.length ?? 0) > 0 && `colonies : ${life.colonies!.join(", ")}`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -342,6 +347,31 @@ export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Bu
           {!still && <animate attributeName="opacity" values="0.2;1;0.2" dur="0.9s" repeatCount="indefinite" />}
         </circle>
       ))}
+
+      {/* v4.8 : colonies, lunes sur des orbites lointaines et inclinées */}
+      {(life.colonies ?? []).slice(0, 5).map((name, i) => {
+        const rx = R + 34 + i * 7;
+        const ry = rx * (0.32 + (i % 2) * 0.1);
+        const dur = 40 + i * 13;
+        const color = MOON_COLORS[i % MOON_COLORS.length];
+        return (
+          <g key={`col${i}`}>
+            <ellipse cx={C} cy={C} rx={rx} ry={ry} fill="none" stroke={color} strokeOpacity={0.14} strokeDasharray="2 4" />
+            <g transform={still ? `translate(${C + rx * Math.cos(i * 1.7)} ${C + ry * Math.sin(i * 1.7)})` : undefined}>
+              {!still && <animateMotion path={orbitPath(rx, ry)} dur={`${dur}s`} begin={`${-dur * (i / 5)}s`} repeatCount="indefinite" />}
+              <circle r={4.2 - Math.min(i, 3) * 0.4} fill={color} />
+              <circle r={4.2 - Math.min(i, 3) * 0.4} fill="url(#moonShade)" />
+              <title>{name}</title>
+            </g>
+          </g>
+        );
+      })}
+      <defs>
+        <radialGradient id="moonShade" cx="30%" cy="30%" r="80%">
+          <stop offset="0%" stopColor="#fff" stopOpacity={0.35} />
+          <stop offset="70%" stopColor="#000" stopOpacity={0.45} />
+        </radialGradient>
+      </defs>
 
       {/* Atelier de réparation : drone en orbite basse */}
       {r.repair && (

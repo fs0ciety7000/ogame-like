@@ -2,7 +2,7 @@ import { useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2 } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
 import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
+import { isWinter, previewWinter, setWinter, useWinterStore } from "@/lib/winter";
 import { SFX_SAMPLES } from "@/lib/sfx";
 import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
@@ -410,6 +411,7 @@ function HelpCard() {
 function ThemeCard() {
   const theme = useThemeStore((s) => s.theme);
   const skin = useSeasonSkinStore((s) => s.enabled);
+  const winter = useWinterStore((s) => s.enabled);
   const month = chronicleOf(Date.now());
   return (
     <Card>
@@ -444,6 +446,22 @@ function ThemeCard() {
           ))}
         </div>
         <p className="mt-3 text-xs text-slate-500">Le choix s'applique tout de suite et reste mémorisé sur cet appareil.</p>
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
+              <Snowflake className="h-3.5 w-3.5 text-cyan-glow" /> Neige d'hiver
+            </span>
+            <span className="text-xs text-slate-500">Neige légère sur le fond, du 1er décembre au 28 février{isWinter(Date.now()) ? "" : " (pas encore de saison)"}.</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-3">
+            {!isWinter(Date.now()) && (
+              <button type="button" className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline" onClick={(e) => (e.preventDefault(), previewWinter())}>
+                Aperçu
+              </button>
+            )}
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={winter} onChange={(e) => setWinter(e.target.checked)} />
+          </span>
+        </label>
         {month && (
           <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
             <span>
