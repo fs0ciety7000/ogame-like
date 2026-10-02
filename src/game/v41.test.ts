@@ -51,6 +51,8 @@ describe("v4.1 season pass", () => {
     const gained = claimPassTier(p, 30, NOW, () => 0.4);
     expect(gained.join(" ")).toMatch(/épique/);
     expect(p.titles?.map((t) => t.label)).toContain(passTitle("2026-10"));
+    expect(passTitle("2026-10")).toBe("Vétéran d'octobre 2026");
+    expect(passTitle("2026-11")).toBe("Vétéran de novembre 2026");
     expect(p.relics?.items[0].rarity).toBe("epic");
     // Le mois suivant : passe vierge, bannière gardée.
     const next = Date.UTC(2026, 10, 3);

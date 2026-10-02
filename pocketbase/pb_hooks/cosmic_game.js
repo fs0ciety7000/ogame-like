@@ -3429,7 +3429,8 @@ var PASS_TIERS = [
 ];
 var CAPSULE_AMBER = 15;
 function passTitle(seasonId) {
-  return `V\xE9t\xE9ran de ${seasonLabel(seasonId).toLowerCase()}`;
+  const month2 = seasonLabel(seasonId).toLowerCase();
+  return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
 }
 function passState(player, now) {
   var _a, _b;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ONBOARDING_STEPS, onboardingEligible, onboardingState } from "@/game/onboarding";
 import { chapterOf, OUTRO_LINES, RAID_LINES, STORY_SPEAKERS, storyText, type StoryLine } from "@/game/story";
 import { assetUrl } from "@/lib/assets";
+import { useAnnouncementPending } from "@/components/game/Announcement";
 import type { PlayerState } from "@/types/game";
 
 /* v4.1 : dialogues du tutoriel scénarisé (Vashka, Varan), une fois chacun. */
@@ -43,9 +44,16 @@ function pendingScene(player: PlayerState, seen: string[]): { id: string; title:
 export function StoryDialog({ player }: { player: PlayerState }) {
   const [state, setState] = useState(() => readSeen(player.uid));
   const [index, setIndex] = useState(0);
+  // Laisse passer d'abord une éventuelle annonce plein écran.
+  const [ready, setReady] = useState(false);
+  const announcing = useAnnouncementPending((s) => s.pending);
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 1600);
+    return () => clearTimeout(t);
+  }, []);
   const scene = useMemo(() => (state.off ? null : pendingScene(player, state.seen)), [player, state]);
   useEffect(() => setIndex(0), [scene?.id]);
-  if (!scene) return null;
+  if (!scene || !ready || announcing) return null;
   const line = scene.lines[Math.min(index, scene.lines.length - 1)];
   const sp = STORY_SPEAKERS[line.speaker];
   const close = () => {

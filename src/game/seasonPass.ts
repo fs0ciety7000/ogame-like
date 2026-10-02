@@ -36,7 +36,7 @@ export type PassReward =
   | { kind: "relic"; rarity: RelicRarity }
   | { kind: "cosmetic" };
 
-/** Récompenses des 30 paliers (≈ 380 Ambre, 3 Dossiers, 8 capsules, 2 reliques). */
+/** Récompenses des 30 paliers (370 Ambre, 3 Dossiers, 8 capsules, 2 reliques). */
 export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 2 }],
   [{ kind: "amber", amount: 20 }],
@@ -85,7 +85,8 @@ export interface PassState {
 }
 
 export function passTitle(seasonId: string): string {
-  return `Vétéran de ${seasonLabel(seasonId).toLowerCase()}`;
+  const month = seasonLabel(seasonId).toLowerCase();
+  return /^[aeiouéâ]/.test(month) ? `Vétéran d'${month}` : `Vétéran de ${month}`;
 }
 
 /** Passe de la saison en cours (remis à zéro au changement de mois). */

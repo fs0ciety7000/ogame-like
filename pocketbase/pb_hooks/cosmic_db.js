@@ -3537,7 +3537,9 @@ function victoryCardPage(e) {
       return "";
     }
   })();
-  const host = "https://" + (e.request.host || "");
+  const reqHost = String(e.request.host || "");
+  // Derrière le proxy de production, toujours en https ; en local, http.
+  const host = (/^(127\.0\.0\.1|localhost)(:|$)/.test(reqHost) ? "http://" : "https://") + reqHost;
   const image = `${host}/api/files/victory_cards/${rec.id}/${rec.getString("image")}`;
   const target = base + (rec.getString("target") || "/");
   const title = escapeHtml(rec.getString("title") || "Victoire");
