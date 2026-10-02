@@ -649,6 +649,8 @@ export function warlordsState(raw: unknown): WarlordsState {
     lastMsg: { ...(r.lastMsg ?? {}) },
     vendettas: Array.isArray(r.vendettas) ? [...r.vendettas] : [],
     reprisals: Array.isArray(r.reprisals) ? [...r.reprisals] : [],
+    // v4.7 : coalitions (voir coalition.ts), conservées telles quelles.
+    ...((r as { coalitions?: unknown }).coalitions ? { coalitions: (r as { coalitions?: unknown }).coalitions } : {}),
   };
 }
 

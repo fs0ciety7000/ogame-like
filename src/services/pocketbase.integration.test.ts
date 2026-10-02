@@ -1930,6 +1930,62 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v4.7: cancel a building with a full refund in the first minute, coalition won against a lord", async () => {
+    const bBefore = await snap(bId);
+    const tick = (action = "tick", warlordId = "") => admin.send<Record<string, unknown>>("/api/cosmic/admin/warlords", { method: "POST", body: { action, warlordId } });
+    const stateRec = async () => admin.collection("game_config").getFirstListItem('key="warlords_state"');
+    const brannoc = "npcbrannoc00000";
+    try {
+      await loginPlayer(B.email, B.pw);
+      await admin.collection("players").update(bId, { resources: RICH, vacation: null, allianceId: "", createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, xp: 5000 });
+      const q = await admin.collection("queues").getOne(bId);
+      await admin.collection("queues").update(bId, { buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] }, activeMissions: q.activeMissions ?? [] });
+
+      // Annulation : remboursement intégral dans la première minute.
+      const scrapBefore = (await snap(bId)).resources.scrap;
+      await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
+      const paid = scrapBefore - (await snap(bId)).resources.scrap;
+      expect(paid).toBeGreaterThan(0);
+      const quote = await ps.cancelJob({ kind: "building", id: "extracteur_ferraille" });
+      expect(quote.fraction).toBe(1);
+      expect((await admin.collection("queues").getOne(bId)).buildingUpgrades.extracteur_ferraille).toBeUndefined();
+      expect((await snap(bId)).resources.scrap).toBeGreaterThanOrEqual(scrapBefore - 1);
+      await expect(ps.cancelJob({ kind: "building", id: "extracteur_ferraille" })).rejects.toThrow(/Aucune amélioration/);
+
+      // Coalition lancée par l'équipe contre Brannoc, objectif ramené à presque rien.
+      const cfg = await admin.collection("game_config").getFirstListItem('key="warlords"').catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      await tick();
+      let st = await stateRec();
+      await admin.collection("game_config").update(st.id, { data: { ...st.data, coalitions: null, byId: { ...st.data.byId, brannoc: { ...(st.data.byId?.brannoc ?? {}), absentUntilMs: 0 } } } });
+      await tick("coalitionStart", "brannoc");
+      await expect(tick("coalitionStart", "brannoc")).rejects.toMatchObject({ status: 400 });
+      const view = await ws.fetchWarlords();
+      expect(view.coalition).toMatchObject({ warlordId: "brannoc", status: "active" });
+      st = await stateRec();
+      await admin.collection("game_config").update(st.id, { data: { ...st.data, coalitions: { ...st.data.coalitions, coalition: { ...st.data.coalitions.coalition, goal: 1 } } } });
+
+      // B pille Brannoc affaibli : la coalition tombe, récompenses et titre.
+      await admin.collection("players").update(brannoc, { units: { roquette: { level: 1, count: 5 } }, xp: 100000 });
+      await admin.collection("players").update(bId, { units: { ...bBefore.units, chasseur: { level: 1, count: 80 } }, seasonPass: null, relics: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      const sent = await ps.sendFleet(brannoc, { chasseur: 80 }, "attack");
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const after = await snap(bId);
+      expect(after.titles.map((t: { label: string }) => t.label)).toContain("Briseur de Brannoc Demi-Barbe");
+      expect(after.seasonPass.points).toBeGreaterThanOrEqual(50);
+      const done = (await ws.fetchWarlords()).coalition;
+      expect(done?.status).toBe("won");
+      await expect(ps.sendFleet(brannoc, { chasseur: 1 }, "attack")).rejects.toThrow(/quitté le secteur/);
+    } finally {
+      const st = await stateRec().catch(() => null);
+      if (st) await admin.collection("game_config").update(st.id, { data: { ...st.data, coalitions: null, byId: { ...st.data.byId, brannoc: { ...(st.data.byId?.brannoc ?? {}), absentUntilMs: 0 } } } });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, relics: null, titles: bBefore.titles ?? null });
+    }
+  }, 60_000);
+
   it("exposes public feats on the profile sheet", async () => {
     await admin.collection("players").update(aId, { victories: 3, stats: { missions: 5, warsWon: 1 } });
     const sheet = await ps.fetchPlayerSheet(aId);

@@ -32,6 +32,7 @@ import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
+import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel";
 import { setProfileStyle } from "@/game/profile";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
@@ -47,6 +48,7 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 export type GameAction =
   | { type: "vacationEnd" }
   | { type: "chronicleClaim"; episode: number }
+  | { type: "cancel"; target: CancelTarget }
   | { type: "sync"; playtimeDeltaSeconds?: number }
   | { type: "unlockBuilding"; buildingId: string }
   | { type: "upgradeBuilding"; buildingId: string }
@@ -178,8 +180,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (queues.buildingUpgrades[def.id]) throw new GameActionError("Amélioration déjà en cours.");
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      pay(player, applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0), now);
-      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000 };
+      const paid = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0);
+      pay(player, paid, now);
+      queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000, startedAtMs: now, paid };
       recordContract(player, "upgrade_building", 1, now);
       return undefined;
     }
@@ -227,8 +230,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
-      pay(player, getTechCost(tech, nextLevel), now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000 });
+      const paid = getTechCost(tech, nextLevel);
+      pay(player, paid, now);
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid });
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
@@ -355,6 +359,11 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "chronicleClaim":
       return { points: claimChronicle(player, action.episode, now) };
+
+    case "cancel":
+      // v4.7 : annulation au prorata (100 % la première minute ou si rien n'a commencé).
+      if (!isCancelTarget(action.target)) throw new GameActionError("Chantier inconnu.");
+      return performCancel(player, queues, action.target, now);
 
     case "vacationEnd":
       endVacation(player, queues, now, true);

@@ -1,4 +1,5 @@
 import { playerResearchTimeFactor } from "@/game/bonuses";
+import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -114,6 +115,9 @@ export function LabPage() {
                     <p className="mt-2 text-center text-xs text-slate-400">
                       Temps restant : {formatDuration(remaining)}
                     </p>
+                    <div className="mt-2 flex justify-center">
+                      <CancelJobButton target={{ kind: "research", id: selected.id }} />
+                    </div>
                   </>
                 );
               })()}

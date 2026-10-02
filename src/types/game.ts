@@ -28,6 +28,9 @@ export type TechLevels = Record<string, number>;
 
 export interface BuildingUpgradeEntry {
   endTime: number;
+  /** v4.7 : départ et coût payé (annulation au prorata). */
+  startedAtMs?: number;
+  paid?: Partial<Record<ResourceId, number>>;
 }
 export type BuildingUpgrades = Partial<Record<BuildingId, BuildingUpgradeEntry>>;
 
@@ -43,6 +46,9 @@ export interface UnitQueues {
 export interface ActiveResearch {
   id: string;
   endTime: number;
+  /** v4.7 : départ et coût payé (annulation au prorata). */
+  startedAtMs?: number;
+  paid?: Partial<Record<ResourceId, number>>;
 }
 
 export interface ActiveMission {
