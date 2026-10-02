@@ -42,6 +42,22 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v4.4-spectacle",
+    eyebrow: "Mise à jour 4.4 · Spectacle",
+    title: "Ton empire prend vie",
+    text: "Chaque palier de bâtiment se fête en plein écran, la galaxie respire sous tes flottes, et le secteur a enfin une voix : sirènes, fanfares et ambiance propre à ton thème.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/buildings/fonderie_quantique.webp",
+    artMobile: "/assets/buildings/extracteur_ferraille.webp",
+    features: [
+      { title: "Paliers en plein écran", text: "Niveaux 5, 10, 15 et 20 : balayage lumineux, nouveau cadre et bonus gagné.", to: "/game/batiments", image: "/assets/buildings/extracteur_ferraille.webp" },
+      { title: "Galaxie vivante", text: "Étoiles en parallaxe, routes cyan, rouges ou ambre, heure d'arrivée au survol.", to: "/game/galaxie" },
+      { title: "Son", text: "Victoire, défaite, alertes, ambiance par thème : un volume par catégorie dans les Réglages.", to: "/game/reglages" },
+    ],
+    cta: { label: "Régler le son", to: "/game/reglages" },
+  },
+  {
     id: "v4.3-chroniques",
     eyebrow: "Mise à jour 4.3 · Chroniques",
     title: "Chaque mois, une histoire",

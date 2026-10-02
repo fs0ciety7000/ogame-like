@@ -58,7 +58,8 @@ export function tierBonusText(buildingId: string, level: number): string | null 
     const now = productionPerSecond(buildingId, level);
     const before = productionPerSecond(buildingId, Math.max(1, level - 5));
     const name = RESOURCE_LIST.find((r) => r.id === res)?.name ?? res;
-    const gain = before > 0 && level > 5 ? ` (+${Math.round(((now - before) / before) * 100)} % depuis le palier précédent)` : "";
+    const ratio = before > 0 && level > 5 ? now / before : 0;
+    const gain = ratio >= 2 ? ` (×${ratio.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} depuis le palier précédent)` : ratio > 1 ? ` (+${Math.round((ratio - 1) * 100)} % depuis le palier précédent)` : "";
     return `${formatCompact(now)}/s de ${name.toLowerCase()}${gain}`;
   }
   switch (def.effect?.type) {
