@@ -75,7 +75,7 @@ export const GAME_EMOJI_GROUPS: { label: string; emojis: CustomEmoji[] }[] = [
   },
   {
     label: "Mascottes",
-    emojis: [e("dino_furets", "Le dino aux furets")],
+    emojis: [e("dino_furets", "Le dino aux furets"), e("discosaure", "Le Discosaure")],
   },
 ];
 

@@ -13588,7 +13588,7 @@ var GAME_EMOJI_GROUPS = [
   },
   {
     label: "Mascottes",
-    emojis: [e2("dino_furets", "Le dino aux furets")]
+    emojis: [e2("dino_furets", "Le dino aux furets"), e2("discosaure", "Le Discosaure")]
   }
 ];
 var REACTIONS = [
