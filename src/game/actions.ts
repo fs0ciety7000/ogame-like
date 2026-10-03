@@ -1,3 +1,4 @@
+import { claimStreak } from "@/game/streak";
 import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
@@ -81,6 +82,7 @@ export type GameAction =
   | { type: "relicRecycle"; relicId: string }
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
+  | { type: "streakClaim" }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
@@ -379,6 +381,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "talentReset":
       return resetTalents(player, now);
+
+    case "streakClaim":
+      return claimStreak(player, now);
 
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };

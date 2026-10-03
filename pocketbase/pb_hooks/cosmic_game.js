@@ -2834,7 +2834,13 @@ function economyInput(colony, player) {
     resources: colony.resources,
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
-    ascensions: player.ascensions
+    ascensions: player.ascensions,
+    // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
+    commanders: player.commanders,
+    relics: player.relics,
+    talents: player.talents,
+    territory: player.territory,
+    bounties: player.bounties
   };
 }
 function advanceColony(colony, player, now) {
@@ -8153,7 +8159,8 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
-  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null });
+  const power = Math.round(computeFleetPower(owner.units, owner.techLevels, units, ["attack", "defense"]));
+  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null, power });
   return {
     attacker: owner,
     fleet,
@@ -8999,6 +9006,59 @@ function lostPower(losses, units, techLevels2) {
   return computeFullPower(lost, techLevels2 != null ? techLevels2 : {}, Object.keys(lost), ["attack", "defense"]);
 }
 
+// src/game/streak.ts
+var STREAK_RULES = {
+  /** Heures de production des ressources communes, jours 1 à 7. */
+  hours: [1, 1.5, 2, 2.5, 3, 3.5, 5],
+  /** Ambre offerte au 7e jour du cycle. */
+  amberDay7: 15,
+  /** Plancher par ressource commune (petits empires). */
+  floor: 2e3
+};
+function streakState(player) {
+  var _a, _b;
+  const raw = (_a = player.streak) != null ? _a : {};
+  return { count: Number(raw.count) || 0, lastDay: String((_b = raw.lastDay) != null ? _b : ""), best: Number(raw.best) || 0, total: Number(raw.total) || 0 };
+}
+function previousDay2(day) {
+  return new Date(Date.parse(`${day}T12:00:00Z`) - 864e5).toISOString().slice(0, 10);
+}
+function cycleDay(count2) {
+  return (Math.max(1, count2) - 1) % 7 + 1;
+}
+function streakReward(player, count2) {
+  var _a;
+  const day = cycleDay(count2);
+  const raw = productionHours(player, STREAK_RULES.hours[day - 1]);
+  const resources = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) resources[res] = Math.max(STREAK_RULES.floor, (_a = raw[res]) != null ? _a : 0);
+  return { resources, amber: day === 7 ? STREAK_RULES.amberDay7 : 0 };
+}
+function streakStatus(player, now) {
+  const st = streakState(player);
+  const today = parisDay(now);
+  if (st.lastDay === today) return { today, claimed: true, next: st.count + 1, current: st.count };
+  const alive = st.lastDay === previousDay2(today);
+  return { today, claimed: false, next: alive ? st.count + 1 : 1, current: alive ? st.count : 0 };
+}
+function claimStreak(player, now) {
+  var _a, _b;
+  const status = streakStatus(player, now);
+  if (status.claimed) throw new GameActionError("R\xE9compense du jour d\xE9j\xE0 r\xE9clam\xE9e : reviens demain !");
+  const st = streakState(player);
+  const count2 = status.next;
+  const reward = streakReward(player, count2);
+  for (const [res, n] of Object.entries(reward.resources)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (reward.amber > 0) {
+    const b = bountyState(player);
+    b.amber += reward.amber;
+    b.amberEarned = ((_b = b.amberEarned) != null ? _b : 0) + reward.amber;
+    player.bounties = b;
+  }
+  player.streak = { count: count2, lastDay: status.today, best: Math.max(st.best, count2), total: st.total + 1 };
+  return __spreadValues({ count: count2 }, reward);
+}
+
 // src/game/cancel.ts
 var CANCEL_RULES = {
   /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
@@ -9520,6 +9580,8 @@ function applyAction(s, action) {
       return learnTalent(player, action.talentId);
     case "talentReset":
       return resetTalents(player, now);
+    case "streakClaim":
+      return claimStreak(player, now);
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
@@ -10129,6 +10191,7 @@ var GAME_FIELDS = [
   "synthesis",
   "profileStyle",
   "renamed",
+  "streak",
   "seasonPass",
   "referral",
   "vacation",
