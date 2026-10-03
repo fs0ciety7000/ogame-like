@@ -29,8 +29,14 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => subscribePactMessages(pact.id, setMessages), [pact.id]);
   // Canal ouvert : tout ce qui s'y affiche est lu.
-  useEffect(() => markPactRead(uid, pact.id), [uid, pact.id, messages.length]);
-  useEffect(() => bottom.current?.scrollIntoView({ block: "end" }), [messages.length]);
+  useEffect(() => {
+    markPactRead(uid, pact.id);
+  }, [uid, pact.id, messages.length]);
+  // Accolades obligatoires : scrollIntoView renvoie une Promise dans les navigateurs
+  // récents, que React prenait pour une fonction de nettoyage (« i is not a function »).
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
 
   const send = async () => {
     if (!text.trim()) return;

@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, ChevronDown } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -29,9 +29,23 @@ interface NavItem {
   end?: boolean;
 }
 
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  /** Couleur du groupe (variable CSS du thème). */
+  accent: string;
+  items: NavItem[];
+}
+
+/* v4.9.1 : six groupes thématiques, chacun sa couleur. Les pages d'information
+   (profil, nouveautés, annonces, signalements) passent en pied de barre. */
+const NAV_GROUPS: NavGroup[] = [
   {
+    id: "empire",
     label: "Empire",
+    icon: Building2,
+    accent: "var(--color-cyan-glow)",
     items: [
       { to: "/game", label: "Accueil", icon: LayoutDashboard, end: true },
       { to: "/game/ressources", label: "Ressources", icon: Factory },
@@ -39,37 +53,67 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/game/unites", label: "Unités", icon: Rocket },
       { to: "/game/labo", label: "Labo", icon: FlaskConical },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
+      { to: "/game/colonies", label: "Colonies", icon: Globe2 },
     ],
   },
   {
+    id: "operations",
     label: "Opérations",
+    icon: Swords,
+    accent: "var(--color-ember-glow)",
     items: [
       { to: "/game/missions", label: "Missions", icon: MapPin },
-      { to: "/game/primes", label: "Primes", icon: Crosshair },
-      { to: "/game/passe", label: "Passe", icon: Ticket },
       { to: "/game/galaxie", label: "Galaxie", icon: Orbit },
-      { to: "/game/colonies", label: "Colonies", icon: Globe2 },
-      { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/combats", label: "Combats", icon: Swords },
       { to: "/game/simulateur", label: "Simulateur", icon: Calculator },
-      { to: "/game/marche", label: "Marché", icon: Store },
       { to: "/game/menaces", label: "Menaces", icon: Skull },
-      { to: "/game/seigneurs", label: "Seigneurs", icon: Crown },
-      { to: "/game/leviathan", label: "Léviathan", icon: Fish },
-      { to: "/game/boss", label: "Boss de saison", icon: Flame },
-      { to: "/game/palmares", label: "Palmarès", icon: Trophy },
-      { to: "/game/alliance", label: "Alliance", icon: Flag },
-      { to: "/game/messages", label: "Messages", icon: Mail },
+      { to: "/game/primes", label: "Primes", icon: Crosshair },
     ],
   },
   {
-    label: "Compte",
+    id: "titans",
+    label: "Grands ennemis",
+    icon: Flame,
+    accent: "var(--color-danger-glow)",
     items: [
-      { to: "/game/profil", label: "Profil", icon: UserCircle },
+      { to: "/game/leviathan", label: "Léviathan", icon: Fish },
+      { to: "/game/boss", label: "Boss de saison", icon: Flame },
+      { to: "/game/seigneurs", label: "Seigneurs", icon: Crown },
+    ],
+  },
+  {
+    id: "social",
+    label: "Social",
+    icon: Users,
+    accent: "var(--color-mint-glow)",
+    items: [
+      { to: "/game/alliance", label: "Alliance", icon: Flag },
+      { to: "/game/messages", label: "Messages", icon: Mail },
+      { to: "/game/joueurs", label: "Joueurs", icon: Users },
+      { to: "/game/marche", label: "Marché", icon: Store },
       { to: "/game/gazette", label: "Gazette", icon: Newspaper },
-      { to: "/game/journal", label: "Journal", icon: ScrollText },
+    ],
+  },
+  {
+    id: "progression",
+    label: "Progression",
+    icon: Trophy,
+    accent: "var(--color-gold-glow)",
+    items: [
+      { to: "/game/passe", label: "Passe", icon: Ticket },
+      { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
+      { to: "/game/journal", label: "Journal", icon: ScrollText },
+    ],
+  },
+  {
+    id: "compte",
+    label: "Compte",
+    icon: UserCircle,
+    accent: "var(--color-violet-glow)",
+    items: [
+      { to: "/game/profil", label: "Profil", icon: UserCircle },
       { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
       { to: "/game/annonces", label: "Annonces", icon: Megaphone },
       { to: "/game/signalements", label: "Signalements", icon: Bug },
@@ -77,10 +121,15 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+/** Groupes listés dans la barre latérale ; le dernier (Compte) est en pied de barre. */
+const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
+const FOOTER_GROUP = NAV_GROUPS[NAV_GROUPS.length - 1];
+
 export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 const ALL_ITEMS = ALL_NAV_ITEMS;
 
-function useBadge(to: string): number {
+/** Pastilles de navigation : renvoie le compteur d'une page. */
+function useBadges(): (to: string) => number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
@@ -92,11 +141,21 @@ function useBadge(to: string): number {
     const st = passState(s.player, Date.now());
     return Math.max(0, passTier(st.points) - st.claimed.length);
   });
-  if (to === "/game/passe") return passClaimable;
-  if (to === "/game/messages") return messagesUnread;
-  // Pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
-  if (to === "/game/leviathan") return leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
-  return to === "/game/alliance" ? allianceUnread : to === "/game/nouveautes" ? changelogUnread : to === "/game/signalements" ? reportsUnread : 0;
+  // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
+  const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
+  return (to) =>
+    ({
+      "/game/passe": passClaimable,
+      "/game/messages": messagesUnread,
+      "/game/leviathan": leviathanNew,
+      "/game/alliance": allianceUnread,
+      "/game/nouveautes": changelogUnread,
+      "/game/signalements": reportsUnread,
+    })[to] ?? 0;
+}
+
+function useBadge(to: string): number {
+  return useBadges()(to);
 }
 
 function Badge({ count }: { count: number }) {
@@ -108,19 +167,18 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-/** Lien de la barre latérale (bureau). */
-function SideLink({ item }: { item: NavItem }) {
-  const badge = useBadge(item.to);
+/** Lien de la barre latérale (bureau), aux couleurs de son groupe (--nav-accent). */
+function SideLink({ item, badge }: { item: NavItem; badge: number }) {
   return (
     <NavLink
       to={item.to}
       end={item.end}
       className={({ isActive }) =>
         cn(
-          "group relative flex items-center gap-3 px-3 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.1em] transition-all duration-200",
-          "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:bg-cyan-glow before:shadow-[0_0_12px_var(--color-cyan-glow)] before:transition-transform before:duration-200",
+          "group relative flex items-center gap-2.5 py-1.5 pl-3 pr-2 font-display text-[12.5px] font-semibold uppercase tracking-[0.09em] transition-all duration-200",
+          "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:bg-[var(--nav-accent)] before:shadow-[0_0_12px_var(--nav-accent)] before:transition-transform before:duration-200",
           isActive
-            ? "bg-gradient-to-r from-cyan-glow/[0.16] via-cyan-glow/[0.05] to-transparent text-white before:scale-y-100"
+            ? "bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_16%,transparent)] via-[color-mix(in_srgb,var(--nav-accent)_4%,transparent)] to-transparent text-white before:scale-y-100"
             : "text-slate-400 before:scale-y-0 hover:translate-x-0.5 hover:bg-white/[0.03] hover:text-slate-100",
         )
       }
@@ -131,19 +189,94 @@ function SideLink({ item }: { item: NavItem }) {
           <span className="relative shrink-0">
             <span
               className={cn(
-                "hud-cut-sm grid h-7 w-7 place-items-center border transition-colors",
-                isActive ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-cyan-glow/10 bg-space-900/60 group-hover:border-cyan-glow/35 group-hover:text-cyan-glow",
+                "hud-cut-sm grid h-6 w-6 place-items-center border transition-colors",
+                isActive
+                  ? "border-[color-mix(in_srgb,var(--nav-accent)_60%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_15%,transparent)] text-[var(--nav-accent)]"
+                  : "border-white/[0.06] bg-space-900/60 group-hover:border-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] group-hover:text-[var(--nav-accent)]",
               )}
             >
               <item.icon className="h-3.5 w-3.5" />
             </span>
             <Badge count={badge} />
           </span>
-          <span className="flex-1">{item.label}</span>
-          {isActive && <span className="font-mono text-[9px] text-cyan-glow/70">◂</span>}
+          <span className="flex-1 truncate">{item.label}</span>
+          {isActive && <span className="h-1.5 w-1.5 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
       )}
     </NavLink>
+  );
+}
+
+const COLLAPSED_KEY = "cosmic-empires:nav-collapsed";
+
+function readCollapsed(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]") as unknown;
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Section repliable de la barre latérale. Repliée, elle reste ouverte si on est sur une de ses pages. */
+function SideGroup({ group, collapsed, onToggle, badgeOf }: { group: NavGroup; collapsed: boolean; onToggle: () => void; badgeOf: (to: string) => number }) {
+  const { pathname } = useLocation();
+  const here = group.items.some((i) => (i.end ? pathname === i.to : pathname === i.to || pathname.startsWith(`${i.to}/`)));
+  const open = !collapsed || here;
+  const total = group.items.reduce((sum, i) => sum + badgeOf(i.to), 0);
+  return (
+    <div className="mb-1.5" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="group/h flex w-full items-center gap-2 px-3 pb-1 pt-2 text-left"
+      >
+        <span className="grid h-4 w-4 place-items-center text-[var(--nav-accent)] opacity-80">
+          <group.icon className="h-3 w-3" />
+        </span>
+        <span className="hud-eyebrow text-[10px] text-slate-500 transition-colors group-hover/h:text-slate-300">{group.label}</span>
+        <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] to-transparent" />
+        {!open && total > 0 && (
+          <span className="bg-danger-glow px-1 font-mono text-[9px] font-bold leading-[14px] text-space-950">{total > 9 ? "9+" : total}</span>
+        )}
+        <ChevronDown className={cn("h-3 w-3 text-slate-600 transition-transform duration-200 group-hover/h:text-slate-300", !open && "-rotate-90")} />
+      </button>
+      <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+        <div className="flex flex-col gap-px overflow-hidden">
+          {group.items.map((item) => (
+            <SideLink key={item.to} item={item} badge={badgeOf(item.to)} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Pied de barre : pages du compte en rangée d'icônes. */
+function FooterLinks({ badgeOf }: { badgeOf: (to: string) => number }) {
+  return (
+    <div className="grid grid-cols-4 gap-1 px-3 pb-2" style={{ "--nav-accent": FOOTER_GROUP.accent } as React.CSSProperties}>
+      {FOOTER_GROUP.items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          title={item.label}
+          aria-label={item.label}
+          className={({ isActive }) =>
+            cn(
+              "hud-cut-sm relative grid h-8 place-items-center border transition-colors",
+              isActive
+                ? "border-[color-mix(in_srgb,var(--nav-accent)_60%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_15%,transparent)] text-[var(--nav-accent)]"
+                : "border-white/[0.06] bg-white/[0.02] text-slate-500 hover:border-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] hover:text-[var(--nav-accent)]",
+            )
+          }
+        >
+          <item.icon className="h-4 w-4" />
+          {badgeOf(item.to) > 0 && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+        </NavLink>
+      ))}
+    </div>
   );
 }
 
@@ -178,6 +311,8 @@ function CommanderCard() {
 
 /** Barre latérale (bureau). */
 function Sidebar() {
+  const badgeOf = useBadges();
+  const [collapsed, setCollapsed] = useState(readCollapsed);
   return (
     <aside className="relative z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
@@ -189,21 +324,29 @@ function Sidebar() {
         </div>
       </Link>
       <CommanderCard />
-      <nav className="mt-4 flex-1 overflow-y-auto px-2 pb-4">
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="mb-3">
-            <p className="hud-eyebrow flex items-center gap-2 px-3 pb-1.5 pt-1 text-[10px] text-slate-600 after:h-px after:flex-1 after:bg-gradient-to-r after:from-cyan-glow/20 after:to-transparent">
-              {group.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {group.items.map((item) => (
-                <SideLink key={item.to} item={item} />
-              ))}
-            </div>
-          </div>
+      <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-3">
+        {SIDE_GROUPS.map((group) => (
+          <SideGroup
+            key={group.id}
+            group={group}
+            badgeOf={badgeOf}
+            collapsed={collapsed.includes(group.id)}
+            onToggle={() => {
+              const next = collapsed.includes(group.id) ? collapsed.filter((g) => g !== group.id) : [...collapsed, group.id];
+              setCollapsed(next);
+              try {
+                localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+              } catch {
+                /* non mémorisé */
+              }
+            }}
+          />
         ))}
       </nav>
-      <div className="border-t border-cyan-glow/10 px-4 py-3">
+      <div className="border-t border-cyan-glow/10 pt-2.5">
+        <FooterLinks badgeOf={badgeOf} />
+      </div>
+      <div className="px-4 pb-3 pt-1">
         <div className="flex items-center justify-between">
           <SignalIndicator />
           <LiveClock />
@@ -301,8 +444,12 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
         {editing && <p className="mt-2 text-xs text-slate-400">Touche une page pour l'épingler dans la barre du bas ({tabs.length} / {MAX_TABS}).</p>}
         <div className="mt-3 flex flex-col gap-4">
           {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              <p className="hud-eyebrow mb-2 text-[10px] text-slate-500">{group.label}</p>
+            <div key={group.id} style={{ "--nav-accent": group.accent } as React.CSSProperties}>
+              <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-slate-500">
+                <group.icon className="h-3 w-3 text-[var(--nav-accent)]" />
+                {group.label}
+                <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] to-transparent" />
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {group.items.map((item) =>
                   editing ? (

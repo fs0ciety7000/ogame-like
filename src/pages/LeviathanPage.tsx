@@ -123,7 +123,9 @@ export function LeviathanPage() {
   const admin = useAdminStatus();
   const [open, setOpen] = useState(false);
   // v4.7.1 : la pastille du menu s'efface une fois la page ouverte.
-  useEffect(() => markLeviathanSeen(state?.id), [state?.id]);
+  useEffect(() => {
+    markLeviathanSeen(state?.id);
+  }, [state?.id]);
   if (!player) return null;
 
   const active = !!state && isActive(state, now);
