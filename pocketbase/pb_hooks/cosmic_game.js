@@ -158,6 +158,7 @@ __export(hooksEntry_exports, {
   completeFleetReturn: () => completeFleetReturn,
   completeTradeContract: () => completeTradeContract,
   computeGameStats: () => computeGameStats,
+  computeLiveBalance: () => computeLiveBalance,
   computeTerritories: () => computeTerritories,
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
@@ -2621,6 +2622,29 @@ function boostedRates(input, multipliers, boost = 1) {
     if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
   }
   return gross;
+}
+function economySnapshot(input, now) {
+  var _a, _b, _c, _d;
+  const gross = boostedRates(input, now === void 0 ? {} : productionMultipliers(now), now === void 0 ? 1 : boostAt(input, now));
+  const upkeep = now !== void 0 && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const capacity = storageCapacityOf(input);
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const outage = energyNet < 0 && ((_b = input.resources.energy) != null ? _b : 0) <= 0;
+  const factor = outage ? ECONOMY_RULES.outageProductionFactor : 1;
+  const net = {};
+  const full = [];
+  for (const r of RESOURCE_LIST) {
+    const stock = (_c = input.resources[r.id]) != null ? _c : 0;
+    const isCommon = r.rarity === "common";
+    const atCap = isCommon && stock >= capacity;
+    if (r.id === "energy") {
+      net.energy = outage ? 0 : atCap && energyNet > 0 ? 0 : energyNet;
+    } else {
+      net[r.id] = atCap ? 0 : ((_d = gross[r.id]) != null ? _d : 0) * factor;
+    }
+    if (atCap) full.push(r.id);
+  }
+  return { gross, upkeep, net, capacity, outage, full };
 }
 function addCapped(stock, gain, cap) {
   if (gain <= 0) return Math.max(0, stock + gain);
@@ -11305,6 +11329,91 @@ function renamePlayer(player, raw, now) {
   player.renamed = { fromPseudo: player.pseudo, atMs: now };
   player.pseudo = pseudo;
   return { pseudo, login: pseudoLogin(pseudo) };
+}
+
+// src/game/balance/diagnostics.ts
+function places(units, ids) {
+  return ids.reduce((a, id) => {
+    var _a, _b, _c, _d;
+    return a + ((_b = (_a = units == null ? void 0 : units[id]) == null ? void 0 : _a.count) != null ? _b : 0) * ((_d = (_c = findUnit(id)) == null ? void 0 : _c.hangarSpace) != null ? _d : 1);
+  }, 0);
+}
+function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
+  const active = players.filter((p) => {
+    var _a, _b;
+    return !p.npc && now - ((_b = (_a = p.lastActiveMs) != null ? _a : p.resourcesUpdatedAtMs) != null ? _b : 0) < 14 * 864e5;
+  });
+  const rows = active.map((p) => {
+    var _a, _b;
+    const units = (_a = p.units) != null ? _a : {};
+    const tech = (_b = p.techLevels) != null ? _b : {};
+    const eco = economySnapshot(p, now);
+    const perHour = Object.values(eco.gross).reduce((a, b) => a + (b != null ? b : 0), 0) * 3600;
+    return {
+      pseudo: p.pseudo,
+      attack: Math.round(computeFullPower(units, tech, OFFENSIVE_UNITS, ["attack"]) * (1 + playerModifiers(p).attack)),
+      defense: Math.round(homeDefensePower(units, tech) * (1 + playerModifiers(p).defense)),
+      shieldPct: Math.round(getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) * 100),
+      defenseBonusPct: Math.round(playerModifiers(p).defense * 100),
+      attackPlacesUsed: places(units, OFFENSIVE_UNITS),
+      attackPlaces: getUnitCapacity(p.buildings, "attack", tech),
+      defensePlacesUsed: places(units, DEFENSIVE_UNITS),
+      defensePlaces: getUnitCapacity(p.buildings, "defense", tech),
+      productionPerHour: Math.round(perHour),
+      outage: eco.outage,
+      fullStorage: eco.full.length
+    };
+  });
+  rows.sort((a, b) => b.attack + b.defense - (a.attack + a.defense));
+  const unitPlaces = [...OFFENSIVE_UNITS, ...DEFENSIVE_UNITS].map((id) => {
+    var _a, _b;
+    const owners = active.filter((p) => {
+      var _a2, _b2, _c;
+      return ((_c = (_b2 = (_a2 = p.units) == null ? void 0 : _a2[id]) == null ? void 0 : _b2.count) != null ? _c : 0) > 0;
+    });
+    return { id, name: (_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id, places: owners.reduce((a, p) => {
+      var _a2, _b2, _c, _d, _e;
+      return a + ((_c = (_b2 = (_a2 = p.units) == null ? void 0 : _a2[id]) == null ? void 0 : _b2.count) != null ? _c : 0) * ((_e = (_d = findUnit(id)) == null ? void 0 : _d.hangarSpace) != null ? _e : 1);
+    }, 0), owners: owners.length };
+  }).filter((u) => u.places > 0).sort((a, b) => b.places - a.places);
+  const since = now - windowDays * 864e5;
+  const recent = reports.filter((r) => r.timestamp >= since);
+  const isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+  const pvp = recent.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const wl = recent.filter((r) => {
+    var _a, _b;
+    return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
+  });
+  const pct5 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
+  const factions2 = FACTIONS.map((f) => {
+    var _a, _b, _c, _d;
+    let raidsWon = 0, raidsLost = 0, lairsTaken = 0, lairsOpen = 0;
+    for (const p of active) {
+      const st = (_a = p.pirates) == null ? void 0 : _a[f.id];
+      if (!st) continue;
+      raidsWon += (_b = st.raidsWon) != null ? _b : 0;
+      raidsLost += (_c = st.raidsLost) != null ? _c : 0;
+      lairsTaken += (_d = st.lairsTaken) != null ? _d : 0;
+      if (st.lairOpen) lairsOpen++;
+    }
+    const total2 = raidsWon + raidsLost;
+    return { id: f.id, name: f.name, raidsWon, raidsLost, repelledPct: total2 ? Math.round(raidsWon / total2 * 100) : 0, lairsTaken, lairsOpen };
+  });
+  return {
+    generatedAt: now,
+    activePlayers: active.length,
+    players: rows,
+    unitPlaces,
+    pvp: { battles: pvp.length, attackerWinPct: pct5(pvp), windowDays },
+    warlordBattles: { battles: wl.length, attackerWinPct: pct5(wl) },
+    factions: factions2,
+    warlords: warlords.map((w) => {
+      var _a, _b, _c, _d;
+      return { pseudo: w.pseudo, power: Math.round(computeFullPower((_a = w.units) != null ? _a : {}, (_b = w.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower((_c = w.units) != null ? _c : {}, (_d = w.techLevels) != null ? _d : {})) };
+    }).sort((a, b) => b.power - a.power),
+    bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
+    bestAttack: Math.max(0, ...rows.map((r) => r.attack))
+  };
 }
 
 // src/server/hooksEntry.ts

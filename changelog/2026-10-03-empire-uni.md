@@ -28,6 +28,11 @@ Passe complète sur les unités, l'économie et les factions, vérifiée par une
 - Un jour manqué remet la série à 1. L'infobulle montre les 7 jours du cycle et ta meilleure série.
 
 ## Administration
+- **Onglet Équilibrage** (Pilotage) : diagnostic du contenu actuel et des joueurs actifs des 14 derniers jours, avec des propositions chiffrées classées critique / à revoir / info et un lien vers l'onglet à modifier. On y trouve :
+  - les unités (valeur par place, coût, entretien, places occupées chez les joueurs) et un bac à sable pour essayer d'autres places, coûts ou ATK/DEF sans rien enregistrer ;
+  - les joueurs (attaque, défense, bouclier, remplissage des hangars, production, alertes) ;
+  - les combats JcJ et contre les seigneurs sur 30 jours, les raids repoussés et repaires pris par faction, la puissance des seigneurs ;
+  - l'amortissement des extracteurs et le rendement des missions au début, au milieu et en fin de partie.
 - **Technologies de capacité des hangars** : nouvel effet « Capacité des hangars » (attaque ou défense, % par niveau) dans l'éditeur des technologies. Aucune techno ne l'utilise encore : c'est à l'équipe de la créer et de la chiffrer.
 - **Territoires** : carte des 24 secteurs dans Outils, avec l'alliance qui tient chacun, ses niveaux, les prétendants et un bouton pour recalculer immédiatement.
 - **Reliques mythiques** : la relique du mois et la liste de celles déjà remises (saison, relique, joueur).

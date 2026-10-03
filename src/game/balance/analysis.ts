@@ -148,8 +148,7 @@ export function missionTable(profile: { buildings: Buildings; techLevels: TechLe
   const perHour = commonPerHour(profile);
   return Object.values(MISSIONS).map((m) => {
     const reward = missionRewards(m, profile);
-    const { xp: _xp, ...res } = reward;
-    const value = costValue(res);
+    const value = costValue(Object.fromEntries(Object.entries(reward).filter(([k]) => k !== "xp")));
     return { key: m.key, name: m.name, minutes: m.duration / 60, value, productionHoursPerHour: perHour > 0 ? value / perHour / (m.duration / 3600) : 0 };
   });
 }

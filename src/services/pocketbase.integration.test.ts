@@ -2161,6 +2161,16 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v5.3: balance report reads live players, refused to players", async () => {
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.send("/api/cosmic/admin/balance", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    const live = await admin.send("/api/cosmic/admin/balance", { method: "GET" });
+    const { pseudo } = await admin.collection("players").getOne(bId);
+    expect(live.players.some((p: { pseudo: string }) => p.pseudo === pseudo)).toBe(true);
+    expect(live.factions.length).toBeGreaterThan(0);
+    expect(live.pvp.windowDays).toBe(30);
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);
