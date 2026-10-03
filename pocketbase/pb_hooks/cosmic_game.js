@@ -320,6 +320,8 @@ __export(hooksEntry_exports, {
   rollRelic: () => rollRelic,
   sagaMonthId: () => sagaMonthId,
   sagaOf: () => sagaOf,
+  sagaPoints: () => sagaPoints,
+  sagaProgress: () => sagaProgress,
   sagaStandings: () => sagaStandings,
   sanitizeClientError: () => sanitizeClientError,
   sanitizeMessageText: () => sanitizeMessageText,
@@ -1591,7 +1593,7 @@ var COMMANDERS = [
     name: "Rhys Calder",
     title: "Amiral",
     portrait: "/assets/commanders/admiral.webp",
-    domain: "Combats gagn\xE9s en attaque, repaires, primes, L\xE9viathan.",
+    domain: "Combats gagn\xE9s en attaque, repaires, primes, assauts sur les boss.",
     bonus: (l) => `+${l} % d'attaque de la flotte`
   },
   {
@@ -1599,7 +1601,7 @@ var COMMANDERS = [
     name: "Ilsa Varga",
     title: "Strat\xE8ge",
     portrait: "/assets/commanders/strategist.webp",
-    domain: "Attaques et raids repouss\xE9s.",
+    domain: "Attaques et raids repouss\xE9s (un peu aussi apr\xE8s une d\xE9fense perdue).",
     bonus: (l) => `+${l} % de d\xE9fense de la base`
   },
   {
@@ -1607,7 +1609,7 @@ var COMMANDERS = [
     name: "Noor Halim",
     title: "Ing\xE9nieure",
     portrait: "/assets/commanders/engineer.webp",
-    domain: "Constructions et recherches termin\xE9es.",
+    domain: "Constructions (plan\xE8te m\xE8re et colonies) et recherches termin\xE9es.",
     bonus: (l) => `\u2212${l} % de temps de construction et de recherche`
   },
   {
@@ -1623,7 +1625,7 @@ var COMMANDERS = [
     name: "Oswin Tarr",
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
-    domain: "Missions, contrats du jour, \xE9changes au march\xE9.",
+    domain: "Missions, contrats du jour, \xE9changes au Comptoir et au march\xE9.",
     bonus: (l) => `+${l} % de production, +${l * 2} % d'entrep\xF4t`
   }
 ];
@@ -1659,6 +1661,32 @@ var COMMANDER_XP = {
   missionDone: 5,
   contractClaimed: 10,
   marketTrade: 5
+};
+var COMMANDER_SOURCES = {
+  admiral: [
+    { label: "Attaque gagn\xE9e", xp: COMMANDER_XP.attackWin },
+    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
+    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin },
+    { label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault }
+  ],
+  strategist: [
+    { label: "Attaque repouss\xE9e", xp: COMMANDER_XP.defenseWin },
+    { label: "Raid de faction repouss\xE9", xp: COMMANDER_XP.raidRepelled },
+    { label: "Attaque ou raid subi et perdu", xp: COMMANDER_XP.defenseLost }
+  ],
+  engineer: [
+    { label: "B\xE2timent termin\xE9 (plan\xE8te m\xE8re ou colonie)", xp: COMMANDER_XP.buildingDone },
+    { label: "Recherche termin\xE9e", xp: COMMANDER_XP.researchDone }
+  ],
+  spy: [
+    { label: "Espionnage lanc\xE9", xp: COMMANDER_XP.spyLaunched },
+    { label: "Sondes ennemies rep\xE9r\xE9es", xp: COMMANDER_XP.probesCaught }
+  ],
+  steward: [
+    { label: "Mission termin\xE9e", xp: COMMANDER_XP.missionDone },
+    { label: "Contrat du jour r\xE9cup\xE9r\xE9", xp: COMMANDER_XP.contractClaimed },
+    { label: "\xC9change au Comptoir ou au march\xE9", xp: COMMANDER_XP.marketTrade }
+  ]
 };
 function findCommander(id) {
   return COMMANDERS.find((c) => c.id === id);
@@ -3060,6 +3088,7 @@ function advanceColony(colony, player, now) {
       const job = colony.building;
       colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: job.level });
       colony.building = null;
+      grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
       notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
@@ -3913,6 +3942,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
       }
     }
     st.raidsLost += 1;
+    grantCommanderXp(player, "strategist", COMMANDER_XP.defenseLost);
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
@@ -7766,6 +7796,8 @@ function acceptOffer(offer, buyer, seller, buysToday, now) {
   bumpStat(buyer, "marketVolume", offer.giveAmount);
   recordChronicle(buyer, "market", now);
   bumpStat(seller, "marketVolume", offer.wantAmount - tax);
+  grantCommanderXp(buyer, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(seller, "steward", COMMANDER_XP.marketTrade);
   return { tax, sameAlliance };
 }
 function buyOrderPaid(order, filled) {
@@ -7798,6 +7830,8 @@ function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
   bumpStat(supplier, "marketVolume", qty);
   bumpStat(owner, "marketVolume", qty - tax);
   recordChronicle(supplier, "market", now);
+  grantCommanderXp(supplier, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(owner, "steward", COMMANDER_XP.marketTrade);
   return { qty, payment, tax, filled, done: filled >= order.wantAmount };
 }
 function refundOffer(offer, seller) {

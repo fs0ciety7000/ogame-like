@@ -430,6 +430,9 @@ routerAdd("POST", "/api/cosmic/admin/market-maker", (e) => {
   return e.json(200, { created: db.marketMakerTick(Date.now()) });
 }, $apis.requireAuth("users", "_superusers"));
 
+/** GET /api/cosmic/alliance/saga/live — progression en direct de mon alliance (v5.6). */
+routerAdd("GET", "/api/cosmic/alliance/saga/live", (e) => require(`${__hooks}/cosmic_db.js`).allianceSagaLive(e), $apis.requireAuth("users"));
+
 /** POST /api/cosmic/admin/alliance-saga — recalcul immédiat (et écriture de la saga du mois si elle manque). */
 routerAdd("POST", "/api/cosmic/admin/alliance-saga", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);
