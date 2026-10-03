@@ -34,6 +34,8 @@ export interface AchievementDef {
   rewardHours: number;
   /** Titre décerné (vide = aucun). */
   title: string;
+  /** v5.4 : palier ajouté par le générateur. */
+  auto?: boolean;
 }
 
 export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire" };
@@ -125,6 +127,10 @@ export const METRICS = {
   },
   xp: { label: "XP totale", value: (p: PlayerState) => p.xp ?? 0 },
   seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length },
+  // v5.4 : Chroniques et passe.
+  chaptersCompleted: { label: "Chapitres des Chroniques terminés", value: (p: PlayerState) => ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).length },
+  bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },
+  passesCompleted: { label: "Passes de saison terminés", value: (p: PlayerState) => ((p.seasonPass as { completed?: string[] } | undefined)?.completed ?? []).length },
   playtimeHours: { label: "Heures de jeu", value: (p: PlayerState) => Math.floor((p.playtimeSeconds ?? 0) / 3600) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
@@ -229,6 +235,11 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("elite_of_elite", "prestige", "or", "xp", 70_000, "Élite des élites", "Atteins le rang Diamant III.", "💠"),
   def("podium", "prestige", "or", "seasonTitles", 1, "Podium", "Remporte un titre de saison.", "🥇"),
   def("tireless", "prestige", "bronze", "playtimeHours", 24, "Increvable", "Cumule 24 h de temps de jeu.", "⏱️"),
+  // v5.4 : Chroniques et passe (les paliers suivants sont générés automatiquement).
+  def("chapter_reader", "prestige", "bronze", "chaptersCompleted", 1, "Lecteur des Chroniques", "Termine les quatre épisodes d'un chapitre.", "📖"),
+  def("chapter_keeper", "prestige", "argent", "chaptersCompleted", 3, "Gardien des Chroniques", "Termine 3 chapitres des Chroniques.", "📚"),
+  def("seal_bearer", "prestige", "argent", "bossSeals", 1, "Porte-sceau", "Participe à la chute d'un boss de saison.", "🔱"),
+  def("pass_finisher", "prestige", "or", "passesCompleted", 1, "Jusqu'au bout", "Termine un passe de saison.", "🎟️"),
 ];
 
 /** Registre courant (remplacé par applyGameContent). */

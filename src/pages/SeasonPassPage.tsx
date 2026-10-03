@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { describePassReward, PASS_POINTS, PASS_RULES, PASS_TIERS, passState, passTier, passTitle, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, PASS_POINTS, passState, passTier, passTitle, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { GameActionError, claimPassTier } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -61,9 +61,12 @@ export function SeasonPassPage() {
   if (!player) return null;
   const now = Date.now();
   const st = passState(player, now);
-  const tier = passTier(st.points);
-  const max = PASS_RULES.tiers * PASS_RULES.pointsPerTier;
-  const inTier = st.points - tier * PASS_RULES.pointsPerTier;
+  // v5.4 : un chapitre généré peut apporter son propre passe.
+  const pass = activePass(st.seasonId);
+  const tiers = pass.tiers.length;
+  const tier = passTier(st.points, st.seasonId);
+  const max = tiers * pass.pointsPerTier;
+  const inTier = st.points - tier * pass.pointsPerTier;
   const claimable = Array.from({ length: tier }, (_, i) => i + 1).filter((t) => !st.claimed.includes(t));
 
   const claim = async (t: number) => {
@@ -86,7 +89,7 @@ export function SeasonPassPage() {
       <PageHeader
         eyebrow="Saison"
         title={`Passe de ${seasonLabel(st.seasonId)}`}
-        description={`Gratuit pour tous : ton activité de chaque jour remplit ${PASS_RULES.tiers} paliers de récompenses. Remise à zéro au début de chaque mois.`}
+        description={`Gratuit pour tous : ton activité de chaque jour remplit ${tiers} paliers de récompenses. Remise à zéro au début de chaque mois.`}
         right={
           claimable.length > 0 ? (
             <Button onClick={() => void claimAll()} disabled={busy !== null}>
@@ -99,7 +102,7 @@ export function SeasonPassPage() {
       <ChroniclesCard />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Palier" value={`${tier} / ${PASS_RULES.tiers}`} sub={tier < PASS_RULES.tiers ? `${inTier} / ${PASS_RULES.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
+        <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
         <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="var(--color-gold-glow)" />
         <StatTile label="Fin de la saison" value={formatDuration(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="var(--color-ember-glow)" />
       </div>
@@ -118,7 +121,7 @@ export function SeasonPassPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-        {PASS_TIERS.map((rewards, i) => {
+        {pass.tiers.map((rewards, i) => {
           const t = i + 1;
           const reached = tier >= t;
           const claimed = st.claimed.includes(t);
@@ -155,7 +158,9 @@ export function SeasonPassPage() {
           );
         })}
       </div>
-      <p className="text-xs text-slate-500">Palier 30 : relique épique, 40 Ambre, la bannière de la saison et le titre « {passTitle(st.seasonId)} », gardés pour toujours.</p>
+      <p className="text-xs text-slate-500">
+        Palier {tiers} : {pass.tiers[tiers - 1].map((r) => describePassReward(r, st.seasonId)).join(", ")}. Le titre « {passTitle(st.seasonId)} » et la bannière de la saison sont gardés pour toujours.
+      </p>
     </div>
   );
 }

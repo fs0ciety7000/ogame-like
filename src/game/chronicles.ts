@@ -1,6 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { parisLocalToUtc, parisOffsetMs, weekendWindow } from "@/game/events";
-import { addPassPoints, onPassPoints, PASS_POINTS } from "@/game/seasonPass";
+import { addPassPoints, grantPassReward, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -35,6 +35,28 @@ export interface ChronicleEpisode {
   title: string;
   lines: StoryLine[];
   objective: { type: ChronicleObjective; count: number };
+  /** v5.4 : récompense en plus des points de passe. */
+  reward?: PassReward[];
+}
+
+/** v5.4 : fiche de Codex propre à un chapitre (débloquée à sa parution). */
+export interface ChronicleCodexEntry {
+  id: string;
+  name: string;
+  subtitle: string;
+  text: string;
+  image: string;
+}
+
+/** v5.4 : chapitre généré automatiquement (trace du calcul). */
+export interface ChapterAuto {
+  generatedAtMs: number;
+  /** Mois dont les données ont servi. */
+  sourceMonth: string;
+  archetype: string;
+  difficulty: number;
+  activePlayers: number;
+  reasons: string[];
 }
 
 export interface SeasonBossDef {
@@ -55,6 +77,14 @@ export interface ChronicleMonth {
   theme: { accent: string; label: string };
   boss: SeasonBossDef;
   episodes: ChronicleEpisode[];
+  /** v5.4 : prologue affiché avant le premier épisode. */
+  synopsis?: string;
+  /** v5.4 : chapitre terminé (les 4 épisodes) : titre, bannière de profil, récompenses. */
+  completion?: { title: string; banner: string; rewards: PassReward[] };
+  codex?: ChronicleCodexEntry[];
+  /** v5.4 : passe propre à ce mois (sinon le passe commun). */
+  pass?: MonthPass;
+  auto?: ChapterAuto;
 }
 
 export interface ChroniclesConfig {
@@ -354,6 +384,7 @@ let config: ChroniclesConfig = structuredClone(DEFAULT_CHRONICLES);
 
 export function setChronicles(next: Partial<ChroniclesConfig> | null | undefined): void {
   config = { months: Array.isArray(next?.months) && next!.months.length > 0 ? structuredClone(next!.months) : structuredClone(DEFAULT_CHRONICLES.months) };
+  setMonthPasses(config.months);
 }
 
 export function chroniclesConfig(): ChroniclesConfig {
@@ -377,6 +408,10 @@ export function validateChronicles(cfg: Partial<ChroniclesConfig> | undefined): 
       if (!(e.objective?.count >= 1)) errors.push(`Chroniques ${m.id}, épisode ${i + 1} : nombre ≥ 1.`);
     });
     if (!m.boss?.name) errors.push(`Chroniques ${m.id} : nom du boss manquant.`);
+    const rewards = [...(m.episodes ?? []).map((e) => e.reward ?? []), m.completion?.rewards ?? []].filter((r) => r.length > 0);
+    if (rewards.length > 0) errors.push(...validateSeasonPass({ tiers: rewards }).map((e) => `Chroniques ${m.id} — ${e.replace(/^Passe, palier \d+ : /, "récompense : ")}`));
+    if (m.pass) errors.push(...validateSeasonPass({ rules: { tiers: m.pass.tiers.length, pointsPerTier: m.pass.pointsPerTier }, tiers: m.pass.tiers }).map((e) => `Chroniques ${m.id} — ${e}`));
+    if (m.completion && !m.completion.title?.trim()) errors.push(`Chroniques ${m.id} : titre de fin de chapitre manquant.`);
   }
   return errors;
 }
@@ -422,19 +457,24 @@ export interface ChronicleState {
   claimed: number[];
   /** Mois dont le boss est tombé avec ce joueur parmi les assaillants (sceau gardé). */
   emblems: string[];
+  /** v5.4 : mois dont les quatre épisodes ont été terminés. */
+  chapters: string[];
 }
 
 export function chronicleState(player: Pick<PlayerState, "chronicle">, now: number): ChronicleState {
   const raw = (player.chronicle ?? {}) as Partial<ChronicleState>;
   const monthId = chronicleMonthId(now);
   const emblems = Array.isArray(raw.emblems) ? raw.emblems.map(String) : [];
-  if (raw.monthId !== monthId) return { monthId, progress: [0, 0, 0, 0], claimed: [], emblems };
+  const chapters = Array.isArray(raw.chapters) ? raw.chapters.map(String) : [];
+  if (raw.monthId !== monthId) return { monthId, progress: [0, 0, 0, 0], claimed: [], emblems, chapters };
   const progress = [0, 1, 2, 3].map((i) => Math.max(0, Number(raw.progress?.[i]) || 0));
-  return { monthId, progress, claimed: (raw.claimed ?? []).map(Number).filter((n) => n >= 0 && n < 4), emblems };
+  return { monthId, progress, claimed: (raw.claimed ?? []).map(Number).filter((n) => n >= 0 && n < 4), emblems, chapters };
 }
 
 /** Une action compte pour les épisodes ouverts et pas encore réclamés. */
 export function recordChronicle(player: PlayerState, type: ChronicleObjective, now: number, times = 1): void {
+  // v5.4 : les actions sans points de passe sont comptées ici (les autres dans addPassPoints).
+  if (!(type in PASS_POINTS)) trackActivity(player, type, now, times);
   const month = chronicleOf(now);
   if (!month || !(times > 0)) return;
   const st = chronicleState(player, now);
@@ -451,7 +491,7 @@ export function recordChronicle(player: PlayerState, type: ChronicleObjective, n
   if (changed) player.chronicle = st;
 }
 
-export function claimChronicle(player: PlayerState, episode: unknown, now: number): number {
+export function claimChronicle(player: PlayerState, episode: unknown, now: number, random: () => number = Math.random): { points: number; gained: string[]; chapter: boolean } {
   const i = Math.floor(Number(episode));
   const month = chronicleOf(now);
   if (!month) throw new GameActionError("Pas de chronique ce mois-ci.");
@@ -464,7 +504,26 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
   addPassPoints(player, "chronicle", now);
-  return PASS_POINTS.chronicle;
+  const gained = (e.reward ?? []).map((r) => grantPassReward(player, r, month.id, now, random));
+  // v5.4 : chapitre terminé : titre, bannière et récompense de fin.
+  const chapter = month.episodes.every((_, k) => st.claimed.includes(k));
+  if (chapter && month.completion) {
+    const after = chronicleState(player, now);
+    if (!after.chapters.includes(month.id)) after.chapters = [...after.chapters, month.id];
+    player.chronicle = after;
+    const title = month.completion.title.trim();
+    if (title && !(player.titles ?? []).some((t) => t.label === title)) {
+      player.titles = [...(player.titles ?? []), { label: title, seasonId: `chapter:${month.id}`, rank: 1 }];
+      gained.push(`Titre « ${title} »`);
+    }
+    gained.push(`Bannière « ${month.title} »`);
+    gained.push(...month.completion.rewards.map((r) => grantPassReward(player, r, month.id, now, random)));
+  } else if (chapter) {
+    const after = chronicleState(player, now);
+    if (!after.chapters.includes(month.id)) after.chapters = [...after.chapters, month.id];
+    player.chronicle = after;
+  }
+  return { points: PASS_POINTS.chronicle, gained, chapter };
 }
 
 // Les sources du passe qui sont aussi des objectifs d'épisode.

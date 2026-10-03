@@ -12,6 +12,7 @@ import {
   Medal,
   Rocket,
   Scale,
+  Sparkles,
   ScrollText,
   ShieldAlert,
   Bug,
@@ -34,6 +35,7 @@ import { useAuthStore } from "@/store/authStore";
 import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
+import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
@@ -84,6 +86,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "warlords", label: "Seigneurs", icon: Crown, hint: "Seigneurs de guerre : puissance, fréquence d'attaque, fiches et répliques." },
       { id: "seasonPass", label: "Passe", icon: Ticket, hint: "Paliers du passe de saison et points par action." },
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
+      { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
@@ -273,6 +276,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="chronicles">
           <ChroniclesPanel />
+        </TabsContent>
+        <TabsContent value="procedural">
+          <ProceduralPanel />
         </TabsContent>
         <TabsContent value="warlords">
           <WarlordsPanel />

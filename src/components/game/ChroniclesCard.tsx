@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { BookOpen, Check, Flame, Lock, Play } from "lucide-react";
+import { BookOpen, Check, Flame, Gift, Lock, Play, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SceneDialog } from "@/components/game/StoryDialog";
 import { chronicleOf, chronicleState, episodeUnlockMs, OBJECTIVE_LABELS, seasonBossWindow, unlockedEpisodes } from "@/game/chronicles";
-import { PASS_POINTS } from "@/game/seasonPass";
+import { describePassReward, PASS_POINTS } from "@/game/seasonPass";
 import { claimChronicleEpisode, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
@@ -30,8 +30,9 @@ export function ChroniclesCard() {
   const claim = async (i: number) => {
     setBusy(i);
     try {
-      await claimChronicleEpisode(i);
-      toast.success(`Épisode ${i + 1} terminé`, { description: `+${PASS_POINTS.chronicle} points de passe` });
+      const out = await claimChronicleEpisode(i);
+      const extra = out.gained?.length ? ` · ${out.gained.join(" · ")}` : "";
+      toast.success(out.chapter ? `Chapitre « ${month.title} » terminé !` : `Épisode ${i + 1} terminé`, { description: `+${PASS_POINTS.chronicle} points de passe${extra}` });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Réclamation impossible.");
     } finally {
@@ -59,6 +60,7 @@ export function ChroniclesCard() {
           )}
         </div>
       </div>
+      {month.synopsis && <p className="px-4 pt-3 text-sm italic text-slate-300">{month.synopsis}</p>}
       <div className="grid gap-2 p-4 sm:grid-cols-2">
         {month.episodes.map((e, i) => {
           const locked = i >= open;
@@ -88,6 +90,11 @@ export function ChroniclesCard() {
                   <div className="h-1.5 bg-white/5">
                     <div className="h-full" style={{ width: `${Math.min(100, (progress / e.objective.count) * 100)}%`, background: month.theme.accent }} />
                   </div>
+                  {e.reward && e.reward.length > 0 && (
+                    <p className="flex items-center gap-1.5 text-[11px] text-gold-glow">
+                      <Gift className="h-3 w-3" /> {e.reward.map((r) => describePassReward(r, month.id)).join(", ")}
+                    </p>
+                  )}
                   {!done && (
                     <Button size="sm" disabled={!ready || busy !== null} onClick={() => void claim(i)} className="self-start">
                       Terminer l'épisode (+{PASS_POINTS.chronicle})
@@ -99,6 +106,17 @@ export function ChroniclesCard() {
           );
         })}
       </div>
+      {month.completion && (
+        <div className="mx-4 mb-4 flex flex-wrap items-center gap-3 border border-white/10 p-3 text-xs text-slate-300">
+          <span className="h-8 w-20 shrink-0" style={{ background: month.completion.banner }} />
+          <Trophy className="h-4 w-4 shrink-0" style={{ color: month.theme.accent }} />
+          <span className="min-w-0 flex-1">
+            {st.chapters.includes(month.id) ? "Chapitre terminé : " : "Termine les quatre épisodes : "}
+            titre « <span className="text-white">{month.completion.title}</span> », bannière de profil
+            {month.completion.rewards.length > 0 && <>, {month.completion.rewards.map((r) => describePassReward(r, month.id)).join(", ")}</>}.
+          </span>
+        </div>
+      )}
       {replay !== null && (
         <SceneDialog title={`Chroniques · ${month.title} · Épisode ${replay + 1} : ${month.episodes[replay].title}`} lines={month.episodes[replay].lines} pseudo={player.pseudo} onClose={() => setReplay(null)} />
       )}

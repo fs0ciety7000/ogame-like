@@ -161,7 +161,7 @@ function useBadges(): (to: string) => number {
   const passClaimable = usePlayerStore((s) => {
     if (!s.player) return 0;
     const st = passState(s.player, Date.now());
-    return Math.max(0, passTier(st.points) - st.claimed.length);
+    return Math.max(0, passTier(st.points, st.seasonId) - st.claimed.length);
   });
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;

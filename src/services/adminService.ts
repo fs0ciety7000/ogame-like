@@ -286,3 +286,36 @@ export function adminBackupToR2(): Promise<{ backup: string | null; dispatched: 
 export function adminBalance(): Promise<import("@/game/balance/diagnostics").LiveBalance> {
   return pb.send("/api/cosmic/admin/balance", { method: "GET" });
 }
+
+/* ---------- v5.4 : générateur procédural ---------- */
+
+export interface ProceduralOverview {
+  settings: import("@/game/procedural").ProceduralSettings;
+  digest: import("@/game/procedural").WorldDigest;
+  difficulty: { value: number; reasons: string[] };
+  pending: string[];
+  preview: import("@/game/chronicles").ChronicleMonth | null;
+  months: { id: string; title: string; boss: string; auto: import("@/game/chronicles").ChapterAuto | null }[];
+  achievements: import("@/game/procedural").AchievementProposal[];
+}
+
+export interface ProceduralResult {
+  chapters: { id: string; title: string; boss: string }[];
+  achievements: { id: string; name: string; reason: string }[];
+}
+
+export function adminProcedural(): Promise<ProceduralOverview> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "GET" });
+}
+
+export function adminProceduralSettings(settings: Partial<import("@/game/procedural").ProceduralSettings>): Promise<{ settings: import("@/game/procedural").ProceduralSettings }> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "settings", settings } });
+}
+
+export function adminProceduralGenerate(monthId: string, variant: number, confirmStarted = false): Promise<ProceduralResult> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId, variant, confirmStarted } });
+}
+
+export function adminProceduralAchievements(): Promise<ProceduralResult> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
+}

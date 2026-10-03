@@ -15,17 +15,20 @@ import { ImageField, NumberField, Section, SelectField, TextAreaField, TextField
 const SPEAKER_IDS = Object.keys(STORY_SPEAKERS) as Speaker[];
 
 /** Une réplique par ligne : « vashka: texte ». */
+// v5.4 : « voix: texte » garde l'orateur ponctuel (antagoniste généré sans portrait de la liste).
 function linesToText(lines: StoryLine[]): string {
-  return lines.map((l) => `${l.speaker}: ${l.text}`).join("\n");
+  return lines.map((l) => `${l.as ? "voix" : l.speaker}: ${l.text}`).join("\n");
 }
 
-function textToLines(text: string): StoryLine[] {
+function textToLines(text: string, previous: StoryLine[] = []): StoryLine[] {
+  const guest = previous.find((l) => l.as);
   return text
     .split("\n")
     .map((row) => row.trim())
     .filter(Boolean)
     .map((row) => {
       const m = /^([a-z]+)\s*:\s*(.*)$/.exec(row);
+      if (m?.[1] === "voix" && guest) return { speaker: guest.speaker, as: guest.as, text: m[2] };
       const speaker = m && SPEAKER_IDS.includes(m[1] as Speaker) ? (m[1] as Speaker) : "vashka";
       return { speaker, text: m ? m[2] : row };
     });
@@ -115,6 +118,24 @@ export function ChroniclesPanel() {
               <TextAreaField label="Présentation du boss" rows={2} value={month.boss.lore} onChange={(v) => setMonth({ boss: { ...month.boss, lore: v } })} />
             </div>
             <div className="sm:col-span-2">
+              <TextAreaField label="Prologue (facultatif)" rows={2} value={month.synopsis ?? ""} onChange={(v) => setMonth({ synopsis: v || undefined })} />
+            </div>
+            {month.completion && (
+              <TextField label="Titre de fin de chapitre" value={month.completion.title} onChange={(v) => setMonth({ completion: { ...month.completion!, title: v } })} />
+            )}
+            {month.auto && (
+              <div className="border border-cyan-glow/20 bg-cyan-glow/5 p-3 text-xs text-slate-300 sm:col-span-2">
+                <p className="mb-1 font-medium text-cyan-glow">
+                  Chapitre généré le {new Date(month.auto.generatedAtMs).toLocaleString("fr-FR")} à partir de {month.auto.sourceMonth} ({month.auto.activePlayers} joueurs actifs, difficulté ×{month.auto.difficulty})
+                </p>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {month.auto.reasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="sm:col-span-2">
               <Button
                 size="sm"
                 variant="ghost"
@@ -145,7 +166,7 @@ export function ChroniclesPanel() {
                     label={`Répliques, une par ligne « personnage: texte » (${SPEAKER_IDS.join(", ")} ; {pseudo} = joueur)`}
                     rows={4}
                     value={linesToText(e.lines)}
-                    onChange={(v) => setMonth({ episodes: month.episodes.map((x, j) => (j === i ? { ...x, lines: textToLines(v) } : x)) })}
+                    onChange={(v) => setMonth({ episodes: month.episodes.map((x, j) => (j === i ? { ...x, lines: textToLines(v, x.lines) } : x)) })}
                   />
                 </div>
               </Section>

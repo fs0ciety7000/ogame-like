@@ -415,6 +415,21 @@ routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
   return e.json(200, game.computeLiveBalance(players, warlords, reports, now, 30));
 }, $apis.requireAuth("users", "_superusers"));
 
+/* ---------- v5.4 : générateur procédural ---------- */
+
+// Chaque jour : chapitre du mois (s'il manque), chapitre suivant à partir du jour réglé, paliers de succès.
+cronAdd("cosmic_procedural", "29 4 * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).proceduralTick(Date.now());
+    if (out.chapters.length + out.achievements.length > 0) console.log(`[cosmic] générateur : ${out.chapters.map((c) => c.id).join(", ") || "aucun chapitre"}, ${out.achievements.length} succès`);
+  } catch (err) {
+    console.log(`[cosmic] générateur : ${err}`);
+  }
+});
+
+routerAdd("GET", "/api/cosmic/admin/procedural", (e) => require(`${__hooks}/cosmic_db.js`).adminProcedural(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/procedural", (e) => require(`${__hooks}/cosmic_db.js`).adminProcedural(e), $apis.requireAuth("users", "_superusers"));
+
 /**
  * POST /api/cosmic/admin/reset — hard reset de la progression (un joueur ou
  * tous), précédé d'une sauvegarde complète. Administrateurs uniquement.
