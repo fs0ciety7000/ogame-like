@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { fleetProgress, type Fleet } from "@/game/fleets";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
+import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
@@ -165,6 +166,7 @@ export function FleetsPanel({
                 ? `${findFaction(f.factionId ?? "varan")?.name ?? "Faction hostile"}${findFaction(f.factionId ?? "varan")?.raid.target === "fleet" ? " · vise ta flotte à quai" : ""} · puissance ${formatCompact(f.power ?? 0)}`
                 : fleetSummary(f)}
             </p>
+            <ThreatGauge fleet={f} className="mt-1.5" />
             {f.anomaly && (
               <p className="mt-1 text-[11px] font-semibold text-violet-300">
                 ⚗ Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.

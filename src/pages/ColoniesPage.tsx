@@ -15,8 +15,14 @@ import { fleetCargoCapacity } from "@/game/combat";
 import { homeLevels,
   advanceColonies,
   COLONY_RULES,
+  BIOMES,
+  colonyBiome,
   colonyBuildingIds,
+  colonyBuildingName,
   colonyDefenseHangar,
+  DEPOSIT_ID,
+  depositLevel,
+  depositPerSecond,
   colonyDefenseSeconds,
   colonyFoundCost,
   colonyHourlyRates,
@@ -28,6 +34,8 @@ import { homeLevels,
   type Colony,
 } from "@/game/colonies";
 import { RESOURCE_LIST } from "@/game/resources";
+import { iconUrl, type GameIconName } from "@/lib/icons";
+import { assetUrl } from "@/lib/assets";
 import { findUnit, getUnitBuildTime, OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import {
@@ -236,6 +244,10 @@ function SectionTitle({ icon: Icon, children, aside }: { icon: typeof Hammer; ch
 
 /** Ce que rapporte le niveau suivant d'un entrepôt ou d'un hangar de défense. */
 function effectLine(colony: Colony, player: PlayerState, id: string, level: number): string | null {
+  if (id === DEPOSIT_ID) {
+    const res = RESOURCE_LIST.find((r) => r.id === colonyBiome(colony))?.name ?? "";
+    return `${res} : +${formatPerSecond(depositPerSecond(level) * 3600)} → +${formatPerSecond(depositPerSecond(level + 1) * 3600)}`;
+  }
   const def = findBuilding(id);
   if (def?.effect?.type === "hangar" && def.effect.category === "defense") {
     return `Hangar : ${formatCompact(level * def.effect.perLevel)} → ${formatCompact((level + 1) * def.effect.perLevel)} places`;
@@ -273,15 +285,17 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
           </p>
         </>
       ) : (
-        <p className="mt-1.5 font-mono text-[9px] text-slate-500">non plafonnée</p>
+        <p className="mt-1.5 font-mono text-[9px] text-slate-500">{rate > 0 ? <span className="text-violet-300">+{formatPerSecond(rate)} · gisement</span> : "non plafonnée"}</p>
       )}
     </div>
   );
 }
 
 function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Colony; player: PlayerState; id: string; busy: boolean; onUpgrade: () => void; now: number }) {
-  const def = findBuilding(id)!;
-  const level = colony.buildings[id]?.level ?? 0;
+  const deposit = id === DEPOSIT_ID;
+  // v5.1 : illustration du gisement par biome (repli : icône de la ressource rare).
+  const def = deposit ? { name: colonyBuildingName(colony, id), image: assetUrl(`/assets/buildings/gisement_${colonyBiome(colony)}.webp`) } : findBuilding(id)!;
+  const level = deposit ? depositLevel(colony) : (colony.buildings[id]?.level ?? 0);
   const max = colonyMaxLevel(id);
   const running = colony.building?.id === id ? colony.building : null;
   const queueBusy = !!colony.building && !running;
@@ -299,7 +313,12 @@ function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Co
       )}
     >
       <div className="relative grid h-16 w-16 shrink-0 place-items-center border border-white/[0.06] bg-space-950/60">
-        <img src={def.image} alt="" className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105" />
+        <img
+          src={def.image}
+          alt=""
+          className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
+          onError={deposit ? (e) => { const fallback = iconUrl(colonyBiome(colony) as GameIconName); if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; } : undefined}
+        />
         <span className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap border px-1.5 font-mono text-[10px] font-bold", maxed ? "border-gold-glow/60 bg-space-950 text-gold-glow" : "border-mint-glow/40 bg-space-950 text-mint-glow")}>
           {maxed ? "MAX" : `NIV ${level}`}
         </span>
@@ -385,8 +404,9 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const batchCost = picked ? { scrap: picked.cost.scrap * defense.qty, energy: picked.cost.energy * defense.qty } : {};
   const batchSpace = picked ? picked.hangarSpace * defense.qty : 0;
   const batchAffordable = Object.entries(batchCost).every(([r, n]) => (colony.resources[r as ResourceId] ?? 0) >= (n ?? 0));
-  const ids = colonyBuildingIds();
-  const levels = ids.reduce((a, id) => a + (colony.buildings[id]?.level ?? 0), 0);
+  const ids = [DEPOSIT_ID, ...colonyBuildingIds()];
+  const levels = ids.reduce((a, id) => a + (id === DEPOSIT_ID ? depositLevel(colony) : (colony.buildings[id]?.level ?? 0)), 0);
+  const biome = BIOMES[colonyBiome(colony)];
   const maxLevels = ids.reduce((a, id) => a + colonyMaxLevel(id), 0);
   const hourly = Object.values(rates).reduce((a: number, b) => a + (b ?? 0), 0);
   const placed = Object.entries(colony.defenses).filter(([, s]) => s.count > 0);
@@ -406,6 +426,9 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <PlanetOrb size={72} tone={colony.slot === 2 ? "var(--color-violet-glow)" : "var(--color-mint-glow)"} />
         <div className="relative min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px] text-mint-glow">Colonie {colony.slot} · fondée {new Date(colony.foundedAtMs).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</p>
+          <p className="mt-0.5 inline-flex items-center gap-1.5 border px-1.5 py-px text-[11px]" style={{ borderColor: `${biome.tone}66`, color: biome.tone }} title={biome.lore}>
+            <img src={iconUrl(colonyBiome(colony) as GameIconName)} alt="" className="h-3.5 w-3.5" /> Biome : {biome.name}
+          </p>
           {rename === null ? (
             <button type="button" className="group/n flex items-center gap-2 text-left" title="Renommer" onClick={() => setRename(colony.name)}>
               <span className="font-display text-xl font-bold tracking-[0.04em] text-white">{colony.name}</span>
@@ -652,7 +675,8 @@ function FoundColony({ player }: { player: PlayerState }) {
           <h2 className="font-display text-xl font-bold tracking-[0.04em] text-white">Fonder la colonie {next.slot}</h2>
           <p className="mt-1 max-w-2xl text-xs text-slate-400">
             Un vaisseau colonial part de ta planète mère et fonde la colonie en {COLONY_RULES.foundHours} h. Elle démarre avec {formatCompact(COLONY_RULES.startStock)} de chaque ressource commune, ses
-            extracteurs, son entrepôt et son hangar de défense au niveau 1.
+            extracteurs, son entrepôt et son hangar de défense au niveau 1. Son biome est tiré au hasard : il lui donne un gisement de ressource rare (acier renforcé, modules
+            cybernétiques, nanites ou fragments d'IA) qui produit dès la fondation.
           </p>
         </div>
       </div>

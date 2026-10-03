@@ -695,6 +695,14 @@ function formatInt(value) {
   }
   return n < 0 ? `-${out}` : out;
 }
+function describeGain(gain) {
+  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
+    var _a;
+    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
+  });
+  return parts.length ? parts.join(", ") : "rien";
+}
 
 // src/game/resources.ts
 var RESOURCE_LIST = [
@@ -2708,6 +2716,45 @@ var COLONY_RULES = {
   costFactor: 1.5
 };
 var HOUR2 = 36e5;
+var DEPOSIT_ID = "gisement";
+var BIOMES = {
+  reinforcedSteel: { name: "Monde ferreux", deposit: "Mine d'acier profond", lore: "Un noyau satur\xE9 de m\xE9tal : l'acier renforc\xE9 affleure presque \xE0 la surface.", tone: "#9fb4c8" },
+  cyberModule: { name: "Cimeti\xE8re d'\xE9paves", deposit: "Atelier de r\xE9cup\xE9ration", lore: "Des flottes enti\xE8res s'y sont \xE9cras\xE9es ; leurs modules dorment sous la poussi\xE8re.", tone: "#5de0ff" },
+  syntheticNanites: { name: "Marais de nanites", deposit: "Ruche de nanites", lore: "Une brume grise vivante, que l'on r\xE9colte comme du miel.", tone: "#7cf0b0" },
+  aiFragment: { name: "N\xE9cropole d'IA", deposit: "Excavation de noyaux", lore: "Les ruines d'une civilisation de machines, aux m\xE9moires encore chaudes.", tone: "#c792ff" }
+};
+var RARE_DEPOSITS = Object.keys(BIOMES);
+var DEPOSIT_RULES = {
+  /** Production par seconde, niveaux 1 à 15. */
+  perSecond: [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.4, 3],
+  /** Coût : celui d'un extracteur de colonie × ce facteur (plus nanocomposants et données). */
+  costFactor: 1.2,
+  /** Durée : celle d'un extracteur de colonie × ce facteur. */
+  timeFactor: 1.5
+};
+function hashString2(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function biomeFor(seed) {
+  return RARE_DEPOSITS[hashString2(seed) % RARE_DEPOSITS.length];
+}
+function colonyBiome(colony) {
+  return colony.biome && BIOMES[colony.biome] ? colony.biome : biomeFor(`${colony.id}:${colony.foundedAtMs}`);
+}
+function depositLevel(colony) {
+  var _a, _b;
+  return (_b = (_a = colony.buildings[DEPOSIT_ID]) == null ? void 0 : _a.level) != null ? _b : 1;
+}
+function depositPerSecond(level3) {
+  if (level3 <= 0) return 0;
+  return DEPOSIT_RULES.perSecond[Math.min(level3, DEPOSIT_RULES.perSecond.length) - 1];
+}
+function colonyBuildingName(colony, id) {
+  var _a, _b;
+  return id === DEPOSIT_ID ? BIOMES[colonyBiome(colony)].deposit : (_b = (_a = findBuilding(id)) == null ? void 0 : _a.name) != null ? _b : id;
+}
 function colonyBuildingIds() {
   return BUILDINGS.filter((b) => {
     var _a, _b;
@@ -2775,10 +2822,12 @@ function startColonization(player, nameIn, now) {
 }
 function foundColony(uid, job, at) {
   const buildings = {};
-  for (const id of colonyBuildingIds()) buildings[id] = { level: 1, unlocked: true };
+  for (const id2 of colonyBuildingIds()) buildings[id2] = { level: 1, unlocked: true };
   const resources = emptyResources();
   for (const res of COMMON_RESOURCES2) resources[res] = COLONY_RULES.startStock;
-  return { id: colonyId(uid, job.slot), slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null };
+  buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
+  const id = colonyId(uid, job.slot);
+  return { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
 }
 function economyInput(colony, player) {
   return {
@@ -2791,7 +2840,7 @@ function economyInput(colony, player) {
   };
 }
 function advanceColony(colony, player, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const notes = [];
   let at = colony.updatedAtMs || now;
   for (let guard = 0; guard < 10; guard++) {
@@ -2799,21 +2848,23 @@ function advanceColony(colony, player, now) {
     const until = Math.min(next, now);
     if (until > at) {
       colony.resources = advanceResources(economyInput(colony, player), (until - at) / 1e3, at);
+      const rare = colonyBiome(colony);
+      colony.resources[rare] = ((_e = colony.resources[rare]) != null ? _e : 0) + depositPerSecond(depositLevel(colony)) * ((until - at) / 1e3);
       at = until;
     }
     if (next > now) break;
     if (colony.building && colony.building.endTime <= now) {
       const job = colony.building;
-      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_e = colony.buildings[job.id]) != null ? _e : { unlocked: true }), { level: job.level });
+      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: job.level });
       colony.building = null;
-      notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${(_g = (_f = findBuilding(job.id)) == null ? void 0 : _f.name) != null ? _g : job.id} niveau ${job.level}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
       const job = colony.defenseJob;
-      const cur = (_j = colony.defenses[job.unitId]) != null ? _j : { level: (_i = (_h = player.units[job.unitId]) == null ? void 0 : _h.level) != null ? _i : 1, count: 0 };
-      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_l = (_k = player.units[job.unitId]) == null ? void 0 : _k.level) != null ? _l : 1), count: cur.count + job.qty };
+      const cur = (_i = colony.defenses[job.unitId]) != null ? _i : { level: (_h = (_g = player.units[job.unitId]) == null ? void 0 : _g.level) != null ? _h : 1, count: 0 };
+      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_k = (_j = player.units[job.unitId]) == null ? void 0 : _j.level) != null ? _k : 1), count: cur.count + job.qty };
       colony.defenseJob = null;
-      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_n = (_m = findUnit(job.unitId)) == null ? void 0 : _m.name) != null ? _n : job.unitId}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_m = (_l = findUnit(job.unitId)) == null ? void 0 : _l.name) != null ? _m : job.unitId}.`, createdAtMs: now, read: false });
     }
   }
   colony.updatedAtMs = now;
@@ -2839,13 +2890,19 @@ function payFrom(resources, cost, what) {
   for (const [res, n] of Object.entries(cost)) resources[res] -= n != null ? n : 0;
 }
 function colonyUpgradeCost(player, buildingId, nextLevel) {
-  var _a, _b;
+  var _a, _b, _c, _d;
+  if (buildingId === DEPOSIT_ID) {
+    const base2 = colonyUpgradeCost(player, "extracteur_ferraille", nextLevel);
+    const scrap = Math.ceil(((_a = base2.scrap) != null ? _a : 0) * DEPOSIT_RULES.costFactor);
+    return { scrap, energy: Math.ceil(((_b = base2.energy) != null ? _b : 0) * DEPOSIT_RULES.costFactor), nano: Math.ceil(scrap / 2), data: Math.ceil(scrap / 4) };
+  }
   const def3 = findBuilding(buildingId);
   if (!def3) return {};
-  const base = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_b = (_a = player.bonuses) == null ? void 0 : _a.buildingUpgradeDiscount) != null ? _b : 0);
+  const base = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0);
   return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil((n != null ? n : 0) * COLONY_RULES.costFactor)]));
 }
 function colonyUpgradeSeconds(player, buildingId, nextLevel, now) {
+  if (buildingId === DEPOSIT_ID) return Math.round(colonyUpgradeSeconds(player, "extracteur_ferraille", nextLevel, now) * DEPOSIT_RULES.timeFactor);
   const def3 = findBuilding(buildingId);
   return def3 ? Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) : 0;
 }
@@ -2853,9 +2910,9 @@ function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   var _a, _b;
   const colony = colonyOf(player, colonyIdIn);
   if (!colony) throw new GameActionError("Colonie introuvable.");
-  if (!colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce b\xE2timent ne se construit pas sur une colonie.");
+  if (buildingId !== DEPOSIT_ID && !colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce b\xE2timent ne se construit pas sur une colonie.");
   if (colony.building) throw new GameActionError("Une construction est d\xE9j\xE0 en cours sur cette colonie.");
-  const level3 = (_b = (_a = colony.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
+  const level3 = buildingId === DEPOSIT_ID ? depositLevel(colony) : (_b = (_a = colony.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
   if (level3 >= colonyMaxLevel(buildingId)) throw new GameActionError(`Niveau maximum d'une colonie atteint (${colonyMaxLevel(buildingId)}).`);
   const paid = colonyUpgradeCost(player, buildingId, level3 + 1);
   payFrom(colony.resources, paid, "cette construction");
@@ -3646,7 +3703,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
     player.lastDefeatAtMs = now;
-    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, `${faction.enforcer} a eu le dessus et emport\xE9 ${formatInt(total(loot))} ressources.`, now));
+    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_g = bounty[r]) != null ? _g : 0) + faction.bounty.rare;
@@ -3666,7 +3723,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
       note2(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
-        `Prime : ${formatInt(total(bounty))} ressources et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
         now
       )
     );
@@ -3760,7 +3817,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
       note2(
         "combat-attacker",
         `${faction.lair.name} est tomb\xE9 !`,
-        `Butin : ${formatInt(total(reward))} ressources, +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
         now
       )
     );
@@ -6713,14 +6770,6 @@ function addLoot(fleet, gain) {
   for (const [res, n] of Object.entries(gain)) if (n > 0) loot[res] = ((_b = loot[res]) != null ? _b : 0) + Math.floor(n);
   fleet.loot = loot;
 }
-function describeGain(gain) {
-  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
-  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
-    var _a;
-    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
-  });
-  return parts.length ? parts.join(", ") : "rien";
-}
 function fleetShips(units) {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
 }
@@ -7826,7 +7875,7 @@ function completeFleetReturn(owner, fleet, now) {
   return { owner, notifications: [__spreadProps(__spreadValues({ kind: "fleet" }, returnMessage(fleet, lootTotal)), { createdAtMs: now, read: false })] };
 }
 function returnMessage(fleet, lootTotal) {
-  var _a;
+  var _a, _b, _c, _d;
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
@@ -7844,7 +7893,7 @@ function returnMessage(fleet, lootTotal) {
     case "elite":
       return { title: "Retour de la traque d'\xE9lite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "transport":
-      return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatri\xE9es de ${fleet.targetPseudo}.` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
+      return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `Rapatri\xE9 de ${fleet.targetPseudo} : ${describeGain((_b = fleet.loot) != null ? _b : {})} (${formatInt(lootTotal)} au total).` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
     case "delivery":
       return fleet.recalled || lootTotal > 0 ? { title: "Livraison revenue", message: `Tes vaisseaux sont revenus de chez ${fleet.targetPseudo} avec la cargaison du contrat.` } : { title: "Livreurs rentr\xE9s", message: `Tes vaisseaux de livraison sont revenus de chez ${fleet.targetPseudo}.` };
     case "garrison":
@@ -7854,17 +7903,17 @@ function returnMessage(fleet, lootTotal) {
     case "recycle":
       return fleet.recalled ? { title: "Recycleurs rentr\xE9s", message: "Tes recycleurs rappel\xE9s sont de retour, soute vide." } : {
         title: "Recyclage termin\xE9",
-        message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources r\xE9cup\xE9r\xE9es dans les d\xE9bris de ${fleet.targetPseudo}.` : `Le champ de d\xE9bris de ${fleet.targetPseudo} \xE9tait d\xE9j\xE0 vide.`
+        message: lootTotal > 0 ? `R\xE9cup\xE9r\xE9 dans les d\xE9bris de ${fleet.targetPseudo} : ${describeGain((_c = fleet.loot) != null ? _c : {})} (${formatInt(lootTotal)} au total).` : `Le champ de d\xE9bris de ${fleet.targetPseudo} \xE9tait d\xE9j\xE0 vide.`
       };
     default:
       return fleet.recalled ? { title: "Flotte rappel\xE9e rentr\xE9e", message: `Ta flotte envoy\xE9e vers ${fleet.targetPseudo} est de retour, sans combat.` } : {
         title: "Flotte rentr\xE9e \xE0 la base",
-        message: `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`
+        message: lootTotal > 0 ? `Retour de ${fleet.targetPseudo}. Butin : ${describeGain((_d = fleet.loot) != null ? _d : {})} (${formatInt(lootTotal)} au total).` : `Retour de ${fleet.targetPseudo}, sans butin.`
       };
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -7932,11 +7981,15 @@ function performLaunch(req) {
       out.defenderNotifications = out.defenderNotifications.map((n) => __spreadProps(__spreadValues({}, n), { message: n.message.replace(/t'envoie [\d\s\u202f\u00a0.,]+ vaisseaux/, `t'envoie ${formatInt(fakeTotal)} vaisseaux`) }));
     }
   }
+  if (mission === "attack") out.fleet.power = attackPowerShown(out.attacker, (_o = capsules == null ? void 0 : capsules.fakeUnits) != null ? _o : out.fleet.units, req.formation);
   if (mission === "spy") grantCommanderXp(out.attacker, "spy", COMMANDER_XP.spyLaunched);
   if (mission === "spy") recordChronicle(out.attacker, "spy", now);
   const counter = { spy: "spies", patrol: "patrols", garrison: "garrisons" }[mission];
   if (counter) bumpStat(out.attacker, counter);
   return __spreadProps(__spreadValues({}, out), { capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
+}
+function attackPowerShown(attacker, units, formation) {
+  return Math.round(computeFleetPower(attacker.units, attacker.techLevels, units, ["attack"]) * formationEffects(formation).attackFactor * (1 + playerModifiers(attacker).attack));
 }
 function advanceTarget(target, now) {
   const copy = structuredClone(target);
@@ -8878,7 +8931,7 @@ function performAttack(input) {
     {
       kind: "combat-attacker",
       title: (_z = outcomeTitle[combat.outcome]) != null ? _z : "Rapport de combat",
-      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
       read: false
     }
@@ -8893,7 +8946,7 @@ function performAttack(input) {
     {
       kind: "combat-defender",
       title: (_A = defenderTitle[combat.outcome]) != null ? _A : "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
       read: false
     }
@@ -9033,12 +9086,11 @@ function quoteCancel(player, queues, target, now) {
     case "colonyBuilding": {
       const colony = colonyOf(player, target.colonyId);
       const job = colony == null ? void 0 : colony.building;
-      const def3 = job ? findBuilding(job.id) : void 0;
-      if (!colony || !job || !def3) throw new GameActionError("Aucune construction en cours sur cette colonie.");
+      if (!colony || !job) throw new GameActionError("Aucune construction en cours sur cette colonie.");
       const paid = (_j = job.paid) != null ? _j : colonyUpgradeCost(player, job.id, job.level);
       const start = (_k = job.startedAtMs) != null ? _k : job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1e3;
       const fraction = refundFraction(start, job.endTime, now);
-      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${def3.name} niveau ${job.level}` };
+      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}` };
     }
     case "colonyDefense": {
       const colony = colonyOf(player, target.colonyId);
