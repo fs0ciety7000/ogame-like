@@ -186,8 +186,12 @@ export function NumberInput(props: NumberInputProps) {
     sm ? "text-[9px]" : "text-[10px]",
   );
 
+  // MIN seulement si le champ est assez large pour garder le chiffre lisible.
+  const wideOnly = stepper ? "hidden items-center @min-[15rem]:flex" : "hidden items-center @min-[11rem]:flex";
+
   return (
-    <div className={cn("inline-flex min-w-0 flex-col gap-1.5", className)}>
+    // Conteneur interrogé : dans une case étroite, MIN s'efface pour laisser la place au chiffre (MAX reste).
+    <div className={cn("@container inline-flex min-w-0 flex-col gap-1.5", className)}>
       <div
         className={cn(
           "group relative flex min-w-0 items-stretch overflow-hidden border bg-space-900/80 transition-[border-color,box-shadow]",
@@ -267,12 +271,12 @@ export function NumberInput(props: NumberInputProps) {
           </button>
         )}
         {quick && (
-          <span className="flex shrink-0 border-l border-white/5">
-            <button type="button" tabIndex={-1} disabled={disabled || atMin} className={cn(chip, "text-slate-500")} onClick={() => put(min)} title={`Minimum : ${display(min, decimals)}`}>
+          <span className={cn("shrink-0 border-l border-white/5", hasMax ? "flex" : wideOnly)}>
+            <button type="button" tabIndex={-1} disabled={disabled || atMin} className={cn(chip, "border-r border-white/5 text-slate-500", wideOnly)} onClick={() => put(min)} title={`Minimum : ${display(min, decimals)}`}>
               MIN
             </button>
             {hasMax && (
-              <button type="button" tabIndex={-1} disabled={disabled || atMax} className={cn(chip, "border-l border-white/5 text-cyan-glow/80")} onClick={() => put(top)} title={`Maximum : ${display(top, decimals)}`}>
+              <button type="button" tabIndex={-1} disabled={disabled || atMax} className={cn(chip, "text-cyan-glow/80")} onClick={() => put(top)} title={`Maximum : ${display(top, decimals)}`}>
                 MAX
               </button>
             )}
