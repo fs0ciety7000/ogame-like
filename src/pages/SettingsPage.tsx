@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,9 @@ import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
 import { isWinter, previewWinter, setWinter, useWinterStore } from "@/lib/winter";
 import { SFX_SAMPLES } from "@/lib/sfx";
 import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
+import { AppleMark, GoogleMark } from "@/components/auth/AltSignIn";
+import { defaultPasskeyName, deletePasskey, listPasskeys, passkeyErrorMessage, passkeysSupported, registerPasskey, renamePasskey, type PasskeyInfo } from "@/services/passkeyService";
+import { enabledOAuthProviders, linkProvider, listLinkedAccounts, oauthErrorMessage, unlinkAccount, OAUTH_PROVIDERS, type LinkedAccount, type OAuthProviderId } from "@/services/oauthService";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
 
 interface PasswordFormValues {
@@ -81,6 +84,167 @@ function ChangePasswordCard() {
             {submitting ? "…" : "Mettre à jour"}
           </Button>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+const fmtDate = (ms: number) => (ms ? new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "jamais");
+
+/* v5.9 : passkeys et comptes Google / Apple rattachés. */
+function SignInMethodsCard() {
+  const uid = useAuthStore((s) => s.user?.uid);
+  const [keys, setKeys] = useState<PasskeyInfo[] | null>(null);
+  const [linked, setLinked] = useState<LinkedAccount[]>([]);
+  const [providers, setProviders] = useState<OAuthProviderId[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const supported = passkeysSupported();
+
+  const reload = async () => {
+    if (!uid) return;
+    const [k, l] = await Promise.all([listPasskeys(uid).catch(() => []), listLinkedAccounts(uid).catch(() => [])]);
+    setKeys(k);
+    setLinked(l);
+  };
+
+  useEffect(() => {
+    void reload();
+    void enabledOAuthProviders().then(setProviders);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
+  const run = async (key: string, fn: () => Promise<unknown>, ok: string, errMsg: (e: unknown) => string) => {
+    setBusy(key);
+    try {
+      await fn();
+      toast.success(ok);
+      await reload();
+    } catch (err) {
+      toast.error(errMsg(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveName = () => {
+    if (!editing) return;
+    const { id, name } = editing;
+    setEditing(null);
+    if (name.trim() === keys?.find((k) => k.id === id)?.name) return;
+    void run(id, () => renamePasskey(id, name), "Passkey renommée.", passkeyErrorMessage);
+  };
+
+  const shownProviders = OAUTH_PROVIDERS.filter((p) => providers.includes(p.id) || linked.some((l) => l.provider === p.id));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-cyan-glow" /> Méthodes de connexion
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5 text-sm">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-medium text-slate-200">Passkeys</span>
+            {supported && (
+              <Button
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => void run("add", () => registerPasskey(defaultPasskeyName()), "Passkey ajoutée : tu peux te connecter sans mot de passe.", passkeyErrorMessage)}
+              >
+                {busy === "add" ? "…" : "Ajouter une passkey"}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">
+            Connecte-toi avec l'empreinte, Face ID, le code de ton téléphone ou une clé de sécurité, sans mot de passe.
+          </p>
+          {!supported && <p className="text-xs text-gold-glow">Ce navigateur ne gère pas les passkeys.</p>}
+          {keys === null ? (
+            <p className="text-xs text-slate-500">Chargement…</p>
+          ) : keys.length === 0 ? (
+            <p className="text-xs text-slate-500">Aucune passkey pour l'instant.</p>
+          ) : (
+            <ul className="divide-y divide-white/5 border border-white/10">
+              {keys.map((k) => (
+                <li key={k.id} className="flex items-center gap-3 px-3 py-2">
+                  <KeyRound className="h-4 w-4 shrink-0 text-slate-500" />
+                  <div className="min-w-0 flex-1">
+                    {editing?.id === k.id ? (
+                      <Input
+                        autoFocus
+                        value={editing.name}
+                        maxLength={40}
+                        onChange={(e) => setEditing({ id: k.id, name: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") setEditing(null);
+                        }}
+                        onBlur={saveName}
+                        className="h-8"
+                      />
+                    ) : (
+                      <div className="truncate text-slate-100">{k.name}</div>
+                    )}
+                    <div className="text-xs text-slate-500">
+                      Ajoutée le {fmtDate(k.createdAtMs)} · dernière utilisation : {fmtDate(k.lastUsedAtMs)}
+                    </div>
+                  </div>
+                  <button type="button" title="Renommer" className="text-slate-500 transition hover:text-cyan-glow disabled:opacity-40" disabled={busy !== null} onClick={() => setEditing({ id: k.id, name: k.name })}>
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Supprimer"
+                    className="text-slate-500 transition hover:text-danger-glow disabled:opacity-40"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      if (window.confirm(`Supprimer la passkey « ${k.name} » ?`)) void run(k.id, () => deletePasskey(k.id), "Passkey supprimée.", passkeyErrorMessage);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {shownProviders.length > 0 && (
+          <div className="space-y-2">
+            <span className="font-medium text-slate-200">Comptes liés</span>
+            <p className="text-xs text-slate-500">Un compte lié permet de te connecter en un clic avec Google ou Apple.</p>
+            <ul className="divide-y divide-white/5 border border-white/10">
+              {shownProviders.map((p) => {
+                const link = linked.find((l) => l.provider === p.id);
+                return (
+                  <li key={p.id} className="flex items-center gap-3 px-3 py-2">
+                    {p.id === "google" ? <GoogleMark /> : <AppleMark />}
+                    <span className="flex-1 text-slate-100">{p.label}</span>
+                    {link ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy !== null}
+                        onClick={() => {
+                          if (window.confirm(`Délier ton compte ${p.label} ?`)) void run(link.id, () => unlinkAccount(link.id), `Compte ${p.label} délié.`, oauthErrorMessage);
+                        }}
+                      >
+                        Délier
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void run(p.id, () => linkProvider(p.id), `Compte ${p.label} lié.`, oauthErrorMessage)}>
+                        <Link2 className="h-4 w-4" /> {busy === p.id ? "…" : "Lier"}
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -578,6 +742,7 @@ export function SettingsPage() {
       <VacationCard />
       <AllianceNotifsCard />
       <EmailNewsCard />
+      <SignInMethodsCard />
       <ChangePasswordCard />
       <DangerZoneCard />
     </div>
