@@ -1,3 +1,4 @@
+import { findUnit } from "@/game/units";
 import { describe, expect, it } from "vitest";
 import { applyLegacyBattleReport, applyLegacyGift, newPlayerProfile, performGift, performPlayerAction } from "@/game/actions";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
@@ -23,7 +24,7 @@ describe("performPlayerAction", () => {
   it("counts ships away on a mission in the hangar (v3.9.1)", () => {
     const base = player("a", { resources: { ...player("x").resources, scrap: 1e9, energy: 1e9 }, units: { chasseur: { level: 1, count: 0 } } });
     const cap = getUnitCapacity(base.buildings, "attack");
-    const fit = Math.floor(cap / 20);
+    const fit = Math.floor(cap / findUnit("chasseur")!.hangarSpace);
     expect(fit).toBeGreaterThan(0);
     // Toute la place est prise par des chasseurs partis en mission : on ne peut plus en construire.
     expect(() => performPlayerAction(base, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 1 }, NOW, { chasseur: fit })).toThrow(/hangar/);

@@ -37,6 +37,7 @@ export const GAME_FIELDS = [
   "synthesis",
   "profileStyle",
   "renamed",
+  "streak",
   "seasonPass",
   "referral",
   "vacation",

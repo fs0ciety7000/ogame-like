@@ -31,7 +31,7 @@ export const RARITIES: { id: RelicRarity; label: string; pct: number; weight: nu
   { id: "epic", label: "Épique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
   { id: "legendary", label: "Légendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
   // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
-  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" },
+  { id: "mythic", label: "Mythique", pct: 0.2, weight: 0, recycle: 0, color: "#ff5df0" },
 ];
 
 export interface RelicTemplate {

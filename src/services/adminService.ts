@@ -281,3 +281,8 @@ export async function adminDownloadBackup(key: string): Promise<void> {
 export function adminBackupToR2(): Promise<{ backup: string | null; dispatched: boolean; message: string }> {
   return pb.send("/api/cosmic/admin/backups/r2", { method: "POST", body: {} });
 }
+
+/** v5.4 : données réelles de l'outil d'équilibrage. */
+export function adminBalance(): Promise<import("@/game/balance/diagnostics").LiveBalance> {
+  return pb.send("/api/cosmic/admin/balance", { method: "GET" });
+}

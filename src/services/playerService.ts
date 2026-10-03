@@ -715,6 +715,11 @@ export function resetTalents() {
   return act({ type: "talentReset" });
 }
 
+/** v5.3 : récompense de la série de connexion du jour. */
+export function claimStreak() {
+  return act<{ count: number; resources: Partial<Record<ResourceId, number>>; amber: number }>({ type: "streakClaim" });
+}
+
 export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }

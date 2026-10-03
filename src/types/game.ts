@@ -137,6 +137,8 @@ export interface PlayerState {
   profileStyle?: import("@/game/profile").ProfileStyle;
   /** v5.1 : changement de pseudo unique (ancien pseudo, date). */
   renamed?: import("@/game/rename").RenameState | null;
+  /** v5.3 : série de connexion quotidienne. */
+  streak?: import("@/game/streak").StreakState | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;

@@ -23,7 +23,8 @@ export type TechEffectType =
   | "unit_time"
   | "research_time"
   | "fleet_upkeep"
-  | "counter_spy";
+  | "counter_spy"
+  | "hangar_capacity";
 
 /** Un effet octroyé par une technologie, multiplié par son niveau. */
 export interface TechEffectDef {
@@ -74,6 +75,7 @@ export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
   research_time: 0.05,
   fleet_upkeep: 0.05,
   counter_spy: 1,
+  hangar_capacity: 0.05,
 };
 
 /** Plafond des réductions cumulées (temps, coûts, entretien) et de la part à l'abri. */
@@ -101,6 +103,7 @@ export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
   research_time: "Temps de recherche (−% par niveau)",
   fleet_upkeep: "Entretien de la flotte (−% par niveau)",
   counter_spy: "Contre-espionnage (points par niveau)",
+  hangar_capacity: "Capacité des hangars d'attaque ou de défense (% par niveau)",
 };
 
 /** Effets chiffrés (une valeur par niveau) ; les autres débloquent. */
@@ -241,6 +244,7 @@ const EFFECT_MAX_PER_LEVEL: Partial<Record<TechEffectType, number>> = {
   fleet_upkeep: 0.5,
   protected_storage: 0.5,
   counter_spy: 10,
+  hangar_capacity: 0.5,
 };
 
 /** Erreurs d'un effet de techno (type, cible, valeur). */
@@ -252,6 +256,7 @@ export function validateTechEffect(
   const errors: string[] = [];
   if (!(e.type in TECH_EFFECT_LABELS)) return [`${label} : effet « ${e.type} » inconnu.`];
   if (e.type === "resource_production" && (!e.target || !refs.resources.has(e.target))) errors.push(`${label} : ressource visée manquante ou inconnue.`);
+  if (e.type === "hangar_capacity" && e.target !== "attack" && e.target !== "defense") errors.push(`${label} : hangar visé manquant (attaque ou défense).`);
   if (e.type === "unlock_next_level" && e.target && !refs.unitIds.has(e.target)) errors.push(`${label} : unité « ${e.target} » inexistante.`);
   for (const id of e.targets ?? []) if (!refs.buildingIds.has(id)) errors.push(`${label} : bâtiment « ${id} » inexistant.`);
   if (e.value !== undefined) {
@@ -295,6 +300,8 @@ export function describeTechEffect(e: TechEffectDef, level: number, names: { res
       return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} d'entretien de la flotte`;
     case "counter_spy":
       return `+${Math.floor(v)} point(s) de contre-espionnage`;
+    case "hangar_capacity":
+      return `+${pct(v)} de capacité des hangars ${e.target === "defense" ? "de défense" : "d'attaque"}`;
     case "unlock_recipe":
       return `${level} recette(s) débloquée(s)`;
     case "unlock_buildings":
