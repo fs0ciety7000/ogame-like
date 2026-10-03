@@ -49,7 +49,7 @@ function topbar(site: BlogSite, active: string): string {
 function footer(site: BlogSite): string {
   return `<footer class="footer"><div class="wrap"><div><a class="brand" href="${url(site, "/")}"><img src="${site.gameUrl}/assets/logo/logo.webp" alt=""><b>COSMIC EMPIRES</b><span>DEVBLOG</span></a>
 <p>Annonces, mises à jour et notes de l'équipe. Le jeu de stratégie spatiale où chaque empire écrit sa légende.</p></div>
-<nav aria-label="Liens"><a href="${site.gameUrl}">Jouer</a><a href="${site.gameUrl}/bible">Bible du jeu</a><a href="${site.gameUrl}/formules">Formules</a><a href="${url(site, "/rss.xml")}">Flux RSS</a><a href="${site.gameUrl}/game/redaction">Espace rédaction</a></nav></div></footer>
+<nav aria-label="Liens"><a href="${site.gameUrl}">Jouer</a><a href="${site.gameUrl}/bible">Bible du jeu</a><a href="${site.gameUrl}/formules">Formules</a><a href="${url(site, "/rss.xml")}">Flux RSS</a></nav></div></footer>
 <script src="${url(site, `/assets/blog.js?v=${site.assetVersion}`)}" defer></script></body></html>`;
 }
 
