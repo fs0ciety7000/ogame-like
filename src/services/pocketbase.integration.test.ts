@@ -2145,6 +2145,20 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect((await ps.fetchPlayerSheet(bId)).entry.avatar).toBeUndefined();
   });
 
+  it("v5.3: daily streak claimed once per day through the server", async () => {
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    try {
+      await admin.collection("players").update(bId, { streak: null });
+      const out = await ps.claimStreak();
+      expect(out.count).toBe(1);
+      expect((await snap(bId)).streak).toMatchObject({ count: 1, total: 1 });
+      await expect(ps.claimStreak()).rejects.toThrow(/déjà réclamée/);
+    } finally {
+      await admin.collection("players").update(bId, { streak: null, resources: before.resources });
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);
