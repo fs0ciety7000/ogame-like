@@ -14,7 +14,7 @@ import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import { checkDelivery } from "@/game/tradeContracts";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
-import { formatInt } from "@/game/format";
+import { describeGain, formatInt } from "@/game/format";
 import { fleetCargoCapacity } from "@/game/combat";
 import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
 import { getFleetUpkeep } from "@/game/economy";
@@ -326,7 +326,7 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
       return { title: "Retour de la traque d'élite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentrés.` };
     case "transport":
       return fleet.transport?.direction === "collect" && !fleet.recalled
-        ? { title: "Transport rentré", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatriées de ${fleet.targetPseudo}.` : `Rien à rapatrier de ${fleet.targetPseudo}.` }
+        ? { title: "Transport rentré", message: lootTotal > 0 ? `Rapatrié de ${fleet.targetPseudo} : ${describeGain(fleet.loot ?? {})} (${formatInt(lootTotal)} au total).` : `Rien à rapatrier de ${fleet.targetPseudo}.` }
         : { title: "Transport rentré", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
     case "delivery":
       return fleet.recalled || lootTotal > 0
@@ -341,14 +341,14 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
         ? { title: "Recycleurs rentrés", message: "Tes recycleurs rappelés sont de retour, soute vide." }
         : {
             title: "Recyclage terminé",
-            message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources récupérées dans les débris de ${fleet.targetPseudo}.` : `Le champ de débris de ${fleet.targetPseudo} était déjà vide.`,
+            message: lootTotal > 0 ? `Récupéré dans les débris de ${fleet.targetPseudo} : ${describeGain(fleet.loot ?? {})} (${formatInt(lootTotal)} au total).` : `Le champ de débris de ${fleet.targetPseudo} était déjà vide.`,
           };
     default:
       return fleet.recalled
         ? { title: "Flotte rappelée rentrée", message: `Ta flotte envoyée vers ${fleet.targetPseudo} est de retour, sans combat.` }
         : {
             title: "Flotte rentrée à la base",
-            message: `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`,
+            message: lootTotal > 0 ? `Retour de ${fleet.targetPseudo}. Butin : ${describeGain(fleet.loot ?? {})} (${formatInt(lootTotal)} au total).` : `Retour de ${fleet.targetPseudo}, sans butin.`,
           };
   }
 }

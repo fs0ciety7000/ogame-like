@@ -695,6 +695,14 @@ function formatInt(value) {
   }
   return n < 0 ? `-${out}` : out;
 }
+function describeGain(gain) {
+  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
+    var _a;
+    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
+  });
+  return parts.length ? parts.join(", ") : "rien";
+}
 
 // src/game/resources.ts
 var RESOURCE_LIST = [
@@ -3646,7 +3654,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
     player.lastDefeatAtMs = now;
-    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, `${faction.enforcer} a eu le dessus et emport\xE9 ${formatInt(total(loot))} ressources.`, now));
+    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_g = bounty[r]) != null ? _g : 0) + faction.bounty.rare;
@@ -3666,7 +3674,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
       note2(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
-        `Prime : ${formatInt(total(bounty))} ressources et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
         now
       )
     );
@@ -3760,7 +3768,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
       note2(
         "combat-attacker",
         `${faction.lair.name} est tomb\xE9 !`,
-        `Butin : ${formatInt(total(reward))} ressources, +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
         now
       )
     );
@@ -6713,14 +6721,6 @@ function addLoot(fleet, gain) {
   for (const [res, n] of Object.entries(gain)) if (n > 0) loot[res] = ((_b = loot[res]) != null ? _b : 0) + Math.floor(n);
   fleet.loot = loot;
 }
-function describeGain(gain) {
-  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
-  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
-    var _a;
-    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
-  });
-  return parts.length ? parts.join(", ") : "rien";
-}
 function fleetShips(units) {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
 }
@@ -7826,7 +7826,7 @@ function completeFleetReturn(owner, fleet, now) {
   return { owner, notifications: [__spreadProps(__spreadValues({ kind: "fleet" }, returnMessage(fleet, lootTotal)), { createdAtMs: now, read: false })] };
 }
 function returnMessage(fleet, lootTotal) {
-  var _a;
+  var _a, _b, _c, _d;
   switch (fleet.mission) {
     case "patrol":
       return { title: "Patrouille termin\xE9e", message: "Ta flotte en patrouille est rentr\xE9e \xE0 la base." };
@@ -7844,7 +7844,7 @@ function returnMessage(fleet, lootTotal) {
     case "elite":
       return { title: "Retour de la traque d'\xE9lite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "transport":
-      return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatri\xE9es de ${fleet.targetPseudo}.` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
+      return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `Rapatri\xE9 de ${fleet.targetPseudo} : ${describeGain((_b = fleet.loot) != null ? _b : {})} (${formatInt(lootTotal)} au total).` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
     case "delivery":
       return fleet.recalled || lootTotal > 0 ? { title: "Livraison revenue", message: `Tes vaisseaux sont revenus de chez ${fleet.targetPseudo} avec la cargaison du contrat.` } : { title: "Livreurs rentr\xE9s", message: `Tes vaisseaux de livraison sont revenus de chez ${fleet.targetPseudo}.` };
     case "garrison":
@@ -7854,12 +7854,12 @@ function returnMessage(fleet, lootTotal) {
     case "recycle":
       return fleet.recalled ? { title: "Recycleurs rentr\xE9s", message: "Tes recycleurs rappel\xE9s sont de retour, soute vide." } : {
         title: "Recyclage termin\xE9",
-        message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources r\xE9cup\xE9r\xE9es dans les d\xE9bris de ${fleet.targetPseudo}.` : `Le champ de d\xE9bris de ${fleet.targetPseudo} \xE9tait d\xE9j\xE0 vide.`
+        message: lootTotal > 0 ? `R\xE9cup\xE9r\xE9 dans les d\xE9bris de ${fleet.targetPseudo} : ${describeGain((_c = fleet.loot) != null ? _c : {})} (${formatInt(lootTotal)} au total).` : `Le champ de d\xE9bris de ${fleet.targetPseudo} \xE9tait d\xE9j\xE0 vide.`
       };
     default:
       return fleet.recalled ? { title: "Flotte rappel\xE9e rentr\xE9e", message: `Ta flotte envoy\xE9e vers ${fleet.targetPseudo} est de retour, sans combat.` } : {
         title: "Flotte rentr\xE9e \xE0 la base",
-        message: `Retour de ${fleet.targetPseudo}${lootTotal > 0 ? ` avec ${formatInt(lootTotal)} ressources de butin` : ""}.`
+        message: lootTotal > 0 ? `Retour de ${fleet.targetPseudo}. Butin : ${describeGain((_d = fleet.loot) != null ? _d : {})} (${formatInt(lootTotal)} au total).` : `Retour de ${fleet.targetPseudo}, sans butin.`
       };
   }
 }
@@ -8878,7 +8878,7 @@ function performAttack(input) {
     {
       kind: "combat-attacker",
       title: (_z = outcomeTitle[combat.outcome]) != null ? _z : "Rapport de combat",
-      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
       read: false
     }
@@ -8893,7 +8893,7 @@ function performAttack(input) {
     {
       kind: "combat-defender",
       title: (_A = defenderTitle[combat.outcome]) != null ? _A : "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
       read: false
     }

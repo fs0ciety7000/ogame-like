@@ -12,7 +12,7 @@ import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
 import { GameActionError } from "@/game/errors";
-import { formatInt } from "@/game/format";
+import { describeGain, formatInt } from "@/game/format";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
@@ -683,7 +683,7 @@ export function resolvePirateRaid(
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
     player.lastDefeatAtMs = now;
-    notifications.push(note("combat-defender", `Victoire de ${faction.name}`, `${faction.enforcer} a eu le dessus et emporté ${formatInt(total(loot))} ressources.`, now));
+    notifications.push(note("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emporté ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrepôts protégés n'ont rien laissé à prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = (bounty[r] ?? 0) + faction.bounty.rare;
@@ -703,7 +703,7 @@ export function resolvePirateRaid(
       note(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
-        `Prime : ${formatInt(total(bounty))} ressources et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
         now,
       ),
     );
@@ -809,7 +809,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
       note(
         "combat-attacker",
         `${faction.lair.name} est tombé !`,
-        `Butin : ${formatInt(total(reward))} ressources, +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.`,
         now,
       ),
     );

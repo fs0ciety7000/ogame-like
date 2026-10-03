@@ -1,3 +1,4 @@
+import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
 import { onVacation } from "@/game/vacation";
@@ -246,7 +247,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-attacker",
       title: outcomeTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).`,
+      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
       read: false,
     },
@@ -262,7 +263,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-defender",
       title: defenderTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pillé : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}`,
       createdAtMs: now,
       read: false,
     },
