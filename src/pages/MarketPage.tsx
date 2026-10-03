@@ -8,7 +8,7 @@ import { ArrowRight, Clock, Store } from "lucide-react";
 import { isMarketMaker } from "@/game/marketMaker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -132,7 +132,7 @@ export function MarketPage() {
       ) : (
       <>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card className="flex flex-col gap-3 p-4">
           <div className="flex items-center gap-2">
             <h2 className="hud-title text-sm">{mode === "buy" ? "Passer un ordre d'achat" : "Publier une offre"}</h2>
@@ -148,7 +148,7 @@ export function MarketPage() {
             <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Je paie (réservé dès l'ordre)" : "Je donne"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={giveRes} onChange={setGiveRes} ariaLabel="Ressource donnée" className="min-w-0 flex-1" size="sm" />
-              <Input type="number" min={0} value={giveAmount || ""} placeholder="0" onChange={(e) => setGiveAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité donnée" />
+              <NumberInput size="sm" stepper={false} value={giveAmount} max={Math.max(0, Math.floor(have(giveRes)))} onChange={setGiveAmount} className="w-44" aria-label="Quantité donnée" />
             </div>
             <button type="button" className="self-end font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setGiveAmount(Math.floor(have(giveRes)))}>
               Stock : {formatCompact(have(giveRes))}
@@ -156,7 +156,7 @@ export function MarketPage() {
             <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Pour acheter" : "Contre"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource demandée" className="min-w-0 flex-1" size="sm" />
-              <Input type="number" min={0} value={wantAmount || ""} placeholder="0" onChange={(e) => setWantAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité demandée" />
+              <NumberInput size="sm" stepper={false} quick={false} value={wantAmount} onChange={setWantAmount} className="w-44" aria-label="Quantité demandée" />
             </div>
           </div>
           {bounds && (
@@ -259,7 +259,7 @@ export function MarketPage() {
                         return (
                           <span className="ml-auto flex flex-wrap items-center gap-2">
                             <span className="font-mono text-[10px] text-slate-500">reste {formatCompact(remaining)}</span>
-                            <Input type="number" min={1} max={remaining} value={qty || ""} onChange={(e) => setFillQty((f) => ({ ...f, [o.id]: Math.max(0, parseInt(e.target.value) || 0) }))} className="h-8 w-24 text-right" aria-label="Quantité livrée" />
+                            <NumberInput size="sm" stepper={false} value={qty} max={remaining} onChange={(v) => setFillQty((f) => ({ ...f, [o.id]: v }))} className="w-40" aria-label="Quantité livrée" />
                             <Button size="sm" disabled={busy !== null || qty <= 0 || pay <= 0 || have(o.wantRes) < qty} title={`Tu reçois ${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id, qty), `Livré : +${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}.`)}>
                               Livrer
                             </Button>

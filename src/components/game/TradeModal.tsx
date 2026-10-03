@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { RESOURCE_LIST } from "@/game/resources";
 import { usePlayerStore } from "@/store/playerStore";
@@ -66,19 +66,19 @@ export function TradeModal({
                 {RESOURCE_LIST.map((res) => {
                   const owned = player.resources[res.id] ?? 0;
                   return (
-                    <div key={res.id} className="flex items-center gap-3 text-sm">
+                    <div key={res.id} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                       <span className="flex-1 text-slate-200">
                         <ResourceIcon id={res.id} /> {res.name}
                       </span>
                       <span className="text-xs text-slate-500">Possédé : {owned}</span>
-                      <Input
-                        type="number"
-                        min={0}
+                      <NumberInput
+                        size="sm"
                         max={owned}
                         disabled={owned === 0}
                         value={amounts[res.id] ?? 0}
-                        onChange={(e) => setQty(res.id, owned, parseInt(e.target.value) || 0)}
-                        className="w-24"
+                        onChange={(v) => setQty(res.id, owned, v)}
+                        aria-label={`Quantité ${res.name}`}
+                        className="w-44"
                       />
                     </div>
                   );

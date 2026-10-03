@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Card, HudBrackets } from "@/components/ui/card";
 import { HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";

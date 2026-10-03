@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { NumberInput } from "@/components/ui/number-input";
 import { Calculator, Coins, Crosshair, Factory, Gauge, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, getUnitCapacity } from "@/game/buildings";
@@ -150,7 +151,7 @@ function CombatCalculator({ attack, defense, shield }: { attack: number; defense
   const input = (label: string, value: number, set: (v: number) => void, max?: number) => (
     <label className="flex flex-col gap-1 text-xs text-slate-400">
       {label}
-      <input type="number" min={0} max={max} value={value} onChange={(e) => set(Math.max(0, Number(e.target.value) || 0))} className="w-full border border-white/15 bg-space-950 px-2 py-1 font-mono text-sm text-white" />
+      <NumberInput size="sm" max={max} value={value} onChange={set} step={max !== undefined && max <= 100 ? 1 : 100} aria-label={label} className="w-full" />
     </label>
   );
   const outcome = out.r.outcome === "attacker_win" ? "L'attaquant gagne" : out.r.outcome === "defender_win" ? "Le défenseur tient" : "Égalité";

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Clock, Radar, ShieldAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { espionageLevel, SPY_RULES, SPY_TIER_LABELS, spyTravelSeconds } from "@/game/espionage";
 import { distanceBetween, FLEET_MISSION_LABELS, fleetSpeed, type FleetMission } from "@/game/fleets";
@@ -216,17 +216,18 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
             <RadarScan label={submitting ? "Lancement des sondes…" : "Chargement…"} />
           ) : (
             <div className="mt-3 space-y-3">
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                 <span className="flex-1 text-slate-200">{probe?.name ?? "Sonde d'espionnage"}</span>
                 <span className="text-xs text-slate-500">Possédées : {owned}</span>
-                <Input
-                  type="number"
-                  min={1}
+                <NumberInput
+                  size="sm"
+                  min={owned > 0 ? 1 : 0}
                   max={owned}
                   disabled={owned === 0}
                   value={count}
-                  onChange={(e) => setProbes(parseInt(e.target.value) || 0)}
-                  className="w-20"
+                  onChange={setProbes}
+                  aria-label="Nombre de sondes"
+                  className="w-40"
                 />
               </div>
               <div className="space-y-1.5 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">

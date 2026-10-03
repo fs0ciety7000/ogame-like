@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { ArrowRight, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -89,10 +89,8 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
               <div key={id} className="flex items-center gap-2 text-sm">
                 <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
-                <Input type="number" min={0} value={ships[id] || ""} placeholder="0" onChange={(e) => setShips((f) => ({ ...f, [id]: Math.min(owned, Math.max(0, parseInt(e.target.value) || 0)) }))} className="h-8 w-24 text-right" aria-label={`Quantité ${findUnit(id)?.name}`} />
-                <button type="button" className="w-12 font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setShips((f) => ({ ...f, [id]: owned }))}>
-                  /{formatCompact(owned)}
-                </button>
+                <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -162,12 +160,12 @@ export function TradeContractsPanel() {
         <p className="hud-eyebrow text-[10px] text-slate-500">Livre-moi</p>
         <div className="flex gap-2">
           <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource à livrer" className="min-w-0 flex-1" size="sm" />
-          <Input type="number" min={0} value={wantAmount || ""} placeholder="0" onChange={(e) => setWantAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité à livrer" />
+          <NumberInput size="sm" stepper={false} quick={false} value={wantAmount} onChange={setWantAmount} className="w-40" aria-label="Quantité à livrer" />
         </div>
         <p className="hud-eyebrow text-[10px] text-slate-500">Contre (bloqué dès la publication)</p>
         <div className="flex gap-2">
           <ResourceSelect value={payRes} onChange={setPayRes} ariaLabel="Ressource payée" className="min-w-0 flex-1" size="sm" />
-          <Input type="number" min={0} value={payAmount || ""} placeholder="0" onChange={(e) => setPayAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Paiement" />
+          <NumberInput size="sm" stepper={false} quick={false} value={payAmount} onChange={setPayAmount} className="w-40" aria-label="Paiement" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="hud-eyebrow text-[10px] text-slate-500">Délai de livraison</span>

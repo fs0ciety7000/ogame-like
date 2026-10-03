@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { ImageUp, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { RESOURCE_LIST } from "@/game/resources";
 import { IconSelect } from "@/components/ui/icon-select";
@@ -85,17 +86,16 @@ export function NumberField({
 }) {
   return (
     <Field label={label} hint={hint}>
-      <Input
-        type="number"
-        min={min}
-        step={step ?? "any"}
-        value={value ?? ""}
-        placeholder={optional ? "(par défaut)" : undefined}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (raw === "") onChange(optional ? undefined : 0);
-          else onChange(Number(raw));
-        }}
+      <NumberInput
+        nullable={optional === true}
+        min={min ?? -1e15}
+        step={step ?? 1}
+        decimals={4}
+        quick={false}
+        value={value}
+        placeholder={optional ? "(par défaut)" : "0"}
+        onChange={(v: number | undefined) => onChange(v === undefined ? (optional ? undefined : 0) : v)}
+        className="w-full"
       />
     </Field>
   );
@@ -197,13 +197,14 @@ export function KeyNumberMapField({
                 ))}
               </select>
             )}
-            <Input
-              type="number"
-              step="any"
+            <NumberInput
+              min={-1e15}
+              decimals={4}
+              quick={false}
               aria-label={valueLabel}
               value={num}
-              onChange={(e) => set(entries.map((en, j) => (j === i ? [en[0], Number(e.target.value) || 0] : en)))}
-              className="h-9 w-32"
+              onChange={(v) => set(entries.map((en, j) => (j === i ? [en[0], v] : en)))}
+              className="w-36"
             />
             <Button variant="ghost" size="icon" type="button" onClick={() => set(entries.filter((_, j) => j !== i))}>
               <X className="h-4 w-4" />

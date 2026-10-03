@@ -1,6 +1,7 @@
 import { EmojiIcon } from "@/components/ui/game-icon";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { NumberInput } from "@/components/ui/number-input";
 
 /* Briques visuelles du HUD (v2.4) : étiquette, jauge segmentée, pastille de
    coût, barre de niveau à crans, sélecteur de quantité. */
@@ -61,50 +62,9 @@ export function LevelTicks({ level, max, next = true, className }: { level: numb
   );
 }
 
-/** Quantité : − / valeur / + et raccourcis. */
+/** Quantité : − / valeur / + et raccourcis (v5.6 : champ numérique commun). */
 export function QtyStepper({ value, onChange, max, presets = [1, 10, 100] }: { value: number; onChange: (v: number) => void; max?: number; presets?: number[] }) {
-  const clamp = (v: number) => Math.max(1, max !== undefined ? Math.min(Math.max(1, max), v) : v);
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center border border-cyan-glow/20 bg-black/25">
-        <button type="button" className="grid h-9 w-8 place-items-center font-mono text-slate-400 hover:text-cyan-glow" onClick={() => onChange(clamp(value - 1))} aria-label="Moins">
-          −
-        </button>
-        <input
-          type="number"
-          min={1}
-          value={value}
-          onChange={(e) => onChange(clamp(parseInt(e.target.value) || 1))}
-          className="w-12 bg-transparent text-center font-mono text-sm font-bold text-slate-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-          aria-label="Quantité"
-        />
-        <button type="button" className="grid h-9 w-8 place-items-center font-mono text-slate-400 hover:text-cyan-glow" onClick={() => onChange(clamp(value + 1))} aria-label="Plus">
-          +
-        </button>
-      </div>
-      <div className="flex gap-1">
-        {presets.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => onChange(clamp(p))}
-            className={cn("border px-2 py-1 font-mono text-[10px] tracking-[0.1em] transition-colors", value === p ? "border-cyan-glow/60 text-cyan-glow" : "border-cyan-glow/15 text-slate-400 hover:border-cyan-glow/50 hover:text-cyan-glow")}
-          >
-            ×{p}
-          </button>
-        ))}
-        {max !== undefined && max > 0 && (
-          <button
-            type="button"
-            onClick={() => onChange(clamp(max))}
-            className={cn("border px-2 py-1 font-mono text-[10px] tracking-[0.1em] transition-colors", value === max ? "border-cyan-glow/60 text-cyan-glow" : "border-cyan-glow/15 text-slate-400 hover:border-cyan-glow/50 hover:text-cyan-glow")}
-          >
-            MAX
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  return <NumberInput value={value} onChange={onChange} min={1} max={max !== undefined ? Math.max(1, max) : undefined} presets={presets} aria-label="Quantité" className="w-full max-w-[260px]" />;
 }
 
 /** Jauge de remplissage fine avec reflet. */

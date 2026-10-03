@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { NumberInput } from "@/components/ui/number-input";
 import { useSearchParams } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -96,7 +97,7 @@ function UnitSandbox({ unit, table, live }: { unit: UnitMetrics; table: UnitMetr
   const num = (label: string, value: number, set: (n: number) => void) => (
     <label className="flex flex-col gap-0.5 text-[11px] text-slate-400">
       {label}
-      <input type="number" value={value} min={0} onChange={(e) => set(Number(e.target.value) || 0)} className="h-8 w-24 border border-cyan-glow/20 bg-space-900 px-2 text-sm text-white outline-none focus:border-cyan-glow/60" />
+      <NumberInput size="sm" decimals={2} value={value} onChange={set} aria-label={label} className="w-32" />
     </label>
   );
   return (
