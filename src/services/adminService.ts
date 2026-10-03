@@ -331,3 +331,8 @@ export type AdminPlayerAction =
 export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Promise<Record<string, unknown>> {
   return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid, ...payload } });
 }
+
+/** v5.5 : photo d'équilibrage du jour, prise tout de suite. */
+export function adminBalanceSnapshot(): Promise<import("@/game/balance/history").BalanceSnapshot> {
+  return pb.send("/api/cosmic/admin/balance/snapshot", { method: "POST" });
+}

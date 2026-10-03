@@ -1,5 +1,6 @@
+import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
-import { computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
+import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
 import { economySnapshot, missionRewards } from "@/game/economy";
 import { getUnitCapacity } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
@@ -172,6 +173,8 @@ export interface LiveBalance {
   warlords: { pseudo: string; power: number }[];
   bestDefense: number;
   bestAttack: number;
+  /** v5.5 : photos quotidiennes (ajoutées par le serveur). */
+  history?: BalanceSnapshot[];
 }
 
 function places(units: PlayerState["units"], ids: string[]): number {
@@ -253,13 +256,28 @@ export function computeLiveBalance(
 
 /* ---------- 3. Propositions sur données réelles ---------- */
 
+/** v5.5 : au-delà, l'attaquant gagne trop souvent (bonus à domicile +0,05). */
+export const PVP_ATTACK_HIGH = 65;
+export const PVP_ATTACK_LOW = 40;
+
 export function liveFindings(live: LiveBalance): Proposal[] {
   const out: Proposal[] = [];
-  if (live.pvp.battles >= 20) {
-    const w = live.pvp.attackerWinPct;
-    if (w > 70) out.push({ id: "pvp-attack", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant gagne ${w} % des ${live.pvp.battles} combats (${live.pvp.windowDays} j). Défendre ne sert presque à rien.`, proposal: "Bonus à domicile (homeDefenseBonus) +0,05, ou bouclier maximal (shieldMax) +0,05.", where: "Règles → Combat" });
-    else if (w < 40) out.push({ id: "pvp-defense", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant ne gagne que ${w} % des ${live.pvp.battles} combats (${live.pvp.windowDays} j). Attaquer décourage.`, proposal: "Bonus à domicile (homeDefenseBonus) −0,05.", where: "Règles → Combat" });
-    else out.push({ id: "pvp-ok", severity: "info", area: "Combats", finding: `JcJ : l'attaquant gagne ${w} % des ${live.pvp.battles} combats (${live.pvp.windowDays} j, zone saine 40–70 %).`, proposal: "Rien à changer.", where: "—" });
+  // v5.5 : la tendance des 7 dernières photos prime sur la fenêtre de 30 jours.
+  const rolling = live.history ? rollingPvpWinPct(live.history, 7) : null;
+  const pvp = rolling ? { w: rolling.pct, battles: rolling.battles, span: "7 derniers jours" } : live.pvp.battles >= 20 ? { w: live.pvp.attackerWinPct, battles: live.pvp.battles, span: `${live.pvp.windowDays} j` } : null;
+  if (pvp) {
+    const bonus = COMBAT_RULES.homeDefenseBonus;
+    const up = (bonus + 0.05).toFixed(2).replace(".", ",");
+    const down = Math.max(0, bonus - 0.05).toFixed(2).replace(".", ",");
+    const cur = bonus.toFixed(2).replace(".", ",");
+    if (pvp.w > PVP_ATTACK_HIGH) out.push({ id: "pvp-attack", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${PVP_ATTACK_LOW}–${PVP_ATTACK_HIGH} %). Défendre rapporte trop peu.`, proposal: `Bonus à domicile ${cur} → ${up}.`, where: "Règles → Combat" });
+    else if (pvp.w < PVP_ATTACK_LOW) out.push({ id: "pvp-defense", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant ne gagne que ${pvp.w} % des ${pvp.battles} combats (${pvp.span}). Attaquer décourage.`, proposal: `Bonus à domicile ${cur} → ${down}.`, where: "Règles → Combat" });
+    else out.push({ id: "pvp-ok", severity: "info", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${PVP_ATTACK_LOW}–${PVP_ATTACK_HIGH} %).`, proposal: "Rien à changer.", where: "—" });
+  }
+  // v5.5 : repaires toujours intouchés après deux semaines d'historique.
+  const h = live.history ?? [];
+  if (h.length >= 14 && live.activePlayers >= 5 && h.at(-1)!.lairsTaken === h.at(-14)!.lairsTaken) {
+    out.push({ id: "lairs-untouched", severity: "warning", area: "Factions", finding: `Aucun repaire pris en 14 jours (${live.activePlayers} joueurs actifs).`, proposal: "Force des repaires (lair.pct) −0,05 pour les factions concernées.", where: "Factions" });
   }
   for (const f of live.factions) {
     const total = f.raidsWon + f.raidsLost;

@@ -52,6 +52,7 @@ __export(hooksEntry_exports, {
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
+  BALANCE_HISTORY_KEY: () => BALANCE_HISTORY_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
@@ -124,6 +125,7 @@ __export(hooksEntry_exports, {
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  balanceSnapshot: () => balanceSnapshot,
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
   bossMonthOf: () => bossMonthOf,
@@ -276,6 +278,7 @@ __export(hooksEntry_exports, {
   pseudoLogin: () => pseudoLogin,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
+  pushSnapshot: () => pushSnapshot,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
   readWarChest: () => readWarChest,
@@ -11771,6 +11774,50 @@ function renamePlayer(player, raw, now) {
   return { pseudo, login: pseudoLogin(pseudo) };
 }
 
+// src/game/balance/history.ts
+var BALANCE_HISTORY_KEY = "balance_history";
+var BALANCE_HISTORY_DAYS = 180;
+var isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+function median3(xs) {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function balanceSnapshot(live, reports, now) {
+  var _a, _b;
+  const day = reports.filter((r) => r.timestamp >= now - 864e5 && r.timestamp <= now);
+  const pvp = day.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const wl = day.filter((r) => {
+    var _a2, _b2;
+    return ((_a2 = r.attackerUid) == null ? void 0 : _a2.startsWith("npc")) || ((_b2 = r.defenderUid) == null ? void 0 : _b2.startsWith("npc"));
+  });
+  const wins = (xs) => xs.filter((r) => r.outcome === "attacker_win").length;
+  const hangars = live.players.filter((p) => p.attackPlaces > 0).map((p) => p.attackPlacesUsed / p.attackPlaces);
+  return {
+    day: new Date(now).toISOString().slice(0, 10),
+    atMs: now,
+    activePlayers: live.activePlayers,
+    pvpBattles: pvp.length,
+    pvpAttackerWins: wins(pvp),
+    warlordBattles: wl.length,
+    warlordAttackerWins: wins(wl),
+    raidsWon: live.factions.reduce((a, f) => a + f.raidsWon, 0),
+    raidsLost: live.factions.reduce((a, f) => a + f.raidsLost, 0),
+    lairsTaken: live.factions.reduce((a, f) => a + f.lairsTaken, 0),
+    medianProduction: Math.round(median3(live.players.map((p) => p.productionPerHour))),
+    avgHangarAttack: hangars.length ? Math.round(hangars.reduce((a, b) => a + b, 0) / hangars.length * 1e3) / 1e3 : 0,
+    bestDefense: live.bestDefense,
+    bestAttack: live.bestAttack,
+    topWarlord: (_b = (_a = live.warlords[0]) == null ? void 0 : _a.power) != null ? _b : 0,
+    homeDefenseBonus: COMBAT_RULES.homeDefenseBonus
+  };
+}
+function pushSnapshot(history, snap) {
+  const list = (Array.isArray(history) ? history : []).filter((s) => s && s.day !== snap.day);
+  return [...list, snap].sort((a, b) => a.day < b.day ? -1 : 1).slice(-BALANCE_HISTORY_DAYS);
+}
+
 // src/game/balance/diagnostics.ts
 function places(units, ids) {
   return ids.reduce((a, id) => {
@@ -11818,8 +11865,8 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
   }).filter((u) => u.places > 0).sort((a, b) => b.places - a.places);
   const since = now - windowDays * 864e5;
   const recent = reports.filter((r) => r.timestamp >= since);
-  const isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-  const pvp = recent.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const isNpc2 = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+  const pvp = recent.filter((r) => !isNpc2(r.attackerUid) && !isNpc2(r.defenderUid));
   const wl = recent.filter((r) => {
     var _a, _b;
     return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
@@ -11894,7 +11941,7 @@ var ofFaction = (f) => /^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`;
 var ofName = (name) => /^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`;
 var clamp3 = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 var round2 = (x) => Math.round(x * 100) / 100;
-function median3(xs) {
+function median4(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -11933,7 +11980,7 @@ function worldDigest(players, now) {
       return (_b2 = (_a2 = s.activity) == null ? void 0 : _a2[k]) != null ? _b2 : 0;
     });
     totals[k] = counts.reduce((a, b) => a + b, 0);
-    weeklyMedian[k] = round2(median3(counts) / observedDays * 7);
+    weeklyMedian[k] = round2(median4(counts) / observedDays * 7);
     const best = counts.reduce((bi, c, i) => c > counts[bi] ? i : bi, 0);
     if (counts[best] > 0) heroes[k] = { pseudo: active[best].pseudo, count: counts[best] };
   }
@@ -11959,7 +12006,7 @@ function worldDigest(players, now) {
     totals,
     heroes,
     episodes,
-    passMedianTier: median3(tiers2),
+    passMedianTier: median4(tiers2),
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
     chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0
