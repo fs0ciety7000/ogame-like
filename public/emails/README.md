@@ -15,3 +15,10 @@ Un fichier HTML (version riche) et un fichier texte (version de secours) par cam
 - Objet : « Les Kesh'Vaar recrutent : primes, Ambre et 63 emojis 🐝 »
 - Variante : « Commandant, l'Essaim a besoin de vous »
 - Expéditeur : Thomas & Nicolas · Cosmic Empires
+
+## 2026-10 · Le jeu déménage (empire.fs0ciety.org)
+
+- Objet : « Cosmic Empires déménage : votre empire vous attend sur empire.fs0ciety.org »
+- Variante : « Nouvelle adresse pour votre empire 🚀 »
+- Expéditeur : Thomas & Nicolas · Cosmic Empires
+- Tirée de l'article du devblog `le-jeu-demenage-empire-fs0ciety-org`. Illustration : `assets/email/demenagement.jpg`.
