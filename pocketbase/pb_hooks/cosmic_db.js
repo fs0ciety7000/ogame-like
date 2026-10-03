@@ -4717,6 +4717,203 @@ function victoryCardPage(e) {
 
 const BLOG_DEFAULT_AUTHORS = ["Nicotine", "Tartiflex"];
 
+/* ---------- Comptes Google / Apple (v5.9) ---------- */
+
+/** POST /api/cosmic/account/pseudo { pseudo } : premier pseudo d'un compte
+ *  ouvert par Google ou Apple (aucun identifiant, aucun empire encore).
+ *  Gratuit et unique ; ensuite, c'est le changement de pseudo habituel. */
+function accountPseudo(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let pseudo = "";
+  $app.runInTransaction((txApp) => {
+    const user = txApp.findRecordById("users", uid);
+    if (user.getString("username") || findOrNull(txApp, "players", uid)) throw new BadRequestError("Ton pseudo est déjà choisi.");
+    try {
+      pseudo = game.cleanNewPseudo(req.pseudo);
+    } catch (err) {
+      throw new BadRequestError(err.message);
+    }
+    const login = game.pseudoLogin(pseudo);
+    const lower = pseudo.toLowerCase();
+    const sameLogin = txApp.findRecordsByFilter("users", "username = {:u} && id != {:id}", "", 1, 0, { u: login, id: uid });
+    const samePseudo = txApp.findRecordsByFilter("players", "pseudo ~ {:p}", "", 50, 0, { p: pseudo }).filter((r) => r.getString("pseudo").toLowerCase() === lower);
+    if (sameLogin.length > 0 || samePseudo.length > 0) throw new BadRequestError("Ce pseudo est déjà pris.");
+    user.set("username", login);
+    user.set("name", pseudo);
+    txApp.save(user);
+  });
+  return e.json(200, { pseudo });
+}
+
+/* ---------- Passkeys (v5.9) ---------- */
+
+function findFirstOrNull(app, collection, filter, params) {
+  try {
+    return app.findFirstRecordByFilter(collection, filter, params);
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Origines autorisées : COSMIC_PASSKEY_ORIGINS (séparées par des virgules),
+ *  sinon l'adresse du jeu. Le site (rpId) est le nom d'hôte de l'origine. */
+function passkeyOrigins() {
+  const env = String($os.getenv("COSMIC_PASSKEY_ORIGINS") || "").split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean);
+  if (env.length > 0) return env;
+  let game = String($os.getenv("COSMIC_GAME_URL") || "");
+  if (!game) {
+    try {
+      game = $app.settings().meta.appURL || "";
+    } catch (_) {
+      game = "";
+    }
+  }
+  const list = [game || "https://empire.fs0ciety.org", "https://empire.fs0ciety.org"].map((o) => o.replace(/\/+$/, ""));
+  return list.filter((o, i) => list.indexOf(o) === i);
+}
+
+function passkeyContext(e) {
+  const origins = passkeyOrigins();
+  const asked = String(e.request.header.get("Origin") || "").replace(/\/+$/, "");
+  const origin = origins.indexOf(asked) >= 0 ? asked : origins[0];
+  const rpId = origin.replace(/^https?:\/\//, "").replace(/:\d+$/, "").replace(/\/.*$/, "");
+  return { origin, origins, rpId };
+}
+
+/** Défi à usage unique, gardé en mémoire 5 minutes. */
+function passkeyIssueChallenge(game, kind, uid, rpId) {
+  const challenge = game.challengeFromBytes(game.passkeyUtf8($security.randomString(32)));
+  $app.store().set(`passkey:${challenge}`, { kind, uid, rpId, exp: Date.now() + game.PASSKEY_RULES.challengeTtlMs });
+  return challenge;
+}
+
+function passkeyTakeChallenge(game, clientDataJSON, kind) {
+  let challenge = "";
+  try {
+    challenge = game.clientChallenge(clientDataJSON);
+  } catch (_) {
+    throw new BadRequestError("Réponse de la passkey illisible.");
+  }
+  const key = `passkey:${challenge}`;
+  const saved = $app.store().get(key);
+  $app.store().remove(key);
+  if (!saved || saved.kind !== kind || saved.exp < Date.now()) throw new BadRequestError("Défi expiré : réessaie.");
+  return { challenge, saved };
+}
+
+function passkeyError(game, err) {
+  if (err && (err.name === "PasskeyError" || err.name === "Base64urlError")) return new BadRequestError(err.message);
+  if (err instanceof game.PasskeyError) return new BadRequestError(err.message);
+  return err;
+}
+
+function passkeyView(rec) {
+  return { id: rec.id, name: rec.getString("name"), createdAtMs: rec.getInt("createdAtMs"), lastUsedAtMs: rec.getInt("lastUsedAtMs") };
+}
+
+/** POST /api/cosmic/passkey/register/options : paramètres de navigator.credentials.create(). */
+function passkeyRegisterOptions(e) {
+  const game = loadGame();
+  const ctx = passkeyContext(e);
+  const uid = e.auth.id;
+  const mine = $app.findRecordsByFilter("passkeys", "user = {:u}", "", 50, 0, { u: uid });
+  if (mine.length >= game.PASSKEY_RULES.maxPerUser) throw new BadRequestError(`${game.PASSKEY_RULES.maxPerUser} passkeys au plus par compte.`);
+  const login = e.auth.getString("username") || e.auth.getString("email") || uid;
+  const display = e.auth.getString("name") || login;
+  return e.json(200, {
+    challenge: passkeyIssueChallenge(game, "create", uid, ctx.rpId),
+    rp: { id: ctx.rpId, name: "Cosmic Empires" },
+    user: { id: game.challengeFromBytes(game.passkeyUtf8(`cosmic:${uid}`)), name: login, displayName: display },
+    pubKeyCredParams: [
+      { type: "public-key", alg: -7 },
+      { type: "public-key", alg: -257 },
+    ],
+    excludeCredentials: mine.map((r) => ({ type: "public-key", id: r.getString("credentialId") })),
+    authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "preferred" },
+    attestation: "none",
+    timeout: game.PASSKEY_RULES.challengeTtlMs,
+  });
+}
+
+/** POST /api/cosmic/passkey/register/verify { response, name, transports } */
+function passkeyRegisterVerify(e) {
+  const game = loadGame();
+  const ctx = passkeyContext(e);
+  const uid = e.auth.id;
+  const req = body(e);
+  const response = req.response || {};
+  const { challenge, saved } = passkeyTakeChallenge(game, response.clientDataJSON, "create");
+  if (saved.uid !== uid) throw new BadRequestError("Défi émis pour un autre compte.");
+  let reg;
+  try {
+    reg = game.verifyRegistration({ clientDataJSON: response.clientDataJSON, attestationObject: response.attestationObject }, { challenge, rpId: saved.rpId, origins: ctx.origins });
+  } catch (err) {
+    throw passkeyError(game, err);
+  }
+  if (findFirstOrNull($app, "passkeys", "credentialId = {:c}", { c: reg.credentialId })) throw new BadRequestError("Cette passkey est déjà enregistrée.");
+  const rec = new Record($app.findCollectionByNameOrId("passkeys"));
+  const now = Date.now();
+  rec.set("user", uid);
+  rec.set("credentialId", reg.credentialId);
+  rec.set("publicKey", reg.publicKey);
+  rec.set("alg", reg.alg);
+  rec.set("signCount", reg.signCount);
+  rec.set("name", game.cleanPasskeyName(req.name));
+  rec.set("transports", Array.isArray(req.transports) ? req.transports.filter((t) => typeof t === "string").slice(0, 6) : []);
+  rec.set("createdAtMs", now);
+  rec.set("lastUsedAtMs", 0);
+  $app.save(rec);
+  return e.json(200, passkeyView(rec));
+}
+
+/** POST /api/cosmic/passkey/login/options : passkeys découvrables (aucun identifiant à saisir). */
+function passkeyLoginOptions(e) {
+  const game = loadGame();
+  const ctx = passkeyContext(e);
+  return e.json(200, { challenge: passkeyIssueChallenge(game, "get", "", ctx.rpId), rpId: ctx.rpId, userVerification: "preferred", allowCredentials: [], timeout: game.PASSKEY_RULES.challengeTtlMs });
+}
+
+/** POST /api/cosmic/passkey/login/verify { id, response } → jeton de session PocketBase. */
+function passkeyLoginVerify(e) {
+  const game = loadGame();
+  const ctx = passkeyContext(e);
+  const req = body(e);
+  const response = req.response || {};
+  const { challenge, saved } = passkeyTakeChallenge(game, response.clientDataJSON, "get");
+  const rec = findFirstOrNull($app, "passkeys", "credentialId = {:c}", { c: String(req.id || "") });
+  if (!rec) throw new BadRequestError("Passkey inconnue : elle a peut-être été retirée de ton compte.");
+  let out;
+  try {
+    out = game.verifyAssertion(
+      { clientDataJSON: response.clientDataJSON, authenticatorData: response.authenticatorData, signature: response.signature },
+      { challenge, rpId: saved.rpId, origins: ctx.origins },
+      rec.getString("publicKey"),
+      rec.getInt("signCount"),
+    );
+  } catch (err) {
+    throw passkeyError(game, err);
+  }
+  const user = findOrNull($app, "users", rec.getString("user"));
+  if (!user) throw new BadRequestError("Compte introuvable.");
+  rec.set("signCount", out.signCount);
+  rec.set("lastUsedAtMs", Date.now());
+  $app.save(rec);
+  return $apis.recordAuthResponse(e, user, "passkey", null);
+}
+
+/** POST /api/cosmic/passkey/rename { id, name } */
+function passkeyRename(e) {
+  const game = loadGame();
+  const req = body(e);
+  const rec = findOrNull($app, "passkeys", String(req.id || ""));
+  if (!rec || rec.getString("user") !== e.auth.id) throw new BadRequestError("Passkey introuvable.");
+  rec.set("name", game.cleanPasskeyName(req.name));
+  $app.save(rec);
+  return e.json(200, passkeyView(rec));
+}
+
 function blogHost() {
   return String($os.getenv("COSMIC_BLOG_HOST") || "devblog.fs0ciety.org").toLowerCase();
 }
@@ -6055,4 +6252,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

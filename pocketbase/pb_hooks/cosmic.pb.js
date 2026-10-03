@@ -27,6 +27,8 @@ routerAdd(
     const game = db.loadGame();
     const uid = e.auth.id;
     const pseudo = e.auth.getString("name") || e.auth.getString("username");
+    // v5.9 : un compte Google / Apple choisit d'abord son pseudo.
+    if (!pseudo.trim() && !db.findOrNull($app, "players", uid)) throw new BadRequestError("Choisis d'abord ton pseudo.");
     let created = false;
 
     $app.runInTransaction((txApp) => {
@@ -52,6 +54,14 @@ routerAdd(
   },
   $apis.requireAuth("users"),
 );
+
+/* ---------- Passkeys et comptes Google / Apple (v5.9) ---------- */
+routerAdd("POST", "/api/cosmic/passkey/register/options", (e) => require(`${__hooks}/cosmic_db.js`).passkeyRegisterOptions(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/passkey/register/verify", (e) => require(`${__hooks}/cosmic_db.js`).passkeyRegisterVerify(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/passkey/rename", (e) => require(`${__hooks}/cosmic_db.js`).passkeyRename(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/passkey/login/options", (e) => require(`${__hooks}/cosmic_db.js`).passkeyLoginOptions(e));
+routerAdd("POST", "/api/cosmic/passkey/login/verify", (e) => require(`${__hooks}/cosmic_db.js`).passkeyLoginVerify(e));
+routerAdd("POST", "/api/cosmic/account/pseudo", (e) => require(`${__hooks}/cosmic_db.js`).accountPseudo(e), $apis.requireAuth("users"));
 
 /**
  * POST /api/cosmic/action  { type, ...paramètres }

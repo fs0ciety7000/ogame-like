@@ -25,6 +25,8 @@ export const hooksBuildOptions = {
   format: "cjs",
   platform: "neutral",
   target: "es2017",
+  // Paquets npm (ex. @noble/curves pour les passkeys) : version ESM.
+  mainFields: ["module", "main"],
   alias: { "@": path.join(root, "src") },
   banner: {
     js: `// FICHIER GÉNÉRÉ par \`npm run build:hooks\` depuis src/game — ne pas modifier à la main.\n${polyfills}`,

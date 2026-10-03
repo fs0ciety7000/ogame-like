@@ -24,6 +24,7 @@ import {
 import { pbConfigured } from "@/lib/pocketbase";
 import { REFERRAL_RULES } from "@/game/referral";
 import { BlogLatest } from "@/components/blog/BlogLatest";
+import { AltSignIn } from "@/components/auth/AltSignIn";
 import { BLOG_URL } from "@/services/blogService";
 import { claimPendingSponsor, fetchSponsorName, pendingSponsor } from "@/services/referralService";
 
@@ -250,6 +251,8 @@ export function LoginPage() {
               Mot de passe oublié ?
             </button>
           )}
+
+          {mode !== "forgot" && <AltSignIn />}
 
           <button
             type="button"
