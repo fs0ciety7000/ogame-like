@@ -866,3 +866,17 @@ body {
     animation: none;
   }
 }
+
+/* v5.6 : champ numérique — éclair quand la saisie bute sur MIN / MAX. */
+.number-input-bump {
+  animation: number-input-bump 0.45s ease-out forwards;
+}
+@keyframes number-input-bump {
+  0% { box-shadow: inset 0 0 0 1px var(--color-gold-glow), 0 0 14px color-mix(in srgb, var(--color-gold-glow) 50%, transparent); transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  100% { box-shadow: inset 0 0 0 1px transparent, 0 0 0 transparent; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .number-input-bump { animation-duration: 0.01s; }
+}

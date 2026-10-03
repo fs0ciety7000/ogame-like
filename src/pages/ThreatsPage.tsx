@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Clock, Crosshair, Skull, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -65,16 +65,16 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
           {OFFENSIVE_UNITS.filter((id) => (player.units[id]?.count ?? 0) > 0).map((id) => {
             const owned = player.units[id]?.count ?? 0;
             return (
-              <div key={id} className="flex items-center gap-3 text-sm">
+              <div key={id} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                 <span className="flex-1 text-slate-200">{findUnit(id)?.name ?? id}</span>
                 <span className="text-xs text-slate-500">À quai : {owned}</span>
-                <Input
-                  type="number"
-                  min={0}
+                <NumberInput
+                  size="sm"
                   max={owned}
                   value={fleet[id] ?? 0}
-                  onChange={(e) => setFleet({ ...fleet, [id]: Math.max(0, Math.min(owned, parseInt(e.target.value) || 0)) })}
-                  className="w-20"
+                  onChange={(v) => setFleet({ ...fleet, [id]: v })}
+                  aria-label={`Quantité ${findUnit(id)?.name ?? id}`}
+                  className="w-40"
                 />
               </div>
             );

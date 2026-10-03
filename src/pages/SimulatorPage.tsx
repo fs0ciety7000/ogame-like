@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Calculator, Shield, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -56,34 +56,11 @@ function UnitRows({
             {withLevel && (
               <label className="flex items-center gap-1 font-mono text-[10px] text-slate-500">
                 niv.
-                <Input
-                  type="number"
-                  min={1}
-                  max={def.maxLevel}
-                  value={cur.level}
-                  onChange={(e) => set(id, { level: Math.min(def.maxLevel, Math.max(1, parseInt(e.target.value) || 1)) })}
-                  className="h-8 w-14 px-1 text-center"
-                  aria-label={`Niveau ${def.name}`}
-                />
+                <NumberInput size="sm" stepper={false} quick={false} meter={false} min={1} max={def.maxLevel} value={cur.level} onChange={(v) => set(id, { level: v })} className="w-12" aria-label={`Niveau ${def.name}`} />
               </label>
             )}
-            <Input
-              type="number"
-              min={0}
-              value={cur.count || ""}
-              placeholder="0"
-              onChange={(e) => {
-                const n = Math.max(0, parseInt(e.target.value) || 0);
-                set(id, { count: cap !== undefined ? Math.min(cap, n) : n });
-              }}
-              className="h-8 w-24 px-2 text-right"
-              aria-label={`Quantité ${def.name}`}
-            />
-            {cap !== undefined && (
-              <button type="button" className="w-14 font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => set(id, { count: cap })}>
-                /{formatCompact(cap)}
-              </button>
-            )}
+            <NumberInput size="sm" value={cur.count} max={cap} onChange={(v) => set(id, { count: v })} className="w-40 shrink-0" aria-label={`Quantité ${def.name}`} />
+            {cap !== undefined && <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500">/{formatCompact(cap)}</span>}
           </div>
         );
       })}
@@ -265,7 +242,7 @@ export function SimulatorPage() {
         description="La formule exacte des vrais combats, sans risque : vérifie l'issue, les pertes et le butin avant d'envoyer ta flotte."
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card className={cn("flex flex-col gap-3 p-4", kind === "raid" && "opacity-50")}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="hud-title text-sm">Ta flotte</h2>
@@ -355,11 +332,11 @@ export function SimulatorPage() {
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs text-slate-400">
                   Bouclier (%)
-                  <Input type="number" min={0} max={95} value={shield} onChange={(e) => setShield(Math.min(95, Math.max(0, parseInt(e.target.value) || 0)))} className="mt-1 h-8" />
+                  <NumberInput size="sm" max={95} value={shield} onChange={setShield} suffix="%" aria-label="Bouclier" className="mt-1 w-full" />
                 </label>
                 <label className="text-xs text-slate-400">
                   Ferraille exposée
-                  <Input type="number" min={0} value={defScrap} onChange={(e) => setDefScrap(Math.max(0, parseInt(e.target.value) || 0))} className="mt-1 h-8" />
+                  <NumberInput size="sm" step={1000} value={defScrap} onChange={setDefScrap} aria-label="Ferraille exposée" className="mt-1 w-full" />
                 </label>
               </div>
               <div>

@@ -5,6 +5,7 @@ import { Check, Clock, Globe2, Hammer, Lock, Package, Pencil, Rocket, Shield, Sp
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudTag } from "@/components/ui/hud";
@@ -127,18 +128,8 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
               <div key={id} className="flex items-center gap-2 text-sm">
                 <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  value={ships[id] || ""}
-                  placeholder="0"
-                  aria-label={`Quantité ${findUnit(id)?.name}`}
-                  onChange={(e) => setShips((f) => ({ ...f, [id]: Math.min(owned, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                  className="h-8 w-24 text-right"
-                />
-                <button type="button" className="w-12 font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setShips((f) => ({ ...f, [id]: owned }))}>
-                  /{formatCompact(owned)}
-                </button>
+                <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -153,7 +144,17 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
               <span className="truncate">
                 <ResourceIcon id={r.id} /> {formatCompact(Math.floor(source[r.id] ?? 0))}
               </span>
-              <Input type="number" min={0} value={cargo[r.id] ?? ""} onChange={(e) => setCargo((c) => ({ ...c, [r.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) }))} />
+              <NumberInput
+                size="sm"
+                stepper={false}
+                nullable={direction !== "deliver"}
+                value={cargo[r.id]}
+                max={Math.max(0, Math.floor(source[r.id] ?? 0))}
+                placeholder={direction === "deliver" ? "0" : "max"}
+                onChange={(v: number | undefined) => setCargo((c) => ({ ...c, [r.id]: v }))}
+                aria-label={r.name}
+                className="w-full"
+              />
             </label>
           ))}
         </div>
@@ -597,12 +598,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                 ))}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Input type="number" min={0} value={defense.qty || ""} placeholder="Quantité" onChange={(e) => setDefense((d) => ({ ...d, qty: Math.max(0, parseInt(e.target.value) || 0) }))} className="h-8 w-28" />
-                {picked && (
-                  <button type="button" className="font-mono text-[10px] text-slate-500 hover:text-cyan-glow" title="Maximum (place et stock)" onClick={() => setDefense((d) => ({ ...d, qty: maxQty }))}>
-                    max {formatCompact(maxQty)}
-                  </button>
-                )}
+                <NumberInput size="sm" value={defense.qty} max={picked ? maxQty : 0} disabled={!picked} onChange={(v) => setDefense((d) => ({ ...d, qty: v }))} aria-label="Quantité" title="Maximum : place et stock" className="w-44" />
                 {picked && defense.qty > 0 && (
                   <span className="flex flex-1 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
                     <CostChips cost={batchCost} stock={colony.resources} />

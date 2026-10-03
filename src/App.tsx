@@ -27,6 +27,7 @@ const AchievementsPage = lazy(() => import("@/pages/AchievementsPage").then((m) 
 const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ default: m.ThreatsPage })));
 const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const EmpireStatsPage = lazy(() => import("@/pages/EmpireStatsPage").then((m) => ({ default: m.EmpireStatsPage })));
 const FormulasPage = lazy(() => import("@/pages/FormulasPage").then((m) => ({ default: m.FormulasPage })));
 const PublicFormulasPage = lazy(() => import("@/pages/PublicFormulasPage").then((m) => ({ default: m.PublicFormulasPage })));
 const CodexPage = lazy(() => import("@/pages/CodexPage").then((m) => ({ default: m.CodexPage })));
@@ -93,6 +94,7 @@ export default function App() {
                 <Route path="etat-major" element={<CommandPage />} />
                 <Route path="passe" element={<SeasonPassPage />} />
                 <Route path="colonies" element={<ColoniesPage />} />
+                <Route path="statistiques" element={<EmpireStatsPage />} />
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />
                 <Route path="seigneurs" element={<WarlordsPage />} />

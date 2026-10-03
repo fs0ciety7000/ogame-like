@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { HudTag, StatTile } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -141,18 +141,8 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
                   {findUnit(id)?.name}
                   {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[10px] text-gold-glow">+50 % PNJ</span>}
                 </span>
-                <Input
-                  type="number"
-                  min={0}
-                  value={fleet[id] || ""}
-                  placeholder="0"
-                  aria-label={`Quantité ${findUnit(id)?.name}`}
-                  onChange={(e) => setFleet((f) => ({ ...f, [id]: Math.min(owned, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                  className="h-8 w-24 text-right"
-                />
-                <button type="button" className="w-12 font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setFleet((f) => ({ ...f, [id]: owned }))}>
-                  /{formatCompact(owned)}
-                </button>
+                <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -553,7 +543,7 @@ function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) 
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Input type="number" min={1} max={Math.min(left, st.amber)} value={amount} onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 1))} className="h-9 w-24" aria-label="Ambre à échanger" />
+        <NumberInput size="sm" min={1} max={Math.max(1, Math.min(left, st.amber))} value={amount} onChange={setAmount} className="w-48" aria-label="Ambre à échanger" />
         <span className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
           →
           {rares.map((r) => (

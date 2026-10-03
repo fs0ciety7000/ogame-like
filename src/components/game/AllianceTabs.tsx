@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Building2, Eye, FlaskConical, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -36,12 +36,7 @@ function AmountsForm({ value, onChange, max }: { value: Amounts; onChange: (v: A
             <ResourceIcon id={r.id} /> {r.name}
             {max && <span className="ml-1 text-slate-600">(max {formatCompact(max(r.id))})</span>}
           </span>
-          <Input
-            type="number"
-            min={0}
-            value={value[r.id] ?? ""}
-            onChange={(e) => onChange({ ...value, [r.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
-          />
+          <NumberInput size="sm" stepper={false} value={value[r.id] ?? 0} max={max ? Math.max(0, max(r.id)) : undefined} onChange={(v) => onChange({ ...value, [r.id]: v })} aria-label={r.name} className="w-full" />
         </label>
       ))}
     </div>
