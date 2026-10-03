@@ -138,7 +138,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
           Soute : {formatCompact(loaded)} / {formatCompact(capacity)}
         </p>
         <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">{direction === "deliver" ? "Chargement" : "À rapatrier (vide = au maximum)"}</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2">
           {RESOURCE_LIST.map((r) => (
             <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
               <span className="truncate">

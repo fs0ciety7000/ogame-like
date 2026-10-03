@@ -50,16 +50,16 @@ function UnitRows({
         const cur = value[id] ?? { count: 0, level: 1 };
         const cap = max?.[id];
         return (
-          <div key={id} className="flex items-center gap-2">
+          <div key={id} className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
             <img src={def.image} alt="" className="h-8 w-8 shrink-0 object-contain" loading="lazy" />
-            <span className="min-w-0 flex-1 truncate text-sm text-slate-300">{def.name}</span>
+            <span className="min-w-[7rem] flex-1 truncate text-sm text-slate-300">{def.name}</span>
             {withLevel && (
               <label className="flex items-center gap-1 font-mono text-[10px] text-slate-500">
                 niv.
-                <NumberInput size="sm" stepper={false} quick={false} meter={false} min={1} max={def.maxLevel} value={cur.level} onChange={(v) => set(id, { level: v })} className="w-12" aria-label={`Niveau ${def.name}`} />
+                <NumberInput size="sm" meter={false} min={1} max={def.maxLevel} value={cur.level} onChange={(v) => set(id, { level: v })} className="w-28" aria-label={`Niveau ${def.name}`} />
               </label>
             )}
-            <NumberInput size="sm" value={cur.count} max={cap} onChange={(v) => set(id, { count: v })} className="w-40 shrink-0" aria-label={`Quantité ${def.name}`} />
+            <NumberInput size="sm" value={cur.count} max={cap} onChange={(v) => set(id, { count: v })} className="w-44 shrink-0" aria-label={`Quantité ${def.name}`} />
             {cap !== undefined && <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500">/{formatCompact(cap)}</span>}
           </div>
         );

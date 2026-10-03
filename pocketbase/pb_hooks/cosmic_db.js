@@ -4713,6 +4713,182 @@ function victoryCardPage(e) {
   return e.html(200, html);
 }
 
+/* ---------- Devblog (v5.8) ---------- */
+
+const BLOG_DEFAULT_AUTHORS = ["Nicotine", "Tartiflex"];
+
+function blogHost() {
+  return String($os.getenv("COSMIC_BLOG_HOST") || "devblog.fs0ciety.org").toLowerCase();
+}
+
+/** v5.8 : sur le domaine du blog, seul le blog est visible. L'API (/api/…)
+ *  reste ouverte (essais de routes, images) ; le panneau d'administration
+ *  (/_/) renvoie vers l'accueil et toute autre adresse affiche la page 404
+ *  du blog au lieu des réponses brutes de PocketBase. */
+function blogHostIntercept(e) {
+  const host = String(e.request.host || "").toLowerCase().replace(/:\d+$/, "");
+  if (host !== blogHost()) return null;
+  const path = String(e.request.url.path || "/");
+  if (path.indexOf("/api/") === 0) return null;
+  if (/^\/($|[ctp]\/|recherche$|rss\.xml$|feed$|sitemap\.xml$|robots\.txt$|assets\/blog\.(css|js)$)/.test(path)) return null;
+  if (path.indexOf("/_") === 0) return "home";
+  return "notfound";
+}
+
+/** Contexte des pages : « / » sur le sous-domaine, « /blog » ailleurs. */
+function blogSite(e, game) {
+  const host = String(e.request.host || "").toLowerCase();
+  const local = /^(127\.0\.0\.1|localhost)(:|$)/.test(host);
+  const origin = (local ? "http://" : "https://") + host;
+  const onBlogHost = host.split(":")[0] === blogHost();
+  let gameUrl = String($os.getenv("COSMIC_GAME_URL") || "");
+  if (!gameUrl) {
+    try {
+      gameUrl = String($app.settings().meta.appURL || "");
+    } catch (_) {
+      gameUrl = "";
+    }
+  }
+  gameUrl = (gameUrl || "https://empire.fs0ciety.org").replace(/\/+$/, "");
+  const cfg = configRecord($app, game.EMOJIS_KEY);
+  const custom = game.normalizeCustomEmojis(cfg ? toPlain(cfg).data : null);
+  return {
+    base: onBlogHost ? "" : "/blog",
+    origin,
+    filesBase: origin,
+    gameUrl,
+    now: Date.now(),
+    emojis: game.GAME_EMOJIS.concat(game.KESH_EMOJIS || [], custom),
+    assetVersion: game.shortHash(game.BLOG_CSS + game.BLOG_JS),
+  };
+}
+
+function blogAuthors(filesBase) {
+  const out = {};
+  let recs = [];
+  try {
+    recs = $app.findAllRecords("blog_authors");
+  } catch (_) {
+    recs = [];
+  }
+  recs.forEach((r) => {
+    const avatar = r.getString("avatar");
+    out[r.id] = { pseudo: r.getString("pseudo"), role: r.getString("role"), avatarUrl: avatar ? `${filesBase}/api/files/blog_authors/${r.id}/${avatar}` : "" };
+  });
+  return out;
+}
+
+function blogPublicPosts(game, site) {
+  let recs = [];
+  try {
+    recs = $app.findRecordsByFilter("blog_posts", 'status = "published"', "-publishedAtMs", 0, 0);
+  } catch (_) {
+    recs = [];
+  }
+  const authors = blogAuthors(site.filesBase);
+  return game.publicPosts(recs.map((r) => game.blogPostFromRecord(Object.assign(toPlain(r), { id: r.id }), site.filesBase, authors)), site.now);
+}
+
+function blogSend(e, status, type, body, maxAge) {
+  e.response.header().set("Content-Type", type);
+  e.response.header().set("Cache-Control", `public, max-age=${maxAge}`);
+  e.response.header().set("X-Content-Type-Options", "nosniff");
+  return e.blob(status, type, body);
+}
+
+/** Routes publiques du devblog (pages HTML, flux, fichiers). */
+function blogRequest(e, page) {
+  const game = loadGame();
+  applyContent($app, game);
+  const site = blogSite(e, game);
+  const posts = blogPublicPosts(game, site);
+  const q = e.request.url.query();
+  const pageNo = Math.max(1, parseInt(q.get("page"), 10) || 1);
+  const html = (status, body) => blogSend(e, status, "text/html; charset=utf-8", body, status === 200 ? 60 : 30);
+  switch (page) {
+    case "home":
+      return html(200, game.renderBlogList(site, { posts, page: pageNo }));
+    case "category": {
+      const id = String(e.request.pathValue("id") || "");
+      const known = ["annonces", "mises-a-jour", "notes", "coulisses", "equilibrage", "evenements"].indexOf(id) >= 0;
+      return known ? html(200, game.renderBlogList(site, { posts, page: pageNo, category: id })) : html(404, game.renderBlogNotFound(site, posts));
+    }
+    case "tag":
+      return html(200, game.renderBlogList(site, { posts, page: pageNo, tag: game.slugify(String(e.request.pathValue("id") || ""), 32) }));
+    case "search":
+      return html(200, game.renderBlogList(site, { posts, page: pageNo, q: String(q.get("q") || "").slice(0, 80) }));
+    case "post": {
+      const slug = String(e.request.pathValue("slug") || "");
+      const post = posts.find((p) => p.slug === slug);
+      return post ? html(200, game.renderBlogPost(site, post, posts)) : html(404, game.renderBlogNotFound(site, posts));
+    }
+    case "rss":
+      return blogSend(e, 200, "application/rss+xml; charset=utf-8", game.renderBlogRss(site, posts), 300);
+    case "sitemap":
+      return blogSend(e, 200, "application/xml; charset=utf-8", game.renderBlogSitemap(site, posts), 3600);
+    case "robots":
+      return blogSend(e, 200, "text/plain; charset=utf-8", game.renderBlogRobots(site), 3600);
+    case "api": {
+      // Liste publique en JSON (bots Discord, intégrations).
+      const cat = String(q.get("categorie") || "");
+      const list = posts.filter((p) => !cat || p.category === cat).slice(0, Math.min(50, Math.max(1, parseInt(q.get("limite"), 10) || 10)));
+      e.response.header().set("Cache-Control", "public, max-age=60");
+      return e.json(200, {
+        posts: list.map((p) => ({ slug: p.slug, title: p.title, excerpt: p.excerpt, category: p.category, tags: p.tags, version: p.version, author: p.authorPseudo, publishedAt: new Date(p.publishedAtMs).toISOString(), url: `${site.origin}${site.base}/p/${p.slug}`, cover: p.coverUrl })),
+      });
+    }
+    case "css":
+      return blogSend(e, 200, "text/css; charset=utf-8", game.BLOG_CSS, 604800);
+    case "js":
+      return blogSend(e, 200, "application/javascript; charset=utf-8", game.BLOG_JS, 604800);
+    default:
+      return html(404, game.renderBlogNotFound(site, posts));
+  }
+}
+
+/** Auteurs par défaut (Nicotine, Tartiflex) : ajoutés une fois si leur compte existe. */
+function ensureBlogAuthors(app) {
+  let col = null;
+  try {
+    col = app.findCollectionByNameOrId("blog_authors");
+  } catch (_) {
+    return [];
+  }
+  const added = [];
+  BLOG_DEFAULT_AUTHORS.forEach((pseudo) => {
+    let player = null;
+    try {
+      player = app.findFirstRecordByFilter("players", "pseudo = {:p}", { p: pseudo });
+    } catch (_) {
+      player = null;
+    }
+    if (!player || findOrNull(app, "blog_authors", player.id)) return;
+    const rec = new Record(col);
+    rec.set("id", player.id);
+    rec.set("pseudo", player.getString("pseudo"));
+    rec.set("role", "Équipe Cosmic Empires");
+    app.save(rec);
+    added.push(pseudo);
+  });
+  // Premier article en brouillon (relu puis publié par l'équipe), une seule fois.
+  try {
+    const authors = app.findAllRecords("blog_authors");
+    const posts = app.findRecordsByFilter("blog_posts", "id != ''", "", 1, 0);
+    if (authors.length > 0 && posts.length === 0 && !configRecord(app, "blog_welcome")) {
+      const w = loadGame().BLOG_WELCOME;
+      const rec = new Record(app.findCollectionByNameOrId("blog_posts"));
+      const now = Date.now();
+      rec.load({ slug: w.slug, title: w.title, excerpt: w.excerpt, body: w.body, category: w.category, tags: w.tags, version: w.version, status: "draft", publishedAtMs: 0, updatedAtMs: now, pinned: true, authorUid: authors[0].id, authorPseudo: authors[0].getString("pseudo") });
+      app.save(rec);
+      writeConfig(app, "blog_welcome", { createdAtMs: now });
+      added.push("article de bienvenue (brouillon)");
+    }
+  } catch (err) {
+    console.log(`[cosmic] devblog, article de bienvenue : ${err}`);
+  }
+  return added;
+}
+
 /* ---------- Seigneurs de guerre (v4.2) ---------- */
 
 const WARLORDS_STATE_KEY = "warlords_state";
@@ -5879,4 +6055,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

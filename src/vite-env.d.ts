@@ -8,6 +8,8 @@ declare module "virtual:changelog-index" {
 interface ImportMetaEnv {
   /** URL du serveur PocketBase, ex. https://pocketbase.mondomaine.fr */
   readonly VITE_POCKETBASE_URL: string;
+  /** v5.8 : adresse du devblog (https://devblog.fs0ciety.org par défaut). */
+  readonly VITE_BLOG_URL?: string;
 }
 
 interface ImportMeta {
