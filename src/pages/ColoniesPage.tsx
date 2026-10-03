@@ -41,7 +41,7 @@ import {
 import { useFleetStore } from "@/store/fleetStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 type Amounts = Partial<Record<ResourceId, number>>;
@@ -268,7 +268,7 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
             <div className={cn("h-full transition-[width] duration-700", full ? "bg-ember-glow" : pct > 85 ? "bg-gold-glow" : "bg-mint-glow/80")} style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-1 flex flex-wrap justify-between gap-x-2 font-mono text-[9px] text-slate-500">
-            <span className={full ? "text-ember-glow" : "text-mint-glow"}>{full ? "PLEIN" : `+${formatCompact(rate)}/h`}</span>
+            <span className={full ? "text-ember-glow" : "text-mint-glow"}>{full ? "PLEIN" : `+${formatPerSecond(rate)}`}</span>
             <span>{full ? "rapatrie ou agrandis" : hoursToFull !== null ? `plein dans ${hoursToFull >= 48 ? `${Math.round(hoursToFull / 24)} j` : formatDuration(Math.floor(hoursToFull * 3600))}` : "—"}</span>
           </p>
         </>
@@ -430,7 +430,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           )}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-slate-400">
             <span className="inline-flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-mint-glow" /> {formatCompact(hourly)}/h
+              <TrendingUp className="h-3 w-3 text-mint-glow" /> +{formatPerSecond(hourly)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Hammer className="h-3 w-3 text-mint-glow" /> {levels}/{maxLevels} niveaux
