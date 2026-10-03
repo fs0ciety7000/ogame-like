@@ -20,7 +20,7 @@ Les alliances se disputent la galaxie, le marché s'ouvre aux commandes et aux c
 - **Reliques mythiques** : une seule par saison, remise au n°1 du classement quand le boss qui la porte tombe (le Léviathan les mois impairs, le boss de saison les mois pairs). Quatre modèles tournent, dont le **Cœur du Léviathan** (+dégâts contre les boss). Elles ne se fusionnent ni ne se recyclent, et passent même quand l'inventaire est plein.
 
 ## Profil
-- **Avatar** : envoie ton image (recadrée en carré). Elle s'affiche sur ta fiche publique.
+- **Avatar** : envoie ton image (recadrée en carré). Elle s'affiche sur ta fiche publique. Sans image, un commandant casqué tient lieu d'avatar par défaut.
 - **Changer de pseudo** : une seule fois, pour 10 Ambre. Ton identifiant de connexion et ton nom dans l'alliance suivent ; les anciens rapports gardent l'ancien nom.
 
 ## Corrections
