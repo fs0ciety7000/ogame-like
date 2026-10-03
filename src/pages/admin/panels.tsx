@@ -27,6 +27,7 @@ import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
 import { MythicRelicsCard, TerritoriesAdminCard } from "@/pages/admin/EndgameCards";
 import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
+import { PlayerToolsCard } from "@/pages/admin/PlayerToolsCard";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -782,6 +783,7 @@ export function PlayersPanel() {
                 </Button>
               </div>
             </div>
+            <PlayerToolsCard player={draft} onDone={() => void reload()} />
             {gameStateChanged && (
               <label className="flex flex-col gap-1 text-xs text-gold-glow">
                 Motif de la modification (obligatoire, consigné au journal)

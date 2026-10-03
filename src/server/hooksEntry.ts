@@ -164,3 +164,4 @@ export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { currentGameContent, validateGameContent } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { chapterDifficulty, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
+export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";

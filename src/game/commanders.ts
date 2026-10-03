@@ -184,7 +184,8 @@ export function assignCommanders(player: PlayerState, idsIn: unknown, now: numbe
   if (ids.length > commanderSlots(player)) throw new GameActionError(`${commanderSlots(player)} postes au plus.`);
   for (const id of ids) if (!st.roster[id]) throw new GameActionError("Cet officier n'est pas recruté.");
   const changed = [...ids.filter((id) => !st.active.includes(id)), ...st.active.filter((id) => !ids.includes(id))];
-  const cooldown = COMMANDER_RULES.swapCooldownHours * 3600_000;
+  // v5.5 : aucun délai sur un compte test.
+  const cooldown = player.testMode ? 0 : COMMANDER_RULES.swapCooldownHours * 3600_000;
   for (const id of changed) {
     const at = st.movedAtMs[id] ?? 0;
     if (at && now - at < cooldown) {

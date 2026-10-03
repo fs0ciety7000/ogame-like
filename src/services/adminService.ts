@@ -319,3 +319,15 @@ export function adminProceduralGenerate(monthId: string, variant: number, confir
 export function adminProceduralAchievements(): Promise<ProceduralResult> {
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
 }
+
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+export type AdminPlayerAction =
+  | { action: "testMode"; on: boolean }
+  | { action: "finishAll" }
+  | { action: "officers" }
+  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string };
+
+export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Promise<Record<string, unknown>> {
+  return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid, ...payload } });
+}

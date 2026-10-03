@@ -415,6 +415,10 @@ routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
   return e.json(200, game.computeLiveBalance(players, warlords, reports, now, 30));
 }, $apis.requireAuth("users", "_superusers"));
 
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAction(e), $apis.requireAuth("users", "_superusers"));
+
 /* ---------- v5.4 : générateur procédural ---------- */
 
 // Chaque jour : chapitre du mois (s'il manque), chapitre suivant à partir du jour réglé, paliers de succès.

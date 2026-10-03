@@ -3974,6 +3974,83 @@ function runContentMigrations(app) {
   return changes;
 }
 
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
+  try {
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") || "admin" : "superuser",
+      action: String(action).slice(0, 20),
+      targetCollection: "players",
+      recordId: uid,
+      recordLabel: String(label || "").slice(0, 200),
+      changes,
+      reason: String(reason || "").slice(0, 300),
+      createdAtMs: Date.now(),
+    });
+    txApp.save(log);
+  } catch (err) {
+    console.log(`[cosmic] journal admin impossible : ${err}`);
+  }
+}
+
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources" };
+
+/**
+ * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
+ * testMode (on) · finishAll · officers · grant (resources, motif obligatoire).
+ */
+function adminPlayerAction(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const action = String(req.action || "");
+  const reason = String(req.reason || "").trim();
+  if (!PLAYER_ACTION_LABELS[action]) throw new BadRequestError("Action inconnue.");
+  if (action === "grant" && reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+  let summary = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid, "Joueur introuvable.");
+    const now = Date.now();
+    let player = loaded.player;
+    let queues = loaded.queues;
+    let notes = [];
+    const flush = () => {
+      const f = game.flushPlayer(player, queues, now);
+      player = f.player;
+      queues = f.queues;
+      notes = notes.concat(f.notifications);
+    };
+    if (action === "testMode") {
+      const on = req.on === true;
+      loaded.rec.set("testMode", on);
+      player.testMode = on;
+      if (on) flush();
+      summary = { testMode: on };
+    } else if (action === "finishAll") {
+      const report = game.finishAllTimers(queues, now);
+      const officers = game.clearOfficerCooldowns(player);
+      flush();
+      summary = Object.assign(report, { officers });
+    } else if (action === "officers") {
+      summary = { officers: game.clearOfficerCooldowns(player) };
+    } else {
+      flush();
+      const given = game.grantResources(player, req.resources);
+      if (Object.keys(given).length === 0) throw new BadRequestError("Aucune ressource à rendre.");
+      summary = { given };
+    }
+    savePlayer(txApp, game, loaded, player, queues);
+    if (notes.length > 0) notify(txApp, uid, notes);
+    writeAdminLog(txApp, e, `joueur : ${PLAYER_ACTION_LABELS[action]}`, uid, player.pseudo, summary, reason);
+  });
+  return e.json(200, summary);
+}
+
 /* ---------- v5.4 : générateur procédural (chapitres, passe, succès) ---------- */
 
 function writeConfig(txApp, key, data) {
@@ -5612,4 +5689,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -149,6 +149,7 @@ __export(hooksEntry_exports, {
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   clearDecoy: () => clearDecoy,
+  clearOfficerCooldowns: () => clearOfficerCooldowns,
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
   coalitionRanking: () => coalitionRanking,
@@ -201,6 +202,7 @@ __export(hooksEntry_exports, {
   fillBuyOrder: () => fillBuyOrder,
   findFaction: () => findFaction,
   findWarlord: () => findWarlord,
+  finishAllTimers: () => finishAllTimers,
   finishAllianceResearch: () => finishAllianceResearch,
   finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
@@ -220,6 +222,7 @@ __export(hooksEntry_exports, {
   grantLeviathanReward: () => grantLeviathanReward,
   grantMythicRelic: () => grantMythicRelic,
   grantReferral: () => grantReferral,
+  grantResources: () => grantResources,
   grantSeasonBossReward: () => grantSeasonBossReward,
   growWarlord: () => growWarlord,
   inVendetta: () => inVendetta,
@@ -1697,7 +1700,7 @@ function assignCommanders(player, idsIn, now) {
   if (ids.length > commanderSlots(player)) throw new GameActionError(`${commanderSlots(player)} postes au plus.`);
   for (const id of ids) if (!st.roster[id]) throw new GameActionError("Cet officier n'est pas recrut\xE9.");
   const changed = [...ids.filter((id) => !st.active.includes(id)), ...st.active.filter((id) => !ids.includes(id))];
-  const cooldown = COMMANDER_RULES.swapCooldownHours * 36e5;
+  const cooldown = player.testMode ? 0 : COMMANDER_RULES.swapCooldownHours * 36e5;
   for (const id of changed) {
     const at = (_a = st.movedAtMs[id]) != null ? _a : 0;
     if (at && now - at < cooldown) {
@@ -2539,6 +2542,57 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
   return rates;
 }
 
+// src/game/adminTools.ts
+function finishAllTimers(queues, now) {
+  var _a, _b, _c, _d, _e;
+  const out = { buildings: 0, researches: 0, units: 0, missions: 0 };
+  for (const entry of Object.values((_a = queues.buildingUpgrades) != null ? _a : {})) {
+    if (entry && entry.endTime > now) {
+      entry.endTime = now;
+      out.buildings++;
+    }
+  }
+  for (const r of (_b = queues.activeResearches) != null ? _b : []) {
+    if (r.endTime > now) {
+      r.endTime = now;
+      out.researches++;
+    }
+  }
+  for (const category of ["attack", "defense"]) {
+    for (const e of (_d = (_c = queues.unitQueues) == null ? void 0 : _c[category]) != null ? _d : []) {
+      if (e.endTime === null || e.endTime > now) {
+        e.endTime = now;
+        out.units++;
+      }
+    }
+  }
+  for (const m of (_e = queues.activeMissions) != null ? _e : []) {
+    if (m.endTime > now) {
+      m.endTime = now;
+      out.missions++;
+    }
+  }
+  return out;
+}
+function clearOfficerCooldowns(player) {
+  const st = commandersState(player);
+  const n = Object.keys(st.movedAtMs).length;
+  player.commanders = __spreadProps(__spreadValues({}, st), { movedAtMs: {} });
+  return n;
+}
+function grantResources(player, input) {
+  var _a;
+  const raw = input && typeof input === "object" ? input : {};
+  const given = {};
+  for (const r of RESOURCE_LIST) {
+    const n = Math.floor(Number(raw[r.id]) || 0);
+    if (n <= 0) continue;
+    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + n;
+    given[r.id] = n;
+  }
+  return given;
+}
+
 // src/game/defaults.ts
 function defaultResources() {
   return {
@@ -2650,9 +2704,11 @@ function ascend(player, queues, now) {
 
 // src/game/bonuses.ts
 function playerBuildTimeFactor(player, now) {
+  if (player.testMode) return 0;
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 function playerResearchTimeFactor(player, now) {
+  if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
 
@@ -4734,6 +4790,7 @@ function flushState(playerIn, queuesIn, now) {
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
   notifications.push(...advanceColonies(player, now));
+  if (player.testMode) finishAllTimers(queues, now);
   const finishedAt = {};
   for (const buildingId of Object.keys(queues.buildingUpgrades)) {
     const entry = queues.buildingUpgrades[buildingId];
@@ -12187,7 +12244,7 @@ function generateChapter(o) {
   var _a, _b, _c, _d, _e;
   const rng = seededRandom2(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
   const d = o.digest;
-  const recent = [...o.existing].sort((a, b) => a.id.localeCompare(b.id)).slice(-2);
+  const recent = [...o.existing].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(-2);
   const recentArch = recent.map((m) => {
     var _a2, _b2, _c2;
     return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
