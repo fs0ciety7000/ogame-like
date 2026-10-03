@@ -8,8 +8,8 @@ Le devblog est fait main, sans WordPress ni Ghost.
 ## Mise en ligne du sous-domaine (une seule fois)
 
 1. **DNS** : ajouter un enregistrement `CNAME devblog → base.fs0ciety.org`. Un `A` vers la même IP que PocketBase convient aussi. Si le domaine passe par Cloudflare, laisser le proxy activé ou non, comme pour `base`.
-2. **Coolify** : dans la ressource **PocketBase**, champ *Domains*, ajouter le domaine à la suite de l'existant, séparé par une virgule :
-   `https://base.fs0ciety.org,https://devblog.fs0ciety.org`
+2. **Coolify** : dans la ressource **PocketBase**, onglet *Domains* → **Add Domain** : `https://devblog.fs0ciety.org`, **Internal port 8080** (le même que `base.fs0ciety.org` : c'est le même serveur), redirection HTTP → HTTPS activée.
+   Sur les anciennes versions de Coolify, ajouter le domaine à la suite de l'existant dans le champ *Domains*, séparé par une virgule : `https://base.fs0ciety.org,https://devblog.fs0ciety.org`.
    Enregistrer, puis **Redeploy** : Traefik obtient le certificat HTTPS tout seul.
 3. **Variables d'environnement** de PocketBase (facultatives, Coolify → *Environment Variables*) :
 
