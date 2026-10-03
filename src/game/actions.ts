@@ -78,7 +78,7 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
-  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string } }
+  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
   | { type: "planBuilding"; buildingId: string }

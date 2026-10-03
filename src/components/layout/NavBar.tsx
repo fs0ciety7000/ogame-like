@@ -1,11 +1,11 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -309,10 +309,106 @@ function CommanderCard() {
   );
 }
 
+/* v4.9.3 : barre réduite (icônes seules). Automatique entre 768 et 1279 px,
+   ou forcée par le joueur ; le choix est mémorisé sur l'appareil. */
+type SidebarMode = "auto" | "compact" | "full";
+const MODE_KEY = "cosmic-empires:nav-mode";
+
+function readMode(): SidebarMode {
+  try {
+    const v = localStorage.getItem(MODE_KEY);
+    return v === "compact" || v === "full" ? v : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+function useWideScreen(): boolean {
+  const query = "(min-width: 1280px)";
+  const [wide, setWide] = useState(() => typeof window === "undefined" || window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
+
+function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      title={item.label}
+      aria-label={item.label}
+      className={({ isActive }) =>
+        cn(
+          "hud-cut-sm relative mx-auto grid h-9 w-9 place-items-center border transition-colors",
+          isActive
+            ? "border-[color-mix(in_srgb,var(--nav-accent)_60%,transparent)] bg-[color-mix(in_srgb,var(--nav-accent)_16%,transparent)] text-[var(--nav-accent)] shadow-[0_0_12px_-4px_var(--nav-accent)]"
+            : "border-transparent text-slate-500 hover:border-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] hover:text-[var(--nav-accent)]",
+        )
+      }
+    >
+      <item.icon className="h-4 w-4" />
+      {badge > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+    </NavLink>
+  );
+}
+
+function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number; onExpand: () => void }) {
+  const player = usePlayerStore((s) => s.player);
+  return (
+    <aside className="relative z-30 hidden h-screen w-[4.25rem] shrink-0 flex-col items-stretch border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
+      <Link to="/game" className="mx-auto pb-3 pt-4" title="Cosmic Empires">
+        <img src={assetUrl("/assets/logo/logo.webp")} alt="Cosmic Empires" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(75,232,255,0.35)]" />
+      </Link>
+      {player && (
+        <Link to="/game/profil" className="mx-auto mb-2" title={`${player.pseudo} · ${getRankLabel(player.xp)}`}>
+          <img src={getRankIcon(player.xp)} alt="" className="h-9 w-9 object-contain transition-transform hover:scale-110" />
+        </Link>
+      )}
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pb-3">
+        {SIDE_GROUPS.map((group) => (
+          <div key={group.id} className="flex flex-col gap-0.5" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
+            <span aria-hidden title={group.label} className="mx-auto my-1.5 h-px w-7 bg-[color-mix(in_srgb,var(--nav-accent)_45%,transparent)]" />
+            {group.items.map((item) => (
+              <CompactLink key={item.to} item={item} badge={badgeOf(item.to)} />
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="flex flex-col gap-0.5 border-t border-cyan-glow/10 py-2" style={{ "--nav-accent": FOOTER_GROUP.accent } as React.CSSProperties}>
+        {FOOTER_GROUP.items.map((item) => (
+          <CompactLink key={item.to} item={item} badge={badgeOf(item.to)} />
+        ))}
+        <button type="button" onClick={onExpand} title="Déplier la barre" aria-label="Déplier la barre" className="mx-auto mt-1 grid h-8 w-9 place-items-center text-slate-600 hover:text-cyan-glow">
+          <ChevronsRight className="h-4 w-4" />
+        </button>
+      </div>
+    </aside>
+  );
+}
+
 /** Barre latérale (bureau). */
 function Sidebar() {
   const badgeOf = useBadges();
   const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [mode, setModeState] = useState(readMode);
+  const wide = useWideScreen();
+  const setMode = (m: SidebarMode) => {
+    setModeState(m);
+    try {
+      localStorage.setItem(MODE_KEY, m);
+    } catch {
+      /* non mémorisé */
+    }
+  };
+  const compact = mode === "compact" || (mode === "auto" && !wide);
+  // Déplier depuis l'automatique sur écran moyen force le mode complet ; replier sur grand écran force le compact.
+  if (compact) return <CompactSidebar badgeOf={badgeOf} onExpand={() => setMode(wide ? "auto" : "full")} />;
   return (
     <aside className="relative z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
@@ -350,6 +446,9 @@ function Sidebar() {
         <div className="flex items-center justify-between">
           <SignalIndicator />
           <LiveClock />
+          <button type="button" onClick={() => setMode(wide ? "compact" : "auto")} title="Réduire la barre" aria-label="Réduire la barre" className="text-slate-600 hover:text-cyan-glow">
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
         </div>
         {CURRENT_VERSION && (
           <NavLink to="/game/nouveautes" className="mt-1.5 block font-mono text-[10px] tracking-[0.14em] text-slate-600 hover:text-cyan-glow">

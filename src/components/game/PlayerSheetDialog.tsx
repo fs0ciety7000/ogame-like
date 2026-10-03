@@ -18,6 +18,14 @@ import { seasonLabel } from "@/game/seasons";
 import { cn, formatNumber } from "@/lib/utils";
 import { findCommander } from "@/game/commanders";
 import { describeRelic, findTemplate, rarityInfo } from "@/game/relics";
+import { ACHIEVEMENTS, TIER_LABELS as ACH_TIER_LABELS } from "@/game/achievements";
+
+const ACH_TIER_STYLE: Record<string, string> = {
+  bronze: "border-[#cd7f32]/50 bg-[#cd7f32]/[0.06] text-[#e0a36a]",
+  argent: "border-slate-300/40 bg-white/[0.04] text-slate-200",
+  or: "border-gold-glow/50 bg-gold-glow/[0.07] text-gold-glow",
+  legendaire: "border-violet-glow/60 bg-violet-glow/[0.08] text-violet-glow",
+};
 
 /* Fiche publique détaillée d'un joueur (v3.7) : rang, colonies, faits
    d'armes, titres, saisons passées et participation au Léviathan. */
@@ -124,6 +132,25 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
         {sheet && entry && (
           <div className="mt-4 flex flex-col gap-4">
             {feats?.showcase?.motto && <p className="border-l-2 border-cyan-glow/40 pl-3 text-sm italic text-slate-300">« {feats.showcase.motto} »</p>}
+
+            {(feats?.showcase?.achievements ?? []).length > 0 && (
+              <section>
+                <p className="hud-eyebrow mb-2 text-slate-400">Succès en vitrine</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(feats?.showcase?.achievements ?? []).map((id) => {
+                    const a = ACHIEVEMENTS.find((x) => x.id === id);
+                    if (!a) return null;
+                    return (
+                      <div key={id} title={a.description} className={cn("hud-cut-sm flex flex-col items-center gap-1 border px-2 py-2.5 text-center", ACH_TIER_STYLE[a.tier])}>
+                        <span className="text-2xl leading-none">{a.emoji}</span>
+                        <span className="text-xs font-semibold text-white">{a.name}</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.14em] opacity-80">{ACH_TIER_LABELS[a.tier]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {feats?.showcase && (feats.showcase.commanders.length > 0 || feats.showcase.relics.length > 0) && (
               <section>

@@ -106,7 +106,7 @@ describe("v4.0 profile", () => {
     const p = player();
     expect(() => setProfileStyle(p, { banner: "leviathan" })).toThrow(/verrouillée/);
     setProfileStyle(p, { banner: "braise", motto: "  <b>Personne\n ne passe</b>  " });
-    expect(p.profileStyle).toEqual({ banner: "braise", emblem: "rank", motto: "bPersonne ne passe/b" });
+    expect(p.profileStyle).toEqual({ banner: "braise", emblem: "rank", motto: "bPersonne ne passe/b", pinned: [] });
     expect(sanitizeMotto("x".repeat(100))).toHaveLength(60);
     p.stats = { ...(p.stats ?? {}), leviathanKills: 1 } as PlayerState["stats"];
     setProfileStyle(p, { banner: "leviathan", emblem: "leviathan" });
@@ -117,5 +117,16 @@ describe("v4.0 profile", () => {
     expect(show.banner.image).toMatch(/leviathan/);
     expect(show.commanders).toEqual([{ id: "spy", level: 1 }]);
     expect(show.relics).toEqual([{ template: "oeil_vesper", rarity: "epic" }]);
+  });
+});
+
+describe("v4.9.3 : succès en vitrine", () => {
+  it("seuls les succès obtenus, 3 au plus, publiés dans la vitrine", () => {
+    const p = player();
+    p.unlockedAchievements = ["a1", "a2", "a3", "a4"];
+    expect(() => setProfileStyle(p, { pinned: ["zz"] })).toThrow(/obtenus/);
+    expect(() => setProfileStyle(p, { pinned: ["a1", "a2", "a3", "a4"] })).toThrow(/3 succès/);
+    setProfileStyle(p, { pinned: ["a2", "a1", "a2"] });
+    expect(publicShowcase(p).achievements).toEqual(["a2", "a1"]);
   });
 });

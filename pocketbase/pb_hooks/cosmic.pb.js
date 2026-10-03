@@ -494,6 +494,8 @@ cronAdd("cosmic_backup_check", "20 5 * * *", () => {
 /** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
 routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
 // v4.9 : liste, téléchargement et copie vers R2 depuis l'administration.
+/** v4.9.3 : flottes bloquées (retard de plus de 10 min). */
+routerAdd("GET", "/api/cosmic/admin/stuck-fleets", (e) => require(`${__hooks}/cosmic_db.js`).adminStuckFleets(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/admin/backups/list", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupList(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/admin/backups/download", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupDownload(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/backups/r2", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupToR2(e), $apis.requireAuth("users", "_superusers"));

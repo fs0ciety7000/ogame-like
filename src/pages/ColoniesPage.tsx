@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { BUILDINGS, findBuilding } from "@/game/buildings";
+import { findBuilding } from "@/game/buildings";
 import { fleetCargoCapacity } from "@/game/combat";
 import { homeLevels,
   advanceColonies,
@@ -637,9 +637,8 @@ function FoundColony({ player }: { player: PlayerState }) {
   const [busy, setBusy] = useState(false);
   const next = nextColonySlot(player);
   if (!next) return null;
-  // v4.8 : même compte que le serveur (bâtiments de fin de partie exclus).
+  // Même compte que le serveur (v4.9.3 : tous les bâtiments, fin de partie comprise).
   const levels = homeLevels(player);
-  const excluded = BUILDINGS.filter((b) => b.endgame).map((b) => b.name);
   const cost = colonyFoundCost();
   const affordable = Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0));
   const ready = levels >= next.levels;
@@ -664,8 +663,8 @@ function FoundColony({ player }: { player: PlayerState }) {
           pct={(levels / next.levels) * 100}
           detail={
             <>
-              {ready ? "Prérequis atteint." : `Encore ${next.levels - levels} niveau${next.levels - levels > 1 ? "x" : ""} : extracteurs, réacteur, entrepôt, hangars, archives ou atelier.`}
-              <span className="block text-[10px] text-slate-500">Hors fin de partie : {excluded.join(", ")}.</span>
+              {ready ? "Prérequis atteint." : `Encore ${next.levels - levels} niveau${next.levels - levels > 1 ? "x" : ""} de bâtiments sur ta planète mère.`}
+              <span className="block text-[10px] text-slate-500">Tous les bâtiments comptent, fin de partie comprise.</span>
             </>
           }
         />

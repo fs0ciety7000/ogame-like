@@ -2397,7 +2397,7 @@ function emptyResources() {
   return Object.fromEntries(RESOURCE_LIST.map((r) => [r.id, 0]));
 }
 function homeLevels(player) {
-  return BUILDINGS.filter((b) => !b.endgame).reduce((a, b) => {
+  return BUILDINGS.reduce((a, b) => {
     var _a, _b;
     return a + ((_b = (_a = player.buildings[b.id]) == null ? void 0 : _a.level) != null ? _b : 0);
   }, 0);
@@ -2420,7 +2420,7 @@ function startColonization(player, nameIn, now) {
   if (player.colonizing) throw new GameActionError("Un vaisseau colonial est d\xE9j\xE0 en route.");
   const next = nextColonySlot(player);
   if (!next) throw new GameActionError(`Tu as d\xE9j\xE0 ${COLONY_RULES.maxColonies} colonies.`);
-  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de b\xE2timents cumul\xE9s sur ta plan\xE8te m\xE8re, hors b\xE2timents de fin de partie (tu en as ${homeLevels(player)}).`);
+  if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de b\xE2timents cumul\xE9s sur ta plan\xE8te m\xE8re (tu en as ${homeLevels(player)}).`);
   const name = String(nameIn != null ? nameIn : "").trim() || `Colonie ${next.slot}`;
   if (name.length > 30) throw new GameActionError("Le nom d'une colonie fait au plus 30 caract\xE8res.");
   const cost = colonyFoundCost();
@@ -8592,7 +8592,7 @@ function isCancelTarget(raw) {
 }
 
 // src/game/profile.ts
-var PROFILE_RULES = { mottoMax: 60 };
+var PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 var FREE_BANNERS = [
   { id: "nebula", label: "N\xE9buleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
   { id: "aurore", label: "Aurore", gradient: "linear-gradient(120deg,#0a1a1a 0%,#0f4d45 50%,#5ef2b066 100%)", hint: "Offerte" },
@@ -8651,14 +8651,17 @@ function emblemOptions(p) {
   ];
 }
 function profileStyle(p) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const raw = (_a = p.profileStyle) != null ? _a : {};
-  return { banner: String((_b = raw.banner) != null ? _b : "nebula"), emblem: String((_c = raw.emblem) != null ? _c : "rank"), motto: String((_d = raw.motto) != null ? _d : "") };
+  const unlocked = new Set((_b = p.unlockedAchievements) != null ? _b : []);
+  const pinned = Array.isArray(raw.pinned) ? raw.pinned.filter((id, i, a) => typeof id === "string" && unlocked.has(id) && a.indexOf(id) === i).slice(0, PROFILE_RULES.pinnedMax) : [];
+  return { banner: String((_c = raw.banner) != null ? _c : "nebula"), emblem: String((_d = raw.emblem) != null ? _d : "rank"), motto: String((_e = raw.motto) != null ? _e : ""), pinned };
 }
 function sanitizeMotto(text) {
   return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
 }
 function setProfileStyle(player, input) {
+  var _a;
   const req = input && typeof input === "object" ? input : {};
   const current2 = profileStyle(player);
   const next = __spreadValues({}, current2);
@@ -8675,6 +8678,14 @@ function setProfileStyle(player, input) {
     next.emblem = opt.id;
   }
   if (req.motto !== void 0) next.motto = sanitizeMotto(req.motto);
+  if (req.pinned !== void 0) {
+    if (!Array.isArray(req.pinned)) throw new GameActionError("Succ\xE8s mis en avant invalides.");
+    const unlocked = new Set((_a = player.unlockedAchievements) != null ? _a : []);
+    const ids = [...new Set(req.pinned.map(String))];
+    if (ids.length > PROFILE_RULES.pinnedMax) throw new GameActionError(`${PROFILE_RULES.pinnedMax} succ\xE8s au plus en vitrine.`);
+    if (ids.some((id) => !unlocked.has(id))) throw new GameActionError("Seuls les succ\xE8s obtenus peuvent \xEAtre mis en avant.");
+    next.pinned = ids;
+  }
   player.profileStyle = next;
   return next;
 }
@@ -8688,6 +8699,7 @@ function publicShowcase(p) {
     banner: banner.image ? { image: banner.image } : { gradient: banner.gradient },
     emblem: (_b = emblem == null ? void 0 : emblem.image) != null ? _b : null,
     motto: style.motto,
+    achievements: style.pinned,
     commanders: st.active.map((id) => {
       var _a2, _b2;
       return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
