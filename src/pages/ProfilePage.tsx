@@ -22,6 +22,7 @@ import { SeasonHistoryCard } from "@/components/game/SeasonHistoryCard";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
 import { ReferralCard } from "@/components/game/ReferralCard";
 import { RenameCard } from "@/components/game/RenameCard";
+import { AvatarCard } from "@/components/game/AvatarCard";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -71,6 +72,8 @@ export function ProfilePage() {
           <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
         </div>
       </Card>
+
+      <AvatarCard player={player} />
 
       <ProfileStyleCard player={player} />
 

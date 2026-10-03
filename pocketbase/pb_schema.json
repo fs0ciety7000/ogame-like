@@ -1257,7 +1257,7 @@
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
     "createRule": null,
-    "updateRule": null,
+    "updateRule": "id = @request.auth.id || (@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
     "deleteRule": null,
     "fields": [
       {
@@ -1362,6 +1362,20 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "avatar",
+        "type": "file",
+        "required": false,
+        "maxSelect": 1,
+        "maxSize": 400000,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg"
+        ],
+        "thumbs": [],
+        "protected": false
       }
     ],
     "indexes": [

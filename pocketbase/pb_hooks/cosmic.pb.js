@@ -586,6 +586,11 @@ onRecordCreateRequest(
   "admins",
 );
 
+onRecordUpdateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardProfileUpdate(e);
+  e.next();
+}, "profiles");
+
 onRecordUpdateRequest(
   (e) => {
     const db = require(`${__hooks}/cosmic_db.js`);

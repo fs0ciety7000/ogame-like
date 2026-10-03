@@ -2129,6 +2129,20 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 30_000);
 
+  it("v5.1: avatar uploaded on the public profile, other fields and other players refused", async () => {
+    await loginPlayer(B.email, B.pw);
+    const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+    const form = new FormData();
+    form.append("avatar", new Blob([png], { type: "image/png" }), "avatar.png");
+    const rec = await pb.collection("profiles").update<{ avatar: string }>(bId, form);
+    expect(rec.avatar).toMatch(/\.png$/);
+    expect((await ps.fetchPlayerSheet(bId)).entry.avatar).toBe(rec.avatar);
+    await expect(pb.collection("profiles").update(bId, { xp: 999_999_999 })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.collection("profiles").update(aId, { avatar: null })).rejects.toBeTruthy();
+    await pb.collection("profiles").update(bId, { avatar: null });
+    expect((await ps.fetchPlayerSheet(bId)).entry.avatar).toBeUndefined();
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

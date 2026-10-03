@@ -266,6 +266,8 @@ export interface LeaderboardEntry {
   vacationUntilMs?: number;
   /** v4.6 : dernière activité réelle (synchro du navigateur), pour « en ligne ». */
   lastActiveMs?: number;
+  /** v5.1 : avatar envoyé (nom de fichier sur la fiche publique). */
+  avatar?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -286,10 +288,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     npc: (data.npc as string) || undefined,
     vacationUntilMs: (data.vacationUntilMs as number) || undefined,
     lastActiveMs: (data.lastActiveMs as number) || undefined,
+    avatar: (data.avatar as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
