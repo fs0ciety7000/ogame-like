@@ -1,6 +1,7 @@
 import { subscribePacts, usePactStore } from "@/services/diplomacyService";
 import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -276,7 +277,10 @@ export function PlayersPage() {
                 >
                   {String(p.rank).padStart(2, "0")}
                 </span>
-                <img src={getRankIcon(displayXp)} alt="" className="h-12 w-12 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_25%,transparent)] max-sm:h-11 max-sm:w-11" />
+                <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="relative h-12 w-12 max-sm:h-11 max-sm:w-11">
+                  <PlayerAvatar uid={p.uid} pseudo={p.pseudo} file={p.avatar} className="h-full w-full" />
+                  <img src={getRankIcon(displayXp)} alt="" className="absolute -bottom-1.5 -right-1.5 h-6 w-6 object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]" />
+                </button>
                 <div className="min-w-0">
                   <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
                     <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 max-w-full truncate text-left hover:text-cyan-glow">

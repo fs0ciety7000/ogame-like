@@ -55,6 +55,9 @@ __export(hooksEntry_exports, {
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   BALANCE_HISTORY_KEY: () => BALANCE_HISTORY_KEY,
+  BLOG_CSS: () => BLOG_CSS,
+  BLOG_JS: () => BLOG_JS,
+  BLOG_WELCOME: () => BLOG_WELCOME,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
@@ -67,11 +70,14 @@ __export(hooksEntry_exports, {
   DIPLOMACY_RULES: () => DIPLOMACY_RULES,
   ELITE_KEY: () => ELITE_KEY,
   ELITE_RULES: () => ELITE_RULES,
+  EMOJIS_KEY: () => EMOJIS_KEY,
   EXPEDITION_RULES: () => EXPEDITION_RULES,
   FACTIONS: () => FACTIONS,
+  GAME_EMOJIS: () => GAME_EMOJIS,
   GAME_FIELDS: () => GAME_FIELDS,
   GAZETTE_KEY: () => GAZETTE_KEY,
   GameActionError: () => GameActionError,
+  KESH_EMOJIS: () => KESH_EMOJIS,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
@@ -133,6 +139,7 @@ __export(hooksEntry_exports, {
   balanceSnapshot: () => balanceSnapshot,
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
+  blogPostFromRecord: () => blogPostFromRecord,
   bossMonthOf: () => bossMonthOf,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
@@ -239,6 +246,7 @@ __export(hooksEntry_exports, {
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isMarketMaker: () => isMarketMaker,
+  isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
   leviathanRanking: () => leviathanRanking,
@@ -257,6 +265,7 @@ __export(hooksEntry_exports, {
   nextMarketDelayMs: () => nextMarketDelayMs,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeChallengeState: () => normalizeChallengeState,
+  normalizeCustomEmojis: () => normalizeCustomEmojis,
   normalizeElite: () => normalizeElite,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
@@ -287,6 +296,7 @@ __export(hooksEntry_exports, {
   proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
   pseudoLogin: () => pseudoLogin,
+  publicPosts: () => publicPosts,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
   pushSnapshot: () => pushSnapshot,
@@ -306,6 +316,12 @@ __export(hooksEntry_exports, {
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
   renamePlayer: () => renamePlayer,
+  renderBlogList: () => renderBlogList,
+  renderBlogNotFound: () => renderBlogNotFound,
+  renderBlogPost: () => renderBlogPost,
+  renderBlogRobots: () => renderBlogRobots,
+  renderBlogRss: () => renderBlogRss,
+  renderBlogSitemap: () => renderBlogSitemap,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
@@ -339,6 +355,8 @@ __export(hooksEntry_exports, {
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
+  shortHash: () => shortHash,
+  slugify: () => slugify,
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
   spawnSeasonBoss: () => spawnSeasonBoss,
@@ -470,10 +488,10 @@ function techBonus(techLevels2, type, target) {
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
-    for (const e of techEffects(tech)) {
-      if (e.type !== type && !(type === "unlock_buildings" && e.type === "unlock_hangars")) continue;
-      if (target !== void 0 && e.target !== target) continue;
-      total2 += level3 * effectValuePerLevel(e);
+    for (const e3 of techEffects(tech)) {
+      if (e3.type !== type && !(type === "unlock_buildings" && e3.type === "unlock_hangars")) continue;
+      if (target !== void 0 && e3.target !== target) continue;
+      total2 += level3 * effectValuePerLevel(e3);
     }
   }
   return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total2)) : total2;
@@ -485,7 +503,7 @@ function buildingsUnlockedByTech(techId, buildings) {
   var _a;
   const tech = findTech(techId);
   const ids = new Set(buildings.filter((b) => b.unlockedByTech === techId).map((b) => b.id));
-  for (const e of tech ? techEffects(tech) : []) if (e.type === "unlock_buildings" || e.type === "unlock_hangars") for (const id of (_a = e.targets) != null ? _a : []) ids.add(id);
+  for (const e3 of tech ? techEffects(tech) : []) if (e3.type === "unlock_buildings" || e3.type === "unlock_hangars") for (const id of (_a = e3.targets) != null ? _a : []) ids.add(id);
   return [...ids];
 }
 var MAX_CONCURRENT_RESEARCH = 4;
@@ -532,17 +550,17 @@ var EFFECT_MAX_PER_LEVEL = {
   counter_spy: 10,
   hangar_capacity: 0.5
 };
-function validateTechEffect(label3, e, refs) {
+function validateTechEffect(label3, e3, refs) {
   var _a, _b;
   const errors = [];
-  if (!(e.type in TECH_EFFECT_LABELS)) return [`${label3} : effet \xAB ${e.type} \xBB inconnu.`];
-  if (e.type === "resource_production" && (!e.target || !refs.resources.has(e.target))) errors.push(`${label3} : ressource vis\xE9e manquante ou inconnue.`);
-  if (e.type === "hangar_capacity" && e.target !== "attack" && e.target !== "defense") errors.push(`${label3} : hangar vis\xE9 manquant (attaque ou d\xE9fense).`);
-  if (e.type === "unlock_next_level" && e.target && !refs.unitIds.has(e.target)) errors.push(`${label3} : unit\xE9 \xAB ${e.target} \xBB inexistante.`);
-  for (const id of (_a = e.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
-  if (e.value !== void 0) {
-    const max = (_b = EFFECT_MAX_PER_LEVEL[e.type]) != null ? _b : 5;
-    if (!Number.isFinite(e.value) || e.value < 0 || e.value > max) errors.push(`${label3} : valeur par niveau de \xAB ${TECH_EFFECT_LABELS[e.type]} \xBB entre 0 et ${max}.`);
+  if (!(e3.type in TECH_EFFECT_LABELS)) return [`${label3} : effet \xAB ${e3.type} \xBB inconnu.`];
+  if (e3.type === "resource_production" && (!e3.target || !refs.resources.has(e3.target))) errors.push(`${label3} : ressource vis\xE9e manquante ou inconnue.`);
+  if (e3.type === "hangar_capacity" && e3.target !== "attack" && e3.target !== "defense") errors.push(`${label3} : hangar vis\xE9 manquant (attaque ou d\xE9fense).`);
+  if (e3.type === "unlock_next_level" && e3.target && !refs.unitIds.has(e3.target)) errors.push(`${label3} : unit\xE9 \xAB ${e3.target} \xBB inexistante.`);
+  for (const id of (_a = e3.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
+  if (e3.value !== void 0) {
+    const max = (_b = EFFECT_MAX_PER_LEVEL[e3.type]) != null ? _b : 5;
+    if (!Number.isFinite(e3.value) || e3.value < 0 || e3.value > max) errors.push(`${label3} : valeur par niveau de \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB entre 0 et ${max}.`);
   }
   return errors;
 }
@@ -1477,19 +1495,19 @@ function scheduledEvents() {
   return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
     const type = findEventType(s.type);
     return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
-  }).filter((e) => e !== null);
+  }).filter((e3) => e3 !== null);
 }
 function eventAt(now) {
-  const scheduled = scheduledEvents().find((e) => e.startMs <= now && now < e.endMs);
+  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
   if (scheduled) return scheduled;
   const rotation = rotationEvent(weekendWindow(now));
   return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
 }
 function eventBoundaries(from, to) {
   const points = /* @__PURE__ */ new Set();
-  for (const e of scheduledEvents()) {
-    if (e.startMs > from && e.startMs < to) points.add(e.startMs);
-    if (e.endMs > from && e.endMs < to) points.add(e.endMs);
+  for (const e3 of scheduledEvents()) {
+    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
+    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
   }
   if (EVENT_RULES.rotationEnabled) {
     for (let w = 0; ; w++) {
@@ -2607,9 +2625,9 @@ function finishAllTimers(queues, now) {
     }
   }
   for (const category of ["attack", "defense"]) {
-    for (const e of (_d = (_c = queues.unitQueues) == null ? void 0 : _c[category]) != null ? _d : []) {
-      if (e.endTime === null || e.endTime > now) {
-        e.endTime = now;
+    for (const e3 of (_d = (_c = queues.unitQueues) == null ? void 0 : _c[category]) != null ? _d : []) {
+      if (e3.endTime === null || e3.endTime > now) {
+        e3.endTime = now;
         out.units++;
       }
     }
@@ -4595,7 +4613,7 @@ function decoyUnits(real, pct5, pool, random = Math.random) {
 function veilCounts(entries, pct5, random = Math.random) {
   if (!entries) return entries;
   const swing = pct5 / 100;
-  return Object.fromEntries(Object.entries(entries).map(([id, e]) => [id, __spreadProps(__spreadValues({}, e), { count: Math.max(0, Math.round(e.count * (1 + (random() * 2 - 1) * swing))) })]));
+  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
 }
 function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
   const req = request && typeof request === "object" ? request : {};
@@ -4675,18 +4693,18 @@ function endVacation(player, queues, at, early = false) {
   const shift = Math.max(0, end - v.startedAtMs);
   const later = (t) => t === null ? null : t + shift;
   for (const id of Object.keys(queues.buildingUpgrades)) {
-    const e = queues.buildingUpgrades[id];
-    if (e) {
-      e.endTime += shift;
-      if (e.startedAtMs) e.startedAtMs += shift;
+    const e3 = queues.buildingUpgrades[id];
+    if (e3) {
+      e3.endTime += shift;
+      if (e3.startedAtMs) e3.startedAtMs += shift;
     }
   }
-  ["attack", "defense"].forEach((c) => queues.unitQueues[c].forEach((e) => e.endTime = later(e.endTime)));
-  queues.activeResearches.forEach((e) => {
-    e.endTime += shift;
-    if (e.startedAtMs) e.startedAtMs += shift;
+  ["attack", "defense"].forEach((c) => queues.unitQueues[c].forEach((e3) => e3.endTime = later(e3.endTime)));
+  queues.activeResearches.forEach((e3) => {
+    e3.endTime += shift;
+    if (e3.startedAtMs) e3.startedAtMs += shift;
   });
-  queues.activeMissions.forEach((e) => e.endTime += shift);
+  queues.activeMissions.forEach((e3) => e3.endTime += shift);
   for (const c of (_a = player.colonies) != null ? _a : []) {
     if (c.building) {
       c.building.endTime += shift;
@@ -5102,7 +5120,7 @@ function seasonXpFor(entry, seasonId) {
   return 0;
 }
 function seasonStandings(entries, seasonId) {
-  return entries.map((e) => ({ e, seasonXp: seasonXpFor(e, seasonId) })).filter((x) => x.seasonXp > 0).sort((a, b) => {
+  return entries.map((e3) => ({ e: e3, seasonXp: seasonXpFor(e3, seasonId) })).filter((x) => x.seasonXp > 0).sort((a, b) => {
     var _a, _b;
     return b.seasonXp - a.seasonXp || ((_a = b.e.xp) != null ? _a : 0) - ((_b = a.e.xp) != null ? _b : 0) || (a.e.pseudo < b.e.pseudo ? -1 : a.e.pseudo > b.e.pseudo ? 1 : 0);
   }).map((x, i) => {
@@ -5260,9 +5278,9 @@ function playerModifiers(player) {
     }
   }
   for (const { def: def3, value } of talentBonuses(player)) {
-    const e = def3.effect;
-    if (e.kind === "production") m.production[e.res] = ((_c = m.production[e.res]) != null ? _c : 0) + value;
-    else m[e.kind] += value;
+    const e3 = def3.effect;
+    if (e3.kind === "production") m.production[e3.res] = ((_c = m.production[e3.res]) != null ? _c : 0) + value;
+    else m[e3.kind] += value;
   }
   m.buildTime = Math.min(0.5, m.buildTime);
   m.researchTime = Math.min(0.5, m.researchTime);
@@ -5707,7 +5725,7 @@ var KESH_EMOJIS = [
 ];
 function assertKeshEmojis(player, text) {
   if (!/:kesh_[a-z]+:/.test(text)) return;
-  if (KESH_EMOJIS.some((e) => text.includes(`:${e.code}:`)) && !owns(bountyState(player), "emojis")) {
+  if (KESH_EMOJIS.some((e3) => text.includes(`:${e3.code}:`)) && !owns(bountyState(player), "emojis")) {
     throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
   }
 }
@@ -6561,18 +6579,18 @@ function validateChronicles(cfg) {
     if (seen.has(m.id)) errors.push(`Chroniques : mois ${m.id} en double.`);
     seen.add(m.id);
     if (!Array.isArray(m.episodes) || m.episodes.length !== 4) errors.push(`Chroniques ${m.id} : il faut 4 \xE9pisodes.`);
-    ((_c = m.episodes) != null ? _c : []).forEach((e, i) => {
+    ((_c = m.episodes) != null ? _c : []).forEach((e3, i) => {
       var _a2, _b2;
-      if (!(((_a2 = e.objective) == null ? void 0 : _a2.type) in OBJECTIVE_LABELS)) errors.push(`Chroniques ${m.id}, \xE9pisode ${i + 1} : objectif inconnu.`);
-      if (!(((_b2 = e.objective) == null ? void 0 : _b2.count) >= 1)) errors.push(`Chroniques ${m.id}, \xE9pisode ${i + 1} : nombre \u2265 1.`);
+      if (!(((_a2 = e3.objective) == null ? void 0 : _a2.type) in OBJECTIVE_LABELS)) errors.push(`Chroniques ${m.id}, \xE9pisode ${i + 1} : objectif inconnu.`);
+      if (!(((_b2 = e3.objective) == null ? void 0 : _b2.count) >= 1)) errors.push(`Chroniques ${m.id}, \xE9pisode ${i + 1} : nombre \u2265 1.`);
     });
     if (!((_d = m.boss) == null ? void 0 : _d.name)) errors.push(`Chroniques ${m.id} : nom du boss manquant.`);
-    const rewards = [...((_e = m.episodes) != null ? _e : []).map((e) => {
+    const rewards = [...((_e = m.episodes) != null ? _e : []).map((e3) => {
       var _a2;
-      return (_a2 = e.reward) != null ? _a2 : [];
+      return (_a2 = e3.reward) != null ? _a2 : [];
     }), (_g = (_f = m.completion) == null ? void 0 : _f.rewards) != null ? _g : []].filter((r) => r.length > 0);
-    if (rewards.length > 0) errors.push(...validateSeasonPass({ tiers: rewards }).map((e) => `Chroniques ${m.id} \u2014 ${e.replace(/^Passe, palier \d+ : /, "r\xE9compense : ")}`));
-    if (m.pass) errors.push(...validateSeasonPass({ rules: { tiers: m.pass.tiers.length, pointsPerTier: m.pass.pointsPerTier }, tiers: m.pass.tiers }).map((e) => `Chroniques ${m.id} \u2014 ${e}`));
+    if (rewards.length > 0) errors.push(...validateSeasonPass({ tiers: rewards }).map((e3) => `Chroniques ${m.id} \u2014 ${e3.replace(/^Passe, palier \d+ : /, "r\xE9compense : ")}`));
+    if (m.pass) errors.push(...validateSeasonPass({ rules: { tiers: m.pass.tiers.length, pointsPerTier: m.pass.pointsPerTier }, tiers: m.pass.tiers }).map((e3) => `Chroniques ${m.id} \u2014 ${e3}`));
     if (m.completion && !((_h = m.completion.title) == null ? void 0 : _h.trim())) errors.push(`Chroniques ${m.id} : titre de fin de chapitre manquant.`);
   }
   return errors;
@@ -6621,9 +6639,9 @@ function recordChronicle(player, type, now, times = 1) {
   const st = chronicleState(player, now);
   const open = unlockedEpisodes(now);
   let changed = false;
-  month2.episodes.slice(0, open).forEach((e, i) => {
-    if (e.objective.type !== type || st.claimed.includes(i)) return;
-    const next = Math.min(e.objective.count, st.progress[i] + times);
+  month2.episodes.slice(0, open).forEach((e3, i) => {
+    if (e3.objective.type !== type || st.claimed.includes(i)) return;
+    const next = Math.min(e3.objective.count, st.progress[i] + times);
     if (next !== st.progress[i]) {
       st.progress[i] = next;
       changed = true;
@@ -6640,12 +6658,12 @@ function claimChronicle(player, episode, now, random = Math.random) {
   if (i >= unlockedEpisodes(now)) throw new GameActionError("Cet \xE9pisode n'est pas encore ouvert.");
   const st = chronicleState(player, now);
   if (st.claimed.includes(i)) throw new GameActionError("\xC9pisode d\xE9j\xE0 termin\xE9.");
-  const e = month2.episodes[i];
-  if (st.progress[i] < e.objective.count) throw new GameActionError(`Objectif pas encore atteint (${st.progress[i]} / ${e.objective.count}).`);
+  const e3 = month2.episodes[i];
+  if (st.progress[i] < e3.objective.count) throw new GameActionError(`Objectif pas encore atteint (${st.progress[i]} / ${e3.objective.count}).`);
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
   addPassPoints(player, "chronicle", now);
-  const gained = ((_a = e.reward) != null ? _a : []).map((r) => grantPassReward(player, r, month2.id, now, random));
+  const gained = ((_a = e3.reward) != null ? _a : []).map((r) => grantPassReward(player, r, month2.id, now, random));
   const chapter = month2.episodes.every((_, k) => st.claimed.includes(k));
   if (chapter && month2.completion) {
     const after = chronicleState(player, now);
@@ -6975,7 +6993,7 @@ function computeRetention(players, now) {
     const reached = recent.filter((p) => {
       try {
         return step.done(p);
-      } catch (e) {
+      } catch (e3) {
         return false;
       }
     }).length;
@@ -6987,7 +7005,7 @@ function computeRetention(players, now) {
     const step = ONBOARDING_STEPS.find((s) => {
       try {
         return !s.done(p);
-      } catch (e) {
+      } catch (e3) {
         return true;
       }
     });
@@ -8354,8 +8372,8 @@ function performLaunch(req) {
   else if (mission === "lair") out = launchLair(owner, (_e = req.lairTarget) != null ? _e : "", req.fleet, now);
   else if (mission === "garrison") out = launchGarrison(owner, target, req.fleet, (_f = req.garrisonHours) != null ? _f : 0, (_g = req.garrisonsAtHost) != null ? _g : 0, now);
   else if (mission === "expedition") {
-    const e = launchExpedition(owner, req.fleet, req.expeditionHours, (_h = req.expeditionsActive) != null ? _h : 0, (_i = req.expeditionsToday) != null ? _i : 0, now, req.formation);
-    out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
+    const e3 = launchExpedition(owner, req.fleet, req.expeditionHours, (_h = req.expeditionsActive) != null ? _h : 0, (_i = req.expeditionsToday) != null ? _i : 0, now, req.formation);
+    out = { attacker: e3.attacker, fleet: e3.fleet, defenderNotifications: [] };
   } else if (mission === "leviathan") {
     const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le L\xE9viathan.");
     if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
@@ -9584,9 +9602,9 @@ function quoteCancel(player, queues, target, now) {
       let refund = {};
       let fraction = 1;
       for (let i = group.start; i < group.start + group.count; i++) {
-        const e = queue[i];
-        if (e.endTime) {
-          const f = refundFraction(e.endTime - getUnitBuildTime(unit, player.techLevels) * 1e3, e.endTime, now);
+        const e3 = queue[i];
+        if (e3.endTime) {
+          const f = refundFraction(e3.endTime - getUnitBuildTime(unit, player.techLevels) * 1e3, e3.endTime, now);
           fraction = Math.min(fraction, f);
           refund = addCost(refund, scaleCost(each, f));
         } else refund = addCost(refund, each);
@@ -10740,7 +10758,7 @@ function applyGameContent(overrides) {
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);
-  for (const t of content.technologies) for (const e of techEffects(t)) if (e.type === "unlock_next_level" && e.target) UNIT_TO_TECH[e.target] = t.id;
+  for (const t of content.technologies) for (const e3 of techEffects(t)) if (e3.type === "unlock_next_level" && e3.target) UNIT_TO_TECH[e3.target] = t.id;
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
@@ -10820,7 +10838,7 @@ function validateGameContent(content) {
   for (const t of content.technologies) {
     const label3 = `Techno ${t.nom || t.id}`;
     if (t.effects && t.effects.length > 0) {
-      for (const e of t.effects) errors.push(...validateTechEffect(label3, e, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
+      for (const e3 of t.effects) errors.push(...validateTechEffect(label3, e3, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     for (const req of Object.keys((_e = t.prereq) != null ? _e : {})) {
@@ -11683,9 +11701,9 @@ function codexEntries(player, fought, now) {
   for (const m of chroniclesConfig().months) {
     if (episodeUnlockMs(m.id, 0) > now) continue;
     out.push({ id: `boss:${m.id}`, category: "bosses", name: m.boss.name, subtitle: `Boss de la chronique \xAB ${m.title} \xBB`, image: m.boss.image, text: m.boss.lore, unlocked: emblems.has(m.id) || m.id < currentMonth });
-    m.episodes.forEach((e, i) => {
+    m.episodes.forEach((e3, i) => {
       if (episodeUnlockMs(m.id, i) > now) return;
-      out.push({ id: `chronicle:${m.id}:${i}`, category: "chronicles", name: e.title, subtitle: `${m.title} \xB7 \xE9pisode ${i + 1}`, image: m.boss.emblem, text: e.lines.map((l) => l.text).join("\n\n"), unlocked: true });
+      out.push({ id: `chronicle:${m.id}:${i}`, category: "chronicles", name: e3.title, subtitle: `${m.title} \xB7 \xE9pisode ${i + 1}`, image: m.boss.emblem, text: e3.lines.map((l) => l.text).join("\n\n"), unlocked: true });
     });
     for (const c of (_h = m.codex) != null ? _h : []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
@@ -11695,7 +11713,7 @@ function codexEntries(player, fought, now) {
   return out;
 }
 function codexProgress(entries) {
-  const unlocked = entries.filter((e) => e.unlocked).length;
+  const unlocked = entries.filter((e3) => e3.unlocked).length;
   const total2 = entries.length;
   return { unlocked, total: total2, pct: total2 > 0 ? Math.floor(unlocked / total2 * 100) : 0 };
 }
@@ -12074,9 +12092,9 @@ function worldDigest(players, now) {
   const open = unlockedEpisodes(now);
   const states = active.map((p) => chronicleState(p, now));
   const share = (n) => active.length > 0 ? round2(n / active.length) : 0;
-  const episodes = ((_a = month2 == null ? void 0 : month2.episodes) != null ? _a : []).map((e, i) => ({
-    type: e.objective.type,
-    count: e.objective.count,
+  const episodes = ((_a = month2 == null ? void 0 : month2.episodes) != null ? _a : []).map((e3, i) => ({
+    type: e3.objective.type,
+    count: e3.objective.count,
     completion: share(states.filter((s) => s.claimed.includes(i)).length),
     open: i < open,
     daysOpen: Math.max(0, Math.floor((now - episodeUnlockMs(monthId, i)) / 864e5))
@@ -12105,12 +12123,12 @@ function worldDigest(players, now) {
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 var MATURE_EPISODE_DAYS = 5;
 function chapterDifficulty(d) {
-  const open = d.episodes.filter((e) => {
+  const open = d.episodes.filter((e3) => {
     var _a;
-    return e.open && ((_a = e.daysOpen) != null ? _a : MATURE_EPISODE_DAYS) >= MATURE_EPISODE_DAYS;
+    return e3.open && ((_a = e3.daysOpen) != null ? _a : MATURE_EPISODE_DAYS) >= MATURE_EPISODE_DAYS;
   });
   if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'\xE9pisode ouvert depuis ${MATURE_EPISODE_DAYS} jours : difficult\xE9 normale (\xD71).`] };
-  const c = open.reduce((a, e) => a + e.completion, 0) / open.length;
+  const c = open.reduce((a, e3) => a + e3.completion, 0) / open.length;
   const value = round2(clamp3(1 + (c - 0.5), 0.7, 1.4));
   const pctTxt = Math.round(c * 100);
   const why = value > 1.02 ? "les objectifs montent" : value < 0.98 ? "les objectifs baissent" : "difficult\xE9 inchang\xE9e";
@@ -12396,7 +12414,7 @@ function generateChapter(o) {
   const bossName = fresh(arch.bossNames);
   const completionTitle = fresh(arch.completionTitles);
   const { value: difficulty, reasons } = chapterDifficulty(d);
-  const previousTypes = ((_c = (_b = recent.at(-1)) == null ? void 0 : _b.episodes) != null ? _c : []).map((e) => e.objective.type);
+  const previousTypes = ((_c = (_b = recent.at(-1)) == null ? void 0 : _b.episodes) != null ? _c : []).map((e3) => e3.objective.type);
   const types = chooseObjectives(rng, d, previousTypes);
   const rewards = episodeRewards(rng, difficulty);
   const vars = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
@@ -12642,6 +12660,1037 @@ function sagaStandings(def3, alliances, now) {
 function sagaMonthId(now) {
   return chronicleMonthId(now);
 }
+
+// src/game/blog.ts
+var BLOG_CATEGORIES = [
+  { id: "annonces", label: "Annonces", emoji: "\u{1F4E3}", color: "#ffd86b", description: "Les grandes nouvelles du secteur : nouvelles saisons, \xE9v\xE9nements, rendez-vous." },
+  { id: "mises-a-jour", label: "Mises \xE0 jour", emoji: "\u{1F6E0}\uFE0F", color: "#4be8ff", description: "Le d\xE9tail de chaque version : nouveaut\xE9s, \xE9quilibrages, corrections." },
+  { id: "notes", label: "Notes du staff", emoji: "\u{1F4DD}", color: "#5cf2b0", description: "Petits mots de l'\xE9quipe : conseils, coups de c\u0153ur, r\xE9ponses \xE0 vos questions." },
+  { id: "coulisses", label: "Coulisses", emoji: "\u{1F52D}", color: "#b18cff", description: "Comment le jeu est fabriqu\xE9 : technique, outils, routes de l'API." },
+  { id: "equilibrage", label: "\xC9quilibrage", emoji: "\u2696\uFE0F", color: "#ff8a4c", description: "Les chiffres derri\xE8re les combats, l'\xE9conomie et la progression." },
+  { id: "evenements", label: "\xC9v\xE9nements", emoji: "\u{1F389}", color: "#ff5c7a", description: "Week-ends, boss de saison, d\xE9fis et r\xE9compenses \xE0 venir." }
+];
+function blogCategory(id) {
+  var _a;
+  return (_a = BLOG_CATEGORIES.find((c) => c.id === id)) != null ? _a : BLOG_CATEGORIES[2];
+}
+var BLOG_RULES = {
+  perPage: 9,
+  titleMax: 140,
+  excerptMax: 300,
+  tagsMax: 8,
+  tagMax: 32,
+  slugMax: 80,
+  bodyMax: 1e5
+};
+var ACCENTS = {
+  \u00E0: "a",
+  \u00E2: "a",
+  \u00E4: "a",
+  \u00E1: "a",
+  \u00E3: "a",
+  \u00E5: "a",
+  \u00E6: "ae",
+  \u00E7: "c",
+  \u00E9: "e",
+  \u00E8: "e",
+  \u00EA: "e",
+  \u00EB: "e",
+  \u00ED: "i",
+  \u00EC: "i",
+  \u00EE: "i",
+  \u00EF: "i",
+  \u00F1: "n",
+  \u00F3: "o",
+  \u00F2: "o",
+  \u00F4: "o",
+  \u00F6: "o",
+  \u00F5: "o",
+  \u00F8: "o",
+  \u0153: "oe",
+  \u00FA: "u",
+  \u00F9: "u",
+  \u00FB: "u",
+  \u00FC: "u",
+  \u00FD: "y",
+  \u00FF: "y",
+  \u00DF: "ss"
+};
+function slugify(text, max = BLOG_RULES.slugMax) {
+  var _a;
+  const lower = String(text != null ? text : "").toLowerCase();
+  let out = "";
+  for (const ch of lower) out += (_a = ACCENTS[ch]) != null ? _a : ch;
+  return out.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, max).replace(/-+$/, "");
+}
+function normalizeTags(raw) {
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : [];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const t of list) {
+    const tag = slugify(String(t), BLOG_RULES.tagMax);
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+    out.push(tag);
+    if (out.length >= BLOG_RULES.tagsMax) break;
+  }
+  return out;
+}
+function plainText(markdown) {
+  return String(markdown != null ? markdown : "").replace(/```[\s\S]*?```/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "").replace(/[*_~=`|]/g, "").replace(/\s+/g, " ").trim();
+}
+function readingMinutes(markdown) {
+  const words = plainText(markdown).split(" ").filter(Boolean).length;
+  return Math.max(1, Math.round(words / 220));
+}
+function excerptOf(post, max = 220) {
+  if (post.excerpt.trim()) return post.excerpt.trim();
+  const text = plainText(post.body);
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 30))}\u2026`;
+}
+var MONTHS = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
+function blogDate(ms) {
+  const d = new Date(ms + parisOffsetMs(ms));
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+function blogDateTime(ms) {
+  const d = new Date(ms + parisOffsetMs(ms));
+  const pad = (n) => n < 10 ? `0${n}` : String(n);
+  return `${blogDate(ms)} \xE0 ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+function isPublic(post, now) {
+  return post.status === "published" && post.publishedAtMs > 0 && post.publishedAtMs <= now;
+}
+function relatedPosts(post, all, n = 3) {
+  return all.filter((p) => p.id !== post.id).map((p) => ({ p, score: (p.category === post.category ? 2 : 0) + p.tags.filter((t) => post.tags.includes(t)).length * 3 })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || b.p.publishedAtMs - a.p.publishedAtMs).slice(0, n).map((x) => x.p);
+}
+function searchPosts(posts, q) {
+  const words = slugify(q).split("-").filter((w) => w.length >= 2);
+  if (words.length === 0) return posts;
+  return posts.filter((p) => {
+    const hay = slugify(`${p.title} ${p.excerpt} ${p.tags.join(" ")} ${plainText(p.body)}`, 1e6);
+    return words.every((w) => hay.includes(w));
+  });
+}
+function blogPostFromRecord(r, filesBase, authors) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+  const id = String((_a = r.id) != null ? _a : "");
+  const authorUid = String((_b = r.authorUid) != null ? _b : "");
+  const author = authors[authorUid];
+  const cover2 = String((_c = r.cover) != null ? _c : "");
+  return {
+    id,
+    slug: String((_d = r.slug) != null ? _d : ""),
+    title: String((_e = r.title) != null ? _e : ""),
+    excerpt: String((_f = r.excerpt) != null ? _f : ""),
+    body: String((_g = r.body) != null ? _g : ""),
+    category: String((_h = r.category) != null ? _h : "notes"),
+    tags: normalizeTags(r.tags),
+    coverUrl: cover2 ? `${filesBase}/api/files/blog_posts/${id}/${cover2}` : "",
+    status: r.status === "published" ? "published" : "draft",
+    publishedAtMs: Number(r.publishedAtMs) || 0,
+    updatedAtMs: Number(r.updatedAtMs) || 0,
+    pinned: r.pinned === true,
+    version: String((_i = r.version) != null ? _i : ""),
+    authorUid,
+    authorPseudo: (author == null ? void 0 : author.pseudo) || String((_j = r.authorPseudo) != null ? _j : "\xC9quipe"),
+    authorAvatarUrl: (_k = author == null ? void 0 : author.avatarUrl) != null ? _k : "",
+    authorRole: (_l = author == null ? void 0 : author.role) != null ? _l : ""
+  };
+}
+function publicPosts(posts, now) {
+  return posts.filter((p) => isPublic(p, now)).sort((a, b) => b.publishedAtMs - a.publishedAtMs);
+}
+function shortHash(text) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = (h << 5) + h + text.charCodeAt(i) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// src/game/blogMarkdown.ts
+var SHORTCODES = {
+  rocket: "\u{1F680}",
+  fire: "\u{1F525}",
+  tada: "\u{1F389}",
+  warning: "\u26A0\uFE0F",
+  star: "\u2B50",
+  sparkles: "\u2728",
+  heart: "\u2764\uFE0F",
+  check: "\u2705",
+  x: "\u274C",
+  eyes: "\u{1F440}",
+  wrench: "\u{1F527}",
+  gear: "\u2699\uFE0F",
+  trophy: "\u{1F3C6}",
+  crown: "\u{1F451}",
+  skull: "\u{1F480}",
+  boom: "\u{1F4A5}",
+  shield: "\u{1F6E1}\uFE0F",
+  swords: "\u2694\uFE0F",
+  gem: "\u{1F48E}",
+  moneybag: "\u{1F4B0}",
+  chart: "\u{1F4C8}",
+  bug: "\u{1F41B}",
+  bulb: "\u{1F4A1}",
+  memo: "\u{1F4DD}",
+  megaphone: "\u{1F4E3}",
+  calendar: "\u{1F4C5}",
+  clock: "\u23F0",
+  lock: "\u{1F512}",
+  key: "\u{1F511}",
+  gift: "\u{1F381}",
+  planet: "\u{1FA90}",
+  satellite: "\u{1F6F0}\uFE0F",
+  ufo: "\u{1F6F8}",
+  alien: "\u{1F47D}",
+  thumbsup: "\u{1F44D}",
+  thumbsdown: "\u{1F44E}",
+  clap: "\u{1F44F}",
+  wave: "\u{1F44B}",
+  salute: "\u{1FAE1}",
+  thinking: "\u{1F914}"
+};
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function safeUrl(raw, assetBase = "") {
+  const url2 = String(raw != null ? raw : "").trim();
+  if (/^(https?:\/\/|mailto:)/i.test(url2)) return url2;
+  if (url2.startsWith("/assets/")) return `${assetBase}${url2}`;
+  if (url2.startsWith("/") || url2.startsWith("#") || url2.startsWith("./")) return url2;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url2)) return "#";
+  return url2;
+}
+var KEYWORDS = {
+  js: ["const", "let", "var", "function", "return", "if", "else", "for", "while", "of", "in", "new", "await", "async", "import", "from", "export", "default", "class", "extends", "try", "catch", "throw", "true", "false", "null", "undefined", "typeof", "this"],
+  ts: ["interface", "type", "enum", "implements", "readonly", "as", "keyof", "public", "private"],
+  bash: ["curl", "echo", "export", "if", "then", "fi", "for", "do", "done", "cd", "npm", "npx", "node", "git"],
+  css: ["!important"]
+};
+var LANG_ALIASES = { javascript: "js", typescript: "ts", tsx: "ts", jsx: "js", sh: "bash", shell: "bash", zsh: "bash", jsonc: "json" };
+function highlight(code, langRaw) {
+  var _a, _b;
+  const lang = (_a = LANG_ALIASES[langRaw]) != null ? _a : langRaw;
+  const words = /* @__PURE__ */ new Set([...(_b = KEYWORDS[lang]) != null ? _b : [], ...lang === "ts" ? KEYWORDS.js : []]);
+  const commentRe = lang === "bash" ? /#[^\n]*/y : lang === "css" || lang === "html" ? /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/y : /\/\/[^\n]*|\/\*[\s\S]*?\*\//y;
+  const rules = [
+    [commentRe, "c"],
+    [/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/y, "s"],
+    [/\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/y, "k"],
+    [/-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/y, "n"],
+    [/[A-Za-z_$][\w$-]*/y, "w"]
+  ];
+  if (lang === "" || lang === "text" || lang === "txt") return escapeHtml(code);
+  let out = "";
+  let i = 0;
+  while (i < code.length) {
+    let matched = false;
+    for (const [re, kind] of rules) {
+      re.lastIndex = i;
+      const m = re.exec(code);
+      if (!m || m[0].length === 0) continue;
+      const text = m[0];
+      if (kind === "w") out += words.has(text) || lang === "json" && (text === "true" || text === "false" || text === "null") ? `<span class="tk-k">${escapeHtml(text)}</span>` : escapeHtml(text);
+      else if (kind === "s" && lang === "json" && code.slice(i + text.length).match(/^\s*:/)) out += `<span class="tk-p">${escapeHtml(text)}</span>`;
+      else out += `<span class="tk-${kind}">${escapeHtml(text)}</span>`;
+      i += text.length;
+      matched = true;
+      break;
+    }
+    if (!matched) {
+      out += escapeHtml(code[i]);
+      i += 1;
+    }
+  }
+  return out;
+}
+function renderInline(src, opts) {
+  var _a, _b;
+  const emojis = new Map(((_a = opts.emojis) != null ? _a : []).map((e3) => [e3.code, e3]));
+  const assetBase = (_b = opts.assetBase) != null ? _b : "";
+  const stash = [];
+  const keep = (html) => `\uE000${stash.push(html) - 1}\uE000`;
+  let s = src.replace(/`([^`\n]+)`/g, (_, code) => keep(`<code>${escapeHtml(code)}</code>`));
+  s = s.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g,
+    (_, alt, url2, title) => keep(`<img src="${escapeHtml(safeUrl(url2, assetBase))}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ""} loading="lazy">`)
+  );
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g, (_, text, url2) => {
+    const href = safeUrl(url2, assetBase);
+    const ext = /^https?:\/\//i.test(href);
+    return keep(`<a href="${escapeHtml(href)}"${ext ? ' target="_blank" rel="noopener noreferrer"' : ""}>${renderInline(text, opts)}</a>`);
+  });
+  s = s.replace(/<(https?:\/\/[^>\s]+)>/g, (_, url2) => keep(`<a href="${escapeHtml(url2)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url2)}</a>`));
+  s = escapeHtml(s);
+  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, (_, pre, url2) => `${pre}<a href="${url2}" target="_blank" rel="noopener noreferrer">${url2}</a>`);
+  s = s.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>").replace(/__([^_]+?)__/g, "<strong>$1</strong>").replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, "$1<em>$2</em>").replace(/(^|[^_\w])_([^_\s][^_]*?)_(?!\w)/g, "$1<em>$2</em>").replace(/~~([^~]+?)~~/g, "<del>$1</del>").replace(/==([^=]+?)==/g, "<mark>$1</mark>").replace(/\[\[([^\]]{1,20})\]\]/g, "<kbd>$1</kbd>");
+  s = s.replace(/:([a-z0-9_+-]{2,24}):/g, (all, code) => {
+    var _a2, _b2;
+    const e3 = emojis.get(code);
+    if (e3) return `<img class="emoji" src="${escapeHtml(safeUrl(e3.url, assetBase))}" alt=":${code}:" title="${escapeHtml((_a2 = e3.label) != null ? _a2 : code)}">`;
+    return (_b2 = SHORTCODES[code]) != null ? _b2 : all;
+  });
+  return s.replace(/\uE000(\d+)\uE000/g, (_, i) => stash[Number(i)]);
+}
+var CALLOUTS = {
+  note: { label: "Note", icon: "\u2139\uFE0F" },
+  info: { label: "Info", icon: "\u2139\uFE0F" },
+  tip: { label: "Astuce", icon: "\u{1F4A1}" },
+  warning: { label: "Attention", icon: "\u26A0\uFE0F" },
+  danger: { label: "Danger", icon: "\u{1F6A8}" },
+  important: { label: "Important", icon: "\u2757" },
+  lore: { label: "Archives", icon: "\u{1F4DC}" }
+};
+function renderApi(code, opts) {
+  var _a;
+  const lines = code.split("\n");
+  const head2 = ((_a = lines.shift()) != null ? _a : "").trim();
+  const m = /^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)/i.exec(head2);
+  if (!m) return `<pre class="code"><code>${escapeHtml(code)}</code></pre>`;
+  const method = m[1].toUpperCase();
+  const path = m[2];
+  let auth = "public";
+  const desc = [];
+  const body = [];
+  let inBody = false;
+  for (const line of lines) {
+    const a = /^auth:\s*(\w+)/i.exec(line.trim());
+    if (a && !inBody) auth = a[1].toLowerCase();
+    else if (/^body:\s*$/i.test(line.trim())) inBody = true;
+    else if (inBody) body.push(line);
+    else if (line.trim()) desc.push(line.trim());
+  }
+  const authLabel = auth === "admin" ? "Administrateur" : auth === "player" || auth === "joueur" ? "Joueur connect\xE9" : "Public";
+  const tryable = method === "GET" && auth === "public" && path.startsWith("/api/");
+  return `<div class="api-card" data-method="${method}" data-path="${escapeHtml(path)}">
+<div class="api-head"><span class="api-method api-${method.toLowerCase()}">${method}</span><code class="api-path">${escapeHtml(path)}</code><span class="api-auth api-auth-${auth === "public" ? "public" : "private"}">${authLabel}</span></div>
+${desc.length ? `<p class="api-desc">${renderInline(desc.join(" "), opts)}</p>` : ""}${body.length ? `<pre class="code api-body"><code>${highlight(body.join("\n"), "json")}</code></pre>` : ""}${tryable ? `<div class="api-try"><button type="button" class="api-run">Essayer la route</button><span class="api-status"></span></div><pre class="code api-out" hidden><code></code></pre>` : ""}
+</div>`;
+}
+function renderList(lines, opts, headings) {
+  const ordered = /^\s*\d+[.)]\s/.test(lines[0]);
+  const startN = ordered ? Number(/^\s*(\d+)/.exec(lines[0])[1]) : 1;
+  const baseIndent = /^\s*/.exec(lines[0])[0].length;
+  const items = [];
+  for (const line of lines) {
+    const indent = /^\s*/.exec(line)[0].length;
+    const m = /^\s*(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (m && indent <= baseIndent + 1) {
+      const task = /^\[([ xX])\]\s+(.*)$/.exec(m[1]);
+      items.push({ text: [task ? task[2] : m[1]], checked: task ? task[1].toLowerCase() === "x" : null, children: [] });
+    } else if (items.length > 0) {
+      if (indent > baseIndent + 1) items[items.length - 1].children.push(line);
+      else items[items.length - 1].text.push(line.trim());
+    }
+  }
+  const tag = ordered ? "ol" : "ul";
+  const hasTasks = items.some((i) => i.checked !== null);
+  const lis = items.map((it) => {
+    const box = it.checked === null ? "" : `<span class="task${it.checked ? " done" : ""}" aria-hidden="true">${it.checked ? "\u2713" : ""}</span>`;
+    const nested = it.children.length ? renderBlocks(it.children.map((l) => l.slice(Math.min(/^\s*/.exec(l)[0].length, baseIndent + 2))), opts, headings) : "";
+    return `<li${it.checked !== null ? ' class="task-item"' : ""}>${box}${renderInline(it.text.join(" "), opts)}${nested}</li>`;
+  }).join("");
+  return `<${tag}${ordered && startN !== 1 ? ` start="${startN}"` : ""}${hasTasks ? ' class="tasks"' : ""}>${lis}</${tag}>`;
+}
+function splitRow(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+}
+function renderTable(lines, opts) {
+  const head2 = splitRow(lines[0]);
+  const aligns = splitRow(lines[1]).map((c) => /^:-+:$/.test(c) ? "center" : /^-+:$/.test(c) ? "right" : /^:-+$/.test(c) ? "left" : "");
+  const cell = (tag, text, i) => `<${tag}${aligns[i] ? ` style="text-align:${aligns[i]}"` : ""}>${renderInline(text, opts)}</${tag}>`;
+  const rows = lines.slice(2).map((l) => `<tr>${splitRow(l).map((c, i) => cell("td", c, i)).join("")}</tr>`).join("");
+  return `<div class="table-wrap"><table><thead><tr>${head2.map((c, i) => cell("th", c, i)).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function uniqueId(base, headings) {
+  const id = base || "section";
+  let n = 1;
+  let out = id;
+  while (headings.some((h) => h.id === out)) out = `${id}-${++n}`;
+  return out;
+}
+var isBlank = (l) => l.trim() === "";
+var isFence = (l) => /^\s{0,3}(```|~~~)/.test(l);
+var isHeading = (l) => /^\s{0,3}#{1,6}\s/.test(l);
+var isHr = (l) => /^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(l);
+var isQuote = (l) => /^\s{0,3}>/.test(l);
+var isListItem = (l) => /^\s*(?:[-*+]|\d+[.)])\s+/.test(l);
+var isTableSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.includes("-");
+var isDirective = (l) => /^\s*:::/.test(l);
+function renderBlocks(lines, opts, headings) {
+  var _a, _b;
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isBlank(line)) {
+      i++;
+      continue;
+    }
+    if (isFence(line)) {
+      const fence = /^\s*(```|~~~)/.exec(line)[1];
+      const lang = line.trim().slice(3).trim().toLowerCase();
+      const code = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith(fence)) code.push(lines[i++]);
+      i++;
+      const text = code.join("\n");
+      if (lang === "api") out.push(renderApi(text, opts));
+      else out.push(`<div class="code-block">${lang ? `<span class="code-lang">${escapeHtml(lang)}</span>` : ""}<button type="button" class="code-copy" aria-label="Copier le code">Copier</button><pre class="code"><code>${highlight(text, lang)}</code></pre></div>`);
+      continue;
+    }
+    if (isDirective(line)) {
+      const head2 = line.trim().slice(3).trim();
+      const inner = [];
+      i++;
+      let depth = 1;
+      while (i < lines.length) {
+        if (isDirective(lines[i])) {
+          if (lines[i].trim() === ":::") depth--;
+          else depth++;
+          if (depth === 0) break;
+        }
+        inner.push(lines[i++]);
+      }
+      i++;
+      const [kind, ...rest] = head2.split(/\s+/);
+      const content = renderBlocks(inner, opts, headings);
+      if (kind === "grid") out.push(`<div class="md-grid">${content}</div>`);
+      else out.push(`<details class="spoiler"><summary>${renderInline(rest.join(" ") || "Afficher", opts)}</summary><div class="spoiler-body">${content}</div></details>`);
+      continue;
+    }
+    if (isHeading(line)) {
+      const m = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+      const level3 = Math.min(4, Math.max(2, m[1].length));
+      const text = m[2];
+      const id = uniqueId(slugify(text), headings);
+      headings.push({ level: level3, id, text: text.replace(/[*_`~=]/g, "") });
+      out.push(`<h${level3} id="${id}"><a class="anchor" href="#${id}" aria-hidden="true">#</a>${renderInline(text, opts)}</h${level3}>`);
+      i++;
+      continue;
+    }
+    if (isHr(line)) {
+      out.push("<hr>");
+      i++;
+      continue;
+    }
+    if (isQuote(line)) {
+      const inner = [];
+      while (i < lines.length && isQuote(lines[i])) inner.push(lines[i++].replace(/^\s{0,3}>\s?/, ""));
+      const callout = /^\[!(\w+)\]\s*(.*)$/.exec((_b = (_a = inner[0]) == null ? void 0 : _a.trim()) != null ? _b : "");
+      if (callout && CALLOUTS[callout[1].toLowerCase()]) {
+        const type = callout[1].toLowerCase();
+        const c = CALLOUTS[type];
+        const title = callout[2] || c.label;
+        out.push(`<aside class="callout callout-${type}"><p class="callout-title"><span aria-hidden="true">${c.icon}</span> ${renderInline(title, opts)}</p>${renderBlocks(inner.slice(1), opts, headings)}</aside>`);
+      } else out.push(`<blockquote>${renderBlocks(inner, opts, headings)}</blockquote>`);
+      continue;
+    }
+    if (isListItem(line)) {
+      const block = [];
+      while (i < lines.length && (isListItem(lines[i]) || !isBlank(lines[i]) && /^\s+/.test(lines[i]) || isBlank(lines[i]) && i + 1 < lines.length && /^\s+(?:[-*+]|\d+[.)])\s/.test(lines[i + 1]))) {
+        if (!isBlank(lines[i])) block.push(lines[i]);
+        i++;
+      }
+      out.push(renderList(block, opts, headings));
+      continue;
+    }
+    if (line.includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const block = [lines[i], lines[i + 1]];
+      i += 2;
+      while (i < lines.length && lines[i].includes("|") && !isBlank(lines[i])) block.push(lines[i++]);
+      out.push(renderTable(block, opts));
+      continue;
+    }
+    const fig = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)\s*$/.exec(line);
+    if (fig) {
+      const caption = fig[3] || fig[1];
+      out.push(`<figure><img src="${escapeHtml(safeUrl(fig[2], opts.assetBase))}" alt="${escapeHtml(fig[1])}" loading="lazy">${caption ? `<figcaption>${renderInline(caption, opts)}</figcaption>` : ""}</figure>`);
+      i++;
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && !isBlank(lines[i]) && !isFence(lines[i]) && !isHeading(lines[i]) && !isQuote(lines[i]) && !isListItem(lines[i]) && !isHr(lines[i]) && !isDirective(lines[i]) && !(lines[i].includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1]))) para.push(lines[i++]);
+    const html = para.map((l, k) => renderInline(l.replace(/(\s{2,}|\\)$/, ""), opts) + (k < para.length - 1 ? /(\s{2,}|\\)$/.test(l) ? "<br>" : " " : "")).join("");
+    out.push(`<p>${html}</p>`);
+  }
+  return out.join("\n");
+}
+function renderMarkdown(markdown, opts = {}) {
+  const headings = [];
+  const lines = String(markdown != null ? markdown : "").replace(/\r\n?/g, "\n").replace(/\t/g, "  ").split("\n");
+  return { html: renderBlocks(lines, opts, headings), headings };
+}
+
+// src/game/blogPages.ts
+var e = escapeHtml;
+var url = (site, path) => `${site.base}${path}`;
+var abs = (site, path) => `${site.origin}${site.base}${path}`;
+var asset = (site, path) => path.startsWith("/assets/") ? `${site.gameUrl}${path}` : path;
+function head(site, o) {
+  var _a;
+  const image = o.image || `${site.gameUrl}/assets/logo/logo.webp`;
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${e(o.title)}</title><meta name="description" content="${e(o.description)}">
+<link rel="canonical" href="${e(o.canonical)}">${o.noindex ? '<meta name="robots" content="noindex">' : ""}
+<meta property="og:site_name" content="Cosmic Empires \xB7 Devblog"><meta property="og:type" content="${(_a = o.type) != null ? _a : "website"}"><meta property="og:title" content="${e(o.title)}"><meta property="og:description" content="${e(o.description)}"><meta property="og:url" content="${e(o.canonical)}"><meta property="og:image" content="${e(image)}"><meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${e(image)}"><meta name="theme-color" content="#4be8ff">
+<link rel="icon" href="${site.gameUrl}/assets/logo/logo.webp"><link rel="alternate" type="application/rss+xml" title="Devblog Cosmic Empires" href="${abs(site, "/rss.xml")}">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="${url(site, `/assets/blog.css?v=${site.assetVersion}`)}"></head><body>`;
+}
+function topbar(site, active) {
+  const nav = [`<a href="${url(site, "/")}"${active === "home" ? ' class="on"' : ""}>Accueil</a>`, ...BLOG_CATEGORIES.map((c) => `<a href="${url(site, `/c/${c.id}`)}"${active === c.id ? ' class="on"' : ""}>${e(c.label)}</a>`)].join("");
+  return `<a class="skip" href="#contenu">Aller au contenu</a><header class="topbar"><div class="wrap">
+<a class="brand" href="${url(site, "/")}"><img src="${site.gameUrl}/assets/logo/logo.webp" alt=""><b>COSMIC EMPIRES</b><span>DEVBLOG</span></a>
+<nav class="nav" aria-label="Cat\xE9gories">${nav}</nav><a class="play" href="${site.gameUrl}">Jouer</a></div></header>`;
+}
+function footer(site) {
+  return `<footer class="footer"><div class="wrap"><div><a class="brand" href="${url(site, "/")}"><img src="${site.gameUrl}/assets/logo/logo.webp" alt=""><b>COSMIC EMPIRES</b><span>DEVBLOG</span></a>
+<p>Annonces, mises \xE0 jour et notes de l'\xE9quipe. Le jeu de strat\xE9gie spatiale o\xF9 chaque empire \xE9crit sa l\xE9gende.</p></div>
+<nav aria-label="Liens"><a href="${site.gameUrl}">Jouer</a><a href="${site.gameUrl}/bible">Bible du jeu</a><a href="${site.gameUrl}/formules">Formules</a><a href="${url(site, "/rss.xml")}">Flux RSS</a><a href="${site.gameUrl}/game/redaction">Espace r\xE9daction</a></nav></div></footer>
+<script src="${url(site, `/assets/blog.js?v=${site.assetVersion}`)}" defer></script></body></html>`;
+}
+function categoryIcon(site, catId) {
+  const c = blogCategory(catId);
+  return `<img class="cat-ico" src="${site.gameUrl}/assets/blog/${c.id}.webp" alt="" onerror="this.replaceWith(document.createTextNode('${c.emoji}'))">`;
+}
+function chip(site, catId) {
+  const c = blogCategory(catId);
+  return `<a class="chip" href="${url(site, `/c/${c.id}`)}" style="color:${c.color}">${categoryIcon(site, c.id)} ${e(c.label)}</a>`;
+}
+function chipSpan(site, catId) {
+  const c = blogCategory(catId);
+  return `<span class="chip" style="color:${c.color}">${categoryIcon(site, c.id)} ${e(c.label)}</span>`;
+}
+function avatar(site, p) {
+  const src = p.authorAvatarUrl || `${site.gameUrl}/assets/avatars/default.webp`;
+  return `<img class="avatar" src="${e(src)}" alt="" loading="lazy">`;
+}
+function cover(site, p) {
+  return p.coverUrl ? asset(site, p.coverUrl) : `${site.gameUrl}/assets/story/choeur-banner.webp`;
+}
+function card(site, p) {
+  return `<a class="card reveal" href="${url(site, `/p/${p.slug}`)}"><div class="cover" style="background-image:url('${e(cover(site, p))}')">${chipSpan(site, p.category)}${p.pinned ? '<span class="pin">\xC9PINGL\xC9</span>' : ""}</div>
+<div class="body"><h2>${e(p.title)}</h2><p>${e(excerptOf(p, 160))}</p>
+<div class="meta"><span class="who">${avatar(site, p)}${e(p.authorPseudo)}</span><span>${blogDate(p.publishedAtMs)}</span><span>${readingMinutes(p.body)} min</span>${p.version ? `<span class="vtag">v${e(p.version)}</span>` : ""}</div></div></a>`;
+}
+function feature(site, p) {
+  return `<a class="feature reveal" href="${url(site, `/p/${p.slug}`)}"><div class="cover" style="background-image:url('${e(cover(site, p))}')"></div>
+<div class="body">${chipSpan(site, p.category)}<h2>${e(p.title)}</h2><p>${e(excerptOf(p, 260))}</p>
+<div class="meta"><span class="who">${avatar(site, p)}${e(p.authorPseudo)}</span><span>${blogDate(p.publishedAtMs)}</span><span>${readingMinutes(p.body)} min de lecture</span>${p.version ? `<span class="vtag">v${e(p.version)}</span>` : ""}</div></div></a>`;
+}
+function sidebar(site, posts, o) {
+  var _a, _b, _c;
+  const counts = /* @__PURE__ */ new Map();
+  const tags = /* @__PURE__ */ new Map();
+  for (const p of posts) {
+    counts.set(p.category, ((_a = counts.get(p.category)) != null ? _a : 0) + 1);
+    for (const t of p.tags) tags.set(t, ((_b = tags.get(t)) != null ? _b : 0) + 1);
+  }
+  const topTags = [...tags.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 24);
+  return `<aside class="side">
+<form class="search panel" action="${url(site, "/recherche")}" method="get" role="search" style="padding:0"><input type="search" name="q" placeholder="Rechercher un article\u2026" value="${e((_c = o.q) != null ? _c : "")}" aria-label="Rechercher"><button type="submit" aria-label="Rechercher">\u2315</button></form>
+<div class="panel"><h3>Cat\xE9gories</h3><ul class="cats">${BLOG_CATEGORIES.map((c) => {
+    var _a2;
+    return `<li><a href="${url(site, `/c/${c.id}`)}"${o.category === c.id ? ' style="color:#fff"' : ""}><span class="dot" style="background:${c.color};box-shadow:0 0 8px ${c.color}"></span>${categoryIcon(site, c.id)} ${e(c.label)}<span class="n">${(_a2 = counts.get(c.id)) != null ? _a2 : 0}</span></a></li>`;
+  }).join("")}</ul></div>
+${topTags.length ? `<div class="panel"><h3>Tags</h3><div class="tagcloud">${topTags.map(([t]) => `<a class="tag${o.tag === t ? " on" : ""}" href="${url(site, `/t/${t}`)}">${e(t)}</a>`).join("")}</div></div>` : ""}
+<div class="panel"><h3>Rejoindre le secteur</h3><p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:var(--t3)">B\xE2tis ton empire, forge des alliances et \xE9cris ton nom dans les Chroniques.</p><a class="play cta" href="${site.gameUrl}">Jouer gratuitement</a><p style="margin:12px 0 0;text-align:center"><a class="tag" style="border:0" href="${url(site, "/rss.xml")}">flux RSS</a></p></div>
+</aside>`;
+}
+function pager(site, path, page, pages, extra = "") {
+  if (pages <= 1) return "";
+  const link = (n) => `${url(site, path)}?page=${n}${extra}`;
+  const items = [];
+  if (page > 1) items.push(`<a href="${link(page - 1)}" rel="prev">\u2190</a>`);
+  for (let n = 1; n <= pages; n++) {
+    if (n === 1 || n === pages || Math.abs(n - page) <= 1) items.push(n === page ? `<span class="cur">${n}</span>` : `<a href="${link(n)}">${n}</a>`);
+    else if (Math.abs(n - page) === 2) items.push("<span>\u2026</span>");
+  }
+  if (page < pages) items.push(`<a href="${link(page + 1)}" rel="next">\u2192</a>`);
+  return `<nav class="pager" aria-label="Pages">${items.join("")}</nav>`;
+}
+function renderBlogList(site, input) {
+  var _a;
+  const all = input.posts;
+  const cat = input.category ? BLOG_CATEGORIES.find((c) => c.id === input.category) : void 0;
+  let list = all;
+  if (cat) list = list.filter((p) => p.category === cat.id);
+  if (input.tag) list = list.filter((p) => p.tags.includes(input.tag));
+  if (input.q !== void 0) list = searchPosts(list, input.q);
+  const isHome = !cat && !input.tag && input.q === void 0;
+  const featured = isHome && input.page === 1 ? (_a = list.find((p) => p.pinned)) != null ? _a : list[0] : void 0;
+  const rest = featured ? list.filter((p) => p.id !== featured.id) : list;
+  const pages = Math.max(1, Math.ceil(rest.length / BLOG_RULES.perPage));
+  const page = Math.min(Math.max(1, input.page), pages);
+  const shown = rest.slice((page - 1) * BLOG_RULES.perPage, page * BLOG_RULES.perPage);
+  const path = cat ? `/c/${cat.id}` : input.tag ? `/t/${input.tag}` : input.q !== void 0 ? "/recherche" : "/";
+  const title = cat ? `${cat.label} \xB7 Devblog Cosmic Empires` : input.tag ? `#${input.tag} \xB7 Devblog Cosmic Empires` : input.q !== void 0 ? `Recherche \xAB ${input.q} \xBB \xB7 Devblog Cosmic Empires` : "Devblog \xB7 Cosmic Empires";
+  const description = cat ? cat.description : input.tag ? `Tous les articles du devblog sur ${input.tag}.` : "Annonces, mises \xE0 jour, coulisses et notes de l'\xE9quipe de Cosmic Empires.";
+  const hero = cat ? `<p class="crumbs"><a href="${url(site, "/")}">Devblog</a> / Cat\xE9gorie</p><p class="eyebrow" style="color:${cat.color}">${categoryIcon(site, cat.id)} Cat\xE9gorie</p><h1>${e(cat.label)}</h1><p class="lead">${e(cat.description)}</p>` : input.tag ? `<p class="crumbs"><a href="${url(site, "/")}">Devblog</a> / Tag</p><p class="eyebrow">Tag</p><h1>#${e(input.tag)}</h1><p class="lead">${list.length} article${list.length > 1 ? "s" : ""}.</p>` : input.q !== void 0 ? `<p class="crumbs"><a href="${url(site, "/")}">Devblog</a> / Recherche</p><p class="eyebrow">Recherche</p><h1>\xAB ${e(input.q || "\u2026")} \xBB</h1><p class="lead">${list.length} r\xE9sultat${list.length > 1 ? "s" : ""}.</p>` : `<p class="eyebrow">Journal de bord de l'\xE9quipe</p><h1>Devblog</h1><p class="lead">Annonces, mises \xE0 jour, coulisses du d\xE9veloppement et petites notes du staff. Tout ce qui se passe dans le secteur, de premi\xE8re main.</p>`;
+  const body = shown.length === 0 && !featured ? `<div class="panel empty"><b>Aucun article</b>${input.q !== void 0 ? "Essaie d'autres mots-cl\xE9s." : "Rien de publi\xE9 ici pour le moment. Repasse bient\xF4t !"}</div>` : `${featured ? feature(site, featured) : ""}${shown.length ? `${featured ? '<p class="section-title">Derniers articles</p>' : ""}<div class="grid">${shown.map((p) => card(site, p)).join("")}</div>` : ""}${pager(site, path, page, pages, input.q !== void 0 ? `&q=${encodeURIComponent(input.q)}` : "")}`;
+  return `${head(site, { title, description, canonical: abs(site, path === "/" ? "/" : path), image: featured ? cover(site, featured) : void 0, noindex: input.q !== void 0 })}${topbar(site, cat ? cat.id : isHome ? "home" : "")}
+<main id="contenu"><section class="hero wrap">${hero}</section><div class="wrap layout"><div>${body}</div>${sidebar(site, all, { q: input.q, tag: input.tag, category: cat == null ? void 0 : cat.id })}</div></main>${footer(site)}`;
+}
+function renderBlogPost(site, post, all, opts = {}) {
+  const { html, headings } = renderMarkdown(post.body, { emojis: site.emojis, assetBase: site.gameUrl });
+  const cat = blogCategory(post.category);
+  const idx = all.findIndex((p) => p.id === post.id);
+  const newer = idx > 0 ? all[idx - 1] : void 0;
+  const older = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : void 0;
+  const related = relatedPosts(post, all);
+  const link = abs(site, `/p/${post.slug}`);
+  const toc = headings.filter((h) => h.level <= 3);
+  const updated = post.updatedAtMs > post.publishedAtMs + 36e5 ? `<span>Mis \xE0 jour le ${blogDate(post.updatedAtMs)}</span>` : "";
+  const date = post.publishedAtMs > 0 ? blogDateTime(post.publishedAtMs) : "Non publi\xE9";
+  const ld = JSON.stringify({ "@context": "https://schema.org", "@type": "BlogPosting", headline: post.title, datePublished: new Date(post.publishedAtMs || site.now).toISOString(), dateModified: new Date(post.updatedAtMs || site.now).toISOString(), author: { "@type": "Person", name: post.authorPseudo }, image: cover(site, post), description: excerptOf(post), mainEntityOfPage: link }).replace(/</g, "\\u003c");
+  return `${head(site, { title: `${post.title} \xB7 Devblog Cosmic Empires`, description: excerptOf(post), image: cover(site, post), canonical: link, type: "article", noindex: opts.preview })}
+<script type="application/ld+json">${ld}</script><div class="progress" aria-hidden="true"></div>${topbar(site, cat.id)}
+<main id="contenu"><header class="post-hero"><div class="bg" style="background-image:url('${e(cover(site, post))}')"></div><div class="wrap">
+<p class="crumbs"><a href="${url(site, "/")}">Devblog</a> / <a href="${url(site, `/c/${cat.id}`)}">${e(cat.label)}</a></p>${chip(site, post.category)}
+<h1>${e(post.title)}</h1>${post.excerpt ? `<p class="lead">${e(post.excerpt)}</p>` : ""}
+<div class="meta"><span class="who">${avatar(site, post)}<span><b>${e(post.authorPseudo)}</b><small>${e(post.authorRole || "\xC9quipe Cosmic Empires")}</small></span></span><span>${date}</span>${updated}<span>${readingMinutes(post.body)} min de lecture</span>${post.version ? `<span class="vtag">v${e(post.version)}</span>` : ""}</div>
+${opts.preview ? `<p class="draft-banner">Aper\xE7u : ${post.status === "draft" ? "brouillon, visible seulement par la r\xE9daction" : `programm\xE9 pour le ${blogDateTime(post.publishedAtMs)}`}</p>` : ""}</div></header>
+<div class="wrap layout"><div><article class="panel article"><div class="prose">${html}</div>
+<div class="post-foot">${post.tags.map((t) => `<a class="tag" href="${url(site, `/t/${t}`)}">${e(t)}</a>`).join("")}<div class="share"><button type="button" class="btn" data-copy="${e(link)}">Copier le lien</button><a class="btn" target="_blank" rel="noopener noreferrer" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(link)}">Partager</a></div></div></article>
+${newer || older ? `<nav class="prevnext">${older ? `<a href="${url(site, `/p/${older.slug}`)}"><small>\u2190 Pr\xE9c\xE9dent</small><b>${e(older.title)}</b></a>` : ""}${newer ? `<a class="next" href="${url(site, `/p/${newer.slug}`)}"><small>Suivant \u2192</small><b>${e(newer.title)}</b></a>` : ""}</nav>` : ""}
+${related.length ? `<p class="section-title" style="margin-top:36px">\xC0 lire aussi</p><div class="grid">${related.map((p) => card(site, p)).join("")}</div>` : ""}</div>
+<aside class="side">${toc.length >= 2 ? `<nav class="panel toc" aria-label="Sommaire"><h3>Sommaire</h3><ol>${toc.map((h) => `<li class="l${h.level}"><a href="#${h.id}">${e(h.text)}</a></li>`).join("")}</ol></nav>` : sidebar(site, all, { category: cat.id })}</aside></div></main>${footer(site)}`;
+}
+function renderBlogNotFound(site, posts) {
+  return `${head(site, { title: "Page introuvable \xB7 Devblog Cosmic Empires", description: "Cette page n'existe pas (ou plus).", canonical: abs(site, "/"), noindex: true })}${topbar(site, "")}
+<main id="contenu"><section class="hero wrap"><p class="eyebrow" style="color:var(--danger)">Erreur 404 \xB7 Signal perdu</p><h1>Page introuvable</h1><p class="lead">Ce secteur est vide : l'article a peut-\xEAtre \xE9t\xE9 d\xE9plac\xE9 ou retir\xE9.</p><p style="margin-top:22px"><a class="play" href="${url(site, "/")}">Retour au devblog</a></p></section>
+${posts.length ? `<div class="wrap" style="padding-bottom:48px"><p class="section-title">Derniers articles</p><div class="grid">${posts.slice(0, 3).map((p) => card(site, p)).join("")}</div></div>` : ""}</main>${footer(site)}`;
+}
+var xml = (s) => e(s);
+function renderBlogRss(site, posts) {
+  const items = posts.slice(0, 30).map((p) => {
+    const { html } = renderMarkdown(p.body, { emojis: site.emojis, assetBase: site.gameUrl });
+    return `<item><title>${xml(p.title)}</title><link>${xml(abs(site, `/p/${p.slug}`))}</link><guid isPermaLink="true">${xml(abs(site, `/p/${p.slug}`))}</guid><pubDate>${new Date(p.publishedAtMs).toUTCString()}</pubDate><category>${xml(blogCategory(p.category).label)}</category><dc:creator>${xml(p.authorPseudo)}</dc:creator><description>${xml(excerptOf(p))}</description><content:encoded><![CDATA[${html.replace(/\]\]>/g, "]]&gt;")}]]></content:encoded></item>`;
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Devblog Cosmic Empires</title><link>${xml(abs(site, "/"))}</link><description>Annonces, mises \xE0 jour et notes de l'\xE9quipe.</description><language>fr</language><atom:link href="${xml(abs(site, "/rss.xml"))}" rel="self" type="application/rss+xml"/>${posts[0] ? `<lastBuildDate>${new Date(posts[0].publishedAtMs).toUTCString()}</lastBuildDate>` : ""}${items}</channel></rss>`;
+}
+function renderBlogSitemap(site, posts) {
+  const day = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const urls = [`<url><loc>${xml(abs(site, "/"))}</loc><changefreq>daily</changefreq></url>`, ...BLOG_CATEGORIES.map((c) => `<url><loc>${xml(abs(site, `/c/${c.id}`))}</loc></url>`), ...posts.map((p) => `<url><loc>${xml(abs(site, `/p/${p.slug}`))}</loc><lastmod>${day(p.updatedAtMs || p.publishedAtMs)}</lastmod></url>`)];
+  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`;
+}
+function renderBlogRobots(site) {
+  return `User-agent: *
+Allow: /
+Disallow: ${site.base}/recherche
+Sitemap: ${abs(site, "/sitemap.xml")}
+`;
+}
+
+// src/game/blogStyles.ts
+var BLOG_VARS = `--bg:#03040a;--panel:rgba(10,15,32,.78);--panel-solid:#0a0f20;--edge:rgba(75,232,255,.16);--edge-strong:rgba(75,232,255,.32);--cyan:#4be8ff;--gold:#ffd86b;--mint:#5cf2b0;--ember:#ff8a4c;--violet:#b18cff;--danger:#ff5c7a;--t1:#f1f5f9;--t2:#cbd5e1;--t3:#94a3b8;--t4:#64748b;--f-title:"Chakra Petch",system-ui,sans-serif;--f-body:Inter,system-ui,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,monospace;--cut:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);--cut-sm:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)`;
+var PROSE_CSS = `
+.prose{color:var(--t2);font-size:17px;line-height:1.75;word-wrap:break-word}
+.prose>*:first-child{margin-top:0}
+.prose p{margin:0 0 1.1em}
+.prose h2,.prose h3,.prose h4{font-family:var(--f-title);color:#fff;letter-spacing:.04em;line-height:1.25;margin:1.9em 0 .6em;position:relative;scroll-margin-top:90px}
+.prose h2{font-size:1.55em;text-transform:uppercase;padding-bottom:.35em;border-bottom:1px solid var(--edge)}
+.prose h2::after{content:"";position:absolute;left:0;bottom:-1px;width:64px;height:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.prose h3{font-size:1.25em;color:var(--cyan)}
+.prose h4{font-size:1.05em;color:var(--gold);text-transform:uppercase;letter-spacing:.12em}
+.prose .anchor{position:absolute;left:-1.1em;color:var(--t4);text-decoration:none;opacity:0;transition:opacity .2s}
+.prose h2:hover .anchor,.prose h3:hover .anchor,.prose h4:hover .anchor{opacity:1}
+.prose a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(75,232,255,.35);transition:border-color .2s,color .2s}
+.prose a:hover{color:#fff;border-bottom-color:var(--cyan)}
+.prose strong{color:#fff;font-weight:600}
+.prose em{color:var(--t1)}
+.prose del{color:var(--t4)}
+.prose mark{background:rgba(255,216,107,.18);color:var(--gold);padding:0 .25em;border-radius:2px}
+.prose kbd{font-family:var(--f-mono);font-size:.8em;padding:.1em .45em;border:1px solid var(--edge-strong);border-bottom-width:2px;background:rgba(255,255,255,.04);color:var(--t1);border-radius:3px}
+.prose code{font-family:var(--f-mono);font-size:.86em;background:rgba(75,232,255,.08);color:#9ff3ff;padding:.12em .4em;border-radius:2px;border:1px solid rgba(75,232,255,.14)}
+.prose hr{border:0;height:1px;margin:2.4em 0;background:linear-gradient(90deg,transparent,var(--edge-strong),transparent)}
+.prose ul,.prose ol{margin:0 0 1.2em;padding-left:1.4em}.prose ul{list-style:disc}.prose ol{list-style:decimal}.prose ul ul{list-style:circle}
+.prose li{margin:.35em 0}
+.prose ul>li::marker{color:var(--cyan)}
+.prose ol>li::marker{color:var(--cyan);font-family:var(--f-mono);font-size:.9em}
+.prose ul.tasks{list-style:none;padding-left:.2em}
+.prose .task{display:inline-grid;place-items:center;width:1.05em;height:1.05em;margin-right:.55em;border:1px solid var(--edge-strong);font-size:.75em;color:#03040a;vertical-align:-.1em}
+.prose .task.done{background:var(--mint);border-color:var(--mint);box-shadow:0 0 10px rgba(92,242,176,.5)}
+.prose blockquote{margin:1.4em 0;padding:.6em 1.2em;border-left:3px solid var(--violet);background:rgba(177,140,255,.06);color:var(--t1);font-style:italic}
+.prose blockquote p:last-child{margin-bottom:0}
+.prose figure{margin:1.8em 0}
+.prose figure img,.prose p>img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid var(--edge);clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.prose figcaption{text-align:center;font-family:var(--f-mono);font-size:.72em;letter-spacing:.08em;color:var(--t4);margin-top:.7em}
+.prose img.emoji{display:inline-block;width:1.45em;height:1.45em;vertical-align:-.35em;margin:0 .05em;border:0;clip-path:none;object-fit:contain}
+.prose .md-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:1.6em 0}
+.prose .md-grid figure{margin:0}
+.prose .table-wrap{overflow-x:auto;margin:1.4em 0;border:1px solid var(--edge)}
+.prose table{width:100%;border-collapse:collapse;font-size:.9em}
+.prose th{font-family:var(--f-mono);font-size:.75em;font-weight:500;text-transform:uppercase;letter-spacing:.14em;color:var(--t3);background:rgba(75,232,255,.06);padding:.8em 1em;border-bottom:1px solid var(--edge-strong);text-align:left}
+.prose td{padding:.7em 1em;border-top:1px solid rgba(255,255,255,.05)}
+.prose tbody tr:hover td{background:rgba(255,255,255,.02)}
+.prose .callout{margin:1.6em 0;padding:1em 1.2em;border:1px solid;border-left-width:3px;background:rgba(255,255,255,.02)}
+.prose .callout p:last-child{margin-bottom:0}
+.prose .callout-title{font-family:var(--f-title);font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:.82em;margin-bottom:.5em}
+.prose .callout-note,.prose .callout-info{border-color:rgba(75,232,255,.35);background:rgba(75,232,255,.05)}.prose .callout-note .callout-title,.prose .callout-info .callout-title{color:var(--cyan)}
+.prose .callout-tip{border-color:rgba(92,242,176,.35);background:rgba(92,242,176,.05)}.prose .callout-tip .callout-title{color:var(--mint)}
+.prose .callout-warning,.prose .callout-important{border-color:rgba(255,216,107,.4);background:rgba(255,216,107,.05)}.prose .callout-warning .callout-title,.prose .callout-important .callout-title{color:var(--gold)}
+.prose .callout-danger{border-color:rgba(255,92,122,.4);background:rgba(255,92,122,.06)}.prose .callout-danger .callout-title{color:var(--danger)}
+.prose .callout-lore{border-color:rgba(177,140,255,.4);background:linear-gradient(135deg,rgba(177,140,255,.08),transparent)}.prose .callout-lore .callout-title{color:var(--violet)}.prose .callout-lore p{font-style:italic}
+.prose details.spoiler{margin:1.4em 0;border:1px solid var(--edge);background:rgba(255,255,255,.02)}
+.prose details.spoiler summary{cursor:pointer;padding:.7em 1em;font-family:var(--f-title);text-transform:uppercase;letter-spacing:.08em;font-size:.85em;color:var(--t1);list-style:none}
+.prose details.spoiler summary::before{content:"\u25B8";display:inline-block;margin-right:.6em;color:var(--cyan);transition:transform .2s}
+.prose details.spoiler[open] summary::before{transform:rotate(90deg)}
+.prose .spoiler-body{padding:0 1em 1em}
+.prose .code-block{position:relative;margin:1.4em 0}
+.prose .code-lang{position:absolute;top:0;left:0;font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--t4);padding:.45em .9em;border-right:1px solid var(--edge);border-bottom:1px solid var(--edge)}
+.prose .code-copy{position:absolute;top:6px;right:6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);background:rgba(255,255,255,.04);border:1px solid var(--edge);padding:.35em .7em;cursor:pointer}
+.prose .code-copy:hover{color:var(--cyan);border-color:var(--cyan)}
+.prose pre.code{margin:0;padding:2.4em 1.2em 1.1em;overflow-x:auto;background:#060a16;border:1px solid var(--edge);font-family:var(--f-mono);font-size:13.5px;line-height:1.65;color:#cbd5e1}
+.prose pre.code code{background:none;border:0;padding:0;color:inherit;font-size:inherit}
+.prose .tk-k{color:#ff8adf}.prose .tk-s{color:#a5f3a0}.prose .tk-n{color:#ffd86b}.prose .tk-c{color:#5b6b86;font-style:italic}.prose .tk-p{color:#7fdcff}
+.prose .api-card{margin:1.6em 0;border:1px solid var(--edge-strong);background:linear-gradient(135deg,rgba(75,232,255,.06),rgba(6,10,22,.9) 60%);clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+.prose .api-head{display:flex;flex-wrap:wrap;align-items:center;gap:.6em;padding:.8em 1em;border-bottom:1px solid var(--edge)}
+.prose .api-method{font-family:var(--f-mono);font-size:.72em;font-weight:700;letter-spacing:.1em;padding:.3em .7em;color:#03040a}
+.prose .api-get{background:var(--mint)}.prose .api-post{background:var(--cyan)}.prose .api-put,.prose .api-patch{background:var(--gold)}.prose .api-delete{background:var(--danger)}
+.prose .api-path{background:none;border:0;color:#fff;font-size:.92em;padding:0}
+.prose .api-auth{margin-left:auto;font-family:var(--f-mono);font-size:.68em;letter-spacing:.12em;text-transform:uppercase;padding:.3em .6em;border:1px solid}
+.prose .api-auth-public{color:var(--mint);border-color:rgba(92,242,176,.4)}.prose .api-auth-private{color:var(--gold);border-color:rgba(255,216,107,.4)}
+.prose .api-desc{margin:0;padding:.8em 1em;font-size:.92em;color:var(--t2)}
+.prose .api-body{margin:0 1em 1em;padding-top:1em}
+.prose .api-try{display:flex;align-items:center;gap:1em;padding:0 1em 1em}
+.prose .api-run{font-family:var(--f-title);font-size:.8em;text-transform:uppercase;letter-spacing:.12em;font-weight:600;color:#03040a;background:var(--cyan);border:0;padding:.6em 1.1em;cursor:pointer;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 0 18px rgba(75,232,255,.35)}
+.prose .api-run:hover{filter:brightness(1.15)}
+.prose .api-run:disabled{opacity:.5;cursor:wait}
+.prose .api-status{font-family:var(--f-mono);font-size:.78em;color:var(--t3)}
+.prose .api-status.ok{color:var(--mint)}.prose .api-status.err{color:var(--danger)}
+.prose .api-out{margin:0 1em 1em;padding-top:1em;max-height:360px}
+`;
+var BLOG_CSS = `
+:root{${BLOG_VARS}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--t2);font-family:var(--f-body);-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-2;background:radial-gradient(1200px 600px at 85% -10%,rgba(75,232,255,.10),transparent 60%),radial-gradient(900px 700px at -10% 30%,rgba(177,140,255,.08),transparent 60%),radial-gradient(800px 500px at 60% 120%,rgba(255,138,76,.06),transparent 60%),var(--bg)}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;background-image:radial-gradient(1px 1px at 20px 30px,#fff,transparent),radial-gradient(1px 1px at 120px 80px,rgba(255,255,255,.7),transparent),radial-gradient(1.5px 1.5px at 200px 160px,rgba(75,232,255,.9),transparent),radial-gradient(1px 1px at 320px 40px,rgba(255,255,255,.6),transparent),radial-gradient(1px 1px at 260px 260px,#fff,transparent),radial-gradient(1px 1px at 60px 220px,rgba(255,216,107,.8),transparent);background-size:360px 300px;animation:drift 120s linear infinite}
+@keyframes drift{to{background-position:360px 300px}}
+@media (prefers-reduced-motion:reduce){body::after{animation:none}*{transition:none!important}}
+a{color:inherit}
+img{max-width:100%}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 20px}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:99;background:var(--cyan);color:#000;padding:8px 12px}
+/* En-t\xEAte */
+.topbar{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:rgba(3,4,10,.72);border-bottom:1px solid var(--edge)}
+.topbar .wrap{display:flex;align-items:center;gap:18px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;flex-shrink:0}
+.brand img{width:34px;height:34px}
+.brand b{font-family:var(--f-title);font-weight:700;letter-spacing:.18em;font-size:15px}
+.brand span{font-family:var(--f-mono);font-size:11px;letter-spacing:.24em;color:var(--cyan);border-left:1px solid var(--edge-strong);padding-left:10px}
+.nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav a{font-family:var(--f-title);font-size:13px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:var(--t3);padding:8px 12px;white-space:nowrap;transition:color .2s}
+.nav a:hover,.nav a.on{color:#fff}
+.nav a.on{box-shadow:inset 0 -2px 0 var(--cyan)}
+.play{flex-shrink:0;font-family:var(--f-title);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:#03040a;background:linear-gradient(90deg,var(--cyan),#9ff3ff);padding:9px 16px;clip-path:var(--cut-sm);box-shadow:0 0 22px rgba(75,232,255,.35)}
+.play:hover{filter:brightness(1.1)}
+@media (max-width:760px){.topbar .wrap{flex-wrap:wrap;height:auto;padding-top:10px;gap:8px 12px}.brand span{display:none}.topbar .play{margin-left:auto;padding:7px 12px;font-size:12px}.nav{order:3;width:100%;margin:0 -20px;padding:0 12px;border-top:1px solid var(--edge)}.nav a{padding:10px 10px;font-size:12px}.hero{padding-top:36px}}
+/* H\xE9ros */
+.hero{padding-top:56px;padding-bottom:28px;position:relative}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--cyan)}
+.hero h1{font-family:var(--f-title);font-size:clamp(38px,6vw,72px);line-height:1;margin:.25em 0 .2em;color:#fff;text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 40px rgba(75,232,255,.25)}
+.hero p.lead{max-width:640px;font-size:18px;color:var(--t3);margin:0}
+.crumbs{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;color:var(--t4);margin-bottom:6px}
+.crumbs a{text-decoration:none;color:var(--t3)}.crumbs a:hover{color:var(--cyan)}
+/* Mise en page */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;padding-bottom:64px}
+@media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--edge);clip-path:var(--cut);padding:20px}
+.side{display:flex;flex-direction:column;gap:20px}
+.side h3{font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--t4);margin:0 0 12px}
+.search{display:flex;border:1px solid var(--edge-strong);background:rgba(0,0,0,.25)}
+.search input{flex:1;min-width:0;background:none;border:0;color:#fff;font:inherit;font-size:14px;padding:10px 12px;outline:none}
+.search button{background:none;border:0;border-left:1px solid var(--edge);color:var(--cyan);padding:0 14px;cursor:pointer;font-size:16px}
+.cats{list-style:none;margin:0;padding:0}
+.cats a{display:flex;align-items:center;gap:10px;text-decoration:none;padding:9px 4px;border-top:1px solid rgba(255,255,255,.05);color:var(--t2);font-size:14px;transition:color .2s,padding .2s}
+.cats li:first-child a{border-top:0}
+.cats a:hover{color:#fff;padding-left:10px}
+.cats .n{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--t4)}
+.cats .dot{width:8px;height:8px;transform:rotate(45deg);flex-shrink:0}
+.tagcloud{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-flex;align-items:center;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.04em;color:var(--t3);text-decoration:none;border:1px solid var(--edge);padding:4px 9px;transition:all .2s}
+.tag::before{content:"#";color:var(--cyan);margin-right:2px}
+.tag:hover,.tag.on{color:#fff;border-color:var(--cyan);background:rgba(75,232,255,.08)}
+.side .cta{display:block;text-align:center;text-decoration:none}
+/* Cartes */
+.cat-ico{width:1.35em;height:1.35em;object-fit:contain;vertical-align:-.3em;filter:drop-shadow(0 0 6px currentColor)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;padding:4px 10px;border:1px solid currentColor;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
+.card{position:relative;display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--edge);clip-path:var(--cut);transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);border-color:var(--edge-strong);box-shadow:0 14px 40px -18px rgba(75,232,255,.45)}
+.card .cover{aspect-ratio:16/9;background:#070b18 center/cover no-repeat;position:relative;border-bottom:1px solid var(--edge)}
+.card .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(3,4,10,.85))}
+.card .cover .chip{position:absolute;left:12px;bottom:12px;z-index:1}
+.card .cover .pin{position:absolute;right:12px;top:12px;z-index:1;font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:#03040a;background:var(--gold);padding:3px 8px}
+.card .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card h2{font-family:var(--f-title);font-size:20px;line-height:1.25;color:#fff;margin:0;letter-spacing:.02em}
+.card p{margin:0;font-size:14.5px;line-height:1.6;color:var(--t3)}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-family:var(--f-mono);font-size:11.5px;color:var(--t4)}
+.meta .who{display:inline-flex;align-items:center;gap:8px;color:var(--t2)}
+.avatar{width:26px;height:26px;object-fit:cover;clip-path:var(--cut-sm);background:#0b1020;border:1px solid var(--edge)}
+.card .meta{margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
+.vtag{color:var(--cyan);border:1px solid var(--edge-strong);padding:1px 6px}
+/* Article mis en avant */
+.feature{display:grid;grid-template-columns:1.3fr 1fr;margin-bottom:28px;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--edge-strong);clip-path:var(--cut);transition:box-shadow .25s}
+.feature:hover{box-shadow:0 18px 60px -24px rgba(75,232,255,.55)}
+.feature .cover{min-height:300px;background:#070b18 center/cover no-repeat;position:relative}
+.feature .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 55%,rgba(10,15,32,.95))}
+.feature .body{padding:28px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+.feature h2{font-family:var(--f-title);font-size:clamp(24px,3vw,34px);line-height:1.15;margin:0;color:#fff;text-transform:uppercase}
+.feature p{margin:0;color:var(--t3);line-height:1.65}
+@media (max-width:760px){.feature{grid-template-columns:1fr}.feature .cover{min-height:200px}.feature .cover::after{background:linear-gradient(180deg,transparent 50%,rgba(10,15,32,.95))}}
+.section-title{display:flex;align-items:center;gap:14px;font-family:var(--f-mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--t4);margin:8px 0 18px}
+.section-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--edge-strong),transparent)}
+.empty{padding:48px 24px;text-align:center;color:var(--t3)}
+.empty b{display:block;font-family:var(--f-title);font-size:22px;color:#fff;text-transform:uppercase;margin-bottom:6px}
+.pager{display:flex;justify-content:center;gap:8px;margin-top:32px;font-family:var(--f-mono);font-size:13px}
+.pager a,.pager span{padding:8px 13px;border:1px solid var(--edge);text-decoration:none;color:var(--t3)}
+.pager a:hover{color:#fff;border-color:var(--cyan)}
+.pager .cur{color:#03040a;background:var(--cyan);border-color:var(--cyan)}
+/* Article */
+.post-hero{position:relative;padding-top:72px;padding-bottom:36px;margin-bottom:12px;overflow:hidden;border-bottom:1px solid var(--edge)}
+.post-hero .bg{position:absolute;inset:0;z-index:-1;background:#070b18 center/cover no-repeat;opacity:.45;mask-image:linear-gradient(180deg,#000 30%,transparent)}
+.post-hero h1{font-family:var(--f-title);font-size:clamp(32px,5vw,58px);line-height:1.08;color:#fff;margin:.35em 0 .35em;max-width:900px;letter-spacing:.02em;text-shadow:0 0 40px rgba(0,0,0,.6)}
+.post-hero .lead{max-width:760px;font-size:19px;line-height:1.6;color:var(--t2);margin:0 0 22px}
+.post-hero .meta{font-size:12.5px}
+.post-hero .avatar{width:40px;height:40px}
+.post-hero .who b{display:block;color:#fff;font-family:var(--f-title);font-size:15px;letter-spacing:.04em}
+.post-hero .who small{color:var(--t4)}
+.article{padding:28px 32px 36px}
+@media (max-width:640px){.article{padding:20px 18px 28px}.prose{font-size:16px}.prose .anchor{display:none}}
+.toc{position:sticky;top:84px}
+.toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--edge)}
+.toc a{display:block;text-decoration:none;color:var(--t3);font-size:13.5px;line-height:1.4;padding:6px 0 6px 14px;margin-left:-1px;border-left:2px solid transparent;transition:all .2s}
+.toc a:hover{color:#fff}
+.toc a.on{color:var(--cyan);border-left-color:var(--cyan)}
+.toc .l3 a{padding-left:28px;font-size:12.5px}
+.progress{position:fixed;left:0;top:0;height:2px;z-index:30;background:linear-gradient(90deg,var(--cyan),var(--violet));box-shadow:0 0 10px var(--cyan);width:0}
+.post-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:28px;padding-top:20px;border-top:1px solid var(--edge)}
+.share{margin-left:auto;display:flex;gap:8px}
+.btn{font-family:var(--f-title);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:var(--t1);background:rgba(255,255,255,.04);border:1px solid var(--edge-strong);padding:9px 14px;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.prevnext{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.prevnext a{display:block;text-decoration:none;padding:16px 18px;background:var(--panel);border:1px solid var(--edge);clip-path:var(--cut-sm);transition:border-color .2s}
+.prevnext a:hover{border-color:var(--cyan)}
+.prevnext small{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--t4)}
+.prevnext b{display:block;margin-top:4px;color:#fff;font-family:var(--f-title);font-size:16px}
+.prevnext .next{text-align:right;grid-column:2}
+@media (max-width:640px){.prevnext{grid-template-columns:1fr}.prevnext .next{grid-column:1}}
+.draft-banner{background:repeating-linear-gradient(-45deg,rgba(255,216,107,.12) 0 12px,transparent 12px 24px);border:1px solid rgba(255,216,107,.5);color:var(--gold);font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:10px 14px;margin-top:20px}
+/* Pied de page */
+.footer{border-top:1px solid var(--edge);background:rgba(3,4,10,.7);padding:36px 0 44px;margin-top:24px}
+.footer .wrap{display:flex;flex-wrap:wrap;gap:20px 40px;align-items:flex-start;justify-content:space-between}
+.footer p{margin:6px 0 0;font-size:13px;color:var(--t4);max-width:420px}
+.footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+.footer nav a{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--t3)}
+.footer nav a:hover{color:var(--cyan)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;transition:all .3s;z-index:50;background:var(--panel-solid);border:1px solid var(--cyan);color:#fff;font-family:var(--f-mono);font-size:13px;padding:10px 16px;box-shadow:0 0 30px rgba(75,232,255,.3)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.reveal{animation:rise .6s ease-out both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.grid .card:nth-child(2){animation-delay:.06s}.grid .card:nth-child(3){animation-delay:.12s}.grid .card:nth-child(4){animation-delay:.18s}.grid .card:nth-child(5){animation-delay:.24s}.grid .card:nth-child(6){animation-delay:.3s}
+${PROSE_CSS}
+`;
+var BLOG_JS = `
+(function(){
+  var toast=document.createElement("div");toast.className="toast";document.body.appendChild(toast);
+  function say(t){toast.textContent=t;toast.classList.add("show");clearTimeout(say.t);say.t=setTimeout(function(){toast.classList.remove("show")},1800)}
+  function copy(t,msg){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){say(msg)},function(){say("Copie impossible")})}
+  document.addEventListener("click",function(e){
+    var b=e.target.closest&&e.target.closest(".code-copy");
+    if(b){var pre=b.parentNode.querySelector("pre");copy(pre?pre.innerText:"","Code copi\xE9");return}
+    var s=e.target.closest&&e.target.closest("[data-copy]");
+    if(s){e.preventDefault();copy(s.getAttribute("data-copy"),"Lien copi\xE9");return}
+    var r=e.target.closest&&e.target.closest(".api-run");
+    if(r){
+      var card=r.closest(".api-card"),out=card.querySelector(".api-out"),st=card.querySelector(".api-status"),path=card.getAttribute("data-path"),t0=Date.now();
+      r.disabled=true;st.className="api-status";st.textContent="Appel en cours\u2026";
+      fetch(path,{headers:{accept:"application/json"}}).then(function(res){return res.text().then(function(txt){return {res:res,txt:txt}})}).then(function(x){
+        var body=x.txt;try{body=JSON.stringify(JSON.parse(x.txt),null,2)}catch(_){}
+        if(body.length>6000)body=body.slice(0,6000)+"\\n\u2026 (tronqu\xE9)";
+        out.hidden=false;out.querySelector("code").textContent=body;
+        st.className="api-status "+(x.res.ok?"ok":"err");st.textContent=x.res.status+" "+(x.res.statusText||"")+" \xB7 "+(Date.now()-t0)+" ms";
+      }).catch(function(err){st.className="api-status err";st.textContent="Erreur : "+err.message}).then(function(){r.disabled=false});
+    }
+  });
+  var bar=document.querySelector(".progress"),art=document.querySelector(".article");
+  var links=[].slice.call(document.querySelectorAll(".toc a")),heads=links.map(function(a){return document.getElementById(a.getAttribute("href").slice(1))});
+  function onScroll(){
+    if(bar&&art){var r=art.getBoundingClientRect(),h=r.height-innerHeight;bar.style.width=Math.max(0,Math.min(1,-r.top/Math.max(1,h)))*100+"%"}
+    if(heads.length){var cur=0;heads.forEach(function(h,i){if(h&&h.getBoundingClientRect().top<120)cur=i});links.forEach(function(a,i){a.classList.toggle("on",i===cur)})}
+  }
+  addEventListener("scroll",onScroll,{passive:true});onScroll();
+})();
+`;
+
+// src/game/emojis.ts
+var EMOJIS_KEY = "emojis";
+var EMOJI_CODE_RE = /^[a-z0-9_]{2,24}$/;
+var MAX_CUSTOM_EMOJIS = 60;
+var e2 = (code, label3) => ({ code, url: `/assets/emojis/${code}.webp`, label: label3 });
+var GAME_EMOJI_GROUPS = [
+  {
+    label: "Factions",
+    emojis: [
+      e2("varan", "Capitaine Orsk Varan"),
+      e2("silencieux", "Le Silencieux"),
+      e2("gravhorn", "Oggrath le Pisteur"),
+      e2("unite_ambre", "L'Unit\xE9 Ambre"),
+      e2("inquisiteur", "Haut-Juge S\xE9raphin Vol"),
+      e2("automate", "Automate de l'Aube Blanche"),
+      e2("vashti", "Madame Vashti Kor"),
+      e2("ysgrim", "Ysgrim Crocs-de-Fer"),
+      e2("chaperon", "Le Chaperon"),
+      e2("archonte", "L'Archonte Vesper"),
+      e2("leviathan", "Le L\xE9viathan")
+    ]
+  },
+  {
+    label: "Empire",
+    emojis: [
+      e2("ferraille", "Ferraille"),
+      e2("energie", "\xC9nergie"),
+      e2("nano", "Nanocomposants"),
+      e2("donnees", "Donn\xE9es anciennes"),
+      e2("fragment_ia", "Fragment d'IA"),
+      e2("ambre", "Ambre de Ruche"),
+      e2("butin", "Butin"),
+      e2("xp", "Exp\xE9rience")
+    ]
+  },
+  {
+    label: "Combat et gloire",
+    emojis: [
+      e2("attaque", "Attaque"),
+      e2("bouclier", "Bouclier"),
+      e2("flotte", "Flotte"),
+      e2("espion", "Espionnage"),
+      e2("menace", "Menace"),
+      e2("alliance", "Alliance"),
+      e2("chasseur", "Chasseur"),
+      e2("etoile_noire", "\xC9toile Noire"),
+      e2("trophee", "Troph\xE9e"),
+      e2("challenger", "Challenger"),
+      e2("grand_maitre", "Grand ma\xEEtre"),
+      e2("legende", "L\xE9gendaire")
+    ]
+  },
+  {
+    label: "Mascottes",
+    emojis: [e2("dino_furets", "Le dino aux furets")]
+  }
+];
+var REACTIONS = [
+  ["varan_or", "Varan compte son or"],
+  ["silencieux_bras", "Le Silencieux attend"],
+  ["gravhorn_mefiant", "Gravhorn m\xE9fiant"],
+  ["ambre_ok", "L'Unit\xE9 Ambre approuve"],
+  ["juge_colere", "Le Haut-Juge s'indigne"],
+  ["vashti_bisou", "Vashti envoie un bisou"],
+  ["ysgrim_hurle", "Ysgrim hurle"],
+  ["archonte_chut", "L'Archonte : chut"]
+];
+GAME_EMOJI_GROUPS.splice(1, 0, {
+  label: "R\xE9actions des factions",
+  emojis: REACTIONS.flatMap(([code, label3]) => [1, 2, 3, 4].map((n) => e2(`${code}_${n}`, label3)))
+});
+var GAME_EMOJIS = GAME_EMOJI_GROUPS.flatMap((g) => g.emojis);
+function normalizeCustomEmojis(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  return raw.filter((e3) => !!e3 && typeof e3 === "object" && EMOJI_CODE_RE.test(String(e3.code)) && typeof e3.url === "string").filter((e3) => seen.has(e3.code) ? false : (seen.add(e3.code), true)).slice(0, MAX_CUSTOM_EMOJIS);
+}
+
+// src/game/blogWelcome.ts
+var BLOG_WELCOME = {
+  slug: "bienvenue-sur-le-devblog",
+  title: "Bienvenue sur le devblog",
+  excerpt: "Le journal de bord de l'\xE9quipe : annonces, mises \xE0 jour, coulisses du d\xE9veloppement et petites notes du staff.",
+  category: "annonces",
+  tags: ["devblog", "communaute"],
+  version: "5.8",
+  body: `Salut \xE0 toutes et \xE0 tous, commandants ! :varan:
+
+Cosmic Empires a d\xE9sormais son **journal de bord**. C'est ici que l'\xE9quipe publiera les annonces, le d\xE9tail de chaque mise \xE0 jour, les coulisses du d\xE9veloppement et quelques petites notes en passant.
+
+## Ce que vous trouverez ici
+
+| Cat\xE9gorie | Pour quoi faire |
+|:--|:--|
+| \u{1F4E3} Annonces | Nouvelles saisons, \xE9v\xE9nements, grands rendez-vous |
+| \u{1F6E0}\uFE0F Mises \xE0 jour | Le d\xE9tail de chaque version, avec les chiffres |
+| \u{1F4DD} Notes du staff | Conseils, coups de c\u0153ur, r\xE9ponses \xE0 vos questions |
+| \u{1F52D} Coulisses | Comment le jeu est fabriqu\xE9, outils et API |
+| \u2696\uFE0F \xC9quilibrage | Les raisons derri\xE8re chaque changement de chiffres |
+| \u{1F389} \xC9v\xE9nements | Week-ends, boss de saison, d\xE9fis |
+
+> [!TIP] Suivre le blog
+> Le flux RSS est en bas de chaque page. Il se branche sur Discord, sur un lecteur de flux ou sur votre application pr\xE9f\xE9r\xE9e.
+
+## Un blog qui parle le langage du jeu
+
+Les articles s'\xE9crivent en markdown, avec quelques extras :
+
+- les **emojis du jeu** : :gravhorn: :silencieux: :ysgrim: ;
+- des encadr\xE9s pour les notes, les avertissements et les extraits des archives ;
+- des tableaux, des galeries d'images et des blocs repliables ;
+- [x] des listes de t\xE2ches pour suivre les chantiers ;
+- [ ] et bien d'autres choses \xE0 venir.
+
+> [!LORE] Extrait des archives du Ch\u0153ur
+> \xAB Les empires ne tombent pas au combat. Ils tombent quand plus personne ne raconte leur histoire. \xBB
+
+### Des routes de l'API, en direct
+
+Pour les curieux et les cr\xE9ateurs d'outils, certains articles pr\xE9senteront l'API du jeu. Les routes publiques peuvent \xEAtre test\xE9es directement depuis la page :
+
+\`\`\`api
+GET /api/cosmic/blog/posts?limite=3
+Les trois derniers articles du devblog, en JSON. Parfait pour un bot Discord.
+\`\`\`
+
+\`\`\`api
+GET /api/health
+L'\xE9tat du serveur du jeu.
+\`\`\`
+
+Les routes r\xE9serv\xE9es aux joueurs connect\xE9s sont pr\xE9sent\xE9es sans bouton d'essai :
+
+\`\`\`api
+POST /api/cosmic/action
+auth: player
+Toutes les actions de jeu (construire, rechercher, \xE9changer\u2026) passent par cette route, v\xE9rifi\xE9es par le serveur.
+body:
+{ "type": "trade", "sellId": "scrap", "buyId": "energy", "amount": 1000 }
+\`\`\`
+
+Et les exemples de code sont color\xE9s :
+
+\`\`\`js
+const res = await fetch("/api/cosmic/blog/posts?categorie=mises-a-jour");
+const { posts } = await res.json();
+console.log(posts[0].title); // le dernier patch
+\`\`\`
+
+:::spoiler Un secret pour les plus curieux
+Le L\xE9viathan n'a pas dit son dernier mot. \u{1F419}
+:::
+
+## Et maintenant ?
+
+Le premier vrai article arrive bient\xF4t : le r\xE9capitulatif de tout ce qui a chang\xE9 depuis la 4.9. D'ici l\xE0, retournez d\xE9fendre vos colonies. On se retrouve dans le secteur ! :salute:
+
+\u2014 L'\xE9quipe Cosmic Empires`
+};
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {

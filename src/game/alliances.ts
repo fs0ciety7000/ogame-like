@@ -363,8 +363,18 @@ export function memberLevels(alliance: Pick<Alliance, "research" | "projects"> |
 }
 
 /** Valeur d'un versement (une rare vaut 100 communes), pour le classement des contributeurs. */
-function contributionValue(amounts: Partial<Record<ResourceId, number>>): number {
+export function contributionValue(amounts: Partial<Record<ResourceId, number>>): number {
   return Object.entries(amounts).reduce((a, [res, n]) => a + (n ?? 0) * (RESOURCE_LIST.find((r) => r.id === res)?.rarity === "rare" ? 100 : 1), 0);
+}
+
+/** v5.8 : avancement du financement d'un palier (0 à 1), en valeur : une
+ *  rare compte pour 100 communes, comme dans le classement des bâtisseurs.
+ *  Le total brut faisait peser les rares à 1 % du palier à peine. */
+export function allianceProjectProgress(cost: Partial<Record<ResourceId, number>>, funded: Partial<Record<ResourceId, number>>): number {
+  const capped: Partial<Record<ResourceId, number>> = {};
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) capped[res] = Math.min(n, funded[res] ?? 0);
+  const total = contributionValue(cost);
+  return total > 0 ? Math.min(1, contributionValue(capped) / total) : 0;
 }
 
 /** Financement d'un projet, depuis le trésor (fondateur, officiers) ou le

@@ -2296,6 +2296,52 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v5.8: devblog — only authors write, drafts and scheduled posts stay hidden, pages, RSS and JSON follow publication", async () => {
+    const base = PB_TEST_URL!.replace(/\/+$/, "");
+    const slug = `test-${suffix}`;
+    const created: string[] = [];
+    try {
+      // B n'est pas auteur : création refusée.
+      await loginPlayer(B.email, B.pw);
+      await expect(pb.collection("blog_posts").create({ slug: `${slug}-b`, title: "Intrus", category: "notes", status: "published", authorUid: bId, publishedAtMs: Date.now() })).rejects.toBeTruthy();
+      // A devient auteur (un administrateur l'ajoute).
+      await admin.collection("blog_authors").create({ id: aId, pseudo: A.pseudo, role: "Testeur" });
+      await loginPlayer(A.email, A.pw);
+      const draft = await pb.collection("blog_posts").create({ slug, title: "Article de test", body: "## Partie\n\nTexte :rocket:", category: "notes", tags: ["test"], status: "draft", authorUid: aId, authorPseudo: A.pseudo, updatedAtMs: Date.now() });
+      created.push(draft.id);
+      // Un auteur ne peut pas signer au nom d'un autre.
+      await expect(pb.collection("blog_posts").create({ slug: `${slug}-x`, title: "Faux", category: "notes", status: "draft", authorUid: bId })).rejects.toBeTruthy();
+      expect((await fetch(`${base}/blog/p/${slug}`)).status).toBe(404);
+      // B ne voit pas les brouillons.
+      await loginPlayer(B.email, B.pw);
+      expect((await pb.collection("blog_posts").getList(1, 50, { filter: `slug = "${slug}"` })).items).toHaveLength(0);
+      // Publication : page, accueil, RSS, JSON.
+      await loginPlayer(A.email, A.pw);
+      await pb.collection("blog_posts").update(draft.id, { status: "published", publishedAtMs: Date.now() - 1000 });
+      const page = await fetch(`${base}/blog/p/${slug}`);
+      expect(page.status).toBe(200);
+      const html = await page.text();
+      expect(html).toContain("Article de test");
+      expect(html).toContain('id="partie"');
+      expect(html).toContain("🚀");
+      expect(await (await fetch(`${base}/blog/`)).text()).toContain(`/blog/p/${slug}`);
+      expect(await (await fetch(`${base}/blog/rss.xml`)).text()).toContain(`/blog/p/${slug}`);
+      const json = await (await fetch(`${base}/api/cosmic/blog/posts?limite=50`)).json();
+      expect(json.posts.some((p: { slug: string }) => p.slug === slug)).toBe(true);
+      expect((await fetch(`${base}/blog/assets/blog.css`)).headers.get("content-type")).toContain("text/css");
+      // Programmé dans le futur : invisible.
+      await pb.collection("blog_posts").update(draft.id, { publishedAtMs: Date.now() + 3_600_000 });
+      expect((await fetch(`${base}/blog/p/${slug}`)).status).toBe(404);
+      // Sous-domaine : mêmes pages à la racine.
+      const host = await fetch(`${base}/c/notes`, { headers: { "X-Forwarded-Host": "devblog.fs0ciety.org" } });
+      expect([200, 404]).toContain(host.status);
+    } finally {
+      for (const id of created) await admin.collection("blog_posts").delete(id).catch(() => undefined);
+      await admin.collection("blog_authors").delete(aId).catch(() => undefined);
+      await loginPlayer(B.email, B.pw);
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

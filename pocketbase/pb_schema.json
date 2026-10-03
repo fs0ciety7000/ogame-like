@@ -2513,5 +2513,185 @@
       "CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)",
       "CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"
     ]
+  },
+  {
+    "id": "pbc_ce_blog_authors",
+    "name": "blog_authors",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "fields": [
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": true
+      },
+      {
+        "name": "role",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "bio",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "avatar",
+        "type": "file",
+        "required": false,
+        "maxSelect": 1,
+        "maxSize": 1048576,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg"
+        ],
+        "thumbs": [],
+        "protected": false
+      }
+    ],
+    "indexes": []
+  },
+  {
+    "id": "pbc_ce_blog_posts",
+    "name": "blog_posts",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))",
+    "viewRule": "status = \"published\" || (@request.auth.id != \"\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))",
+    "createRule": "(@request.auth.id != \"\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id",
+    "updateRule": "(@request.auth.id != \"\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))",
+    "deleteRule": "(@request.auth.id != \"\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))",
+    "fields": [
+      {
+        "name": "slug",
+        "type": "text",
+        "required": true,
+        "max": 80,
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "presentable": true
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "required": true,
+        "max": 140,
+        "presentable": false
+      },
+      {
+        "name": "excerpt",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "body",
+        "type": "text",
+        "required": false,
+        "max": 100000,
+        "presentable": false
+      },
+      {
+        "name": "category",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "tags",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": true,
+        "max": 20,
+        "pattern": "^(draft|published)$",
+        "presentable": false
+      },
+      {
+        "name": "publishedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "updatedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "pinned",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "version",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "authorUid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "authorPseudo",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "cover",
+        "type": "file",
+        "required": false,
+        "maxSelect": 1,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg",
+          "image/gif"
+        ],
+        "thumbs": [],
+        "protected": false
+      },
+      {
+        "name": "images",
+        "type": "file",
+        "required": false,
+        "maxSelect": 99,
+        "maxSize": 5242880,
+        "mimeTypes": [
+          "image/webp",
+          "image/png",
+          "image/jpeg",
+          "image/gif"
+        ],
+        "thumbs": [],
+        "protected": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)",
+      "CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"
+    ]
   }
 ]

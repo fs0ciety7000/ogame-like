@@ -171,3 +171,10 @@ export { getProductionRatesPerSecond } from "@/game/production";
 export { COMMON_RESOURCES } from "@/game/economy";
 export { isMarketMaker, MARKET_MAKER_ID, MARKET_MAKER_PSEUDO, marketMakerPlayer, planMakerOffers } from "@/game/marketMaker";
 export { ALLIANCE_SAGA_KEY, ALLIANCE_SAGA_RULES, generateAllianceSaga, readAllianceSaga, sagaMonthId, sagaOf, sagaPoints, sagaProgress, sagaStandings } from "@/game/allianceSaga";
+// v5.8 : devblog (pages rendues par PocketBase).
+export { blogPostFromRecord, publicPosts, shortHash, slugify, isPublic } from "@/game/blog";
+export { renderBlogList, renderBlogPost, renderBlogNotFound, renderBlogRss, renderBlogSitemap, renderBlogRobots } from "@/game/blogPages";
+export { BLOG_CSS, BLOG_JS } from "@/game/blogStyles";
+export { GAME_EMOJIS, normalizeCustomEmojis, EMOJIS_KEY } from "@/game/emojis";
+export { KESH_EMOJIS } from "@/game/bounties";
+export { BLOG_WELCOME } from "@/game/blogWelcome";
