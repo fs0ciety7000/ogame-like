@@ -23,6 +23,7 @@ import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
 import { ReferralCard } from "@/components/game/ReferralCard";
 import { RenameCard } from "@/components/game/RenameCard";
 import { AvatarCard } from "@/components/game/AvatarCard";
+import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -57,7 +58,7 @@ export function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." />
+      <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." right={<EmpireShareActions player={player} kind="profile" />} />
 
       <Card className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
         <RadialGauge value={progress.percent} size={96} strokeWidth={5}>

@@ -23,7 +23,7 @@ export interface VictoryCardInput {
 export const CARD_W = 1200;
 export const CARD_H = 630;
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -34,7 +34,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 }
 
 /** Dégradé CSS « linear-gradient(120deg, #a 0%, #b 50%, …) » → dégradé canvas. */
-function paintGradient(ctx: CanvasRenderingContext2D, css: string) {
+export function paintGradient(ctx: CanvasRenderingContext2D, css: string) {
   const stops = [...css.matchAll(/(#[0-9a-fA-F]{3,8})\s+(\d+)%/g)];
   const g = ctx.createLinearGradient(0, 0, CARD_W, CARD_H);
   if (stops.length === 0) {
@@ -45,7 +45,7 @@ function paintGradient(ctx: CanvasRenderingContext2D, css: string) {
   ctx.fillRect(0, 0, CARD_W, CARD_H);
 }
 
-function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+export function cover(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
   const r = Math.max(CARD_W / img.width, CARD_H / img.height);
   const w = img.width * r;
   const h = img.height * r;

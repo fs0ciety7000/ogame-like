@@ -8,6 +8,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 import { empireStats, ratio } from "@/game/empireStats";
 import { FLEET_MISSION_LABELS, type FleetMission } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
@@ -205,7 +206,7 @@ export function EmpireStatsPage() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="flex min-w-0 flex-col gap-5">
-        <PageHeader eyebrow="Empire" title="Statistiques" description="Tout ton empire en chiffres : planète mère et colonies, production, armée à quai et en vol, état-major, bonus, menaces et carrière." />
+        <PageHeader eyebrow="Empire" title="Statistiques" description="Tout ton empire en chiffres : planète mère et colonies, production, armée à quai et en vol, état-major, bonus, menaces et carrière." right={<EmpireShareActions player={player} stats={st} kind="empire" />} />
 
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <HeroTile label="Rang" display={o.rank} sub={`${n(o.xp)} XP · ${n(o.seasonXp)} cette saison`} icon={Crown} tone={GOLD} />
