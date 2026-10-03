@@ -7864,7 +7864,7 @@ function returnMessage(fleet, lootTotal) {
   }
 }
 function performLaunch(req) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const mission = (_a = req.mission) != null ? _a : "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -7932,11 +7932,15 @@ function performLaunch(req) {
       out.defenderNotifications = out.defenderNotifications.map((n) => __spreadProps(__spreadValues({}, n), { message: n.message.replace(/t'envoie [\d\s\u202f\u00a0.,]+ vaisseaux/, `t'envoie ${formatInt(fakeTotal)} vaisseaux`) }));
     }
   }
+  if (mission === "attack") out.fleet.power = attackPowerShown(out.attacker, (_o = capsules == null ? void 0 : capsules.fakeUnits) != null ? _o : out.fleet.units, req.formation);
   if (mission === "spy") grantCommanderXp(out.attacker, "spy", COMMANDER_XP.spyLaunched);
   if (mission === "spy") recordChronicle(out.attacker, "spy", now);
   const counter = { spy: "spies", patrol: "patrols", garrison: "garrisons" }[mission];
   if (counter) bumpStat(out.attacker, counter);
   return __spreadProps(__spreadValues({}, out), { capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications });
+}
+function attackPowerShown(attacker, units, formation) {
+  return Math.round(computeFleetPower(attacker.units, attacker.techLevels, units, ["attack"]) * formationEffects(formation).attackFactor * (1 + playerModifiers(attacker).attack));
 }
 function advanceTarget(target, now) {
   const copy = structuredClone(target);

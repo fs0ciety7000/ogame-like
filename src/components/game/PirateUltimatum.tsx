@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { activeUltimatum, type FactionDef } from "@/game/pirates";
+import { activeUltimatum, pirateState, raidPower, type FactionDef } from "@/game/pirates";
+import { ThreatGauge } from "@/components/game/ThreatGauge";
+import type { Fleet } from "@/game/fleets";
 import { RESOURCE_LIST } from "@/game/resources";
 import { answerPirateUltimatum, GameActionError } from "@/services/playerService";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
@@ -125,6 +127,10 @@ export function UltimatumDialog() {
               {fleetOnly ? " et vise ta flotte à quai (tes défenses ne combattent pas)" : ""}. Repoussé, le raid te rapporte une prime ; réussi, il emporte{" "}
               {Math.round(faction.raid.lootPct * 100)} % de tes ressources {faction.raid.lootKind === "rare" ? "rares" : "communes"}.
             </p>
+            <ThreatGauge
+              fleet={{ id: "ultimatum", mission: "pirate", factionId: faction.id, units: {}, targetUid: player.uid, power: raidPower(faction, player, pirateState(player, faction.id).notoriety) } as unknown as Fleet}
+              className="rounded-lg border border-white/10 bg-space-950/40 p-2"
+            />
             <div className="mt-1 flex flex-wrap gap-2">
               <Button variant="outline" className="flex-1" disabled={busy || !canPay} onClick={() => void answer("pay")}>
                 {canPay ? faction.ultimatum.payLabel : "Pas assez pour payer"}

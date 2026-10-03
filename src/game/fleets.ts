@@ -15,7 +15,9 @@ import { withMissingBuildings } from "@/game/buildings";
 import { checkDelivery } from "@/game/tradeContracts";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { describeGain, formatInt } from "@/game/format";
-import { fleetCargoCapacity } from "@/game/combat";
+import { computeFleetPower, fleetCargoCapacity } from "@/game/combat";
+import { formationEffects } from "@/game/formations";
+import { playerModifiers } from "@/game/modifiers";
 import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
@@ -470,11 +472,18 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
       out.defenderNotifications = out.defenderNotifications.map((n) => ({ ...n, message: n.message.replace(/t'envoie [\d\s\u202f\u00a0.,]+ vaisseaux/, `t'envoie ${formatInt(fakeTotal)} vaisseaux`) }));
     }
   }
+  // v5.1 : puissance d'attaque affichée au défenseur (sur la composition qu'il voit, leurre compris).
+  if (mission === "attack") out.fleet.power = attackPowerShown(out.attacker, capsules?.fakeUnits ?? out.fleet.units, req.formation);
   if (mission === "spy") grantCommanderXp(out.attacker, "spy", COMMANDER_XP.spyLaunched);
   if (mission === "spy") recordChronicle(out.attacker, "spy", now);
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
   return { ...out, capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+}
+
+/** Puissance d'attaque d'une flotte (bonus de l'attaquant et formation compris), pour l'alerte du défenseur. */
+export function attackPowerShown(attacker: PlayerState, units: Record<string, number>, formation?: string): number {
+  return Math.round(computeFleetPower(attacker.units, attacker.techLevels, units, ["attack"]) * formationEffects(formation).attackFactor * (1 + playerModifiers(attacker).attack));
 }
 
 /** Copie de la cible avec ses colonies rattrapées (colonisation arrivée). */

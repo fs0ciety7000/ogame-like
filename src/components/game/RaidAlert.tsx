@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Orbit, Wind, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { isHostile } from "@/components/game/FleetsPanel";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -78,6 +79,7 @@ export function RaidAlert() {
               </p>
               <p className="hud-title mt-3 font-mono text-6xl tabular-nums text-danger-glow drop-shadow-[0_0_18px_var(--color-danger-glow)]">{formatClock(left)}</p>
               {imminent.length > 1 && <p className="mt-1 text-xs text-slate-400">+ {imminent.length - 1} autre{imminent.length > 2 ? "s" : ""} flotte{imminent.length > 2 ? "s" : ""} dans les 5 minutes</p>}
+              <ThreatGauge fleet={next} className="mt-4" />
               <p className="mt-3 text-xs text-slate-400">Mets ta flotte à l'abri en patrouille, ou prépare tes défenses.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <Button variant="danger" onClick={() => setPatrol(true)}>
