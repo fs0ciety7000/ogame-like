@@ -142,7 +142,7 @@ img{max-width:100%}
 .tag:hover,.tag.on{color:#fff;border-color:var(--cyan);background:rgba(75,232,255,.08)}
 .side .cta{display:block;text-align:center;text-decoration:none}
 /* Cartes */
-.cat-ico{width:1.35em;height:1.35em;object-fit:contain;vertical-align:-.3em;filter:drop-shadow(0 0 6px currentColor)}
+.cat-ico{width:2em;height:2em;margin:-.4em 0;object-fit:contain;vertical-align:middle}
 .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;padding:4px 10px;border:1px solid currentColor;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
 .card{position:relative;display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--edge);clip-path:var(--cut);transition:transform .25s,border-color .25s,box-shadow .25s}

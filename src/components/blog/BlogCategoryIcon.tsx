@@ -3,7 +3,7 @@ import { blogCategory } from "@/game/blog";
 
 /** v5.8 : icône d'une catégorie du devblog (public/assets/blog/<id>.webp),
  *  l'emoji prend le relais tant que l'image n'existe pas. */
-export function BlogCategoryIcon({ category, className = "h-4 w-4" }: { category: string; className?: string }) {
+export function BlogCategoryIcon({ category, className = "-my-1 h-6 w-6" }: { category: string; className?: string }) {
   const c = blogCategory(category);
   const [broken, setBroken] = useState(false);
   if (broken) return <span aria-hidden>{c.emoji}</span>;
