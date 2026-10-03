@@ -1,3 +1,4 @@
+import { COMMANDER_XP } from "@/game/commanders";
 import { describe, expect, it } from "vitest";
 import {
   activeUltimatum,
@@ -148,9 +149,11 @@ describe("Factions hostiles", () => {
     expect(out.debris.scrap).toBeGreaterThan(0);
     expect(out.report.attackerUid).toBe("pirates");
 
-    p = veteran({ pirates: listed(["varan"], { notoriety: 2 }) });
+    p = veteran({ pirates: listed(["varan"], { notoriety: 2 }), commanders: { roster: { strategist: { xp: 0 } }, active: ["strategist"], movedAtMs: {}, dossiers: 0 } });
     const lost = resolvePirateRaid(varan, p, defaultQueues(), 50_000, [], NOW);
     expect(lost.combat.outcome).toBe("attacker_win");
+    // v5.6 : la Stratège en poste progresse aussi sur un raid perdu.
+    expect(lost.player.commanders?.roster.strategist?.xp).toBe(COMMANDER_XP.defenseLost);
     expect(lost.loot.scrap).toBeGreaterThan(0);
     expect(pirateState(lost.player, "varan")).toMatchObject({ notoriety: 1, raidsLost: 1 });
   });

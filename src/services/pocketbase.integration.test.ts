@@ -29,7 +29,9 @@ import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
-import { fetchMarketTrades } from "@/services/marketService";
+import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/services/marketService";
+import { priceBounds } from "@/game/market";
+import { readAllianceSaga, sagaMonthId, sagaOf } from "@/game/allianceSaga";
 import { fetchNpcOpponents } from "@/services/codexService";
 
 const suffix = Math.random().toString(36).slice(2, 7);
@@ -2249,6 +2251,48 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
         else if (now) await admin.collection("game_config").delete(now.id);
       }
+    }
+  });
+
+  it("v5.6: steward gains XP on both sides of a player market trade; alliance saga progress is live", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keepSaga = await cfg("alliance_saga");
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    let sagaAllianceId = "";
+    try {
+      const steward = { roster: { steward: { xp: 0 } }, active: ["steward"], movedAtMs: {} };
+      await admin.collection("players").update(aId, { commanders: steward, resources: RICH });
+      await admin.collection("players").update(bId, { commanders: steward, resources: RICH, allianceId: "" });
+
+      // Offre de A acceptée par B : l'Intendant de chacun progresse.
+      await loginPlayer(A.email, A.pw);
+      const offer = await createMarketOffer({ giveRes: "scrap", giveAmount: 1000, wantRes: "energy", wantAmount: priceBounds("scrap", 1000, "energy").min });
+      await loginPlayer(B.email, B.pw);
+      await acceptMarketOffer(offer.id);
+      expect((await snap(aId)).commanders.roster.steward.xp).toBe(5);
+      expect((await snap(bId)).commanders.roster.steward.xp).toBe(5);
+
+      // Saga : la progression de l'alliance suit l'activité du mois sans attendre le classement horaire.
+      sagaAllianceId = await al.createAlliance(bId, B.pseudo, "Saga Live", "sg" + suffix.slice(0, 2));
+      await admin.send("/api/cosmic/admin/alliance-saga", { method: "POST" });
+      const def = sagaOf(readAllianceSaga((await cfg("alliance_saga"))!.data), sagaMonthId(Date.now()))!;
+      const before = await pb.send("/api/cosmic/alliance/saga/live", { method: "GET" });
+      expect(before.allianceId).toBe(sagaAllianceId);
+      const b = await snap(bId);
+      const activity = { ...(b.seasonPass?.activity ?? {}) };
+      for (const o of def.objectives) activity[o.type] = (activity[o.type] ?? 0) + 3;
+      await admin.collection("players").update(bId, { seasonPass: { ...b.seasonPass, activity } });
+      const after = await pb.send("/api/cosmic/alliance/saga/live", { method: "GET" });
+      expect(after.progress).toEqual(before.progress.map((n: number) => n + 3));
+      expect(after.points).toBeGreaterThanOrEqual(before.points);
+    } finally {
+      if (sagaAllianceId) await al.leaveAlliance().catch(() => undefined);
+      await admin.collection("players").update(aId, { commanders: aBefore.commanders, resources: aBefore.resources });
+      await admin.collection("players").update(bId, { commanders: bBefore.commanders, resources: bBefore.resources, allianceId: bBefore.allianceId, seasonPass: bBefore.seasonPass });
+      const now = await cfg("alliance_saga");
+      if (keepSaga) await admin.collection("game_config").update(keepSaga.id, { data: keepSaga.data });
+      else if (now) await admin.collection("game_config").delete(now.id);
     }
   });
 

@@ -26,7 +26,7 @@ export const COMMANDERS: CommanderDef[] = [
     name: "Rhys Calder",
     title: "Amiral",
     portrait: "/assets/commanders/admiral.webp",
-    domain: "Combats gagnés en attaque, repaires, primes, Léviathan.",
+    domain: "Combats gagnés en attaque, repaires, primes, assauts sur les boss.",
     bonus: (l) => `+${l} % d'attaque de la flotte`,
   },
   {
@@ -34,7 +34,7 @@ export const COMMANDERS: CommanderDef[] = [
     name: "Ilsa Varga",
     title: "Stratège",
     portrait: "/assets/commanders/strategist.webp",
-    domain: "Attaques et raids repoussés.",
+    domain: "Attaques et raids repoussés (un peu aussi après une défense perdue).",
     bonus: (l) => `+${l} % de défense de la base`,
   },
   {
@@ -42,7 +42,7 @@ export const COMMANDERS: CommanderDef[] = [
     name: "Noor Halim",
     title: "Ingénieure",
     portrait: "/assets/commanders/engineer.webp",
-    domain: "Constructions et recherches terminées.",
+    domain: "Constructions (planète mère et colonies) et recherches terminées.",
     bonus: (l) => `−${l} % de temps de construction et de recherche`,
   },
   {
@@ -58,7 +58,7 @@ export const COMMANDERS: CommanderDef[] = [
     name: "Oswin Tarr",
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
-    domain: "Missions, contrats du jour, échanges au marché.",
+    domain: "Missions, contrats du jour, échanges au Comptoir et au marché.",
     bonus: (l) => `+${l} % de production, +${l * 2} % d'entrepôt`,
   },
 ];
@@ -97,6 +97,34 @@ export const COMMANDER_XP = {
   missionDone: 5,
   contractClaimed: 10,
   marketTrade: 5,
+};
+
+/** v5.6 : ce qui fait progresser chaque officier (affiché sur sa fiche). */
+export const COMMANDER_SOURCES: Record<CommanderId, { label: string; xp: number }[]> = {
+  admiral: [
+    { label: "Attaque gagnée", xp: COMMANDER_XP.attackWin },
+    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
+    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin },
+    { label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault },
+  ],
+  strategist: [
+    { label: "Attaque repoussée", xp: COMMANDER_XP.defenseWin },
+    { label: "Raid de faction repoussé", xp: COMMANDER_XP.raidRepelled },
+    { label: "Attaque ou raid subi et perdu", xp: COMMANDER_XP.defenseLost },
+  ],
+  engineer: [
+    { label: "Bâtiment terminé (planète mère ou colonie)", xp: COMMANDER_XP.buildingDone },
+    { label: "Recherche terminée", xp: COMMANDER_XP.researchDone },
+  ],
+  spy: [
+    { label: "Espionnage lancé", xp: COMMANDER_XP.spyLaunched },
+    { label: "Sondes ennemies repérées", xp: COMMANDER_XP.probesCaught },
+  ],
+  steward: [
+    { label: "Mission terminée", xp: COMMANDER_XP.missionDone },
+    { label: "Contrat du jour récupéré", xp: COMMANDER_XP.contractClaimed },
+    { label: "Échange au Comptoir ou au marché", xp: COMMANDER_XP.marketTrade },
+  ],
 };
 
 export interface CommanderState {

@@ -693,6 +693,8 @@ export function resolvePirateRaid(
       }
     }
     st.raidsLost += 1;
+    // v5.6 : comme une défense perdue contre un joueur, la Stratège apprend aussi de la défaite.
+    grantCommanderXp(player, "strategist", COMMANDER_XP.defenseLost);
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;

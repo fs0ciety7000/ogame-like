@@ -1,4 +1,5 @@
 import { recordChronicle } from "@/game/chronicles";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { GameActionError } from "@/game/errors";
 import { getTradeRate, RESOURCE_LIST } from "@/game/resources";
 import { bumpStat } from "@/game/stats";
@@ -136,6 +137,9 @@ export function acceptOffer(
   bumpStat(buyer, "marketVolume", offer.giveAmount);
   recordChronicle(buyer, "market", now);
   bumpStat(seller, "marketVolume", offer.wantAmount - tax);
+  // v5.6 : l'Intendant en poste progresse des deux côtés de l'échange.
+  grantCommanderXp(buyer, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(seller, "steward", COMMANDER_XP.marketTrade);
   return { tax, sameAlliance };
 }
 
@@ -182,6 +186,8 @@ export function fillBuyOrder(
   bumpStat(supplier, "marketVolume", qty);
   bumpStat(owner, "marketVolume", qty - tax);
   recordChronicle(supplier, "market", now);
+  grantCommanderXp(supplier, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(owner, "steward", COMMANDER_XP.marketTrade);
   return { qty, payment, tax, filled, done: filled >= order.wantAmount };
 }
 

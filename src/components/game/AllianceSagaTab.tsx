@@ -12,6 +12,22 @@ import { cn } from "@/lib/utils";
 
 export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
   const [state, setState] = useState<AllianceSagaState | null>(null);
+  // v5.6 : progression en direct de mon alliance (le classement complet est recalculé chaque heure).
+  const [live, setLive] = useState<{ monthId: string; allianceId: string; progress: number[]; points: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      pb
+        .send("/api/cosmic/alliance/saga/live", { method: "GET" })
+        .then((r) => alive && setLive(r))
+        .catch(() => undefined);
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
   useEffect(() => {
     let alive = true;
     pb.collection("game_config")
@@ -28,7 +44,9 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
   const saga = sagaOf(state, monthId);
   if (!saga) return <Card className="p-4 text-sm text-slate-400">La saga de ce mois s'écrit dans l'heure : reviens un peu plus tard.</Card>;
   const rows = state.standing?.monthId === monthId ? state.standing.rows : [];
-  const mine = rows.find((r) => r.allianceId === allianceId);
+  const ranked = rows.find((r) => r.allianceId === allianceId);
+  const fresh = live && live.monthId === monthId && live.allianceId === allianceId ? live : null;
+  const mine = fresh ? { ...(ranked ?? { rank: 0 }), progress: fresh.progress, points: fresh.points } : ranked;
   const top = rows.slice(0, 10);
 
   return (
@@ -72,7 +90,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
         <div className="flex items-center gap-2">
           <Crown className="h-4 w-4 text-gold-glow" />
           <h3 className="hud-title text-sm text-white">Classement de la saga</h3>
-          {state.standing && <span className="ml-auto text-[11px] text-slate-500">mis à jour chaque heure</span>}
+          {state.standing && <span className="ml-auto text-[11px] text-slate-500">classement mis à jour chaque heure · ta progression en direct</span>}
         </div>
         {top.length === 0 ? (
           <p className="text-sm text-slate-400">Pas encore de classement : il se calcule chaque heure.</p>
