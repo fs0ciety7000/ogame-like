@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -76,6 +76,8 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/bible" element={<BibleRedirect />} />
             <Route path="/formules" element={<PublicFormulasPage />} />
+            {/* v5.9 : page statique publique (vérification OAuth Google). */}
+            <Route path="/confidentialite" element={<StaticPageRedirect to="/confidentialite.html" />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/game" element={<AppShell />}>
@@ -140,4 +142,12 @@ export default function App() {
       />
     </TooltipProvider>
   );
+}
+
+/** Adresse sans extension d'une page statique de public/ : on recharge la vraie page. */
+function StaticPageRedirect({ to }: { to: string }) {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
 }
