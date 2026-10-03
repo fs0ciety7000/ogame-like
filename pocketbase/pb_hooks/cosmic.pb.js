@@ -413,6 +413,16 @@ routerAdd("POST", "/api/cosmic/admin/balance/snapshot", (e) => {
   return e.json(200, db.balanceHistoryTick(Date.now()));
 }, $apis.requireAuth("users", "_superusers"));
 
+// v5.5 : Courtier du Comptoir (marchand PNJ) : une passe par heure.
+cronAdd("cosmic_market_maker", "47 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).marketMakerTick(Date.now());
+    if (n > 0) console.log(`[cosmic] courtier : ${n} offre(s) publiée(s)`);
+  } catch (err) {
+    console.log(`[cosmic] courtier : ${err}`);
+  }
+});
+
 // v5.5 : photo quotidienne des indicateurs d'équilibrage (historique de 180 jours).
 cronAdd("cosmic_balance_history", "11 3 * * *", () => {
   try {

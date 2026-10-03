@@ -167,3 +167,6 @@ export { chapterDifficulty, generateChapter, monthsToGenerate, normalizeProcedur
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";
 export { defaultGameContent } from "@/game/content";
+export { getProductionRatesPerSecond } from "@/game/production";
+export { COMMON_RESOURCES } from "@/game/economy";
+export { isMarketMaker, MARKET_MAKER_ID, MARKET_MAKER_PSEUDO, marketMakerPlayer, planMakerOffers } from "@/game/marketMaker";

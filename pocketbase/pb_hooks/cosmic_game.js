@@ -59,6 +59,7 @@ __export(hooksEntry_exports, {
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
+  COMMON_RESOURCES: () => COMMON_RESOURCES2,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   DIPLOMACY_RULES: () => DIPLOMACY_RULES,
@@ -72,6 +73,8 @@ __export(hooksEntry_exports, {
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
+  MARKET_MAKER_ID: () => MARKET_MAKER_ID,
+  MARKET_MAKER_PSEUDO: () => MARKET_MAKER_PSEUDO,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
   PASS_POINTS: () => PASS_POINTS,
@@ -214,6 +217,7 @@ __export(hooksEntry_exports, {
   gazetteDue: () => gazetteDue,
   gazetteState: () => gazetteState,
   generateChapter: () => generateChapter,
+  getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
@@ -231,6 +235,7 @@ __export(hooksEntry_exports, {
   inVendetta: () => inVendetta,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
+  isMarketMaker: () => isMarketMaker,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
   leviathanRanking: () => leviathanRanking,
@@ -238,6 +243,7 @@ __export(hooksEntry_exports, {
   linkReferrer: () => linkReferrer,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
+  marketMakerPlayer: () => marketMakerPlayer,
   mergeDebris: () => mergeDebris,
   monthsToGenerate: () => monthsToGenerate,
   mythicFor: () => mythicFor,
@@ -270,6 +276,7 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
+  planMakerOffers: () => planMakerOffers,
   previousSeasonId: () => previousSeasonId,
   previousSummary: () => previousSummary,
   productionHours: () => productionHours,
@@ -7689,7 +7696,15 @@ var MARKET_RULES = {
   /** Durée de vie d'une offre (h) ; à l'expiration, le vendeur est remboursé. */
   offerHours: 48,
   /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
-  priceBand: 3
+  priceBand: 3,
+  /** v5.5 : Courtier du Comptoir (marchand PNJ), voir marketMaker.ts. */
+  makerEnabled: true,
+  /** Offres ouvertes des joueurs en dessous desquelles il intervient (par ressource et par sens). */
+  makerMinOffers: 2,
+  /** Écart au taux du comptoir (0,12 = vend 12 % plus cher, achète 12 % moins cher). */
+  makerSpread: 0.12,
+  /** Taille d'une offre : heures de production commune médiane des joueurs actifs. */
+  makerSizeHours: 2
 };
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var label = (res) => {
@@ -12454,6 +12469,50 @@ function proposeAchievementTiers(defs, players, now) {
       holders,
       reason: `${holders} joueur(s) ont atteint \xAB ${top.name} \xBB (${formatInt(top.threshold)}) : nouveau palier \xE0 ${formatInt(threshold)}.`
     });
+  }
+  return out;
+}
+
+// src/game/marketMaker.ts
+var MARKET_MAKER_ID = "market_maker";
+var MARKET_MAKER_PSEUDO = "Courtier du Comptoir";
+var MARKET_MAKER_RULES = {
+  /** Taille minimale (en équivalent ferraille). */
+  minSize: 5e3,
+  offerHours: 12
+};
+function marketMakerPlayer() {
+  return __spreadProps(__spreadValues({}, defaultPlayerState(MARKET_MAKER_ID, MARKET_MAKER_PSEUDO)), { createdAt: 0 });
+}
+function isMarketMaker(uid) {
+  return uid === MARKET_MAKER_ID;
+}
+function payWith(res) {
+  return res === "scrap" ? "energy" : "scrap";
+}
+function planMakerOffers(open, commonPerHour, now) {
+  if (!MARKET_RULES.makerEnabled) return [];
+  const live = open.filter((o) => o.status === "open");
+  const sizeScrap = Math.max(MARKET_MAKER_RULES.minSize, Math.round(commonPerHour * MARKET_RULES.makerSizeHours));
+  const band = Math.max(1, MARKET_RULES.priceBand);
+  const spread = Math.max(0, Math.min(MARKET_RULES.makerSpread, band - 1));
+  const out = [];
+  for (const r of RESOURCE_LIST) {
+    const res = r.id;
+    const pay2 = payWith(res);
+    const size = Math.max(1, Math.round(sizeScrap * getTradeRate("scrap", res)));
+    const reference = size * getTradeRate(res, pay2);
+    const sells = live.filter((o) => {
+      var _a;
+      return ((_a = o.kind) != null ? _a : "sell") === "sell" && o.giveRes === res;
+    });
+    if (sells.length < MARKET_RULES.makerMinOffers && !sells.some((o) => isMarketMaker(o.sellerId))) {
+      out.push({ kind: "sell", giveRes: res, giveAmount: size, wantRes: pay2, wantAmount: Math.ceil(reference * (1 + spread)), expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
+    }
+    const buys = live.filter((o) => o.kind === "buy" && o.wantRes === res);
+    if (buys.length < MARKET_RULES.makerMinOffers && !buys.some((o) => isMarketMaker(o.sellerId))) {
+      out.push({ kind: "buy", giveRes: pay2, giveAmount: Math.max(1, Math.floor(reference * (1 - spread))), wantRes: res, wantAmount: size, expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
+    }
   }
   return out;
 }

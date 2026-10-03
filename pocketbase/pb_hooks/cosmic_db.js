@@ -2641,7 +2641,9 @@ function marketAccept(e) {
     const offer = toPlain(rec);
     if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
     const buyer = loadFlushed(txApp, game, uid);
-    const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    // v5.5 : le Courtier du Comptoir n'a pas de fiche : contrepartie virtuelle, jamais enregistrée.
+    const maker = game.isMarketMaker(offer.sellerId);
+    const seller = maker ? { player: game.marketMakerPlayer(), notifications: [] } : loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
@@ -2654,9 +2656,9 @@ function marketAccept(e) {
         throw asHttpError(game, err);
       }
       savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
       notify(txApp, uid, buyer.notifications);
-      notify(txApp, offer.sellerId, seller.notifications.concat([
+      if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
         {
           kind: "gift",
           title: fill.done ? "Ordre d'achat complété" : "Ordre d'achat en partie rempli",
@@ -2684,9 +2686,9 @@ function marketAccept(e) {
       throw asHttpError(game, err);
     }
     savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
     notify(txApp, uid, buyer.notifications);
-    notify(txApp, offer.sellerId, seller.notifications.concat([
+    if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
       {
         kind: "gift",
         title: "Offre acceptée au marché",
@@ -2696,7 +2698,7 @@ function marketAccept(e) {
       },
     ]));
     // v4.2 : un marchand seigneur de guerre remercie (une fois par jour).
-    if (seller.player.npc) {
+    if (!maker && seller.player.npc) {
       const lord = game.findWarlord(seller.player.npc);
       if (lord) {
         const st = readWarlordsState(txApp, game);
@@ -2734,6 +2736,51 @@ function marketCancel(e) {
     out = offerJson(rec);
   });
   return e.json(200, out);
+}
+
+/** v5.5 : le Courtier du Comptoir publie là où le marché est presque vide (tâche horaire). */
+function marketMakerTick(now) {
+  const game = loadGame();
+  let created = 0;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const open = txApp.findRecordsByFilter("market_offers", 'status = "open"', "", 2000, 0).map((r) => toPlain(r));
+    const since = now - 14 * 24 * 3600 * 1000;
+    const perHour = txApp
+      .findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: since })
+      .map((r) => {
+        const p = toPlain(r);
+        const rates = game.getProductionRatesPerSecond(p.buildings || {}, p.techLevels || {});
+        return (game.COMMON_RESOURCES.reduce((a, res) => a + (rates[res] || 0), 0) / game.COMMON_RESOURCES.length) * 3600;
+      })
+      .sort((a, b) => a - b);
+    const median = perHour.length ? perHour[Math.floor(perHour.length / 2)] : 0;
+    const col = txApp.findCollectionByNameOrId("market_offers");
+    game.planMakerOffers(open, median, now).forEach((o) => {
+      const rec = new Record(col);
+      rec.load({
+        sellerId: game.MARKET_MAKER_ID,
+        sellerPseudo: game.MARKET_MAKER_PSEUDO,
+        sellerAllianceId: "",
+        giveRes: o.giveRes,
+        giveAmount: o.giveAmount,
+        wantRes: o.wantRes,
+        wantAmount: o.wantAmount,
+        status: "open",
+        createdAtMs: now,
+        expiresAtMs: o.expiresAtMs,
+        buyerId: "",
+        buyerPseudo: "",
+        filledAtMs: 0,
+        tax: 0,
+        kind: o.kind,
+        filled: 0,
+      });
+      txApp.save(rec);
+      created++;
+    });
+  });
+  return created;
 }
 
 /** Offres expirées : marchandise rendue au vendeur (tâche planifiée). */
@@ -5740,4 +5787,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
