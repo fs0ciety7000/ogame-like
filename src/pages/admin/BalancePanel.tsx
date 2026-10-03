@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag } from "@/components/ui/hud";
 import { adminBalance } from "@/services/adminService";
+import { BalanceHistory } from "@/pages/admin/BalanceHistory";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
 import { commonPerHour, empireProfile, extractorCurve, missionTable, techProfile, unitMetrics, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { findUnit } from "@/game/units";
@@ -187,6 +188,12 @@ export function BalancePanel() {
       <Section title="Propositions">
         {proposals.length === 0 ? <p className="text-sm text-mint-glow">Aucun déséquilibre détecté.</p> : proposals.map((p) => <ProposalCard key={p.id} p={p} />)}
       </Section>
+
+      {live && (
+        <Section title="Historique quotidien">
+          <BalanceHistory history={live.history ?? []} onSnapshot={() => void load()} />
+        </Section>
+      )}
 
       <Section title="Unités — niveau max, technologies au maximum" aside={<span className="text-[11px] text-slate-500">Clique une ligne pour l'essayer dans le bac à sable</span>}>
         <div className="overflow-x-auto">

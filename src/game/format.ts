@@ -30,3 +30,12 @@ export function describeGain(gain: Partial<Record<string, number>>): string {
     .map(([k, v]) => `${formatInt(v ?? 0)} ${names[k] ?? k}`);
   return parts.length ? parts.join(", ") : "rien";
 }
+
+/** 1 234 567 → « 1,2 M » (même rendu que formatCompact, sans Intl). */
+export function formatShort(value: number): string {
+  const n = Number(value) || 0;
+  const abs = Math.abs(n);
+  const units: [number, string][] = [[1e12, " Bn"], [1e9, " Md"], [1e6, " M"], [1e3, " k"]];
+  for (const [size, suffix] of units) if (abs >= size) return `${formatDecimal(n / size, 1)}${suffix}`;
+  return formatDecimal(n, 1);
+}

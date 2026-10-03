@@ -3,7 +3,7 @@ import { getRepairPercent } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { computeCombatXp } from "@/game/pvp";
-import { lairPower, raidPower, type FactionDef } from "@/game/pirates";
+import { lairPower, pirateState, raidPower, type FactionDef } from "@/game/pirates";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { formationEffects, postureEffects } from "@/game/formations";
 import type { Buildings, PlayerState, ResourceId, SpyReport, TechLevels, Units } from "@/types/game";
@@ -171,7 +171,7 @@ export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety
     attackerTechLevels: {},
     attackerRepairPct: 0,
     fleet: {},
-    attackerPowerOverride: raidPower(faction, player, notoriety),
+    attackerPowerOverride: raidPower(faction, player, notoriety, pirateState(player, faction.id).adapt),
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: getRepairPercent(player.buildings),

@@ -2641,7 +2641,9 @@ function marketAccept(e) {
     const offer = toPlain(rec);
     if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
     const buyer = loadFlushed(txApp, game, uid);
-    const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    // v5.5 : le Courtier du Comptoir n'a pas de fiche : contrepartie virtuelle, jamais enregistrée.
+    const maker = game.isMarketMaker(offer.sellerId);
+    const seller = maker ? { player: game.marketMakerPlayer(), notifications: [] } : loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
@@ -2654,9 +2656,9 @@ function marketAccept(e) {
         throw asHttpError(game, err);
       }
       savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
       notify(txApp, uid, buyer.notifications);
-      notify(txApp, offer.sellerId, seller.notifications.concat([
+      if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
         {
           kind: "gift",
           title: fill.done ? "Ordre d'achat complété" : "Ordre d'achat en partie rempli",
@@ -2684,9 +2686,9 @@ function marketAccept(e) {
       throw asHttpError(game, err);
     }
     savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
     notify(txApp, uid, buyer.notifications);
-    notify(txApp, offer.sellerId, seller.notifications.concat([
+    if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
       {
         kind: "gift",
         title: "Offre acceptée au marché",
@@ -2696,7 +2698,7 @@ function marketAccept(e) {
       },
     ]));
     // v4.2 : un marchand seigneur de guerre remercie (une fois par jour).
-    if (seller.player.npc) {
+    if (!maker && seller.player.npc) {
       const lord = game.findWarlord(seller.player.npc);
       if (lord) {
         const st = readWarlordsState(txApp, game);
@@ -2734,6 +2736,51 @@ function marketCancel(e) {
     out = offerJson(rec);
   });
   return e.json(200, out);
+}
+
+/** v5.5 : le Courtier du Comptoir publie là où le marché est presque vide (tâche horaire). */
+function marketMakerTick(now) {
+  const game = loadGame();
+  let created = 0;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const open = txApp.findRecordsByFilter("market_offers", 'status = "open"', "", 2000, 0).map((r) => toPlain(r));
+    const since = now - 14 * 24 * 3600 * 1000;
+    const perHour = txApp
+      .findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: since })
+      .map((r) => {
+        const p = toPlain(r);
+        const rates = game.getProductionRatesPerSecond(p.buildings || {}, p.techLevels || {});
+        return (game.COMMON_RESOURCES.reduce((a, res) => a + (rates[res] || 0), 0) / game.COMMON_RESOURCES.length) * 3600;
+      })
+      .sort((a, b) => a - b);
+    const median = perHour.length ? perHour[Math.floor(perHour.length / 2)] : 0;
+    const col = txApp.findCollectionByNameOrId("market_offers");
+    game.planMakerOffers(open, median, now).forEach((o) => {
+      const rec = new Record(col);
+      rec.load({
+        sellerId: game.MARKET_MAKER_ID,
+        sellerPseudo: game.MARKET_MAKER_PSEUDO,
+        sellerAllianceId: "",
+        giveRes: o.giveRes,
+        giveAmount: o.giveAmount,
+        wantRes: o.wantRes,
+        wantAmount: o.wantAmount,
+        status: "open",
+        createdAtMs: now,
+        expiresAtMs: o.expiresAtMs,
+        buyerId: "",
+        buyerPseudo: "",
+        filledAtMs: 0,
+        tax: 0,
+        kind: o.kind,
+        filled: 0,
+      });
+      txApp.save(rec);
+      created++;
+    });
+  });
+  return created;
 }
 
 /** Offres expirées : marchandise rendue au vendeur (tâche planifiée). */
@@ -3918,6 +3965,13 @@ const CONTENT_MIGRATIONS = [
       { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
     ],
   },
+  // v5.5 : la techno « Extension des hangars » (tech26) ajoutée aux technologies personnalisées.
+  {
+    id: "hangar-tech-5.5",
+    key: "technologies",
+    patches: [],
+    appendFromDefaults: ["tech26"],
+  },
 ];
 
 function canonJson(v) {
@@ -3948,6 +4002,15 @@ function runContentMigrations(app) {
       const items = rec ? toPlain(rec).data : null;
       if (Array.isArray(items)) {
         let touched = false;
+        (m.appendFromDefaults || []).forEach((id) => {
+          if (items.some((x) => x && x.id === id)) return;
+          const def = loadGame().defaultGameContent()[m.key].find((x) => x.id === id);
+          if (def) {
+            items.push(def);
+            touched = true;
+            changes.push(`${m.id} : ${id} ajouté`);
+          }
+        });
         m.patches.forEach((p) => {
           const item = items.find((x) => x && x.id === p.id);
           if (item && canonJson(item[p.field]) === canonJson(p.from)) {
@@ -3972,6 +4035,184 @@ function runContentMigrations(app) {
     txApp.save(marker);
   });
   return changes;
+}
+
+/* ---------- v5.4 / v5.5 : équilibrage (données réelles, historique) ---------- */
+
+function readBalanceHistory(txApp, game) {
+  const rec = configRecord(txApp, game.BALANCE_HISTORY_KEY);
+  const data = rec ? toPlain(rec).data : null;
+  return data && Array.isArray(data.days) ? data.days : [];
+}
+
+/** Données réelles de l'outil d'équilibrage (30 jours de combats), avec l'historique si demandé. */
+function liveBalance(now, withHistory) {
+  const game = loadGame();
+  applyContent($app, game);
+  const plain = (r) => Object.assign(toPlain(r), { uid: r.id });
+  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map(plain);
+  const warlords = $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).map(plain);
+  const reports = $app
+    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
+    .map((r) => ({ attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") }));
+  const live = game.computeLiveBalance(players, warlords, reports, now, 30);
+  if (withHistory) live.history = readBalanceHistory($app, game);
+  return { game, live, reports };
+}
+
+/** Tâche quotidienne : ajoute la photo du jour à l'historique. */
+function balanceHistoryTick(now) {
+  const out = liveBalance(now, false);
+  const game = out.game;
+  const snap = game.balanceSnapshot(out.live, out.reports, now);
+  $app.runInTransaction((txApp) => {
+    const days = game.pushSnapshot(readBalanceHistory(txApp, game), snap);
+    writeConfig(txApp, game.BALANCE_HISTORY_KEY, { days });
+  });
+  return snap;
+}
+
+/* ---------- v5.5 : saga d'alliance (générée chaque mois) ---------- */
+
+/** Tâche horaire : écrit la saga du mois si besoin, clôt et récompense le mois écoulé, met le classement à jour. */
+function allianceSagaTick(now) {
+  const game = loadGame();
+  const out = { generated: null, closed: null, alliances: 0 };
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.ALLIANCE_SAGA_KEY);
+    const state = game.readAllianceSaga(rec ? toPlain(rec).data : null);
+    const monthId = game.sagaMonthId(now);
+
+    // 1. Mois écoulé : le dernier classement enregistré fait foi.
+    const last = state.standing;
+    if (last && last.monthId !== monthId && state.closed.indexOf(last.monthId) < 0) {
+      const def = game.sagaOf(state, last.monthId);
+      last.rows.slice(0, game.ALLIANCE_SAGA_RULES.rewardHours.length).forEach((row) => {
+        const hours = game.ALLIANCE_SAGA_RULES.rewardHours[row.rank - 1];
+        const a = findOrNull(txApp, "alliances", row.allianceId);
+        if (!a || !hours || row.points <= 0) return;
+        const al = toPlain(a);
+        const treasury = al.treasury || {};
+        (al.members || []).filter((uid) => findOrNull(txApp, "players", uid)).forEach((uid) => {
+          const loaded = loadPlayer(txApp, game, uid);
+          const gain = game.productionHours(loaded.player, hours);
+          Object.keys(gain).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + Math.floor(gain[r] || 0)));
+          const title = row.rank === 1 && def ? def.winnerTitle : "";
+          if (title && !(loaded.player.titles || []).some((t) => t.label === title)) {
+            loaded.player.titles = (loaded.player.titles || []).concat([{ label: title, seasonId: `saga:${last.monthId}`, rank: 1 }]);
+            savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+          }
+          notify(txApp, uid, [
+            { kind: "alliance", title: "Saga d'alliance", message: `[${al.tag}] termine ${row.rank === 1 ? "1re" : `${row.rank}e`} de la saga « ${def ? def.title : last.monthId} » : ${hours} h de production des membres versées au trésor${title ? `, titre « ${title} »` : ""}.`, createdAtMs: now, read: false, link: "/game/alliance?onglet=saga" },
+          ]);
+        });
+        a.set("treasury", treasury);
+        txApp.save(a);
+      });
+      state.closed = state.closed.concat([last.monthId]).slice(-24);
+      out.closed = last.monthId;
+    }
+
+    // 2. Saga du mois.
+    const players = proceduralPlayers(txApp);
+    let def = game.sagaOf(state, monthId);
+    if (!def) {
+      const digest = game.worldDigest(players, now);
+      def = game.generateAllianceSaga(monthId, digest, game.chapterDifficulty(digest).value, now);
+      state.sagas = state.sagas.concat([def]).slice(-12);
+      out.generated = monthId;
+    }
+
+    // 3. Classement.
+    const byId = {};
+    players.forEach((p) => (byId[p.uid] = p));
+    const alliances = txApp.findAllRecords("alliances").map((r) => {
+      const al = toPlain(r);
+      return { id: r.id, name: al.name, tag: al.tag, members: (al.members || []).map((uid) => byId[uid]).filter((p) => !!p) };
+    });
+    state.standing = { monthId, rows: game.sagaStandings(def, alliances, now), updatedAtMs: now };
+    out.alliances = alliances.length;
+    writeConfig(txApp, game.ALLIANCE_SAGA_KEY, state);
+  });
+  return out;
+}
+
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
+  try {
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") || "admin" : "superuser",
+      action: String(action).slice(0, 20),
+      targetCollection: "players",
+      recordId: uid,
+      recordLabel: String(label || "").slice(0, 200),
+      changes,
+      reason: String(reason || "").slice(0, 300),
+      createdAtMs: Date.now(),
+    });
+    txApp.save(log);
+  } catch (err) {
+    console.log(`[cosmic] journal admin impossible : ${err}`);
+  }
+}
+
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources" };
+
+/**
+ * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
+ * testMode (on) · finishAll · officers · grant (resources, motif obligatoire).
+ */
+function adminPlayerAction(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const action = String(req.action || "");
+  const reason = String(req.reason || "").trim();
+  if (!PLAYER_ACTION_LABELS[action]) throw new BadRequestError("Action inconnue.");
+  if (action === "grant" && reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+  let summary = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid, "Joueur introuvable.");
+    const now = Date.now();
+    let player = loaded.player;
+    let queues = loaded.queues;
+    let notes = [];
+    const flush = () => {
+      const f = game.flushPlayer(player, queues, now);
+      player = f.player;
+      queues = f.queues;
+      notes = notes.concat(f.notifications);
+    };
+    if (action === "testMode") {
+      const on = req.on === true;
+      loaded.rec.set("testMode", on);
+      player.testMode = on;
+      if (on) flush();
+      summary = { testMode: on };
+    } else if (action === "finishAll") {
+      const report = game.finishAllTimers(queues, now);
+      const officers = game.clearOfficerCooldowns(player);
+      flush();
+      summary = Object.assign(report, { officers });
+    } else if (action === "officers") {
+      summary = { officers: game.clearOfficerCooldowns(player) };
+    } else {
+      flush();
+      const given = game.grantResources(player, req.resources);
+      if (Object.keys(given).length === 0) throw new BadRequestError("Aucune ressource à rendre.");
+      summary = { given };
+    }
+    savePlayer(txApp, game, loaded, player, queues);
+    if (notes.length > 0) notify(txApp, uid, notes);
+    writeAdminLog(txApp, e, `joueur : ${PLAYER_ACTION_LABELS[action]}`, uid, player.pseudo, summary, reason);
+  });
+  return e.json(200, summary);
 }
 
 /* ---------- v5.4 : générateur procédural (chapitres, passe, succès) ---------- */
@@ -5612,4 +5853,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

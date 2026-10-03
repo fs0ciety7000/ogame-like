@@ -128,7 +128,7 @@ export function UltimatumDialog() {
               {Math.round(faction.raid.lootPct * 100)} % de tes ressources {faction.raid.lootKind === "rare" ? "rares" : "communes"}.
             </p>
             <ThreatGauge
-              fleet={{ id: "ultimatum", mission: "pirate", factionId: faction.id, units: {}, targetUid: player.uid, power: raidPower(faction, player, pirateState(player, faction.id).notoriety) } as unknown as Fleet}
+              fleet={{ id: "ultimatum", mission: "pirate", factionId: faction.id, units: {}, targetUid: player.uid, power: raidPower(faction, player, pirateState(player, faction.id).notoriety, pirateState(player, faction.id).adapt) } as unknown as Fleet}
               className="rounded-lg border border-white/10 bg-space-950/40 p-2"
             />
             <div className="mt-1 flex flex-wrap gap-2">

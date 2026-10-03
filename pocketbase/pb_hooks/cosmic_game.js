@@ -49,15 +49,19 @@ __export(hooksEntry_exports, {
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
   ALLIANCE_DAILY_RULES: () => ALLIANCE_DAILY_RULES,
   ALLIANCE_RULES: () => ALLIANCE_RULES,
+  ALLIANCE_SAGA_KEY: () => ALLIANCE_SAGA_KEY,
+  ALLIANCE_SAGA_RULES: () => ALLIANCE_SAGA_RULES,
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
+  BALANCE_HISTORY_KEY: () => BALANCE_HISTORY_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
+  COMMON_RESOURCES: () => COMMON_RESOURCES2,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   DIPLOMACY_RULES: () => DIPLOMACY_RULES,
@@ -71,6 +75,8 @@ __export(hooksEntry_exports, {
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
+  MARKET_MAKER_ID: () => MARKET_MAKER_ID,
+  MARKET_MAKER_PSEUDO: () => MARKET_MAKER_PSEUDO,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
   PASS_POINTS: () => PASS_POINTS,
@@ -124,6 +130,7 @@ __export(hooksEntry_exports, {
   assertReportQuota: () => assertReportQuota,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  balanceSnapshot: () => balanceSnapshot,
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
   bossMonthOf: () => bossMonthOf,
@@ -149,6 +156,7 @@ __export(hooksEntry_exports, {
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   clearDecoy: () => clearDecoy,
+  clearOfficerCooldowns: () => clearOfficerCooldowns,
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
   coalitionRanking: () => coalitionRanking,
@@ -175,6 +183,7 @@ __export(hooksEntry_exports, {
   dailyTreasuryBonus: () => dailyTreasuryBonus,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
+  defaultGameContent: () => defaultGameContent,
   defaultQueues: () => defaultQueues,
   depositWarChest: () => depositWarChest,
   describeAmount: () => describeAmount,
@@ -201,6 +210,7 @@ __export(hooksEntry_exports, {
   fillBuyOrder: () => fillBuyOrder,
   findFaction: () => findFaction,
   findWarlord: () => findWarlord,
+  finishAllTimers: () => finishAllTimers,
   finishAllianceResearch: () => finishAllianceResearch,
   finishExpedition: () => finishExpedition,
   flushPlayer: () => flushPlayer,
@@ -208,7 +218,9 @@ __export(hooksEntry_exports, {
   foughtWarlords: () => foughtWarlords,
   gazetteDue: () => gazetteDue,
   gazetteState: () => gazetteState,
+  generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
+  getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
@@ -220,11 +232,13 @@ __export(hooksEntry_exports, {
   grantLeviathanReward: () => grantLeviathanReward,
   grantMythicRelic: () => grantMythicRelic,
   grantReferral: () => grantReferral,
+  grantResources: () => grantResources,
   grantSeasonBossReward: () => grantSeasonBossReward,
   growWarlord: () => growWarlord,
   inVendetta: () => inVendetta,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
+  isMarketMaker: () => isMarketMaker,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
   leviathanRanking: () => leviathanRanking,
@@ -232,6 +246,7 @@ __export(hooksEntry_exports, {
   linkReferrer: () => linkReferrer,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
+  marketMakerPlayer: () => marketMakerPlayer,
   mergeDebris: () => mergeDebris,
   monthsToGenerate: () => monthsToGenerate,
   mythicFor: () => mythicFor,
@@ -264,6 +279,7 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
+  planMakerOffers: () => planMakerOffers,
   previousSeasonId: () => previousSeasonId,
   previousSummary: () => previousSummary,
   productionHours: () => productionHours,
@@ -273,6 +289,8 @@ __export(hooksEntry_exports, {
   pseudoLogin: () => pseudoLogin,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
+  pushSnapshot: () => pushSnapshot,
+  readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
   readWarChest: () => readWarChest,
@@ -300,6 +318,9 @@ __export(hooksEntry_exports, {
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
   rollRelic: () => rollRelic,
+  sagaMonthId: () => sagaMonthId,
+  sagaOf: () => sagaOf,
+  sagaStandings: () => sagaStandings,
   sanitizeClientError: () => sanitizeClientError,
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
@@ -422,6 +443,8 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'\xE9nergie, prot\xE9ger les stocks : +1 point de stock \xE0 l'abri du pillage par niveau. D\xE9bloque le G\xE9n\xE9rateur de bouclier plan\xE9taire.", maxLevel: 10, baseCost: { energy: 3e5, nano: 2e5, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
   { id: "tech24", nom: "Propulsion \xE0 antimati\xE8re", desc: "D\xE9bloque le Croiseur Nova, puis l'am\xE9liore (+250 attaque et d\xE9fense par niveau). \u22122 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 4e5, energy: 4e5, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
   { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
+  // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
+  { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de d\xE9fense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 15e4, nano: 8e4, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
   { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
@@ -1697,7 +1720,7 @@ function assignCommanders(player, idsIn, now) {
   if (ids.length > commanderSlots(player)) throw new GameActionError(`${commanderSlots(player)} postes au plus.`);
   for (const id of ids) if (!st.roster[id]) throw new GameActionError("Cet officier n'est pas recrut\xE9.");
   const changed = [...ids.filter((id) => !st.active.includes(id)), ...st.active.filter((id) => !ids.includes(id))];
-  const cooldown = COMMANDER_RULES.swapCooldownHours * 36e5;
+  const cooldown = player.testMode ? 0 : COMMANDER_RULES.swapCooldownHours * 36e5;
   for (const id of changed) {
     const at = (_a = st.movedAtMs[id]) != null ? _a : 0;
     if (at && now - at < cooldown) {
@@ -2539,6 +2562,57 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
   return rates;
 }
 
+// src/game/adminTools.ts
+function finishAllTimers(queues, now) {
+  var _a, _b, _c, _d, _e;
+  const out = { buildings: 0, researches: 0, units: 0, missions: 0 };
+  for (const entry of Object.values((_a = queues.buildingUpgrades) != null ? _a : {})) {
+    if (entry && entry.endTime > now) {
+      entry.endTime = now;
+      out.buildings++;
+    }
+  }
+  for (const r of (_b = queues.activeResearches) != null ? _b : []) {
+    if (r.endTime > now) {
+      r.endTime = now;
+      out.researches++;
+    }
+  }
+  for (const category of ["attack", "defense"]) {
+    for (const e of (_d = (_c = queues.unitQueues) == null ? void 0 : _c[category]) != null ? _d : []) {
+      if (e.endTime === null || e.endTime > now) {
+        e.endTime = now;
+        out.units++;
+      }
+    }
+  }
+  for (const m of (_e = queues.activeMissions) != null ? _e : []) {
+    if (m.endTime > now) {
+      m.endTime = now;
+      out.missions++;
+    }
+  }
+  return out;
+}
+function clearOfficerCooldowns(player) {
+  const st = commandersState(player);
+  const n = Object.keys(st.movedAtMs).length;
+  player.commanders = __spreadProps(__spreadValues({}, st), { movedAtMs: {} });
+  return n;
+}
+function grantResources(player, input) {
+  var _a;
+  const raw = input && typeof input === "object" ? input : {};
+  const given = {};
+  for (const r of RESOURCE_LIST) {
+    const n = Math.floor(Number(raw[r.id]) || 0);
+    if (n <= 0) continue;
+    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + n;
+    given[r.id] = n;
+  }
+  return given;
+}
+
 // src/game/defaults.ts
 function defaultResources() {
   return {
@@ -2650,9 +2724,11 @@ function ascend(player, queues, now) {
 
 // src/game/bonuses.ts
 function playerBuildTimeFactor(player, now) {
+  if (player.testMode) return 0;
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 function playerResearchTimeFactor(player, now) {
+  if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
 
@@ -3524,7 +3600,15 @@ setFactions(structuredClone(DEFAULT_FACTIONS));
 function findFaction(id) {
   return FACTIONS.find((f) => f.id === id);
 }
-var PIRATE_RULES = { enabled: true };
+var PIRATE_RULES = {
+  enabled: true,
+  /** v5.5 : adaptation des raids à la réussite du joueur (par faction) : chaque raid
+   *  repoussé renforce le suivant, chaque défaite l'affaiblit. Équilibre vers 70 % repoussés. */
+  adaptUp: 0.04,
+  adaptDown: 0.1,
+  adaptMin: 0.9,
+  adaptMax: 1.5
+};
 var PIRATE_OWNER_UID = "pirates";
 function lairUid(factionId) {
   return `lair_${factionId}`;
@@ -3545,6 +3629,7 @@ function normalize(p, maxNotoriety = 8) {
     raidsLost: (_h = p == null ? void 0 : p.raidsLost) != null ? _h : 0,
     tributesPaid: (_i = p == null ? void 0 : p.tributesPaid) != null ? _i : 0,
     lairsTaken: (_j = p == null ? void 0 : p.lairsTaken) != null ? _j : 0,
+    adapt: Number.isFinite(p == null ? void 0 : p.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p.adapt)) : 1,
     mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null
   };
 }
@@ -3607,11 +3692,11 @@ function homeFleetPower(player) {
 function targetPower(faction, player) {
   return faction.raid.target === "fleet" ? homeFleetPower(player) : defensivePower(player);
 }
-function raidPower(faction, player, notoriety) {
+function raidPower(faction, player, notoriety, adapt = 1) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
   const pct5 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct5));
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct5 * adapt));
 }
 function exposedStock(player) {
   var _a, _b, _c;
@@ -3749,7 +3834,7 @@ function pirateTick(player, now, options = {}) {
   return out;
 }
 function launchRaid(player, faction, st, now, random) {
-  const power = raidPower(faction, player, st.notoriety);
+  const power = raidPower(faction, player, st.notoriety, st.adapt);
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -3829,6 +3914,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     }
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
+    st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
     notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
@@ -3840,6 +3926,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
     st.raidsWon += 1;
     st.repelled += 1;
+    st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
@@ -4734,6 +4821,7 @@ function flushState(playerIn, queuesIn, now) {
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
   notifications.push(...advanceColonies(player, now));
+  if (player.testMode) finishAllTimers(queues, now);
   const finishedAt = {};
   for (const buildingId of Object.keys(queues.buildingUpgrades)) {
     const entry = queues.buildingUpgrades[buildingId];
@@ -7615,7 +7703,15 @@ var MARKET_RULES = {
   /** Durée de vie d'une offre (h) ; à l'expiration, le vendeur est remboursé. */
   offerHours: 48,
   /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
-  priceBand: 3
+  priceBand: 3,
+  /** v5.5 : Courtier du Comptoir (marchand PNJ), voir marketMaker.ts. */
+  makerEnabled: true,
+  /** Offres ouvertes des joueurs en dessous desquelles il intervient (par ressource et par sens). */
+  makerMinOffers: 2,
+  /** Écart au taux du comptoir (0,12 = vend 12 % plus cher, achète 12 % moins cher). */
+  makerSpread: 0.12,
+  /** Taille d'une offre : heures de production commune médiane des joueurs actifs. */
+  makerSizeHours: 2
 };
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var label = (res) => {
@@ -8527,6 +8623,8 @@ var WARLORD_RULES = {
   minPower: 3e3,
   /** Croissance maximale par jour, en part de la puissance visée. */
   growthPerDay: 0.08,
+  /** v5.5 : jamais plus de ce multiple de la meilleure défense de joueur ; au-delà, l'armée fond (même rythme que la croissance). */
+  maxDefenseRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
   buildingFactor: { weak: 0.8, medium: 1, strong: 1.25 },
   buildingLevelEveryHours: 12,
@@ -8782,6 +8880,10 @@ function warlordReference(actives) {
       var _a;
       return (_a = p.seasonXp) != null ? _a : 0;
     })),
+    maxDefense: humans.length ? Math.max(0, ...humans.map((p) => {
+      var _a, _b;
+      return Math.round(homeDefensePower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}));
+    })) : 0,
     buildings
   };
 }
@@ -8799,8 +8901,11 @@ function tierFactor(d) {
   return lo + (hi - lo) * hash01(d.id);
 }
 function warlordTargetPower(d, ref, settings = config2.settings) {
+  var _a;
   const base = d.tier === "strong" ? ref.max : ref.median;
-  return Math.max(WARLORD_RULES.minPower, Math.round(base * tierFactor(d) * (settings.powerFactor || 1)));
+  const target = Math.round(base * tierFactor(d) * (settings.powerFactor || 1));
+  const cap = ((_a = ref.maxDefense) != null ? _a : 0) > 0 ? ref.maxDefense * WARLORD_RULES.maxDefenseRatio : Infinity;
+  return Math.max(WARLORD_RULES.minPower, Math.round(Math.min(target, cap)));
 }
 function warlordTargetXp(d, ref) {
   const base = d.tier === "strong" ? ref.maxXp : ref.medianXp;
@@ -8837,7 +8942,7 @@ function emptyRuntime() {
   return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0 };
 }
 function growWarlord(npc, d, ref, rt, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const out = __spreadValues({}, rt);
   const target = warlordTargetPower(d, ref);
   const desired = desiredArmy(d, target);
@@ -8848,11 +8953,18 @@ function growWarlord(npc, d, ref, rt, now) {
     const count2 = (_b = state.count) != null ? _b : 0;
     if (count2 < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count2 + Math.ceil(want * step)) };
   }
+  if (rt.seeded && empirePower(npc) > target * 1.1) {
+    for (const [id, state] of Object.entries(npc.units)) {
+      const want = (_c = desired[id]) != null ? _c : 0;
+      const count2 = (_d = state == null ? void 0 : state.count) != null ? _d : 0;
+      if (count2 > want) npc.units[id] = __spreadProps(__spreadValues({}, state), { count: Math.max(want, count2 - Math.ceil((count2 - want) * step)) });
+    }
+  }
   const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 36e5;
   if (buildStep) {
     for (const b of BUILDINGS) {
-      const want = Math.min(b.maxLevel, Math.round(((_c = ref.buildings[b.id]) != null ? _c : 0) * ((_d = WARLORD_RULES.buildingFactor[d.tier]) != null ? _d : 1)));
-      const cur = (_f = (_e = npc.buildings[b.id]) == null ? void 0 : _e.level) != null ? _f : 0;
+      const want = Math.min(b.maxLevel, Math.round(((_e = ref.buildings[b.id]) != null ? _e : 0) * ((_f = WARLORD_RULES.buildingFactor[d.tier]) != null ? _f : 1)));
+      const cur = (_h = (_g = npc.buildings[b.id]) == null ? void 0 : _g.level) != null ? _h : 0;
       if (want > cur) npc.buildings[b.id] = { level: rt.seeded ? cur + 1 : want, unlocked: true };
     }
     out.lastBuildingAtMs = now;
@@ -8860,16 +8972,16 @@ function growWarlord(npc, d, ref, rt, now) {
   const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
   const stock = productionHours(npc, stockHours);
   for (const res of COMMON_RESOURCES2) {
-    const want = (_g = stock[res]) != null ? _g : 0;
-    const cur = (_h = npc.resources[res]) != null ? _h : 0;
+    const want = (_i = stock[res]) != null ? _i : 0;
+    const cur = (_j = npc.resources[res]) != null ? _j : 0;
     if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
   }
   const xpTarget = warlordTargetXp(d, ref);
-  const xp = (_i = npc.xp) != null ? _i : 0;
+  const xp = (_k = npc.xp) != null ? _k : 0;
   const xpStep = Math.ceil(xpTarget * WARLORD_RULES.xpGrowthPerHour * hours2);
   npc.xp = xp < xpTarget ? rt.seeded ? Math.min(xpTarget, xp + xpStep) : xpTarget : xp;
   const seasonTarget = Math.round((ref.medianSeasonXp || 0) * tierFactor(d));
-  npc.seasonXp = Math.max((_j = npc.seasonXp) != null ? _j : 0, rt.seeded ? Math.min(seasonTarget, ((_k = npc.seasonXp) != null ? _k : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
+  npc.seasonXp = Math.max((_l = npc.seasonXp) != null ? _l : 0, rt.seeded ? Math.min(seasonTarget, ((_m = npc.seasonXp) != null ? _m : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;
@@ -11714,6 +11826,50 @@ function renamePlayer(player, raw, now) {
   return { pseudo, login: pseudoLogin(pseudo) };
 }
 
+// src/game/balance/history.ts
+var BALANCE_HISTORY_KEY = "balance_history";
+var BALANCE_HISTORY_DAYS = 180;
+var isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+function median3(xs) {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function balanceSnapshot(live, reports, now) {
+  var _a, _b;
+  const day = reports.filter((r) => r.timestamp >= now - 864e5 && r.timestamp <= now);
+  const pvp = day.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const wl = day.filter((r) => {
+    var _a2, _b2;
+    return ((_a2 = r.attackerUid) == null ? void 0 : _a2.startsWith("npc")) || ((_b2 = r.defenderUid) == null ? void 0 : _b2.startsWith("npc"));
+  });
+  const wins = (xs) => xs.filter((r) => r.outcome === "attacker_win").length;
+  const hangars = live.players.filter((p) => p.attackPlaces > 0).map((p) => p.attackPlacesUsed / p.attackPlaces);
+  return {
+    day: new Date(now).toISOString().slice(0, 10),
+    atMs: now,
+    activePlayers: live.activePlayers,
+    pvpBattles: pvp.length,
+    pvpAttackerWins: wins(pvp),
+    warlordBattles: wl.length,
+    warlordAttackerWins: wins(wl),
+    raidsWon: live.factions.reduce((a, f) => a + f.raidsWon, 0),
+    raidsLost: live.factions.reduce((a, f) => a + f.raidsLost, 0),
+    lairsTaken: live.factions.reduce((a, f) => a + f.lairsTaken, 0),
+    medianProduction: Math.round(median3(live.players.map((p) => p.productionPerHour))),
+    avgHangarAttack: hangars.length ? Math.round(hangars.reduce((a, b) => a + b, 0) / hangars.length * 1e3) / 1e3 : 0,
+    bestDefense: live.bestDefense,
+    bestAttack: live.bestAttack,
+    topWarlord: (_b = (_a = live.warlords[0]) == null ? void 0 : _a.power) != null ? _b : 0,
+    homeDefenseBonus: COMBAT_RULES.homeDefenseBonus
+  };
+}
+function pushSnapshot(history, snap) {
+  const list = (Array.isArray(history) ? history : []).filter((s) => s && s.day !== snap.day);
+  return [...list, snap].sort((a, b) => a.day < b.day ? -1 : 1).slice(-BALANCE_HISTORY_DAYS);
+}
+
 // src/game/balance/diagnostics.ts
 function places(units, ids) {
   return ids.reduce((a, id) => {
@@ -11761,8 +11917,8 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
   }).filter((u) => u.places > 0).sort((a, b) => b.places - a.places);
   const since = now - windowDays * 864e5;
   const recent = reports.filter((r) => r.timestamp >= since);
-  const isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-  const pvp = recent.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const isNpc2 = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+  const pvp = recent.filter((r) => !isNpc2(r.attackerUid) && !isNpc2(r.defenderUid));
   const wl = recent.filter((r) => {
     var _a, _b;
     return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
@@ -11837,7 +11993,7 @@ var ofFaction = (f) => /^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`;
 var ofName = (name) => /^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`;
 var clamp3 = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 var round2 = (x) => Math.round(x * 100) / 100;
-function median3(xs) {
+function median4(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -11876,7 +12032,7 @@ function worldDigest(players, now) {
       return (_b2 = (_a2 = s.activity) == null ? void 0 : _a2[k]) != null ? _b2 : 0;
     });
     totals[k] = counts.reduce((a, b) => a + b, 0);
-    weeklyMedian[k] = round2(median3(counts) / observedDays * 7);
+    weeklyMedian[k] = round2(median4(counts) / observedDays * 7);
     const best = counts.reduce((bi, c, i) => c > counts[bi] ? i : bi, 0);
     if (counts[best] > 0) heroes[k] = { pseudo: active[best].pseudo, count: counts[best] };
   }
@@ -11902,10 +12058,14 @@ function worldDigest(players, now) {
     totals,
     heroes,
     episodes,
-    passMedianTier: median3(tiers2),
+    passMedianTier: median4(tiers2),
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
-    chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0
+    chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    allianceSizeMedian: median4(Object.values(active.reduce((acc, p) => {
+      var _a2;
+      return p.allianceId ? __spreadProps(__spreadValues({}, acc), { [p.allianceId]: ((_a2 = acc[p.allianceId]) != null ? _a2 : 0) + 1 }) : acc;
+    }, {})))
   };
 }
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
@@ -12187,7 +12347,7 @@ function generateChapter(o) {
   var _a, _b, _c, _d, _e;
   const rng = seededRandom2(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
   const d = o.digest;
-  const recent = [...o.existing].sort((a, b) => a.id.localeCompare(b.id)).slice(-2);
+  const recent = [...o.existing].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(-2);
   const recentArch = recent.map((m) => {
     var _a2, _b2, _c2;
     return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
@@ -12322,6 +12482,131 @@ function proposeAchievementTiers(defs, players, now) {
     });
   }
   return out;
+}
+
+// src/game/marketMaker.ts
+var MARKET_MAKER_ID = "market_maker";
+var MARKET_MAKER_PSEUDO = "Courtier du Comptoir";
+var MARKET_MAKER_RULES = {
+  /** Taille minimale (en équivalent ferraille). */
+  minSize: 5e3,
+  offerHours: 12
+};
+function marketMakerPlayer() {
+  return __spreadProps(__spreadValues({}, defaultPlayerState(MARKET_MAKER_ID, MARKET_MAKER_PSEUDO)), { createdAt: 0 });
+}
+function isMarketMaker(uid) {
+  return uid === MARKET_MAKER_ID;
+}
+function payWith(res) {
+  return res === "scrap" ? "energy" : "scrap";
+}
+function planMakerOffers(open, commonPerHour, now) {
+  if (!MARKET_RULES.makerEnabled) return [];
+  const live = open.filter((o) => o.status === "open");
+  const sizeScrap = Math.max(MARKET_MAKER_RULES.minSize, Math.round(commonPerHour * MARKET_RULES.makerSizeHours));
+  const band = Math.max(1, MARKET_RULES.priceBand);
+  const spread = Math.max(0, Math.min(MARKET_RULES.makerSpread, band - 1));
+  const out = [];
+  for (const r of RESOURCE_LIST) {
+    const res = r.id;
+    const pay2 = payWith(res);
+    const size = Math.max(1, Math.round(sizeScrap * getTradeRate("scrap", res)));
+    const reference = size * getTradeRate(res, pay2);
+    const sells = live.filter((o) => {
+      var _a;
+      return ((_a = o.kind) != null ? _a : "sell") === "sell" && o.giveRes === res;
+    });
+    if (sells.length < MARKET_RULES.makerMinOffers && !sells.some((o) => isMarketMaker(o.sellerId))) {
+      out.push({ kind: "sell", giveRes: res, giveAmount: size, wantRes: pay2, wantAmount: Math.ceil(reference * (1 + spread)), expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
+    }
+    const buys = live.filter((o) => o.kind === "buy" && o.wantRes === res);
+    if (buys.length < MARKET_RULES.makerMinOffers && !buys.some((o) => isMarketMaker(o.sellerId))) {
+      out.push({ kind: "buy", giveRes: pay2, giveAmount: Math.max(1, Math.floor(reference * (1 - spread))), wantRes: res, wantAmount: size, expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
+    }
+  }
+  return out;
+}
+
+// src/game/allianceSaga.ts
+var ALLIANCE_SAGA_KEY = "alliance_saga";
+var ALLIANCE_SAGA_RULES = {
+  objectives: 3,
+  /** Points par objectif : 100 × progression, plafonnée à 2 (objectif dépassé). */
+  pointsPerObjective: 100,
+  overflowCap: 2,
+  /** Heures de production des membres versées au trésor, 1re à 3e. */
+  rewardHours: [24, 12, 6],
+  /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
+  weeks: 4,
+  share: 0.6
+};
+function readAllianceSaga(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    sagas: Array.isArray(r.sagas) ? r.sagas.slice(-12) : [],
+    standing: r.standing && Array.isArray(r.standing.rows) ? r.standing : null,
+    closed: Array.isArray(r.closed) ? r.closed.slice(-24) : []
+  };
+}
+function sagaOf(state, monthId) {
+  var _a;
+  return (_a = state.sagas.find((s) => s.monthId === monthId)) != null ? _a : null;
+}
+var SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande Coalition", "Les Banni\xE8res lev\xE9es", "Le Pacte des \xE9toiles", "La Marche commune"];
+var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alliance", "Fer de lance"];
+function generateAllianceSaga(monthId, digest, difficulty, now) {
+  var _a;
+  const rng = seededRandom2(`saga:${monthId}`);
+  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
+  const pool = [...ACTIVITY_KEYS].filter((k) => {
+    var _a2;
+    return k !== "warlordWin" || ((_a2 = digest.weeklyMedian.warlordWin) != null ? _a2 : 0) > 0;
+  });
+  const chosen = [];
+  while (chosen.length < ALLIANCE_SAGA_RULES.objectives && pool.length > 0) chosen.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  const size = Math.max(2, Math.round((_a = digest.allianceSizeMedian) != null ? _a : 3));
+  const objectives = chosen.map((type) => {
+    var _a2;
+    const weekly = Math.max((_a2 = digest.weeklyMedian[type]) != null ? _a2 : 0, BASE_COUNTS[type] / 2);
+    return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
+  });
+  const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
+  return {
+    monthId,
+    title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
+    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)(?=\s)|^L'/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
+    bossName,
+    image: arch.image,
+    accent: arch.accent,
+    objectives,
+    winnerTitle: `${SAGA_WINNERS[Math.floor(rng() * SAGA_WINNERS.length)]} (${seasonLabel(monthId).toLowerCase()})`,
+    generatedAtMs: now
+  };
+}
+function sagaProgress(def3, members, now) {
+  return def3.objectives.map((o) => members.reduce((a, m) => {
+    var _a, _b;
+    return a + ((_b = (_a = passState(m, now).activity) == null ? void 0 : _a[o.type]) != null ? _b : 0);
+  }, 0));
+}
+function sagaPoints(def3, progress) {
+  return def3.objectives.reduce((a, o, i) => {
+    var _a;
+    return a + Math.round(ALLIANCE_SAGA_RULES.pointsPerObjective * Math.min(ALLIANCE_SAGA_RULES.overflowCap, ((_a = progress[i]) != null ? _a : 0) / Math.max(1, o.count)));
+  }, 0);
+}
+function sagaStandings(def3, alliances, now) {
+  const rows = alliances.map((a) => {
+    const progress = sagaProgress(def3, a.members, now);
+    return { allianceId: a.id, name: a.name, tag: a.tag, members: a.members.length, progress, points: sagaPoints(def3, progress), rank: 0 };
+  });
+  rows.sort((x, y) => y.points - x.points || y.progress.reduce((a, b) => a + b, 0) - x.progress.reduce((a, b) => a + b, 0));
+  rows.forEach((r, i) => r.rank = i + 1);
+  return rows.filter((r) => r.points > 0 || r.members > 0);
+}
+function sagaMonthId(now) {
+  return chronicleMonthId(now);
 }
 
 // src/server/hooksEntry.ts

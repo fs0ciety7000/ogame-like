@@ -319,3 +319,25 @@ export function adminProceduralGenerate(monthId: string, variant: number, confir
 export function adminProceduralAchievements(): Promise<ProceduralResult> {
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
 }
+
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+export type AdminPlayerAction =
+  | { action: "testMode"; on: boolean }
+  | { action: "finishAll" }
+  | { action: "officers" }
+  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string };
+
+export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Promise<Record<string, unknown>> {
+  return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid, ...payload } });
+}
+
+/** v5.5 : photo d'équilibrage du jour, prise tout de suite. */
+export function adminBalanceSnapshot(): Promise<import("@/game/balance/history").BalanceSnapshot> {
+  return pb.send("/api/cosmic/admin/balance/snapshot", { method: "POST" });
+}
+
+/** v5.5 : saga d'alliance, recalcul immédiat. */
+export function adminAllianceSagaTick(): Promise<{ generated: string | null; closed: string | null; alliances: number }> {
+  return pb.send("/api/cosmic/admin/alliance-saga", { method: "POST" });
+}
