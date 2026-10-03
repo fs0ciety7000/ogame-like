@@ -897,6 +897,14 @@ onBootstrap((e) => {
    extérieures : chaque route est donc écrite en entier. Sous-domaine :
    COSMIC_BLOG_HOST (devblog.fs0ciety.org par défaut). */
 const COSMIC_BLOG_HOST = String($os.getenv("COSMIC_BLOG_HOST") || "devblog.fs0ciety.org").toLowerCase();
+// Le domaine du blog ne montre que le blog (ni panneau PocketBase, ni erreurs JSON).
+routerUse((e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  const hit = db.blogHostIntercept(e);
+  if (hit === "home") return e.redirect(302, "/");
+  if (hit) return db.blogRequest(e, hit);
+  return e.next();
+});
 routerAdd("GET", COSMIC_BLOG_HOST + "/{$}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "home"));
 routerAdd("GET", "/blog/{$}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "home"));
 routerAdd("GET", COSMIC_BLOG_HOST + "/c/{id}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "category"));
