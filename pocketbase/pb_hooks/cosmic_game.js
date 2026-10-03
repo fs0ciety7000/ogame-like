@@ -82,6 +82,7 @@ __export(hooksEntry_exports, {
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
+  SEASON_WAR_RULES: () => SEASON_WAR_RULES,
   SECTOR_COUNT: () => SECTOR_COUNT,
   STAFF_KEY: () => STAFF_KEY,
   TERRITORY_RULES: () => TERRITORY_RULES,
@@ -89,6 +90,7 @@ __export(hooksEntry_exports, {
   TUTORIAL_RAID: () => TUTORIAL_RAID,
   VACATION_RULES: () => VACATION_RULES,
   WARLORD_RULES: () => WARLORD_RULES,
+  WAR_CHEST_RULES: () => WAR_CHEST_RULES,
   WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
@@ -100,6 +102,7 @@ __export(hooksEntry_exports, {
   addPassPoints: () => addPassPoints,
   addRelic: () => addRelic,
   addReportComment: () => addReportComment,
+  addSeasonPower: () => addSeasonPower,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceNextDueMs: () => allianceNextDueMs,
@@ -127,6 +130,7 @@ __export(hooksEntry_exports, {
   buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
+  canDiplomacy: () => canDiplomacy,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
   challengeMetrics: () => challengeMetrics,
@@ -138,6 +142,7 @@ __export(hooksEntry_exports, {
   checkEliteLaunch: () => checkEliteLaunch,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
+  chestShieldCost: () => chestShieldCost,
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   clearDecoy: () => clearDecoy,
@@ -166,6 +171,7 @@ __export(hooksEntry_exports, {
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
   defaultQueues: () => defaultQueues,
+  depositWarChest: () => depositWarChest,
   describeAmount: () => describeAmount,
   describeAnomalies: () => describeAnomalies,
   describeElite: () => describeElite,
@@ -199,6 +205,7 @@ __export(hooksEntry_exports, {
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
+  grantChestShield: () => grantChestShield,
   grantCoalitionReward: () => grantCoalitionReward,
   grantCodexTitle: () => grantCodexTitle,
   grantCommanderXp: () => grantCommanderXp,
@@ -255,6 +262,7 @@ __export(hooksEntry_exports, {
   publishGazette: () => publishGazette,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
+  readWarChest: () => readWarChest,
   recallFleet: () => recallFleet,
   recordCoalitionDamage: () => recordCoalitionDamage,
   recordDecoy: () => recordDecoy,
@@ -284,8 +292,11 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   seasonBossWindow: () => seasonBossWindow,
+  seasonPowerOf: () => seasonPowerOf,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
+  seasonWarPoints: () => seasonWarPoints,
+  seasonWarStandings: () => seasonWarStandings,
   seasonXpFor: () => seasonXpFor,
   sectorOf: () => sectorOf,
   settleCoalition: () => settleCoalition,
@@ -6797,6 +6808,104 @@ function finishExpedition(player, fleet, now, random = Math.random) {
   };
 }
 
+// src/game/seasonWars.ts
+var SEASON_WAR_RULES = {
+  powerPerPoint: 1e4,
+  sectorPoints: 50,
+  /** Heures de production des membres versées au trésor, 1er à 3e. */
+  rewardHours: [48, 24, 12],
+  titles: ["Conqu\xE9rants de la saison", "Strat\xE8ges de la saison", "V\xE9t\xE9rans de la saison"]
+};
+var WAR_CHEST_RULES = {
+  depositPct: 0.1,
+  capDays: 30,
+  shieldHours: 2,
+  shieldCostHours: 4
+};
+function readWarChest(raw) {
+  var _a, _b;
+  const c = raw && typeof raw === "object" ? raw : {};
+  return { resources: __spreadValues({}, (_a = c.resources) != null ? _a : {}), cap: __spreadValues({}, (_b = c.cap) != null ? _b : {}) };
+}
+function depositWarChest(chest, treasuryBonus) {
+  var _a, _b;
+  const added = {};
+  for (const [res, n] of Object.entries(treasuryBonus)) {
+    const part = Math.floor((n != null ? n : 0) * WAR_CHEST_RULES.depositPct);
+    if (part <= 0) continue;
+    const cap = Math.max((_a = chest.cap[res]) != null ? _a : 0, part * WAR_CHEST_RULES.capDays);
+    chest.cap[res] = cap;
+    const before = (_b = chest.resources[res]) != null ? _b : 0;
+    const after = Math.min(cap, before + part);
+    chest.resources[res] = after;
+    if (after > before) added[res] = after - before;
+  }
+  return added;
+}
+function spend(chest, cost, what) {
+  var _a, _b;
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = chest.resources[res]) != null ? _a : 0) < (n != null ? n : 0)) throw new GameActionError(`Coffre de guerre insuffisant pour ${what} : il faut ${formatInt(n != null ? n : 0)} ${res}.`);
+  }
+  for (const [res, n] of Object.entries(cost)) chest.resources[res] = ((_b = chest.resources[res]) != null ? _b : 0) - (n != null ? n : 0);
+}
+function payWarFromChest(chest, cost) {
+  spend(chest, cost, "d\xE9clarer la guerre");
+}
+function chestShieldCost(member) {
+  var _a, _b;
+  const prod = productionHours(member, WAR_CHEST_RULES.shieldCostHours);
+  const out = {};
+  for (const r of COMMON_RESOURCES2) if (((_a = prod[r]) != null ? _a : 0) > 0) out[r] = Math.ceil((_b = prod[r]) != null ? _b : 0);
+  return out;
+}
+function grantChestShield(chest, member, now) {
+  const cost = chestShieldCost(member);
+  spend(chest, cost, "ce bouclier");
+  const st = bountyState(member);
+  st.shieldUntilMs = Math.max(st.shieldUntilMs, now) + WAR_CHEST_RULES.shieldHours * 36e5;
+  member.bounties = st;
+  return { cost, untilMs: st.shieldUntilMs };
+}
+function addSeasonPower(player, amount3, now) {
+  var _a, _b;
+  if (!(amount3 > 0)) return;
+  const stats = (_a = player.stats) != null ? _a : {};
+  const season = currentSeasonId(now);
+  if (stats.seasonPowerId !== season) {
+    stats.seasonPowerId = season;
+    stats.seasonPower = 0;
+  }
+  stats.seasonPower = ((_b = stats.seasonPower) != null ? _b : 0) + Math.round(amount3);
+  player.stats = stats;
+}
+function seasonPowerOf(player, seasonId) {
+  var _a;
+  const s = player.stats;
+  return (s == null ? void 0 : s.seasonPowerId) === seasonId ? (_a = s.seasonPower) != null ? _a : 0 : 0;
+}
+function seasonWarPoints(wars, seasonId) {
+  var _a, _b, _c, _d;
+  const out = {};
+  for (const w of wars) {
+    if (w.seasonId !== seasonId) continue;
+    out[w.attackerId] = ((_a = out[w.attackerId]) != null ? _a : 0) + ((_b = w.scoreAttacker) != null ? _b : 0);
+    out[w.defenderId] = ((_c = out[w.defenderId]) != null ? _c : 0) + ((_d = w.scoreDefender) != null ? _d : 0);
+  }
+  return out;
+}
+function seasonWarStandings(input) {
+  const ids = new Set([...Object.keys(input.warPoints), ...Object.keys(input.power), ...Object.keys(input.sectors)].filter(Boolean));
+  return [...ids].map((allianceId) => {
+    var _a, _b, _c;
+    const warPoints = (_a = input.warPoints[allianceId]) != null ? _a : 0;
+    const power = (_b = input.power[allianceId]) != null ? _b : 0;
+    const powerPoints = Math.floor(power / SEASON_WAR_RULES.powerPerPoint);
+    const sectors = (_c = input.sectors[allianceId]) != null ? _c : 0;
+    return { allianceId, warPoints, power, powerPoints, sectors, score: warPoints + powerPoints + sectors * SEASON_WAR_RULES.sectorPoints, rank: 0 };
+  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
+}
+
 // src/game/wars.ts
 var WAR_RULES = {
   minMembers: 3,
@@ -6850,14 +6959,20 @@ function declareWar(input) {
   const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR8 - now;
   if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR8))} jour(s).`);
   const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
-  if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
-    throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
+  const chest = input.chest ? { resources: __spreadValues({}, input.chest.resources), cap: __spreadValues({}, input.chest.cap) } : null;
+  if (chest) {
+    payWarFromChest(chest, { scrap: WAR_RULES.costScrap, energy: WAR_RULES.costEnergy });
+  } else {
+    if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
+      throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
+    }
+    treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
+    treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
   }
-  treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
-  treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
   const startMs = now + WAR_RULES.prepHours * HOUR8;
   return {
     own: __spreadProps(__spreadValues({}, own), { treasury }),
+    chest,
     war: {
       attackerId: own.id,
       attackerName: own.name,
@@ -8618,8 +8733,12 @@ function performAttack(input) {
     }
     def3.resources[res] = Math.max(0, ((_u = def3.resources[res]) != null ? _u : 0) - (amt != null ? amt : 0));
   }
-  bumpStat(attacker, "powerDestroyed", Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels)));
-  bumpStat(def3, "powerDestroyed", Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels)));
+  const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels));
+  const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
+  bumpStat(attacker, "powerDestroyed", destroyedByAttacker);
+  bumpStat(def3, "powerDestroyed", destroyedByDefender);
+  addSeasonPower(attacker, destroyedByAttacker, now);
+  addSeasonPower(def3, destroyedByDefender, now);
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }

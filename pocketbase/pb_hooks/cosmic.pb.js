@@ -502,6 +502,9 @@ cronAdd("cosmic_backup_check", "20 5 * * *", () => {
 /** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
 routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
 // v4.9 : liste, téléchargement et copie vers R2 depuis l'administration.
+/** v5.1 : classement des guerres de saison (saison en cours). */
+routerAdd("GET", "/api/cosmic/season-war", (e) => require(`${__hooks}/cosmic_db.js`).seasonWarRequest(e), $apis.requireAuth("users"));
+
 /** v5.1 : territoires d'alliance, recalculés toutes les heures (et à la demande de l'équipe). */
 cronAdd("cosmic_territories", "17 * * * *", () => {
   try {

@@ -286,6 +286,8 @@ export interface Alliance {
   boss?: unknown;
   /** v4.9 : objectif du jour (propositions, vote, progression). */
   daily?: unknown;
+  /** v5.1 : coffre de guerre (dépôts des objectifs du jour). */
+  warChest?: import("@/game/seasonWars").WarChest | null;
 }
 
 export interface AllianceLog {

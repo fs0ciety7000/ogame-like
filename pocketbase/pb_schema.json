@@ -858,6 +858,13 @@
         "required": false,
         "maxSize": 20000,
         "id": "json4900000002"
+      },
+      {
+        "name": "warChest",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "presentable": false
       }
     ],
     "indexes": [

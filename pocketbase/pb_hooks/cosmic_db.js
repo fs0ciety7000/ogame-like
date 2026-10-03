@@ -525,6 +525,42 @@ function transportArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
+/* ---------- Guerres de saison (v5.1) ---------- */
+
+/** Classement de guerre d'une saison : points de guerre, puissance détruite, secteurs tenus. */
+function seasonWarStandingsFor(txApp, game, seasonId) {
+  const wars = txApp.findRecordsByFilter("alliance_wars", "seasonId = {:s}", "", 1000, 0, { s: seasonId }).map((r) => toPlain(r));
+  const warPoints = game.seasonWarPoints(wars, seasonId);
+  const power = {};
+  txApp.findRecordsByFilter("players", "allianceId != '' && npc = ''", "", 0, 0).forEach((r) => {
+    const p = toPlain(r);
+    const n = game.seasonPowerOf(p, seasonId);
+    if (n > 0) power[p.allianceId] = (power[p.allianceId] || 0) + n;
+  });
+  const sectors = {};
+  try {
+    const cfg = txApp.findFirstRecordByFilter("game_config", "key = 'territories'");
+    ((toPlain(cfg).data || {}).sectors || []).forEach((sec) => {
+      if (sec.allianceId) sectors[sec.allianceId] = (sectors[sec.allianceId] || 0) + 1;
+    });
+  } catch (_) {
+    /* pas encore de territoires */
+  }
+  return game.seasonWarStandings({ warPoints, power, sectors });
+}
+
+/** GET /api/cosmic/season-war — classement de guerre de la saison en cours. */
+function seasonWarRequest(e) {
+  const game = loadGame();
+  applyContent($app, game);
+  const seasonId = game.currentSeasonId(Date.now());
+  const standings = seasonWarStandingsFor($app, game, seasonId).slice(0, 20).map((st) => {
+    const a = findOrNull($app, "alliances", st.allianceId);
+    return Object.assign({}, st, { tag: a ? a.getString("tag") : "?", name: a ? a.getString("name") : "Alliance dissoute" });
+  });
+  return e.json(200, { seasonId, rules: game.SEASON_WAR_RULES, standings });
+}
+
 /* ---------- Territoires d'alliance (v5.1) ---------- */
 
 /** Recalcule le contrôle des secteurs et le bonus de chaque joueur (tâche horaire). */
@@ -1407,7 +1443,34 @@ function closeSeason(game, now, seasonIdIn) {
           notify(txApp, p.uid, out.notifications);
         });
     });
-    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length };
+    // v5.1 : guerres de saison — podium récompensé (trésor et titre d'alliance).
+    const war = seasonWarStandingsFor(txApp, game, seasonId);
+    war.slice(0, 10).forEach((st) => {
+      const a = findOrNull(txApp, "alliances", st.allianceId);
+      if (!a) return;
+      const al = toPlain(a);
+      const rec = new Record(collection);
+      rec.load({ seasonId, kind: "seasonwar", uid: `seasonwar_${al.id}`, pseudo: `[${al.tag}] ${al.name}`, allianceId: al.id, rank: st.rank, seasonXp: st.score, reward: null, createdAtMs: now });
+      txApp.save(rec);
+      const hours = game.SEASON_WAR_RULES.rewardHours[st.rank - 1];
+      if (!hours) return;
+      const title = game.SEASON_WAR_RULES.titles[st.rank - 1];
+      const treasury = al.treasury || {};
+      const members = (al.members || []).filter((uid) => findOrNull(txApp, "players", uid));
+      members.forEach((uid) => {
+        const loaded = loadPlayer(txApp, game, uid);
+        const gain = game.productionHours(loaded.player, hours);
+        Object.keys(gain).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + Math.floor(gain[r] || 0)));
+        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: st.rank, seasonXp: st.score }, { hours: 0, rare: 0, title }, now, `Guerres de saison : ton alliance [${al.tag}] finit ${st.rank === 1 ? "1re" : `${st.rank}e`} !`);
+        savePlayer(txApp, game, loaded, out.player, out.queues);
+        notify(txApp, uid, out.notifications.concat([
+          { kind: "alliance", title: "Guerres de saison", message: `[${al.tag}] termine ${st.rank === 1 ? "1re" : `${st.rank}e`} du classement de guerre : ${hours} h de production des membres versées au trésor, titre « ${title} ».`, createdAtMs: now, read: false, link: "/game/alliance?onglet=guerre" },
+        ]));
+      });
+      a.set("treasury", treasury);
+      txApp.save(a);
+    });
+    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length, seasonWar: war.length };
   });
   return summary;
 }
@@ -2075,11 +2138,12 @@ function warRequest(e) {
       if (bindingPact(txApp, game, own.id, target.id, now)) throw new BadRequestError(`Un pacte de non-agression vous lie à [${target.tag}] : rompez-le d'abord (préavis de ${game.DIPLOMACY_RULES.breakNoticeHours} h).`);
       let res;
       try {
-        res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now });
+        res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now, chest: req.payFrom === "chest" ? game.readWarChest(toPlain(ownRec).warChest) : null });
       } catch (err) {
         throw asHttpError(game, err);
       }
       ownRec.set("treasury", res.own.treasury);
+      if (res.chest) ownRec.set("warChest", res.chest);
       txApp.save(ownRec);
       const rec = new Record(txApp.findCollectionByNameOrId("alliance_wars"));
       rec.load(res.war);
@@ -2088,6 +2152,26 @@ function warRequest(e) {
       notifyAlliance(txApp, own.id, "Guerre déclarée", `${pseudo} a déclaré la guerre à [${target.tag}] ${target.name}. ${startText}`, now);
       notifyAlliance(txApp, target.id, "Déclaration de guerre !", `[${own.tag}] ${own.name} vous déclare la guerre. ${startText}`, now);
       out = warJson(rec);
+    } else if (req.action === "chestShield") {
+      // v5.1 : bouclier de 2 h offert à un membre par le coffre de guerre.
+      if (!game.canDiplomacy(game.allianceRole(own, uid))) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
+      const memberUid = String(req.memberUid || "");
+      if ((own.members || []).indexOf(memberUid) < 0) throw new BadRequestError("Ce commandant n'est pas membre de l'alliance.");
+      const member = loadFlushed(txApp, game, memberUid);
+      const chest = game.readWarChest(toPlain(ownRec).warChest);
+      let res;
+      try {
+        res = game.grantChestShield(chest, member.player, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, member.loaded, member.player, member.queues);
+      ownRec.set("warChest", chest);
+      txApp.save(ownRec);
+      notify(txApp, memberUid, member.notifications.concat([
+        { kind: "alliance", title: "Bouclier offert", message: `${pseudo} t'offre un bouclier de ${game.WAR_CHEST_RULES.shieldHours} h financé par le coffre de guerre : aucune attaque ne peut te viser.`, createdAtMs: now, read: false },
+      ]));
+      out = { warChest: chest, untilMs: res.untilMs };
     } else if (req.action === "surrender") {
       const rec = findOrNull(txApp, "alliance_wars", String(req.warId || ""));
       if (!rec) throw new NotFoundError("Guerre introuvable.");
@@ -5067,6 +5151,10 @@ function rewardAllianceDaily(txApp, game, allianceRec, daily, now) {
     const treasury = toPlain(allianceRec).treasury || {};
     Object.keys(bonus).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + bonus[r]));
     allianceRec.set("treasury", treasury);
+    // v5.1 : 10 % du bonus rejoint aussi le coffre de guerre (plafonné à 30 jours de dépôts).
+    const chest = game.readWarChest(toPlain(allianceRec).warChest);
+    game.depositWarChest(chest, bonus);
+    allianceRec.set("warChest", chest);
   }
   allianceBossLog(txApp, allianceRec.id, "", "", "Objectif du jour atteint : le trésor reçoit 10 % de la production de l'alliance.", Object.keys(bonus).length ? bonus : null);
 }
@@ -5259,4 +5347,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

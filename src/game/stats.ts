@@ -26,6 +26,9 @@ export interface PlayerStats {
   marketTrades?: number;
   /** v5.1 : contrats livrés à temps (livreur). */
   contractsDelivered?: number;
+  /** v5.1 : puissance ennemie détruite pendant la saison seasonPowerId (classement de guerre). */
+  seasonPower?: number;
+  seasonPowerId?: string;
   marketTax?: number;
   /** v3.8 : ressources reçues au marché (défis hebdomadaires). */
   marketVolume?: number;
