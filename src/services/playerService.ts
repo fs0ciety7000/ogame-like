@@ -733,7 +733,7 @@ export function endVacation() {
 
 /** v4.3 : épisode des Chroniques terminé (+40 points de passe). */
 export function claimChronicleEpisode(episode: number) {
-  return act<{ points: number }>({ type: "chronicleClaim", episode });
+  return act<{ points: number; gained?: string[]; chapter?: boolean }>({ type: "chronicleClaim", episode });
 }
 
 export function claimPassTier(tier: number) {

@@ -1,4 +1,4 @@
-import { bossEmblems } from "@/game/chronicles";
+import { bossEmblems, chroniclesConfig } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { bountyState, KESH } from "@/game/bounties";
 import { commanderLevel, commandersState, type CommanderId } from "@/game/commanders";
@@ -69,6 +69,16 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
       hint: "Terminer le passe de saison",
       unlocked: true,
     })),
+    // v5.4 : une bannière par chapitre des Chroniques terminé.
+    ...chroniclesConfig()
+      .months.filter((m) => m.completion)
+      .map((m) => ({
+        id: `chapter:${m.id}`,
+        label: `Chapitre « ${m.title} »`,
+        gradient: m.completion!.banner,
+        hint: `Terminer les quatre épisodes de « ${m.title} »`,
+        unlocked: ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).includes(m.id),
+      })),
   ];
 }
 

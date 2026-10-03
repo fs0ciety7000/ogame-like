@@ -70,6 +70,8 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       if (episodeUnlockMs(m.id, i) > now) return;
       out.push({ id: `chronicle:${m.id}:${i}`, category: "chronicles", name: e.title, subtitle: `${m.title} · épisode ${i + 1}`, image: m.boss.emblem, text: e.lines.map((l) => l.text).join("\n\n"), unlocked: true });
     });
+    // v5.4 : fiches propres au chapitre (dossiers, archives du secteur).
+    for (const c of m.codex ?? []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
   for (const u of UNITS) {
     out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "Défense" : "Flotte", image: u.image, text: u.description, unlocked: !!player.units?.[u.id] });
