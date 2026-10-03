@@ -2342,7 +2342,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
-  it("v5.9 Google / Apple account: pseudo chosen once before the empire exists", async () => {
+  it("v5.9 Google account: pseudo chosen once before the empire exists", async () => {
     const email = `oa${suffix}@test.dev`;
     const rec = await admin.collection("users").create({ email, password: "motdepasse3", passwordConfirm: "motdepasse3" });
     const oa = new PocketBase(PB_TEST_URL);

@@ -880,3 +880,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .number-input-bump { animation-duration: 0.01s; }
 }
+
+/* v5.9 : ta ligne dans le classement respire doucement. */
+@keyframes leaderboard-self {
+  0%, 100% { border-color: color-mix(in srgb, var(--color-cyan-glow) 60%, transparent); }
+  50% { border-color: color-mix(in srgb, var(--color-cyan-glow) 100%, transparent); }
+}
+.leaderboard-self { animation: leaderboard-self 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-self { animation: none; }
+}

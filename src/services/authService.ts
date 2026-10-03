@@ -80,7 +80,7 @@ export async function loginPlayer(identity: string, password: string) {
   for (const candidate of candidates) {
     try {
       const auth = await pb.collection("users").authWithPassword(candidate, password);
-      // v5.9 : un compte né via Google / Apple sans pseudo passe d'abord par l'écran du pseudo.
+      // v5.9 : un compte né via Google sans pseudo passe d'abord par l'écran du pseudo.
       const pseudo = (auth.record.name as string) || (auth.record.username as string);
       if (pseudo) await ensurePlayerDoc(auth.record.id, pseudo);
       return auth.record;
