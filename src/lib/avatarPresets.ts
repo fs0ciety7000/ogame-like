@@ -56,6 +56,52 @@ export const AVATAR_PRESET_GROUPS: AvatarPresetGroup[] = [
     ],
   },
   {
+    id: "equipage",
+    label: "Équipage",
+    presets: [
+      preset("navigatrice", "Navigatrice stellaire"),
+      preset("contrebandier", "Contrebandier"),
+      preset("canonniere", "Canonnière"),
+      preset("cuisinier", "Cuisinier de bord"),
+      preset("mecano", "Mécano des soutes"),
+      preset("aumonier", "Aumônier du vide"),
+    ],
+  },
+  {
+    id: "legendes",
+    label: "Légendes",
+    presets: [
+      preset("chasseuse", "Chasseuse de primes"),
+      preset("archiviste", "Archiviste du Codex"),
+      preset("seigneur_dechu", "Seigneur déchu"),
+      preset("heritiere", "Héritière stellaire"),
+      preset("forgeron", "Maître de la Fonderie"),
+      preset("cultiste", "Cultiste du Léviathan"),
+    ],
+  },
+  {
+    id: "creatures",
+    label: "Créatures",
+    presets: [
+      preset("furet", "Furet pilote"),
+      preset("poulpe", "Poulpe diplomate"),
+      preset("chat", "Chat de bord"),
+      preset("insectoide", "Insectoïde éclaireur"),
+      preset("golem", "Golem de cristal"),
+      preset("dragon", "Wyverne du vide"),
+    ],
+  },
+  {
+    id: "insignes",
+    label: "Insignes",
+    presets: [
+      preset("insigne_flotte", "Insigne de la flotte"),
+      preset("insigne_crane", "Crâne de pirate"),
+      preset("insigne_atome", "Atome de recherche"),
+      preset("insigne_couronne", "Couronne d'empire"),
+    ],
+  },
+  {
     // Portraits déjà présents dans le jeu : la galerie n'est jamais vide.
     id: "officiers",
     label: "Officiers",
