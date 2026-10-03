@@ -550,7 +550,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
     category: "attack",
     unlockTech: "tech13",
-    hangarSpace: 20
+    // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
+    hangarSpace: 2
   },
   {
     id: "etoile_noire",
@@ -562,7 +563,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
     category: "attack",
     unlockTech: "tech19",
-    hangarSpace: 200,
+    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    hangarSpace: 80,
     // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
     // par niveau que les autres (15 800 ATK/DEF au niveau 10).
     levelBonus: 1700
@@ -591,7 +593,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech25",
-    hangarSpace: 8,
+    // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
+    hangarSpace: 12,
     levelBonus: 150
   },
   {
@@ -612,7 +615,8 @@ var DEFAULT_UNITS = [
     image: "/assets/units/canon_impulsion.webp",
     maxLevel: 10,
     description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
-    cost: { scrap: 2e3, energy: 1200 },
+    // v5.4 : moins cher que la Batterie AA, qu'il ne bat pas (2000/1200 avant).
+    cost: { scrap: 1200, energy: 600 },
     stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech15",
@@ -624,7 +628,8 @@ var DEFAULT_UNITS = [
     image: "/assets/units/canon_plasma.webp",
     maxLevel: 10,
     description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
-    cost: { scrap: 2500, energy: 1500 },
+    // v5.4 : entre le Canon à impulsion et la Batterie AA (2500/1500 avant).
+    cost: { scrap: 1500, energy: 750 },
     stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech16",
@@ -652,7 +657,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
     category: "defense",
     unlockTech: "tech18",
-    hangarSpace: 20
+    // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
+    hangarSpace: 2
   },
   KESH_HUNTER_UNIT
 ];
@@ -2162,7 +2168,7 @@ var RARITIES = [
   { id: "epic", label: "\xC9pique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
   { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
   // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
-  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" }
+  { id: "mythic", label: "Mythique", pct: 0.2, weight: 0, recycle: 0, color: "#ff5df0" }
 ];
 var RELICS = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arrach\xE9 au poste de tir d'un croiseur de la Confr\xE9rie." },
@@ -2573,7 +2579,8 @@ var ECONOMY_RULES = {
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
   missionRareLevelDivisor: 35,
   /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 5e5
+  // v5.4 : 500 000 → 150 000 (les missions rares valaient < 1 % d'une heure de production en fin de partie).
+  missionRareProductionRef: 15e4
 };
 var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
 var KESH_BOOST_PCT = 0.2;
@@ -3275,7 +3282,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
-    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" }
+    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" }
   },
   {
     id: "gravhorn",
@@ -3298,7 +3305,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 1.5,
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
-    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" }
+    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" }
   },
   {
     id: "inquisition",
@@ -3321,7 +3328,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" }
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" }
   },
   {
     id: "cartel",
@@ -3344,7 +3351,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2.5,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" }
+    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" }
   },
   {
     id: "meute",
@@ -3367,7 +3374,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 0.75,
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
-    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
+    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
   },
   {
     id: "choeur",
@@ -3392,7 +3399,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2e3, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
-    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 5, pct: 1.5, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
+    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 5, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
   }
 ];
 var FACTIONS = [];
@@ -3765,7 +3772,9 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   return { player, queues: flushed.queues, combat, loot, bounty, debris, report, notifications };
 }
 function lairPower(faction, player) {
-  return Math.round(Math.max(faction.raid.floorPower * 3, targetPower(faction, player) * faction.lair.pct));
+  var _a, _b;
+  const fleetAttack = computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  return Math.round(Math.max(faction.raid.floorPower * 3, fleetAttack * faction.lair.pct));
 }
 function checkLairLaunch(faction, player, fleet) {
   if (!faction) throw new GameActionError("Repaire inconnu.");

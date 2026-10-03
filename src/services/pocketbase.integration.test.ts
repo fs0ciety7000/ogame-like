@@ -6,6 +6,7 @@
 // (pocketbase/pb_hooks) installés. Le compte superuser sert à préparer les
 // scénarios (donner des ressources, vieillir un compte) : les joueurs ne
 // peuvent plus modifier eux-mêmes ces champs.
+import { findUnit } from "@/game/units";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
@@ -725,7 +726,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Repaire : fermé, puis localisé et pris d'assaut.
       await expect(ps.sendFleet("lair_varan", { chasseur: 10 }, "lair")).rejects.toThrow(/localisé/);
       await admin.collection("players").update(bId, { pirates: { varan: { ...(await varan()), lairOpen: true, repelled: 5 } } });
-      const assault = await ps.sendFleet("lair_varan", { chasseur: (await snap(bId)).units.chasseur.count }, "lair");
+      // v5.4 : le repaire vaut 1,05 × l'attaque de la flotte à quai : toute la flotte en formation d'assaut (+10 %).
+      const assault = await ps.sendFleet("lair_varan", { chasseur: (await snap(bId)).units.chasseur.count }, "lair", { formation: "assault" });
       expect(assault.power).toBeGreaterThan(0);
       await wait(Math.max(0, assault.arriveAtMs - Date.now()) + 400);
       await ps.syncPlayer("");
@@ -1517,7 +1519,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const before = await snap(bId);
     const fleets: string[] = [];
     try {
-      const fit = Math.floor(getUnitCapacity(before.buildings, "attack") / 20);
+      const fit = Math.floor(getUnitCapacity(before.buildings, "attack") / findUnit("chasseur")!.hangarSpace);
       await admin.collection("players").update(bId, { units: { ...before.units, chasseur: { level: 1, count: fit } }, resources: RICH });
       const patrol = await ps.sendFleet("", { chasseur: fit }, "patrol", { minutes: 30 });
       fleets.push(patrol.id);

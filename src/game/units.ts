@@ -122,7 +122,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
     category: "attack",
     unlockTech: "tech13",
-    hangarSpace: 20,
+    // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
+    hangarSpace: 2,
   },
   {
     id: "etoile_noire",
@@ -134,7 +135,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
     category: "attack",
     unlockTech: "tech19",
-    hangarSpace: 200,
+    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    hangarSpace: 80,
     // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
     // par niveau que les autres (15 800 ATK/DEF au niveau 10).
     levelBonus: 1700,
@@ -163,7 +165,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech25",
-    hangarSpace: 8,
+    // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
+    hangarSpace: 12,
     levelBonus: 150,
   },
   {
@@ -184,7 +187,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     image: "/assets/units/canon_impulsion.webp",
     maxLevel: 10,
     description: "Canon énergétique puissant, idéal contre les cibles blindées.",
-    cost: { scrap: 2000, energy: 1200 },
+    // v5.4 : moins cher que la Batterie AA, qu'il ne bat pas (2000/1200 avant).
+    cost: { scrap: 1200, energy: 600 },
     stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech15",
@@ -196,7 +200,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     image: "/assets/units/canon_plasma.webp",
     maxLevel: 10,
     description: "Arme lourde tirant des projectiles de plasma surchauffé.",
-    cost: { scrap: 2500, energy: 1500 },
+    // v5.4 : entre le Canon à impulsion et la Batterie AA (2500/1500 avant).
+    cost: { scrap: 1500, energy: 750 },
     stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech16",
@@ -224,7 +229,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
     category: "defense",
     unlockTech: "tech18",
-    hangarSpace: 20,
+    // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
+    hangarSpace: 2,
   },
   KESH_HUNTER_UNIT,
 ];

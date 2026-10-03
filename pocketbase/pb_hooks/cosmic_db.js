@@ -3900,6 +3900,80 @@ function guardPlayerUpdate(e) {
 
 const PSEUDO_SIGNUP_MS = 15 * 60000;
 
+/* ---------- Migrations du contenu personnalisé (au démarrage) ---------- */
+
+// Chaque migration ne passe qu'une fois (game_config « content_migrations ») et ne
+// remplace une valeur que si elle vaut encore l'ancienne valeur par défaut : un
+// réglage fait à la main dans l'administration est conservé.
+const CONTENT_MIGRATIONS = [
+  {
+    id: "balance-5.4",
+    key: "units",
+    patches: [
+      { id: "chasseur", field: "hangarSpace", from: 20, to: 2 },
+      { id: "intercepteur", field: "hangarSpace", from: 20, to: 2 },
+      { id: "etoile_noire", field: "hangarSpace", from: 200, to: 80 },
+      { id: "lance_gravitationnelle", field: "hangarSpace", from: 8, to: 12 },
+      { id: "canon_impulsion", field: "cost", from: { scrap: 2000, energy: 1200 }, to: { scrap: 1200, energy: 600 } },
+      { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
+    ],
+  },
+];
+
+function canonJson(v) {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return JSON.stringify(v);
+  const out = {};
+  Object.keys(v).sort().forEach((k) => (out[k] = v[k]));
+  return JSON.stringify(out);
+}
+
+function configRecord(txApp, key) {
+  try {
+    return txApp.findFirstRecordByFilter("game_config", "key = {:k}", { k: key });
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Applique les migrations de contenu pas encore passées. Retourne les changements. */
+function runContentMigrations(app) {
+  const changes = [];
+  app.runInTransaction((txApp) => {
+    let marker = configRecord(txApp, "content_migrations");
+    const applied = marker ? (toPlain(marker).data || {}).applied || [] : [];
+    const done = [];
+    CONTENT_MIGRATIONS.forEach((m) => {
+      if (applied.indexOf(m.id) >= 0) return;
+      const rec = configRecord(txApp, m.key);
+      const items = rec ? toPlain(rec).data : null;
+      if (Array.isArray(items)) {
+        let touched = false;
+        m.patches.forEach((p) => {
+          const item = items.find((x) => x && x.id === p.id);
+          if (item && canonJson(item[p.field]) === canonJson(p.from)) {
+            item[p.field] = p.to;
+            touched = true;
+            changes.push(`${m.id} : ${p.id}.${p.field}`);
+          }
+        });
+        if (touched) {
+          rec.set("data", items);
+          txApp.save(rec);
+        }
+      }
+      done.push(m.id);
+    });
+    if (done.length === 0) return;
+    if (!marker) {
+      marker = new Record(txApp.findCollectionByNameOrId("game_config"));
+      marker.set("key", "content_migrations");
+    }
+    marker.set("data", { applied: applied.concat(done) });
+    txApp.save(marker);
+  });
+  return changes;
+}
+
 /** v5.1 : sur sa fiche publique, un joueur ne change que son avatar (le reste vient du serveur). */
 function guardProfileUpdate(e) {
   if (e.hasSuperuserAuth()) return;
@@ -5433,4 +5507,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

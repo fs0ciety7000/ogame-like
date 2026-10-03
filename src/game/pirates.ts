@@ -127,7 +127,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
-    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
+    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
   },
   {
     id: "gravhorn",
@@ -154,7 +154,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 1.5,
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
-    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
+    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
   },
   {
     id: "inquisition",
@@ -181,7 +181,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
   },
   {
     id: "cartel",
@@ -208,7 +208,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2.5,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Casino Fantôme", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
+    lair: { name: "Le Casino Fantôme", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
   },
   {
     id: "meute",
@@ -235,7 +235,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 0.75,
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
-    lair: { name: "La Tanière du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+    lair: { name: "La Tanière du Rift", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
   },
   {
     id: "choeur",
@@ -264,7 +264,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2000, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
-    lair: { name: "La Cathédrale du Silence", raidsNeeded: 5, pct: 1.5, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
+    lair: { name: "La Cathédrale du Silence", raidsNeeded: 5, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
   },
 ];
 
@@ -739,8 +739,12 @@ export function resolvePirateRaid(
 
 /* ---------- repaires ---------- */
 
+/** Puissance du repaire. v5.4 : rapportée à l'ATTAQUE de ta flotte à quai (et non plus à ta défense,
+ *  1,5 × ta défense étant hors de portée de n'importe quelle flotte : aucun repaire pris en un mois).
+ *  `lair.pct` ≈ 1 : il faut presque toute la flotte et un bonus (formation d'assaut, Traqueurs, officiers). */
 export function lairPower(faction: FactionDef, player: PlayerState): number {
-  return Math.round(Math.max(faction.raid.floorPower * 3, targetPower(faction, player) * faction.lair.pct));
+  const fleetAttack = computeFullPower(player.units ?? {}, player.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]);
+  return Math.round(Math.max(faction.raid.floorPower * 3, fleetAttack * faction.lair.pct));
 }
 
 export function checkLairLaunch(faction: FactionDef | undefined, player: PlayerState, fleet: Record<string, unknown>): Record<string, number> {

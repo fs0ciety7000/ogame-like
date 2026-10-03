@@ -182,7 +182,11 @@ describe("Factions hostiles", () => {
     expect(() => launch(p, lairUid("gravhorn"), 1)).toThrow(/localisé/);
     const launched = launch(p, "pirates_lair", 2000);
     expect(launched.fleet).toMatchObject({ factionId: "varan", targetUid: "lair_varan", power: lairPower(varan, p) });
-    const out = resolveLairAssault(varan, { ...launched.attacker, resourcesUpdatedAtMs: launched.fleet.arriveAtMs }, defaultQueues(), launched.fleet.units, launched.fleet.power!, launched.fleet.arriveAtMs);
+    // v5.4 : le repaire vaut 1,05 × l'attaque de la flotte à quai — toute la flotte sans bonus ne passe pas…
+    const arrived = { ...launched.attacker, resourcesUpdatedAtMs: launched.fleet.arriveAtMs };
+    expect(resolveLairAssault(varan, structuredClone(arrived), defaultQueues(), launched.fleet.units, launched.fleet.power!, launched.fleet.arriveAtMs).combat.outcome).toBe("defender_win");
+    // …la formation d'assaut (+10 %) suffit.
+    const out = resolveLairAssault(varan, arrived, defaultQueues(), launched.fleet.units, launched.fleet.power!, launched.fleet.arriveAtMs, "assault");
     expect(out.combat.outcome).toBe("attacker_win");
     expect(out.player.titles?.map((t) => t.label)).toContain(varan.lair.title);
     expect(pirateState(out.player, "varan")).toMatchObject({ lairOpen: false, repelled: 0, notoriety: 0, lairsTaken: 1 });

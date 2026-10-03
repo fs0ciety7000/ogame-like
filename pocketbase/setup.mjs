@@ -123,3 +123,4 @@ for (const email of adminEmails) {
   console.log(`Administrateur du jeu : ${email}`);
 }
 
+

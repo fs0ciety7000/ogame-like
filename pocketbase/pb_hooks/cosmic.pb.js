@@ -794,3 +794,15 @@ routerAdd("POST", "/api/cosmic/admin/alliance-daily", (e) => {
   const now = Number((db.body(e) || {}).now) || Date.now();
   return e.json(200, { changed: db.allianceDailyTick(now) });
 });
+
+/* ---------- v5.4 : migrations du contenu personnalisé (équilibrage) ---------- */
+
+onBootstrap((e) => {
+  e.next();
+  try {
+    const changes = require(`${__hooks}/cosmic_db.js`).runContentMigrations($app);
+    if (changes.length > 0) console.log(`[cosmic] contenu migré : ${changes.join(", ")}`);
+  } catch (err) {
+    console.log(`[cosmic] migrations du contenu : ${err}`);
+  }
+});

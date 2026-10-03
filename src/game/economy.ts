@@ -32,7 +32,8 @@ export const ECONOMY_RULES = {
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
   missionRareLevelDivisor: 35,
   /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 500_000,
+  // v5.4 : 500 000 → 150 000 (les missions rares valaient < 1 % d'une heure de production en fin de partie).
+  missionRareProductionRef: 150_000,
 };
 
 export const COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id) as ResourceId[];

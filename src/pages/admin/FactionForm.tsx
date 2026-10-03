@@ -139,7 +139,7 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
       <Section title="Repaire">
         <TextField label="Nom" value={f.lair.name} onChange={(v) => lair({ name: v })} />
         <NumberField label="Raids repoussés pour le localiser" value={f.lair.raidsNeeded} min={1} step={1} onChange={(v) => lair({ raidsNeeded: num(v) })} />
-        <NumberField label="Force (× la cible du raid)" value={f.lair.pct} min={0} step={0.1} onChange={(v) => lair({ pct: num(v) })} />
+        <NumberField label="Force (× l'attaque de la flotte du joueur)" value={f.lair.pct} min={0} step={0.1} onChange={(v) => lair({ pct: num(v) })} />
         <NumberField label="Récompense : heures de production" value={f.lair.rewardHours} min={0} step={1} onChange={(v) => lair({ rewardHours: num(v) })} />
         <NumberField label="Récompense : bonus de chaque rare" value={f.lair.rare} min={0} step={50} onChange={(v) => lair({ rare: num(v) })} />
         <NumberField label="Récompense : XP" value={f.lair.xp} min={0} step={10} onChange={(v) => lair({ xp: num(v) })} />
