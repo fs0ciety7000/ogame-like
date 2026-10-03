@@ -24,12 +24,14 @@ export interface Modifiers {
   detection: number;
   repair: number;
   cargo: number;
+  /** v5.1 : dégâts contre les boss (relique mythique). */
+  bossDamage: number;
 }
 
 type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
 }
 
 export function playerModifiers(player: ModPlayer | null | undefined): Modifiers {
@@ -57,6 +59,7 @@ export function playerModifiers(player: ModPlayer | null | undefined): Modifiers
     else if (effect === "cargo") m.cargo += b;
     else if (effect === "spy") m.spyLevel += b * 10;
     else if (effect === "production_all") m.productionAll += b;
+    else if (effect === "boss_damage") m.bossDamage += b;
     else if (effect && PRODUCTION_EFFECT[effect]) {
       const res = PRODUCTION_EFFECT[effect]!;
       m.production[res] = (m.production[res] ?? 0) + b;

@@ -11,6 +11,7 @@ import { EmptyState, HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
+import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { computeFleetPower } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, type LeviathanState } from "@/game/leviathan";
@@ -160,6 +161,8 @@ export function LeviathanPage() {
           </div>
         </div>
       </div>
+
+      <MythicRelicNotice source="leviathan" />
 
       {state ? (
         <Card className="relative flex flex-col gap-4 overflow-hidden p-5">

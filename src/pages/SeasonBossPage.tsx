@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState, HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
 import { isActive, LEVIATHAN_RULES, leviathanRanking } from "@/game/leviathan";
@@ -58,6 +59,7 @@ export function SeasonBossPage() {
         title={boss?.name ?? "Boss de saison"}
         description="Le dernier week-end de chaque mois, du vendredi 18 h au dimanche 23 h, le boss de la chronique surgit. Tout le serveur frappe ensemble."
       />
+      <MythicRelicNotice source="seasonboss" />
 
       {boss && (
         <div className="hud-cut relative overflow-hidden border" style={{ borderColor: `${month!.theme.accent}55` }}>

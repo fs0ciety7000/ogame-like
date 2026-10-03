@@ -74,7 +74,7 @@ export {
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
 export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
-export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";
+export { addRelic, expeditionRelicChance, grantMythicRelic, mythicFor, rollRelic } from "@/game/relics";
 export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";

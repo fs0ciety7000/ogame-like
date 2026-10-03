@@ -279,6 +279,7 @@ const RELIC_ICONS: Record<RelicEffect, typeof Swords> = {
   production_data: Gem,
   production_all: Sparkles,
   aegis: ShieldHalf,
+  boss_damage: Swords,
 };
 
 function RelicBadge({ item, className }: { item: Pick<RelicItem, "template" | "rarity">; className?: string }) {
@@ -289,7 +290,7 @@ function RelicBadge({ item, className }: { item: Pick<RelicItem, "template" | "r
   return (
     <div
       className={cn("hud-cut-sm relative grid shrink-0 place-items-center overflow-hidden border", className)}
-      style={{ borderColor: `${r.color}88`, background: `radial-gradient(circle, ${r.color}2a, transparent 75%), #070a14`, boxShadow: item.rarity === "legendary" ? `0 0 16px -4px ${r.color}` : undefined }}
+      style={{ borderColor: `${r.color}88`, background: `radial-gradient(circle, ${r.color}2a, transparent 75%), #070a14`, boxShadow: item.rarity === "legendary" || item.rarity === "mythic" ? `0 0 16px -4px ${r.color}` : undefined }}
     >
       {!broken ? (
         <img src={assetUrl(`/assets/relics/${item.template}.webp`)} alt="" className="h-full w-full object-contain p-1" onError={() => setBroken(true)} />
@@ -323,7 +324,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
       const key = `${r.template}|${r.rarity}`;
       map.set(key, [...(map.get(key) ?? []), r]);
     }
-    return [...map.values()].filter((g) => g.length >= RELIC_RULES.fuseCount && g[0].rarity !== "legendary");
+    return [...map.values()].filter((g) => g.length >= RELIC_RULES.fuseCount && g[0].rarity !== "legendary" && g[0].rarity !== "mythic");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.relics]);
 

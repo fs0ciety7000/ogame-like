@@ -2371,21 +2371,51 @@ function writeLeviathan(txApp, state) {
 }
 
 /** Récompenses versées à tous les participants (une seule fois). */
+/** v5.1 : reliques mythiques déjà remises (game_config, clé "mythic_relics" : saison → uid). */
+function readMythicGiven(txApp) {
+  try {
+    return toPlain(txApp.findFirstRecordByFilter("game_config", "key = 'mythic_relics'")).data || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeMythicGiven(txApp, given) {
+  let cfg = null;
+  try {
+    cfg = txApp.findFirstRecordByFilter("game_config", "key = 'mythic_relics'");
+  } catch (_) {
+    cfg = new Record(txApp.findCollectionByNameOrId("game_config"));
+    cfg.set("key", "mythic_relics");
+  }
+  cfg.set("data", given);
+  txApp.save(cfg);
+}
+
+/** Remet la mythique au n°1 d'un boss tué si c'est le boss qui la porte ce mois-ci. */
+function grantMythicTo(txApp, game, player, source, now) {
+  const out = game.grantMythicRelic(player, source, now, readMythicGiven(txApp));
+  if (!out) return "";
+  writeMythicGiven(txApp, out.given);
+  return out.name;
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
-  ranking.forEach((c) => {
+  ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantLeviathanReward(state, flushed.player);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     const won = state.status === "killed";
+    const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
         createdAtMs: now,
         read: false,
       },
@@ -4809,18 +4839,19 @@ function distributeSeasonBoss(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
-  game.leviathanRanking(state).forEach((c) => {
+  game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantSeasonBossReward(state, flushed.player, now);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     const won = state.status === "killed";
+    const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}.`,
+        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/boss",

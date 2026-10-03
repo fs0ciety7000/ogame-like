@@ -211,6 +211,7 @@ __export(hooksEntry_exports, {
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
+  grantMythicRelic: () => grantMythicRelic,
   grantReferral: () => grantReferral,
   grantSeasonBossReward: () => grantSeasonBossReward,
   growWarlord: () => growWarlord,
@@ -225,6 +226,7 @@ __export(hooksEntry_exports, {
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
+  mythicFor: () => mythicFor,
   nearestWarlord: () => nearestWarlord,
   newPlayerProfile: () => newPlayerProfile,
   nextAttackDelayMs: () => nextAttackDelayMs,
@@ -2145,7 +2147,9 @@ var RARITIES = [
   { id: "common", label: "Commune", pct: 0.03, weight: 60, recycle: 5, color: "#cbd5e1" },
   { id: "rare", label: "Rare", pct: 0.06, weight: 28, recycle: 15, color: "#4be8ff" },
   { id: "epic", label: "\xC9pique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
-  { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" }
+  { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
+  // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
+  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" }
 ];
 var RELICS = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arrach\xE9 au poste de tir d'un croiseur de la Confr\xE9rie." },
@@ -2160,8 +2164,22 @@ var RELICS = [
   { id: "essaim_nanites", name: "Essaim de nanites", effect: "production_nano", lore: "Des milliards d'ouvri\xE8res qui ne dorment jamais." },
   { id: "cristal_memoriel", name: "Cristal m\xE9moriel", effect: "production_data", lore: "Il se souvient de civilisations disparues." },
   { id: "couronne_essaim", name: "Couronne de l'Essaim", effect: "production_all", lore: "Port\xE9e jadis par la Reine des Kesh'Vaar.", legendaryOnly: true },
-  { id: "egide_reine", name: "\xC9gide de la Reine", effect: "aegis", lore: "Chaque semaine, la premi\xE8re d\xE9faite n'est pas pill\xE9e.", legendaryOnly: true }
+  { id: "egide_reine", name: "\xC9gide de la Reine", effect: "aegis", lore: "Chaque semaine, la premi\xE8re d\xE9faite n'est pas pill\xE9e.", legendaryOnly: true },
+  // v5.1 : reliques mythiques, une par saison (le modèle tourne d'une saison à l'autre).
+  { id: "coeur_leviathan", name: "C\u0153ur du L\xE9viathan", effect: "boss_damage", lore: "Il bat encore, et sa col\xE8re guide tes salves contre les colosses.", mythicOnly: true },
+  { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taill\xE9e dans l'ambre de la premi\xE8re Reine, elle fait fructifier l'empire.", mythicOnly: true },
+  { id: "oeil_neant", name: "\u0152il du N\xE9ant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
+  { id: "egide_stellaire", name: "\xC9gide stellaire", effect: "defense", lore: "Un bouclier forg\xE9 au c\u0153ur d'une \xE9toile mourante.", mythicOnly: true }
 ];
+var MYTHIC_TEMPLATES = RELICS.filter((t) => t.mythicOnly);
+function mythicFor(seasonId) {
+  const [y, m] = seasonId.split("-").map(Number);
+  const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
+  return { template: MYTHIC_TEMPLATES[index % MYTHIC_TEMPLATES.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+}
+function mythicRelic(seasonId, now, random = Math.random) {
+  return { id: newId(now, random), template: mythicFor(seasonId).template.id, rarity: "mythic", foundAtMs: now, source: `mythic:${seasonId}` };
+}
 var RELIC_RULES = {
   slots: 3,
   /** Emplacement supplémentaire à partir de cette ascension. */
@@ -2214,7 +2232,7 @@ function newId(now, random) {
 }
 function rollRelic(source, now, random = Math.random, minRarity = "common") {
   const order = RARITIES.map((r) => r.id);
-  const pool = RARITIES.filter((r) => order.indexOf(r.id) >= order.indexOf(minRarity));
+  const pool = RARITIES.filter((r) => r.id !== "mythic" && order.indexOf(r.id) >= order.indexOf(minRarity));
   const total2 = pool.reduce((a, r) => a + r.weight, 0);
   let pick = random() * total2;
   let rarity = pool[pool.length - 1].id;
@@ -2225,7 +2243,7 @@ function rollRelic(source, now, random = Math.random, minRarity = "common") {
       break;
     }
   }
-  const templates = RELICS.filter((t) => !t.legendaryOnly || rarity === "legendary");
+  const templates = RELICS.filter((t) => !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
@@ -2235,6 +2253,16 @@ function addRelic(player, item) {
   st.items.push(item);
   player.relics = st;
   return true;
+}
+function grantMythicRelic(player, source, now, given, random = Math.random) {
+  const d = new Date(now);
+  const seasonId = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const def3 = mythicFor(seasonId);
+  if (def3.source !== source || given[seasonId]) return null;
+  const st = relicsState(player);
+  st.items.push(mythicRelic(seasonId, now, random));
+  player.relics = st;
+  return { given: __spreadProps(__spreadValues({}, given), { [seasonId]: player.uid }), name: def3.template.name };
 }
 function expeditionRelicChance(hours2) {
   return Math.min(0.15, RELIC_RULES.expeditionBase + Math.max(0, hours2 - 2) * RELIC_RULES.expeditionPerHour);
@@ -2266,7 +2294,7 @@ function fuseRelics(player, template, rarity, now, random = Math.random) {
   const st = relicsState(player);
   const order = RARITIES.map((r) => r.id);
   const idx = order.indexOf(rarity);
-  if (idx < 0 || idx >= order.length - 1) throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
+  if (idx < 0 || idx >= order.length - 1 || order[idx + 1] === "mythic") throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
   const equipped = new Set(st.slots.filter(Boolean));
   const same = st.items.filter((r) => r.template === template && r.rarity === rarity && !equipped.has(r.id));
   if (same.length < RELIC_RULES.fuseCount) throw new GameActionError(`Il faut ${RELIC_RULES.fuseCount} reliques identiques non \xE9quip\xE9es.`);
@@ -2281,6 +2309,7 @@ function recycleRelic(player, relicId) {
   const item = st.items.find((r) => r.id === relicId);
   if (!item) throw new GameActionError("Relique introuvable.");
   if (st.slots.includes(item.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
+  if (item.rarity === "mythic") throw new GameActionError("Une relique mythique ne se recycle pas.");
   st.items = st.items.filter((r) => r.id !== item.id);
   player.relics = st;
   return { item, amber: rarityInfo(item.rarity).recycle };
@@ -4829,7 +4858,7 @@ function talentBonuses(player) {
 
 // src/game/modifiers.ts
 function emptyModifiers() {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
 }
 function playerModifiers(player) {
   var _a, _b, _c;
@@ -4856,6 +4885,7 @@ function playerModifiers(player) {
     else if (effect === "cargo") m.cargo += b;
     else if (effect === "spy") m.spyLevel += b * 10;
     else if (effect === "production_all") m.productionAll += b;
+    else if (effect === "boss_damage") m.bossDamage += b;
     else if (effect && PRODUCTION_EFFECT[effect]) {
       const res = PRODUCTION_EFFECT[effect];
       m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
@@ -5380,7 +5410,7 @@ function resolveEliteAssault(state, player, fleet, formation, now) {
   var _a;
   const fx = formationEffects(formation);
   const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack)
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
   );
   const active = eliteActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
@@ -5711,7 +5741,7 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
 function resolveLeviathanAssault(state, player, fleet, formation, now) {
   var _a;
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
