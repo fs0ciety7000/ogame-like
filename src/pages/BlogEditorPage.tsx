@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BlogCategoryIcon } from "@/components/blog/BlogCategoryIcon";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, PenSquare, Pin, Plus, Rss, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { Download, ExternalLink, FileText, Loader2, PenSquare, Pin, Plus, Rss, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { HudTag } from "@/components/ui/hud";
 import { BlogPostForm } from "@/components/blog/BlogPostForm";
 import { BLOG_CATEGORIES, blogCategory, blogDate, blogDateTime, isPublic, readingMinutes, type BlogPost } from "@/game/blog";
-import { addBlogAuthor, authorAvatarUrl, BLOG_URL, fetchAllBlogPosts, fetchBlogAuthors, gameAvatarBlob, removeBlogAuthor, saveMyAuthorProfile, useBlogAccess, type BlogAuthor } from "@/services/blogService";
+import { addBlogAuthor, authorAvatarUrl, BLOG_URL, createBlogPost, fetchAllBlogPosts, fetchBlogAuthors, gameAvatarBlob, removeBlogAuthor, saveMyAuthorProfile, useBlogAccess, type BlogAuthor } from "@/services/blogService";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn } from "@/lib/utils";
+import { bundledBlogDrafts, type BlogDraftFile } from "@/lib/blogDrafts";
 
 /* v5.8 : espace rédaction du devblog (auteurs et administrateurs). */
 
@@ -150,6 +151,7 @@ export function BlogEditorPage() {
         </Card>
 
         <div className="flex flex-col gap-5">
+          <ReadyDraftsCard existing={posts?.map((x) => x.post.slug) ?? null} pseudo={pseudo} onImported={() => void load()} />
           {me && <AuthorProfileCard me={me} onSaved={() => void load()} />}
           <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
             <p className="hud-eyebrow text-[10px] text-slate-500">Catégories</p>
@@ -169,6 +171,93 @@ export function BlogEditorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Couverture d'un article prêt : image du jeu (/assets/…) ou adresse complète. */
+async function draftCover(src: string): Promise<File | null> {
+  if (!src) return null;
+  try {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const name = src.split("/").pop()?.split("?")[0] || "couverture.webp";
+    return new File([blob], name, { type: blob.type || "image/webp" });
+  } catch {
+    return null;
+  }
+}
+
+async function importDraft(d: BlogDraftFile, pseudo: string): Promise<void> {
+  const cover = await draftCover(d.cover);
+  await createBlogPost({ slug: d.slug, title: d.title, excerpt: d.excerpt, body: d.body, category: d.category, tags: d.tags, status: "draft", publishedAtMs: 0, pinned: d.pinned, version: d.version }, pseudo, cover);
+}
+
+/** Articles rédigés à l'avance (content/blog) : importés en brouillon, couverture comprise. */
+function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] | null; pseudo: string; onImported: () => void }) {
+  const drafts = useMemo(() => bundledBlogDrafts(), []);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (drafts.length === 0) return null;
+  const known = new Set(existing ?? []);
+  const pending = drafts.filter((d) => !known.has(d.slug));
+
+  const run = async (list: BlogDraftFile[]) => {
+    let done = 0;
+    for (const d of list) {
+      setBusy(d.slug);
+      try {
+        await importDraft(d, pseudo);
+        done++;
+      } catch (err) {
+        toast.error(`« ${d.title} » : ${err instanceof Error ? err.message : "import impossible"}.`);
+      }
+    }
+    setBusy(null);
+    if (done > 0) {
+      toast.success(done > 1 ? `${done} articles importés en brouillon.` : "Article importé en brouillon.");
+      onImported();
+    }
+  };
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="hud-eyebrow flex items-center gap-1.5 text-[10px] text-slate-500">
+          <FileText className="h-3.5 w-3.5" /> Articles prêts ({pending.length} / {drafts.length})
+        </p>
+        {pending.length > 1 && (
+          <Button size="sm" variant="secondary" disabled={busy !== null || existing === null} onClick={() => void run(pending)}>
+            <Download className="h-3.5 w-3.5" /> Tout importer
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-slate-400">Rédigés à l'avance. L'import crée un brouillon avec sa couverture : relis-le, puis publie-le.</p>
+      <ul className="flex flex-col gap-1.5">
+        {drafts.map((d) => {
+          const imported = known.has(d.slug);
+          const cat = blogCategory(d.category);
+          return (
+            <li key={d.file} className="flex items-center gap-2 border border-white/5 bg-white/[0.02] px-2 py-1.5">
+              <BlogCategoryIcon category={d.category} className="h-5 w-5" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs text-slate-200" title={d.title}>{d.title}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em]" style={{ color: cat.color }}>
+                  {cat.label}
+                  {d.pinned ? " · épinglé" : ""}
+                </span>
+              </span>
+              {imported ? (
+                <HudTag tone="mint">Importé</HudTag>
+              ) : (
+                <Button size="sm" variant="ghost" disabled={busy !== null || existing === null} onClick={() => void run([d])} title="Importer en brouillon">
+                  {busy === d.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }
 
