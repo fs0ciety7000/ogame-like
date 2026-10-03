@@ -13151,7 +13151,7 @@ function topbar(site, active) {
 function footer(site) {
   return `<footer class="footer"><div class="wrap"><div><a class="brand" href="${url(site, "/")}"><img src="${site.gameUrl}/assets/logo/logo.webp" alt=""><b>COSMIC EMPIRES</b><span>DEVBLOG</span></a>
 <p>Annonces, mises \xE0 jour et notes de l'\xE9quipe. Le jeu de strat\xE9gie spatiale o\xF9 chaque empire \xE9crit sa l\xE9gende.</p></div>
-<nav aria-label="Liens"><a href="${site.gameUrl}">Jouer</a><a href="${site.gameUrl}/bible">Bible du jeu</a><a href="${site.gameUrl}/formules">Formules</a><a href="${url(site, "/rss.xml")}">Flux RSS</a><a href="${site.gameUrl}/game/redaction">Espace r\xE9daction</a></nav></div></footer>
+<nav aria-label="Liens"><a href="${site.gameUrl}">Jouer</a><a href="${site.gameUrl}/bible">Bible du jeu</a><a href="${site.gameUrl}/formules">Formules</a><a href="${url(site, "/rss.xml")}">Flux RSS</a></nav></div></footer>
 <script src="${url(site, `/assets/blog.js?v=${site.assetVersion}`)}" defer></script></body></html>`;
 }
 function categoryIcon(site, catId) {
@@ -13393,6 +13393,8 @@ img{max-width:100%}
 .nav a.on{box-shadow:inset 0 -2px 0 var(--cyan)}
 .play{flex-shrink:0;font-family:var(--f-title);font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;color:#03040a;background:linear-gradient(90deg,var(--cyan),#9ff3ff);padding:9px 16px;clip-path:var(--cut-sm);box-shadow:0 0 22px rgba(75,232,255,.35)}
 .play:hover{filter:brightness(1.1)}
+.topbar .wrap{flex-wrap:wrap;height:auto;padding-top:10px;gap:4px 12px}.topbar .play{margin-left:auto}.nav{order:3;width:100%;margin:0;border-top:1px solid var(--edge)}.nav a:first-child{padding-left:0}
+@media (max-width:900px){.nav{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}}
 @media (max-width:760px){.topbar .wrap{flex-wrap:wrap;height:auto;padding-top:10px;gap:8px 12px}.brand span{display:none}.topbar .play{margin-left:auto;padding:7px 12px;font-size:12px}.nav{order:3;width:100%;margin:0 -20px;padding:0 12px;border-top:1px solid var(--edge)}.nav a{padding:10px 10px;font-size:12px}.hero{padding-top:36px}}
 /* H\xE9ros */
 .hero{padding-top:56px;padding-bottom:28px;position:relative}

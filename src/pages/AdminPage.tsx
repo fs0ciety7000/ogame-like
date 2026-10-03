@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import {
   Award,
@@ -27,6 +27,8 @@ import {
   Crown,
   Ticket,
   BookOpen,
+  ExternalLink,
+  PenSquare,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -61,7 +63,8 @@ import { useContentStore } from "@/services/contentService";
 import type { ContentSection } from "@/game/content";
 import { cn } from "@/lib/utils";
 
-type NavEntry = { id: string; label: string; icon: LucideIcon; hint: string };
+/** `to` : lien vers une autre page du jeu plutôt qu'un onglet. */
+type NavEntry = { id: string; label: string; icon: LucideIcon; hint: string; to?: string };
 
 const NAV: { label: string; items: NavEntry[] }[] = [
   {
@@ -99,6 +102,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
+      { id: "devblog", label: "Devblog", icon: PenSquare, hint: "Espace rédaction du devblog : articles, brouillons et auteurs.", to: "/game/redaction" },
       { id: "admins", label: "Administrateurs", icon: ShieldCheck, hint: "Qui a accès à cette console." },
     ],
   },
@@ -149,7 +153,19 @@ export function AdminPage() {
           {NAV.map((group) => (
             <div key={group.label} className="contents lg:block">
               <p className="hud-eyebrow hidden px-2 pb-1 pt-2 text-[9px] text-slate-600 first:pt-0 lg:block">{group.label}</p>
-              {group.items.map((item) => (
+              {group.items.map((item) =>
+                item.to ? (
+                  <Link
+                    key={item.id}
+                    to={item.to}
+                    title={item.hint}
+                    className="group relative flex shrink-0 items-center gap-2.5 px-2.5 py-2 text-left font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-slate-200 lg:w-full"
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="whitespace-nowrap">{item.label}</span>
+                    <ExternalLink className="ml-auto h-3 w-3 opacity-50" />
+                  </Link>
+                ) : (
                 <TabsPrimitive.Trigger
                   key={item.id}
                   value={item.id}
@@ -170,7 +186,8 @@ export function AdminPage() {
                     <span title="Personnalisé (différent du code)" className="ml-auto h-1.5 w-1.5 rounded-full bg-violet-glow" />
                   )}
                 </TabsPrimitive.Trigger>
-              ))}
+                ),
+              )}
             </div>
           ))}
         </TabsPrimitive.List>
