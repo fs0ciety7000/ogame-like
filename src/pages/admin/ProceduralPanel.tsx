@@ -11,6 +11,7 @@ import { ACTIVITY_KEYS, type ProceduralSettings } from "@/game/procedural";
 import { STORY_SPEAKERS } from "@/game/story";
 import { seasonLabel } from "@/game/seasons";
 import { timeAgo } from "@/lib/utils";
+import { AllianceSagaAdmin } from "@/pages/admin/AllianceSagaAdmin";
 
 /* v5.4 : générateur procédural. Ce que le serveur sait du mois en cours,
    l'aperçu du prochain chapitre, les réglages et le journal des écritures. */
@@ -266,6 +267,10 @@ export function ProceduralPanel() {
           })}
         </Section>
       )}
+
+      <Section title="Saga d'alliance du mois">
+        <AllianceSagaAdmin />
+      </Section>
 
       <Section
         title="Paliers de succès à ajouter"

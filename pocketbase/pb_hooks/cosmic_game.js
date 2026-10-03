@@ -49,6 +49,8 @@ __export(hooksEntry_exports, {
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
   ALLIANCE_DAILY_RULES: () => ALLIANCE_DAILY_RULES,
   ALLIANCE_RULES: () => ALLIANCE_RULES,
+  ALLIANCE_SAGA_KEY: () => ALLIANCE_SAGA_KEY,
+  ALLIANCE_SAGA_RULES: () => ALLIANCE_SAGA_RULES,
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
@@ -216,6 +218,7 @@ __export(hooksEntry_exports, {
   foughtWarlords: () => foughtWarlords,
   gazetteDue: () => gazetteDue,
   gazetteState: () => gazetteState,
+  generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
   getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   githubIssueBody: () => githubIssueBody,
@@ -287,6 +290,7 @@ __export(hooksEntry_exports, {
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
   pushSnapshot: () => pushSnapshot,
+  readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
   readWarChest: () => readWarChest,
@@ -314,6 +318,9 @@ __export(hooksEntry_exports, {
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
   rollRelic: () => rollRelic,
+  sagaMonthId: () => sagaMonthId,
+  sagaOf: () => sagaOf,
+  sagaStandings: () => sagaStandings,
   sanitizeClientError: () => sanitizeClientError,
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
@@ -12054,7 +12061,11 @@ function worldDigest(players, now) {
     passMedianTier: median4(tiers2),
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
-    chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0
+    chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    allianceSizeMedian: median4(Object.values(active.reduce((acc, p) => {
+      var _a2;
+      return p.allianceId ? __spreadProps(__spreadValues({}, acc), { [p.allianceId]: ((_a2 = acc[p.allianceId]) != null ? _a2 : 0) + 1 }) : acc;
+    }, {})))
   };
 }
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
@@ -12515,6 +12526,87 @@ function planMakerOffers(open, commonPerHour, now) {
     }
   }
   return out;
+}
+
+// src/game/allianceSaga.ts
+var ALLIANCE_SAGA_KEY = "alliance_saga";
+var ALLIANCE_SAGA_RULES = {
+  objectives: 3,
+  /** Points par objectif : 100 × progression, plafonnée à 2 (objectif dépassé). */
+  pointsPerObjective: 100,
+  overflowCap: 2,
+  /** Heures de production des membres versées au trésor, 1re à 3e. */
+  rewardHours: [24, 12, 6],
+  /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
+  weeks: 4,
+  share: 0.6
+};
+function readAllianceSaga(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    sagas: Array.isArray(r.sagas) ? r.sagas.slice(-12) : [],
+    standing: r.standing && Array.isArray(r.standing.rows) ? r.standing : null,
+    closed: Array.isArray(r.closed) ? r.closed.slice(-24) : []
+  };
+}
+function sagaOf(state, monthId) {
+  var _a;
+  return (_a = state.sagas.find((s) => s.monthId === monthId)) != null ? _a : null;
+}
+var SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande Coalition", "Les Banni\xE8res lev\xE9es", "Le Pacte des \xE9toiles", "La Marche commune"];
+var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alliance", "Fer de lance"];
+function generateAllianceSaga(monthId, digest, difficulty, now) {
+  var _a;
+  const rng = seededRandom2(`saga:${monthId}`);
+  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
+  const pool = [...ACTIVITY_KEYS].filter((k) => {
+    var _a2;
+    return k !== "warlordWin" || ((_a2 = digest.weeklyMedian.warlordWin) != null ? _a2 : 0) > 0;
+  });
+  const chosen = [];
+  while (chosen.length < ALLIANCE_SAGA_RULES.objectives && pool.length > 0) chosen.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  const size = Math.max(2, Math.round((_a = digest.allianceSizeMedian) != null ? _a : 3));
+  const objectives = chosen.map((type) => {
+    var _a2;
+    const weekly = Math.max((_a2 = digest.weeklyMedian[type]) != null ? _a2 : 0, BASE_COUNTS[type] / 2);
+    return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
+  });
+  const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
+  return {
+    monthId,
+    title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
+    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)\s/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
+    bossName,
+    image: arch.image,
+    accent: arch.accent,
+    objectives,
+    winnerTitle: `${SAGA_WINNERS[Math.floor(rng() * SAGA_WINNERS.length)]} (${seasonLabel(monthId).toLowerCase()})`,
+    generatedAtMs: now
+  };
+}
+function sagaProgress(def3, members, now) {
+  return def3.objectives.map((o) => members.reduce((a, m) => {
+    var _a, _b;
+    return a + ((_b = (_a = passState(m, now).activity) == null ? void 0 : _a[o.type]) != null ? _b : 0);
+  }, 0));
+}
+function sagaPoints(def3, progress) {
+  return def3.objectives.reduce((a, o, i) => {
+    var _a;
+    return a + Math.round(ALLIANCE_SAGA_RULES.pointsPerObjective * Math.min(ALLIANCE_SAGA_RULES.overflowCap, ((_a = progress[i]) != null ? _a : 0) / Math.max(1, o.count)));
+  }, 0);
+}
+function sagaStandings(def3, alliances, now) {
+  const rows = alliances.map((a) => {
+    const progress = sagaProgress(def3, a.members, now);
+    return { allianceId: a.id, name: a.name, tag: a.tag, members: a.members.length, progress, points: sagaPoints(def3, progress), rank: 0 };
+  });
+  rows.sort((x, y) => y.points - x.points || y.progress.reduce((a, b) => a + b, 0) - x.progress.reduce((a, b) => a + b, 0));
+  rows.forEach((r, i) => r.rank = i + 1);
+  return rows.filter((r) => r.points > 0 || r.members > 0);
+}
+function sagaMonthId(now) {
+  return chronicleMonthId(now);
 }
 
 // src/server/hooksEntry.ts

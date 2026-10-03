@@ -137,9 +137,11 @@ export interface WorldDigest {
   passTiers: number;
   passFinishedShare: number;
   chapterShare: number;
+  /** v5.5 : nombre médian de membres actifs par alliance (saga d'alliance). */
+  allianceSizeMedian?: number;
 }
 
-type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs">>;
+type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
 
 function parisDay(now: number): number {
   return new Date(now + parisOffsetMs(now)).getUTCDate();
@@ -186,6 +188,7 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     passTiers,
     passFinishedShare: share(tiers.filter((t) => t >= passTiers).length),
     chapterShare: month ? share(states.filter((s) => month.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    allianceSizeMedian: median(Object.values(active.reduce<Record<string, number>>((acc, p) => (p.allianceId ? { ...acc, [p.allianceId]: (acc[p.allianceId] ?? 0) + 1 } : acc), {}))),
   };
 }
 

@@ -336,3 +336,8 @@ export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Prom
 export function adminBalanceSnapshot(): Promise<import("@/game/balance/history").BalanceSnapshot> {
   return pb.send("/api/cosmic/admin/balance/snapshot", { method: "POST" });
 }
+
+/** v5.5 : saga d'alliance, recalcul immédiat. */
+export function adminAllianceSagaTick(): Promise<{ generated: string | null; closed: string | null; alliances: number }> {
+  return pb.send("/api/cosmic/admin/alliance-saga", { method: "POST" });
+}

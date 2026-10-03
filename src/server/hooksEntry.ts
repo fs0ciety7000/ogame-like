@@ -170,3 +170,4 @@ export { defaultGameContent } from "@/game/content";
 export { getProductionRatesPerSecond } from "@/game/production";
 export { COMMON_RESOURCES } from "@/game/economy";
 export { isMarketMaker, MARKET_MAKER_ID, MARKET_MAKER_PSEUDO, marketMakerPlayer, planMakerOffers } from "@/game/marketMaker";
+export { ALLIANCE_SAGA_KEY, ALLIANCE_SAGA_RULES, generateAllianceSaga, readAllianceSaga, sagaMonthId, sagaOf, sagaStandings } from "@/game/allianceSaga";

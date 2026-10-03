@@ -2,7 +2,7 @@ import { DiplomacyTab } from "@/components/game/DiplomacyTab";
 import { useSearchParams } from "react-router-dom";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
-const ALLIANCE_TABS = ["objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
+const ALLIANCE_TABS = ["saga", "objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useRef, useState } from "react";
 import { AllianceBossTab } from "@/components/game/AllianceBossTab";
@@ -39,6 +39,7 @@ import { allianceRole, ALLIANCE_RULES, canDiplomacy } from "@/game/alliances";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WarTab } from "@/components/game/WarTab";
 import { AllianceDailyTab } from "@/components/game/AllianceDailyTab";
+import { AllianceSagaTab } from "@/components/game/AllianceSagaTab";
 import { AllianceCalendarTab } from "@/components/game/AllianceCalendarTab";
 import { AllianceRanking } from "@/components/game/AllianceRanking";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
@@ -256,6 +257,7 @@ function AllianceRoom({
     <Tabs defaultValue={tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"} className="flex flex-col gap-4">
       <TabsList className="self-start">
         <TabsTrigger value="membres">Membres et canal</TabsTrigger>
+        <TabsTrigger value="saga">Saga</TabsTrigger>
         <TabsTrigger value="objectif">Objectif du jour</TabsTrigger>
         <TabsTrigger value="calendrier">Calendrier</TabsTrigger>
         <TabsTrigger value="boss" className="inline-flex items-center gap-1.5">
@@ -272,6 +274,9 @@ function AllianceRoom({
         </TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
       </TabsList>
+      <TabsContent value="saga">
+        <AllianceSagaTab allianceId={alliance.id} />
+      </TabsContent>
       <TabsContent value="objectif">
         <AllianceDailyTab alliance={alliance} uid={uid} canVote={role === "founder" || role === "officer"} />
       </TabsContent>

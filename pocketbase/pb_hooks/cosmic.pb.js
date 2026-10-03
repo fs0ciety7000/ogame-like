@@ -413,6 +413,23 @@ routerAdd("POST", "/api/cosmic/admin/balance/snapshot", (e) => {
   return e.json(200, db.balanceHistoryTick(Date.now()));
 }, $apis.requireAuth("users", "_superusers"));
 
+// v5.5 : saga d'alliance (classement chaque heure, clôture au changement de mois).
+cronAdd("cosmic_alliance_saga", "53 * * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).allianceSagaTick(Date.now());
+    if (out.generated || out.closed) console.log(`[cosmic] saga d'alliance : ${out.generated ? `écrite (${out.generated})` : ""}${out.closed ? ` close (${out.closed})` : ""}`);
+  } catch (err) {
+    console.log(`[cosmic] saga d'alliance : ${err}`);
+  }
+});
+
+/** POST /api/cosmic/admin/alliance-saga — recalcul immédiat (et écriture de la saga du mois si elle manque). */
+routerAdd("POST", "/api/cosmic/admin/alliance-saga", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.allianceSagaTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
 // v5.5 : Courtier du Comptoir (marchand PNJ) : une passe par heure.
 cronAdd("cosmic_market_maker", "47 * * * *", () => {
   try {
