@@ -27,6 +27,8 @@ const AchievementsPage = lazy(() => import("@/pages/AchievementsPage").then((m) 
 const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ default: m.ThreatsPage })));
 const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const FormulasPage = lazy(() => import("@/pages/FormulasPage").then((m) => ({ default: m.FormulasPage })));
+const PublicFormulasPage = lazy(() => import("@/pages/PublicFormulasPage").then((m) => ({ default: m.PublicFormulasPage })));
 const CodexPage = lazy(() => import("@/pages/CodexPage").then((m) => ({ default: m.CodexPage })));
 const AnnouncementsPage = lazy(() => import("@/pages/AnnouncementsPage").then((m) => ({ default: m.AnnouncementsPage })));
 const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
@@ -71,6 +73,7 @@ export default function App() {
             {/* Lien de l'email « mot de passe oublié » : accessible connecté ou non. */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/bible" element={<BibleRedirect />} />
+            <Route path="/formules" element={<PublicFormulasPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/game" element={<AppShell />}>
@@ -106,6 +109,7 @@ export default function App() {
                 <Route path="nouveautes" element={<ChangelogPage />} />
                 <Route path="annonces" element={<AnnouncementsPage />} />
                 <Route path="codex" element={<CodexPage />} />
+                <Route path="formules" element={<FormulasPage />} />
                 <Route path="signalements" element={<ReportsPage />} />
               </Route>
             </Route>

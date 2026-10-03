@@ -3,6 +3,7 @@ import {
   chronicleMonthId,
   chronicleOf,
   chronicleState,
+  episodeUnlockMs,
   OBJECTIVE_LABELS,
   unlockedEpisodes,
   type ChapterAuto,
@@ -12,6 +13,7 @@ import {
   type ChronicleObjective,
 } from "@/game/chronicles";
 import { parisOffsetMs } from "@/game/events";
+import { formatInt } from "@/game/format";
 import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
@@ -90,6 +92,8 @@ const ucfirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 /** « La Foreuse » → « la Foreuse » (milieu de phrase). */
 const lcArticle = (name: string) => name.replace(/^(Le|La|Les|L')(?=[\s'])/, (a) => a.toLowerCase()).replace(/^L'/, "l'");
 /** « La Foreuse » → « de la Foreuse », « Le Croiseur » → « du Croiseur ». */
+/** « le Syndicat » → « du Syndicat », « la Meute » → « de la Meute », « l'Inquisition » → « de l'Inquisition ». */
+const ofFaction = (f: string) => (/^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`);
 const ofName = (name: string) => (/^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`);
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -128,7 +132,7 @@ export interface WorldDigest {
   /** Joueur le plus actif pour chaque action (cité dans le scénario). */
   heroes: Partial<Record<ChronicleObjective, { pseudo: string; count: number }>>;
   /** Épisodes du mois observé : part des joueurs actifs qui les ont terminés. */
-  episodes: { type: ChronicleObjective; count: number; completion: number; open: boolean }[];
+  episodes: { type: ChronicleObjective; count: number; completion: number; open: boolean; daysOpen: number }[];
   passMedianTier: number;
   passTiers: number;
   passFinishedShare: number;
@@ -165,6 +169,7 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     count: e.objective.count,
     completion: share(states.filter((s) => s.claimed.includes(i)).length),
     open: i < open,
+    daysOpen: Math.max(0, Math.floor((now - episodeUnlockMs(monthId, i)) / 86_400_000)),
   }));
   const seasonId = passes[0]?.seasonId ?? monthId;
   const tiers = passes.map((s) => passTier(s.points, s.seasonId));
@@ -190,14 +195,17 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
 export const BASE_COUNTS: Record<ChronicleObjective, number> = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
+/** Un épisode ouvert depuis moins longtemps ne dit encore rien de sa difficulté. */
+export const MATURE_EPISODE_DAYS = 5;
+
 export function chapterDifficulty(d: WorldDigest): { value: number; reasons: string[] } {
-  const open = d.episodes.filter((e) => e.open);
-  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: ["Pas encore de données sur les épisodes : difficulté normale (×1)."] };
+  const open = d.episodes.filter((e) => e.open && (e.daysOpen ?? MATURE_EPISODE_DAYS) >= MATURE_EPISODE_DAYS);
+  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'épisode ouvert depuis ${MATURE_EPISODE_DAYS} jours : difficulté normale (×1).`] };
   const c = open.reduce((a, e) => a + e.completion, 0) / open.length;
   const value = round2(clamp(1 + (c - 0.5), 0.7, 1.4));
   const pctTxt = Math.round(c * 100);
   const why = value > 1.02 ? "les objectifs montent" : value < 0.98 ? "les objectifs baissent" : "difficulté inchangée";
-  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont terminé les épisodes ouverts (cible 50 %) : ${why} (×${value}).`] };
+  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont terminé les ${open.length} épisode(s) ouverts depuis au moins ${MATURE_EPISODE_DAYS} jours (cible 50 %) : ${why} (×${value}).`] };
 }
 
 /** Nombre demandé pour un objectif : activité médiane d'une semaine × difficulté. */
@@ -359,7 +367,7 @@ const ACT_TITLES = [
 const HOOKS: string[][] = [
   [
     "{villain} refait surface, {pseudo}. Et pas les mains vides : {boss} quitte son chantier.",
-    "Mes éclaireurs ont repéré la signature de {faction} aux confins du secteur. Ils préparent quelque chose de grand.",
+    "Mes éclaireurs ont repéré la signature {ofFaction} aux confins du secteur. Ils préparent quelque chose de grand.",
     "On parle de {boss} dans tous les ports. Personne ne l'a vu, mais tout le monde l'a entendu.",
   ],
   [
@@ -522,7 +530,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const previousTypes = (recent.at(-1)?.episodes ?? []).map((e) => e.objective.type);
   const types = chooseObjectives(rng, d, previousTypes);
   const rewards = episodeRewards(rng, difficulty);
-  const vars: Record<string, string | number> = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction };
+  const vars: Record<string, string | number> = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = new Set<string>();
   const episodes: ChronicleEpisode[] = types.map((type, i) => {
     const count = objectiveCount(type, d, difficulty);
@@ -619,7 +627,7 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
     const top = [...list].sort((a, b) => b.threshold - a.threshold)[0];
     const holders = active.filter((p) => m.value(p) >= top.threshold).length;
     if (holders === 0) continue;
-    const threshold = niceNumber(top.threshold * (top.threshold >= 100 ? 1.5 : 2));
+    const threshold = niceNumber(top.threshold * (top.threshold >= 100 ? 1.5 : top.threshold < 5 ? 3 : 2));
     const autoCount = list.filter((a) => a.auto).length;
     const baseName = top.name.replace(/\s+[IVX]+$/, "");
     const level = autoCount + 2;
@@ -632,7 +640,7 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
         id,
         enabled: true,
         name: `${baseName} ${ROMAN[level] ?? level}`,
-        description: `${m.label} : ${threshold.toLocaleString("fr-FR")}.`,
+        description: `${m.label} : ${formatInt(threshold)}.`,
         emoji: top.emoji,
         category: top.category,
         tier,
@@ -645,7 +653,7 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
         auto: true,
       },
       holders,
-      reason: `${holders} joueur(s) ont atteint « ${top.name} » (${top.threshold.toLocaleString("fr-FR")}) : nouveau palier à ${threshold.toLocaleString("fr-FR")}.`,
+      reason: `${holders} joueur(s) ont atteint « ${top.name} » (${formatInt(top.threshold)}) : nouveau palier à ${formatInt(threshold)}.`,
     });
   }
   return out;

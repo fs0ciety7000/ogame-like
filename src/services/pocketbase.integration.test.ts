@@ -2171,6 +2171,29 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(live.pvp.windowDays).toBe(30);
   });
 
+  it("v5.4: generator writes a chapter, never replaces a hand-written month, refused to players", async () => {
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.send("/api/cosmic/admin/procedural", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    const find = async () => (await admin.collection("game_config").getFullList({ filter: 'key = "chronicles"' }))[0] ?? null;
+    const before = await find();
+    try {
+      const overview = await admin.send("/api/cosmic/admin/procedural", { method: "GET" });
+      expect(overview.digest.activePlayers).toBeGreaterThan(0);
+      expect(overview.preview?.episodes).toHaveLength(4);
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2031-04", variant: 0 } });
+      expect(out.chapters[0].id).toBe("2031-04");
+      const months = (await find())!.data.months as { id: string; auto?: unknown; pass?: { tiers: unknown[] } }[];
+      const month = months.find((m) => m.id === "2031-04")!;
+      expect(month.auto).toBeTruthy();
+      expect(month.pass?.tiers).toHaveLength(30);
+      await expect(admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2026-10" } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      const now = await find();
+      if (before) await admin.collection("game_config").update(before.id, { data: before.data });
+      else if (now) await admin.collection("game_config").delete(now.id);
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

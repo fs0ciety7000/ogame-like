@@ -11833,6 +11833,7 @@ var pick = (rng, xs) => xs[Math.floor(rng() * xs.length) % xs.length];
 var fill = (text, vars) => text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
 var ucfirst = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 var lcArticle = (name) => name.replace(/^(Le|La|Les|L')(?=[\s'])/, (a) => a.toLowerCase()).replace(/^L'/, "l'");
+var ofFaction = (f) => /^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`;
 var ofName = (name) => /^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`;
 var clamp3 = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 var round2 = (x) => Math.round(x * 100) / 100;
@@ -11887,7 +11888,8 @@ function worldDigest(players, now) {
     type: e.objective.type,
     count: e.objective.count,
     completion: share(states.filter((s) => s.claimed.includes(i)).length),
-    open: i < open
+    open: i < open,
+    daysOpen: Math.max(0, Math.floor((now - episodeUnlockMs(monthId, i)) / 864e5))
   }));
   const seasonId = (_c = (_b = passes[0]) == null ? void 0 : _b.seasonId) != null ? _c : monthId;
   const tiers2 = passes.map((s) => passTier(s.points, s.seasonId));
@@ -11907,14 +11909,18 @@ function worldDigest(players, now) {
   };
 }
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
+var MATURE_EPISODE_DAYS = 5;
 function chapterDifficulty(d) {
-  const open = d.episodes.filter((e) => e.open);
-  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: ["Pas encore de donn\xE9es sur les \xE9pisodes : difficult\xE9 normale (\xD71)."] };
+  const open = d.episodes.filter((e) => {
+    var _a;
+    return e.open && ((_a = e.daysOpen) != null ? _a : MATURE_EPISODE_DAYS) >= MATURE_EPISODE_DAYS;
+  });
+  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'\xE9pisode ouvert depuis ${MATURE_EPISODE_DAYS} jours : difficult\xE9 normale (\xD71).`] };
   const c = open.reduce((a, e) => a + e.completion, 0) / open.length;
   const value = round2(clamp3(1 + (c - 0.5), 0.7, 1.4));
   const pctTxt = Math.round(c * 100);
   const why = value > 1.02 ? "les objectifs montent" : value < 0.98 ? "les objectifs baissent" : "difficult\xE9 inchang\xE9e";
-  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont termin\xE9 les \xE9pisodes ouverts (cible 50 %) : ${why} (\xD7${value}).`] };
+  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont termin\xE9 les ${open.length} \xE9pisode(s) ouverts depuis au moins ${MATURE_EPISODE_DAYS} jours (cible 50 %) : ${why} (\xD7${value}).`] };
 }
 function objectiveCount(type, d, difficulty) {
   var _a;
@@ -12046,7 +12052,7 @@ var ACT_TITLES = [
 var HOOKS = [
   [
     "{villain} refait surface, {pseudo}. Et pas les mains vides : {boss} quitte son chantier.",
-    "Mes \xE9claireurs ont rep\xE9r\xE9 la signature de {faction} aux confins du secteur. Ils pr\xE9parent quelque chose de grand.",
+    "Mes \xE9claireurs ont rep\xE9r\xE9 la signature {ofFaction} aux confins du secteur. Ils pr\xE9parent quelque chose de grand.",
     "On parle de {boss} dans tous les ports. Personne ne l'a vu, mais tout le monde l'a entendu."
   ],
   [
@@ -12199,7 +12205,7 @@ function generateChapter(o) {
   const previousTypes = ((_c = (_b = recent.at(-1)) == null ? void 0 : _b.episodes) != null ? _c : []).map((e) => e.objective.type);
   const types = chooseObjectives(rng, d, previousTypes);
   const rewards = episodeRewards(rng, difficulty);
-  const vars = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction };
+  const vars = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = /* @__PURE__ */ new Set();
   const episodes = types.map((type, i) => {
     const count2 = objectiveCount(type, d, difficulty);
@@ -12286,7 +12292,7 @@ function proposeAchievementTiers(defs, players, now) {
     const top = [...list].sort((a, b) => b.threshold - a.threshold)[0];
     const holders = active.filter((p) => m.value(p) >= top.threshold).length;
     if (holders === 0) continue;
-    const threshold = niceNumber(top.threshold * (top.threshold >= 100 ? 1.5 : 2));
+    const threshold = niceNumber(top.threshold * (top.threshold >= 100 ? 1.5 : top.threshold < 5 ? 3 : 2));
     const autoCount = list.filter((a) => a.auto).length;
     const baseName = top.name.replace(/\s+[IVX]+$/, "");
     const level3 = autoCount + 2;
@@ -12299,7 +12305,7 @@ function proposeAchievementTiers(defs, players, now) {
         id,
         enabled: true,
         name: `${baseName} ${(_b = ROMAN[level3]) != null ? _b : level3}`,
-        description: `${m.label} : ${threshold.toLocaleString("fr-FR")}.`,
+        description: `${m.label} : ${formatInt(threshold)}.`,
         emoji: top.emoji,
         category: top.category,
         tier,
@@ -12312,7 +12318,7 @@ function proposeAchievementTiers(defs, players, now) {
         auto: true
       },
       holders,
-      reason: `${holders} joueur(s) ont atteint \xAB ${top.name} \xBB (${top.threshold.toLocaleString("fr-FR")}) : nouveau palier \xE0 ${threshold.toLocaleString("fr-FR")}.`
+      reason: `${holders} joueur(s) ont atteint \xAB ${top.name} \xBB (${formatInt(top.threshold)}) : nouveau palier \xE0 ${formatInt(threshold)}.`
     });
   }
   return out;

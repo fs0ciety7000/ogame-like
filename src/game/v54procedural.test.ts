@@ -27,7 +27,7 @@ function digest(over: Partial<WorldDigest> = {}): WorldDigest {
     weeklyMedian: { mission: 10, contract: 5, victory: 2, spy: 1, market: 0.5, bounty: 1, warlordWin: 0.2 },
     totals: { mission: 800, victory: 120 },
     heroes: { victory: { pseudo: "Tartiflex", count: 40 } },
-    episodes: [0.9, 0.8, 0.7, 0.6].map((completion) => ({ type: "mission" as const, count: 6, completion, open: true })),
+    episodes: [0.9, 0.8, 0.7, 0.6].map((completion) => ({ type: "mission" as const, count: 6, completion, open: true, daysOpen: 10 })),
     passMedianTier: 18,
     passTiers: 30,
     passFinishedShare: 0.5,
@@ -55,6 +55,11 @@ describe("v5.4 générateur de chapitres", () => {
     const content = currentGameContent();
     content.chronicles.months.push(a);
     expect(validateGameContent(content)).toEqual([]);
+  });
+
+  it("ignore les épisodes ouverts depuis moins de 5 jours", () => {
+    const fresh = digest({ episodes: digest().episodes.map((e) => ({ ...e, completion: 0, daysOpen: 2 })) });
+    expect(generateChapter({ monthId: "2027-04", digest: fresh, existing: [], now: APR_02 }).auto!.difficulty).toBe(1);
   });
 
   it("ajuste la difficulté et le passe selon la réussite des joueurs", () => {

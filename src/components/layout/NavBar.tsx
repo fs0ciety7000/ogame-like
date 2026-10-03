@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -125,6 +125,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
+      { to: "/game/formules", label: "Formules", icon: Sigma },
       { to: "/game/journal", label: "Journal", icon: ScrollText },
     ],
   },

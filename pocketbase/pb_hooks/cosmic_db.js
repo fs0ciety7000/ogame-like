@@ -4064,9 +4064,10 @@ function adminProcedural(e) {
   const digest = game.worldDigest(players, now);
   const months = game.chroniclesConfig().months;
   const pending = game.monthsToGenerate(months, now, settings.leadDay);
-  const [y, m] = game.chronicleMonthId(now).split("-").map(Number);
-  const nextId = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
-  const previewId = pending[0] || (months.some((x) => x.id === nextId) ? null : nextId);
+  // Aperçu : le mois à écrire, sinon le premier mois sans chronique après la dernière.
+  const last = months.map((x) => x.id).sort().pop() || game.chronicleMonthId(now);
+  const [y, m] = last.split("-").map(Number);
+  const previewId = pending[0] || (m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`);
   return e.json(200, {
     settings,
     digest,
