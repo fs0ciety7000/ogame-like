@@ -18,7 +18,7 @@ export function ProtectedRoute() {
   }
 
   if (!user) return <Navigate to="/" replace />;
-  // v5.9 : compte Google / Apple tout neuf, sans pseudo ni empire.
+  // v5.9 : compte Google tout neuf, sans pseudo ni empire.
   if (!user.displayName) return <ChoosePseudoScreen />;
 
   return <Outlet />;

@@ -23,7 +23,7 @@ import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
 import { isWinter, previewWinter, setWinter, useWinterStore } from "@/lib/winter";
 import { SFX_SAMPLES } from "@/lib/sfx";
 import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
-import { AppleMark, GoogleMark } from "@/components/auth/AltSignIn";
+import { GoogleMark } from "@/components/auth/AltSignIn";
 import { defaultPasskeyName, deletePasskey, listPasskeys, passkeyErrorMessage, passkeysSupported, registerPasskey, renamePasskey, type PasskeyInfo } from "@/services/passkeyService";
 import { enabledOAuthProviders, linkProvider, listLinkedAccounts, oauthErrorMessage, unlinkAccount, OAUTH_PROVIDERS, type LinkedAccount, type OAuthProviderId } from "@/services/oauthService";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
@@ -91,7 +91,7 @@ function ChangePasswordCard() {
 
 const fmtDate = (ms: number) => (ms ? new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "jamais");
 
-/* v5.9 : passkeys et comptes Google / Apple rattachés. */
+/* v5.9 : passkeys et compte Google rattaché. */
 function SignInMethodsCard() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [keys, setKeys] = useState<PasskeyInfo[] | null>(null);
@@ -215,13 +215,13 @@ function SignInMethodsCard() {
         {shownProviders.length > 0 && (
           <div className="space-y-2">
             <span className="font-medium text-slate-200">Comptes liés</span>
-            <p className="text-xs text-slate-500">Un compte lié permet de te connecter en un clic avec Google ou Apple.</p>
+            <p className="text-xs text-slate-500">Un compte lié permet de te connecter en un clic avec Google.</p>
             <ul className="divide-y divide-white/5 border border-white/10">
               {shownProviders.map((p) => {
                 const link = linked.find((l) => l.provider === p.id);
                 return (
                   <li key={p.id} className="flex items-center gap-3 px-3 py-2">
-                    {p.id === "google" ? <GoogleMark /> : <AppleMark />}
+                    <GoogleMark />
                     <span className="flex-1 text-slate-100">{p.label}</span>
                     {link ? (
                       <Button

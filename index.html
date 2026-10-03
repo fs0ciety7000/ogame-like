@@ -50,7 +50,14 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Remplacé par l'application au chargement ; lu par les robots sans JavaScript (vérification OAuth). -->
+      <main style="max-width: 640px; margin: 64px auto; padding: 0 16px; color: #cbd5e1; font-family: system-ui, sans-serif">
+        <h1 style="color: #f1f5f9">Cosmic Empires</h1>
+        <p>Jeu de stratégie spatiale gratuit dans le navigateur : bâtis ton empire, recherche, combats et alliances en temps réel.</p>
+        <p><a href="/confidentialite.html" style="color: #5ee7ff">Politique de confidentialité</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
