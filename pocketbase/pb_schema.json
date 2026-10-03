@@ -339,6 +339,13 @@
         "required": false,
         "maxSize": 20000,
         "presentable": false
+      },
+      {
+        "name": "talents",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "presentable": false
       }
     ],
     "indexes": [

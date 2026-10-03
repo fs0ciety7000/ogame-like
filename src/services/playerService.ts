@@ -703,6 +703,15 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
+/** v5.1 : talents d'Ascension. */
+export function learnTalent(talentId: string) {
+  return act({ type: "talentLearn", talentId });
+}
+
+export function resetTalents() {
+  return act({ type: "talentReset" });
+}
+
 export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }

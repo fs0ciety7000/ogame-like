@@ -34,6 +34,7 @@ import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass"
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
 import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel";
 import { setProfileStyle } from "@/game/profile";
+import { learnTalent, resetTalents } from "@/game/talents";
 import { addSeenAnnouncements } from "@/game/announcements";
 import { addPlanned, removePlanned } from "@/game/buildPlan";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
@@ -78,6 +79,8 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
+  | { type: "talentLearn"; talentId: string }
+  | { type: "talentReset" }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
@@ -370,6 +373,12 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
+
+    case "talentLearn":
+      return learnTalent(player, action.talentId);
+
+    case "talentReset":
+      return resetTalents(player, now);
 
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };

@@ -2379,48 +2379,6 @@ function territoryBonus(t, now) {
   return t && t.untilMs > now ? Math.min(TERRITORY_RULES.maxBonus, Math.max(0, t.pct)) : 0;
 }
 
-// src/game/modifiers.ts
-function emptyModifiers() {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
-}
-function playerModifiers(player) {
-  var _a, _b;
-  const m = emptyModifiers();
-  if (!player) return m;
-  const lv = activeLevels(player);
-  m.attack += lv.admiral * 0.01;
-  m.defense += lv.strategist * 0.01;
-  m.buildTime += lv.engineer * 0.01;
-  m.researchTime += lv.engineer * 0.01;
-  m.spyLevel += lv.spy * 0.2;
-  m.detection += lv.spy * 0.01;
-  m.productionAll += lv.steward * 0.01;
-  m.productionAll += territoryBonus(player.territory, Date.now());
-  m.storage += lv.steward * 0.02;
-  for (const item of equippedRelics(player)) {
-    const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
-    const b = relicBonus(item);
-    if (effect === "attack") m.attack += b;
-    else if (effect === "defense") m.defense += b;
-    else if (effect === "build_time") m.buildTime += b;
-    else if (effect === "research_time") m.researchTime += b;
-    else if (effect === "repair") m.repair += b;
-    else if (effect === "cargo") m.cargo += b;
-    else if (effect === "spy") m.spyLevel += b * 10;
-    else if (effect === "production_all") m.productionAll += b;
-    else if (effect && PRODUCTION_EFFECT[effect]) {
-      const res = PRODUCTION_EFFECT[effect];
-      m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
-    }
-  }
-  m.buildTime = Math.min(0.5, m.buildTime);
-  m.researchTime = Math.min(0.5, m.researchTime);
-  return m;
-}
-function withRepairBonus(base, player) {
-  return Math.min(0.95, base + playerModifiers(player).repair);
-}
-
 // src/game/production.ts
 function getProductionBonus(techLevels2) {
   return techBonus(techLevels2, "energy_efficiency");
@@ -2442,12 +2400,263 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
   return rates;
 }
 
+// src/game/defaults.ts
+function defaultResources() {
+  return {
+    scrap: 100,
+    energy: 50,
+    nano: 0,
+    data: 0,
+    reinforcedSteel: 0,
+    cyberModule: 0,
+    syntheticNanites: 0,
+    aiFragment: 0
+  };
+}
+function defaultPlayerState(uid, pseudo) {
+  return {
+    uid,
+    pseudo,
+    resources: defaultResources(),
+    buildings: defaultBuildings(),
+    units: {},
+    techLevels: {},
+    bonuses: {
+      energyEfficiency: 0,
+      unitDefenseBonus: 0,
+      unitAttackBonus: 0,
+      buildingUpgradeDiscount: 0,
+      unlockedRecipes: 0
+    },
+    xp: 0,
+    seasonId: currentSeasonId(),
+    seasonXp: 0,
+    victories: 0,
+    defeats: 0,
+    playtimeSeconds: 0,
+    resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
+    unlockedAchievements: []
+  };
+}
+function defaultQueues() {
+  return {
+    buildingUpgrades: {},
+    unitQueues: { attack: [], defense: [] },
+    activeResearches: [],
+    activeMissions: [],
+    buildPlan: []
+  };
+}
+
+// src/game/ascension.ts
+var ASCENSION_RULES = {
+  productionPerAscension: 0.1,
+  buildTimePerAscension: 0.05,
+  maxAscensions: 5,
+  cooldownDays: 7,
+  shieldHours: 72,
+  upkeepFreeDays: 7
+};
+var DAY2 = 24 * 36e5;
+function ascensionCount(player) {
+  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
+}
+function ascensionProductionFactor(player) {
+  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
+}
+function ascensionBuildTimeFactor(player) {
+  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
+}
+function upkeepFreeUntil(player) {
+  const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY2 : 0;
+}
+function canAscend(player, queues, now) {
+  var _a;
+  const missing = BUILDINGS.filter((b) => {
+    var _a2, _b;
+    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
+  }).map((b) => {
+    var _a2, _b;
+    return {
+      id: b.id,
+      name: b.name,
+      level: (_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0,
+      maxLevel: b.maxLevel
+    };
+  });
+  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
+  if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY2 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY2)} jour(s).`, missing };
+  if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
+  return { ok: true, missing };
+}
+function ascend(player, queues, now) {
+  var _a;
+  const check = canAscend(player, queues, now);
+  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
+  for (const b of BUILDINGS) {
+    if (b.endgame) continue;
+    const cur = player.buildings[b.id];
+    player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
+  }
+  player.resources = defaultResources();
+  player.resourceHistory = [];
+  player.ascensions = ascensionCount(player) + 1;
+  player.ascendedAtMs = now;
+  bumpStat(player, "ascensions");
+}
+
 // src/game/bonuses.ts
 function playerBuildTimeFactor(player, now) {
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 function playerResearchTimeFactor(player, now) {
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
+}
+
+// src/game/economy.ts
+var ECONOMY_RULES = {
+  /** Énergie consommée par seconde et par place de hangar occupée. */
+  upkeepPerPlaceAttack: 0.015,
+  upkeepPerPlaceDefense: 75e-4,
+  /** Production des autres ressources pendant une panne d'énergie. */
+  outageProductionFactor: 0.5,
+  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
+  protectedStoragePct: 0.1,
+  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
+  missionProductionMultiplier: 1.5,
+  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
+  missionRareLevelDivisor: 35,
+  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
+  missionRareProductionRef: 5e5
+};
+var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var KESH_BOOST_PCT = 0.2;
+function boostUntil(input) {
+  var _a;
+  const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
+  return Number.isFinite(v) ? v : 0;
+}
+function boostAt(input, at) {
+  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+}
+function storageCapacityOf(input) {
+  const base = getStorageCapacity(input.buildings, input.techLevels);
+  const bonus = input.commanders ? playerModifiers(input).storage : 0;
+  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
+}
+function getFleetUpkeep(units, techLevels2) {
+  let upkeep = 0;
+  for (const [id, state] of Object.entries(units != null ? units : {})) {
+    const def3 = findUnit(id);
+    if (!def3 || !(state == null ? void 0 : state.count)) continue;
+    const perPlace = def3.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
+    upkeep += state.count * def3.hangarSpace * perPlace;
+  }
+  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
+}
+function boostedRates(input, multipliers, boost = 1) {
+  var _a, _b, _c, _d;
+  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
+  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
+  if (input.commanders || input.relics) {
+    const mods = playerModifiers(input);
+    for (const res of Object.keys(gross)) {
+      const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
+      if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
+    }
+  }
+  for (const [res, m] of Object.entries(multipliers)) {
+    if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
+  }
+  return gross;
+}
+function addCapped(stock, gain, cap) {
+  if (gain <= 0) return Math.max(0, stock + gain);
+  if (stock >= cap) return stock;
+  return Math.min(cap, stock + gain);
+}
+function advanceResources(input, elapsedSeconds, startMs) {
+  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  const endMs = startMs + elapsedSeconds * 1e3;
+  let resources = input.resources;
+  let at = startMs;
+  const freeUntil = upkeepFreeUntil(input);
+  const boostEnd = boostUntil(input);
+  const cuts = [
+    ...eventBoundaries(startMs, endMs),
+    ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
+    ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
+    endMs
+  ].sort((a, b) => a - b);
+  for (const cut of cuts) {
+    if (cut <= at) continue;
+    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil, boostAt(input, at));
+    at = cut;
+  }
+  return resources;
+}
+function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, boost = 1) {
+  var _a, _b, _c, _d;
+  const out = __spreadValues({}, input.resources);
+  if (elapsedSeconds <= 0) return out;
+  const gross = boostedRates(input, multipliers, boost);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const capacity = storageCapacityOf(input);
+  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const energyStock = (_b = out.energy) != null ? _b : 0;
+  let normalSeconds = elapsedSeconds;
+  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
+  const outageSeconds = elapsedSeconds - normalSeconds;
+  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
+  if (outageSeconds > 0) out.energy = 0;
+  for (const r of RESOURCE_LIST) {
+    if (r.id === "energy") continue;
+    const rate = (_c = gross[r.id]) != null ? _c : 0;
+    if (!rate) continue;
+    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
+    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
+  }
+  return out;
+}
+function protectedAmount(buildings, res, techLevels2, allianceLevels) {
+  if (!COMMON_RESOURCES2.includes(res)) return 0;
+  const capacity = getStorageCapacity(buildings, techLevels2);
+  const bastion = allianceBastionBonus(allianceLevels);
+  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
+}
+function rareRewardScale(player) {
+  var _a;
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
+    var _a2;
+    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
+  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
+  const ref = ECONOMY_RULES.missionRareProductionRef;
+  const production = ref > 0 ? perHour / ref : 0;
+  return Math.max(development, production);
+}
+function missionRewards(mission, player) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const rareScale = rareRewardScale(player);
+  const out = {};
+  for (const [res, fixed] of Object.entries(mission.reward)) {
+    if (res === "xp") out.xp = fixed;
+    else if (COMMON_RESOURCES2.includes(res)) {
+      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
+      out[res] = Math.max(fixed, indexed);
+    } else out[res] = Math.floor(fixed * rareScale);
+  }
+  return out;
 }
 
 // src/game/colonies.ts
@@ -2692,6 +2901,152 @@ function collectFromColony(colony, requested, capacity) {
 function deliverToColony(colony, cargo) {
   var _a;
   for (const [r, n] of Object.entries(cargo)) colony.resources[r] = ((_a = colony.resources[r]) != null ? _a : 0) + (n != null ? n : 0);
+}
+
+// src/game/contracts.ts
+var CONTRACT_RULES = {
+  perDay: 3,
+  streakBonusPerDay: 0.1,
+  streakBonusMax: 0.5,
+  chestEvery: 7,
+  xpPerContract: 20,
+  rarePerContract: 120,
+  chestRare: 1500,
+  chestXp: 150
+};
+var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
+var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var DAY_MS = 24 * 3600 * 1e3;
+function contractDay(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function previousDay(day) {
+  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
+}
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function targetFor(type, player) {
+  var _a, _b, _c, _d;
+  switch (type) {
+    case "build_units":
+      return 20;
+    case "missions":
+      return 2;
+    case "spend": {
+      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
+      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
+    }
+    default:
+      return 1;
+  }
+}
+function makeContract(type, player, day, index) {
+  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+}
+function ensureContracts(player, now) {
+  var _a, _b;
+  const day = contractDay(now);
+  const current2 = player.contracts;
+  if (current2 && current2.day === day) return current2;
+  const rand = seededRandom(`${player.uid}:${day}`);
+  const pool = [...ALL_TYPES];
+  const items = [];
+  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
+    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    items.push(makeContract(type, player, day, i));
+  }
+  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
+  player.contracts = {
+    day,
+    items,
+    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
+    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
+    rerolled: false
+  };
+  return player.contracts;
+}
+function recordContract(player, type, amount3, now) {
+  if (!(amount3 > 0)) return;
+  const state = ensureContracts(player, now);
+  for (const c of state.items) {
+    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
+  }
+}
+function developmentScale(player) {
+  return rareRewardScale(player);
+}
+function streakBonus(streak) {
+  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
+}
+function contractReward(player, contract) {
+  var _a, _b, _c;
+  const state = player.contracts;
+  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
+  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index + contract.type.length) % RARES.length];
+  return {
+    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
+    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
+  };
+}
+function chestReward(player) {
+  const scale = developmentScale(player);
+  const out = { xp: CONTRACT_RULES.chestXp };
+  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
+  return out;
+}
+function grant(player, reward, now) {
+  var _a;
+  for (const [res, amount3] of Object.entries(reward)) {
+    if (res === "xp") applyXpDelta(player, amount3, now);
+    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  }
+}
+function claimContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  const contract = state.items.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
+  const reward = contractReward(player, contract);
+  grant(player, reward, now);
+  contract.claimed = true;
+  let chest = null;
+  const dayCompleted = state.items.every((c) => c.claimed);
+  if (dayCompleted) {
+    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
+    state.lastCompletedDay = state.day;
+    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
+      chest = chestReward(player);
+      grant(player, chest, now);
+    }
+  }
+  return { reward, dayCompleted, chest };
+}
+function rerollContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
+  const index = state.items.findIndex((c) => c.id === contractId);
+  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const used = new Set(state.items.map((c) => c.type));
+  const pool = ALL_TYPES.filter((t) => !used.has(t));
+  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const type = pool[Math.floor(rand() * pool.length)];
+  const next = makeContract(type, player, state.day, index);
+  next.id = `${state.day}-${index}-${type}-r`;
+  state.items[index] = next;
+  state.rerolled = true;
+  return next;
 }
 
 // src/game/missions.ts
@@ -3884,7 +4239,7 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
-var DAY2 = 864e5;
+var DAY3 = 864e5;
 var HOUR3 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
@@ -3898,8 +4253,8 @@ function startVacation(player, daysIn, ctx, now) {
   }
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
-  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY2) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY2 - now) / HOUR3);
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY3) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY3 - now) / HOUR3);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
@@ -3908,7 +4263,7 @@ function startVacation(player, daysIn, ctx, now) {
   if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR3) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
-  const v = { startedAtMs: now, untilMs: now + days * DAY2 };
+  const v = { startedAtMs: now, untilMs: now + days * DAY3 };
   player.vacation = v;
   return v;
 }
@@ -4406,401 +4761,117 @@ function setActiveTitle(player, label3) {
   player.activeTitle = label3;
 }
 
-// src/game/defaults.ts
-function defaultResources() {
-  return {
-    scrap: 100,
-    energy: 50,
-    nano: 0,
-    data: 0,
-    reinforcedSteel: 0,
-    cyberModule: 0,
-    syntheticNanites: 0,
-    aiFragment: 0
-  };
-}
-function defaultPlayerState(uid, pseudo) {
-  return {
-    uid,
-    pseudo,
-    resources: defaultResources(),
-    buildings: defaultBuildings(),
-    units: {},
-    techLevels: {},
-    bonuses: {
-      energyEfficiency: 0,
-      unitDefenseBonus: 0,
-      unitAttackBonus: 0,
-      buildingUpgradeDiscount: 0,
-      unlockedRecipes: 0
-    },
-    xp: 0,
-    seasonId: currentSeasonId(),
-    seasonXp: 0,
-    victories: 0,
-    defeats: 0,
-    playtimeSeconds: 0,
-    resourcesUpdatedAtMs: Date.now(),
-    resourceHistory: [],
-    unlockedAchievements: []
-  };
-}
-function defaultQueues() {
-  return {
-    buildingUpgrades: {},
-    unitQueues: { attack: [], defense: [] },
-    activeResearches: [],
-    activeMissions: [],
-    buildPlan: []
-  };
-}
-
-// src/game/ascension.ts
-var ASCENSION_RULES = {
-  productionPerAscension: 0.1,
-  buildTimePerAscension: 0.05,
-  maxAscensions: 5,
-  cooldownDays: 7,
-  shieldHours: 72,
-  upkeepFreeDays: 7
-};
-var DAY3 = 24 * 36e5;
-function ascensionCount(player) {
-  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
-}
-function ascensionProductionFactor(player) {
-  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
-}
-function ascensionBuildTimeFactor(player) {
-  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
-}
-function upkeepFreeUntil(player) {
-  const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY3 : 0;
-}
-function canAscend(player, queues, now) {
-  var _a;
-  const missing = BUILDINGS.filter((b) => {
-    var _a2, _b;
-    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
-  }).map((b) => {
-    var _a2, _b;
-    return {
-      id: b.id,
-      name: b.name,
-      level: (_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0,
-      maxLevel: b.maxLevel
-    };
-  });
-  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
-  if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY3 - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY3)} jour(s).`, missing };
-  if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
-  return { ok: true, missing };
-}
-function ascend(player, queues, now) {
-  var _a;
-  const check = canAscend(player, queues, now);
-  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
-  for (const b of BUILDINGS) {
-    if (b.endgame) continue;
-    const cur = player.buildings[b.id];
-    player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
-  }
-  player.resources = defaultResources();
-  player.resourceHistory = [];
-  player.ascensions = ascensionCount(player) + 1;
-  player.ascendedAtMs = now;
-  bumpStat(player, "ascensions");
-}
-
-// src/game/economy.ts
-var ECONOMY_RULES = {
-  /** Énergie consommée par seconde et par place de hangar occupée. */
-  upkeepPerPlaceAttack: 0.015,
-  upkeepPerPlaceDefense: 75e-4,
-  /** Production des autres ressources pendant une panne d'énergie. */
-  outageProductionFactor: 0.5,
-  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
-  protectedStoragePct: 0.1,
-  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
-  missionProductionMultiplier: 1.5,
-  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
-  missionRareLevelDivisor: 35,
-  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 5e5
-};
-var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
-var KESH_BOOST_PCT = 0.2;
-function boostUntil(input) {
-  var _a;
-  const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
-  return Number.isFinite(v) ? v : 0;
-}
-function boostAt(input, at) {
-  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
-}
-function storageCapacityOf(input) {
-  const base = getStorageCapacity(input.buildings, input.techLevels);
-  const bonus = input.commanders ? playerModifiers(input).storage : 0;
-  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
-}
-function getFleetUpkeep(units, techLevels2) {
-  let upkeep = 0;
-  for (const [id, state] of Object.entries(units != null ? units : {})) {
-    const def3 = findUnit(id);
-    if (!def3 || !(state == null ? void 0 : state.count)) continue;
-    const perPlace = def3.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
-    upkeep += state.count * def3.hangarSpace * perPlace;
-  }
-  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
-}
-function boostedRates(input, multipliers, boost = 1) {
-  var _a, _b, _c, _d;
-  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
-  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
-  if (input.commanders || input.relics) {
-    const mods = playerModifiers(input);
-    for (const res of Object.keys(gross)) {
-      const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
-      if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
-    }
-  }
-  for (const [res, m] of Object.entries(multipliers)) {
-    if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
-  }
-  return gross;
-}
-function addCapped(stock, gain, cap) {
-  if (gain <= 0) return Math.max(0, stock + gain);
-  if (stock >= cap) return stock;
-  return Math.min(cap, stock + gain);
-}
-function advanceResources(input, elapsedSeconds, startMs) {
-  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
-  const endMs = startMs + elapsedSeconds * 1e3;
-  let resources = input.resources;
-  let at = startMs;
-  const freeUntil = upkeepFreeUntil(input);
-  const boostEnd = boostUntil(input);
-  const cuts = [
-    ...eventBoundaries(startMs, endMs),
-    ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
-    ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
-    endMs
-  ].sort((a, b) => a - b);
-  for (const cut of cuts) {
-    if (cut <= at) continue;
-    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil, boostAt(input, at));
-    at = cut;
-  }
-  return resources;
-}
-function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, boost = 1) {
-  var _a, _b, _c, _d;
-  const out = __spreadValues({}, input.resources);
-  if (elapsedSeconds <= 0) return out;
-  const gross = boostedRates(input, multipliers, boost);
-  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
-  const capacity = storageCapacityOf(input);
-  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
-  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
-  const energyStock = (_b = out.energy) != null ? _b : 0;
-  let normalSeconds = elapsedSeconds;
-  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
-  const outageSeconds = elapsedSeconds - normalSeconds;
-  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
-  if (outageSeconds > 0) out.energy = 0;
-  for (const r of RESOURCE_LIST) {
-    if (r.id === "energy") continue;
-    const rate = (_c = gross[r.id]) != null ? _c : 0;
-    if (!rate) continue;
-    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
-    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
-  }
-  return out;
-}
-function protectedAmount(buildings, res, techLevels2, allianceLevels) {
-  if (!COMMON_RESOURCES2.includes(res)) return 0;
-  const capacity = getStorageCapacity(buildings, techLevels2);
-  const bastion = allianceBastionBonus(allianceLevels);
-  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
-}
-function rareRewardScale(player) {
-  var _a;
-  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
-  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
-    var _a2;
-    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
-  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
-  const ref = ECONOMY_RULES.missionRareProductionRef;
-  const production = ref > 0 ? perHour / ref : 0;
-  return Math.max(development, production);
-}
-function missionRewards(mission, player) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const rareScale = rareRewardScale(player);
-  const out = {};
-  for (const [res, fixed] of Object.entries(mission.reward)) {
-    if (res === "xp") out.xp = fixed;
-    else if (COMMON_RESOURCES2.includes(res)) {
-      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
-      out[res] = Math.max(fixed, indexed);
-    } else out[res] = Math.floor(fixed * rareScale);
-  }
-  return out;
-}
-
-// src/game/contracts.ts
-var CONTRACT_RULES = {
-  perDay: 3,
-  streakBonusPerDay: 0.1,
-  streakBonusMax: 0.5,
-  chestEvery: 7,
-  xpPerContract: 20,
-  rarePerContract: 120,
-  chestRare: 1500,
-  chestXp: 150
-};
-var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
-var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var DAY_MS = 24 * 3600 * 1e3;
-function contractDay(now) {
-  return new Date(now).toISOString().slice(0, 10);
-}
-function previousDay(day) {
-  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
-}
-function seededRandom(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return () => {
-    h = Math.imul(h ^ h >>> 15, 2246822507);
-    h = Math.imul(h ^ h >>> 13, 3266489909);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  };
-}
-function targetFor(type, player) {
-  var _a, _b, _c, _d;
-  switch (type) {
-    case "build_units":
-      return 20;
-    case "missions":
-      return 2;
-    case "spend": {
-      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
-      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
-    }
-    default:
-      return 1;
-  }
-}
-function makeContract(type, player, day, index) {
-  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
-}
-function ensureContracts(player, now) {
+// src/game/talents.ts
+var TALENT_RULES = { pointsPerAscension: 3, maxRank: 3 };
+var TALENTS = [
+  { id: "rendement", branch: "economie", name: "Rendement imp\xE9rial", description: "Production de toutes les ressources.", effect: { kind: "productionAll" }, perRank: 0.02 },
+  { id: "fonderies", branch: "economie", name: "Fonderies profondes", description: "Production de ferraille.", effect: { kind: "production", res: "scrap" }, perRank: 0.02 },
+  { id: "reacteurs", branch: "economie", name: "R\xE9acteurs stabilis\xE9s", description: "Production d'\xE9nergie instable.", effect: { kind: "production", res: "energy" }, perRank: 0.02 },
+  { id: "nanoforges", branch: "economie", name: "Nanoforges", description: "Production de nanocomposants.", effect: { kind: "production", res: "nano" }, perRank: 0.02 },
+  { id: "archivistes", branch: "economie", name: "Archivistes", description: "Production de donn\xE9es anciennes.", effect: { kind: "production", res: "data" }, perRank: 0.02 },
+  { id: "assaut", branch: "guerre", name: "Doctrine d'assaut", description: "Attaque de tes flottes.", effect: { kind: "attack" }, perRank: 0.02 },
+  { id: "rempart", branch: "guerre", name: "Rempart", description: "D\xE9fense de tes unit\xE9s.", effect: { kind: "defense" }, perRank: 0.02 },
+  { id: "ateliers", branch: "guerre", name: "Ateliers de campagne", description: "Vaisseaux r\xE9par\xE9s apr\xE8s un combat.", effect: { kind: "repair" }, perRank: 0.02 },
+  { id: "sentinelles", branch: "guerre", name: "Sentinelles", description: "Chances de rep\xE9rer l'espionnage adverse.", effect: { kind: "detection" }, perRank: 0.02 },
+  { id: "reseau", branch: "guerre", name: "R\xE9seau d'informateurs", description: "Niveau d'espionnage (+0,2 par rang).", effect: { kind: "spyLevel" }, perRank: 0.2 },
+  { id: "chantiers", branch: "logistique", name: "Chantiers rapides", description: "Dur\xE9e de construction des b\xE2timents.", effect: { kind: "buildTime" }, perRank: 0.02 },
+  { id: "laboratoires", branch: "logistique", name: "Laboratoires", description: "Dur\xE9e des recherches.", effect: { kind: "researchTime" }, perRank: 0.02 },
+  { id: "entrepots", branch: "logistique", name: "Entrep\xF4ts \xE9tendus", description: "Capacit\xE9 des entrep\xF4ts.", effect: { kind: "storage" }, perRank: 0.02 },
+  { id: "soutes", branch: "logistique", name: "Soutes renforc\xE9es", description: "Capacit\xE9 de transport des flottes.", effect: { kind: "cargo" }, perRank: 0.02 },
+  { id: "intendance", branch: "logistique", name: "Intendance", description: "Production de toutes les ressources (logistique).", effect: { kind: "productionAll" }, perRank: 0.02 }
+];
+function talentState(player) {
   var _a, _b;
-  const day = contractDay(now);
-  const current2 = player.contracts;
-  if (current2 && current2.day === day) return current2;
-  const rand = seededRandom(`${player.uid}:${day}`);
-  const pool = [...ALL_TYPES];
-  const items = [];
-  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
-    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
-    items.push(makeContract(type, player, day, i));
+  const raw = (_a = player.talents) != null ? _a : {};
+  const ranks = {};
+  for (const t of TALENTS) {
+    const r = Math.floor(Number((_b = raw.ranks) == null ? void 0 : _b[t.id]) || 0);
+    if (r > 0) ranks[t.id] = Math.min(TALENT_RULES.maxRank, r);
   }
-  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
-  player.contracts = {
-    day,
-    items,
-    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
-    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
-    rerolled: false
-  };
-  return player.contracts;
+  return { ranks, resetSeasonId: raw.resetSeasonId };
 }
-function recordContract(player, type, amount3, now) {
-  if (!(amount3 > 0)) return;
-  const state = ensureContracts(player, now);
-  for (const c of state.items) {
-    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
-  }
-}
-function developmentScale(player) {
-  return rareRewardScale(player);
-}
-function streakBonus(streak) {
-  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
-}
-function contractReward(player, contract) {
-  var _a, _b, _c;
-  const state = player.contracts;
-  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
-  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
-  const rare = RARES[(index + contract.type.length) % RARES.length];
-  return {
-    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
-    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
-  };
-}
-function chestReward(player) {
-  const scale = developmentScale(player);
-  const out = { xp: CONTRACT_RULES.chestXp };
-  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
-  return out;
-}
-function grant(player, reward, now) {
+function talentPoints(player) {
   var _a;
-  for (const [res, amount3] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount3, now);
-    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  }
+  const total2 = Math.max(0, Math.floor((_a = player.ascensions) != null ? _a : 0)) * TALENT_RULES.pointsPerAscension;
+  const spent = Object.values(talentState(player).ranks).reduce((a, b) => a + b, 0);
+  return { total: total2, spent, free: Math.max(0, total2 - spent) };
 }
-function claimContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  const contract = state.items.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
-  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
-  const reward = contractReward(player, contract);
-  grant(player, reward, now);
-  contract.claimed = true;
-  let chest = null;
-  const dayCompleted = state.items.every((c) => c.claimed);
-  if (dayCompleted) {
-    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
-    state.lastCompletedDay = state.day;
-    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
-      chest = chestReward(player);
-      grant(player, chest, now);
+function learnTalent(player, talentId) {
+  var _a, _b;
+  const def3 = TALENTS.find((t) => t.id === talentId);
+  if (!def3) throw new GameActionError("Talent inconnu.");
+  const st = talentState(player);
+  if (((_a = st.ranks[def3.id]) != null ? _a : 0) >= TALENT_RULES.maxRank) throw new GameActionError("Ce talent est d\xE9j\xE0 au rang maximum.");
+  if (talentPoints(player).free <= 0) throw new GameActionError("Aucun point de talent disponible : chaque Ascension en donne 3.");
+  st.ranks[def3.id] = ((_b = st.ranks[def3.id]) != null ? _b : 0) + 1;
+  player.talents = st;
+  return st;
+}
+function resetTalents(player, now) {
+  const st = talentState(player);
+  const season = currentSeasonId(now);
+  if (st.resetSeasonId === season) throw new GameActionError("Tu as d\xE9j\xE0 redistribu\xE9 tes talents cette saison.");
+  if (Object.keys(st.ranks).length === 0) throw new GameActionError("Aucun talent \xE0 redistribuer.");
+  const next = { ranks: {}, resetSeasonId: season };
+  player.talents = next;
+  return next;
+}
+function talentBonuses(player) {
+  const st = talentState(player);
+  return TALENTS.filter((t) => {
+    var _a;
+    return ((_a = st.ranks[t.id]) != null ? _a : 0) > 0;
+  }).map((def3) => {
+    var _a;
+    return { def: def3, value: def3.perRank * ((_a = st.ranks[def3.id]) != null ? _a : 0) };
+  });
+}
+
+// src/game/modifiers.ts
+function emptyModifiers() {
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
+}
+function playerModifiers(player) {
+  var _a, _b, _c;
+  const m = emptyModifiers();
+  if (!player) return m;
+  const lv = activeLevels(player);
+  m.attack += lv.admiral * 0.01;
+  m.defense += lv.strategist * 0.01;
+  m.buildTime += lv.engineer * 0.01;
+  m.researchTime += lv.engineer * 0.01;
+  m.spyLevel += lv.spy * 0.2;
+  m.detection += lv.spy * 0.01;
+  m.productionAll += lv.steward * 0.01;
+  m.productionAll += territoryBonus(player.territory, Date.now());
+  m.storage += lv.steward * 0.02;
+  for (const item of equippedRelics(player)) {
+    const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
+    const b = relicBonus(item);
+    if (effect === "attack") m.attack += b;
+    else if (effect === "defense") m.defense += b;
+    else if (effect === "build_time") m.buildTime += b;
+    else if (effect === "research_time") m.researchTime += b;
+    else if (effect === "repair") m.repair += b;
+    else if (effect === "cargo") m.cargo += b;
+    else if (effect === "spy") m.spyLevel += b * 10;
+    else if (effect === "production_all") m.productionAll += b;
+    else if (effect && PRODUCTION_EFFECT[effect]) {
+      const res = PRODUCTION_EFFECT[effect];
+      m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
     }
   }
-  return { reward, dayCompleted, chest };
+  for (const { def: def3, value } of talentBonuses(player)) {
+    const e = def3.effect;
+    if (e.kind === "production") m.production[e.res] = ((_c = m.production[e.res]) != null ? _c : 0) + value;
+    else m[e.kind] += value;
+  }
+  m.buildTime = Math.min(0.5, m.buildTime);
+  m.researchTime = Math.min(0.5, m.researchTime);
+  return m;
 }
-function rerollContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
-  const index = state.items.findIndex((c) => c.id === contractId);
-  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
-  const used = new Set(state.items.map((c) => c.type));
-  const pool = ALL_TYPES.filter((t) => !used.has(t));
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
-  const type = pool[Math.floor(rand() * pool.length)];
-  const next = makeContract(type, player, state.day, index);
-  next.id = `${state.day}-${index}-${type}-r`;
-  state.items[index] = next;
-  state.rerolled = true;
-  return next;
+function withRepairBonus(base, player) {
+  return Math.min(0.95, base + playerModifiers(player).repair);
 }
 
 // src/game/bounties.ts
@@ -9362,6 +9433,10 @@ function applyAction(s, action) {
     }
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
+    case "talentLearn":
+      return learnTalent(player, action.talentId);
+    case "talentReset":
+      return resetTalents(player, now);
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
@@ -9974,7 +10049,8 @@ var GAME_FIELDS = [
   "referral",
   "vacation",
   "chronicle",
-  "announcementsSeen"
+  "announcementsSeen",
+  "talents"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 

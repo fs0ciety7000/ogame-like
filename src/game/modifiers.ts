@@ -1,6 +1,7 @@
 import { activeLevels } from "@/game/commanders";
 import { equippedRelics, findTemplate, PRODUCTION_EFFECT, relicBonus } from "@/game/relics";
 import { territoryBonus } from "@/game/territories";
+import { talentBonuses } from "@/game/talents";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -25,7 +26,7 @@ export interface Modifiers {
   cargo: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents">>;
 
 export function emptyModifiers(): Modifiers {
   return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
@@ -60,6 +61,12 @@ export function playerModifiers(player: ModPlayer | null | undefined): Modifiers
       const res = PRODUCTION_EFFECT[effect]!;
       m.production[res] = (m.production[res] ?? 0) + b;
     }
+  }
+  // v5.1 : talents d'Ascension.
+  for (const { def, value } of talentBonuses(player as Pick<PlayerState, "talents">)) {
+    const e = def.effect;
+    if (e.kind === "production") m.production[e.res] = (m.production[e.res] ?? 0) + value;
+    else m[e.kind] += value;
   }
   // Durées : jamais en dessous de 50 % de la normale par ce biais.
   m.buildTime = Math.min(0.5, m.buildTime);
