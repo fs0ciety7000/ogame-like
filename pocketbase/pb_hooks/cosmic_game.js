@@ -2603,12 +2603,10 @@ function boostedRates(input, multipliers, boost = 1) {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
   const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
   if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
-  if (input.commanders || input.relics) {
-    const mods = playerModifiers(input);
-    for (const res of Object.keys(gross)) {
-      const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
-      if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
-    }
+  const mods = playerModifiers(input);
+  for (const res of Object.keys(gross)) {
+    const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
+    if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
   }
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
