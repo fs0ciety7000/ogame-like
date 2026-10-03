@@ -9,6 +9,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   COMMANDER_RULES,
+  COMMANDER_SOURCES,
   COMMANDERS,
   commanderLevel,
   commanderSlots,
@@ -196,7 +197,17 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
         </div>
       </div>
       <p className="text-sm text-slate-300">{def.bonus(Math.max(1, level))}{entry ? "" : " (au niveau 1)"}</p>
-      <p className="text-xs text-slate-500">Progresse avec : {def.domain}</p>
+      <div className="flex flex-col gap-1">
+        <p className="text-xs text-slate-500">Progresse avec :</p>
+        <div className="flex flex-wrap gap-1">
+          {COMMANDER_SOURCES[def.id].map((src) => (
+            <span key={src.label} className="border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[11px] text-slate-300">
+              {src.label} <span className="font-mono" style={{ color: tone }}>+{src.xp}</span>
+            </span>
+          ))}
+        </div>
+        {entry && !active && <p className="text-[11px] text-gold-glow">En réserve : il ne gagne pas d'XP. Mets-le en poste pour qu'il progresse.</p>}
+      </div>
       {entry && (
         <div className="flex flex-col gap-1">
           <Bar value={maxed ? 1 : (xp - floor) / Math.max(1, ceil - floor)} tone={tone} />

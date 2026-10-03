@@ -1,6 +1,7 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildTimeFactor } from "@/game/bonuses";
+import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
 import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
@@ -267,6 +268,8 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
       const job = colony.building;
       colony.buildings[job.id] = { ...(colony.buildings[job.id] ?? { unlocked: true }), level: job.level };
       colony.building = null;
+      // v5.6 : l'Ingénieure en poste progresse aussi avec les chantiers des colonies.
+      grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
       notes.push({ kind: "building", title: "Colonie : construction terminée", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {

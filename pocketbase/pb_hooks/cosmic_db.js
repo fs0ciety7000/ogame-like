@@ -4075,6 +4075,32 @@ function balanceHistoryTick(now) {
 /* ---------- v5.5 : saga d'alliance (générée chaque mois) ---------- */
 
 /** Tâche horaire : écrit la saga du mois si besoin, clôt et récompense le mois écoulé, met le classement à jour. */
+/**
+ * v5.6 : progression en direct de l'alliance du joueur (le classement complet
+ * reste calculé chaque heure). GET /api/cosmic/alliance/saga/live
+ */
+function allianceSagaLive(e) {
+  const game = loadGame();
+  const now = Date.now();
+  applyContent($app, game);
+  const own = findOrNull($app, "players", e.auth.id);
+  const allianceId = own ? own.getString("allianceId") : "";
+  if (!allianceId) return e.json(200, null);
+  const a = findOrNull($app, "alliances", allianceId);
+  if (!a) return e.json(200, null);
+  const rec = configRecord($app, game.ALLIANCE_SAGA_KEY);
+  const state = game.readAllianceSaga(rec ? toPlain(rec).data : null);
+  const monthId = game.sagaMonthId(now);
+  const def = game.sagaOf(state, monthId);
+  if (!def) return e.json(200, null);
+  const members = (toPlain(a).members || [])
+    .map((uid) => findOrNull($app, "players", uid))
+    .filter((r) => !!r)
+    .map((r) => ({ seasonPass: toPlain(r).seasonPass }));
+  const progress = game.sagaProgress(def, members, now);
+  return e.json(200, { monthId, allianceId, progress, points: game.sagaPoints(def, progress), updatedAtMs: now });
+}
+
 function allianceSagaTick(now) {
   const game = loadGame();
   const out = { generated: null, closed: null, alliances: 0 };
@@ -5853,4 +5879,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
