@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Starfield } from "@/components/layout/Starfield";
+import { ChoosePseudoScreen } from "@/components/auth/ChoosePseudoScreen";
 
 export function ProtectedRoute() {
   const { user, initializing } = useAuth();
@@ -17,6 +18,8 @@ export function ProtectedRoute() {
   }
 
   if (!user) return <Navigate to="/" replace />;
+  // v5.9 : compte Google / Apple tout neuf, sans pseudo ni empire.
+  if (!user.displayName) return <ChoosePseudoScreen />;
 
   return <Outlet />;
 }

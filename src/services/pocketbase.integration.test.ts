@@ -2342,6 +2342,39 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v5.9 Google / Apple account: pseudo chosen once before the empire exists", async () => {
+    const email = `oa${suffix}@test.dev`;
+    const rec = await admin.collection("users").create({ email, password: "motdepasse3", passwordConfirm: "motdepasse3" });
+    const oa = new PocketBase(PB_TEST_URL);
+    try {
+      await oa.collection("users").authWithPassword(email, "motdepasse3");
+      expect(oa.authStore.record?.username).toBe("");
+      await expect(oa.send("/api/cosmic/init", { method: "POST" })).rejects.toMatchObject({ status: 400 });
+      await expect(oa.send("/api/cosmic/account/pseudo", { method: "POST", body: { pseudo: A.pseudo } })).rejects.toMatchObject({ status: 400 });
+      const pseudo = `Oauth_${suffix}`;
+      await oa.send("/api/cosmic/account/pseudo", { method: "POST", body: { pseudo } });
+      await expect(oa.send("/api/cosmic/account/pseudo", { method: "POST", body: { pseudo: `Autre_${suffix}` } })).rejects.toMatchObject({ status: 400 });
+      await oa.send("/api/cosmic/init", { method: "POST" });
+      expect((await snap(rec.id))?.pseudo).toBe(pseudo);
+    } finally {
+      await admin.collection("players").delete(rec.id).catch(() => undefined);
+      await admin.collection("users").delete(rec.id).catch(() => undefined);
+    }
+  });
+
+  it("v5.9 passkeys: options need a session, unknown credentials are refused", async () => {
+    const anon = new PocketBase(PB_TEST_URL);
+    await expect(anon.send("/api/cosmic/passkey/register/options", { method: "POST" })).rejects.toMatchObject({ status: 401 });
+    const login = await anon.send("/api/cosmic/passkey/login/options", { method: "POST" });
+    expect(login.challenge).toMatch(/^[A-Za-z0-9_-]{20,}$/);
+    await expect(
+      anon.send("/api/cosmic/passkey/login/verify", { method: "POST", body: { id: "AAAA", response: { clientDataJSON: "e30", authenticatorData: "", signature: "" } } }),
+    ).rejects.toMatchObject({ status: 400 });
+    const reg = await pb.send("/api/cosmic/passkey/register/options", { method: "POST" });
+    expect(reg.authenticatorSelection.residentKey).toBe("required");
+    expect(await pb.collection("passkeys").getFullList()).toEqual([]);
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

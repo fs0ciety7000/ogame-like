@@ -2693,5 +2693,84 @@
       "CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)",
       "CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"
     ]
+  },
+  {
+    "id": "pbc_ce_passkeys",
+    "name": "passkeys",
+    "type": "base",
+    "listRule": "user = @request.auth.id && @request.auth.collectionName = \"users\"",
+    "viewRule": "user = @request.auth.id && @request.auth.collectionName = \"users\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": "user = @request.auth.id && @request.auth.collectionName = \"users\"",
+    "fields": [
+      {
+        "name": "user",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "credentialId",
+        "type": "text",
+        "required": true,
+        "max": 400,
+        "presentable": false
+      },
+      {
+        "name": "publicKey",
+        "type": "text",
+        "required": true,
+        "max": 2000,
+        "presentable": false
+      },
+      {
+        "name": "alg",
+        "type": "number",
+        "required": false,
+        "onlyInt": true,
+        "presentable": false
+      },
+      {
+        "name": "signCount",
+        "type": "number",
+        "required": false,
+        "onlyInt": true,
+        "presentable": false
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": true
+      },
+      {
+        "name": "transports",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": true,
+        "presentable": false
+      },
+      {
+        "name": "lastUsedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": true,
+        "presentable": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)",
+      "CREATE INDEX idx_passkeys_user ON passkeys (user)"
+    ]
   }
 ]
