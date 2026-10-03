@@ -53,6 +53,8 @@ function fleetLabel(f: Fleet, outbound: boolean): string {
       return outbound ? `🐝 Prime : ${f.targetPseudo}` : `🐝 ← retour de la traque de ${f.targetPseudo}`;
     case "elite":
       return outbound ? `🐝 Proie d'élite : ${f.targetPseudo}` : "🐝 ← retour de la proie d'élite";
+    case "delivery":
+      return outbound ? `📦 Livraison → ${f.targetPseudo}` : `📦 ← retour de livraison (${f.targetPseudo})`;
     case "recycle":
       return outbound
         ? `♻️ Débris de ${f.targetPseudo}`

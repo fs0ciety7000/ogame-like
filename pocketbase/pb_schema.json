@@ -1762,6 +1762,19 @@
         "name": "tax",
         "type": "number",
         "required": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "filled",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
       }
     ],
     "indexes": [
@@ -2311,6 +2324,140 @@
     ],
     "indexes": [
       "CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_tradecontracts",
+    "name": "trade_contracts",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "clientUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "clientPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "targetUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "wantRes",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "wantAmount",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "payRes",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "payAmount",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "hours",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "expiresAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "supplierUid",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "supplierPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "deposit",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "acceptedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "deadlineMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
+        "name": "fleetId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "closedAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)",
+      "CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)",
+      "CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"
     ]
   }
 ]

@@ -399,6 +399,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "seasonboss") return seasonBossArrival(txApp, game, rec, now);
   if (mission === "allianceboss") return allianceBossArrival(txApp, game, rec, now);
   if (mission === "transport") return transportArrival(txApp, game, rec, now);
+  if (mission === "delivery") return deliveryArrival(txApp, game, rec, now);
   if (mission === "bounty") return bountyArrival(txApp, game, rec, now);
   if (mission === "elite") return eliteArrival(txApp, game, rec, now);
   if (mission === "garrison") {
@@ -522,6 +523,185 @@ function transportArrival(txApp, game, rec, now) {
   rec.set("status", "returning");
   rec.set("returnAtMs", now + tripMs);
   txApp.save(rec);
+}
+
+/* ---------- Contrats entre joueurs (v5.1) ---------- */
+
+/** Contrats actifs d'un joueur : publiés (ouverts ou acceptés) et acceptés comme livreur. */
+function activeTradeContracts(txApp, uid) {
+  return txApp.findRecordsByFilter(
+    "trade_contracts",
+    '(clientUid = {:u} && (status = "open" || status = "accepted")) || (supplierUid = {:u} && status = "accepted")',
+    "",
+    20,
+    0,
+    { u: uid },
+  ).length;
+}
+
+/** Arrivée d'une livraison : à temps, le contrat est honoré ; sinon la cargaison repart. */
+function deliveryArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  const cargo = (fleet.transport && fleet.transport.cargo) || {};
+  const contractRec = fleet.transport && fleet.transport.contractId ? findOrNull(txApp, "trade_contracts", fleet.transport.contractId) : null;
+  const c = contractRec ? toPlain(contractRec) : null;
+  const ok = c && c.status === "accepted" && c.supplierUid === fleet.ownerUid && now <= c.deadlineMs && findOrNull(txApp, "players", c.clientUid) && findOrNull(txApp, "players", fleet.ownerUid);
+  if (ok) {
+    const client = loadPlayer(txApp, game, c.clientUid);
+    const supplier = loadPlayer(txApp, game, fleet.ownerUid);
+    try {
+      game.completeTradeContract(c, client.player, supplier.player, Number(cargo[c.wantRes]) || 0, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, client, client.player, client.queues);
+    savePlayer(txApp, game, supplier, supplier.player, supplier.queues);
+    notify(txApp, c.clientUid, [
+      { kind: "gift", title: "Contrat livré", message: `${c.supplierPseudo} t'a livré ${game.describeAmount(c.wantRes, c.wantAmount)}. Contrat honoré.`, createdAtMs: now, read: false },
+    ]);
+    notify(txApp, fleet.ownerUid, [
+      { kind: "gift", title: "Contrat honoré", message: `Livraison reçue par ${c.clientPseudo} : +${game.describeAmount(c.payRes, c.payAmount)}, caution de ${game.describeAmount(c.payRes, c.deposit)} rendue.`, createdAtMs: now, read: false },
+    ]);
+    contractRec.set("status", "delivered");
+    contractRec.set("closedAtMs", now);
+    txApp.save(contractRec);
+    rec.set("outcome", "delivered");
+    rec.set("loot", null);
+  } else {
+    // Contrat échu ou disparu : la cargaison rentre avec les vaisseaux.
+    rec.set("outcome", "late");
+    rec.set("loot", cargo);
+  }
+  rec.set("status", "returning");
+  rec.set("returnAtMs", now + tripMs);
+  txApp.save(rec);
+}
+
+/** POST /api/cosmic/trade-contract { action: create | accept | cancel | abandon, ... } */
+function tradeContractRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const me = loadFlushed(txApp, game, uid);
+    if (game.onVacation(me.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour commercer.");
+    let rec = null;
+    try {
+      if (action === "create") {
+        const c = game.createTradeContract(me.player, req, activeTradeContracts(txApp, uid), now);
+        if (c.targetUid && !findOrNull(txApp, "players", c.targetUid)) throw new game.GameActionError("Ce commandant est introuvable.");
+        rec = new Record(txApp.findCollectionByNameOrId("trade_contracts"));
+        rec.load(Object.assign({ clientUid: uid, clientPseudo: me.player.pseudo, status: "open", createdAtMs: now, supplierUid: "", supplierPseudo: "", deposit: 0, acceptedAtMs: 0, deadlineMs: 0, fleetId: "", closedAtMs: 0 }, c));
+        txApp.save(rec);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        if (c.targetUid) {
+          notify(txApp, c.targetUid, [
+            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Marché → Contrats).`, link: "/game/marche?onglet=contrats", createdAtMs: now, read: false },
+          ]);
+        }
+        out = toPlain(rec);
+        return;
+      }
+      rec = findOrNull(txApp, "trade_contracts", String(req.id || ""));
+      if (!rec) throw new NotFoundError("Contrat introuvable.");
+      const c = toPlain(rec);
+      if (action === "accept") {
+        const res = game.acceptTradeContract(c, me.player, activeTradeContracts(txApp, uid), now);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        rec.set("status", "accepted");
+        rec.set("supplierUid", uid);
+        rec.set("supplierPseudo", me.player.pseudo);
+        rec.set("deposit", res.deposit);
+        rec.set("acceptedAtMs", now);
+        rec.set("deadlineMs", res.deadlineMs);
+        txApp.save(rec);
+        notify(txApp, c.clientUid, [
+          { kind: "gift", title: "Contrat accepté", message: `${me.player.pseudo} s'engage à te livrer ${game.describeAmount(c.wantRes, c.wantAmount)} sous ${c.hours} h (caution : ${game.describeAmount(c.payRes, res.deposit)}).`, createdAtMs: now, read: false },
+        ]);
+      } else if (action === "cancel") {
+        if (c.clientUid !== uid) throw new NotFoundError("Contrat introuvable.");
+        game.cancelTradeContract(c, me.player);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        rec.set("status", "cancelled");
+        rec.set("closedAtMs", now);
+        txApp.save(rec);
+      } else if (action === "abandon") {
+        if (c.supplierUid !== uid || c.status !== "accepted") throw new game.GameActionError("Ce contrat ne t'est pas attribué.");
+        if (c.fleetId) {
+          const f = findOrNull(txApp, "fleets", c.fleetId);
+          if (f && f.getString("status") === "outbound") throw new game.GameActionError("Ta livraison est en route : rappelle-la d'abord.");
+        }
+        failTradeContractRec(txApp, game, rec, now, `${me.player.pseudo} a abandonné le contrat`);
+      } else throw new game.GameActionError("Action inconnue.");
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    out = toPlain(rec);
+  });
+  return e.json(200, out);
+}
+
+/** Échec ou expiration : le client récupère son paiement (et la caution si un livreur s'était engagé). */
+function failTradeContractRec(txApp, game, rec, now, reason) {
+  const c = toPlain(rec);
+  const accepted = c.status === "accepted";
+  rec.set("status", accepted ? "failed" : "expired");
+  rec.set("closedAtMs", now);
+  txApp.save(rec);
+  if (!findOrNull(txApp, "players", c.clientUid)) return;
+  const client = loadFlushed(txApp, game, c.clientUid);
+  const penalty = game.failTradeContract(c, client.player);
+  savePlayer(txApp, game, client.loaded, client.player, client.queues);
+  notify(txApp, c.clientUid, client.notifications.concat([
+    {
+      kind: "gift",
+      title: accepted ? "Contrat non honoré" : "Contrat expiré",
+      message: accepted
+        ? `${reason} : ton paiement de ${game.describeAmount(c.payRes, c.payAmount)} t'est rendu, avec la caution de ${game.describeAmount(c.payRes, penalty)}.`
+        : `Personne n'a pris ton contrat : ${game.describeAmount(c.payRes, c.payAmount)} te sont rendus.`,
+      createdAtMs: now,
+      read: false,
+    },
+  ]));
+  if (accepted && c.supplierUid && reason.indexOf("abandonné") < 0) {
+    notify(txApp, c.supplierUid, [
+      { kind: "gift", title: "Contrat échu", message: `Tu n'as pas livré ${c.clientPseudo} à temps : ta caution de ${game.describeAmount(c.payRes, penalty)} lui revient.`, createdAtMs: now, read: false },
+    ]);
+  }
+}
+
+/** Tâche planifiée : contrats ouverts expirés, contrats acceptés échus sans livraison en route. */
+function tradeContractsTick(now) {
+  const game = loadGame();
+  const due = $app.findRecordsByFilter(
+    "trade_contracts",
+    '(status = "open" && expiresAtMs <= {:n}) || (status = "accepted" && deadlineMs <= {:n})',
+    "createdAtMs",
+    100,
+    0,
+    { n: now },
+  );
+  let count = 0;
+  due.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = txApp.findRecordById("trade_contracts", r.id);
+        const st = rec.getString("status");
+        if (st !== "open" && st !== "accepted") return;
+        failTradeContractRec(txApp, game, rec, now, "Échéance dépassée");
+      });
+      count++;
+    } catch (err) {
+      console.log(`[cosmic] contrat ${r.id} : ${err}`);
+    }
+  });
+  return count;
 }
 
 /** Garnisons alliées stationnées chez un joueur. */
@@ -937,6 +1117,8 @@ function launchFleetRequest(e) {
         ? "allianceboss"
         : mission === "transport"
           ? String(body.colonyId || "")
+          : mission === "delivery"
+          ? `contract:${String(body.contractId || "")}`
           : mission === "bounty"
             ? body.bountyId
               ? `bounty_${body.bountyId}`
@@ -945,7 +1127,7 @@ function launchFleetRequest(e) {
               ? "bounty_elite"
               : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss", "delivery"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -968,6 +1150,13 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
+    }
+    // v5.1 : livraison d'un contrat — le client est la cible.
+    let contractRec = null;
+    if (mission === "delivery") {
+      contractRec = db.findOrNull(txApp, "trade_contracts", String(body.contractId || ""));
+      if (!contractRec) throw new NotFoundError("Contrat introuvable.");
+      target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
     // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
     if (mission === "attack" && target) {
@@ -1044,6 +1233,7 @@ function launchFleetRequest(e) {
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
         eliteName: elite ? game.describeElite(elite).name : seasonBoss ? (game.bossMonthOf(seasonBoss) || { boss: { name: "Boss de saison" } }).boss.name : allianceBoss ? game.allianceBossDef(allianceBoss).name : undefined,
         capsules: mission === "attack" ? body.capsules : undefined,
+        delivery: contractRec ? db.toPlain(contractRec) : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -1087,6 +1277,10 @@ function launchFleetRequest(e) {
       txApp.save(allianceBossRec);
     }
     if (elite) writeElite(txApp, game, elite);
+    if (contractRec) {
+      contractRec.set("fleetId", rec.id);
+      txApp.save(contractRec);
+    }
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet, { anomaly: !!anomaly });
   });
 
@@ -2257,6 +2451,8 @@ function marketCreate(e) {
       sellerId: uid,
       sellerPseudo: seller.player.pseudo,
       sellerAllianceId: seller.loaded.rec.getString("allianceId"),
+      kind: offer.kind,
+      filled: 0,
       giveRes: offer.giveRes,
       giveAmount: offer.giveAmount,
       wantRes: offer.wantRes,
@@ -2293,6 +2489,38 @@ function marketAccept(e) {
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
+    // v5.1 : ordre d'achat — livraison partielle, paiement au prorata.
+    if (offer.kind === "buy") {
+      let fill;
+      try {
+        fill = game.fillBuyOrder(offer, buyer.player, seller.player, body(e).qty, buysToday, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, buyer.notifications);
+      notify(txApp, offer.sellerId, seller.notifications.concat([
+        {
+          kind: "gift",
+          title: fill.done ? "Ordre d'achat complété" : "Ordre d'achat en partie rempli",
+          message: `${buyer.player.pseudo} t'a livré ${game.describeAmount(offer.wantRes, fill.qty)} : +${game.describeAmount(offer.wantRes, fill.qty - fill.tax)} (taxe : ${game.describeAmount(offer.wantRes, fill.tax)}).${fill.done ? "" : ` Reste ${game.describeAmount(offer.wantRes, offer.wantAmount - fill.filled)} à recevoir.`}`,
+          createdAtMs: now,
+          read: false,
+        },
+      ]));
+      rec.set("filled", fill.filled);
+      rec.set("tax", rec.getFloat("tax") + fill.tax);
+      rec.set("buyerId", uid);
+      rec.set("buyerPseudo", buyer.player.pseudo);
+      if (fill.done) {
+        rec.set("status", "filled");
+        rec.set("filledAtMs", now);
+      }
+      txApp.save(rec);
+      out = offerJson(rec);
+      return;
+    }
     let res;
     try {
       res = game.acceptOffer(offer, buyer.player, seller.player, buysToday, now);
@@ -2367,10 +2595,10 @@ function expireMarketOffers(now) {
         txApp.save(rec);
         if (!findOrNull(txApp, "players", rec.getString("sellerId"))) return;
         const seller = loadFlushed(txApp, game, rec.getString("sellerId"));
-        game.refundOffer(toPlain(rec), seller.player);
+        const back = game.refundOffer(toPlain(rec), seller.player);
         savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
         notify(txApp, rec.getString("sellerId"), seller.notifications.concat([
-          { kind: "gift", title: "Offre expirée", message: `Ton offre au marché a expiré : ${game.describeAmount(rec.getString("giveRes"), rec.getFloat("giveAmount"))} te sont rendus.`, createdAtMs: now, read: false },
+          { kind: "gift", title: rec.getString("kind") === "buy" ? "Ordre d'achat expiré" : "Offre expirée", message: `${rec.getString("kind") === "buy" ? "Ton ordre d'achat" : "Ton offre au marché"} a expiré : ${game.describeAmount(rec.getString("giveRes"), back)} te sont rendus.`, createdAtMs: now, read: false },
         ]));
       });
       count++;
@@ -4989,4 +5217,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

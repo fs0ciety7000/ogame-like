@@ -24,6 +24,8 @@ export interface PlayerStats {
   spent?: number;
   /** v3.0 : échanges conclus au marché, et taxe payée (retirée du jeu). */
   marketTrades?: number;
+  /** v5.1 : contrats livrés à temps (livreur). */
+  contractsDelivered?: number;
   marketTax?: number;
   /** v3.8 : ressources reçues au marché (défis hebdomadaires). */
   marketVolume?: number;

@@ -1,4 +1,6 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
+import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
+import { useSearchParams } from "react-router-dom";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { MARKET_RULES, marketTax, priceBounds, type MarketOffer } from "@/game/market";
+import { buyOrderPaid, MARKET_RULES, marketTax, priceBounds, type MarketOffer } from "@/game/market";
 import { RESOURCE_LIST } from "@/game/resources";
 import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, fetchMarketTrades, subscribeOffers } from "@/services/marketService";
 import { MarketPriceChart, formatRatio } from "@/components/game/MarketPriceChart";
@@ -45,6 +47,11 @@ export function MarketPage() {
   const [wantAmount, setWantAmount] = useState(0);
   const [filter, setFilter] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("onglet") === "contrats" ? "contrats" : "offres";
+  // v5.1 : « sell » = je donne X contre Y ; « buy » = ordre d'achat, je paie X (réservé) pour recevoir Y, rempli en plusieurs fois.
+  const [mode, setMode] = useState<"sell" | "buy">("sell");
+  const [fillQty, setFillQty] = useState<Record<string, number>>({});
 
   useEffect(() => subscribeOffers(setData), []);
   // v4.8 : échanges conclus (historique des prix), rechargés quand le marché bouge.
@@ -66,8 +73,8 @@ export function MarketPage() {
   const publish = async () => {
     setBusy("create");
     try {
-      await createMarketOffer({ giveRes, giveAmount, wantRes, wantAmount });
-      toast.success("Offre publiée : la marchandise est mise de côté jusqu'à la vente.");
+      await createMarketOffer({ giveRes, giveAmount, wantRes, wantAmount, kind: mode });
+      toast.success(mode === "buy" ? "Ordre d'achat publié : le paiement est réservé, les vendeurs peuvent le remplir en plusieurs fois." : "Offre publiée : la marchandise est mise de côté jusqu'à la vente.");
       setGiveAmount(0);
       setWantAmount(0);
     } catch (err) {
@@ -97,11 +104,43 @@ export function MarketPage() {
         description={`Échange tes surplus avec les autres commandants. Taxe de ${Math.round(MARKET_RULES.taxPct * 100)} % sur la vente (${Math.round(MARKET_RULES.allianceTaxPct * 100)} % entre membres d'une alliance), retirée du jeu.`}
       />
 
+      {/* v5.1 : offres et ordres d'achat, ou contrats de livraison entre joueurs. */}
+      <div className="flex gap-1 border-b border-white/10">
+        {(
+          [
+            ["offres", "Offres et ordres"],
+            ["contrats", "Contrats"],
+          ] as const
+        ).map(([id, text]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setParams(id === "offres" ? {} : { onglet: id }, { replace: true })}
+            className={cn("-mb-px border-b-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.12em] transition-colors", tab === id ? "border-cyan-glow text-cyan-glow" : "border-transparent text-slate-500 hover:text-slate-300")}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+      {tab === "contrats" ? (
+        <TradeContractsPanel />
+      ) : (
+      <>
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card className="flex flex-col gap-3 p-4">
-          <h2 className="hud-title text-sm">Publier une offre</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="hud-title text-sm">{mode === "buy" ? "Passer un ordre d'achat" : "Publier une offre"}</h2>
+            <div className="ml-auto flex border border-white/10 text-[11px] font-semibold uppercase tracking-[0.1em]">
+              {(["sell", "buy"] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setMode(m)} className={cn("px-2.5 py-1 transition-colors", mode === m ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500 hover:text-slate-300")}>
+                  {m === "sell" ? "Vendre" : "Acheter"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-col gap-2">
-            <p className="hud-eyebrow text-[10px] text-slate-500">Je donne</p>
+            <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Je paie (réservé dès l'ordre)" : "Je donne"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={giveRes} onChange={setGiveRes} ariaLabel="Ressource donnée" className="min-w-0 flex-1" size="sm" />
               <Input type="number" min={0} value={giveAmount || ""} placeholder="0" onChange={(e) => setGiveAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité donnée" />
@@ -109,7 +148,7 @@ export function MarketPage() {
             <button type="button" className="self-end font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setGiveAmount(Math.floor(have(giveRes)))}>
               Stock : {formatCompact(have(giveRes))}
             </button>
-            <p className="hud-eyebrow text-[10px] text-slate-500">Contre</p>
+            <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Pour acheter" : "Contre"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource demandée" className="min-w-0 flex-1" size="sm" />
               <Input type="number" min={0} value={wantAmount || ""} placeholder="0" onChange={(e) => setWantAmount(Math.max(0, parseInt(e.target.value) || 0))} className="h-9 w-32 text-right" aria-label="Quantité demandée" />
@@ -135,17 +174,21 @@ export function MarketPage() {
             Publier ({myOpen.length}/{MARKET_RULES.maxOpenOffers})
           </Button>
           <p className="text-[11px] text-slate-500">
-            La marchandise est bloquée dès la publication. Sans preneur sous {MARKET_RULES.offerHours} h, elle te revient automatiquement. Le comptoir automatique reste disponible dans Ressources.
+            {mode === "buy"
+              ? `Le paiement est réservé dès l'ordre. Les vendeurs le remplissent en une ou plusieurs livraisons, payées au prorata ; la taxe porte sur ce que tu reçois. Au bout de ${MARKET_RULES.offerHours} h, la part non dépensée te revient.`
+              : `La marchandise est bloquée dès la publication. Sans preneur sous ${MARKET_RULES.offerHours} h, elle te revient automatiquement. Le comptoir automatique reste disponible dans Ressources.`}
           </p>
 
           {myOpen.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
               <p className="hud-eyebrow text-[10px] text-slate-500">Mes offres en cours</p>
               {myOpen.map((o) => (
-                <div key={o.id} className="flex items-center gap-2 border border-white/5 px-2 py-1.5 text-xs">
+                <div key={o.id} className="flex flex-wrap items-center gap-2 border border-white/5 px-2 py-1.5 text-xs">
+                  {o.kind === "buy" && <HudTag tone="accent">Achat</HudTag>}
                   <Amount res={o.giveRes} n={o.giveAmount} />
                   <ArrowRight className="h-3 w-3 text-slate-500" />
                   <Amount res={o.wantRes} n={o.wantAmount} />
+                  {o.kind === "buy" && (o.filled ?? 0) > 0 && <span className="font-mono text-[10px] text-mint-glow">{Math.round(((o.filled ?? 0) / o.wantAmount) * 100)} % reçu</span>}
                   <span className="ml-auto flex items-center gap-1 text-slate-500">
                     <Clock className="h-3 w-3" /> {formatDuration(Math.max(0, Math.floor((o.expiresAtMs - Date.now()) / 1000)))}
                   </span>
@@ -177,23 +220,49 @@ export function MarketPage() {
                       <PlayerName uid={o.sellerId} pseudo={o.sellerPseudo} allianceId={o.sellerAllianceId || null} />
                       {ally && <HudTag tone="mint" className="ml-1.5">Allié</HudTag>}
                     </span>
-                    <span className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase text-slate-500">tu reçois</span>
-                      <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
-                      <span className="text-[10px] uppercase text-slate-500">contre</span>
-                      <Amount res={o.wantRes} n={o.wantAmount} />
-                    </span>
+                    {o.kind === "buy" ? (
+                      <span className="flex items-center gap-2">
+                        <HudTag tone="accent">Achète</HudTag>
+                        <Amount res={o.wantRes} n={o.wantAmount} />
+                        <span className="text-[10px] uppercase text-slate-500">paie</span>
+                        <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase text-slate-500">tu reçois</span>
+                        <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
+                        <span className="text-[10px] uppercase text-slate-500">contre</span>
+                        <Amount res={o.wantRes} n={o.wantAmount} />
+                      </span>
+                    )}
                     {flag && (
                       <span title={`${formatRatio(flag.factor)} le prix habituel des ${MARKET_HISTORY_DAYS} derniers jours`}>
                         <HudTag tone={flag.kind === "high" ? "danger" : "gold"}>{flag.kind === "high" ? "Prix anormal : cher" : "Prix anormal : bradé"}</HudTag>
                       </span>
                     )}
-                    <span className="ml-auto flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
-                      <Button size="sm" disabled={busy !== null || !affordable} title={affordable ? undefined : `Il te manque ${formatNumber(o.wantAmount - have(o.wantRes))} ${resName(o.wantRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id), "Échange conclu !")}>
-                        Accepter
-                      </Button>
-                    </span>
+                    {o.kind === "buy" ? (
+                      (() => {
+                        const remaining = o.wantAmount - (o.filled ?? 0);
+                        const qty = Math.min(remaining, fillQty[o.id] ?? Math.min(remaining, Math.floor(have(o.wantRes))));
+                        const pay = buyOrderPaid(o, (o.filled ?? 0) + qty) - buyOrderPaid(o, o.filled ?? 0);
+                        return (
+                          <span className="ml-auto flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-[10px] text-slate-500">reste {formatCompact(remaining)}</span>
+                            <Input type="number" min={1} max={remaining} value={qty || ""} onChange={(e) => setFillQty((f) => ({ ...f, [o.id]: Math.max(0, parseInt(e.target.value) || 0) }))} className="h-8 w-24 text-right" aria-label="Quantité livrée" />
+                            <Button size="sm" disabled={busy !== null || qty <= 0 || pay <= 0 || have(o.wantRes) < qty} title={`Tu reçois ${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id, qty), `Livré : +${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}.`)}>
+                              Livrer
+                            </Button>
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="ml-auto flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
+                        <Button size="sm" disabled={busy !== null || !affordable} title={affordable ? undefined : `Il te manque ${formatNumber(o.wantAmount - have(o.wantRes))} ${resName(o.wantRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id), "Échange conclu !")}>
+                          Accepter
+                        </Button>
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -211,7 +280,22 @@ export function MarketPage() {
           <div className="flex flex-col divide-y divide-white/5 text-xs">
             {data.mine.map((o) => {
               const sold = o.sellerId === uid;
-              const label = o.status === "filled" ? (sold ? `Vendu à ${o.buyerPseudo}` : `Acheté à ${o.sellerPseudo}`) : o.status === "expired" ? "Expirée, rendue" : "Annulée";
+              const label =
+                o.kind === "buy"
+                  ? o.status === "filled"
+                    ? sold
+                      ? "Ordre d'achat complété"
+                      : `Livré à ${o.sellerPseudo}`
+                    : o.status === "expired"
+                      ? `Ordre expiré (${Math.round(((o.filled ?? 0) / o.wantAmount) * 100)} % reçu)`
+                      : "Ordre annulé"
+                  : o.status === "filled"
+                    ? sold
+                      ? `Vendu à ${o.buyerPseudo}`
+                      : `Acheté à ${o.sellerPseudo}`
+                    : o.status === "expired"
+                      ? "Expirée, rendue"
+                      : "Annulée";
               return (
                 <div key={o.id} className="flex flex-wrap items-center gap-2 py-2">
                   <HudTag tone={o.status === "filled" ? "mint" : "gold"}>{label}</HudTag>
@@ -225,6 +309,8 @@ export function MarketPage() {
             })}
           </div>
         </Card>
+      )}
+      </>
       )}
     </div>
   );
