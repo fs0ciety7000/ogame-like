@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Clock, Recycle, ShieldPlus, Wind } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { distanceBetween, fleetSpeed, PATROL_RULES, patrolEnergyCost, travelSeconds } from "@/game/fleets";
 import { DEBRIS_RULES, recyclerCapacity, type DebrisField } from "@/game/debris";
@@ -74,16 +74,16 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
               <div className="space-y-2">
                 {Object.keys(all).length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau à quai.</p>}
                 {Object.entries(all).map(([unitId, owned]) => (
-                  <div key={unitId} className="flex items-center gap-3 text-sm">
+                  <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                     <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
                     <span className="text-xs text-slate-500">À quai : {owned}</span>
-                    <Input
-                      type="number"
-                      min={0}
+                    <NumberInput
+                      size="sm"
                       max={owned}
                       value={current[unitId] ?? 0}
-                      onChange={(e) => setFleet({ ...current, [unitId]: Math.max(0, Math.min(owned, parseInt(e.target.value) || 0)) })}
-                      className="w-20"
+                      onChange={(v) => setFleet({ ...current, [unitId]: v })}
+                      aria-label={`Quantité ${findUnit(unitId)?.name ?? unitId}`}
+                      className="w-40"
                     />
                   </div>
                 ))}
@@ -164,10 +164,10 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
             <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
           ) : (
             <div className="mt-3 space-y-3">
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                 <span className="flex-1 text-slate-200">{findUnit(droneId)?.name ?? "Drone récupérateur"}</span>
                 <span className="text-xs text-slate-500">Possédés : {owned}</span>
-                <Input type="number" min={1} max={owned} disabled={owned === 0} value={count} onChange={(e) => setDrones(parseInt(e.target.value) || 0)} className="w-20" />
+                <NumberInput size="sm" min={owned > 0 ? 1 : 0} max={owned} disabled={owned === 0} value={count} onChange={setDrones} aria-label="Nombre de drones" className="w-40" />
               </div>
               <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p>
@@ -250,16 +250,16 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
             <div className="mt-3 space-y-3">
               {Object.keys(available).length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau à quai.</p>}
               {Object.entries(available).map(([unitId, owned]) => (
-                <div key={unitId} className="flex items-center gap-3 text-sm">
+                <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                   <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
                   <span className="text-xs text-slate-500">À quai : {owned}</span>
-                  <Input
-                    type="number"
-                    min={0}
+                  <NumberInput
+                    size="sm"
                     max={owned}
                     value={fleet[unitId] ?? 0}
-                    onChange={(e) => setFleet({ ...fleet, [unitId]: Math.max(0, Math.min(owned, parseInt(e.target.value) || 0)) })}
-                    className="w-20"
+                    onChange={(v) => setFleet({ ...fleet, [unitId]: v })}
+                    aria-label={`Quantité ${findUnit(unitId)?.name ?? unitId}`}
+                    className="w-40"
                   />
                 </div>
               ))}

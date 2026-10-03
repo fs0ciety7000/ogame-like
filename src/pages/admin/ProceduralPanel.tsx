@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { NumberInput } from "@/components/ui/number-input";
 import { toast } from "sonner";
 import { BookOpen, Dices, RefreshCw, Sparkles, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -187,7 +188,7 @@ export function ProceduralPanel() {
           <Toggle label="Paliers de succès" hint="Ajoute le palier suivant quand un joueur a atteint le dernier." checked={settings.achievements} onChange={(v) => void saveSettings({ achievements: v })} />
           <label className="flex items-center gap-2 text-sm text-slate-200">
             Écrire le mois suivant à partir du
-            <input type="number" min={1} max={28} defaultValue={settings.leadDay} className="w-16 border border-white/15 bg-space-950 px-2 py-1 font-mono" onBlur={(e) => Number(e.target.value) !== settings.leadDay && void saveSettings({ leadDay: Number(e.target.value) })} />
+            <NumberInput size="sm" min={1} max={28} stepper={false} quick={false} value={settings.leadDay} onCommit={(v) => v !== undefined && v !== settings.leadDay && void saveSettings({ leadDay: v })} aria-label="Jour d'écriture du mois suivant" className="w-28" />
           </label>
         </div>
       </Section>

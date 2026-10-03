@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { DEFAULT_RESET_OPTIONS, type ResetOptions } from "@/game/reset";
 import { RESOURCE_LIST } from "@/game/resources";
 import { adminHardReset, adminListPlayers, type AdminPlayer } from "@/services/adminService";
@@ -107,13 +108,13 @@ export function HardResetCard() {
               <span>
                 <ResourceIcon id={r.id} /> {r.name}
               </span>
-              <Input
-                type="number"
-                min={0}
+              <NumberInput
+                size="sm"
+                step={100}
                 value={options.starterKit[r.id as ResourceId] ?? 0}
-                onChange={(e) =>
-                  setOptions((prev) => ({ ...prev, starterKit: { ...prev.starterKit, [r.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) } }))
-                }
+                onChange={(v) => setOptions((prev) => ({ ...prev, starterKit: { ...prev.starterKit, [r.id]: v } }))}
+                aria-label={r.name}
+                className="w-full"
               />
             </label>
           ))}

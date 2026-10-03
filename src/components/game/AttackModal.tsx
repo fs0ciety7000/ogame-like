@@ -15,6 +15,7 @@ import { applyPreset, deleteFleetPreset, MAX_PRESETS, saveFleetPreset, useFleetP
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
@@ -149,18 +150,18 @@ export function AttackModal({
                   const owned = player.units[unitId]?.count ?? 0;
                   if (!unit) return null;
                   return (
-                    <div key={unitId} className="flex items-center gap-3 text-sm">
+                    <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                       <span className="flex-1 text-slate-200">{unit.name}</span>
                       <span className="text-xs text-slate-500">VIT {unit.stats.vitesse * Math.max(1, player.units[unitId]?.level ?? 1)}</span>
                       <span className="text-xs text-slate-500">Possédés : {owned}</span>
-                      <Input
-                        type="number"
-                        min={0}
+                      <NumberInput
+                        size="sm"
                         max={owned}
                         disabled={owned === 0}
                         value={fleet[unitId] ?? 0}
-                        onChange={(e) => setQty(unitId, owned, parseInt(e.target.value) || 0)}
-                        className="w-20"
+                        onChange={(v) => setQty(unitId, owned, v)}
+                        aria-label={`Quantité ${unit.name}`}
+                        className="w-40"
                       />
                     </div>
                   );

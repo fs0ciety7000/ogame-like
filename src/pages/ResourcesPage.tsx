@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { ResourceHistoryChart } from "@/components/game/ResourceHistoryChart";
@@ -124,12 +124,7 @@ export function ResourcesPage() {
 
             <div>
               <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Quantité</label>
-              <Input
-                type="number"
-                min={1}
-                value={amount}
-                onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 1))}
-              />
+              <NumberInput min={1} max={Math.max(1, Math.floor(resources[sellId] ?? 0))} value={amount} onChange={setAmount} aria-label="Quantité vendue" className="w-full" />
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Compass, Swords, Coins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { HudTag } from "@/components/ui/hud";
@@ -71,18 +71,8 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
               <div key={id} className="flex items-center gap-2 text-sm">
                 <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  value={fleet[id] || ""}
-                  placeholder="0"
-                  aria-label={`Quantité ${findUnit(id)?.name}`}
-                  onChange={(e) => setFleet((f) => ({ ...f, [id]: Math.min(owned, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                  className="h-8 w-24 text-right"
-                />
-                <button type="button" className="w-12 font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setFleet((f) => ({ ...f, [id]: owned }))}>
-                  /{formatCompact(owned)}
-                </button>
+                <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { FastForward, FlaskConical, Gift, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { RESOURCE_LIST } from "@/game/resources";
 import { adminPlayerAction, type AdminPlayer } from "@/services/adminService";
@@ -63,7 +64,7 @@ export function PlayerToolsCard({ player, onDone }: { player: AdminPlayer; onDon
               <span>
                 <ResourceIcon id={r.id} /> {r.name}
               </span>
-              <Input type="number" min={0} value={grant[r.id] ?? ""} className="h-8" onChange={(e) => setGrant((g) => ({ ...g, [r.id]: Math.max(0, Number(e.target.value) || 0) }))} />
+              <NumberInput size="sm" step={100} value={grant[r.id] ?? 0} onChange={(v) => setGrant((g) => ({ ...g, [r.id]: v }))} aria-label={r.name} className="w-full" />
             </label>
           ))}
         </div>

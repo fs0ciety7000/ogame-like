@@ -1,7 +1,7 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { currentGameContent } from "@/game/content";
 import { RESOURCE_LIST } from "@/game/resources";
 import {
@@ -156,16 +156,15 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
               {numeric && (
                 <label className="flex flex-col gap-1">
                   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">{pct ? "Valeur par niveau (%)" : "Points par niveau"}</span>
-                  <Input
-                    type="number"
-                    step="any"
-                    min={0}
-                    value={e.value === undefined ? "" : pct ? Math.round(e.value * 10000) / 100 : e.value}
+                  <NumberInput
+                    nullable
+                    decimals={pct ? 2 : 4}
+                    quick={false}
+                    value={e.value === undefined ? undefined : pct ? Math.round(e.value * 10000) / 100 : e.value}
                     placeholder={`défaut : ${pct ? Math.round(def * 1000) / 10 : def}`}
-                    onChange={(ev) => {
-                      const raw = ev.target.value;
-                      patch(i, { value: raw === "" ? undefined : pct ? Number(raw) / 100 : Number(raw) });
-                    }}
+                    suffix={pct ? "%" : undefined}
+                    onChange={(v) => patch(i, { value: v === undefined ? undefined : pct ? v / 100 : v })}
+                    className="w-full"
                   />
                 </label>
               )}

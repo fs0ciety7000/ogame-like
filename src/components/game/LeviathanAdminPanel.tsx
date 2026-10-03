@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Activity } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { StatTile } from "@/components/ui/hud";
 import { isActive, LEVIATHAN_RULES, leviathanPace, leviathanRanking, type LeviathanState } from "@/game/leviathan";
 import { adminLeviathan } from "@/services/leviathanService";
@@ -76,7 +76,7 @@ export function LeviathanAdminPanel({ state }: { state: LeviathanState | null })
             <div className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-3">
               <label className="flex flex-col gap-1 text-xs text-slate-400">
                 Structure maximale
-                <Input type="number" min={1} value={maxHp} placeholder={String(state.maxHp)} onChange={(e) => setMaxHp(e.target.value)} className="h-8 w-44" />
+                <NumberInput nullable size="sm" stepper={false} min={1} value={maxHp === "" ? undefined : Number(maxHp)} placeholder={String(state.maxHp)} onChange={(v) => setMaxHp(v === undefined ? "" : String(v))} aria-label="Structure maximale" className="w-44" />
               </label>
               <Button size="sm" variant="outline" disabled={busy || !(Number(maxHp) > 0)} onClick={() => void run("resize", Number(maxHp))}>
                 Appliquer

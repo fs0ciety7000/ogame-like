@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Badge } from "@/components/ui/badge";
 import { currentGameContent, validateGameContent, type GameContent, type GameRules } from "@/game/content";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -823,14 +824,7 @@ export function PlayersPanel() {
                 return (
                   <div key={b.id} className="flex items-center gap-2 text-sm text-slate-200">
                     <span className="flex-1 truncate">{b.name}</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={b.maxLevel}
-                      value={st.level}
-                      className="h-8 w-20"
-                      onChange={(e) => set({ buildings: { ...draft.buildings, [b.id]: { ...st, level: Number(e.target.value) || 0 } } })}
-                    />
+                    <NumberInput size="sm" quick={false} max={b.maxLevel} value={st.level} className="w-28" aria-label={`Niveau ${b.name}`} onChange={(v) => set({ buildings: { ...draft.buildings, [b.id]: { ...st, level: v } } })} />
                     <input
                       type="checkbox"
                       checked={st.unlocked}
@@ -850,8 +844,8 @@ export function PlayersPanel() {
                 return (
                   <div key={u.id} className="flex items-center gap-2 text-sm text-slate-200">
                     <span className="flex-1 truncate">{u.name}</span>
-                    <Input type="number" min={0} value={st.level} className="h-8 w-16" onChange={(e) => setUnit({ level: Number(e.target.value) || 0 })} />
-                    <Input type="number" min={0} value={st.count} className="h-8 w-24" onChange={(e) => setUnit({ count: Number(e.target.value) || 0 })} />
+                    <NumberInput size="sm" stepper={false} quick={false} value={st.level} className="w-14" aria-label={`Niveau ${u.name}`} onChange={(v) => setUnit({ level: v })} />
+                    <NumberInput size="sm" value={st.count} className="w-32" aria-label={`Nombre ${u.name}`} onChange={(v) => setUnit({ count: v })} />
                   </div>
                 );
               })}
@@ -861,14 +855,7 @@ export function PlayersPanel() {
               {content.technologies.map((t) => (
                 <div key={t.id} className="flex items-center gap-2 text-sm text-slate-200">
                   <span className="flex-1 truncate">{t.nom}</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={t.maxLevel}
-                    value={draft.techLevels?.[t.id] ?? 0}
-                    className="h-8 w-20"
-                    onChange={(e) => set({ techLevels: { ...draft.techLevels, [t.id]: Number(e.target.value) || 0 } })}
-                  />
+                  <NumberInput size="sm" quick={false} max={t.maxLevel} value={draft.techLevels?.[t.id] ?? 0} className="w-28" aria-label={`Niveau ${t.nom}`} onChange={(v) => set({ techLevels: { ...draft.techLevels, [t.id]: v } })} />
                 </div>
               ))}
             </Section>

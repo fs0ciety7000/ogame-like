@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NumberInput } from "@/components/ui/number-input";
 import { toast } from "sonner";
 import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -55,7 +56,7 @@ function blank(kind: PassReward["kind"]): PassReward {
 }
 
 const sel = "h-8 border border-white/15 bg-space-950 px-1.5 text-xs text-slate-200";
-const num = "h-8 w-16 border border-white/15 bg-space-950 px-1.5 text-right text-xs text-slate-200";
+const num = { size: "sm", stepper: false, quick: false, meter: false, className: "w-20" } as const;
 
 function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
   return (
@@ -67,9 +68,9 @@ function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChan
           </option>
         ))}
       </select>
-      {value.kind === "production" && <input className={num} type="number" min={1} value={value.hours} onChange={(e) => onChange({ ...value, hours: Math.max(1, Number(e.target.value) || 1) })} />}
-      {value.kind === "amber" && <input className={num} type="number" min={1} value={value.amount} onChange={(e) => onChange({ ...value, amount: Math.max(1, Number(e.target.value) || 1) })} />}
-      {value.kind === "dossier" && <input className={num} type="number" min={1} value={value.count} onChange={(e) => onChange({ ...value, count: Math.max(1, Number(e.target.value) || 1) })} />}
+      {value.kind === "production" && <NumberInput {...num} min={1} value={value.hours} suffix="h" aria-label="Heures" onChange={(v) => onChange({ ...value, hours: v })} />}
+      {value.kind === "amber" && <NumberInput {...num} min={1} value={value.amount} aria-label="Ambre" onChange={(v) => onChange({ ...value, amount: v })} />}
+      {value.kind === "dossier" && <NumberInput {...num} min={1} value={value.count} aria-label="Dossiers" onChange={(v) => onChange({ ...value, count: v })} />}
       {value.kind === "capsule" && (
         <>
           <select className={sel} value={value.capsule} onChange={(e) => onChange({ ...value, capsule: e.target.value as CapsuleType })}>
@@ -79,7 +80,7 @@ function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChan
               </option>
             ))}
           </select>
-          <input className={num} type="number" min={1} max={10} value={value.level} onChange={(e) => onChange({ ...value, level: Math.min(10, Math.max(1, Number(e.target.value) || 1)) })} />
+          <NumberInput {...num} min={1} max={10} value={value.level} aria-label="Niveau" onChange={(v) => onChange({ ...value, level: v })} />
         </>
       )}
       {value.kind === "relic" && (

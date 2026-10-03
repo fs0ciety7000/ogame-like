@@ -6,7 +6,7 @@
 import { chromium } from "playwright";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4173";
-const PAGES = ["", "ressources", "batiments", "unites", "labo", "missions", "galaxie", "colonies", "joueurs", "combats", "simulateur", "marche", "menaces", "leviathan", "palmares", "alliance", "messages", "journal", "profil", "succes", "nouveautes", "signalements", "reglages"];
+const PAGES = ["", "ressources", "batiments", "unites", "labo", "missions", "galaxie", "colonies", "statistiques", "joueurs", "combats", "simulateur", "marche", "menaces", "leviathan", "palmares", "alliance", "messages", "journal", "profil", "succes", "nouveautes", "signalements", "reglages"];
 
 const suffix = Date.now().toString(36);
 const browser = await chromium.launch();
