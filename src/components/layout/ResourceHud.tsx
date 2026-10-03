@@ -7,12 +7,28 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Sparkline } from "@/components/ui/sparkline";
 import { motion } from "framer-motion";
 import { useFxStore } from "@/store/fxStore";
-import { economySnapshot } from "@/game/economy";
+import { economySnapshot, productionBonuses } from "@/game/economy";
 import { HostileFleetAlert } from "@/components/game/FleetsPanel";
 import { EventBadge } from "@/components/game/EventBanner";
 import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+
+/** v5.2 : bonus de production actifs (infobulle). Ils se multiplient entre eux. */
+function BonusList({ bonuses }: { bonuses: { label: string; pct: number }[] }) {
+  if (bonuses.length === 0) return <p className="mt-1 text-[11px] text-slate-400">Aucun bonus de production actif.</p>;
+  return (
+    <div className="mt-1.5 border-t border-white/10 pt-1.5">
+      <p className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Bonus de production actifs</p>
+      {bonuses.map((b) => (
+        <p key={b.label} className="flex justify-between gap-4 text-[11px]">
+          <span className="text-slate-300">{b.label}</span>
+          <span className="tabular-mono text-mint-glow">+{Math.round(b.pct * 1000) / 10} %</span>
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export function ResourceHud() {
   const player = usePlayerStore((s) => s.player);
@@ -90,6 +106,7 @@ export function ResourceHud() {
               {full && " — entrepôt plein, production à l'arrêt"}
               {!full && secondsToFull !== null && ` — plein dans ${formatDuration(Math.ceil(secondsToFull))}`}
               {res.id === "energy" && economy.upkeep > 0 && ` — entretien de la flotte : −${formatNumber(Math.round(economy.upkeep))}/s`}
+              <BonusList bonuses={productionBonuses({ ...player, resources }, Date.now(), res.id)} />
             </TooltipContent>
           </Tooltip>
         );
@@ -131,6 +148,8 @@ export function ResourceHud() {
           </TooltipTrigger>
           <TooltipContent>
             {res.name} : {formatNumber(resources[res.id])}
+            {(rates[res.id] ?? 0) > 0 && ` (+${formatNumber(rates[res.id] ?? 0)}/s)`}
+            {(rates[res.id] ?? 0) > 0 && <BonusList bonuses={productionBonuses({ ...player, resources }, Date.now(), res.id)} />}
           </TooltipContent>
         </Tooltip>
       ))}

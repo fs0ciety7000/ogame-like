@@ -35,10 +35,15 @@ export function formatDuration(totalSeconds: number): string {
   return `${sec}s`;
 }
 
+/** Compte à rebours : « 4:38 » sous l'heure, « 5 h 06 min » au-delà, « 2 j 03 h » au-delà d'un jour. */
 export function formatClock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
-  const m = Math.floor(s / 60);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
   const r = s % 60;
+  if (d > 0) return `${d} j ${h.toString().padStart(2, "0")} h`;
+  if (h > 0) return `${h} h ${m.toString().padStart(2, "0")} min`;
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
