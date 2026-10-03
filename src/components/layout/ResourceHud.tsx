@@ -10,6 +10,7 @@ import { useFxStore } from "@/store/fxStore";
 import { economySnapshot, productionBonuses } from "@/game/economy";
 import { HostileFleetAlert } from "@/components/game/FleetsPanel";
 import { EventBadge } from "@/components/game/EventBanner";
+import { StreakBadge } from "@/components/game/StreakBadge";
 import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
@@ -114,6 +115,7 @@ export function ResourceHud() {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
       <HostileFleetAlert />
+      <StreakBadge />
       <EventBadge />
       <UltimatumBadge />
       {economy.outage && (

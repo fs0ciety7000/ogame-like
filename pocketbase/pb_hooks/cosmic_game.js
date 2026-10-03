@@ -158,6 +158,7 @@ __export(hooksEntry_exports, {
   completeFleetReturn: () => completeFleetReturn,
   completeTradeContract: () => completeTradeContract,
   computeGameStats: () => computeGameStats,
+  computeLiveBalance: () => computeLiveBalance,
   computeTerritories: () => computeTerritories,
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
@@ -356,7 +357,8 @@ var TECH_EFFECT_DEFAULTS = {
   unit_time: 0.05,
   research_time: 0.05,
   fleet_upkeep: 0.05,
-  counter_spy: 1
+  counter_spy: 1,
+  hangar_capacity: 0.05
 };
 var TECH_REDUCTION_CAP = 0.75;
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
@@ -549,7 +551,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
     category: "attack",
     unlockTech: "tech13",
-    hangarSpace: 20
+    // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
+    hangarSpace: 2
   },
   {
     id: "etoile_noire",
@@ -561,7 +564,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
     category: "attack",
     unlockTech: "tech19",
-    hangarSpace: 200,
+    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    hangarSpace: 80,
     // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
     // par niveau que les autres (15 800 ATK/DEF au niveau 10).
     levelBonus: 1700
@@ -590,7 +594,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech25",
-    hangarSpace: 8,
+    // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
+    hangarSpace: 12,
     levelBonus: 150
   },
   {
@@ -611,7 +616,8 @@ var DEFAULT_UNITS = [
     image: "/assets/units/canon_impulsion.webp",
     maxLevel: 10,
     description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
-    cost: { scrap: 2e3, energy: 1200 },
+    // v5.4 : moins cher que la Batterie AA, qu'il ne bat pas (2000/1200 avant).
+    cost: { scrap: 1200, energy: 600 },
     stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech15",
@@ -623,7 +629,8 @@ var DEFAULT_UNITS = [
     image: "/assets/units/canon_plasma.webp",
     maxLevel: 10,
     description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
-    cost: { scrap: 2500, energy: 1500 },
+    // v5.4 : entre le Canon à impulsion et la Batterie AA (2500/1500 avant).
+    cost: { scrap: 1500, energy: 750 },
     stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech16",
@@ -651,7 +658,8 @@ var DEFAULT_UNITS = [
     stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
     category: "defense",
     unlockTech: "tech18",
-    hangarSpace: 20
+    // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
+    hangarSpace: 2
   },
   KESH_HUNTER_UNIT
 ];
@@ -1018,14 +1026,15 @@ function getStorageCapacity(buildings, techLevels2) {
 function storageCapacityAt(effect, level3) {
   return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
 }
-function getUnitCapacity(buildings, category) {
+function getUnitCapacity(buildings, category, techLevels2) {
   var _a, _b, _c;
   let capacity = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
     capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
   }
-  return capacity;
+  const bonus = techLevels2 ? techBonus(techLevels2, "hangar_capacity", category) : 0;
+  return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
 }
 function effectiveBuildingLevel(buildings, id) {
   var _a;
@@ -2160,7 +2169,7 @@ var RARITIES = [
   { id: "epic", label: "\xC9pique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
   { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
   // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
-  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" }
+  { id: "mythic", label: "Mythique", pct: 0.2, weight: 0, recycle: 0, color: "#ff5df0" }
 ];
 var RELICS = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arrach\xE9 au poste de tir d'un croiseur de la Confr\xE9rie." },
@@ -2571,7 +2580,8 @@ var ECONOMY_RULES = {
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
   missionRareLevelDivisor: 35,
   /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 5e5
+  // v5.4 : 500 000 → 150 000 (les missions rares valaient < 1 % d'une heure de production en fin de partie).
+  missionRareProductionRef: 15e4
 };
 var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
 var KESH_BOOST_PCT = 0.2;
@@ -2612,6 +2622,29 @@ function boostedRates(input, multipliers, boost = 1) {
     if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
   }
   return gross;
+}
+function economySnapshot(input, now) {
+  var _a, _b, _c, _d;
+  const gross = boostedRates(input, now === void 0 ? {} : productionMultipliers(now), now === void 0 ? 1 : boostAt(input, now));
+  const upkeep = now !== void 0 && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const capacity = storageCapacityOf(input);
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const outage = energyNet < 0 && ((_b = input.resources.energy) != null ? _b : 0) <= 0;
+  const factor = outage ? ECONOMY_RULES.outageProductionFactor : 1;
+  const net = {};
+  const full = [];
+  for (const r of RESOURCE_LIST) {
+    const stock = (_c = input.resources[r.id]) != null ? _c : 0;
+    const isCommon = r.rarity === "common";
+    const atCap = isCommon && stock >= capacity;
+    if (r.id === "energy") {
+      net.energy = outage ? 0 : atCap && energyNet > 0 ? 0 : energyNet;
+    } else {
+      net[r.id] = atCap ? 0 : ((_d = gross[r.id]) != null ? _d : 0) * factor;
+    }
+    if (atCap) full.push(r.id);
+  }
+  return { gross, upkeep, net, capacity, outage, full };
 }
 function addCapped(stock, gain, cap) {
   if (gain <= 0) return Math.max(0, stock + gain);
@@ -2834,7 +2867,13 @@ function economyInput(colony, player) {
     resources: colony.resources,
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
-    ascensions: player.ascensions
+    ascensions: player.ascensions,
+    // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
+    commanders: player.commanders,
+    relics: player.relics,
+    talents: player.talents,
+    territory: player.territory,
+    bounties: player.bounties
   };
 }
 function advanceColony(colony, player, now) {
@@ -3267,7 +3306,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
-    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" }
+    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" }
   },
   {
     id: "gravhorn",
@@ -3290,7 +3329,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 1.5,
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
-    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" }
+    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" }
   },
   {
     id: "inquisition",
@@ -3313,7 +3352,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" }
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" }
   },
   {
     id: "cartel",
@@ -3336,7 +3375,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2.5,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 5, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" }
+    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" }
   },
   {
     id: "meute",
@@ -3359,7 +3398,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 0.75,
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
-    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 4, pct: 1.5, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
+    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
   },
   {
     id: "choeur",
@@ -3384,7 +3423,7 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2e3, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
-    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 5, pct: 1.5, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
+    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 5, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
   }
 ];
 var FACTIONS = [];
@@ -3757,7 +3796,9 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   return { player, queues: flushed.queues, combat, loot, bounty, debris, report, notifications };
 }
 function lairPower(faction, player) {
-  return Math.round(Math.max(faction.raid.floorPower * 3, targetPower(faction, player) * faction.lair.pct));
+  var _a, _b;
+  const fleetAttack = computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  return Math.round(Math.max(faction.raid.floorPower * 3, fleetAttack * faction.lair.pct));
 }
 function checkLairLaunch(faction, player, fleet) {
   if (!faction) throw new GameActionError("Repaire inconnu.");
@@ -8153,7 +8194,8 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
-  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null });
+  const power = Math.round(computeFleetPower(owner.units, owner.techLevels, units, ["attack", "defense"]));
+  const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null, power });
   return {
     attacker: owner,
     fleet,
@@ -8999,6 +9041,59 @@ function lostPower(losses, units, techLevels2) {
   return computeFullPower(lost, techLevels2 != null ? techLevels2 : {}, Object.keys(lost), ["attack", "defense"]);
 }
 
+// src/game/streak.ts
+var STREAK_RULES = {
+  /** Heures de production des ressources communes, jours 1 à 7. */
+  hours: [1, 1.5, 2, 2.5, 3, 3.5, 5],
+  /** Ambre offerte au 7e jour du cycle. */
+  amberDay7: 15,
+  /** Plancher par ressource commune (petits empires). */
+  floor: 2e3
+};
+function streakState(player) {
+  var _a, _b;
+  const raw = (_a = player.streak) != null ? _a : {};
+  return { count: Number(raw.count) || 0, lastDay: String((_b = raw.lastDay) != null ? _b : ""), best: Number(raw.best) || 0, total: Number(raw.total) || 0 };
+}
+function previousDay2(day) {
+  return new Date(Date.parse(`${day}T12:00:00Z`) - 864e5).toISOString().slice(0, 10);
+}
+function cycleDay(count2) {
+  return (Math.max(1, count2) - 1) % 7 + 1;
+}
+function streakReward(player, count2) {
+  var _a;
+  const day = cycleDay(count2);
+  const raw = productionHours(player, STREAK_RULES.hours[day - 1]);
+  const resources = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) resources[res] = Math.max(STREAK_RULES.floor, (_a = raw[res]) != null ? _a : 0);
+  return { resources, amber: day === 7 ? STREAK_RULES.amberDay7 : 0 };
+}
+function streakStatus(player, now) {
+  const st = streakState(player);
+  const today = parisDay(now);
+  if (st.lastDay === today) return { today, claimed: true, next: st.count + 1, current: st.count };
+  const alive = st.lastDay === previousDay2(today);
+  return { today, claimed: false, next: alive ? st.count + 1 : 1, current: alive ? st.count : 0 };
+}
+function claimStreak(player, now) {
+  var _a, _b;
+  const status = streakStatus(player, now);
+  if (status.claimed) throw new GameActionError("R\xE9compense du jour d\xE9j\xE0 r\xE9clam\xE9e : reviens demain !");
+  const st = streakState(player);
+  const count2 = status.next;
+  const reward = streakReward(player, count2);
+  for (const [res, n] of Object.entries(reward.resources)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (reward.amber > 0) {
+    const b = bountyState(player);
+    b.amber += reward.amber;
+    b.amberEarned = ((_b = b.amberEarned) != null ? _b : 0) + reward.amber;
+    player.bounties = b;
+  }
+  player.streak = { count: count2, lastDay: status.today, best: Math.max(st.best, count2), total: st.total + 1 };
+  return __spreadValues({ count: count2 }, reward);
+}
+
 // src/game/cancel.ts
 var CANCEL_RULES = {
   /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
@@ -9375,7 +9470,7 @@ function applyAction(s, action) {
         var _a2, _b2;
         return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
       }, 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
       }
       pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
@@ -9520,6 +9615,8 @@ function applyAction(s, action) {
       return learnTalent(player, action.talentId);
     case "talentReset":
       return resetTalents(player, now);
+    case "streakClaim":
+      return claimStreak(player, now);
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
@@ -10129,6 +10226,7 @@ var GAME_FIELDS = [
   "synthesis",
   "profileStyle",
   "renamed",
+  "streak",
   "seasonPass",
   "referral",
   "vacation",
@@ -11231,6 +11329,91 @@ function renamePlayer(player, raw, now) {
   player.renamed = { fromPseudo: player.pseudo, atMs: now };
   player.pseudo = pseudo;
   return { pseudo, login: pseudoLogin(pseudo) };
+}
+
+// src/game/balance/diagnostics.ts
+function places(units, ids) {
+  return ids.reduce((a, id) => {
+    var _a, _b, _c, _d;
+    return a + ((_b = (_a = units == null ? void 0 : units[id]) == null ? void 0 : _a.count) != null ? _b : 0) * ((_d = (_c = findUnit(id)) == null ? void 0 : _c.hangarSpace) != null ? _d : 1);
+  }, 0);
+}
+function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
+  const active = players.filter((p) => {
+    var _a, _b;
+    return !p.npc && now - ((_b = (_a = p.lastActiveMs) != null ? _a : p.resourcesUpdatedAtMs) != null ? _b : 0) < 14 * 864e5;
+  });
+  const rows = active.map((p) => {
+    var _a, _b;
+    const units = (_a = p.units) != null ? _a : {};
+    const tech = (_b = p.techLevels) != null ? _b : {};
+    const eco = economySnapshot(p, now);
+    const perHour = Object.values(eco.gross).reduce((a, b) => a + (b != null ? b : 0), 0) * 3600;
+    return {
+      pseudo: p.pseudo,
+      attack: Math.round(computeFullPower(units, tech, OFFENSIVE_UNITS, ["attack"]) * (1 + playerModifiers(p).attack)),
+      defense: Math.round(homeDefensePower(units, tech) * (1 + playerModifiers(p).defense)),
+      shieldPct: Math.round(getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) * 100),
+      defenseBonusPct: Math.round(playerModifiers(p).defense * 100),
+      attackPlacesUsed: places(units, OFFENSIVE_UNITS),
+      attackPlaces: getUnitCapacity(p.buildings, "attack", tech),
+      defensePlacesUsed: places(units, DEFENSIVE_UNITS),
+      defensePlaces: getUnitCapacity(p.buildings, "defense", tech),
+      productionPerHour: Math.round(perHour),
+      outage: eco.outage,
+      fullStorage: eco.full.length
+    };
+  });
+  rows.sort((a, b) => b.attack + b.defense - (a.attack + a.defense));
+  const unitPlaces = [...OFFENSIVE_UNITS, ...DEFENSIVE_UNITS].map((id) => {
+    var _a, _b;
+    const owners = active.filter((p) => {
+      var _a2, _b2, _c;
+      return ((_c = (_b2 = (_a2 = p.units) == null ? void 0 : _a2[id]) == null ? void 0 : _b2.count) != null ? _c : 0) > 0;
+    });
+    return { id, name: (_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id, places: owners.reduce((a, p) => {
+      var _a2, _b2, _c, _d, _e;
+      return a + ((_c = (_b2 = (_a2 = p.units) == null ? void 0 : _a2[id]) == null ? void 0 : _b2.count) != null ? _c : 0) * ((_e = (_d = findUnit(id)) == null ? void 0 : _d.hangarSpace) != null ? _e : 1);
+    }, 0), owners: owners.length };
+  }).filter((u) => u.places > 0).sort((a, b) => b.places - a.places);
+  const since = now - windowDays * 864e5;
+  const recent = reports.filter((r) => r.timestamp >= since);
+  const isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
+  const pvp = recent.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const wl = recent.filter((r) => {
+    var _a, _b;
+    return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
+  });
+  const pct5 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
+  const factions2 = FACTIONS.map((f) => {
+    var _a, _b, _c, _d;
+    let raidsWon = 0, raidsLost = 0, lairsTaken = 0, lairsOpen = 0;
+    for (const p of active) {
+      const st = (_a = p.pirates) == null ? void 0 : _a[f.id];
+      if (!st) continue;
+      raidsWon += (_b = st.raidsWon) != null ? _b : 0;
+      raidsLost += (_c = st.raidsLost) != null ? _c : 0;
+      lairsTaken += (_d = st.lairsTaken) != null ? _d : 0;
+      if (st.lairOpen) lairsOpen++;
+    }
+    const total2 = raidsWon + raidsLost;
+    return { id: f.id, name: f.name, raidsWon, raidsLost, repelledPct: total2 ? Math.round(raidsWon / total2 * 100) : 0, lairsTaken, lairsOpen };
+  });
+  return {
+    generatedAt: now,
+    activePlayers: active.length,
+    players: rows,
+    unitPlaces,
+    pvp: { battles: pvp.length, attackerWinPct: pct5(pvp), windowDays },
+    warlordBattles: { battles: wl.length, attackerWinPct: pct5(wl) },
+    factions: factions2,
+    warlords: warlords.map((w) => {
+      var _a, _b, _c, _d;
+      return { pseudo: w.pseudo, power: Math.round(computeFullPower((_a = w.units) != null ? _a : {}, (_b = w.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower((_c = w.units) != null ? _c : {}, (_d = w.techLevels) != null ? _d : {})) };
+    }).sort((a, b) => b.power - a.power),
+    bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
+    bestAttack: Math.max(0, ...rows.map((r) => r.attack))
+  };
 }
 
 // src/server/hooksEntry.ts

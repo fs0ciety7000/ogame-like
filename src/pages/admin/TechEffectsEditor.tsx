@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 const GROUPS: { label: string; types: TechEffectType[] }[] = [
   { label: "Économie", types: ["energy_efficiency", "resource_production", "storage_capacity", "protected_storage", "building_discount"] },
   { label: "Durées", types: ["building_time", "unit_time", "research_time"] },
-  { label: "Flotte et combat", types: ["unit_attack", "unit_defense", "fleet_speed", "cargo_capacity", "fleet_upkeep", "counter_spy"] },
+  { label: "Flotte et combat", types: ["unit_attack", "unit_defense", "fleet_speed", "cargo_capacity", "fleet_upkeep", "counter_spy", "hangar_capacity"] },
   { label: "Déblocages", types: ["unlock_next_level", "unlock_buildings", "unlock_recipe", "unlock_defense_units", "unlock_attack_units"] },
 ];
 
@@ -94,6 +94,17 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
                 <label className="flex flex-col gap-1">
                   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Ressource</span>
 <ResourceSelect<string> value={e.target ?? ""} onChange={(v) => patch(i, { target: v || undefined })} ariaLabel="Ressource" className="h-9" />
+                </label>
+              )}
+
+              {e.type === "hangar_capacity" && (
+                <label className="flex flex-col gap-1">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Hangar</span>
+                  <select value={e.target ?? ""} onChange={(ev) => patch(i, { target: ev.target.value || undefined })} className={SELECT}>
+                    <option value="">— choisir —</option>
+                    <option value="attack">Hangar d'attaque</option>
+                    <option value="defense">Hangar de défense</option>
+                  </select>
                 </label>
               )}
 

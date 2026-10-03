@@ -3,6 +3,7 @@ import { findFaction } from "@/game/pirates";
 import { threatEstimate, type ThreatVerdict } from "@/game/threat";
 import type { Fleet } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
+import { useFleetStore } from "@/store/fleetStore";
 import { cn, formatCompact } from "@/lib/utils";
 
 const VERDICT: Record<ThreatVerdict, { label: string; color: string }> = {
@@ -14,9 +15,10 @@ const VERDICT: Record<ThreatVerdict, { label: string; color: string }> = {
 /** v5.1 : attaque de la flotte hostile contre la défense de la planète visée. */
 export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compact?: boolean; className?: string }) {
   const player = usePlayerStore((s) => s.player);
+  const fleets = useFleetStore((s) => s.fleets);
   if (!player) return null;
   const fleetOnly = fleet.mission === "pirate" && findFaction(fleet.factionId ?? "varan")?.raid.target === "fleet";
-  const t = threatEstimate(fleet, player, { fleetOnly });
+  const t = threatEstimate(fleet, player, { fleetOnly, garrisons: fleets });
   const v = VERDICT[t.verdict];
   const total = t.attack + t.defense;
   const atkPct = total > 0 ? Math.max(4, Math.min(96, (t.attack / total) * 100)) : 50;
@@ -41,7 +43,7 @@ export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compa
       {!compact && (
         <p className="mt-1 text-[10px] text-slate-500">
           Attaque {t.shield > 0 ? `après bouclier (−${Math.round(t.shield * 100)} %)` : ""} contre ta défense sur {t.targetName}
-          {fleetOnly ? " (flotte à quai seulement)" : ""}. Estimation hors garnisons{t.estimated ? ", composition évaluée avec tes niveaux" : ""}.
+          {fleetOnly ? " (flotte à quai seulement)" : ""}{t.garrison > 0 ? `, garnisons alliées comprises (+${formatCompact(t.garrison)})` : ""}. Estimation{t.estimated ? ", composition évaluée avec tes niveaux" : ""}.
         </p>
       )}
     </div>

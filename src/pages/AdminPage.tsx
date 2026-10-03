@@ -33,6 +33,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
+import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
@@ -65,6 +66,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Pilotage",
     items: [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
+      { id: "balance", label: "Équilibrage", icon: Scale, hint: "Diagnostic du contenu et des joueurs réels, propositions chiffrées et bac à sable d'unité." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
       { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site et annonces plein écran : création et programmation." },
       { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
@@ -207,6 +209,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="stats">
           <StatsPanel />
+        </TabsContent>
+        <TabsContent value="balance">
+          <BalancePanel />
         </TabsContent>
         <TabsContent value="buildings">
           <ContentEditor

@@ -1,3 +1,4 @@
+import { claimStreak } from "@/game/streak";
 import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
@@ -81,6 +82,7 @@ export type GameAction =
   | { type: "relicRecycle"; relicId: string }
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
+  | { type: "streakClaim" }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
@@ -204,7 +206,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const category = unit.category;
       const built = hangarUsed(player.units, s.unitsAway, category);
       const reserved = queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
       }
 
@@ -379,6 +381,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "talentReset":
       return resetTalents(player, now);
+
+    case "streakClaim":
+      return claimStreak(player, now);
 
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };

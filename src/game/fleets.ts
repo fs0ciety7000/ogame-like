@@ -680,7 +680,9 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
-  const fleet = { ...newFleet(owner, host, "garrison", units, now, arriveAtMs), durationMs: hours * 3600_000, stationedUntilMs: null };
+  // v5.3 : puissance brute (attaque + défense) affichée à l'hôte dans le comparatif des menaces.
+  const power = Math.round(computeFleetPower(owner.units, owner.techLevels, units, ["attack", "defense"]));
+  const fleet = { ...newFleet(owner, host, "garrison", units, now, arriveAtMs), durationMs: hours * 3600_000, stationedUntilMs: null, power };
   return {
     attacker: owner,
     fleet,

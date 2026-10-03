@@ -1,8 +1,8 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildTimeFactor } from "@/game/bonuses";
-import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getStorageCapacity, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
-import { advanceResources, COMMON_RESOURCES } from "@/game/economy";
+import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
+import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -226,11 +226,18 @@ function economyInput(colony: Colony, player: PlayerState) {
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
+    // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
+    commanders: player.commanders,
+    relics: player.relics,
+    talents: player.talents,
+    territory: player.territory,
+    bounties: player.bounties,
   };
 }
 
-export function colonyStorage(colony: Colony, player: Pick<PlayerState, "techLevels">): number {
-  return getStorageCapacity(colony.buildings, player.techLevels);
+/** Entrepôt de la colonie (v5.3 : Intendant en poste compris, comme pour la production). */
+export function colonyStorage(colony: Colony, player: Pick<PlayerState, "techLevels" | "commanders">): number {
+  return storageCapacityOf({ buildings: colony.buildings, techLevels: player.techLevels, resources: colony.resources, commanders: player.commanders });
 }
 
 /** Production horaire d'une colonie (affichage). */

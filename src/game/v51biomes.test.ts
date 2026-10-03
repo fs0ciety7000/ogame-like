@@ -45,3 +45,14 @@ describe("v5.1 biomes de colonie", () => {
     expect(depositLevel(old)).toBe(1);
   });
 });
+
+describe("v5.3 bonus de l'empire sur les colonies", () => {
+  it("les secteurs d'alliance et talents augmentent aussi la production d'une colonie", () => {
+    const p = founded();
+    const c = p.colonies![0];
+    const base = colonyHourlyRates(c, p).scrap ?? 0;
+    const boosted = colonyHourlyRates(c, { ...p, territory: { pct: 0.04, sectors: [1, 2], untilMs: Date.now() + 3_600_000 } } as PlayerState).scrap ?? 0;
+    expect(boosted).toBeGreaterThan(base);
+    expect(boosted / base).toBeCloseTo(1.04, 2);
+  });
+});

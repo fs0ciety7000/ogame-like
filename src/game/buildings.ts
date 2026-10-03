@@ -1,5 +1,5 @@
 import { RESOURCE_LIST } from "@/game/resources";
-import type { BuildingId, Buildings, ResourceId } from "@/types/game";
+import type { BuildingId, Buildings, ResourceId, TechLevels } from "@/types/game";
 import { techBonus } from "@/game/technologies";
 
 /* =====================================================
@@ -398,13 +398,15 @@ export function storageCapacityAt(effect: Extract<BuildingEffect, { type: "stora
   return level > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level)) : 0;
 }
 
-export function getUnitCapacity(buildings: Buildings, category: "attack" | "defense"): number {
+/** Places des hangars ; v5.3 : + les technologies « Capacité des hangars » (cible attack / defense). */
+export function getUnitCapacity(buildings: Buildings, category: "attack" | "defense", techLevels?: TechLevels): number {
   let capacity = 0;
   for (const b of BUILDINGS) {
     if (b.effect?.type !== "hangar" || b.effect.category !== category) continue;
     capacity += (buildings[b.id]?.level ?? 0) * b.effect.perLevel;
   }
-  return capacity;
+  const bonus = techLevels ? techBonus(techLevels, "hangar_capacity", category) : 0;
+  return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
 }
 
 /** Niveau effectif d'un bâtiment : 0 tant qu'il n'est pas débloqué (tous

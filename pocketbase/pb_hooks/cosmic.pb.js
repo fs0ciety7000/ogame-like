@@ -397,6 +397,25 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
 });
 
 /**
+ * GET /api/cosmic/admin/balance — v5.4 : données réelles pour l'outil d'équilibrage
+ * (puissance et hangars des joueurs actifs, combats sur 30 jours, factions, seigneurs).
+ */
+routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = db.loadGame();
+  db.applyContent($app, game);
+  const now = Date.now();
+  const plain = (r) => Object.assign(db.toPlain(r), { uid: r.id });
+  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map(plain);
+  const warlords = $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).map(plain);
+  const reports = $app
+    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
+    .map((r) => ({ attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") }));
+  return e.json(200, game.computeLiveBalance(players, warlords, reports, now, 30));
+}, $apis.requireAuth("users", "_superusers"));
+
+/**
  * POST /api/cosmic/admin/reset — hard reset de la progression (un joueur ou
  * tous), précédé d'une sauvegarde complète. Administrateurs uniquement.
  */
@@ -793,4 +812,16 @@ routerAdd("POST", "/api/cosmic/admin/alliance-daily", (e) => {
   if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const now = Number((db.body(e) || {}).now) || Date.now();
   return e.json(200, { changed: db.allianceDailyTick(now) });
+});
+
+/* ---------- v5.4 : migrations du contenu personnalisé (équilibrage) ---------- */
+
+onBootstrap((e) => {
+  e.next();
+  try {
+    const changes = require(`${__hooks}/cosmic_db.js`).runContentMigrations($app);
+    if (changes.length > 0) console.log(`[cosmic] contenu migré : ${changes.join(", ")}`);
+  } catch (err) {
+    console.log(`[cosmic] migrations du contenu : ${err}`);
+  }
 });
