@@ -178,6 +178,7 @@ __export(hooksEntry_exports, {
   dailyTreasuryBonus: () => dailyTreasuryBonus,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
+  defaultGameContent: () => defaultGameContent,
   defaultQueues: () => defaultQueues,
   depositWarChest: () => depositWarChest,
   describeAmount: () => describeAmount,
@@ -428,6 +429,8 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'\xE9nergie, prot\xE9ger les stocks : +1 point de stock \xE0 l'abri du pillage par niveau. D\xE9bloque le G\xE9n\xE9rateur de bouclier plan\xE9taire.", maxLevel: 10, baseCost: { energy: 3e5, nano: 2e5, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
   { id: "tech24", nom: "Propulsion \xE0 antimati\xE8re", desc: "D\xE9bloque le Croiseur Nova, puis l'am\xE9liore (+250 attaque et d\xE9fense par niveau). \u22122 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 4e5, energy: 4e5, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
   { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
+  // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
+  { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de d\xE9fense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 15e4, nano: 8e4, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
   { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
@@ -3583,7 +3586,15 @@ setFactions(structuredClone(DEFAULT_FACTIONS));
 function findFaction(id) {
   return FACTIONS.find((f) => f.id === id);
 }
-var PIRATE_RULES = { enabled: true };
+var PIRATE_RULES = {
+  enabled: true,
+  /** v5.5 : adaptation des raids à la réussite du joueur (par faction) : chaque raid
+   *  repoussé renforce le suivant, chaque défaite l'affaiblit. Équilibre vers 70 % repoussés. */
+  adaptUp: 0.04,
+  adaptDown: 0.1,
+  adaptMin: 0.9,
+  adaptMax: 1.5
+};
 var PIRATE_OWNER_UID = "pirates";
 function lairUid(factionId) {
   return `lair_${factionId}`;
@@ -3604,6 +3615,7 @@ function normalize(p, maxNotoriety = 8) {
     raidsLost: (_h = p == null ? void 0 : p.raidsLost) != null ? _h : 0,
     tributesPaid: (_i = p == null ? void 0 : p.tributesPaid) != null ? _i : 0,
     lairsTaken: (_j = p == null ? void 0 : p.lairsTaken) != null ? _j : 0,
+    adapt: Number.isFinite(p == null ? void 0 : p.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p.adapt)) : 1,
     mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null
   };
 }
@@ -3666,11 +3678,11 @@ function homeFleetPower(player) {
 function targetPower(faction, player) {
   return faction.raid.target === "fleet" ? homeFleetPower(player) : defensivePower(player);
 }
-function raidPower(faction, player, notoriety) {
+function raidPower(faction, player, notoriety, adapt = 1) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
   const pct5 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct5));
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct5 * adapt));
 }
 function exposedStock(player) {
   var _a, _b, _c;
@@ -3808,7 +3820,7 @@ function pirateTick(player, now, options = {}) {
   return out;
 }
 function launchRaid(player, faction, st, now, random) {
-  const power = raidPower(faction, player, st.notoriety);
+  const power = raidPower(faction, player, st.notoriety, st.adapt);
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -3888,6 +3900,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     }
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
+    st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
     notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
@@ -3899,6 +3912,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
     st.raidsWon += 1;
     st.repelled += 1;
+    st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
@@ -8587,6 +8601,8 @@ var WARLORD_RULES = {
   minPower: 3e3,
   /** Croissance maximale par jour, en part de la puissance visée. */
   growthPerDay: 0.08,
+  /** v5.5 : jamais plus de ce multiple de la meilleure défense de joueur ; au-delà, l'armée fond (même rythme que la croissance). */
+  maxDefenseRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
   buildingFactor: { weak: 0.8, medium: 1, strong: 1.25 },
   buildingLevelEveryHours: 12,
@@ -8842,6 +8858,10 @@ function warlordReference(actives) {
       var _a;
       return (_a = p.seasonXp) != null ? _a : 0;
     })),
+    maxDefense: humans.length ? Math.max(0, ...humans.map((p) => {
+      var _a, _b;
+      return Math.round(homeDefensePower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}));
+    })) : 0,
     buildings
   };
 }
@@ -8859,8 +8879,11 @@ function tierFactor(d) {
   return lo + (hi - lo) * hash01(d.id);
 }
 function warlordTargetPower(d, ref, settings = config2.settings) {
+  var _a;
   const base = d.tier === "strong" ? ref.max : ref.median;
-  return Math.max(WARLORD_RULES.minPower, Math.round(base * tierFactor(d) * (settings.powerFactor || 1)));
+  const target = Math.round(base * tierFactor(d) * (settings.powerFactor || 1));
+  const cap = ((_a = ref.maxDefense) != null ? _a : 0) > 0 ? ref.maxDefense * WARLORD_RULES.maxDefenseRatio : Infinity;
+  return Math.max(WARLORD_RULES.minPower, Math.round(Math.min(target, cap)));
 }
 function warlordTargetXp(d, ref) {
   const base = d.tier === "strong" ? ref.maxXp : ref.medianXp;
@@ -8897,7 +8920,7 @@ function emptyRuntime() {
   return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0 };
 }
 function growWarlord(npc, d, ref, rt, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const out = __spreadValues({}, rt);
   const target = warlordTargetPower(d, ref);
   const desired = desiredArmy(d, target);
@@ -8908,11 +8931,18 @@ function growWarlord(npc, d, ref, rt, now) {
     const count2 = (_b = state.count) != null ? _b : 0;
     if (count2 < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count2 + Math.ceil(want * step)) };
   }
+  if (rt.seeded && empirePower(npc) > target * 1.1) {
+    for (const [id, state] of Object.entries(npc.units)) {
+      const want = (_c = desired[id]) != null ? _c : 0;
+      const count2 = (_d = state == null ? void 0 : state.count) != null ? _d : 0;
+      if (count2 > want) npc.units[id] = __spreadProps(__spreadValues({}, state), { count: Math.max(want, count2 - Math.ceil((count2 - want) * step)) });
+    }
+  }
   const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 36e5;
   if (buildStep) {
     for (const b of BUILDINGS) {
-      const want = Math.min(b.maxLevel, Math.round(((_c = ref.buildings[b.id]) != null ? _c : 0) * ((_d = WARLORD_RULES.buildingFactor[d.tier]) != null ? _d : 1)));
-      const cur = (_f = (_e = npc.buildings[b.id]) == null ? void 0 : _e.level) != null ? _f : 0;
+      const want = Math.min(b.maxLevel, Math.round(((_e = ref.buildings[b.id]) != null ? _e : 0) * ((_f = WARLORD_RULES.buildingFactor[d.tier]) != null ? _f : 1)));
+      const cur = (_h = (_g = npc.buildings[b.id]) == null ? void 0 : _g.level) != null ? _h : 0;
       if (want > cur) npc.buildings[b.id] = { level: rt.seeded ? cur + 1 : want, unlocked: true };
     }
     out.lastBuildingAtMs = now;
@@ -8920,16 +8950,16 @@ function growWarlord(npc, d, ref, rt, now) {
   const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
   const stock = productionHours(npc, stockHours);
   for (const res of COMMON_RESOURCES2) {
-    const want = (_g = stock[res]) != null ? _g : 0;
-    const cur = (_h = npc.resources[res]) != null ? _h : 0;
+    const want = (_i = stock[res]) != null ? _i : 0;
+    const cur = (_j = npc.resources[res]) != null ? _j : 0;
     if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
   }
   const xpTarget = warlordTargetXp(d, ref);
-  const xp = (_i = npc.xp) != null ? _i : 0;
+  const xp = (_k = npc.xp) != null ? _k : 0;
   const xpStep = Math.ceil(xpTarget * WARLORD_RULES.xpGrowthPerHour * hours2);
   npc.xp = xp < xpTarget ? rt.seeded ? Math.min(xpTarget, xp + xpStep) : xpTarget : xp;
   const seasonTarget = Math.round((ref.medianSeasonXp || 0) * tierFactor(d));
-  npc.seasonXp = Math.max((_j = npc.seasonXp) != null ? _j : 0, rt.seeded ? Math.min(seasonTarget, ((_k = npc.seasonXp) != null ? _k : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
+  npc.seasonXp = Math.max((_l = npc.seasonXp) != null ? _l : 0, rt.seeded ? Math.min(seasonTarget, ((_m = npc.seasonXp) != null ? _m : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;

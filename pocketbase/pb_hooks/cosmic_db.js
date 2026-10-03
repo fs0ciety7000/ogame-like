@@ -3918,6 +3918,13 @@ const CONTENT_MIGRATIONS = [
       { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
     ],
   },
+  // v5.5 : la techno « Extension des hangars » (tech26) ajoutée aux technologies personnalisées.
+  {
+    id: "hangar-tech-5.5",
+    key: "technologies",
+    patches: [],
+    appendFromDefaults: ["tech26"],
+  },
 ];
 
 function canonJson(v) {
@@ -3948,6 +3955,15 @@ function runContentMigrations(app) {
       const items = rec ? toPlain(rec).data : null;
       if (Array.isArray(items)) {
         let touched = false;
+        (m.appendFromDefaults || []).forEach((id) => {
+          if (items.some((x) => x && x.id === id)) return;
+          const def = loadGame().defaultGameContent()[m.key].find((x) => x.id === id);
+          if (def) {
+            items.push(def);
+            touched = true;
+            changes.push(`${m.id} : ${id} ajouté`);
+          }
+        });
         m.patches.forEach((p) => {
           const item = items.find((x) => x && x.id === p.id);
           if (item && canonJson(item[p.field]) === canonJson(p.from)) {
