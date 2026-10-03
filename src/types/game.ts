@@ -118,6 +118,8 @@ export interface PlayerState {
   ascendedAtMs?: number;
   /** v3.5 : colonies (stocks séparés) et vaisseau colonial en route. */
   colonies?: import("@/game/colonies").Colony[];
+  /** v5.1 : bonus de territoire (écrit par le serveur toutes les heures). */
+  territory?: import("@/game/territories").PlayerTerritory | null;
   colonizing?: import("@/game/colonies").Colonizing | null;
   /** v3.9 : chasseurs de primes (Ambre, réputation, contrats, Comptoir). */
   bounties?: import("@/game/bounties").BountyState;

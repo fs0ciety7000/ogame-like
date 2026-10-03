@@ -525,6 +525,48 @@ function transportArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
+/* ---------- Territoires d'alliance (v5.1) ---------- */
+
+/** Recalcule le contrôle des secteurs et le bonus de chaque joueur (tâche horaire). */
+function territoriesTick(now) {
+  const game = loadGame();
+  const recs = $app.findRecordsByFilter("players", "id != ''", "", 2000, 0);
+  const players = recs.map((r) => ({
+    uid: r.id,
+    allianceId: r.getString("allianceId"),
+    buildings: parseJsonField(r, "buildings", {}) || {},
+    colonies: (parseJsonField(r, "colonies", []) || []).map((c) => ({ id: c.id, buildings: c.buildings || {} })),
+  }));
+  const out = game.computeTerritories(players, now);
+  const tags = {};
+  $app.findRecordsByFilter("alliances", "id != ''", "", 500, 0).forEach((a) => (tags[a.id] = a.getString("tag")));
+  const sectors = out.sectors.map((s) =>
+    Object.assign({}, s, { tag: tags[s.allianceId] || "", contenders: s.contenders.map((c) => Object.assign({}, c, { tag: tags[c.allianceId] || "" })) }),
+  );
+  $app.runInTransaction((txApp) => {
+    let cfg = null;
+    try {
+      cfg = txApp.findFirstRecordByFilter("game_config", "key = 'territories'");
+    } catch (_) {
+      cfg = new Record(txApp.findCollectionByNameOrId("game_config"));
+      cfg.set("key", "territories");
+    }
+    cfg.set("data", { atMs: now, sectors });
+    txApp.save(cfg);
+    recs.forEach((r) => {
+      const t = out.byUid[r.id];
+      if (!t) return;
+      const prev = parseJsonField(r, "territory", null);
+      // Pas d'écriture inutile pour qui n'a ni bonus ni secteur, avant comme après.
+      if (!t.pct && (!prev || !prev.pct)) return;
+      const rec = txApp.findRecordById("players", r.id);
+      rec.set("territory", t);
+      txApp.save(rec);
+    });
+  });
+  return { sectors: sectors.filter((s) => s.allianceId).length };
+}
+
 /* ---------- Contrats entre joueurs (v5.1) ---------- */
 
 /** Contrats actifs d'un joueur : publiés (ouverts ou acceptés) et acceptés comme livreur. */
@@ -5217,4 +5259,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

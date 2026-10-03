@@ -502,6 +502,25 @@ cronAdd("cosmic_backup_check", "20 5 * * *", () => {
 /** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
 routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
 // v4.9 : liste, téléchargement et copie vers R2 depuis l'administration.
+/** v5.1 : territoires d'alliance, recalculés toutes les heures (et à la demande de l'équipe). */
+cronAdd("cosmic_territories", "17 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).territoriesTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] territoires : ${err}`);
+  }
+});
+routerAdd(
+  "POST",
+  "/api/cosmic/admin/territories",
+  (e) => {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+    return e.json(200, db.territoriesTick(Date.now()));
+  },
+  $apis.requireAuth("users", "_superusers"),
+);
+
 /** v5.1 : contrats entre joueurs (« livre-moi X contre Y »). */
 routerAdd("POST", "/api/cosmic/trade-contract", (e) => require(`${__hooks}/cosmic_db.js`).tradeContractRequest(e), $apis.requireAuth("users"));
 cronAdd("cosmic_tradecontracts", "*/5 * * * *", () => {

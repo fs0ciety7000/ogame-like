@@ -82,7 +82,9 @@ __export(hooksEntry_exports, {
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
+  SECTOR_COUNT: () => SECTOR_COUNT,
   STAFF_KEY: () => STAFF_KEY,
+  TERRITORY_RULES: () => TERRITORY_RULES,
   TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
   VACATION_RULES: () => VACATION_RULES,
@@ -150,6 +152,7 @@ __export(hooksEntry_exports, {
   completeFleetReturn: () => completeFleetReturn,
   completeTradeContract: () => completeTradeContract,
   computeGameStats: () => computeGameStats,
+  computeTerritories: () => computeTerritories,
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
   consumeJammer: () => consumeJammer,
@@ -284,6 +287,7 @@ __export(hooksEntry_exports, {
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
   seasonXpFor: () => seasonXpFor,
+  sectorOf: () => sectorOf,
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
@@ -2289,6 +2293,81 @@ function consumeAegis(player, now) {
   return true;
 }
 
+// src/game/galaxy.ts
+function hashString(input, seed) {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function galaxyCoords(uid) {
+  return {
+    galaxy: 1 + hashString(uid, 3) % 9,
+    system: 1 + hashString(uid, 4) % 499,
+    position: 1 + hashString(uid, 5) % 15,
+    x: hashString(uid, 1) / 4294967296,
+    y: hashString(uid, 2) / 4294967296
+  };
+}
+
+// src/game/territories.ts
+var TERRITORY_RULES = {
+  cols: 6,
+  rows: 4,
+  minLevels: 150,
+  bonusPerSector: 0.02,
+  maxBonus: 0.06,
+  /** Le bonus écrit sur le joueur reste valable ce délai (h) sans recalcul. */
+  validHours: 3
+};
+var SECTOR_COUNT = TERRITORY_RULES.cols * TERRITORY_RULES.rows;
+function sectorOf(planetId) {
+  const c = galaxyCoords(planetId);
+  const col = Math.min(TERRITORY_RULES.cols - 1, Math.floor(c.x * TERRITORY_RULES.cols));
+  const row = Math.min(TERRITORY_RULES.rows - 1, Math.floor(c.y * TERRITORY_RULES.rows));
+  return row * TERRITORY_RULES.cols + col;
+}
+function levelsOf(b) {
+  return Object.values(b != null ? b : {}).reduce((a, s) => {
+    var _a;
+    return a + ((_a = s == null ? void 0 : s.level) != null ? _a : 0);
+  }, 0);
+}
+function computeTerritories(players, now) {
+  var _a, _b, _c;
+  const per = Array.from({ length: SECTOR_COUNT }, () => /* @__PURE__ */ new Map());
+  const presence = /* @__PURE__ */ new Map();
+  for (const p of players) {
+    if (!p.allianceId) continue;
+    const planets = [{ id: p.uid, buildings: p.buildings }, ...(_a = p.colonies) != null ? _a : []];
+    const here = /* @__PURE__ */ new Set();
+    for (const planet of planets) {
+      const s = sectorOf(planet.id);
+      here.add(s);
+      per[s].set(p.allianceId, ((_b = per[s].get(p.allianceId)) != null ? _b : 0) + levelsOf(planet.buildings));
+    }
+    presence.set(p.uid, here);
+  }
+  const sectors = per.map((m, id) => {
+    var _a2;
+    const ranked = [...m.entries()].map(([allianceId, levels]) => ({ allianceId, levels })).sort((a, b) => b.levels - a.levels);
+    const top = ranked[0];
+    const held = top && top.levels >= TERRITORY_RULES.minLevels && !(ranked[1] && ranked[1].levels === top.levels);
+    return { id, allianceId: held ? top.allianceId : "", levels: (_a2 = top == null ? void 0 : top.levels) != null ? _a2 : 0, contenders: ranked.slice(0, 3) };
+  });
+  const byUid = {};
+  for (const p of players) {
+    const held = [...(_c = presence.get(p.uid)) != null ? _c : []].filter((s) => p.allianceId && sectors[s].allianceId === p.allianceId).sort((a, b) => a - b);
+    byUid[p.uid] = { pct: Math.min(TERRITORY_RULES.maxBonus, held.length * TERRITORY_RULES.bonusPerSector), sectors: held, untilMs: now + TERRITORY_RULES.validHours * 36e5 };
+  }
+  return { sectors, byUid };
+}
+function territoryBonus(t, now) {
+  return t && t.untilMs > now ? Math.min(TERRITORY_RULES.maxBonus, Math.max(0, t.pct)) : 0;
+}
+
 // src/game/modifiers.ts
 function emptyModifiers() {
   return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
@@ -2305,6 +2384,7 @@ function playerModifiers(player) {
   m.spyLevel += lv.spy * 0.2;
   m.detection += lv.spy * 0.01;
   m.productionAll += lv.steward * 0.01;
+  m.productionAll += territoryBonus(player.territory, Date.now());
   m.storage += lv.steward * 0.02;
   for (const item of equippedRelics(player)) {
     const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
@@ -6850,25 +6930,6 @@ function warSeasonBonuses(wars, seasonId) {
   const out = {};
   for (const w of wars) if (w.winnerId && w.seasonId === seasonId) out[w.winnerId] = ((_a = out[w.winnerId]) != null ? _a : 0) + WAR_RULES.seasonBonusPct;
   return out;
-}
-
-// src/game/galaxy.ts
-function hashString(input, seed) {
-  let h = (2166136261 ^ seed) >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-function galaxyCoords(uid) {
-  return {
-    galaxy: 1 + hashString(uid, 3) % 9,
-    system: 1 + hashString(uid, 4) % 499,
-    position: 1 + hashString(uid, 5) % 15,
-    x: hashString(uid, 1) / 4294967296,
-    y: hashString(uid, 2) / 4294967296
-  };
 }
 
 // src/game/pvp.ts

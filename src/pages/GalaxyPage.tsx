@@ -1,7 +1,7 @@
 import { targetsPlayer } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { Eye, Gift, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
+import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,8 @@ import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { ParallaxStars } from "@/components/fx/ParallaxStars";
 import { isWarlordUid } from "@/game/warlords";
 import { FLEET_MISSION_LABELS, type Fleet } from "@/game/fleets";
+import { SECTOR_COUNT, sectorLabel, sectorOf, TERRITORY_RULES, territoryBonus } from "@/game/territories";
+import { allianceHue, useTerritories } from "@/services/territoryService";
 
 const SIZE = FLEET_RULES.mapSize;
 /** Marge autour de la carte : les empires posés au bord restent entiers. */
@@ -87,6 +89,9 @@ export function GalaxyPage() {
   const [view, setView] = useState<View>({ k: 1, x: 0, y: 0 });
   const uid = useAuthStore((s) => s.user?.uid);
   const me = usePlayerStore((s) => s.player);
+  // v5.1 : territoires d'alliance (secteurs teintés), affichables ou non.
+  const territories = useTerritories();
+  const [showSectors, setShowSectors] = useState(true);
   const fleets = useFleetStore((s) => s.fleets);
   const now = useSmoothNow();
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
@@ -242,6 +247,9 @@ export function GalaxyPage() {
           <Button variant="outline" size="icon" title="Dézoomer" onClick={() => zoomAt(1 / 1.4)}>
             <Minus className="h-4 w-4" />
           </Button>
+          <Button variant={showSectors ? "secondary" : "outline"} size="icon" title={showSectors ? "Masquer les territoires" : "Afficher les territoires"} onClick={() => setShowSectors((v) => !v)}>
+            <Grid3x3 className="h-4 w-4" />
+          </Button>
           {myPos && (
             <Button
               variant="outline"
@@ -273,6 +281,39 @@ export function GalaxyPage() {
             aria-label="Carte de la galaxie"
           >
             <g transform={`translate(${view.x} ${view.y}) scale(${k})`}>
+              {/* v5.1 : secteurs et territoires d'alliance (teinte de l'alliance qui tient le secteur). */}
+              {showSectors &&
+                Array.from({ length: SECTOR_COUNT }, (_, id) => {
+                  const w = FLEET_RULES.mapSize / TERRITORY_RULES.cols;
+                  const h = FLEET_RULES.mapSize / TERRITORY_RULES.rows;
+                  const x = (id % TERRITORY_RULES.cols) * w;
+                  const y = Math.floor(id / TERRITORY_RULES.cols) * h;
+                  const sector = territories?.sectors[id];
+                  const hue = sector?.allianceId ? allianceHue(sector.allianceId) : null;
+                  const mine = !!sector?.allianceId && sector.allianceId === me?.allianceId;
+                  return (
+                    <g key={`sector-${id}`} className="pointer-events-none">
+                      <rect
+                        x={x}
+                        y={y}
+                        width={w}
+                        height={h}
+                        fill={hue !== null ? `hsla(${hue}, 80%, 55%, ${mine ? 0.14 : 0.08})` : "transparent"}
+                        stroke={mine ? "var(--color-mint-glow)" : "rgba(148,163,184,0.18)"}
+                        strokeWidth={(mine ? 0.45 : 0.2) / k}
+                        strokeDasharray={mine ? undefined : `${1.2 / k} ${0.8 / k}`}
+                      />
+                      <text x={x + 1.2 / k} y={y + 3 / k} fontSize={2 / k} fill="rgba(148,163,184,0.5)" className="font-mono">
+                        {sectorLabel(id)}
+                      </text>
+                      {sector?.allianceId && (
+                        <text x={x + w / 2} y={y + h / 2} textAnchor="middle" fontSize={Math.min(5, 3.2 / k)} fontWeight={700} fill={`hsla(${hue}, 85%, 70%, 0.55)`} className="font-display">
+                          [{sector.tag}]
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
               {/* Anneaux de distance autour de ma base */}
               {myPos &&
                 [25, 50, 75].map((r) => (
@@ -570,6 +611,7 @@ export function GalaxyPage() {
               )}
             </Card>
           )}
+          <TerritoryCard />
           <FleetsPanel />
           {debrisByDistance.length > 0 && (
             <Card className="flex flex-col gap-2 p-4">
@@ -605,5 +647,46 @@ export function GalaxyPage() {
       <RecycleDialog field={recycleField} onClose={() => setRecycleField(null)} />
       <GarrisonDialog target={garrisonTarget} onClose={() => setGarrisonTarget(null)} />
     </div>
+  );
+}
+
+/** v5.1 : territoires — secteurs tenus par ton alliance, ton bonus et le secteur de tes planètes. */
+function TerritoryCard() {
+  const me = usePlayerStore((s) => s.player);
+  const map = useTerritories();
+  if (!me) return null;
+  const now = Date.now();
+  const bonus = territoryBonus(me.territory, now);
+  const home = sectorOf(me.uid);
+  const held = map?.sectors.filter((x) => x.allianceId && x.allianceId === me.allianceId) ?? [];
+  const homeSector = map?.sectors[home];
+  return (
+    <Card className="flex flex-col gap-2 p-4">
+      <h3 className="flex items-center gap-2 font-display text-sm text-white">
+        <Grid3x3 className="h-4 w-4 text-mint-glow" /> Territoires
+        {bonus > 0 && <span className="ml-auto font-mono text-xs text-mint-glow">+{Math.round(bonus * 100)} % production</span>}
+      </h3>
+      <p className="text-xs text-slate-400">
+        Ta planète est en secteur <b className="text-slate-200">{sectorLabel(home)}</b>
+        {homeSector?.allianceId ? (
+          <>
+            , tenu par <b className="text-slate-200">[{homeSector.tag}]</b> ({formatCompact(homeSector.levels)} niveaux).
+          </>
+        ) : (
+          ", que personne ne tient."
+        )}
+      </p>
+      {me.allianceId ? (
+        <p className="text-xs text-slate-400">
+          Ton alliance tient {held.length} secteur{held.length > 1 ? "s" : ""}
+          {held.length > 0 && ` : ${held.map((x) => sectorLabel(x.id)).join(", ")}`}.
+        </p>
+      ) : (
+        <p className="text-xs text-slate-500">Rejoins une alliance pour conquérir des secteurs.</p>
+      )}
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        Un secteur appartient à l'alliance qui y cumule le plus de niveaux de bâtiments (au moins {TERRITORY_RULES.minLevels}), planètes mères et colonies comprises. +{Math.round(TERRITORY_RULES.bonusPerSector * 100)} % de production par secteur tenu où tu es présent, +{Math.round(TERRITORY_RULES.maxBonus * 100)} % au plus. Recalcul toutes les heures.
+      </p>
+    </Card>
   );
 }

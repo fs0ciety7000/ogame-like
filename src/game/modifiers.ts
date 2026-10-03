@@ -1,5 +1,6 @@
 import { activeLevels } from "@/game/commanders";
 import { equippedRelics, findTemplate, PRODUCTION_EFFECT, relicBonus } from "@/game/relics";
+import { territoryBonus } from "@/game/territories";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -24,7 +25,7 @@ export interface Modifiers {
   cargo: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory">>;
 
 export function emptyModifiers(): Modifiers {
   return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
@@ -41,6 +42,8 @@ export function playerModifiers(player: ModPlayer | null | undefined): Modifiers
   m.spyLevel += lv.spy * 0.2;
   m.detection += lv.spy * 0.01;
   m.productionAll += lv.steward * 0.01;
+  // v5.1 : territoires d'alliance (valable jusqu'au prochain recalcul du serveur).
+  m.productionAll += territoryBonus(player.territory, Date.now());
   m.storage += lv.steward * 0.02;
   for (const item of equippedRelics(player as Pick<PlayerState, "relics" | "ascensions">)) {
     const effect = findTemplate(item.template)?.effect;
