@@ -33,3 +33,15 @@ describe("v5.1 comparatif attaque / défense", () => {
     expect(attackPowerShown(attacker, { chasseur: 50 })).toBe(attackPowerShown(attacker, { chasseur: 100 }) / 2);
   });
 });
+
+describe("v5.3 garnisons dans le comparatif", () => {
+  it("une garnison stationnée renforce la défense estimée", () => {
+    const me = player({ roquette: { level: 1, count: 100 } });
+    const alone = threatEstimate(fleet(1000), me);
+    const garrison = { mission: "garrison", status: "stationed", targetUid: "me", units: {}, power: 4000 } as unknown as Fleet;
+    const elsewhere = { ...garrison, targetUid: "autre" } as Fleet;
+    const helped = threatEstimate(fleet(1000), me, { garrisons: [garrison, elsewhere] });
+    expect(helped.garrison).toBe(2000);
+    expect(helped.defense).toBeCloseTo(alone.defense + 2000, 5);
+  });
+});
