@@ -53,7 +53,7 @@ export function UnitsPage() {
   const reserved = (category: "attack" | "defense") =>
     queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
 
-  const capacity = (category: "attack" | "defense") => getUnitCapacity(player.buildings, category);
+  const capacity = (category: "attack" | "defense") => getUnitCapacity(player.buildings, category, player.techLevels);
 
   const handleBuild = async (unitId: string) => {
     if (!uid) return;

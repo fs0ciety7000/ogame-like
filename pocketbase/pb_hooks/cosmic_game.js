@@ -356,7 +356,8 @@ var TECH_EFFECT_DEFAULTS = {
   unit_time: 0.05,
   research_time: 0.05,
   fleet_upkeep: 0.05,
-  counter_spy: 1
+  counter_spy: 1,
+  hangar_capacity: 0.05
 };
 var TECH_REDUCTION_CAP = 0.75;
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
@@ -1018,14 +1019,15 @@ function getStorageCapacity(buildings, techLevels2) {
 function storageCapacityAt(effect, level3) {
   return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
 }
-function getUnitCapacity(buildings, category) {
+function getUnitCapacity(buildings, category, techLevels2) {
   var _a, _b, _c;
   let capacity = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
     capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
   }
-  return capacity;
+  const bonus = techLevels2 ? techBonus(techLevels2, "hangar_capacity", category) : 0;
+  return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
 }
 function effectiveBuildingLevel(buildings, id) {
   var _a;
@@ -9435,7 +9437,7 @@ function applyAction(s, action) {
         var _a2, _b2;
         return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
       }, 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
       }
       pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);

@@ -18,5 +18,6 @@ Tes colonies profitent enfin de tous les bonus de l'empire, tes alliés comptent
 - Un jour manqué remet la série à 1. L'infobulle montre les 7 jours du cycle et ta meilleure série.
 
 ## Administration
+- **Technologies de capacité des hangars** : nouvel effet « Capacité des hangars » (attaque ou défense, % par niveau) dans l'éditeur des technologies. Aucune techno ne l'utilise encore : c'est à l'équipe de la créer et de la chiffrer.
 - **Territoires** : carte des 24 secteurs dans Outils, avec l'alliance qui tient chacun, ses niveaux, les prétendants et un bouton pour recalculer immédiatement.
 - **Reliques mythiques** : la relique du mois et la liste de celles déjà remises (saison, relique, joueur).

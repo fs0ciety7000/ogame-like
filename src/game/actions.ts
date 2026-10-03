@@ -206,7 +206,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const category = unit.category;
       const built = hangarUsed(player.units, s.unitsAway, category);
       const reserved = queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category)) {
+      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
       }
 
