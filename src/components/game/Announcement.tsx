@@ -46,6 +46,26 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "v5.7-recap",
+    eyebrow: "Mise à jour 5.7 · Le grand récapitulatif",
+    title: "Ton empire a changé d'échelle",
+    text: "Depuis la 4.9 : des colonies à biomes, des sagas d'alliance, un marché qui ne dort jamais, des chapitres écrits d'après vos parties. Et maintenant, une page qui met tout ton empire en chiffres, avec une carte à partager.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/story/v5-recap.webp",
+    artMobile: "/assets/story/v5-recap.webp",
+    emblem: "/assets/story/choeur-emblem.webp",
+    features: [
+      { title: "Statistiques et cartes", text: "Tout l'empire sur une page, export CSV ou PDF, carte d'empire et de profil à partager sur Discord.", to: "/game/statistiques", image: "/assets/logo/logo.webp" },
+      { title: "Alliances", text: "24 secteurs à tenir, guerres de saison, coffre de guerre et une saga par mois aux objectifs communs.", to: "/game/alliance?onglet=saga", image: "/assets/story/gravhorn.webp" },
+      { title: "Commerce", text: "Ordres d'achat, contrats de livraison et le Courtier du Comptoir quand personne ne vend.", to: "/game/marche", image: "/assets/warlords/kragmor-sceau.webp" },
+      { title: "Colonies", text: "Un biome et son gisement rare par colonie, et tous les bonus de l'empire appliqués là-bas aussi.", to: "/game/colonies", image: "/assets/buildings/gisement_aiFragment.webp" },
+      { title: "Chapitres vivants", text: "Un chapitre par mois écrit d'après vos exploits, avec titres, bannières et page Formules.", to: "/game/passe", image: "/assets/chronicles/2026-10-sceau.webp" },
+      { title: "Fin de partie", text: "Talents d'Ascension, reliques mythiques, série de connexion et officiers qui progressent partout.", to: "/game/etat-major", image: "/assets/buildings/fonderie_quantique.webp" },
+    ],
+    cta: { label: "Voir mes statistiques", to: "/game/statistiques" },
+  },
+  {
     id: "v4.9-alliance",
     eyebrow: "Mise à jour 4.9 · Organisation",
     title: "Chaque matin, un cap commun",

@@ -7,7 +7,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { RESOURCE_LIST } from "@/game/resources";
-import { ALLIANCE_RULES, allianceProjectCost, allianceProjectSeconds, allianceResearchCost, allianceResearchSeconds, projectState } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceProjectCost, allianceProjectProgress, allianceProjectSeconds, allianceResearchCost, allianceResearchSeconds, projectState } from "@/game/alliances";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -280,8 +280,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
           const maxed = st.level >= p.maxLevel;
           const cost = allianceProjectCost(next);
           const missing = Object.fromEntries((Object.entries(cost) as [ResourceId, number][]).map(([r, n]) => [r, Math.max(0, n - (st.funded[r] ?? 0))])) as Amounts;
-          const totalCost = Object.values(cost).reduce((a: number, b) => a + (b ?? 0), 0);
-          const totalFunded = (Object.entries(cost) as [ResourceId, number][]).reduce((a, [r, n]) => a + Math.min(n, st.funded[r] ?? 0), 0);
+          const progress = allianceProjectProgress(cost, st.funded);
           const fromTreasury = Object.fromEntries((Object.entries(missing) as [ResourceId, number][]).map(([r, n]) => [r, Math.min(n, Math.floor(treasury[r] ?? 0))])) as Amounts;
           const pct = Math.round(p.perLevel * 100);
           return (
@@ -317,10 +316,27 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
                   <div>
                     <div className="flex justify-between text-[11px] text-slate-400">
                       <span>Palier {next} : financement · construction {formatDuration(allianceProjectSeconds(next))}</span>
-                      <span className="tabular-mono">{Math.floor((totalFunded / Math.max(1, totalCost)) * 100)} %</span>
+                      <span className="tabular-mono" title="En valeur : une ressource rare compte pour 100 communes.">{Math.floor(progress * 100)} %</span>
                     </div>
-                    <Progress value={(totalFunded / Math.max(1, totalCost)) * 100} className="mt-1" />
-                    <p className="mt-1 text-[11px] text-slate-500">Reste : <AmountsText res={missing} /></p>
+                    <Progress value={progress * 100} className="mt-1" />
+                    <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
+                      {(Object.entries(cost) as [ResourceId, number][]).map(([r, n]) => {
+                        const got = Math.min(n, st.funded[r] ?? 0);
+                        return (
+                          <li key={r} className="min-w-0" title={`${formatNumber(got)} / ${formatNumber(n)}`}>
+                            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                              <ResourceIcon id={r} className="h-3.5 w-3.5" />
+                              <span className={cn("tabular-mono", got >= n ? "text-mint-glow" : "text-slate-300")}>{formatCompact(got)}</span>
+                              <span className="tabular-mono text-slate-600">/ {formatCompact(n)}</span>
+                            </span>
+                            <i className="mt-0.5 block h-1 bg-white/10">
+                              <i className={cn("block h-full", got >= n ? "bg-mint-glow" : "bg-gold-glow")} style={{ width: `${(got / Math.max(1, n)) * 100}%` }} />
+                            </i>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="mt-1.5 text-[11px] text-slate-500">Reste : <AmountsText res={missing} /></p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => setOpen(open === p.id ? null : p.id)}>

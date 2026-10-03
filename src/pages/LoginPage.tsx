@@ -23,6 +23,8 @@ import {
 } from "@/services/authService";
 import { pbConfigured } from "@/lib/pocketbase";
 import { REFERRAL_RULES } from "@/game/referral";
+import { BlogLatest } from "@/components/blog/BlogLatest";
+import { BLOG_URL } from "@/services/blogService";
 import { claimPendingSponsor, fetchSponsorName, pendingSponsor } from "@/services/referralService";
 
 type Mode = "login" | "register" | "forgot";
@@ -143,6 +145,7 @@ export function LoginPage() {
               </div>
             ))}
           </div>
+          <BlogLatest className="mt-10 max-w-md" />
         </motion.div>
 
         <motion.div
@@ -258,12 +261,16 @@ export function LoginPage() {
             {mode === "forgot" && "Retour à la connexion"}
           </button>
         </form>
-        <a
-          href="/bible/index.html"
-          className="mt-4 block text-center font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500 transition hover:text-cyan-glow"
-        >
-          Découvrir la bible visuelle du jeu
-        </a>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
+          <a href="/bible/index.html" className="transition hover:text-cyan-glow">
+            Bible visuelle du jeu
+          </a>
+          <span aria-hidden className="text-slate-700">·</span>
+          <a href={BLOG_URL} target="_blank" rel="noopener" className="transition hover:text-cyan-glow">
+            Devblog
+          </a>
+        </div>
+        <BlogLatest className="mt-6 lg:hidden" />
         </motion.div>
       </div>
     </div>

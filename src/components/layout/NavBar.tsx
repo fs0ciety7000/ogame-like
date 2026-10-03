@@ -7,6 +7,7 @@ import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
+import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -141,6 +142,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/annonces", label: "Annonces", icon: Megaphone },
       { to: "/game/signalements", label: "Signalements", icon: Bug },
       { to: "/bible", href: "/bible/index.html", label: "Bible du jeu", icon: BookMarked },
+      { to: "/devblog", href: BLOG_URL, label: "Devblog", icon: Newspaper },
     ],
   },
 ];

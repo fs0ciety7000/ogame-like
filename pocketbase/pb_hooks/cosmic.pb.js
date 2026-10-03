@@ -888,3 +888,55 @@ onBootstrap((e) => {
     console.log(`[cosmic] migrations du contenu : ${err}`);
   }
 });
+
+/* ---------- v5.8 : devblog ----------
+   Pages publiques rendues ici : sur le sous-domaine à la racine, et
+   partout sous /blog (aperçu avant la mise en place du sous-domaine).
+   Les routes /api et /_ restent accessibles sur le sous-domaine
+   (fichiers, essais d'API). Un handler ne voit pas les variables
+   extérieures : chaque route est donc écrite en entier. Sous-domaine :
+   COSMIC_BLOG_HOST (devblog.fs0ciety.org par défaut). */
+const COSMIC_BLOG_HOST = String($os.getenv("COSMIC_BLOG_HOST") || "devblog.fs0ciety.org").toLowerCase();
+// Le domaine du blog ne montre que le blog (ni panneau PocketBase, ni erreurs JSON).
+routerUse((e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  const hit = db.blogHostIntercept(e);
+  if (hit === "home") return e.redirect(302, "/");
+  if (hit) return db.blogRequest(e, hit);
+  return e.next();
+});
+routerAdd("GET", COSMIC_BLOG_HOST + "/{$}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "home"));
+routerAdd("GET", "/blog/{$}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "home"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/c/{id}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "category"));
+routerAdd("GET", "/blog/c/{id}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "category"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/t/{id}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "tag"));
+routerAdd("GET", "/blog/t/{id}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "tag"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/recherche", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "search"));
+routerAdd("GET", "/blog/recherche", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "search"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/p/{slug}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "post"));
+routerAdd("GET", "/blog/p/{slug}", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "post"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/rss.xml", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "rss"));
+routerAdd("GET", "/blog/rss.xml", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "rss"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/feed", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "rss"));
+routerAdd("GET", "/blog/feed", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "rss"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/sitemap.xml", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "sitemap"));
+routerAdd("GET", "/blog/sitemap.xml", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "sitemap"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/robots.txt", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "robots"));
+routerAdd("GET", "/blog/robots.txt", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "robots"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/assets/blog.css", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "css"));
+routerAdd("GET", "/blog/assets/blog.css", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "css"));
+routerAdd("GET", COSMIC_BLOG_HOST + "/assets/blog.js", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "js"));
+routerAdd("GET", "/blog/assets/blog.js", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "js"));
+routerAdd("GET", "/blog", (e) => e.redirect(301, "/blog/"));
+/** GET /api/cosmic/blog/posts?limite=10&categorie=annonces — derniers articles publiés (JSON). */
+routerAdd("GET", "/api/cosmic/blog/posts", (e) => require(`${__hooks}/cosmic_db.js`).blogRequest(e, "api"));
+
+onBootstrap((e) => {
+  e.next();
+  try {
+    const added = require(`${__hooks}/cosmic_db.js`).ensureBlogAuthors($app);
+    if (added.length > 0) console.log(`[cosmic] devblog : auteurs ajoutés (${added.join(", ")})`);
+  } catch (err) {
+    console.log(`[cosmic] devblog : ${err}`);
+  }
+});

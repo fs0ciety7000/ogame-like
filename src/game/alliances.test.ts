@@ -6,6 +6,7 @@ import {
   allianceForgeFactor,
   allianceNextDueMs,
   allianceProjectCost,
+  allianceProjectProgress,
   allianceSiegeFactor,
   finishAllianceResearch,
   fundAllianceProject,
@@ -207,5 +208,18 @@ describe("alliance projects (v3.3)", () => {
   it("shortens build times with the Anneau-forge", () => {
     const p = player("m1", { allianceResearch: { projet_forge: 5 } });
     expect(playerBuildTimeFactor(p, NOW) / playerBuildTimeFactor(player("x"), NOW)).toBeCloseTo(0.9);
+  });
+});
+
+describe("allianceProjectProgress", () => {
+  it("weighs rare resources like the builders ranking (1 rare = 100 common)", () => {
+    const cost = allianceProjectCost(1);
+    expect(allianceProjectProgress(cost, {})).toBe(0);
+    // Toutes les rares réunies : la moitié de la valeur du palier.
+    const rares = { reinforcedSteel: cost.reinforcedSteel, cyberModule: cost.cyberModule, syntheticNanites: cost.syntheticNanites, aiFragment: cost.aiFragment };
+    expect(allianceProjectProgress(cost, rares)).toBeCloseTo(0.5);
+    // Le surplus d'une ressource ne compte pas pour les autres.
+    expect(allianceProjectProgress(cost, { scrap: (cost.scrap ?? 0) * 10 })).toBeCloseTo(0.125);
+    expect(allianceProjectProgress(cost, { ...cost })).toBe(1);
   });
 });

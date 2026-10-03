@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Minus, Plus } from "lucide-react";
-import { formatDecimal, formatInt } from "@/game/format";
+import { formatDecimal, formatInt, formatShort } from "@/game/format";
 import { cn } from "@/lib/utils";
 
 /* v5.6 : champ numérique commun à tout le jeu (quantités d'unités, montants,
@@ -72,7 +72,8 @@ export function NumberInput(props: NumberInputProps) {
   const nullable = props.nullable === true;
   const hasMax = max !== undefined && Number.isFinite(max);
   const top = hasMax ? Math.max(min, max as number) : Infinity;
-  const quick = props.quick ?? hasMax;
+  // MIN (remise à zéro) dès que la place le permet ; MAX seulement s'il existe un maximum.
+  const quick = props.quick ?? true;
   const meter = props.meter ?? (hasMax && top > min);
   const value = props.value ?? undefined;
   const shown = value ?? (nullable ? undefined : min);
@@ -175,7 +176,9 @@ export function NumberInput(props: NumberInputProps) {
   const atMax = hasMax && (shown ?? min) >= top;
   const ratio = meter && top > min ? Math.min(1, Math.max(0, ((shown ?? min) - min) / (top - min))) : 0;
   const sm = size === "sm";
-  const text = draft ?? (shown === undefined ? "" : display(shown, decimals));
+  // Montants gigantesques (milliers de milliards) : forme courte hors saisie (« 95,2 Md »), valeur exacte au survol et en saisie.
+  const huge = shown !== undefined && Math.abs(shown) >= 1e12;
+  const text = draft ?? (shown === undefined ? "" : huge ? formatShort(shown) : display(shown, decimals));
   const btn = cn(
     "grid shrink-0 place-items-center text-slate-500 transition-colors select-none touch-manipulation",
     "hover:bg-cyan-glow/10 hover:text-cyan-glow active:bg-cyan-glow/20 disabled:pointer-events-none disabled:opacity-30",
@@ -230,7 +233,7 @@ export function NumberInput(props: NumberInputProps) {
           aria-valuemax={hasMax ? top : undefined}
           aria-valuenow={shown}
           aria-label={props["aria-label"]}
-          title={title}
+          title={title ?? (huge && draft === null ? display(shown as number, decimals) : undefined)}
           autoFocus={autoFocus}
           disabled={disabled}
           placeholder={placeholder ?? (nullable ? "" : display(min, decimals))}
@@ -246,8 +249,9 @@ export function NumberInput(props: NumberInputProps) {
           onChange={(e) => onText(e.target.value)}
           onKeyDown={onKey}
           className={cn(
-            "min-w-0 flex-1 bg-transparent px-2 text-center font-mono tabular-nums text-slate-100 outline-none placeholder:text-slate-600",
-            sm ? "text-xs" : "text-sm",
+            "min-w-0 flex-1 bg-transparent px-1.5 text-center font-mono tabular-nums text-slate-100 outline-none placeholder:text-slate-600",
+            // Longs nombres : un cran plus petit pour rester entiers dans les cases étroites.
+            text.length > 8 ? (sm ? "text-[11px] tracking-tight" : "text-xs tracking-tight") : sm ? "text-xs" : "text-sm",
             atMax && meter && !disabled && "text-gold-glow",
           )}
         />

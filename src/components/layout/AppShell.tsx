@@ -8,9 +8,10 @@ import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
 import { useReportBadges } from "@/services/reportService";
-import { LogOut, Music, Music as MusicOff, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
+import { LogOut, Music, Music as MusicOff, PenSquare, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
+import { useBlogAccess } from "@/services/blogService";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -104,7 +105,7 @@ function SfxToggle() {
 }
 
 /** Pages hors navigation principale (barre d'outils). */
-const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages", "/game/rapport": "Rapport partagé" };
+const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages", "/game/rapport": "Rapport partagé", "/game/redaction": "Rédaction du devblog" };
 
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
@@ -113,6 +114,7 @@ export function AppShell() {
   const contentLoaded = useContentStore((s) => s.loaded);
   const contentVersion = useContentStore((s) => s.version);
   const isAdmin = useIsAdmin();
+  const blog = useBlogAccess();
   const location = useLocation();
 
   useGameSync(user?.uid ?? null);
@@ -205,6 +207,11 @@ export function AppShell() {
                 <MusicToggle />
               </span>
               <NotificationBell />
+              {(blog.author || blog.admin) && (
+                <HeaderButton title="Rédaction du devblog" asLink="/game/redaction">
+                  <PenSquare className="h-4 w-4" />
+                </HeaderButton>
+              )}
               {isAdmin && (
                 <HeaderButton title="Administration" asLink={pendingReports > 0 ? "/game/admin?onglet=reports" : "/game/admin"}>
                   <Wrench className="h-4 w-4" />
