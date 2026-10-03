@@ -1,10 +1,10 @@
 ---
-version: 4.9.1
-iteration: 56
+version: 4.9.2
+iteration: 57
 date: 2026-10-03
-title: Nouvelle navigation, colonies redessinées et raids débloqués
+title: Nouvelle navigation et colonies redessinées
 ---
-Une barre latérale réorganisée, une page Colonies entièrement redessinée, et les raids de l'Inquisition enfin débloqués.
+Une barre latérale réorganisée, une page Colonies entièrement redessinée, et l'onglet Diplomatie qui ne plante plus.
 
 ## Navigation
 - **Barre latérale réorganisée** en six familles colorées : Empire, Opérations, Grands ennemis, Social, Progression et Compte.
@@ -23,8 +23,3 @@ Une barre latérale réorganisée, une page Colonies entièrement redessinée, e
 
 ## Corrections
 - **Onglet Diplomatie de l'alliance** : « Une erreur est survenue — i is not a function » en ouvrant puis en quittant le canal d'un pacte, sur les navigateurs récents (Chrome, Edge). Corrigé.
-- **Raids de l'Inquisition de l'Aube Blanche** : la flotte du Lecteur arrivait à 00:00 puis restait affichée « en approche » sans jamais attaquer. Le nom du rapport de combat dépassait la taille prévue par le serveur, ce qui faisait échouer le raid. Les raids en attente sont résolus dès la mise à jour.
-- Les noms de faction et de repaire trop longs sont désormais tronqués dans les rapports et ne peuvent plus bloquer un combat.
-
-## Administration
-- Les erreurs remontées automatiquement indiquent maintenant les **composants en cause**, pour retrouver plus vite l'origine d'un écran « Une erreur est survenue ».
