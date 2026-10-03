@@ -36,6 +36,8 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { useProductionRates } from "@/hooks/useLiveResources";
 
 export function BuildingsPage() {
   useNowTicker();
@@ -43,6 +45,7 @@ export function BuildingsPage() {
   const queues = usePlayerStore((s) => s.queues);
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
+  const rates = useProductionRates(player);
 
   if (!player || !queues) return null;
 
@@ -266,20 +269,18 @@ export function BuildingsPage() {
                       </Button>
                     ) : (
                       <>
-                        <div className="mb-2.5 flex flex-wrap gap-1.5">
-                          {(Object.entries(cost) as [ResourceId, number][]).map(([res, amount]) => {
-                            const lack = amount - (player.resources[res] ?? 0);
-                            return (
-                              <CostPill key={res} ok={lack <= 0} missing={lack > 0 ? `manque ${formatCompact(lack)}` : undefined}>
-                                <ResourceIcon id={res} /> {formatCompact(amount)}
-                              </CostPill>
-                            );
-                          })}
-                          <CostPill><GameIcon name="duration" /> {formatDuration(time)}</CostPill>
-                        </div>
-                        <Button variant="warn" className="w-full" disabled={pending === building.id} onClick={() => void handleUpgrade(building.id)}>
-                          Améliorer → niv. {nextLevel}
-                        </Button>
+                        <CostPills cost={cost} stock={player.resources} seconds={time} className="mb-2.5" />
+                        {(() => {
+                          const wait = secondsToAfford(cost, player.resources, rates);
+                          return (
+                            <>
+                              <Button variant="warn" className="w-full" disabled={pending === building.id || wait > 0} onClick={() => void handleUpgrade(building.id)}>
+                                Améliorer → niv. {nextLevel}
+                              </Button>
+                              {wait > 0 && <BlockedReason>{affordText(wait)}</BlockedReason>}
+                            </>
+                          );
+                        })()}
                         {planButton}
                       </>
                     )}

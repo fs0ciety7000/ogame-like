@@ -245,6 +245,23 @@ export interface BackupFile {
   modifiedAtMs: number;
 }
 
+export interface StuckFleet {
+  id: string;
+  mission: string;
+  status: string;
+  ownerPseudo: string;
+  targetPseudo: string;
+  factionId: string;
+  dueAtMs: number;
+  lateMs: number;
+  lastError: { message: string; atMs: number } | null;
+}
+
+/** v4.9.3 : flottes que la tâche serveur n'arrive pas à traiter (retard > 10 min). */
+export function adminStuckFleets(): Promise<{ thresholdMs: number; count: number; items: StuckFleet[] }> {
+  return pb.send("/api/cosmic/admin/stuck-fleets", { method: "GET" });
+}
+
 export function adminListBackups(): Promise<BackupFile[]> {
   return pb.send<BackupFile[]>("/api/cosmic/admin/backups/list", { method: "GET" });
 }

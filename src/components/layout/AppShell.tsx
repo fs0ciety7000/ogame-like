@@ -23,6 +23,7 @@ import { useAmbience } from "@/hooks/useAmbience";
 import { checkTierUps } from "@/store/tierUpStore";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
+import { RaidAlert } from "@/components/game/RaidAlert";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { PageLoader } from "@/components/layout/PageLoader";
@@ -245,6 +246,7 @@ export function AppShell() {
 
       <CombatResultModal />
       <WarpOverlay />
+      <RaidAlert />
       <RankUpCelebration />
       <AwaySummaryModal />
       <UltimatumDialog />

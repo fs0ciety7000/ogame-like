@@ -703,7 +703,7 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
-export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string }) {
+export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }
 

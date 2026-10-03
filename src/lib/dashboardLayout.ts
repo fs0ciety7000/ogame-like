@@ -2,12 +2,13 @@ import { create } from "zustand";
 
 /* v4.5 : ordre et visibilité des cartes de l'accueil, mémorisés sur l'appareil. */
 
-export type DashboardSection = "next" | "planet" | "fleets" | "leviathan" | "challenge" | "event" | "contracts" | "economy" | "power" | "log";
+export type DashboardSection = "next" | "planet" | "colonies" | "fleets" | "leviathan" | "challenge" | "event" | "contracts" | "economy" | "power" | "log";
 
 export const DASHBOARD_SECTIONS: { id: DashboardSection; label: string }[] = [
   { id: "next", label: "Que faire maintenant" },
   { id: "fleets", label: "Flottes en vol" },
   { id: "planet", label: "Planète et développement" },
+  { id: "colonies", label: "Colonies" },
   { id: "leviathan", label: "Boss mondiaux" },
   { id: "challenge", label: "Défi de la semaine" },
   { id: "event", label: "Évènement" },

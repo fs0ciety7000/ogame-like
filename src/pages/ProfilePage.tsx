@@ -18,6 +18,7 @@ import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
 import { formatNumber, cn } from "@/lib/utils";
 import { GameIcon } from "@/components/ui/game-icon";
+import { SeasonHistoryCard } from "@/components/game/SeasonHistoryCard";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
 import { ReferralCard } from "@/components/game/ReferralCard";
 
@@ -77,6 +78,8 @@ export function ProfilePage() {
       <RankLadder xp={player.xp} />
 
       <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
+
+      <SeasonHistoryCard uid={player.uid} currentXp={player.seasonXp ?? 0} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile label="Victoires" value={formatNumber(player.victories)} tone="var(--color-mint-glow)" sub={`${player.victories + player.defeats > 0 ? Math.round((player.victories / (player.victories + player.defeats)) * 100) : 0} % de réussite`} />

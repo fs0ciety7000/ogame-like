@@ -13,7 +13,10 @@ import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, ge
 import { cn, formatDuration } from "@/lib/utils";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
-import { ResourceIcon } from "@/components/ui/game-icon";
+import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { LevelTicks } from "@/components/ui/hud";
+import { useProductionRates } from "@/hooks/useLiveResources";
+import type { ResourceId } from "@/types/game";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -26,6 +29,7 @@ export function LabPage() {
   const [selectedId, setSelectedId] = useState<string>(TECHNOLOGIES[0].id);
   const [pending, setPending] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const rates = useProductionRates(player);
 
   // Plein écran de l'arbre : Échap pour sortir, et la page derrière ne
   // défile plus tant que la surcouche est ouverte.
@@ -124,18 +128,21 @@ export function LabPage() {
             </div>
           ) : (
             <>
-              <div className="mt-4 space-y-1 text-sm">
-                <p className="text-slate-400">
-                  Niveau actuel : {currentLevel} → {currentLevel + 1}
+              <div className="mt-4 space-y-2 text-sm">
+                <p className="flex items-baseline justify-between text-slate-400">
+                  <span>
+                    Niveau {currentLevel} → <b className="text-white">{currentLevel + 1}</b>
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    {currentLevel} / {selected.maxLevel}
+                  </span>
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(getTechCost(selected, currentLevel + 1)).map(([res, val]) => (
-                    <span key={res} className="rounded bg-space-800 px-2 py-1 text-xs text-slate-300">
-                      <ResourceIcon id={res} /> {val}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-slate-500">Temps : {formatDuration(Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now())))}</p>
+                <LevelTicks level={currentLevel} max={selected.maxLevel} />
+                <CostPills
+                  cost={getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>}
+                  stock={player.resources}
+                  seconds={Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now()))}
+                />
               </div>
 
               {(() => {
@@ -155,19 +162,27 @@ export function LabPage() {
                 return <p className="mt-3 text-xs text-mint-glow">✅ Aucun prérequis</p>;
               })()}
 
-              <Button
-                className="mt-4 w-full"
-                disabled={
-                  pending ||
-                  !checkPrereqs(selected, levels).valid ||
-                  (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH && !activeEntry)
-                }
-                onClick={() => void handleLaunch()}
-              >
-                {queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH
-                  ? "File de recherche pleine"
-                  : "Lancer la recherche"}
-              </Button>
+              {(() => {
+                const prereqOk = checkPrereqs(selected, levels).valid;
+                const queueFull = queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH && !activeEntry;
+                const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
+                return (
+                  <>
+                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0} onClick={() => void handleLaunch()}>
+                      {queueFull ? "File de recherche pleine" : "Lancer la recherche"}
+                    </Button>
+                    {!prereqOk ? (
+                      <BlockedReason tone="block">Prérequis manquants (voir ci-dessus).</BlockedReason>
+                    ) : queueFull ? (
+                      <BlockedReason tone="block">
+                        {MAX_CONCURRENT_RESEARCH} recherches en cours au plus : attends la fin de l'une d'elles.
+                      </BlockedReason>
+                    ) : wait > 0 ? (
+                      <BlockedReason>{affordText(wait)}</BlockedReason>
+                    ) : null}
+                  </>
+                );
+              })()}
             </>
           )}
         </Card>

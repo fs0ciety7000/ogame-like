@@ -1,7 +1,7 @@
 import { RESOURCE_LIST } from "@/game/resources";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
 import { usePlayerStore } from "@/store/playerStore";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Sparkline } from "@/components/ui/sparkline";
@@ -36,6 +36,9 @@ export function ResourceHud() {
         const trend = history.slice(-12).map((p) => p.r[res.id] ?? 0);
         const full = economy.full.includes(res.id);
         const fill = Number.isFinite(economy.capacity) && economy.capacity > 0 ? (resources[res.id] / economy.capacity) * 100 : 0;
+        // v4.9.3 : entrepôt presque plein (≥ 85 %) — bordure dorée et temps avant plein.
+        const nearFull = !full && fill >= 85;
+        const secondsToFull = !full && rate > 0 && Number.isFinite(economy.capacity) ? Math.max(0, (economy.capacity - resources[res.id]) / rate) : null;
         return (
           <Tooltip key={res.id}>
             <TooltipTrigger asChild>
@@ -47,7 +50,7 @@ export function ResourceHud() {
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
                   "hud-cut-sm relative flex min-w-[9.5rem] items-center gap-2 overflow-hidden border bg-space-900/70 px-2.5 pb-2 pt-1.5 xl:flex-1",
-                  full ? "border-ember-glow/60" : "border-cyan-glow/15",
+                  full ? "border-ember-glow/60" : nearFull ? "border-gold-glow/50" : "border-cyan-glow/15",
                 )}
               >
                 <ResourceIcon id={res.id} className="h-8 w-8" />
@@ -63,7 +66,11 @@ export function ResourceHud() {
                       </span>
                     ) : null}
                   </div>
-                  <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
+                  {nearFull && secondsToFull !== null ? (
+                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-gold-glow">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
+                  ) : (
+                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
+                  )}
                 </div>
                 {trend.length >= 2 && <Sparkline values={trend} className="hidden 2xl:block" />}
                 <span className="absolute inset-x-0 bottom-0 h-[3px] bg-white/[0.05]">
@@ -81,6 +88,7 @@ export function ResourceHud() {
               {res.name} : {formatNumber(resources[res.id])} / {Number.isFinite(economy.capacity) ? formatNumber(economy.capacity) : "∞"}
               {rate !== 0 && ` (${rate > 0 ? "+" : ""}${formatNumber(rate)}/s)`}
               {full && " — entrepôt plein, production à l'arrêt"}
+              {!full && secondsToFull !== null && ` — plein dans ${formatDuration(Math.ceil(secondsToFull))}`}
               {res.id === "energy" && economy.upkeep > 0 && ` — entretien de la flotte : −${formatNumber(Math.round(economy.upkeep))}/s`}
             </TooltipContent>
           </Tooltip>
