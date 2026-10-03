@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -75,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/labo", label: "Labo", icon: FlaskConical },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
+      { to: "/game/statistiques", label: "Statistiques", icon: BarChart3 },
     ],
   },
   {
