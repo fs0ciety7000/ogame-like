@@ -98,6 +98,9 @@ export interface FactionDef {
   lair: { name: string; raidsNeeded: number; pct: number; rewardHours: number; rare: number; xp: number; title: string };
 }
 
+/** Taille maximale des pseudos d'un rapport de combat (schéma battle_reports). */
+export const REPORT_PSEUDO_MAX = 120;
+
 export const DEFAULT_FACTIONS: FactionDef[] = [
   {
     id: "varan",
@@ -710,7 +713,8 @@ export function resolvePirateRaid(
 
   const report: Omit<BattleReport, "id"> = {
     attackerUid: PIRATE_OWNER_UID,
-    attackerPseudo: `${faction.enforcer} (${faction.name})`,
+    // Tronqué à la taille du champ battle_reports (un nom trop long bloquait le raid).
+    attackerPseudo: `${faction.enforcer} (${faction.name})`.slice(0, REPORT_PSEUDO_MAX),
     defenderUid: player.uid,
     defenderPseudo: player.pseudo,
     timestamp: now,
@@ -818,7 +822,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     attackerUid: player.uid,
     attackerPseudo: player.pseudo,
     defenderUid: lairUid(faction.id),
-    defenderPseudo: faction.lair.name,
+    defenderPseudo: faction.lair.name.slice(0, REPORT_PSEUDO_MAX),
     timestamp: now,
     outcome: combat.outcome,
     attackerPower: combat.attackerPower,

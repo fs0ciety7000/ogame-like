@@ -2701,6 +2701,7 @@ function setPosture(player, id, now) {
 }
 
 // src/game/pirates.ts
+var REPORT_PSEUDO_MAX = 120;
 var DEFAULT_FACTIONS = [
   {
     id: "varan",
@@ -3186,7 +3187,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   setState(player, faction.id, st);
   const report = {
     attackerUid: PIRATE_OWNER_UID,
-    attackerPseudo: `${faction.enforcer} (${faction.name})`,
+    // Tronqué à la taille du champ battle_reports (un nom trop long bloquait le raid).
+    attackerPseudo: `${faction.enforcer} (${faction.name})`.slice(0, REPORT_PSEUDO_MAX),
     defenderUid: player.uid,
     defenderPseudo: player.pseudo,
     timestamp: now,
@@ -3283,7 +3285,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     attackerUid: player.uid,
     attackerPseudo: player.pseudo,
     defenderUid: lairUid(faction.id),
-    defenderPseudo: faction.lair.name,
+    defenderPseudo: faction.lair.name.slice(0, REPORT_PSEUDO_MAX),
     timestamp: now,
     outcome: combat.outcome,
     attackerPower: combat.attackerPower,
