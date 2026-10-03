@@ -525,6 +525,7 @@ routerAdd(
 );
 
 /** v5.1 : contrats entre joueurs (« livre-moi X contre Y »). */
+routerAdd("POST", "/api/cosmic/rename", (e) => require(`${__hooks}/cosmic_db.js`).renameRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/trade-contract", (e) => require(`${__hooks}/cosmic_db.js`).tradeContractRequest(e), $apis.requireAuth("users"));
 cronAdd("cosmic_tradecontracts", "*/5 * * * *", () => {
   try {

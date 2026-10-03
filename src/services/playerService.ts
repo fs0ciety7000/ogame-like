@@ -736,3 +736,10 @@ export function claimPassTier(tier: number) {
 export function cancelJob(target: import("@/game/cancel").CancelTarget) {
   return act<import("@/game/cancel").CancelQuote>({ type: "cancel", target });
 }
+
+/** v5.1 : changement de pseudo unique (10 Ambre). Le compte de connexion suit. */
+export async function renamePlayer(pseudo: string): Promise<{ pseudo: string }> {
+  const out = await callGame<{ pseudo: string }>("rename", { pseudo });
+  await pb.collection("users").authRefresh().catch(() => undefined);
+  return out;
+}

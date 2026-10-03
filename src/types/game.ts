@@ -135,6 +135,8 @@ export interface PlayerState {
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;
+  /** v5.1 : changement de pseudo unique (ancien pseudo, date). */
+  renamed?: import("@/game/rename").RenameState | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;

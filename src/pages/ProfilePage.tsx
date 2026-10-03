@@ -21,6 +21,7 @@ import { GameIcon } from "@/components/ui/game-icon";
 import { SeasonHistoryCard } from "@/components/game/SeasonHistoryCard";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
 import { ReferralCard } from "@/components/game/ReferralCard";
+import { RenameCard } from "@/components/game/RenameCard";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -72,6 +73,8 @@ export function ProfilePage() {
       </Card>
 
       <ProfileStyleCard player={player} />
+
+      <RenameCard player={player} />
 
       <ReferralCard player={player} />
 

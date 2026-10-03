@@ -79,6 +79,7 @@ __export(hooksEntry_exports, {
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   REFERRAL_RULES: () => REFERRAL_RULES,
+  RENAME_RULES: () => RENAME_RULES,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
@@ -260,6 +261,7 @@ __export(hooksEntry_exports, {
   productionHours: () => productionHours,
   proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
+  pseudoLogin: () => pseudoLogin,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
   readCoalitions: () => readCoalitions,
@@ -276,6 +278,7 @@ __export(hooksEntry_exports, {
   releaseBounty: () => releaseBounty,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
+  renamePlayer: () => renamePlayer,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
@@ -10075,6 +10078,7 @@ var GAME_FIELDS = [
   "relics",
   "synthesis",
   "profileStyle",
+  "renamed",
   "seasonPass",
   "referral",
   "vacation",
@@ -11149,6 +11153,34 @@ function dailyMemberOf(p, now) {
     production4h: productionHours(p, ALLIANCE_DAILY_RULES.treasuryHours),
     fleetPower: computeFullPower((_b = p.units) != null ? _b : {}, (_c = p.techLevels) != null ? _c : {}, OFFENSIVE_UNITS, ["attack"])
   };
+}
+
+// src/game/rename.ts
+var RENAME_RULES = {
+  amber: 10,
+  minLength: 3,
+  maxLength: 20
+};
+function pseudoLogin(pseudo) {
+  return pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+function cleanNewPseudo(raw) {
+  const pseudo = String(raw != null ? raw : "").trim().replace(/\s+/g, " ");
+  if (pseudo.length > RENAME_RULES.maxLength) throw new GameActionError(`Le pseudo fait ${RENAME_RULES.maxLength} caract\xE8res au plus.`);
+  if (pseudoLogin(pseudo).length < RENAME_RULES.minLength) throw new GameActionError("Le pseudo doit contenir au moins 3 caract\xE8res valides (lettres, chiffres, - ou _).");
+  return pseudo;
+}
+function renamePlayer(player, raw, now) {
+  if (player.renamed) throw new GameActionError("Tu as d\xE9j\xE0 chang\xE9 de pseudo.");
+  const pseudo = cleanNewPseudo(raw);
+  if (pseudo === player.pseudo) throw new GameActionError("C'est d\xE9j\xE0 ton pseudo.");
+  const st = bountyState(player);
+  if (st.amber < RENAME_RULES.amber) throw new GameActionError(`Il te faut ${RENAME_RULES.amber} Ambre.`);
+  st.amber -= RENAME_RULES.amber;
+  player.bounties = st;
+  player.renamed = { fromPseudo: player.pseudo, atMs: now };
+  player.pseudo = pseudo;
+  return { pseudo, login: pseudoLogin(pseudo) };
 }
 
 // src/server/hooksEntry.ts

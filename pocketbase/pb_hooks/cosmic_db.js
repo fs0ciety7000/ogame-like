@@ -3889,6 +3889,53 @@ function guardPlayerUpdate(e) {
   const sent = e.requestInfo().body || {};
   const bad = Object.keys(sent).filter((k) => PLAYER_WRITABLE.indexOf(k) < 0);
   if (bad.length > 0) throw new ForbiddenError("Ces informations ne se modifient qu'en jeu.");
+  // v5.1 : le pseudo ne s'écrit librement qu'à l'inscription ; ensuite, Profil → Changer de pseudo.
+  if (sent.pseudo !== undefined) {
+    const before = e.record.original();
+    if (String(sent.pseudo) !== before.getString("pseudo") && (Date.now() - before.getInt("createdAtMs") > PSEUDO_SIGNUP_MS || before.get("renamed"))) {
+      throw new ForbiddenError("Le pseudo se change depuis ton profil (une seule fois).");
+    }
+  }
+}
+
+const PSEUDO_SIGNUP_MS = 15 * 60000;
+
+/** POST /api/cosmic/rename — changement de pseudo unique (10 Ambre). */
+function renameRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let pseudo = "";
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const me = loadFlushed(txApp, game, uid);
+    try {
+      const out = game.renamePlayer(me.player, req.pseudo, now);
+      const sameLogin = txApp.findRecordsByFilter("users", "username = {:u} && id != {:id}", "", 1, 0, { u: out.login, id: uid });
+      const lower = out.pseudo.toLowerCase();
+      const samePseudo = txApp.findRecordsByFilter("players", "pseudo ~ {:p} && id != {:id}", "", 50, 0, { p: out.pseudo, id: uid }).filter((r) => r.getString("pseudo").toLowerCase() === lower);
+      if (sameLogin.length > 0 || samePseudo.length > 0) throw new game.GameActionError("Ce pseudo est déjà pris.");
+      me.loaded.rec.set("pseudo", out.pseudo);
+      savePlayer(txApp, game, me.loaded, me.player, me.queues);
+      const user = txApp.findRecordById("users", uid);
+      user.set("username", out.login);
+      user.set("name", out.pseudo);
+      txApp.save(user);
+      const allianceId = me.loaded.rec.getString("allianceId");
+      const alliance = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+      if (alliance) {
+        const pseudos = parseJsonField(alliance, "memberPseudos", {}) || {};
+        pseudos[uid] = out.pseudo;
+        alliance.set("memberPseudos", pseudos);
+        txApp.save(alliance);
+      }
+      pseudo = out.pseudo;
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+  });
+  return e.json(200, { pseudo });
 }
 
 /* ---------- Campagnes e-mail (v3.9.2) ---------- */
@@ -5378,4 +5425,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

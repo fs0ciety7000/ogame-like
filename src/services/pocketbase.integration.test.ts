@@ -2100,6 +2100,35 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("v5.1: season war standings readable; pseudo renamed once for amber, login follows", async () => {
+    await loginPlayer(B.email, B.pw);
+    const war = await pb.send<{ seasonId: string; standings: unknown[] }>("/api/cosmic/season-war", { method: "GET" });
+    expect(war.seasonId).toMatch(/^\d{4}-\d{2}$/);
+    expect(Array.isArray(war.standings)).toBe(true);
+
+    const bBefore = await snap(bId);
+    const fresh = `Renomme_${suffix}`;
+    try {
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(bBefore), amber: 5 }, renamed: null });
+      await expect(ps.renamePlayer(fresh)).rejects.toThrow(/Ambre/);
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(bBefore), amber: 25 } });
+      await expect(ps.renamePlayer(A.pseudo.toUpperCase())).rejects.toThrow(/déjà pris/);
+      await expect(ps.renamePlayer("!!")).rejects.toThrow(/3 caractères/);
+      expect(await ps.renamePlayer(fresh)).toEqual({ pseudo: fresh });
+      const b = await snap(bId);
+      expect(b.pseudo).toBe(fresh);
+      expect(b.renamed).toMatchObject({ fromPseudo: B.pseudo });
+      expect(bountyState(b).amber).toBe(15);
+      await expect(ps.renamePlayer(`Encore_${suffix}`)).rejects.toThrow(/déjà changé/);
+      await expect(pb.collection("players").update(bId, { pseudo: "Pirate" })).rejects.toMatchObject({ status: 403 });
+      logout();
+      await loginPlayer(fresh, B.pw);
+      expect(pb.authStore.record?.id).toBe(bId);
+    } finally {
+      await admin.collection("players").update(bId, { bounties: bBefore.bounties ?? {} });
+    }
+  }, 30_000);
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

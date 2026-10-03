@@ -36,6 +36,7 @@ export const GAME_FIELDS = [
   "relics",
   "synthesis",
   "profileStyle",
+  "renamed",
   "seasonPass",
   "referral",
   "vacation",

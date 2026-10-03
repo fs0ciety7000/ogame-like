@@ -159,3 +159,4 @@ export { allianceRole, canDiplomacy } from "@/game/alliances";
 export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/game/territories";
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
+export { pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";

@@ -346,6 +346,13 @@
         "required": false,
         "maxSize": 20000,
         "presentable": false
+      },
+      {
+        "name": "renamed",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000,
+        "presentable": false
       }
     ],
     "indexes": [
