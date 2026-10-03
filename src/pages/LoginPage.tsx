@@ -272,6 +272,10 @@ export function LoginPage() {
           <a href={BLOG_URL} target="_blank" rel="noopener" className="transition hover:text-cyan-glow">
             Devblog
           </a>
+          <span aria-hidden className="text-slate-700">·</span>
+          <a href="/confidentialite.html" className="transition hover:text-cyan-glow">
+            Confidentialité
+          </a>
         </div>
         <BlogLatest className="mt-6 lg:hidden" />
         </motion.div>

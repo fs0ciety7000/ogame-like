@@ -2,18 +2,17 @@ import { pb } from "@/lib/pocketbase";
 import { callGame, ensurePlayerDoc } from "@/services/playerService";
 
 /* =====================================================
-   v5.9 : connexion par Google et Apple (OAuth2 de PocketBase).
+   v5.9 : connexion par Google (OAuth2 de PocketBase).
    Les fournisseurs s'activent dans le tableau de bord PocketBase
    (collection users → OAuth2) : le jeu n'affiche que ceux qui sont
    configurés. Un compte dont l'e-mail existe déjà y est rattaché par
    PocketBase ; un nouveau compte choisit d'abord son pseudo.
 ===================================================== */
 
-export type OAuthProviderId = "google" | "apple";
+export type OAuthProviderId = "google";
 
 export const OAUTH_PROVIDERS: { id: OAuthProviderId; label: string }[] = [
   { id: "google", label: "Google" },
-  { id: "apple", label: "Apple" },
 ];
 
 /** Fournisseurs activés côté serveur (vide si OAuth2 n'est pas configuré). */
@@ -42,7 +41,7 @@ export async function signInWithProvider(provider: OAuthProviderId): Promise<boo
   return false;
 }
 
-/** Premier pseudo d'un compte Google / Apple, puis création de l'empire. */
+/** Premier pseudo d'un compte Google, puis création de l'empire. */
 export async function chooseFirstPseudo(pseudo: string): Promise<void> {
   await callGame("account/pseudo", { pseudo });
   const refreshed = await pb.collection("users").authRefresh();

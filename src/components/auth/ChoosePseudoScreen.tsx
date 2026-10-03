@@ -10,7 +10,7 @@ import { chooseFirstPseudo } from "@/services/oauthService";
 import { logout } from "@/services/authService";
 import { RENAME_RULES } from "@/game/rename";
 
-/** v5.9 : compte ouvert par Google ou Apple, pas encore de pseudo ni d'empire. */
+/** v5.9 : compte ouvert par Google, pas encore de pseudo ni d'empire. */
 export function ChoosePseudoScreen() {
   const [pseudo, setPseudo] = useState("");
   const [busy, setBusy] = useState(false);
