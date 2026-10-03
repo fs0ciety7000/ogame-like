@@ -48,7 +48,13 @@ export interface MarketOffer {
   filledAtMs: number;
   /** Taxe prélevée (en ressource demandée). */
   tax: number;
+  /** v5.1 : « sell » (offre classique, prise d'un bloc) ou « buy » (ordre d'achat, rempli en plusieurs fois). */
+  kind?: OfferKind;
+  /** v5.1 : quantité déjà livrée sur un ordre d'achat (en ressource demandée). */
+  filled?: number;
 }
+
+export type OfferKind = "sell" | "buy";
 
 const RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id as string));
 const label = (res: string) => RESOURCE_LIST.find((r) => r.id === res)?.name.toLowerCase() ?? res;
@@ -72,6 +78,7 @@ export function marketTax(wantAmount: number, sameAlliance: boolean): number {
 }
 
 export interface NewOffer {
+  kind: OfferKind;
   giveRes: ResourceId;
   giveAmount: number;
   wantRes: ResourceId;
@@ -94,7 +101,8 @@ export function createOffer(seller: PlayerState, input: Record<string, unknown>,
   }
   if ((seller.resources[giveRes] ?? 0) < giveAmount) throw new GameActionError(`Pas assez de ${label(giveRes)}.`);
   seller.resources[giveRes] -= giveAmount;
-  return { giveRes, giveAmount, wantRes, wantAmount, expiresAtMs: now + MARKET_RULES.offerHours * 3600_000 };
+  const kind: OfferKind = input.kind === "buy" ? "buy" : "sell";
+  return { kind, giveRes, giveAmount, wantRes, wantAmount, expiresAtMs: now + MARKET_RULES.offerHours * 3600_000 };
 }
 
 /** Acceptation : l'acheteur paie, le vendeur reçoit (moins la taxe), l'acheteur reçoit la marchandise. */
@@ -123,9 +131,57 @@ export function acceptOffer(
   return { tax, sameAlliance };
 }
 
-/** Annulation ou expiration : la marchandise bloquée revient au vendeur. */
-export function refundOffer(offer: Pick<MarketOffer, "giveRes" | "giveAmount">, seller: PlayerState): void {
-  seller.resources[offer.giveRes] = (seller.resources[offer.giveRes] ?? 0) + offer.giveAmount;
+/** v5.1 : part du paiement déjà versée pour `filled` unités livrées (arrondi vers le bas). */
+export function buyOrderPaid(order: Pick<MarketOffer, "giveAmount" | "wantAmount">, filled: number): number {
+  return Math.floor((order.giveAmount * Math.min(filled, order.wantAmount)) / order.wantAmount);
+}
+
+/** Ce qui reste bloqué sur l'offre (tout pour une vente, le paiement non versé pour un ordre d'achat). */
+export function offerReserved(offer: Pick<MarketOffer, "giveAmount" | "wantAmount" | "kind" | "filled">): number {
+  return offer.kind === "buy" ? offer.giveAmount - buyOrderPaid(offer, offer.filled ?? 0) : offer.giveAmount;
+}
+
+/**
+ * v5.1 : livraison sur un ordre d'achat. Le vendeur livre `qty` (ressource demandée), reçoit sa part
+ * du paiement réservé ; le donneur d'ordre reçoit la marchandise moins la taxe.
+ */
+export function fillBuyOrder(
+  order: Pick<MarketOffer, "sellerId" | "sellerAllianceId" | "giveRes" | "giveAmount" | "wantRes" | "wantAmount" | "status" | "expiresAtMs" | "filled">,
+  supplier: PlayerState,
+  owner: PlayerState,
+  qtyRaw: unknown,
+  buysToday: number,
+  now: number,
+): { qty: number; payment: number; tax: number; filled: number; done: boolean } {
+  if (order.status !== "open" || now >= order.expiresAtMs) throw new GameActionError("Cet ordre d'achat n'est plus disponible.");
+  if (order.sellerId === supplier.uid) throw new GameActionError("Tu ne peux pas remplir ton propre ordre.");
+  if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} échanges par jour atteinte.`);
+  const already = order.filled ?? 0;
+  const remaining = order.wantAmount - already;
+  const qty = Math.min(remaining, amount(qtyRaw ?? remaining, "Quantité livrée"));
+  if ((supplier.resources[order.wantRes] ?? 0) < qty) throw new GameActionError(`Pas assez de ${label(order.wantRes)} pour livrer.`);
+  const filled = already + qty;
+  const payment = buyOrderPaid(order, filled) - buyOrderPaid(order, already);
+  if (payment <= 0) throw new GameActionError("Quantité trop faible : livre davantage pour être payé.");
+  const sameAlliance = !!order.sellerAllianceId && order.sellerAllianceId === (supplier.allianceId ?? "");
+  const tax = marketTax(qty, sameAlliance);
+  supplier.resources[order.wantRes] -= qty;
+  supplier.resources[order.giveRes] = (supplier.resources[order.giveRes] ?? 0) + payment;
+  owner.resources[order.wantRes] = (owner.resources[order.wantRes] ?? 0) + qty - tax;
+  bumpStat(supplier, "marketTrades");
+  bumpStat(owner, "marketTrades");
+  bumpStat(owner, "marketTax", tax);
+  bumpStat(supplier, "marketVolume", qty);
+  bumpStat(owner, "marketVolume", qty - tax);
+  recordChronicle(supplier, "market", now);
+  return { qty, payment, tax, filled, done: filled >= order.wantAmount };
+}
+
+/** Annulation ou expiration : ce qui reste bloqué revient au vendeur (ou au donneur d'ordre). */
+export function refundOffer(offer: Pick<MarketOffer, "giveRes" | "giveAmount" | "wantAmount" | "kind" | "filled">, seller: PlayerState): number {
+  const back = offerReserved(offer);
+  seller.resources[offer.giveRes] = (seller.resources[offer.giveRes] ?? 0) + back;
+  return back;
 }
 
 /** « 1 200 ferraille » (notifications du serveur). */

@@ -399,6 +399,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "seasonboss") return seasonBossArrival(txApp, game, rec, now);
   if (mission === "allianceboss") return allianceBossArrival(txApp, game, rec, now);
   if (mission === "transport") return transportArrival(txApp, game, rec, now);
+  if (mission === "delivery") return deliveryArrival(txApp, game, rec, now);
   if (mission === "bounty") return bountyArrival(txApp, game, rec, now);
   if (mission === "elite") return eliteArrival(txApp, game, rec, now);
   if (mission === "garrison") {
@@ -522,6 +523,263 @@ function transportArrival(txApp, game, rec, now) {
   rec.set("status", "returning");
   rec.set("returnAtMs", now + tripMs);
   txApp.save(rec);
+}
+
+/* ---------- Guerres de saison (v5.1) ---------- */
+
+/** Classement de guerre d'une saison : points de guerre, puissance détruite, secteurs tenus. */
+function seasonWarStandingsFor(txApp, game, seasonId) {
+  const wars = txApp.findRecordsByFilter("alliance_wars", "seasonId = {:s}", "", 1000, 0, { s: seasonId }).map((r) => toPlain(r));
+  const warPoints = game.seasonWarPoints(wars, seasonId);
+  const power = {};
+  txApp.findRecordsByFilter("players", "allianceId != '' && npc = ''", "", 0, 0).forEach((r) => {
+    const p = toPlain(r);
+    const n = game.seasonPowerOf(p, seasonId);
+    if (n > 0) power[p.allianceId] = (power[p.allianceId] || 0) + n;
+  });
+  const sectors = {};
+  try {
+    const cfg = txApp.findFirstRecordByFilter("game_config", "key = 'territories'");
+    ((toPlain(cfg).data || {}).sectors || []).forEach((sec) => {
+      if (sec.allianceId) sectors[sec.allianceId] = (sectors[sec.allianceId] || 0) + 1;
+    });
+  } catch (_) {
+    /* pas encore de territoires */
+  }
+  return game.seasonWarStandings({ warPoints, power, sectors });
+}
+
+/** GET /api/cosmic/season-war — classement de guerre de la saison en cours. */
+function seasonWarRequest(e) {
+  const game = loadGame();
+  applyContent($app, game);
+  const seasonId = game.currentSeasonId(Date.now());
+  const standings = seasonWarStandingsFor($app, game, seasonId).slice(0, 20).map((st) => {
+    const a = findOrNull($app, "alliances", st.allianceId);
+    return Object.assign({}, st, { tag: a ? a.getString("tag") : "?", name: a ? a.getString("name") : "Alliance dissoute" });
+  });
+  return e.json(200, { seasonId, rules: game.SEASON_WAR_RULES, standings });
+}
+
+/* ---------- Territoires d'alliance (v5.1) ---------- */
+
+/** Recalcule le contrôle des secteurs et le bonus de chaque joueur (tâche horaire). */
+function territoriesTick(now) {
+  const game = loadGame();
+  const recs = $app.findRecordsByFilter("players", "id != ''", "", 2000, 0);
+  const players = recs.map((r) => ({
+    uid: r.id,
+    allianceId: r.getString("allianceId"),
+    buildings: parseJsonField(r, "buildings", {}) || {},
+    colonies: (parseJsonField(r, "colonies", []) || []).map((c) => ({ id: c.id, buildings: c.buildings || {} })),
+  }));
+  const out = game.computeTerritories(players, now);
+  const tags = {};
+  $app.findRecordsByFilter("alliances", "id != ''", "", 500, 0).forEach((a) => (tags[a.id] = a.getString("tag")));
+  const sectors = out.sectors.map((s) =>
+    Object.assign({}, s, { tag: tags[s.allianceId] || "", contenders: s.contenders.map((c) => Object.assign({}, c, { tag: tags[c.allianceId] || "" })) }),
+  );
+  $app.runInTransaction((txApp) => {
+    let cfg = null;
+    try {
+      cfg = txApp.findFirstRecordByFilter("game_config", "key = 'territories'");
+    } catch (_) {
+      cfg = new Record(txApp.findCollectionByNameOrId("game_config"));
+      cfg.set("key", "territories");
+    }
+    cfg.set("data", { atMs: now, sectors });
+    txApp.save(cfg);
+    recs.forEach((r) => {
+      const t = out.byUid[r.id];
+      if (!t) return;
+      const prev = parseJsonField(r, "territory", null);
+      // Pas d'écriture inutile pour qui n'a ni bonus ni secteur, avant comme après.
+      if (!t.pct && (!prev || !prev.pct)) return;
+      const rec = txApp.findRecordById("players", r.id);
+      rec.set("territory", t);
+      txApp.save(rec);
+    });
+  });
+  return { sectors: sectors.filter((s) => s.allianceId).length };
+}
+
+/* ---------- Contrats entre joueurs (v5.1) ---------- */
+
+/** Contrats actifs d'un joueur : publiés (ouverts ou acceptés) et acceptés comme livreur. */
+function activeTradeContracts(txApp, uid) {
+  return txApp.findRecordsByFilter(
+    "trade_contracts",
+    '(clientUid = {:u} && (status = "open" || status = "accepted")) || (supplierUid = {:u} && status = "accepted")',
+    "",
+    20,
+    0,
+    { u: uid },
+  ).length;
+}
+
+/** Arrivée d'une livraison : à temps, le contrat est honoré ; sinon la cargaison repart. */
+function deliveryArrival(txApp, game, rec, now) {
+  const fleet = fleetFromRecord(rec);
+  const tripMs = Math.max(0, fleet.arriveAtMs - fleet.departAtMs);
+  const cargo = (fleet.transport && fleet.transport.cargo) || {};
+  const contractRec = fleet.transport && fleet.transport.contractId ? findOrNull(txApp, "trade_contracts", fleet.transport.contractId) : null;
+  const c = contractRec ? toPlain(contractRec) : null;
+  const ok = c && c.status === "accepted" && c.supplierUid === fleet.ownerUid && now <= c.deadlineMs && findOrNull(txApp, "players", c.clientUid) && findOrNull(txApp, "players", fleet.ownerUid);
+  if (ok) {
+    const client = loadPlayer(txApp, game, c.clientUid);
+    const supplier = loadPlayer(txApp, game, fleet.ownerUid);
+    try {
+      game.completeTradeContract(c, client.player, supplier.player, Number(cargo[c.wantRes]) || 0, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, client, client.player, client.queues);
+    savePlayer(txApp, game, supplier, supplier.player, supplier.queues);
+    notify(txApp, c.clientUid, [
+      { kind: "gift", title: "Contrat livré", message: `${c.supplierPseudo} t'a livré ${game.describeAmount(c.wantRes, c.wantAmount)}. Contrat honoré.`, createdAtMs: now, read: false },
+    ]);
+    notify(txApp, fleet.ownerUid, [
+      { kind: "gift", title: "Contrat honoré", message: `Livraison reçue par ${c.clientPseudo} : +${game.describeAmount(c.payRes, c.payAmount)}, caution de ${game.describeAmount(c.payRes, c.deposit)} rendue.`, createdAtMs: now, read: false },
+    ]);
+    contractRec.set("status", "delivered");
+    contractRec.set("closedAtMs", now);
+    txApp.save(contractRec);
+    rec.set("outcome", "delivered");
+    rec.set("loot", null);
+  } else {
+    // Contrat échu ou disparu : la cargaison rentre avec les vaisseaux.
+    rec.set("outcome", "late");
+    rec.set("loot", cargo);
+  }
+  rec.set("status", "returning");
+  rec.set("returnAtMs", now + tripMs);
+  txApp.save(rec);
+}
+
+/** POST /api/cosmic/trade-contract { action: create | accept | cancel | abandon, ... } */
+function tradeContractRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const me = loadFlushed(txApp, game, uid);
+    if (game.onVacation(me.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour commercer.");
+    let rec = null;
+    try {
+      if (action === "create") {
+        const c = game.createTradeContract(me.player, req, activeTradeContracts(txApp, uid), now);
+        if (c.targetUid && !findOrNull(txApp, "players", c.targetUid)) throw new game.GameActionError("Ce commandant est introuvable.");
+        rec = new Record(txApp.findCollectionByNameOrId("trade_contracts"));
+        rec.load(Object.assign({ clientUid: uid, clientPseudo: me.player.pseudo, status: "open", createdAtMs: now, supplierUid: "", supplierPseudo: "", deposit: 0, acceptedAtMs: 0, deadlineMs: 0, fleetId: "", closedAtMs: 0 }, c));
+        txApp.save(rec);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        if (c.targetUid) {
+          notify(txApp, c.targetUid, [
+            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Marché → Contrats).`, link: "/game/marche?onglet=contrats", createdAtMs: now, read: false },
+          ]);
+        }
+        out = toPlain(rec);
+        return;
+      }
+      rec = findOrNull(txApp, "trade_contracts", String(req.id || ""));
+      if (!rec) throw new NotFoundError("Contrat introuvable.");
+      const c = toPlain(rec);
+      if (action === "accept") {
+        const res = game.acceptTradeContract(c, me.player, activeTradeContracts(txApp, uid), now);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        rec.set("status", "accepted");
+        rec.set("supplierUid", uid);
+        rec.set("supplierPseudo", me.player.pseudo);
+        rec.set("deposit", res.deposit);
+        rec.set("acceptedAtMs", now);
+        rec.set("deadlineMs", res.deadlineMs);
+        txApp.save(rec);
+        notify(txApp, c.clientUid, [
+          { kind: "gift", title: "Contrat accepté", message: `${me.player.pseudo} s'engage à te livrer ${game.describeAmount(c.wantRes, c.wantAmount)} sous ${c.hours} h (caution : ${game.describeAmount(c.payRes, res.deposit)}).`, createdAtMs: now, read: false },
+        ]);
+      } else if (action === "cancel") {
+        if (c.clientUid !== uid) throw new NotFoundError("Contrat introuvable.");
+        game.cancelTradeContract(c, me.player);
+        savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        rec.set("status", "cancelled");
+        rec.set("closedAtMs", now);
+        txApp.save(rec);
+      } else if (action === "abandon") {
+        if (c.supplierUid !== uid || c.status !== "accepted") throw new game.GameActionError("Ce contrat ne t'est pas attribué.");
+        if (c.fleetId) {
+          const f = findOrNull(txApp, "fleets", c.fleetId);
+          if (f && f.getString("status") === "outbound") throw new game.GameActionError("Ta livraison est en route : rappelle-la d'abord.");
+        }
+        failTradeContractRec(txApp, game, rec, now, `${me.player.pseudo} a abandonné le contrat`);
+      } else throw new game.GameActionError("Action inconnue.");
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    out = toPlain(rec);
+  });
+  return e.json(200, out);
+}
+
+/** Échec ou expiration : le client récupère son paiement (et la caution si un livreur s'était engagé). */
+function failTradeContractRec(txApp, game, rec, now, reason) {
+  const c = toPlain(rec);
+  const accepted = c.status === "accepted";
+  rec.set("status", accepted ? "failed" : "expired");
+  rec.set("closedAtMs", now);
+  txApp.save(rec);
+  if (!findOrNull(txApp, "players", c.clientUid)) return;
+  const client = loadFlushed(txApp, game, c.clientUid);
+  const penalty = game.failTradeContract(c, client.player);
+  savePlayer(txApp, game, client.loaded, client.player, client.queues);
+  notify(txApp, c.clientUid, client.notifications.concat([
+    {
+      kind: "gift",
+      title: accepted ? "Contrat non honoré" : "Contrat expiré",
+      message: accepted
+        ? `${reason} : ton paiement de ${game.describeAmount(c.payRes, c.payAmount)} t'est rendu, avec la caution de ${game.describeAmount(c.payRes, penalty)}.`
+        : `Personne n'a pris ton contrat : ${game.describeAmount(c.payRes, c.payAmount)} te sont rendus.`,
+      createdAtMs: now,
+      read: false,
+    },
+  ]));
+  if (accepted && c.supplierUid && reason.indexOf("abandonné") < 0) {
+    notify(txApp, c.supplierUid, [
+      { kind: "gift", title: "Contrat échu", message: `Tu n'as pas livré ${c.clientPseudo} à temps : ta caution de ${game.describeAmount(c.payRes, penalty)} lui revient.`, createdAtMs: now, read: false },
+    ]);
+  }
+}
+
+/** Tâche planifiée : contrats ouverts expirés, contrats acceptés échus sans livraison en route. */
+function tradeContractsTick(now) {
+  const game = loadGame();
+  const due = $app.findRecordsByFilter(
+    "trade_contracts",
+    '(status = "open" && expiresAtMs <= {:n}) || (status = "accepted" && deadlineMs <= {:n})',
+    "createdAtMs",
+    100,
+    0,
+    { n: now },
+  );
+  let count = 0;
+  due.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = txApp.findRecordById("trade_contracts", r.id);
+        const st = rec.getString("status");
+        if (st !== "open" && st !== "accepted") return;
+        failTradeContractRec(txApp, game, rec, now, "Échéance dépassée");
+      });
+      count++;
+    } catch (err) {
+      console.log(`[cosmic] contrat ${r.id} : ${err}`);
+    }
+  });
+  return count;
 }
 
 /** Garnisons alliées stationnées chez un joueur. */
@@ -937,6 +1195,8 @@ function launchFleetRequest(e) {
         ? "allianceboss"
         : mission === "transport"
           ? String(body.colonyId || "")
+          : mission === "delivery"
+          ? `contract:${String(body.contractId || "")}`
           : mission === "bounty"
             ? body.bountyId
               ? `bounty_${body.bountyId}`
@@ -945,7 +1205,7 @@ function launchFleetRequest(e) {
               ? "bounty_elite"
               : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss", "delivery"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -968,6 +1228,13 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
+    }
+    // v5.1 : livraison d'un contrat — le client est la cible.
+    let contractRec = null;
+    if (mission === "delivery") {
+      contractRec = db.findOrNull(txApp, "trade_contracts", String(body.contractId || ""));
+      if (!contractRec) throw new NotFoundError("Contrat introuvable.");
+      target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
     // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
     if (mission === "attack" && target) {
@@ -1044,6 +1311,7 @@ function launchFleetRequest(e) {
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
         eliteName: elite ? game.describeElite(elite).name : seasonBoss ? (game.bossMonthOf(seasonBoss) || { boss: { name: "Boss de saison" } }).boss.name : allianceBoss ? game.allianceBossDef(allianceBoss).name : undefined,
         capsules: mission === "attack" ? body.capsules : undefined,
+        delivery: contractRec ? db.toPlain(contractRec) : undefined,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -1087,6 +1355,10 @@ function launchFleetRequest(e) {
       txApp.save(allianceBossRec);
     }
     if (elite) writeElite(txApp, game, elite);
+    if (contractRec) {
+      contractRec.set("fleetId", rec.id);
+      txApp.save(contractRec);
+    }
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet, { anomaly: !!anomaly });
   });
 
@@ -1171,7 +1443,34 @@ function closeSeason(game, now, seasonIdIn) {
           notify(txApp, p.uid, out.notifications);
         });
     });
-    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length };
+    // v5.1 : guerres de saison — podium récompensé (trésor et titre d'alliance).
+    const war = seasonWarStandingsFor(txApp, game, seasonId);
+    war.slice(0, 10).forEach((st) => {
+      const a = findOrNull(txApp, "alliances", st.allianceId);
+      if (!a) return;
+      const al = toPlain(a);
+      const rec = new Record(collection);
+      rec.load({ seasonId, kind: "seasonwar", uid: `seasonwar_${al.id}`, pseudo: `[${al.tag}] ${al.name}`, allianceId: al.id, rank: st.rank, seasonXp: st.score, reward: null, createdAtMs: now });
+      txApp.save(rec);
+      const hours = game.SEASON_WAR_RULES.rewardHours[st.rank - 1];
+      if (!hours) return;
+      const title = game.SEASON_WAR_RULES.titles[st.rank - 1];
+      const treasury = al.treasury || {};
+      const members = (al.members || []).filter((uid) => findOrNull(txApp, "players", uid));
+      members.forEach((uid) => {
+        const loaded = loadPlayer(txApp, game, uid);
+        const gain = game.productionHours(loaded.player, hours);
+        Object.keys(gain).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + Math.floor(gain[r] || 0)));
+        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: st.rank, seasonXp: st.score }, { hours: 0, rare: 0, title }, now, `Guerres de saison : ton alliance [${al.tag}] finit ${st.rank === 1 ? "1re" : `${st.rank}e`} !`);
+        savePlayer(txApp, game, loaded, out.player, out.queues);
+        notify(txApp, uid, out.notifications.concat([
+          { kind: "alliance", title: "Guerres de saison", message: `[${al.tag}] termine ${st.rank === 1 ? "1re" : `${st.rank}e`} du classement de guerre : ${hours} h de production des membres versées au trésor, titre « ${title} ».`, createdAtMs: now, read: false, link: "/game/alliance?onglet=guerre" },
+        ]));
+      });
+      a.set("treasury", treasury);
+      txApp.save(a);
+    });
+    summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length, seasonWar: war.length };
   });
   return summary;
 }
@@ -1839,11 +2138,12 @@ function warRequest(e) {
       if (bindingPact(txApp, game, own.id, target.id, now)) throw new BadRequestError(`Un pacte de non-agression vous lie à [${target.tag}] : rompez-le d'abord (préavis de ${game.DIPLOMACY_RULES.breakNoticeHours} h).`);
       let res;
       try {
-        res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now });
+        res = game.declareWar({ actorUid: uid, actorPseudo: pseudo, own, target, wars: warsOf(txApp, [own.id, target.id]).map(warJson), now, chest: req.payFrom === "chest" ? game.readWarChest(toPlain(ownRec).warChest) : null });
       } catch (err) {
         throw asHttpError(game, err);
       }
       ownRec.set("treasury", res.own.treasury);
+      if (res.chest) ownRec.set("warChest", res.chest);
       txApp.save(ownRec);
       const rec = new Record(txApp.findCollectionByNameOrId("alliance_wars"));
       rec.load(res.war);
@@ -1852,6 +2152,26 @@ function warRequest(e) {
       notifyAlliance(txApp, own.id, "Guerre déclarée", `${pseudo} a déclaré la guerre à [${target.tag}] ${target.name}. ${startText}`, now);
       notifyAlliance(txApp, target.id, "Déclaration de guerre !", `[${own.tag}] ${own.name} vous déclare la guerre. ${startText}`, now);
       out = warJson(rec);
+    } else if (req.action === "chestShield") {
+      // v5.1 : bouclier de 2 h offert à un membre par le coffre de guerre.
+      if (!game.canDiplomacy(game.allianceRole(own, uid))) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
+      const memberUid = String(req.memberUid || "");
+      if ((own.members || []).indexOf(memberUid) < 0) throw new BadRequestError("Ce commandant n'est pas membre de l'alliance.");
+      const member = loadFlushed(txApp, game, memberUid);
+      const chest = game.readWarChest(toPlain(ownRec).warChest);
+      let res;
+      try {
+        res = game.grantChestShield(chest, member.player, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, member.loaded, member.player, member.queues);
+      ownRec.set("warChest", chest);
+      txApp.save(ownRec);
+      notify(txApp, memberUid, member.notifications.concat([
+        { kind: "alliance", title: "Bouclier offert", message: `${pseudo} t'offre un bouclier de ${game.WAR_CHEST_RULES.shieldHours} h financé par le coffre de guerre : aucune attaque ne peut te viser.`, createdAtMs: now, read: false },
+      ]));
+      out = { warChest: chest, untilMs: res.untilMs };
     } else if (req.action === "surrender") {
       const rec = findOrNull(txApp, "alliance_wars", String(req.warId || ""));
       if (!rec) throw new NotFoundError("Guerre introuvable.");
@@ -2051,21 +2371,51 @@ function writeLeviathan(txApp, state) {
 }
 
 /** Récompenses versées à tous les participants (une seule fois). */
+/** v5.1 : reliques mythiques déjà remises (game_config, clé "mythic_relics" : saison → uid). */
+function readMythicGiven(txApp) {
+  try {
+    return toPlain(txApp.findFirstRecordByFilter("game_config", "key = 'mythic_relics'")).data || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeMythicGiven(txApp, given) {
+  let cfg = null;
+  try {
+    cfg = txApp.findFirstRecordByFilter("game_config", "key = 'mythic_relics'");
+  } catch (_) {
+    cfg = new Record(txApp.findCollectionByNameOrId("game_config"));
+    cfg.set("key", "mythic_relics");
+  }
+  cfg.set("data", given);
+  txApp.save(cfg);
+}
+
+/** Remet la mythique au n°1 d'un boss tué si c'est le boss qui la porte ce mois-ci. */
+function grantMythicTo(txApp, game, player, source, now) {
+  const out = game.grantMythicRelic(player, source, now, readMythicGiven(txApp));
+  if (!out) return "";
+  writeMythicGiven(txApp, out.given);
+  return out.name;
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
-  ranking.forEach((c) => {
+  ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantLeviathanReward(state, flushed.player);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     const won = state.status === "killed";
+    const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
         createdAtMs: now,
         read: false,
       },
@@ -2257,6 +2607,8 @@ function marketCreate(e) {
       sellerId: uid,
       sellerPseudo: seller.player.pseudo,
       sellerAllianceId: seller.loaded.rec.getString("allianceId"),
+      kind: offer.kind,
+      filled: 0,
       giveRes: offer.giveRes,
       giveAmount: offer.giveAmount,
       wantRes: offer.wantRes,
@@ -2293,6 +2645,38 @@ function marketAccept(e) {
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
+    // v5.1 : ordre d'achat — livraison partielle, paiement au prorata.
+    if (offer.kind === "buy") {
+      let fill;
+      try {
+        fill = game.fillBuyOrder(offer, buyer.player, seller.player, body(e).qty, buysToday, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, buyer.notifications);
+      notify(txApp, offer.sellerId, seller.notifications.concat([
+        {
+          kind: "gift",
+          title: fill.done ? "Ordre d'achat complété" : "Ordre d'achat en partie rempli",
+          message: `${buyer.player.pseudo} t'a livré ${game.describeAmount(offer.wantRes, fill.qty)} : +${game.describeAmount(offer.wantRes, fill.qty - fill.tax)} (taxe : ${game.describeAmount(offer.wantRes, fill.tax)}).${fill.done ? "" : ` Reste ${game.describeAmount(offer.wantRes, offer.wantAmount - fill.filled)} à recevoir.`}`,
+          createdAtMs: now,
+          read: false,
+        },
+      ]));
+      rec.set("filled", fill.filled);
+      rec.set("tax", rec.getFloat("tax") + fill.tax);
+      rec.set("buyerId", uid);
+      rec.set("buyerPseudo", buyer.player.pseudo);
+      if (fill.done) {
+        rec.set("status", "filled");
+        rec.set("filledAtMs", now);
+      }
+      txApp.save(rec);
+      out = offerJson(rec);
+      return;
+    }
     let res;
     try {
       res = game.acceptOffer(offer, buyer.player, seller.player, buysToday, now);
@@ -2367,10 +2751,10 @@ function expireMarketOffers(now) {
         txApp.save(rec);
         if (!findOrNull(txApp, "players", rec.getString("sellerId"))) return;
         const seller = loadFlushed(txApp, game, rec.getString("sellerId"));
-        game.refundOffer(toPlain(rec), seller.player);
+        const back = game.refundOffer(toPlain(rec), seller.player);
         savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
         notify(txApp, rec.getString("sellerId"), seller.notifications.concat([
-          { kind: "gift", title: "Offre expirée", message: `Ton offre au marché a expiré : ${game.describeAmount(rec.getString("giveRes"), rec.getFloat("giveAmount"))} te sont rendus.`, createdAtMs: now, read: false },
+          { kind: "gift", title: rec.getString("kind") === "buy" ? "Ordre d'achat expiré" : "Offre expirée", message: `${rec.getString("kind") === "buy" ? "Ton ordre d'achat" : "Ton offre au marché"} a expiré : ${game.describeAmount(rec.getString("giveRes"), back)} te sont rendus.`, createdAtMs: now, read: false },
         ]));
       });
       count++;
@@ -3505,6 +3889,61 @@ function guardPlayerUpdate(e) {
   const sent = e.requestInfo().body || {};
   const bad = Object.keys(sent).filter((k) => PLAYER_WRITABLE.indexOf(k) < 0);
   if (bad.length > 0) throw new ForbiddenError("Ces informations ne se modifient qu'en jeu.");
+  // v5.1 : le pseudo ne s'écrit librement qu'à l'inscription ; ensuite, Profil → Changer de pseudo.
+  if (sent.pseudo !== undefined) {
+    const before = e.record.original();
+    if (String(sent.pseudo) !== before.getString("pseudo") && (Date.now() - before.getInt("createdAtMs") > PSEUDO_SIGNUP_MS || before.get("renamed"))) {
+      throw new ForbiddenError("Le pseudo se change depuis ton profil (une seule fois).");
+    }
+  }
+}
+
+const PSEUDO_SIGNUP_MS = 15 * 60000;
+
+/** v5.1 : sur sa fiche publique, un joueur ne change que son avatar (le reste vient du serveur). */
+function guardProfileUpdate(e) {
+  if (e.hasSuperuserAuth()) return;
+  const sent = e.requestInfo().body || {};
+  const bad = Object.keys(sent).filter((k) => !/^avatar[+-]?$/.test(k));
+  if (bad.length > 0) throw new ForbiddenError("Seul l'avatar se modifie ici.");
+}
+
+/** POST /api/cosmic/rename — changement de pseudo unique (10 Ambre). */
+function renameRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let pseudo = "";
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const me = loadFlushed(txApp, game, uid);
+    try {
+      const out = game.renamePlayer(me.player, req.pseudo, now);
+      const sameLogin = txApp.findRecordsByFilter("users", "username = {:u} && id != {:id}", "", 1, 0, { u: out.login, id: uid });
+      const lower = out.pseudo.toLowerCase();
+      const samePseudo = txApp.findRecordsByFilter("players", "pseudo ~ {:p} && id != {:id}", "", 50, 0, { p: out.pseudo, id: uid }).filter((r) => r.getString("pseudo").toLowerCase() === lower);
+      if (sameLogin.length > 0 || samePseudo.length > 0) throw new game.GameActionError("Ce pseudo est déjà pris.");
+      me.loaded.rec.set("pseudo", out.pseudo);
+      savePlayer(txApp, game, me.loaded, me.player, me.queues);
+      const user = txApp.findRecordById("users", uid);
+      user.set("username", out.login);
+      user.set("name", out.pseudo);
+      txApp.save(user);
+      const allianceId = me.loaded.rec.getString("allianceId");
+      const alliance = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+      if (alliance) {
+        const pseudos = parseJsonField(alliance, "memberPseudos", {}) || {};
+        pseudos[uid] = out.pseudo;
+        alliance.set("memberPseudos", pseudos);
+        txApp.save(alliance);
+      }
+      pseudo = out.pseudo;
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+  });
+  return e.json(200, { pseudo });
 }
 
 /* ---------- Campagnes e-mail (v3.9.2) ---------- */
@@ -4455,18 +4894,19 @@ function distributeSeasonBoss(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
-  game.leviathanRanking(state).forEach((c) => {
+  game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantSeasonBossReward(state, flushed.player, now);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     const won = state.status === "killed";
+    const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}.`,
+        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/boss",
@@ -4797,6 +5237,10 @@ function rewardAllianceDaily(txApp, game, allianceRec, daily, now) {
     const treasury = toPlain(allianceRec).treasury || {};
     Object.keys(bonus).forEach((r) => (treasury[r] = (Number(treasury[r]) || 0) + bonus[r]));
     allianceRec.set("treasury", treasury);
+    // v5.1 : 10 % du bonus rejoint aussi le coffre de guerre (plafonné à 30 jours de dépôts).
+    const chest = game.readWarChest(toPlain(allianceRec).warChest);
+    game.depositWarChest(chest, bonus);
+    allianceRec.set("warChest", chest);
   }
   allianceBossLog(txApp, allianceRec.id, "", "", "Objectif du jour atteint : le trésor reçoit 10 % de la production de l'alliance.", Object.keys(bonus).length ? bonus : null);
 }
@@ -4989,4 +5433,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

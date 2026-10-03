@@ -118,6 +118,10 @@ export interface PlayerState {
   ascendedAtMs?: number;
   /** v3.5 : colonies (stocks séparés) et vaisseau colonial en route. */
   colonies?: import("@/game/colonies").Colony[];
+  /** v5.1 : talents d'Ascension (rangs, dernière redistribution). */
+  talents?: import("@/game/talents").TalentState | null;
+  /** v5.1 : bonus de territoire (écrit par le serveur toutes les heures). */
+  territory?: import("@/game/territories").PlayerTerritory | null;
   colonizing?: import("@/game/colonies").Colonizing | null;
   /** v3.9 : chasseurs de primes (Ambre, réputation, contrats, Comptoir). */
   bounties?: import("@/game/bounties").BountyState;
@@ -131,6 +135,8 @@ export interface PlayerState {
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;
+  /** v5.1 : changement de pseudo unique (ancien pseudo, date). */
+  renamed?: import("@/game/rename").RenameState | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;
@@ -284,6 +290,8 @@ export interface Alliance {
   boss?: unknown;
   /** v4.9 : objectif du jour (propositions, vote, progression). */
   daily?: unknown;
+  /** v5.1 : coffre de guerre (dépôts des objectifs du jour). */
+  warChest?: import("@/game/seasonWars").WarChest | null;
 }
 
 export interface AllianceLog {

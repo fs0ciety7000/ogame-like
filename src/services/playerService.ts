@@ -266,6 +266,8 @@ export interface LeaderboardEntry {
   vacationUntilMs?: number;
   /** v4.6 : dernière activité réelle (synchro du navigateur), pour « en ligne ». */
   lastActiveMs?: number;
+  /** v5.1 : avatar envoyé (nom de fichier sur la fiche publique). */
+  avatar?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -286,10 +288,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     npc: (data.npc as string) || undefined,
     vacationUntilMs: (data.vacationUntilMs as number) || undefined,
     lastActiveMs: (data.lastActiveMs as number) || undefined,
+    avatar: (data.avatar as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -703,6 +706,15 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
+/** v5.1 : talents d'Ascension. */
+export function learnTalent(talentId: string) {
+  return act({ type: "talentLearn", talentId });
+}
+
+export function resetTalents() {
+  return act({ type: "talentReset" });
+}
+
 export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }
@@ -726,4 +738,11 @@ export function claimPassTier(tier: number) {
 /** v4.7 : annule un chantier (remboursement calculé par le serveur). */
 export function cancelJob(target: import("@/game/cancel").CancelTarget) {
   return act<import("@/game/cancel").CancelQuote>({ type: "cancel", target });
+}
+
+/** v5.1 : changement de pseudo unique (10 Ambre). Le compte de connexion suit. */
+export async function renamePlayer(pseudo: string): Promise<{ pseudo: string }> {
+  const out = await callGame<{ pseudo: string }>("rename", { pseudo });
+  await pb.collection("users").authRefresh().catch(() => undefined);
+  return out;
 }

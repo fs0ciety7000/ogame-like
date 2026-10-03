@@ -8,7 +8,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    en une relique plus rare ; une relique de trop se recycle en Ambre.
 ===================================================== */
 
-export type RelicRarity = "common" | "rare" | "epic" | "legendary";
+export type RelicRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 export type RelicEffect =
   | "attack"
   | "defense"
@@ -22,13 +22,16 @@ export type RelicEffect =
   | "production_nano"
   | "production_data"
   | "production_all"
-  | "aegis";
+  | "aegis"
+  | "boss_damage";
 
 export const RARITIES: { id: RelicRarity; label: string; pct: number; weight: number; recycle: number; color: string }[] = [
   { id: "common", label: "Commune", pct: 0.03, weight: 60, recycle: 5, color: "#cbd5e1" },
   { id: "rare", label: "Rare", pct: 0.06, weight: 28, recycle: 15, color: "#4be8ff" },
   { id: "epic", label: "Épique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
   { id: "legendary", label: "Légendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
+  // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
+  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" },
 ];
 
 export interface RelicTemplate {
@@ -38,6 +41,8 @@ export interface RelicTemplate {
   lore: string;
   /** Réservée à la rareté légendaire (effet unique). */
   legendaryOnly?: boolean;
+  /** v5.1 : relique mythique (une par saison, décernée au n°1 d'un boss). */
+  mythicOnly?: boolean;
 }
 
 export const RELICS: RelicTemplate[] = [
@@ -54,7 +59,26 @@ export const RELICS: RelicTemplate[] = [
   { id: "cristal_memoriel", name: "Cristal mémoriel", effect: "production_data", lore: "Il se souvient de civilisations disparues." },
   { id: "couronne_essaim", name: "Couronne de l'Essaim", effect: "production_all", lore: "Portée jadis par la Reine des Kesh'Vaar.", legendaryOnly: true },
   { id: "egide_reine", name: "Égide de la Reine", effect: "aegis", lore: "Chaque semaine, la première défaite n'est pas pillée.", legendaryOnly: true },
+  // v5.1 : reliques mythiques, une par saison (le modèle tourne d'une saison à l'autre).
+  { id: "coeur_leviathan", name: "Cœur du Léviathan", effect: "boss_damage", lore: "Il bat encore, et sa colère guide tes salves contre les colosses.", mythicOnly: true },
+  { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taillée dans l'ambre de la première Reine, elle fait fructifier l'empire.", mythicOnly: true },
+  { id: "oeil_neant", name: "Œil du Néant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
+  { id: "egide_stellaire", name: "Égide stellaire", effect: "defense", lore: "Un bouclier forgé au cœur d'une étoile mourante.", mythicOnly: true },
 ];
+
+/** v5.1 : reliques mythiques — modèle et source (Léviathan les mois impairs, boss de saison les mois pairs). */
+export const MYTHIC_TEMPLATES = RELICS.filter((t) => t.mythicOnly);
+
+export function mythicFor(seasonId: string): { template: RelicTemplate; source: "leviathan" | "seasonboss" } {
+  const [y, m] = seasonId.split("-").map(Number);
+  const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
+  return { template: MYTHIC_TEMPLATES[index % MYTHIC_TEMPLATES.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+}
+
+/** Relique mythique de la saison pour le vainqueur. */
+export function mythicRelic(seasonId: string, now: number, random: () => number = Math.random): RelicItem {
+  return { id: newId(now, random), template: mythicFor(seasonId).template.id, rarity: "mythic", foundAtMs: now, source: `mythic:${seasonId}` };
+}
 
 export const RELIC_RULES = {
   slots: 3,
@@ -152,6 +176,8 @@ export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): str
       return `+${pct} % de toute la production`;
     case "aegis":
       return "Chaque semaine, ta première défaite n'est pas pillée";
+    case "boss_damage":
+      return `+${pct} % de dégâts contre le Léviathan et les boss`;
     default:
       return "";
   }
@@ -171,7 +197,8 @@ function newId(now: number, random: () => number): string {
 /** Tirage d'une relique (rareté minimale facultative). */
 export function rollRelic(source: string, now: number, random: () => number = Math.random, minRarity: RelicRarity = "common"): RelicItem {
   const order = RARITIES.map((r) => r.id);
-  const pool = RARITIES.filter((r) => order.indexOf(r.id) >= order.indexOf(minRarity));
+  // Jamais de mythique au tirage (décernée une fois par saison).
+  const pool = RARITIES.filter((r) => r.id !== "mythic" && order.indexOf(r.id) >= order.indexOf(minRarity));
   const total = pool.reduce((a, r) => a + r.weight, 0);
   let pick = random() * total;
   let rarity = pool[pool.length - 1].id;
@@ -182,7 +209,7 @@ export function rollRelic(source: string, now: number, random: () => number = Ma
       break;
     }
   }
-  const templates = RELICS.filter((t) => !t.legendaryOnly || rarity === "legendary");
+  const templates = RELICS.filter((t) => !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
@@ -194,6 +221,25 @@ export function addRelic(player: PlayerState, item: RelicItem): boolean {
   st.items.push(item);
   player.relics = st;
   return true;
+}
+
+/** v5.1 : remet la mythique de la saison au n°1 du boss qui la porte, une seule fois
+ *  par saison (`given` : saison → uid). Elle passe même si l'inventaire est plein. */
+export function grantMythicRelic(
+  player: PlayerState,
+  source: "leviathan" | "seasonboss",
+  now: number,
+  given: Record<string, string>,
+  random: () => number = Math.random,
+): { given: Record<string, string>; name: string } | null {
+  const d = new Date(now);
+  const seasonId = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const def = mythicFor(seasonId);
+  if (def.source !== source || given[seasonId]) return null;
+  const st = relicsState(player);
+  st.items.push(mythicRelic(seasonId, now, random));
+  player.relics = st;
+  return { given: { ...given, [seasonId]: player.uid }, name: def.template.name };
 }
 
 export function expeditionRelicChance(hours: number): number {
@@ -226,7 +272,7 @@ export function fuseRelics(player: PlayerState, template: unknown, rarity: unkno
   const st = relicsState(player);
   const order = RARITIES.map((r) => r.id);
   const idx = order.indexOf(rarity as RelicRarity);
-  if (idx < 0 || idx >= order.length - 1) throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
+  if (idx < 0 || idx >= order.length - 1 || order[idx + 1] === "mythic") throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
   const equipped = new Set(st.slots.filter(Boolean));
   const same = st.items.filter((r) => r.template === template && r.rarity === rarity && !equipped.has(r.id));
   if (same.length < RELIC_RULES.fuseCount) throw new GameActionError(`Il faut ${RELIC_RULES.fuseCount} reliques identiques non équipées.`);
@@ -243,6 +289,7 @@ export function recycleRelic(player: PlayerState, relicId: unknown): { item: Rel
   const item = st.items.find((r) => r.id === relicId);
   if (!item) throw new GameActionError("Relique introuvable.");
   if (st.slots.includes(item.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
+  if (item.rarity === "mythic") throw new GameActionError("Une relique mythique ne se recycle pas.");
   st.items = st.items.filter((r) => r.id !== item.id);
   player.relics = st;
   return { item, amber: rarityInfo(item.rarity).recycle };

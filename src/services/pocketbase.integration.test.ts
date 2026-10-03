@@ -11,6 +11,7 @@ import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
 import * as ps from "@/services/playerService";
+import * as tcs from "@/services/tradeContractService";
 import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
 import * as srs from "@/services/sharedReportService";
@@ -2048,6 +2049,98 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const info = await pb.send<{ recruits: unknown[]; verified: boolean; rules: { rewardXp: number } }>("/api/cosmic/referral", { method: "GET" });
     expect(Array.isArray(info.recruits)).toBe(true);
     expect(info.rules.rewardXp).toBe(2000);
+  });
+
+  it("v5.1: buy order filled in two deliveries; trade contract accepted, delivered by fleet and honoured", async () => {
+    await loginPlayer(B.email, B.pw);
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const asA = <T = Record<string, unknown>>(path: string, body: Record<string, unknown>) => aClient.send<T>(`/api/cosmic/${path}`, { method: "POST", body });
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const money = { scrap: 1_000_000, energy: 1_000_000, nano: 1_000_000 };
+    await admin.collection("players").update(aId, { resources: { ...aBefore.resources, ...money }, vacation: null });
+    await admin.collection("players").update(bId, { resources: { ...bBefore.resources, ...money }, vacation: null, units: { ...bBefore.units, cargo: { level: 1, count: 200 } } });
+    try {
+      // Ordre d'achat : A réserve 10 000 ferraille pour 10 000 énergie ; B livre en deux fois.
+      const order = await asA<{ id: string; kind: string }>("market/create", { kind: "buy", giveRes: "scrap", giveAmount: 10_000, wantRes: "energy", wantAmount: 10_000 });
+      expect(order.kind).toBe("buy");
+      expect((await snap(aId)).resources.scrap).toBeLessThanOrEqual(990_100);
+      const part = await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: order.id, qty: 4_000 } });
+      expect(part).toMatchObject({ status: "open", filled: 4_000 });
+      const full = await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: order.id, qty: 99_999 } });
+      expect(full).toMatchObject({ status: "filled", filled: 10_000 });
+      const b1 = await snap(bId);
+      expect(Math.round(b1.resources.scrap - 1_000_000)).toBeGreaterThanOrEqual(10_000);
+      expect(Math.round(1_000_000 - b1.resources.energy)).toBeGreaterThanOrEqual(9_900);
+
+      // Contrat : A veut 5 000 nanocomposants contre 5 000 ferraille, B accepte (caution 500) puis livre.
+      const c = await asA<{ id: string; status: string }>("trade-contract", { action: "create", wantRes: "nano", wantAmount: 5_000, payRes: "scrap", payAmount: 5_000, hours: 4 });
+      expect(c.status).toBe("open");
+      await expect(asA("trade-contract", { action: "accept", id: c.id })).rejects.toMatchObject({ status: 400 });
+      const accepted = await pb.send("/api/cosmic/trade-contract", { method: "POST", body: { action: "accept", id: c.id } });
+      expect(accepted).toMatchObject({ status: "accepted", deposit: 500 });
+      await expect(pb.collection("trade_contracts").update(c.id, { status: "delivered" })).rejects.toBeTruthy();
+      await expect(tcs.sendDelivery(c.id, { cargo: 1 })).rejects.toThrow(/soute/);
+      const sent = await tcs.sendDelivery(c.id, { cargo: 200 });
+      expect(sent.mission).toBe("delivery");
+      await expect(tcs.sendDelivery(c.id, { cargo: 200 })).rejects.toThrow(/déjà en route/);
+      const aNano = (await snap(aId)).resources.nano;
+      const bScrap = (await snap(bId)).resources.scrap;
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const done = await admin.collection("trade_contracts").getOne(c.id);
+      expect(done.status).toBe("delivered");
+      expect(Math.round((await snap(aId)).resources.nano - aNano)).toBeGreaterThanOrEqual(5_000);
+      expect(Math.round((await snap(bId)).resources.scrap - bScrap)).toBeGreaterThanOrEqual(5_500);
+    } finally {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(aId, { resources: aBefore.resources });
+      await admin.collection("players").update(bId, { resources: bBefore.resources, units: bBefore.units });
+    }
+  }, 60_000);
+
+  it("v5.1: season war standings readable; pseudo renamed once for amber, login follows", async () => {
+    await loginPlayer(B.email, B.pw);
+    const war = await pb.send<{ seasonId: string; standings: unknown[] }>("/api/cosmic/season-war", { method: "GET" });
+    expect(war.seasonId).toMatch(/^\d{4}-\d{2}$/);
+    expect(Array.isArray(war.standings)).toBe(true);
+
+    const bBefore = await snap(bId);
+    const fresh = `Renomme_${suffix}`;
+    try {
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(bBefore), amber: 5 }, renamed: null });
+      await expect(ps.renamePlayer(fresh)).rejects.toThrow(/Ambre/);
+      await admin.collection("players").update(bId, { bounties: { ...bountyState(bBefore), amber: 25 } });
+      await expect(ps.renamePlayer(A.pseudo.toUpperCase())).rejects.toThrow(/déjà pris/);
+      await expect(ps.renamePlayer("!!")).rejects.toThrow(/3 caractères/);
+      expect(await ps.renamePlayer(fresh)).toEqual({ pseudo: fresh });
+      const b = await snap(bId);
+      expect(b.pseudo).toBe(fresh);
+      expect(b.renamed).toMatchObject({ fromPseudo: B.pseudo });
+      expect(bountyState(b).amber).toBe(15);
+      await expect(ps.renamePlayer(`Encore_${suffix}`)).rejects.toThrow(/déjà changé/);
+      await expect(pb.collection("players").update(bId, { pseudo: "Pirate" })).rejects.toMatchObject({ status: 403 });
+      logout();
+      await loginPlayer(fresh, B.pw);
+      expect(pb.authStore.record?.id).toBe(bId);
+    } finally {
+      await admin.collection("players").update(bId, { bounties: bBefore.bounties ?? {} });
+    }
+  }, 30_000);
+
+  it("v5.1: avatar uploaded on the public profile, other fields and other players refused", async () => {
+    await loginPlayer(B.email, B.pw);
+    const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+    const form = new FormData();
+    form.append("avatar", new Blob([png], { type: "image/png" }), "avatar.png");
+    const rec = await pb.collection("profiles").update<{ avatar: string }>(bId, form);
+    expect(rec.avatar).toMatch(/\.png$/);
+    expect((await ps.fetchPlayerSheet(bId)).entry.avatar).toBe(rec.avatar);
+    await expect(pb.collection("profiles").update(bId, { xp: 999_999_999 })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.collection("profiles").update(aId, { avatar: null })).rejects.toBeTruthy();
+    await pb.collection("profiles").update(bId, { avatar: null });
+    expect((await ps.fetchPlayerSheet(bId)).entry.avatar).toBeUndefined();
   });
 
   it("changes password and keeps the session", async () => {

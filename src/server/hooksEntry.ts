@@ -28,7 +28,7 @@ export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
 export { applyStaffTitle, DEFAULT_STAFF_BY_PSEUDO, isStaffRole, normalizeStaff, STAFF_KEY } from "@/game/staff";
 export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody, reportStatusLabel, sanitizeNewReport } from "@/game/reports";
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
-export { acceptOffer, createOffer, describeAmount, MARKET_RULES, refundOffer, utcDayStart } from "@/game/market";
+export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, MARKET_RULES, offerReserved, refundOffer, utcDayStart } from "@/game/market";
 export { isFormation } from "@/game/formations";
 export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
 export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeRewardees, challengeTier, grantChallengeReward, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
@@ -74,7 +74,7 @@ export {
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
 export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
-export { addRelic, expeditionRelicChance, rollRelic } from "@/game/relics";
+export { addRelic, expeditionRelicChance, grantMythicRelic, mythicFor, rollRelic } from "@/game/relics";
 export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";
@@ -155,4 +155,8 @@ export {
 export { CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
 export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, previousSummary, proposeDaily, readDaily, startDaily, updateDailyProgress, voteDaily } from "@/game/allianceDaily";
 export { parisDay } from "@/game/retention";
-export { allianceRole } from "@/game/alliances";
+export { allianceRole, canDiplomacy } from "@/game/alliances";
+export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
+export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/game/territories";
+export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
+export { pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";

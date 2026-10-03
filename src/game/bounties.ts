@@ -727,7 +727,7 @@ export function resolveEliteAssault(
 ): { state: EliteHunt; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
   const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage),
   );
   const active = eliteActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;

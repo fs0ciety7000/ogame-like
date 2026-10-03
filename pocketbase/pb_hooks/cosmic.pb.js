@@ -265,6 +265,14 @@ routerAdd(
       txApp.save(rec);
       // v3.9 : une prime rappelée redevient disponible au tableau.
       db.releaseBountyOnRecall(txApp, game, next);
+      // v5.1 : une livraison rappelée libère le contrat (une autre flotte peut repartir avant l'échéance).
+      if (next.mission === "delivery" && next.transport && next.transport.contractId) {
+        const c = db.findOrNull(txApp, "trade_contracts", next.transport.contractId);
+        if (c && c.getString("fleetId") === rec.id) {
+          c.set("fleetId", "");
+          txApp.save(c);
+        }
+      }
       response = db.toPlain(rec);
     });
     return e.json(200, response);
@@ -494,6 +502,39 @@ cronAdd("cosmic_backup_check", "20 5 * * *", () => {
 /** GET /api/cosmic/admin/backups — état des sauvegardes (administrateurs). */
 routerAdd("GET", "/api/cosmic/admin/backups", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupStatus(e), $apis.requireAuth("users", "_superusers"));
 // v4.9 : liste, téléchargement et copie vers R2 depuis l'administration.
+/** v5.1 : classement des guerres de saison (saison en cours). */
+routerAdd("GET", "/api/cosmic/season-war", (e) => require(`${__hooks}/cosmic_db.js`).seasonWarRequest(e), $apis.requireAuth("users"));
+
+/** v5.1 : territoires d'alliance, recalculés toutes les heures (et à la demande de l'équipe). */
+cronAdd("cosmic_territories", "17 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).territoriesTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] territoires : ${err}`);
+  }
+});
+routerAdd(
+  "POST",
+  "/api/cosmic/admin/territories",
+  (e) => {
+    const db = require(`${__hooks}/cosmic_db.js`);
+    if (!db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+    return e.json(200, db.territoriesTick(Date.now()));
+  },
+  $apis.requireAuth("users", "_superusers"),
+);
+
+/** v5.1 : contrats entre joueurs (« livre-moi X contre Y »). */
+routerAdd("POST", "/api/cosmic/rename", (e) => require(`${__hooks}/cosmic_db.js`).renameRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/trade-contract", (e) => require(`${__hooks}/cosmic_db.js`).tradeContractRequest(e), $apis.requireAuth("users"));
+cronAdd("cosmic_tradecontracts", "*/5 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).tradeContractsTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] contrats : ${err}`);
+  }
+});
+
 /** v4.9.3 : flottes bloquées (retard de plus de 10 min). */
 routerAdd("GET", "/api/cosmic/admin/stuck-fleets", (e) => require(`${__hooks}/cosmic_db.js`).adminStuckFleets(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/admin/backups/list", (e) => require(`${__hooks}/cosmic_db.js`).adminBackupList(e), $apis.requireAuth("users", "_superusers"));
@@ -544,6 +585,11 @@ onRecordCreateRequest(
   "game_assets",
   "admins",
 );
+
+onRecordUpdateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardProfileUpdate(e);
+  e.next();
+}, "profiles");
 
 onRecordUpdateRequest(
   (e) => {

@@ -1,7 +1,11 @@
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
+import { PlayerAvatar } from "@/components/ui/player-avatar";
+import { removeAvatar } from "@/services/avatarService";
+import { useAdminStatus } from "@/services/maintenanceService";
 import { useEffect, useState, type ReactNode } from "react";
 import { KESH, rankName } from "@/game/bounties";
 import { assetUrl } from "@/lib/assets";
@@ -48,6 +52,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
   const [sheet, setSheet] = useState<PlayerSheet | null>(null);
   const [error, setError] = useState(false);
   const leviathan = useLeviathan();
+  const isAdmin = useAdminStatus();
 
   useEffect(() => {
     if (!target) return;
@@ -88,7 +93,14 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
           />
         )}
         <div className="flex items-center gap-3 pr-6">
-          <img src={getRankIcon(entry?.xp ?? 0)} alt="" className="h-14 w-14 shrink-0 object-contain" />
+          {entry && !entry.npc ? (
+            <div className="relative shrink-0">
+              <PlayerAvatar uid={entry.uid} pseudo={entry.pseudo} file={entry.avatar} className="h-16 w-16" />
+              <img src={getRankIcon(entry.xp)} alt="" className="absolute -bottom-2 -right-2 h-7 w-7 object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]" />
+            </div>
+          ) : (
+            <img src={getRankIcon(entry?.xp ?? 0)} alt="" className="h-14 w-14 shrink-0 object-contain" />
+          )}
           {feats?.showcase?.emblem && <img src={assetUrl(feats.showcase.emblem)} alt="" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.25)]" />}
           {!feats?.showcase?.emblem && feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
           <div className="min-w-0">
@@ -110,6 +122,20 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             )}
           </div>
         </div>
+
+        {isAdmin && entry?.avatar && (
+          <button
+            type="button"
+            className="self-start text-[11px] text-danger-glow hover:underline"
+            onClick={() =>
+              removeAvatar(entry.uid)
+                .then(() => setSheet((cur) => (cur ? { ...cur, entry: { ...cur.entry, avatar: undefined } } : cur)))
+                .catch(() => toast.error("Impossible de retirer l'avatar."))
+            }
+          >
+            Modération : retirer l'avatar
+          </button>
+        )}
 
         {lord && (
           <div className="mt-3 border-l-2 pl-3 text-xs leading-relaxed text-slate-400" style={{ borderColor: lord.color }}>

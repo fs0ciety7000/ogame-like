@@ -79,15 +79,22 @@ __export(hooksEntry_exports, {
   PVP_RULES: () => PVP_RULES,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
   REFERRAL_RULES: () => REFERRAL_RULES,
+  RENAME_RULES: () => RENAME_RULES,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
+  SEASON_WAR_RULES: () => SEASON_WAR_RULES,
+  SECTOR_COUNT: () => SECTOR_COUNT,
   STAFF_KEY: () => STAFF_KEY,
+  TERRITORY_RULES: () => TERRITORY_RULES,
+  TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
   VACATION_RULES: () => VACATION_RULES,
   WARLORD_RULES: () => WARLORD_RULES,
+  WAR_CHEST_RULES: () => WAR_CHEST_RULES,
   WAR_RULES: () => WAR_RULES,
   acceptOffer: () => acceptOffer,
+  acceptTradeContract: () => acceptTradeContract,
   activeUltimatum: () => activeUltimatum,
   activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
@@ -96,6 +103,7 @@ __export(hooksEntry_exports, {
   addPassPoints: () => addPassPoints,
   addRelic: () => addRelic,
   addReportComment: () => addReportComment,
+  addSeasonPower: () => addSeasonPower,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceNextDueMs: () => allianceNextDueMs,
@@ -120,9 +128,12 @@ __export(hooksEntry_exports, {
   bossMonthOf: () => bossMonthOf,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
+  buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
+  canDiplomacy: () => canDiplomacy,
   canMessage: () => canMessage,
+  cancelTradeContract: () => cancelTradeContract,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
   challengeRewardees: () => challengeRewardees,
@@ -132,6 +143,7 @@ __export(hooksEntry_exports, {
   checkEliteLaunch: () => checkEliteLaunch,
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
+  chestShieldCost: () => chestShieldCost,
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   clearDecoy: () => clearDecoy,
@@ -144,11 +156,15 @@ __export(hooksEntry_exports, {
   colonyOwnerUid: () => colonyOwnerUid,
   compileGazette: () => compileGazette,
   completeFleetReturn: () => completeFleetReturn,
+  completeTradeContract: () => completeTradeContract,
   computeGameStats: () => computeGameStats,
+  computeTerritories: () => computeTerritories,
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
   consumeJammer: () => consumeJammer,
+  contractDeposit: () => contractDeposit,
   createOffer: () => createOffer,
+  createTradeContract: () => createTradeContract,
   currentSeasonId: () => currentSeasonId,
   dailyMemberOf: () => dailyMemberOf,
   dailyPhase: () => dailyPhase,
@@ -156,6 +172,7 @@ __export(hooksEntry_exports, {
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
   defaultQueues: () => defaultQueues,
+  depositWarChest: () => depositWarChest,
   describeAmount: () => describeAmount,
   describeAnomalies: () => describeAnomalies,
   describeElite: () => describeElite,
@@ -175,6 +192,8 @@ __export(hooksEntry_exports, {
   expeditionRelicChance: () => expeditionRelicChance,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
+  failTradeContract: () => failTradeContract,
+  fillBuyOrder: () => fillBuyOrder,
   findFaction: () => findFaction,
   findWarlord: () => findWarlord,
   finishAllianceResearch: () => finishAllianceResearch,
@@ -187,11 +206,13 @@ __export(hooksEntry_exports, {
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
+  grantChestShield: () => grantChestShield,
   grantCoalitionReward: () => grantCoalitionReward,
   grantCodexTitle: () => grantCodexTitle,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
   grantLeviathanReward: () => grantLeviathanReward,
+  grantMythicRelic: () => grantMythicRelic,
   grantReferral: () => grantReferral,
   grantSeasonBossReward: () => grantSeasonBossReward,
   growWarlord: () => growWarlord,
@@ -206,6 +227,7 @@ __export(hooksEntry_exports, {
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   mergeDebris: () => mergeDebris,
+  mythicFor: () => mythicFor,
   nearestWarlord: () => nearestWarlord,
   newPlayerProfile: () => newPlayerProfile,
   nextAttackDelayMs: () => nextAttackDelayMs,
@@ -217,6 +239,7 @@ __export(hooksEntry_exports, {
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeStaff: () => normalizeStaff,
+  offerReserved: () => offerReserved,
   onVacation: () => onVacation,
   openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
@@ -238,10 +261,12 @@ __export(hooksEntry_exports, {
   productionHours: () => productionHours,
   proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
+  pseudoLogin: () => pseudoLogin,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
+  readWarChest: () => readWarChest,
   recallFleet: () => recallFleet,
   recordCoalitionDamage: () => recordCoalitionDamage,
   recordDecoy: () => recordDecoy,
@@ -253,6 +278,7 @@ __export(hooksEntry_exports, {
   releaseBounty: () => releaseBounty,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
+  renamePlayer: () => renamePlayer,
   reportStatusLabel: () => reportStatusLabel,
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
@@ -271,9 +297,13 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   seasonBossWindow: () => seasonBossWindow,
+  seasonPowerOf: () => seasonPowerOf,
   seasonRewardFor: () => seasonRewardFor,
   seasonStandings: () => seasonStandings,
+  seasonWarPoints: () => seasonWarPoints,
+  seasonWarStandings: () => seasonWarStandings,
   seasonXpFor: () => seasonXpFor,
+  sectorOf: () => sectorOf,
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
@@ -409,8 +439,8 @@ function getTechCost(tech, level3) {
   const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
   const factor = Math.pow(growth, level3 - 1);
   const cost = {};
-  for (const [res, amount2] of Object.entries(tech.baseCost)) {
-    cost[res] = Math.floor(amount2 * factor);
+  for (const [res, amount3] of Object.entries(tech.baseCost)) {
+    cost[res] = Math.floor(amount3 * factor);
   }
   return cost;
 }
@@ -893,9 +923,9 @@ function setBuildings(defs) {
   for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
   for (const b of defs) {
     const entries = Object.entries((_a = b.unlockCost) != null ? _a : {}).filter(([, v]) => (v != null ? v : 0) > 0);
-    const items = entries.map(([resource, amount2]) => {
+    const items = entries.map(([resource, amount3]) => {
       var _a2, _b;
-      return { resource, amount: amount2, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
+      return { resource, amount: amount3, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
     });
     if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
     else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
@@ -1197,19 +1227,19 @@ function resolveCombat(params) {
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
       const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount2 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
-      wanted[res] = amount2;
-      total2 += amount2;
+      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
+      wanted[res] = amount3;
+      total2 += amount3;
     }
     const ratio = total2 > cargoCapacity ? cargoCapacity / total2 : 1;
     loot = {};
     const entries = Object.entries(wanted);
-    for (const [res, amount2] of entries) loot[res] = Math.floor(amount2 * ratio);
+    for (const [res, amount3] of entries) loot[res] = Math.floor(amount3 * ratio);
     let left = Math.min(total2, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
       var _a2;
       return s + ((_a2 = loot[res]) != null ? _a2 : 0);
     }, 0);
-    const byRemainder = entries.map(([res, amount2]) => ({ res, frac: amount2 * ratio - Math.floor(amount2 * ratio) })).sort((a, b) => b.frac - a.frac);
+    const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
       if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
@@ -1531,12 +1561,12 @@ function activeLevels(player) {
   for (const id of st.active) out[id] = commanderLevel((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0);
   return out;
 }
-function grantCommanderXp(player, id, amount2) {
+function grantCommanderXp(player, id, amount3) {
   var _a, _b;
-  if (!(amount2 > 0)) return;
+  if (!(amount3 > 0)) return;
   const st = commandersState(player);
   if (!st.active.includes(id) || !st.roster[id]) return;
-  st.roster[id] = { xp: ((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0) + amount2 };
+  st.roster[id] = { xp: ((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0) + amount3 };
   player.commanders = st;
 }
 function recruitCost(player) {
@@ -1809,12 +1839,12 @@ function deposit(alliance, player, amounts) {
   var _a, _b, _c, _d;
   if (!alliance.members.includes(player.uid)) throw new GameActionError("Tu n'es pas membre de cette alliance.");
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
-  for (const [res, amount2] of Object.entries(amounts)) {
-    if (((_b = player.resources[res]) != null ? _b : 0) < amount2) throw new GameActionError("Ressources insuffisantes pour ce d\xE9p\xF4t.");
+  for (const [res, amount3] of Object.entries(amounts)) {
+    if (((_b = player.resources[res]) != null ? _b : 0) < amount3) throw new GameActionError("Ressources insuffisantes pour ce d\xE9p\xF4t.");
   }
-  for (const [res, amount2] of Object.entries(amounts)) {
-    player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - amount2;
-    treasury[res] = ((_d = treasury[res]) != null ? _d : 0) + amount2;
+  for (const [res, amount3] of Object.entries(amounts)) {
+    player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - amount3;
+    treasury[res] = ((_d = treasury[res]) != null ? _d : 0) + amount3;
   }
   return __spreadProps(__spreadValues({}, alliance), { treasury });
 }
@@ -1830,13 +1860,13 @@ function distribute(alliance, actorUid, targetUid, amounts, now) {
   const count2 = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
   if (count2 >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
   const treasury = __spreadValues({}, (_b = alliance.treasury) != null ? _b : {});
-  for (const [res, amount2] of Object.entries(amounts)) {
+  for (const [res, amount3] of Object.entries(amounts)) {
     const max = Math.floor(((_c = treasury[res]) != null ? _c : 0) * ALLIANCE_RULES.distributionMaxPct);
-    if (amount2 > max) {
+    if (amount3 > max) {
       throw new GameActionError(`Un versement est limit\xE9 \xE0 ${Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock du tr\xE9sor (${max} pour cette ressource).`);
     }
   }
-  for (const [res, amount2] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount2;
+  for (const [res, amount3] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount3;
   return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count2 + 1 } });
 }
 function allianceResearchCost(nextLevel) {
@@ -1859,10 +1889,10 @@ function startAllianceResearch(alliance, actorUid, researchId, now) {
   if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
   const cost = allianceResearchCost(next);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
-  for (const [res, amount2] of Object.entries(cost)) {
-    if (((_b = treasury[res]) != null ? _b : 0) < amount2) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
+  for (const [res, amount3] of Object.entries(cost)) {
+    if (((_b = treasury[res]) != null ? _b : 0) < amount3) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
   }
-  for (const [res, amount2] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount2;
+  for (const [res, amount3] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount3;
   return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def3.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
 }
 function completeAllianceResearch(alliance, now) {
@@ -1917,9 +1947,9 @@ function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
   const cost = allianceProjectCost(next);
   const pool = source === "treasury" ? __spreadValues({}, (_a = alliance.treasury) != null ? _a : {}) : actor.resources;
   const used = {};
-  for (const [res, amount2] of Object.entries(amounts)) {
+  for (const [res, amount3] of Object.entries(amounts)) {
     const missing = Math.max(0, ((_b = cost[res]) != null ? _b : 0) - ((_c = state.funded[res]) != null ? _c : 0));
-    const n = Math.min(amount2, missing);
+    const n = Math.min(amount3, missing);
     if (n <= 0) continue;
     if (((_d = pool[res]) != null ? _d : 0) < n) throw new GameActionError(source === "treasury" ? "Le tr\xE9sor ne suffit pas pour ce versement." : "Ressources insuffisantes pour ce versement.");
     used[res] = n;
@@ -2053,7 +2083,7 @@ function performAllianceAction(input) {
       if (!target || target.uid !== action.targetUid) throw new GameActionError("Ce joueur est introuvable.");
       const amounts = parseAmounts(action.resources);
       out.alliance = distribute(alliance, actor.uid, target.uid, amounts, now);
-      for (const [res, amount2] of Object.entries(amounts)) target.resources[res] = ((_f = target.resources[res]) != null ? _f : 0) + amount2;
+      for (const [res, amount3] of Object.entries(amounts)) target.resources[res] = ((_f = target.resources[res]) != null ? _f : 0) + amount3;
       out.notifications[target.uid] = [note("Versement du tr\xE9sor", `${actor.pseudo} t'a vers\xE9 des ressources du tr\xE9sor de l'alliance.`, now)];
       log({ kind: "distribute", targetUid: target.uid, targetPseudo: target.pseudo, resources: amounts });
       return out;
@@ -2095,15 +2125,15 @@ function finishAllianceResearch(alliance, now) {
   const logs = [];
   if (done.completed) {
     const def3 = findAllianceResearch(done.completed.id);
-    const label2 = `${(_a = def3 == null ? void 0 : def3.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
-    labels.push(`${(_b = def3 == null ? void 0 : def3.emoji) != null ? _b : ""} ${label2}`.trim());
-    logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label2, createdAtMs: now });
+    const label3 = `${(_a = def3 == null ? void 0 : def3.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
+    labels.push(`${(_b = def3 == null ? void 0 : def3.emoji) != null ? _b : ""} ${label3}`.trim());
+    logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
   }
   for (const c of built.completed) {
     const def3 = findAllianceProject(c.id);
-    const label2 = `${(_c = def3 == null ? void 0 : def3.name) != null ? _c : c.id} niveau ${c.level}`;
-    labels.push(`${(_d = def3 == null ? void 0 : def3.emoji) != null ? _d : ""} ${label2}`.trim());
-    logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label2, createdAtMs: now });
+    const label3 = `${(_c = def3 == null ? void 0 : def3.name) != null ? _c : c.id} niveau ${c.level}`;
+    labels.push(`${(_d = def3 == null ? void 0 : def3.emoji) != null ? _d : ""} ${label3}`.trim());
+    logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
   }
   const memberships = {};
   const notifications = {};
@@ -2120,7 +2150,9 @@ var RARITIES = [
   { id: "common", label: "Commune", pct: 0.03, weight: 60, recycle: 5, color: "#cbd5e1" },
   { id: "rare", label: "Rare", pct: 0.06, weight: 28, recycle: 15, color: "#4be8ff" },
   { id: "epic", label: "\xC9pique", pct: 0.1, weight: 10, recycle: 40, color: "#a78bfa" },
-  { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" }
+  { id: "legendary", label: "L\xE9gendaire", pct: 0.15, weight: 2, recycle: 100, color: "#ffd86b" },
+  // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
+  { id: "mythic", label: "Mythique", pct: 0.08, weight: 0, recycle: 0, color: "#ff5df0" }
 ];
 var RELICS = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arrach\xE9 au poste de tir d'un croiseur de la Confr\xE9rie." },
@@ -2135,8 +2167,22 @@ var RELICS = [
   { id: "essaim_nanites", name: "Essaim de nanites", effect: "production_nano", lore: "Des milliards d'ouvri\xE8res qui ne dorment jamais." },
   { id: "cristal_memoriel", name: "Cristal m\xE9moriel", effect: "production_data", lore: "Il se souvient de civilisations disparues." },
   { id: "couronne_essaim", name: "Couronne de l'Essaim", effect: "production_all", lore: "Port\xE9e jadis par la Reine des Kesh'Vaar.", legendaryOnly: true },
-  { id: "egide_reine", name: "\xC9gide de la Reine", effect: "aegis", lore: "Chaque semaine, la premi\xE8re d\xE9faite n'est pas pill\xE9e.", legendaryOnly: true }
+  { id: "egide_reine", name: "\xC9gide de la Reine", effect: "aegis", lore: "Chaque semaine, la premi\xE8re d\xE9faite n'est pas pill\xE9e.", legendaryOnly: true },
+  // v5.1 : reliques mythiques, une par saison (le modèle tourne d'une saison à l'autre).
+  { id: "coeur_leviathan", name: "C\u0153ur du L\xE9viathan", effect: "boss_damage", lore: "Il bat encore, et sa col\xE8re guide tes salves contre les colosses.", mythicOnly: true },
+  { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taill\xE9e dans l'ambre de la premi\xE8re Reine, elle fait fructifier l'empire.", mythicOnly: true },
+  { id: "oeil_neant", name: "\u0152il du N\xE9ant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
+  { id: "egide_stellaire", name: "\xC9gide stellaire", effect: "defense", lore: "Un bouclier forg\xE9 au c\u0153ur d'une \xE9toile mourante.", mythicOnly: true }
 ];
+var MYTHIC_TEMPLATES = RELICS.filter((t) => t.mythicOnly);
+function mythicFor(seasonId) {
+  const [y, m] = seasonId.split("-").map(Number);
+  const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
+  return { template: MYTHIC_TEMPLATES[index % MYTHIC_TEMPLATES.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+}
+function mythicRelic(seasonId, now, random = Math.random) {
+  return { id: newId(now, random), template: mythicFor(seasonId).template.id, rarity: "mythic", foundAtMs: now, source: `mythic:${seasonId}` };
+}
 var RELIC_RULES = {
   slots: 3,
   /** Emplacement supplémentaire à partir de cette ascension. */
@@ -2189,7 +2235,7 @@ function newId(now, random) {
 }
 function rollRelic(source, now, random = Math.random, minRarity = "common") {
   const order = RARITIES.map((r) => r.id);
-  const pool = RARITIES.filter((r) => order.indexOf(r.id) >= order.indexOf(minRarity));
+  const pool = RARITIES.filter((r) => r.id !== "mythic" && order.indexOf(r.id) >= order.indexOf(minRarity));
   const total2 = pool.reduce((a, r) => a + r.weight, 0);
   let pick = random() * total2;
   let rarity = pool[pool.length - 1].id;
@@ -2200,7 +2246,7 @@ function rollRelic(source, now, random = Math.random, minRarity = "common") {
       break;
     }
   }
-  const templates = RELICS.filter((t) => !t.legendaryOnly || rarity === "legendary");
+  const templates = RELICS.filter((t) => !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
@@ -2210,6 +2256,16 @@ function addRelic(player, item) {
   st.items.push(item);
   player.relics = st;
   return true;
+}
+function grantMythicRelic(player, source, now, given, random = Math.random) {
+  const d = new Date(now);
+  const seasonId = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const def3 = mythicFor(seasonId);
+  if (def3.source !== source || given[seasonId]) return null;
+  const st = relicsState(player);
+  st.items.push(mythicRelic(seasonId, now, random));
+  player.relics = st;
+  return { given: __spreadProps(__spreadValues({}, given), { [seasonId]: player.uid }), name: def3.template.name };
 }
 function expeditionRelicChance(hours2) {
   return Math.min(0.15, RELIC_RULES.expeditionBase + Math.max(0, hours2 - 2) * RELIC_RULES.expeditionPerHour);
@@ -2241,7 +2297,7 @@ function fuseRelics(player, template, rarity, now, random = Math.random) {
   const st = relicsState(player);
   const order = RARITIES.map((r) => r.id);
   const idx = order.indexOf(rarity);
-  if (idx < 0 || idx >= order.length - 1) throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
+  if (idx < 0 || idx >= order.length - 1 || order[idx + 1] === "mythic") throw new GameActionError("Ces reliques ne peuvent plus fusionner.");
   const equipped = new Set(st.slots.filter(Boolean));
   const same = st.items.filter((r) => r.template === template && r.rarity === rarity && !equipped.has(r.id));
   if (same.length < RELIC_RULES.fuseCount) throw new GameActionError(`Il faut ${RELIC_RULES.fuseCount} reliques identiques non \xE9quip\xE9es.`);
@@ -2256,6 +2312,7 @@ function recycleRelic(player, relicId) {
   const item = st.items.find((r) => r.id === relicId);
   if (!item) throw new GameActionError("Relique introuvable.");
   if (st.slots.includes(item.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
+  if (item.rarity === "mythic") throw new GameActionError("Une relique mythique ne se recycle pas.");
   st.items = st.items.filter((r) => r.id !== item.id);
   player.relics = st;
   return { item, amber: rarityInfo(item.rarity).recycle };
@@ -2279,45 +2336,79 @@ function consumeAegis(player, now) {
   return true;
 }
 
-// src/game/modifiers.ts
-function emptyModifiers() {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0 };
-}
-function playerModifiers(player) {
-  var _a, _b;
-  const m = emptyModifiers();
-  if (!player) return m;
-  const lv = activeLevels(player);
-  m.attack += lv.admiral * 0.01;
-  m.defense += lv.strategist * 0.01;
-  m.buildTime += lv.engineer * 0.01;
-  m.researchTime += lv.engineer * 0.01;
-  m.spyLevel += lv.spy * 0.2;
-  m.detection += lv.spy * 0.01;
-  m.productionAll += lv.steward * 0.01;
-  m.storage += lv.steward * 0.02;
-  for (const item of equippedRelics(player)) {
-    const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
-    const b = relicBonus(item);
-    if (effect === "attack") m.attack += b;
-    else if (effect === "defense") m.defense += b;
-    else if (effect === "build_time") m.buildTime += b;
-    else if (effect === "research_time") m.researchTime += b;
-    else if (effect === "repair") m.repair += b;
-    else if (effect === "cargo") m.cargo += b;
-    else if (effect === "spy") m.spyLevel += b * 10;
-    else if (effect === "production_all") m.productionAll += b;
-    else if (effect && PRODUCTION_EFFECT[effect]) {
-      const res = PRODUCTION_EFFECT[effect];
-      m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
-    }
+// src/game/galaxy.ts
+function hashString(input, seed) {
+  let h = (2166136261 ^ seed) >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  m.buildTime = Math.min(0.5, m.buildTime);
-  m.researchTime = Math.min(0.5, m.researchTime);
-  return m;
+  return h >>> 0;
 }
-function withRepairBonus(base, player) {
-  return Math.min(0.95, base + playerModifiers(player).repair);
+function galaxyCoords(uid) {
+  return {
+    galaxy: 1 + hashString(uid, 3) % 9,
+    system: 1 + hashString(uid, 4) % 499,
+    position: 1 + hashString(uid, 5) % 15,
+    x: hashString(uid, 1) / 4294967296,
+    y: hashString(uid, 2) / 4294967296
+  };
+}
+
+// src/game/territories.ts
+var TERRITORY_RULES = {
+  cols: 6,
+  rows: 4,
+  minLevels: 150,
+  bonusPerSector: 0.02,
+  maxBonus: 0.06,
+  /** Le bonus écrit sur le joueur reste valable ce délai (h) sans recalcul. */
+  validHours: 3
+};
+var SECTOR_COUNT = TERRITORY_RULES.cols * TERRITORY_RULES.rows;
+function sectorOf(planetId) {
+  const c = galaxyCoords(planetId);
+  const col = Math.min(TERRITORY_RULES.cols - 1, Math.floor(c.x * TERRITORY_RULES.cols));
+  const row = Math.min(TERRITORY_RULES.rows - 1, Math.floor(c.y * TERRITORY_RULES.rows));
+  return row * TERRITORY_RULES.cols + col;
+}
+function levelsOf(b) {
+  return Object.values(b != null ? b : {}).reduce((a, s) => {
+    var _a;
+    return a + ((_a = s == null ? void 0 : s.level) != null ? _a : 0);
+  }, 0);
+}
+function computeTerritories(players, now) {
+  var _a, _b, _c;
+  const per = Array.from({ length: SECTOR_COUNT }, () => /* @__PURE__ */ new Map());
+  const presence = /* @__PURE__ */ new Map();
+  for (const p of players) {
+    if (!p.allianceId) continue;
+    const planets = [{ id: p.uid, buildings: p.buildings }, ...(_a = p.colonies) != null ? _a : []];
+    const here = /* @__PURE__ */ new Set();
+    for (const planet of planets) {
+      const s = sectorOf(planet.id);
+      here.add(s);
+      per[s].set(p.allianceId, ((_b = per[s].get(p.allianceId)) != null ? _b : 0) + levelsOf(planet.buildings));
+    }
+    presence.set(p.uid, here);
+  }
+  const sectors = per.map((m, id) => {
+    var _a2;
+    const ranked = [...m.entries()].map(([allianceId, levels]) => ({ allianceId, levels })).sort((a, b) => b.levels - a.levels);
+    const top = ranked[0];
+    const held = top && top.levels >= TERRITORY_RULES.minLevels && !(ranked[1] && ranked[1].levels === top.levels);
+    return { id, allianceId: held ? top.allianceId : "", levels: (_a2 = top == null ? void 0 : top.levels) != null ? _a2 : 0, contenders: ranked.slice(0, 3) };
+  });
+  const byUid = {};
+  for (const p of players) {
+    const held = [...(_c = presence.get(p.uid)) != null ? _c : []].filter((s) => p.allianceId && sectors[s].allianceId === p.allianceId).sort((a, b) => a - b);
+    byUid[p.uid] = { pct: Math.min(TERRITORY_RULES.maxBonus, held.length * TERRITORY_RULES.bonusPerSector), sectors: held, untilMs: now + TERRITORY_RULES.validHours * 36e5 };
+  }
+  return { sectors, byUid };
+}
+function territoryBonus(t, now) {
+  return t && t.untilMs > now ? Math.min(TERRITORY_RULES.maxBonus, Math.max(0, t.pct)) : 0;
 }
 
 // src/game/production.ts
@@ -2341,12 +2432,263 @@ function getProductionRatesPerSecond(buildings, techLevels2) {
   return rates;
 }
 
+// src/game/defaults.ts
+function defaultResources() {
+  return {
+    scrap: 100,
+    energy: 50,
+    nano: 0,
+    data: 0,
+    reinforcedSteel: 0,
+    cyberModule: 0,
+    syntheticNanites: 0,
+    aiFragment: 0
+  };
+}
+function defaultPlayerState(uid, pseudo) {
+  return {
+    uid,
+    pseudo,
+    resources: defaultResources(),
+    buildings: defaultBuildings(),
+    units: {},
+    techLevels: {},
+    bonuses: {
+      energyEfficiency: 0,
+      unitDefenseBonus: 0,
+      unitAttackBonus: 0,
+      buildingUpgradeDiscount: 0,
+      unlockedRecipes: 0
+    },
+    xp: 0,
+    seasonId: currentSeasonId(),
+    seasonXp: 0,
+    victories: 0,
+    defeats: 0,
+    playtimeSeconds: 0,
+    resourcesUpdatedAtMs: Date.now(),
+    resourceHistory: [],
+    unlockedAchievements: []
+  };
+}
+function defaultQueues() {
+  return {
+    buildingUpgrades: {},
+    unitQueues: { attack: [], defense: [] },
+    activeResearches: [],
+    activeMissions: [],
+    buildPlan: []
+  };
+}
+
+// src/game/ascension.ts
+var ASCENSION_RULES = {
+  productionPerAscension: 0.1,
+  buildTimePerAscension: 0.05,
+  maxAscensions: 5,
+  cooldownDays: 7,
+  shieldHours: 72,
+  upkeepFreeDays: 7
+};
+var DAY2 = 24 * 36e5;
+function ascensionCount(player) {
+  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
+}
+function ascensionProductionFactor(player) {
+  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
+}
+function ascensionBuildTimeFactor(player) {
+  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
+}
+function upkeepFreeUntil(player) {
+  const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY2 : 0;
+}
+function canAscend(player, queues, now) {
+  var _a;
+  const missing = BUILDINGS.filter((b) => {
+    var _a2, _b;
+    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
+  }).map((b) => {
+    var _a2, _b;
+    return {
+      id: b.id,
+      name: b.name,
+      level: (_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0,
+      maxLevel: b.maxLevel
+    };
+  });
+  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
+  if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY2 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY2)} jour(s).`, missing };
+  if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
+  return { ok: true, missing };
+}
+function ascend(player, queues, now) {
+  var _a;
+  const check = canAscend(player, queues, now);
+  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
+  for (const b of BUILDINGS) {
+    if (b.endgame) continue;
+    const cur = player.buildings[b.id];
+    player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
+  }
+  player.resources = defaultResources();
+  player.resourceHistory = [];
+  player.ascensions = ascensionCount(player) + 1;
+  player.ascendedAtMs = now;
+  bumpStat(player, "ascensions");
+}
+
 // src/game/bonuses.ts
 function playerBuildTimeFactor(player, now) {
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 function playerResearchTimeFactor(player, now) {
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
+}
+
+// src/game/economy.ts
+var ECONOMY_RULES = {
+  /** Énergie consommée par seconde et par place de hangar occupée. */
+  upkeepPerPlaceAttack: 0.015,
+  upkeepPerPlaceDefense: 75e-4,
+  /** Production des autres ressources pendant une panne d'énergie. */
+  outageProductionFactor: 0.5,
+  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
+  protectedStoragePct: 0.1,
+  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
+  missionProductionMultiplier: 1.5,
+  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
+  missionRareLevelDivisor: 35,
+  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
+  missionRareProductionRef: 5e5
+};
+var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var KESH_BOOST_PCT = 0.2;
+function boostUntil(input) {
+  var _a;
+  const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
+  return Number.isFinite(v) ? v : 0;
+}
+function boostAt(input, at) {
+  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+}
+function storageCapacityOf(input) {
+  const base = getStorageCapacity(input.buildings, input.techLevels);
+  const bonus = input.commanders ? playerModifiers(input).storage : 0;
+  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
+}
+function getFleetUpkeep(units, techLevels2) {
+  let upkeep = 0;
+  for (const [id, state] of Object.entries(units != null ? units : {})) {
+    const def3 = findUnit(id);
+    if (!def3 || !(state == null ? void 0 : state.count)) continue;
+    const perPlace = def3.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
+    upkeep += state.count * def3.hangarSpace * perPlace;
+  }
+  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
+}
+function boostedRates(input, multipliers, boost = 1) {
+  var _a, _b, _c, _d;
+  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
+  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
+  if (input.commanders || input.relics) {
+    const mods = playerModifiers(input);
+    for (const res of Object.keys(gross)) {
+      const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
+      if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
+    }
+  }
+  for (const [res, m] of Object.entries(multipliers)) {
+    if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
+  }
+  return gross;
+}
+function addCapped(stock, gain, cap) {
+  if (gain <= 0) return Math.max(0, stock + gain);
+  if (stock >= cap) return stock;
+  return Math.min(cap, stock + gain);
+}
+function advanceResources(input, elapsedSeconds, startMs) {
+  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  const endMs = startMs + elapsedSeconds * 1e3;
+  let resources = input.resources;
+  let at = startMs;
+  const freeUntil = upkeepFreeUntil(input);
+  const boostEnd = boostUntil(input);
+  const cuts = [
+    ...eventBoundaries(startMs, endMs),
+    ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
+    ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
+    endMs
+  ].sort((a, b) => a - b);
+  for (const cut of cuts) {
+    if (cut <= at) continue;
+    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil, boostAt(input, at));
+    at = cut;
+  }
+  return resources;
+}
+function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, boost = 1) {
+  var _a, _b, _c, _d;
+  const out = __spreadValues({}, input.resources);
+  if (elapsedSeconds <= 0) return out;
+  const gross = boostedRates(input, multipliers, boost);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const capacity = storageCapacityOf(input);
+  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
+  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
+  const energyStock = (_b = out.energy) != null ? _b : 0;
+  let normalSeconds = elapsedSeconds;
+  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
+  const outageSeconds = elapsedSeconds - normalSeconds;
+  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
+  if (outageSeconds > 0) out.energy = 0;
+  for (const r of RESOURCE_LIST) {
+    if (r.id === "energy") continue;
+    const rate = (_c = gross[r.id]) != null ? _c : 0;
+    if (!rate) continue;
+    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
+    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
+  }
+  return out;
+}
+function protectedAmount(buildings, res, techLevels2, allianceLevels) {
+  if (!COMMON_RESOURCES2.includes(res)) return 0;
+  const capacity = getStorageCapacity(buildings, techLevels2);
+  const bastion = allianceBastionBonus(allianceLevels);
+  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
+}
+function rareRewardScale(player) {
+  var _a;
+  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
+  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
+    var _a2;
+    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
+  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
+  const ref = ECONOMY_RULES.missionRareProductionRef;
+  const production = ref > 0 ? perHour / ref : 0;
+  return Math.max(development, production);
+}
+function missionRewards(mission, player) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const rareScale = rareRewardScale(player);
+  const out = {};
+  for (const [res, fixed] of Object.entries(mission.reward)) {
+    if (res === "xp") out.xp = fixed;
+    else if (COMMON_RESOURCES2.includes(res)) {
+      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
+      out[res] = Math.max(fixed, indexed);
+    } else out[res] = Math.floor(fixed * rareScale);
+  }
+  return out;
 }
 
 // src/game/colonies.ts
@@ -2591,6 +2933,152 @@ function collectFromColony(colony, requested, capacity) {
 function deliverToColony(colony, cargo) {
   var _a;
   for (const [r, n] of Object.entries(cargo)) colony.resources[r] = ((_a = colony.resources[r]) != null ? _a : 0) + (n != null ? n : 0);
+}
+
+// src/game/contracts.ts
+var CONTRACT_RULES = {
+  perDay: 3,
+  streakBonusPerDay: 0.1,
+  streakBonusMax: 0.5,
+  chestEvery: 7,
+  xpPerContract: 20,
+  rarePerContract: 120,
+  chestRare: 1500,
+  chestXp: 150
+};
+var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
+var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var DAY_MS = 24 * 3600 * 1e3;
+function contractDay(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function previousDay(day) {
+  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
+}
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function targetFor(type, player) {
+  var _a, _b, _c, _d;
+  switch (type) {
+    case "build_units":
+      return 20;
+    case "missions":
+      return 2;
+    case "spend": {
+      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
+      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
+    }
+    default:
+      return 1;
+  }
+}
+function makeContract(type, player, day, index) {
+  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+}
+function ensureContracts(player, now) {
+  var _a, _b;
+  const day = contractDay(now);
+  const current2 = player.contracts;
+  if (current2 && current2.day === day) return current2;
+  const rand = seededRandom(`${player.uid}:${day}`);
+  const pool = [...ALL_TYPES];
+  const items = [];
+  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
+    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    items.push(makeContract(type, player, day, i));
+  }
+  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
+  player.contracts = {
+    day,
+    items,
+    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
+    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
+    rerolled: false
+  };
+  return player.contracts;
+}
+function recordContract(player, type, amount3, now) {
+  if (!(amount3 > 0)) return;
+  const state = ensureContracts(player, now);
+  for (const c of state.items) {
+    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
+  }
+}
+function developmentScale(player) {
+  return rareRewardScale(player);
+}
+function streakBonus(streak) {
+  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
+}
+function contractReward(player, contract) {
+  var _a, _b, _c;
+  const state = player.contracts;
+  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
+  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index + contract.type.length) % RARES.length];
+  return {
+    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
+    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
+  };
+}
+function chestReward(player) {
+  const scale = developmentScale(player);
+  const out = { xp: CONTRACT_RULES.chestXp };
+  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
+  return out;
+}
+function grant(player, reward, now) {
+  var _a;
+  for (const [res, amount3] of Object.entries(reward)) {
+    if (res === "xp") applyXpDelta(player, amount3, now);
+    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  }
+}
+function claimContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  const contract = state.items.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
+  const reward = contractReward(player, contract);
+  grant(player, reward, now);
+  contract.claimed = true;
+  let chest = null;
+  const dayCompleted = state.items.every((c) => c.claimed);
+  if (dayCompleted) {
+    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
+    state.lastCompletedDay = state.day;
+    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
+      chest = chestReward(player);
+      grant(player, chest, now);
+    }
+  }
+  return { reward, dayCompleted, chest };
+}
+function rerollContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
+  const index = state.items.findIndex((c) => c.id === contractId);
+  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const used = new Set(state.items.map((c) => c.type));
+  const pool = ALL_TYPES.filter((t) => !used.has(t));
+  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const type = pool[Math.floor(rand() * pool.length)];
+  const next = makeContract(type, player, state.day, index);
+  next.id = `${state.day}-${index}-${type}-r`;
+  state.items[index] = next;
+  state.rerolled = true;
+  return next;
 }
 
 // src/game/missions.ts
@@ -3093,10 +3581,10 @@ function answerUltimatum(player, answer, now, random = Math.random) {
   const st = pirateState(player, faction.id);
   const tribute = active.ultimatum.tribute;
   if (answer === "pay") {
-    for (const [res, amount2] of Object.entries(tribute)) {
-      if (((_a = player.resources[res]) != null ? _a : 0) < amount2) throw new GameActionError("Tu n'as pas de quoi payer : refuse, ou trouve les ressources \xE0 temps.");
+    for (const [res, amount3] of Object.entries(tribute)) {
+      if (((_a = player.resources[res]) != null ? _a : 0) < amount3) throw new GameActionError("Tu n'as pas de quoi payer : refuse, ou trouve les ressources \xE0 temps.");
     }
-    for (const [res, amount2] of Object.entries(tribute)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) - amount2;
+    for (const [res, amount3] of Object.entries(tribute)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) - amount3;
     st.ultimatum = null;
     st.tributesPaid += 1;
     st.nextListAtMs = now + nextListDelay(faction, random);
@@ -3162,7 +3650,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_g = bounty[r]) != null ? _g : 0) + faction.bounty.rare;
-    for (const [res, amount2] of Object.entries(bounty)) player.resources[res] = ((_h = player.resources[res]) != null ? _h : 0) + amount2;
+    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_h = player.resources[res]) != null ? _h : 0) + amount3;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
@@ -3254,7 +3742,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);
     for (const r of RARE) reward[r] = ((_b = reward[r]) != null ? _b : 0) + faction.lair.rare;
-    for (const [res, amount2] of Object.entries(reward)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + amount2;
+    for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + amount3;
     applyXpDelta(player, faction.lair.xp, now);
     const title = faction.lair.title;
     if (title && !((_d = player.titles) != null ? _d : []).some((t) => t.label === title)) {
@@ -3783,7 +4271,7 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
-var DAY2 = 864e5;
+var DAY3 = 864e5;
 var HOUR3 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
@@ -3797,8 +4285,8 @@ function startVacation(player, daysIn, ctx, now) {
   }
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
-  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY2) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY2 - now) / HOUR3);
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY3) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY3 - now) / HOUR3);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
@@ -3807,7 +4295,7 @@ function startVacation(player, daysIn, ctx, now) {
   if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR3) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
-  const v = { startedAtMs: now, untilMs: now + days * DAY2 };
+  const v = { startedAtMs: now, untilMs: now + days * DAY3 };
   player.vacation = v;
   return v;
 }
@@ -4078,11 +4566,11 @@ function flushState(playerIn, queuesIn, now) {
     }
     const factor = missionRewardFactor(entry.endTime);
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
-    for (const [res, amount2] of Object.entries(reward)) {
+    for (const [res, amount3] of Object.entries(reward)) {
       if (res === "xp") {
-        applyXpDelta(player, amount2, now);
+        applyXpDelta(player, amount3, now);
       } else {
-        player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + amount2;
+        player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + amount3;
       }
     }
     recordContract(player, "missions", 1, now);
@@ -4114,7 +4602,7 @@ function flushState(playerIn, queuesIn, now) {
     let totalXp = 0;
     for (const a of newAchievements) {
       const reward = achievementReward(a, player);
-      for (const [res, amount2] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount2;
+      for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
       if (a.title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === a.title)) {
@@ -4270,10 +4758,10 @@ function performSeasonReward(playerIn, queuesIn, standing, reward, now, headline
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const gained = {};
   for (const r of RESOURCE_LIST) {
-    const amount2 = Math.floor(((_a = rates[r.id]) != null ? _a : 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0);
-    if (amount2 <= 0) continue;
-    gained[r.id] = amount2;
-    player.resources[r.id] = ((_b = player.resources[r.id]) != null ? _b : 0) + amount2;
+    const amount3 = Math.floor(((_a = rates[r.id]) != null ? _a : 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0);
+    if (amount3 <= 0) continue;
+    gained[r.id] = amount3;
+    player.resources[r.id] = ((_b = player.resources[r.id]) != null ? _b : 0) + amount3;
   }
   let titleText = "";
   if (reward.title) {
@@ -4299,407 +4787,124 @@ function performSeasonReward(playerIn, queuesIn, standing, reward, now, headline
     ]
   };
 }
-function setActiveTitle(player, label2) {
+function setActiveTitle(player, label3) {
   var _a;
-  if (label2 && !((_a = player.titles) != null ? _a : []).some((t) => t.label === label2)) throw new GameActionError("Tu n'as pas gagn\xE9 ce titre.");
-  player.activeTitle = label2;
+  if (label3 && !((_a = player.titles) != null ? _a : []).some((t) => t.label === label3)) throw new GameActionError("Tu n'as pas gagn\xE9 ce titre.");
+  player.activeTitle = label3;
 }
 
-// src/game/defaults.ts
-function defaultResources() {
-  return {
-    scrap: 100,
-    energy: 50,
-    nano: 0,
-    data: 0,
-    reinforcedSteel: 0,
-    cyberModule: 0,
-    syntheticNanites: 0,
-    aiFragment: 0
-  };
-}
-function defaultPlayerState(uid, pseudo) {
-  return {
-    uid,
-    pseudo,
-    resources: defaultResources(),
-    buildings: defaultBuildings(),
-    units: {},
-    techLevels: {},
-    bonuses: {
-      energyEfficiency: 0,
-      unitDefenseBonus: 0,
-      unitAttackBonus: 0,
-      buildingUpgradeDiscount: 0,
-      unlockedRecipes: 0
-    },
-    xp: 0,
-    seasonId: currentSeasonId(),
-    seasonXp: 0,
-    victories: 0,
-    defeats: 0,
-    playtimeSeconds: 0,
-    resourcesUpdatedAtMs: Date.now(),
-    resourceHistory: [],
-    unlockedAchievements: []
-  };
-}
-function defaultQueues() {
-  return {
-    buildingUpgrades: {},
-    unitQueues: { attack: [], defense: [] },
-    activeResearches: [],
-    activeMissions: [],
-    buildPlan: []
-  };
-}
-
-// src/game/ascension.ts
-var ASCENSION_RULES = {
-  productionPerAscension: 0.1,
-  buildTimePerAscension: 0.05,
-  maxAscensions: 5,
-  cooldownDays: 7,
-  shieldHours: 72,
-  upkeepFreeDays: 7
-};
-var DAY3 = 24 * 36e5;
-function ascensionCount(player) {
-  return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
-}
-function ascensionProductionFactor(player) {
-  return 1 + ascensionCount(player) * ASCENSION_RULES.productionPerAscension;
-}
-function ascensionBuildTimeFactor(player) {
-  return Math.max(0.1, 1 - ascensionCount(player) * ASCENSION_RULES.buildTimePerAscension);
-}
-function upkeepFreeUntil(player) {
-  const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY3 : 0;
-}
-function canAscend(player, queues, now) {
-  var _a;
-  const missing = BUILDINGS.filter((b) => {
-    var _a2, _b;
-    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
-  }).map((b) => {
-    var _a2, _b;
-    return {
-      id: b.id,
-      name: b.name,
-      level: (_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0,
-      maxLevel: b.maxLevel
-    };
-  });
-  if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
-  if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY3 - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY3)} jour(s).`, missing };
-  if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
-  return { ok: true, missing };
-}
-function ascend(player, queues, now) {
-  var _a;
-  const check = canAscend(player, queues, now);
-  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
-  for (const b of BUILDINGS) {
-    if (b.endgame) continue;
-    const cur = player.buildings[b.id];
-    player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
-  }
-  player.resources = defaultResources();
-  player.resourceHistory = [];
-  player.ascensions = ascensionCount(player) + 1;
-  player.ascendedAtMs = now;
-  bumpStat(player, "ascensions");
-}
-
-// src/game/economy.ts
-var ECONOMY_RULES = {
-  /** Énergie consommée par seconde et par place de hangar occupée. */
-  upkeepPerPlaceAttack: 0.015,
-  upkeepPerPlaceDefense: 75e-4,
-  /** Production des autres ressources pendant une panne d'énergie. */
-  outageProductionFactor: 0.5,
-  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
-  protectedStoragePct: 0.1,
-  /** Missions : ressources communes = au moins ce multiple de (durée × production). */
-  missionProductionMultiplier: 1.5,
-  /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
-  missionRareLevelDivisor: 35,
-  /** Rares (missions, contrats, coffre) : au moins récompense × production horaire / cette référence. */
-  missionRareProductionRef: 5e5
-};
-var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
-var KESH_BOOST_PCT = 0.2;
-function boostUntil(input) {
-  var _a;
-  const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
-  return Number.isFinite(v) ? v : 0;
-}
-function boostAt(input, at) {
-  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
-}
-function storageCapacityOf(input) {
-  const base = getStorageCapacity(input.buildings, input.techLevels);
-  const bonus = input.commanders ? playerModifiers(input).storage : 0;
-  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
-}
-function getFleetUpkeep(units, techLevels2) {
-  let upkeep = 0;
-  for (const [id, state] of Object.entries(units != null ? units : {})) {
-    const def3 = findUnit(id);
-    if (!def3 || !(state == null ? void 0 : state.count)) continue;
-    const perPlace = def3.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
-    upkeep += state.count * def3.hangarSpace * perPlace;
-  }
-  return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
-}
-function boostedRates(input, multipliers, boost = 1) {
-  var _a, _b, _c, _d;
-  const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
-  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
-  if (input.commanders || input.relics) {
-    const mods = playerModifiers(input);
-    for (const res of Object.keys(gross)) {
-      const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
-      if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
-    }
-  }
-  for (const [res, m] of Object.entries(multipliers)) {
-    if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
-  }
-  return gross;
-}
-function addCapped(stock, gain, cap) {
-  if (gain <= 0) return Math.max(0, stock + gain);
-  if (stock >= cap) return stock;
-  return Math.min(cap, stock + gain);
-}
-function advanceResources(input, elapsedSeconds, startMs) {
-  if (startMs === void 0 || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
-  const endMs = startMs + elapsedSeconds * 1e3;
-  let resources = input.resources;
-  let at = startMs;
-  const freeUntil = upkeepFreeUntil(input);
-  const boostEnd = boostUntil(input);
-  const cuts = [
-    ...eventBoundaries(startMs, endMs),
-    ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
-    ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
-    endMs
-  ].sort((a, b) => a - b);
-  for (const cut of cuts) {
-    if (cut <= at) continue;
-    resources = advanceSegment(__spreadProps(__spreadValues({}, input), { resources }), (cut - at) / 1e3, productionMultipliers(at), at < freeUntil, boostAt(input, at));
-    at = cut;
-  }
-  return resources;
-}
-function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, boost = 1) {
-  var _a, _b, _c, _d;
-  const out = __spreadValues({}, input.resources);
-  if (elapsedSeconds <= 0) return out;
-  const gross = boostedRates(input, multipliers, boost);
-  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
-  const capacity = storageCapacityOf(input);
-  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
-  const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
-  const energyStock = (_b = out.energy) != null ? _b : 0;
-  let normalSeconds = elapsedSeconds;
-  if (energyNet < 0) normalSeconds = Math.min(elapsedSeconds, Math.max(0, energyStock) / -energyNet);
-  const outageSeconds = elapsedSeconds - normalSeconds;
-  out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
-  if (outageSeconds > 0) out.energy = 0;
-  for (const r of RESOURCE_LIST) {
-    if (r.id === "energy") continue;
-    const rate = (_c = gross[r.id]) != null ? _c : 0;
-    if (!rate) continue;
-    const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
-    out[r.id] = addCapped((_d = out[r.id]) != null ? _d : 0, gain, capOf(r.id));
-  }
-  return out;
-}
-function protectedAmount(buildings, res, techLevels2, allianceLevels) {
-  if (!COMMON_RESOURCES2.includes(res)) return 0;
-  const capacity = getStorageCapacity(buildings, techLevels2);
-  const bastion = allianceBastionBonus(allianceLevels);
-  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
-}
-function rareRewardScale(player) {
-  var _a;
-  const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
-  const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
-  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
-    var _a2;
-    return a + ((_a2 = rates[r]) != null ? _a2 : 0);
-  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
-  const ref = ECONOMY_RULES.missionRareProductionRef;
-  const production = ref > 0 ? perHour / ref : 0;
-  return Math.max(development, production);
-}
-function missionRewards(mission, player) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const rareScale = rareRewardScale(player);
-  const out = {};
-  for (const [res, fixed] of Object.entries(mission.reward)) {
-    if (res === "xp") out.xp = fixed;
-    else if (COMMON_RESOURCES2.includes(res)) {
-      const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
-      out[res] = Math.max(fixed, indexed);
-    } else out[res] = Math.floor(fixed * rareScale);
-  }
-  return out;
-}
-
-// src/game/contracts.ts
-var CONTRACT_RULES = {
-  perDay: 3,
-  streakBonusPerDay: 0.1,
-  streakBonusMax: 0.5,
-  chestEvery: 7,
-  xpPerContract: 20,
-  rarePerContract: 120,
-  chestRare: 1500,
-  chestXp: 150
-};
-var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
-var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var DAY_MS = 24 * 3600 * 1e3;
-function contractDay(now) {
-  return new Date(now).toISOString().slice(0, 10);
-}
-function previousDay(day) {
-  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
-}
-function seededRandom(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return () => {
-    h = Math.imul(h ^ h >>> 15, 2246822507);
-    h = Math.imul(h ^ h >>> 13, 3266489909);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  };
-}
-function targetFor(type, player) {
-  var _a, _b, _c, _d;
-  switch (type) {
-    case "build_units":
-      return 20;
-    case "missions":
-      return 2;
-    case "spend": {
-      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
-      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
-    }
-    default:
-      return 1;
-  }
-}
-function makeContract(type, player, day, index) {
-  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
-}
-function ensureContracts(player, now) {
+// src/game/talents.ts
+var TALENT_RULES = { pointsPerAscension: 3, maxRank: 3 };
+var TALENTS = [
+  { id: "rendement", branch: "economie", name: "Rendement imp\xE9rial", description: "Production de toutes les ressources.", effect: { kind: "productionAll" }, perRank: 0.02 },
+  { id: "fonderies", branch: "economie", name: "Fonderies profondes", description: "Production de ferraille.", effect: { kind: "production", res: "scrap" }, perRank: 0.02 },
+  { id: "reacteurs", branch: "economie", name: "R\xE9acteurs stabilis\xE9s", description: "Production d'\xE9nergie instable.", effect: { kind: "production", res: "energy" }, perRank: 0.02 },
+  { id: "nanoforges", branch: "economie", name: "Nanoforges", description: "Production de nanocomposants.", effect: { kind: "production", res: "nano" }, perRank: 0.02 },
+  { id: "archivistes", branch: "economie", name: "Archivistes", description: "Production de donn\xE9es anciennes.", effect: { kind: "production", res: "data" }, perRank: 0.02 },
+  { id: "assaut", branch: "guerre", name: "Doctrine d'assaut", description: "Attaque de tes flottes.", effect: { kind: "attack" }, perRank: 0.02 },
+  { id: "rempart", branch: "guerre", name: "Rempart", description: "D\xE9fense de tes unit\xE9s.", effect: { kind: "defense" }, perRank: 0.02 },
+  { id: "ateliers", branch: "guerre", name: "Ateliers de campagne", description: "Vaisseaux r\xE9par\xE9s apr\xE8s un combat.", effect: { kind: "repair" }, perRank: 0.02 },
+  { id: "sentinelles", branch: "guerre", name: "Sentinelles", description: "Chances de rep\xE9rer l'espionnage adverse.", effect: { kind: "detection" }, perRank: 0.02 },
+  { id: "reseau", branch: "guerre", name: "R\xE9seau d'informateurs", description: "Niveau d'espionnage (+0,2 par rang).", effect: { kind: "spyLevel" }, perRank: 0.2 },
+  { id: "chantiers", branch: "logistique", name: "Chantiers rapides", description: "Dur\xE9e de construction des b\xE2timents.", effect: { kind: "buildTime" }, perRank: 0.02 },
+  { id: "laboratoires", branch: "logistique", name: "Laboratoires", description: "Dur\xE9e des recherches.", effect: { kind: "researchTime" }, perRank: 0.02 },
+  { id: "entrepots", branch: "logistique", name: "Entrep\xF4ts \xE9tendus", description: "Capacit\xE9 des entrep\xF4ts.", effect: { kind: "storage" }, perRank: 0.02 },
+  { id: "soutes", branch: "logistique", name: "Soutes renforc\xE9es", description: "Capacit\xE9 de transport des flottes.", effect: { kind: "cargo" }, perRank: 0.02 },
+  { id: "intendance", branch: "logistique", name: "Intendance", description: "Production de toutes les ressources (logistique).", effect: { kind: "productionAll" }, perRank: 0.02 }
+];
+function talentState(player) {
   var _a, _b;
-  const day = contractDay(now);
-  const current2 = player.contracts;
-  if (current2 && current2.day === day) return current2;
-  const rand = seededRandom(`${player.uid}:${day}`);
-  const pool = [...ALL_TYPES];
-  const items = [];
-  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
-    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
-    items.push(makeContract(type, player, day, i));
+  const raw = (_a = player.talents) != null ? _a : {};
+  const ranks = {};
+  for (const t of TALENTS) {
+    const r = Math.floor(Number((_b = raw.ranks) == null ? void 0 : _b[t.id]) || 0);
+    if (r > 0) ranks[t.id] = Math.min(TALENT_RULES.maxRank, r);
   }
-  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
-  player.contracts = {
-    day,
-    items,
-    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
-    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
-    rerolled: false
-  };
-  return player.contracts;
+  return { ranks, resetSeasonId: raw.resetSeasonId };
 }
-function recordContract(player, type, amount2, now) {
-  if (!(amount2 > 0)) return;
-  const state = ensureContracts(player, now);
-  for (const c of state.items) {
-    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount2);
-  }
-}
-function developmentScale(player) {
-  return rareRewardScale(player);
-}
-function streakBonus(streak) {
-  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
-}
-function contractReward(player, contract) {
-  var _a, _b, _c;
-  const state = player.contracts;
-  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
-  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
-  const rare = RARES[(index + contract.type.length) % RARES.length];
-  return {
-    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
-    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
-  };
-}
-function chestReward(player) {
-  const scale = developmentScale(player);
-  const out = { xp: CONTRACT_RULES.chestXp };
-  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
-  return out;
-}
-function grant(player, reward, now) {
+function talentPoints(player) {
   var _a;
-  for (const [res, amount2] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount2, now);
-    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
-  }
+  const total2 = Math.max(0, Math.floor((_a = player.ascensions) != null ? _a : 0)) * TALENT_RULES.pointsPerAscension;
+  const spent = Object.values(talentState(player).ranks).reduce((a, b) => a + b, 0);
+  return { total: total2, spent, free: Math.max(0, total2 - spent) };
 }
-function claimContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  const contract = state.items.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
-  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
-  const reward = contractReward(player, contract);
-  grant(player, reward, now);
-  contract.claimed = true;
-  let chest = null;
-  const dayCompleted = state.items.every((c) => c.claimed);
-  if (dayCompleted) {
-    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
-    state.lastCompletedDay = state.day;
-    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
-      chest = chestReward(player);
-      grant(player, chest, now);
+function learnTalent(player, talentId) {
+  var _a, _b;
+  const def3 = TALENTS.find((t) => t.id === talentId);
+  if (!def3) throw new GameActionError("Talent inconnu.");
+  const st = talentState(player);
+  if (((_a = st.ranks[def3.id]) != null ? _a : 0) >= TALENT_RULES.maxRank) throw new GameActionError("Ce talent est d\xE9j\xE0 au rang maximum.");
+  if (talentPoints(player).free <= 0) throw new GameActionError("Aucun point de talent disponible : chaque Ascension en donne 3.");
+  st.ranks[def3.id] = ((_b = st.ranks[def3.id]) != null ? _b : 0) + 1;
+  player.talents = st;
+  return st;
+}
+function resetTalents(player, now) {
+  const st = talentState(player);
+  const season = currentSeasonId(now);
+  if (st.resetSeasonId === season) throw new GameActionError("Tu as d\xE9j\xE0 redistribu\xE9 tes talents cette saison.");
+  if (Object.keys(st.ranks).length === 0) throw new GameActionError("Aucun talent \xE0 redistribuer.");
+  const next = { ranks: {}, resetSeasonId: season };
+  player.talents = next;
+  return next;
+}
+function talentBonuses(player) {
+  const st = talentState(player);
+  return TALENTS.filter((t) => {
+    var _a;
+    return ((_a = st.ranks[t.id]) != null ? _a : 0) > 0;
+  }).map((def3) => {
+    var _a;
+    return { def: def3, value: def3.perRank * ((_a = st.ranks[def3.id]) != null ? _a : 0) };
+  });
+}
+
+// src/game/modifiers.ts
+function emptyModifiers() {
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
+}
+function playerModifiers(player) {
+  var _a, _b, _c;
+  const m = emptyModifiers();
+  if (!player) return m;
+  const lv = activeLevels(player);
+  m.attack += lv.admiral * 0.01;
+  m.defense += lv.strategist * 0.01;
+  m.buildTime += lv.engineer * 0.01;
+  m.researchTime += lv.engineer * 0.01;
+  m.spyLevel += lv.spy * 0.2;
+  m.detection += lv.spy * 0.01;
+  m.productionAll += lv.steward * 0.01;
+  m.productionAll += territoryBonus(player.territory, Date.now());
+  m.storage += lv.steward * 0.02;
+  for (const item of equippedRelics(player)) {
+    const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
+    const b = relicBonus(item);
+    if (effect === "attack") m.attack += b;
+    else if (effect === "defense") m.defense += b;
+    else if (effect === "build_time") m.buildTime += b;
+    else if (effect === "research_time") m.researchTime += b;
+    else if (effect === "repair") m.repair += b;
+    else if (effect === "cargo") m.cargo += b;
+    else if (effect === "spy") m.spyLevel += b * 10;
+    else if (effect === "production_all") m.productionAll += b;
+    else if (effect === "boss_damage") m.bossDamage += b;
+    else if (effect && PRODUCTION_EFFECT[effect]) {
+      const res = PRODUCTION_EFFECT[effect];
+      m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
     }
   }
-  return { reward, dayCompleted, chest };
+  for (const { def: def3, value } of talentBonuses(player)) {
+    const e = def3.effect;
+    if (e.kind === "production") m.production[e.res] = ((_c = m.production[e.res]) != null ? _c : 0) + value;
+    else m[e.kind] += value;
+  }
+  m.buildTime = Math.min(0.5, m.buildTime);
+  m.researchTime = Math.min(0.5, m.researchTime);
+  return m;
 }
-function rerollContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
-  const index = state.items.findIndex((c) => c.id === contractId);
-  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
-  const used = new Set(state.items.map((c) => c.type));
-  const pool = ALL_TYPES.filter((t) => !used.has(t));
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
-  const type = pool[Math.floor(rand() * pool.length)];
-  const next = makeContract(type, player, state.day, index);
-  next.id = `${state.day}-${index}-${type}-r`;
-  state.items[index] = next;
-  state.rerolled = true;
-  return next;
+function withRepairBonus(base, player) {
+  return Math.min(0.95, base + playerModifiers(player).repair);
 }
 
 // src/game/bounties.ts
@@ -5084,24 +5289,24 @@ function weekId(now) {
 }
 function exchangeAmber(player, amountIn, now) {
   var _a;
-  const amount2 = Math.floor(Number(amountIn));
-  if (!(amount2 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
+  const amount3 = Math.floor(Number(amountIn));
+  if (!(amount3 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
   const st = bountyState(player);
   const week = weekId(now);
   if (st.exchangeWeek !== week) {
     st.exchangeWeek = week;
     st.exchanged = 0;
   }
-  if (amount2 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
-  if (amount2 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
+  if (amount3 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
+  if (amount3 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
   const gain = {};
   for (const r of RESOURCE_LIST) {
     if (r.rarity !== "rare") continue;
-    gain[r.id] = amount2 * BOUNTY_RULES.exchange.rarePerAmber;
+    gain[r.id] = amount3 * BOUNTY_RULES.exchange.rarePerAmber;
     player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
   }
-  st.amber -= amount2;
-  st.exchanged += amount2;
+  st.amber -= amount3;
+  st.exchanged += amount3;
   player.bounties = st;
   return gain;
 }
@@ -5208,7 +5413,7 @@ function resolveEliteAssault(state, player, fleet, formation, now) {
   var _a;
   const fx = formationEffects(formation);
   const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack)
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
   );
   const active = eliteActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
@@ -5539,7 +5744,7 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
 function resolveLeviathanAssault(state, player, fleet, formation, now) {
   var _a;
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack));
+  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage));
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
@@ -6205,7 +6410,7 @@ function claimOnboarding(player, stepId) {
   const st = onboardingState(player);
   if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
   if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount2] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount2;
+  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
   if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
     player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
     if (!player.activeTitle) player.activeTitle = step.title;
@@ -6707,6 +6912,104 @@ function finishExpedition(player, fleet, now, random = Math.random) {
   };
 }
 
+// src/game/seasonWars.ts
+var SEASON_WAR_RULES = {
+  powerPerPoint: 1e4,
+  sectorPoints: 50,
+  /** Heures de production des membres versées au trésor, 1er à 3e. */
+  rewardHours: [48, 24, 12],
+  titles: ["Conqu\xE9rants de la saison", "Strat\xE8ges de la saison", "V\xE9t\xE9rans de la saison"]
+};
+var WAR_CHEST_RULES = {
+  depositPct: 0.1,
+  capDays: 30,
+  shieldHours: 2,
+  shieldCostHours: 4
+};
+function readWarChest(raw) {
+  var _a, _b;
+  const c = raw && typeof raw === "object" ? raw : {};
+  return { resources: __spreadValues({}, (_a = c.resources) != null ? _a : {}), cap: __spreadValues({}, (_b = c.cap) != null ? _b : {}) };
+}
+function depositWarChest(chest, treasuryBonus) {
+  var _a, _b;
+  const added = {};
+  for (const [res, n] of Object.entries(treasuryBonus)) {
+    const part = Math.floor((n != null ? n : 0) * WAR_CHEST_RULES.depositPct);
+    if (part <= 0) continue;
+    const cap = Math.max((_a = chest.cap[res]) != null ? _a : 0, part * WAR_CHEST_RULES.capDays);
+    chest.cap[res] = cap;
+    const before = (_b = chest.resources[res]) != null ? _b : 0;
+    const after = Math.min(cap, before + part);
+    chest.resources[res] = after;
+    if (after > before) added[res] = after - before;
+  }
+  return added;
+}
+function spend(chest, cost, what) {
+  var _a, _b;
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = chest.resources[res]) != null ? _a : 0) < (n != null ? n : 0)) throw new GameActionError(`Coffre de guerre insuffisant pour ${what} : il faut ${formatInt(n != null ? n : 0)} ${res}.`);
+  }
+  for (const [res, n] of Object.entries(cost)) chest.resources[res] = ((_b = chest.resources[res]) != null ? _b : 0) - (n != null ? n : 0);
+}
+function payWarFromChest(chest, cost) {
+  spend(chest, cost, "d\xE9clarer la guerre");
+}
+function chestShieldCost(member) {
+  var _a, _b;
+  const prod = productionHours(member, WAR_CHEST_RULES.shieldCostHours);
+  const out = {};
+  for (const r of COMMON_RESOURCES2) if (((_a = prod[r]) != null ? _a : 0) > 0) out[r] = Math.ceil((_b = prod[r]) != null ? _b : 0);
+  return out;
+}
+function grantChestShield(chest, member, now) {
+  const cost = chestShieldCost(member);
+  spend(chest, cost, "ce bouclier");
+  const st = bountyState(member);
+  st.shieldUntilMs = Math.max(st.shieldUntilMs, now) + WAR_CHEST_RULES.shieldHours * 36e5;
+  member.bounties = st;
+  return { cost, untilMs: st.shieldUntilMs };
+}
+function addSeasonPower(player, amount3, now) {
+  var _a, _b;
+  if (!(amount3 > 0)) return;
+  const stats = (_a = player.stats) != null ? _a : {};
+  const season = currentSeasonId(now);
+  if (stats.seasonPowerId !== season) {
+    stats.seasonPowerId = season;
+    stats.seasonPower = 0;
+  }
+  stats.seasonPower = ((_b = stats.seasonPower) != null ? _b : 0) + Math.round(amount3);
+  player.stats = stats;
+}
+function seasonPowerOf(player, seasonId) {
+  var _a;
+  const s = player.stats;
+  return (s == null ? void 0 : s.seasonPowerId) === seasonId ? (_a = s.seasonPower) != null ? _a : 0 : 0;
+}
+function seasonWarPoints(wars, seasonId) {
+  var _a, _b, _c, _d;
+  const out = {};
+  for (const w of wars) {
+    if (w.seasonId !== seasonId) continue;
+    out[w.attackerId] = ((_a = out[w.attackerId]) != null ? _a : 0) + ((_b = w.scoreAttacker) != null ? _b : 0);
+    out[w.defenderId] = ((_c = out[w.defenderId]) != null ? _c : 0) + ((_d = w.scoreDefender) != null ? _d : 0);
+  }
+  return out;
+}
+function seasonWarStandings(input) {
+  const ids = new Set([...Object.keys(input.warPoints), ...Object.keys(input.power), ...Object.keys(input.sectors)].filter(Boolean));
+  return [...ids].map((allianceId) => {
+    var _a, _b, _c;
+    const warPoints = (_a = input.warPoints[allianceId]) != null ? _a : 0;
+    const power = (_b = input.power[allianceId]) != null ? _b : 0;
+    const powerPoints = Math.floor(power / SEASON_WAR_RULES.powerPerPoint);
+    const sectors = (_c = input.sectors[allianceId]) != null ? _c : 0;
+    return { allianceId, warPoints, power, powerPoints, sectors, score: warPoints + powerPoints + sectors * SEASON_WAR_RULES.sectorPoints, rank: 0 };
+  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
+}
+
 // src/game/wars.ts
 var WAR_RULES = {
   minMembers: 3,
@@ -6760,14 +7063,20 @@ function declareWar(input) {
   const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR8 - now;
   if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR8))} jour(s).`);
   const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
-  if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
-    throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
+  const chest = input.chest ? { resources: __spreadValues({}, input.chest.resources), cap: __spreadValues({}, input.chest.cap) } : null;
+  if (chest) {
+    payWarFromChest(chest, { scrap: WAR_RULES.costScrap, energy: WAR_RULES.costEnergy });
+  } else {
+    if (((_c = treasury.scrap) != null ? _c : 0) < WAR_RULES.costScrap || ((_d = treasury.energy) != null ? _d : 0) < WAR_RULES.costEnergy) {
+      throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} \xE9nergie dans le tr\xE9sor.`);
+    }
+    treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
+    treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
   }
-  treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
-  treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
   const startMs = now + WAR_RULES.prepHours * HOUR8;
   return {
     own: __spreadProps(__spreadValues({}, own), { treasury }),
+    chest,
     war: {
       attackerId: own.id,
       attackerName: own.name,
@@ -6840,25 +7149,6 @@ function warSeasonBonuses(wars, seasonId) {
   const out = {};
   for (const w of wars) if (w.winnerId && w.seasonId === seasonId) out[w.winnerId] = ((_a = out[w.winnerId]) != null ? _a : 0) + WAR_RULES.seasonBonusPct;
   return out;
-}
-
-// src/game/galaxy.ts
-function hashString(input, seed) {
-  let h = (2166136261 ^ seed) >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-function galaxyCoords(uid) {
-  return {
-    galaxy: 1 + hashString(uid, 3) % 9,
-    system: 1 + hashString(uid, 4) % 499,
-    position: 1 + hashString(uid, 5) % 15,
-    x: hashString(uid, 1) / 4294967296,
-    y: hashString(uid, 2) / 4294967296
-  };
 }
 
 // src/game/pvp.ts
@@ -6976,6 +7266,206 @@ function checkAttackAllowed(ctx) {
   return { allowed: true };
 }
 
+// src/game/market.ts
+var MARKET_RULES = {
+  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), retirée du jeu. */
+  taxPct: 0.05,
+  /** Taxe entre membres d'une même alliance. */
+  allianceTaxPct: 0.02,
+  /** Offres ouvertes par joueur. */
+  maxOpenOffers: 5,
+  /** Offres acceptées par joueur et par jour (UTC). */
+  maxBuysPerDay: 20,
+  /** Durée de vie d'une offre (h) ; à l'expiration, le vendeur est remboursé. */
+  offerHours: 48,
+  /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
+  priceBand: 3
+};
+var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
+var label = (res) => {
+  var _a, _b;
+  return (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name.toLowerCase()) != null ? _b : res;
+};
+function amount(raw, what) {
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n) || n <= 0 || n > 1e13) throw new GameActionError(`${what} invalide.`);
+  return n;
+}
+function priceBounds(giveRes, giveAmount, wantRes) {
+  const reference = giveAmount * getTradeRate(giveRes, wantRes);
+  const band = Math.max(1, MARKET_RULES.priceBand);
+  return { min: Math.max(1, Math.ceil(reference / band)), max: Math.floor(reference * band), reference: Math.round(reference) };
+}
+function marketTax(wantAmount, sameAlliance) {
+  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct));
+}
+function createOffer(seller, input, openOffers, now) {
+  var _a, _b, _c;
+  const giveRes = String((_a = input.giveRes) != null ? _a : "");
+  const wantRes = String((_b = input.wantRes) != null ? _b : "");
+  if (!RESOURCE_IDS2.has(giveRes) || !RESOURCE_IDS2.has(wantRes)) throw new GameActionError("Ressource inconnue.");
+  if (giveRes === wantRes) throw new GameActionError("Choisis deux ressources diff\xE9rentes.");
+  const giveAmount = amount(input.giveAmount, "Quantit\xE9 propos\xE9e");
+  const wantAmount = amount(input.wantAmount, "Quantit\xE9 demand\xE9e");
+  if (openOffers >= MARKET_RULES.maxOpenOffers) throw new GameActionError(`Tu as d\xE9j\xE0 ${MARKET_RULES.maxOpenOffers} offres ouvertes : annule-en une ou attends qu'elles partent.`);
+  const { min, max } = priceBounds(giveRes, giveAmount, wantRes);
+  if (wantAmount < min || wantAmount > max) {
+    throw new GameActionError(`Prix hors limites : pour ${formatInt(giveAmount)} ${label(giveRes)}, demande entre ${formatInt(min)} et ${formatInt(max)} ${label(wantRes)}.`);
+  }
+  if (((_c = seller.resources[giveRes]) != null ? _c : 0) < giveAmount) throw new GameActionError(`Pas assez de ${label(giveRes)}.`);
+  seller.resources[giveRes] -= giveAmount;
+  const kind = input.kind === "buy" ? "buy" : "sell";
+  return { kind, giveRes, giveAmount, wantRes, wantAmount, expiresAtMs: now + MARKET_RULES.offerHours * 36e5 };
+}
+function acceptOffer(offer, buyer, seller, buysToday, now) {
+  var _a, _b, _c, _d;
+  if (offer.status !== "open" || now >= offer.expiresAtMs) throw new GameActionError("Cette offre n'est plus disponible.");
+  if (offer.sellerId === buyer.uid) throw new GameActionError("Tu ne peux pas accepter ta propre offre.");
+  if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} achats par jour atteinte.`);
+  if (((_a = buyer.resources[offer.wantRes]) != null ? _a : 0) < offer.wantAmount) throw new GameActionError(`Pas assez de ${label(offer.wantRes)} pour cette offre.`);
+  const sameAlliance = !!offer.sellerAllianceId && offer.sellerAllianceId === ((_b = buyer.allianceId) != null ? _b : "");
+  const tax = marketTax(offer.wantAmount, sameAlliance);
+  buyer.resources[offer.wantRes] -= offer.wantAmount;
+  buyer.resources[offer.giveRes] = ((_c = buyer.resources[offer.giveRes]) != null ? _c : 0) + offer.giveAmount;
+  seller.resources[offer.wantRes] = ((_d = seller.resources[offer.wantRes]) != null ? _d : 0) + offer.wantAmount - tax;
+  bumpStat(buyer, "marketTrades");
+  bumpStat(seller, "marketTrades");
+  bumpStat(seller, "marketTax", tax);
+  bumpStat(buyer, "marketVolume", offer.giveAmount);
+  recordChronicle(buyer, "market", now);
+  bumpStat(seller, "marketVolume", offer.wantAmount - tax);
+  return { tax, sameAlliance };
+}
+function buyOrderPaid(order, filled) {
+  return Math.floor(order.giveAmount * Math.min(filled, order.wantAmount) / order.wantAmount);
+}
+function offerReserved(offer) {
+  var _a;
+  return offer.kind === "buy" ? offer.giveAmount - buyOrderPaid(offer, (_a = offer.filled) != null ? _a : 0) : offer.giveAmount;
+}
+function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
+  var _a, _b, _c, _d, _e;
+  if (order.status !== "open" || now >= order.expiresAtMs) throw new GameActionError("Cet ordre d'achat n'est plus disponible.");
+  if (order.sellerId === supplier.uid) throw new GameActionError("Tu ne peux pas remplir ton propre ordre.");
+  if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} \xE9changes par jour atteinte.`);
+  const already = (_a = order.filled) != null ? _a : 0;
+  const remaining = order.wantAmount - already;
+  const qty = Math.min(remaining, amount(qtyRaw != null ? qtyRaw : remaining, "Quantit\xE9 livr\xE9e"));
+  if (((_b = supplier.resources[order.wantRes]) != null ? _b : 0) < qty) throw new GameActionError(`Pas assez de ${label(order.wantRes)} pour livrer.`);
+  const filled = already + qty;
+  const payment = buyOrderPaid(order, filled) - buyOrderPaid(order, already);
+  if (payment <= 0) throw new GameActionError("Quantit\xE9 trop faible : livre davantage pour \xEAtre pay\xE9.");
+  const sameAlliance = !!order.sellerAllianceId && order.sellerAllianceId === ((_c = supplier.allianceId) != null ? _c : "");
+  const tax = marketTax(qty, sameAlliance);
+  supplier.resources[order.wantRes] -= qty;
+  supplier.resources[order.giveRes] = ((_d = supplier.resources[order.giveRes]) != null ? _d : 0) + payment;
+  owner.resources[order.wantRes] = ((_e = owner.resources[order.wantRes]) != null ? _e : 0) + qty - tax;
+  bumpStat(supplier, "marketTrades");
+  bumpStat(owner, "marketTrades");
+  bumpStat(owner, "marketTax", tax);
+  bumpStat(supplier, "marketVolume", qty);
+  bumpStat(owner, "marketVolume", qty - tax);
+  recordChronicle(supplier, "market", now);
+  return { qty, payment, tax, filled, done: filled >= order.wantAmount };
+}
+function refundOffer(offer, seller) {
+  var _a;
+  const back = offerReserved(offer);
+  seller.resources[offer.giveRes] = ((_a = seller.resources[offer.giveRes]) != null ? _a : 0) + back;
+  return back;
+}
+function describeAmount(res, n) {
+  return `${formatInt(n)} ${label(res)}`;
+}
+function utcDayStart(now) {
+  return Math.floor(now / 864e5) * 864e5;
+}
+
+// src/game/tradeContracts.ts
+var TRADE_CONTRACT_RULES = {
+  minHours: 4,
+  maxHours: 72,
+  /** Contrats actifs par joueur (publiés ouverts ou acceptés, comme client ou livreur). */
+  maxActive: 3,
+  /** Caution du livreur, en part du paiement. */
+  depositPct: 0.1,
+  /** Un contrat ouvert sans livreur expire au bout de ce délai (h). */
+  openHours: 48
+};
+var RESOURCE_IDS3 = new Set(RESOURCE_LIST.map((r) => r.id));
+var label2 = (res) => {
+  var _a, _b;
+  return (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name.toLowerCase()) != null ? _b : res;
+};
+function amount2(raw, what) {
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n) || n <= 0 || n > 1e13) throw new GameActionError(`${what} invalide.`);
+  return n;
+}
+function contractDeposit(payAmount) {
+  return Math.max(1, Math.floor(payAmount * TRADE_CONTRACT_RULES.depositPct));
+}
+function createTradeContract(client, input, active, now) {
+  var _a, _b, _c, _d;
+  const wantRes = String((_a = input.wantRes) != null ? _a : "");
+  const payRes = String((_b = input.payRes) != null ? _b : "");
+  if (!RESOURCE_IDS3.has(wantRes) || !RESOURCE_IDS3.has(payRes)) throw new GameActionError("Ressource inconnue.");
+  if (wantRes === payRes) throw new GameActionError("Choisis deux ressources diff\xE9rentes.");
+  const wantAmount = amount2(input.wantAmount, "Quantit\xE9 demand\xE9e");
+  const payAmount = amount2(input.payAmount, "Paiement");
+  const hours2 = Math.floor(Number(input.hours));
+  if (!(hours2 >= TRADE_CONTRACT_RULES.minHours && hours2 <= TRADE_CONTRACT_RULES.maxHours)) {
+    throw new GameActionError(`D\xE9lai entre ${TRADE_CONTRACT_RULES.minHours} et ${TRADE_CONTRACT_RULES.maxHours} h.`);
+  }
+  if (active >= TRADE_CONTRACT_RULES.maxActive) throw new GameActionError(`${TRADE_CONTRACT_RULES.maxActive} contrats actifs au plus.`);
+  const { min, max } = priceBounds(payRes, payAmount, wantRes);
+  if (wantAmount < min || wantAmount > max) {
+    throw new GameActionError(`Prix hors limites : pour ${formatInt(payAmount)} ${label2(payRes)}, demande entre ${formatInt(min)} et ${formatInt(max)} ${label2(wantRes)}.`);
+  }
+  const targetUid = String((_c = input.targetUid) != null ? _c : "").slice(0, 40);
+  if (targetUid && targetUid === client.uid) throw new GameActionError("Tu ne peux pas te livrer toi-m\xEAme.");
+  if (((_d = client.resources[payRes]) != null ? _d : 0) < payAmount) throw new GameActionError(`Pas assez de ${label2(payRes)} pour le paiement.`);
+  client.resources[payRes] -= payAmount;
+  return { targetUid, wantRes, wantAmount, payRes, payAmount, hours: hours2, expiresAtMs: now + TRADE_CONTRACT_RULES.openHours * 36e5 };
+}
+function acceptTradeContract(c, supplier, active, now) {
+  var _a;
+  if (c.status !== "open" || now >= c.expiresAtMs) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (c.clientUid === supplier.uid) throw new GameActionError("Tu ne peux pas accepter ton propre contrat.");
+  if (c.targetUid && c.targetUid !== supplier.uid) throw new GameActionError("Ce contrat est r\xE9serv\xE9 \xE0 un autre commandant.");
+  if (active >= TRADE_CONTRACT_RULES.maxActive) throw new GameActionError(`${TRADE_CONTRACT_RULES.maxActive} contrats actifs au plus.`);
+  const deposit2 = contractDeposit(c.payAmount);
+  if (((_a = supplier.resources[c.payRes]) != null ? _a : 0) < deposit2) throw new GameActionError(`Caution : il faut ${formatInt(deposit2)} ${label2(c.payRes)}.`);
+  supplier.resources[c.payRes] -= deposit2;
+  return { deposit: deposit2, deadlineMs: now + c.hours * 36e5 };
+}
+function cancelTradeContract(c, client) {
+  var _a;
+  if (c.status !== "open") throw new GameActionError("Un livreur a d\xE9j\xE0 accept\xE9 : le contrat ne peut plus \xEAtre annul\xE9.");
+  client.resources[c.payRes] = ((_a = client.resources[c.payRes]) != null ? _a : 0) + c.payAmount;
+}
+function completeTradeContract(c, client, supplier, cargo, now) {
+  var _a, _b;
+  if (c.status !== "accepted" || now > c.deadlineMs) throw new GameActionError("Contrat clos ou \xE9chu.");
+  client.resources[c.wantRes] = ((_a = client.resources[c.wantRes]) != null ? _a : 0) + cargo;
+  supplier.resources[c.payRes] = ((_b = supplier.resources[c.payRes]) != null ? _b : 0) + c.payAmount + c.deposit;
+  bumpStat(supplier, "contractsDelivered");
+  bumpStat(client, "marketTrades");
+  bumpStat(supplier, "marketTrades");
+}
+function failTradeContract(c, client) {
+  var _a;
+  const penalty = c.status === "accepted" ? c.deposit : 0;
+  client.resources[c.payRes] = ((_a = client.resources[c.payRes]) != null ? _a : 0) + c.payAmount + penalty;
+  return penalty;
+}
+function checkDelivery(c, supplierUid, capacity, arriveAtMs) {
+  if (c.status !== "accepted" || c.supplierUid !== supplierUid) throw new GameActionError("Ce contrat ne t'est pas attribu\xE9.");
+  if (c.fleetId) throw new GameActionError("Une livraison est d\xE9j\xE0 en route pour ce contrat.");
+  if (capacity < c.wantAmount) throw new GameActionError(`La soute doit contenir ${formatInt(c.wantAmount)} ressources (actuellement ${formatInt(capacity)}).`);
+  if (arriveAtMs > c.deadlineMs) throw new GameActionError("Ces vaisseaux arriveraient apr\xE8s l'\xE9ch\xE9ance : choisis une flotte plus rapide.");
+}
+
 // src/game/espionage.ts
 var SPY_RULES = {
   /** Unité envoyée en mission d'espionnage. */
@@ -7042,7 +7532,7 @@ function buildSpyReportData(target, queues, targetFleets, tier, now, garrisons =
   const data = {};
   if (tier >= 1) {
     data.resources = Object.fromEntries(
-      Object.entries((_a = target.resources) != null ? _a : {}).map(([res, amount2]) => [res, Math.floor(amount2 != null ? amount2 : 0)])
+      Object.entries((_a = target.resources) != null ? _a : {}).map(([res, amount3]) => [res, Math.floor(amount3 != null ? amount3 : 0)])
     );
   }
   if (tier >= 2) {
@@ -7324,11 +7814,11 @@ function completeFleetReturn(owner, fleet, now) {
     const state = (_b = owner.units[unitId]) != null ? _b : { level: 1, count: 0 };
     owner.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
   }
-  if (fleet.mission === "transport" && fleet.recalled && ((_c = fleet.transport) == null ? void 0 : _c.direction) === "deliver") {
-    for (const [res, amount2] of Object.entries((_d = fleet.transport.cargo) != null ? _d : {})) owner.resources[res] = ((_e = owner.resources[res]) != null ? _e : 0) + (amount2 != null ? amount2 : 0);
+  if ((fleet.mission === "transport" || fleet.mission === "delivery") && fleet.recalled && ((_c = fleet.transport) == null ? void 0 : _c.direction) === "deliver") {
+    for (const [res, amount3] of Object.entries((_d = fleet.transport.cargo) != null ? _d : {})) owner.resources[res] = ((_e = owner.resources[res]) != null ? _e : 0) + (amount3 != null ? amount3 : 0);
   }
-  for (const [res, amount2] of Object.entries((_f = fleet.loot) != null ? _f : {})) {
-    owner.resources[res] = ((_g = owner.resources[res]) != null ? _g : 0) + (amount2 != null ? amount2 : 0);
+  for (const [res, amount3] of Object.entries((_f = fleet.loot) != null ? _f : {})) {
+    owner.resources[res] = ((_g = owner.resources[res]) != null ? _g : 0) + (amount3 != null ? amount3 : 0);
   }
   const lootTotal = Object.values((_h = fleet.loot) != null ? _h : {}).reduce((a, b) => a + (b != null ? b : 0), 0);
   if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
@@ -7355,6 +7845,8 @@ function returnMessage(fleet, lootTotal) {
       return { title: "Retour de la traque d'\xE9lite", message: `Les survivants de l'assaut sur ${fleet.targetPseudo} sont rentr\xE9s.` };
     case "transport":
       return ((_a = fleet.transport) == null ? void 0 : _a.direction) === "collect" && !fleet.recalled ? { title: "Transport rentr\xE9", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatri\xE9es de ${fleet.targetPseudo}.` : `Rien \xE0 rapatrier de ${fleet.targetPseudo}.` } : { title: "Transport rentr\xE9", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
+    case "delivery":
+      return fleet.recalled || lootTotal > 0 ? { title: "Livraison revenue", message: `Tes vaisseaux sont revenus de chez ${fleet.targetPseudo} avec la cargaison du contrat.` } : { title: "Livreurs rentr\xE9s", message: `Tes vaisseaux de livraison sont revenus de chez ${fleet.targetPseudo}.` };
     case "garrison":
       return { title: "Garnison rentr\xE9e", message: `Ta garnison stationn\xE9e chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -7425,7 +7917,10 @@ function performLaunch(req) {
     };
   } else if (mission === "transport") out = launchTransport(owner, req.fleet, (_l = req.transport) != null ? _l : {}, now);
   else if (mission === "bounty") out = launchBounty(owner, (_m = req.bountyId) != null ? _m : "", req.fleet, now);
-  else if (mission === "elite") {
+  else if (mission === "delivery") {
+    if (!target || !req.delivery) throw new GameActionError("Contrat introuvable.");
+    out = launchDelivery(owner, target, req.fleet, req.delivery, now);
+  } else if (mission === "elite") {
     const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'\xE9lite.");
     out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: (_n = req.eliteName) != null ? _n : "Proie d'\xE9lite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 6e4), defenderNotifications: [] };
   } else throw new GameActionError("Mission inconnue.");
@@ -7470,6 +7965,24 @@ function launchTransport(owner, raw, req, now) {
   return {
     attacker: owner,
     fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: colony.id, pseudo: colony.name }, "transport", units, now, arriveAtMs)), { transport: { direction, colonyId: colony.id, cargo } }),
+    defenderNotifications: []
+  };
+}
+function launchDelivery(owner, client, raw, contract, now) {
+  var _a;
+  if (contract.fleetId) throw new GameActionError("Une livraison est d\xE9j\xE0 en route pour ce contrat.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
+  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  checkDelivery(contract, owner.uid, capacity, arriveAtMs);
+  if (((_a = owner.resources[contract.wantRes]) != null ? _a : 0) < contract.wantAmount) throw new GameActionError("Ressources insuffisantes pour cette livraison.");
+  owner.resources[contract.wantRes] -= contract.wantAmount;
+  return {
+    attacker: owner,
+    fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: client.uid, pseudo: client.pseudo }, "delivery", units, now, arriveAtMs)), {
+      transport: { direction: "deliver", colonyId: "", cargo: { [contract.wantRes]: contract.wantAmount }, contractId: contract.id }
+    }),
     defenderNotifications: []
   };
 }
@@ -8301,7 +8814,7 @@ function performAttack(input) {
     defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_p = def3.resources) != null ? _p : {}).map(([res, amount2]) => [res, Math.max(0, (amount2 != null ? amount2 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
+      Object.entries((_p = def3.resources) != null ? _p : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
     )
   }));
   const aegis = combat.outcome === "attacker_win" && Object.values((_q = combat.loot) != null ? _q : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
@@ -8324,8 +8837,12 @@ function performAttack(input) {
     }
     def3.resources[res] = Math.max(0, ((_u = def3.resources[res]) != null ? _u : 0) - (amt != null ? amt : 0));
   }
-  bumpStat(attacker, "powerDestroyed", Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels)));
-  bumpStat(def3, "powerDestroyed", Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels)));
+  const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels));
+  const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
+  bumpStat(attacker, "powerDestroyed", destroyedByAttacker);
+  bumpStat(def3, "powerDestroyed", destroyedByDefender);
+  addSeasonPower(attacker, destroyedByAttacker, now);
+  addSeasonPower(def3, destroyedByDefender, now);
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }
@@ -8718,11 +9235,11 @@ function addSeenAnnouncements(current2, ids) {
 }
 
 // src/game/actions.ts
-var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
+var RESOURCE_IDS4 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
-function positiveInt(value, label2) {
+function positiveInt(value, label3) {
   const n = Math.floor(Number(value));
-  if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label2} invalide.`);
+  if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label3} invalide.`);
   return n;
 }
 function pay(player, cost, now, spending = true) {
@@ -8858,13 +9375,13 @@ function applyAction(s, action) {
     }
     case "trade": {
       const { sellId, buyId } = action;
-      if (!RESOURCE_IDS2.has(sellId) || !RESOURCE_IDS2.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
-      const amount2 = positiveInt(action.amount, "Montant");
-      if (((_k = player.resources[sellId]) != null ? _k : 0) < amount2) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
-      const gained = Math.floor(amount2 * getTradeRate(sellId, buyId));
-      player.resources[sellId] -= amount2;
+      if (!RESOURCE_IDS4.has(sellId) || !RESOURCE_IDS4.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
+      const amount3 = positiveInt(action.amount, "Montant");
+      if (((_k = player.resources[sellId]) != null ? _k : 0) < amount3) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
+      const gained = Math.floor(amount3 * getTradeRate(sellId, buyId));
+      player.resources[sellId] -= amount3;
       player.resources[buyId] = ((_l = player.resources[buyId]) != null ? _l : 0) + gained;
-      bumpStat(player, "traded", amount2);
+      bumpStat(player, "traded", amount3);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return gained;
     }
@@ -8949,6 +9466,10 @@ function applyAction(s, action) {
     }
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
+    case "talentLearn":
+      return learnTalent(player, action.talentId);
+    case "talentReset":
+      return resetTalents(player, now);
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
@@ -8980,7 +9501,7 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   const resources = {};
   for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
     const n = Math.floor(Number(raw));
-    if (!RESOURCE_IDS2.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
+    if (!RESOURCE_IDS4.has(res) || !Number.isFinite(n) || n < 0) throw new GameActionError("Ressources invalides.");
     if (n > 0) resources[res] = n;
   }
   if (Object.keys(resources).length === 0) throw new GameActionError("S\xE9lectionne au moins une ressource \xE0 envoyer.");
@@ -9021,7 +9542,7 @@ function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
   }
   for (const [res, amt] of Object.entries((_b = report.loot) != null ? _b : {})) {
     const key = res;
-    if (RESOURCE_IDS2.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
+    if (RESOURCE_IDS4.has(key)) player.resources[key] = Math.max(0, ((_c = player.resources[key]) != null ? _c : 0) - (Number(amt) || 0));
   }
   if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
   else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
@@ -9041,7 +9562,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
   const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
     const n = Math.floor(Number(amt));
-    if (RESOURCE_IDS2.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+    if (RESOURCE_IDS4.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
   }
   notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
   return { player, queues, notifications };
@@ -9175,7 +9696,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         var _a;
         return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
       }))),
-      ranks: [...families.entries()].map(([label2, count2]) => ({ label: label2, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
+      ranks: [...families.entries()].map(([label3, count2]) => ({ label: label3, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
       medianXp: median2(players.map((p) => {
         var _a;
         return (_a = p.xp) != null ? _a : 0;
@@ -9337,7 +9858,7 @@ function computeBalance(players, reports, now, windowDays) {
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
     byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY8]);
   });
-  const rankAge = [...byFamily.entries()].map(([label2, ages]) => ({ label: label2, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+  const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
   recent.forEach((r) => {
     var _a2;
@@ -9373,14 +9894,14 @@ function computeBalance(players, reports, now, windowDays) {
   const anomalies = [];
   for (const r of RESOURCE_LIST) {
     for (const p of players) {
-      const amount2 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
-      if (amount2 < 1e6) continue;
+      const amount3 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
+      if (amount3 < 1e6) continue;
       const others = median2(players.filter((o) => o !== p).map((o) => {
         var _a2, _b2;
         return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
       }));
-      const ratio = others > 0 ? amount2 / others : Infinity;
-      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount2), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
+      const ratio = others > 0 ? amount3 / others : Infinity;
+      if (ratio >= 20) anomalies.push({ pseudo: p.pseudo, resource: r.name, amount: Math.floor(amount3), ratio: Number.isFinite(ratio) ? Math.round(ratio) : 0 });
     }
   }
   anomalies.sort((a, b) => b.amount - a.amount);
@@ -9483,7 +10004,7 @@ function resetPlayerState(player, options, now) {
   var _a, _b, _c, _d, _e, _f, _g;
   const fresh = defaultPlayerState(player.uid, player.pseudo);
   const resources = __spreadValues({}, fresh.resources);
-  for (const [res, amount2] of Object.entries(options.starterKit)) resources[res] = ((_a = resources[res]) != null ? _a : 0) + amount2;
+  for (const [res, amount3] of Object.entries(options.starterKit)) resources[res] = ((_a = resources[res]) != null ? _a : 0) + amount3;
   const next = __spreadProps(__spreadValues({}, fresh), {
     uid: player.uid,
     pseudo: player.pseudo,
@@ -9557,93 +10078,15 @@ var GAME_FIELDS = [
   "relics",
   "synthesis",
   "profileStyle",
+  "renamed",
   "seasonPass",
   "referral",
   "vacation",
   "chronicle",
-  "announcementsSeen"
+  "announcementsSeen",
+  "talents"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
-
-// src/game/market.ts
-var MARKET_RULES = {
-  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), retirée du jeu. */
-  taxPct: 0.05,
-  /** Taxe entre membres d'une même alliance. */
-  allianceTaxPct: 0.02,
-  /** Offres ouvertes par joueur. */
-  maxOpenOffers: 5,
-  /** Offres acceptées par joueur et par jour (UTC). */
-  maxBuysPerDay: 20,
-  /** Durée de vie d'une offre (h) ; à l'expiration, le vendeur est remboursé. */
-  offerHours: 48,
-  /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
-  priceBand: 3
-};
-var RESOURCE_IDS3 = new Set(RESOURCE_LIST.map((r) => r.id));
-var label = (res) => {
-  var _a, _b;
-  return (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name.toLowerCase()) != null ? _b : res;
-};
-function amount(raw, what) {
-  const n = Math.floor(Number(raw));
-  if (!Number.isFinite(n) || n <= 0 || n > 1e13) throw new GameActionError(`${what} invalide.`);
-  return n;
-}
-function priceBounds(giveRes, giveAmount, wantRes) {
-  const reference = giveAmount * getTradeRate(giveRes, wantRes);
-  const band = Math.max(1, MARKET_RULES.priceBand);
-  return { min: Math.max(1, Math.ceil(reference / band)), max: Math.floor(reference * band), reference: Math.round(reference) };
-}
-function marketTax(wantAmount, sameAlliance) {
-  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct));
-}
-function createOffer(seller, input, openOffers, now) {
-  var _a, _b, _c;
-  const giveRes = String((_a = input.giveRes) != null ? _a : "");
-  const wantRes = String((_b = input.wantRes) != null ? _b : "");
-  if (!RESOURCE_IDS3.has(giveRes) || !RESOURCE_IDS3.has(wantRes)) throw new GameActionError("Ressource inconnue.");
-  if (giveRes === wantRes) throw new GameActionError("Choisis deux ressources diff\xE9rentes.");
-  const giveAmount = amount(input.giveAmount, "Quantit\xE9 propos\xE9e");
-  const wantAmount = amount(input.wantAmount, "Quantit\xE9 demand\xE9e");
-  if (openOffers >= MARKET_RULES.maxOpenOffers) throw new GameActionError(`Tu as d\xE9j\xE0 ${MARKET_RULES.maxOpenOffers} offres ouvertes : annule-en une ou attends qu'elles partent.`);
-  const { min, max } = priceBounds(giveRes, giveAmount, wantRes);
-  if (wantAmount < min || wantAmount > max) {
-    throw new GameActionError(`Prix hors limites : pour ${formatInt(giveAmount)} ${label(giveRes)}, demande entre ${formatInt(min)} et ${formatInt(max)} ${label(wantRes)}.`);
-  }
-  if (((_c = seller.resources[giveRes]) != null ? _c : 0) < giveAmount) throw new GameActionError(`Pas assez de ${label(giveRes)}.`);
-  seller.resources[giveRes] -= giveAmount;
-  return { giveRes, giveAmount, wantRes, wantAmount, expiresAtMs: now + MARKET_RULES.offerHours * 36e5 };
-}
-function acceptOffer(offer, buyer, seller, buysToday, now) {
-  var _a, _b, _c, _d;
-  if (offer.status !== "open" || now >= offer.expiresAtMs) throw new GameActionError("Cette offre n'est plus disponible.");
-  if (offer.sellerId === buyer.uid) throw new GameActionError("Tu ne peux pas accepter ta propre offre.");
-  if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} achats par jour atteinte.`);
-  if (((_a = buyer.resources[offer.wantRes]) != null ? _a : 0) < offer.wantAmount) throw new GameActionError(`Pas assez de ${label(offer.wantRes)} pour cette offre.`);
-  const sameAlliance = !!offer.sellerAllianceId && offer.sellerAllianceId === ((_b = buyer.allianceId) != null ? _b : "");
-  const tax = marketTax(offer.wantAmount, sameAlliance);
-  buyer.resources[offer.wantRes] -= offer.wantAmount;
-  buyer.resources[offer.giveRes] = ((_c = buyer.resources[offer.giveRes]) != null ? _c : 0) + offer.giveAmount;
-  seller.resources[offer.wantRes] = ((_d = seller.resources[offer.wantRes]) != null ? _d : 0) + offer.wantAmount - tax;
-  bumpStat(buyer, "marketTrades");
-  bumpStat(seller, "marketTrades");
-  bumpStat(seller, "marketTax", tax);
-  bumpStat(buyer, "marketVolume", offer.giveAmount);
-  recordChronicle(buyer, "market", now);
-  bumpStat(seller, "marketVolume", offer.wantAmount - tax);
-  return { tax, sameAlliance };
-}
-function refundOffer(offer, seller) {
-  var _a;
-  seller.resources[offer.giveRes] = ((_a = seller.resources[offer.giveRes]) != null ? _a : 0) + offer.giveAmount;
-}
-function describeAmount(res, n) {
-  return `${formatInt(n)} ${label(res)}`;
-}
-function utcDayStart(now) {
-  return Math.floor(now / 864e5) * 864e5;
-}
 
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles"];
@@ -9766,10 +10209,10 @@ function applyStaffTitle(player, role, display = false) {
   const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
   const staffLabels = Object.values(STAFF_LABELS);
   const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
-  const label2 = role ? STAFF_LABELS[role] : null;
-  player.titles = label2 ? [{ label: label2, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
-  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label2) player.activeTitle = "";
-  if (label2 && display) player.activeTitle = label2;
+  const label3 = role ? STAFF_LABELS[role] : null;
+  player.titles = label3 ? [{ label: label3, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
+  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label3) player.activeTitle = "";
+  if (label3 && display) player.activeTitle = label3;
   return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
 }
 
@@ -10033,11 +10476,11 @@ function challengeMetrics(player) {
     bounties: (_g = s.bounties) != null ? _g : 0
   };
 }
-function addContribution(ch, uid, pseudo, amount2, now) {
+function addContribution(ch, uid, pseudo, amount3, now) {
   var _a, _b;
-  if (ch.status !== "active" || !(amount2 > 0) || now < ch.startMs || now >= ch.endMs) return ch;
+  if (ch.status !== "active" || !(amount3 > 0) || now < ch.startMs || now >= ch.endMs) return ch;
   const prev = (_b = (_a = ch.contributions[uid]) == null ? void 0 : _a.amount) != null ? _b : 0;
-  return __spreadProps(__spreadValues({}, ch), { total: ch.total + amount2, contributions: __spreadProps(__spreadValues({}, ch.contributions), { [uid]: { pseudo, amount: prev + amount2 } }) });
+  return __spreadProps(__spreadValues({}, ch), { total: ch.total + amount3, contributions: __spreadProps(__spreadValues({}, ch.contributions), { [uid]: { pseudo, amount: prev + amount3 } }) });
 }
 function challengeRanking(ch) {
   return Object.entries(ch.contributions).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.amount - a.amount);
@@ -10710,6 +11153,34 @@ function dailyMemberOf(p, now) {
     production4h: productionHours(p, ALLIANCE_DAILY_RULES.treasuryHours),
     fleetPower: computeFullPower((_b = p.units) != null ? _b : {}, (_c = p.techLevels) != null ? _c : {}, OFFENSIVE_UNITS, ["attack"])
   };
+}
+
+// src/game/rename.ts
+var RENAME_RULES = {
+  amber: 10,
+  minLength: 3,
+  maxLength: 20
+};
+function pseudoLogin(pseudo) {
+  return pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+function cleanNewPseudo(raw) {
+  const pseudo = String(raw != null ? raw : "").trim().replace(/\s+/g, " ");
+  if (pseudo.length > RENAME_RULES.maxLength) throw new GameActionError(`Le pseudo fait ${RENAME_RULES.maxLength} caract\xE8res au plus.`);
+  if (pseudoLogin(pseudo).length < RENAME_RULES.minLength) throw new GameActionError("Le pseudo doit contenir au moins 3 caract\xE8res valides (lettres, chiffres, - ou _).");
+  return pseudo;
+}
+function renamePlayer(player, raw, now) {
+  if (player.renamed) throw new GameActionError("Tu as d\xE9j\xE0 chang\xE9 de pseudo.");
+  const pseudo = cleanNewPseudo(raw);
+  if (pseudo === player.pseudo) throw new GameActionError("C'est d\xE9j\xE0 ton pseudo.");
+  const st = bountyState(player);
+  if (st.amber < RENAME_RULES.amber) throw new GameActionError(`Il te faut ${RENAME_RULES.amber} Ambre.`);
+  st.amber -= RENAME_RULES.amber;
+  player.bounties = st;
+  player.renamed = { fromPseudo: player.pseudo, atMs: now };
+  player.pseudo = pseudo;
+  return { pseudo, login: pseudoLogin(pseudo) };
 }
 
 // src/server/hooksEntry.ts
