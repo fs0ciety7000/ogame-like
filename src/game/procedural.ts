@@ -137,9 +137,11 @@ export interface WorldDigest {
   passTiers: number;
   passFinishedShare: number;
   chapterShare: number;
+  /** v5.5 : nombre médian de membres actifs par alliance (saga d'alliance). */
+  allianceSizeMedian?: number;
 }
 
-type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs">>;
+type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
 
 function parisDay(now: number): number {
   return new Date(now + parisOffsetMs(now)).getUTCDate();
@@ -186,6 +188,7 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     passTiers,
     passFinishedShare: share(tiers.filter((t) => t >= passTiers).length),
     chapterShare: month ? share(states.filter((s) => month.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    allianceSizeMedian: median(Object.values(active.reduce<Record<string, number>>((acc, p) => (p.allianceId ? { ...acc, [p.allianceId]: (acc[p.allianceId] ?? 0) + 1 } : acc), {}))),
   };
 }
 
@@ -518,7 +521,7 @@ export interface GenerateOptions {
 export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const rng = seededRandom(`${o.monthId}:${o.variant ?? 0}`);
   const d = o.digest;
-  const recent = [...o.existing].sort((a, b) => a.id.localeCompare(b.id)).slice(-2);
+  const recent = [...o.existing].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(-2);
   const recentArch = recent.map((m) => m.auto?.archetype ?? ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
   const arch = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
   const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));

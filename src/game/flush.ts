@@ -1,3 +1,4 @@
+import { finishAllTimers } from "@/game/adminTools";
 import { advanceColonies } from "@/game/colonies";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { advanceResources, missionRewards } from "@/game/economy";
@@ -93,6 +94,9 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   ensureSeasonRollover(player, now);
   // v3.5 : colonies (production, constructions, défenses) et colonisation.
   notifications.push(...advanceColonies(player, now));
+
+  // v5.5 : compte test, tout ce qui est en cours se termine maintenant.
+  if (player.testMode) finishAllTimers(queues, now);
 
   // --- Bâtiments en construction ---
   const finishedAt: Record<string, number> = {};

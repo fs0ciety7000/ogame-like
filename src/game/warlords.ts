@@ -59,6 +59,8 @@ export const WARLORD_RULES = {
   minPower: 3000,
   /** Croissance maximale par jour, en part de la puissance visée. */
   growthPerDay: 0.08,
+  /** v5.5 : jamais plus de ce multiple de la meilleure défense de joueur ; au-delà, l'armée fond (même rythme que la croissance). */
+  maxDefenseRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
   buildingFactor: { weak: 0.8, medium: 1, strong: 1.25 } as Record<WarlordTier, number>,
   buildingLevelEveryHours: 12,
@@ -318,6 +320,8 @@ export interface WarlordReference {
   medianXp: number;
   maxXp: number;
   medianSeasonXp: number;
+  /** v5.5 : meilleure défense de base parmi les actifs (plafond des seigneurs). */
+  maxDefense?: number;
   /** Niveau moyen de chaque bâtiment chez les actifs. */
   buildings: Record<string, number>;
 }
@@ -345,6 +349,7 @@ export function warlordReference(actives: PlayerState[]): WarlordReference {
     medianXp: median(xps),
     maxXp: xps.length ? Math.max(...xps) : 0,
     medianSeasonXp: median(humans.map((p) => p.seasonXp ?? 0)),
+    maxDefense: humans.length ? Math.max(0, ...humans.map((p) => Math.round(homeDefensePower(p.units ?? {}, p.techLevels ?? {})))) : 0,
     buildings,
   };
 }
@@ -366,7 +371,9 @@ export function tierFactor(d: Pick<WarlordDef, "id" | "tier">): number {
 
 export function warlordTargetPower(d: WarlordDef, ref: WarlordReference, settings: WarlordSettings = config.settings): number {
   const base = d.tier === "strong" ? ref.max : ref.median;
-  return Math.max(WARLORD_RULES.minPower, Math.round(base * tierFactor(d) * (settings.powerFactor || 1)));
+  const target = Math.round(base * tierFactor(d) * (settings.powerFactor || 1));
+  const cap = (ref.maxDefense ?? 0) > 0 ? ref.maxDefense! * WARLORD_RULES.maxDefenseRatio : Infinity;
+  return Math.max(WARLORD_RULES.minPower, Math.round(Math.min(target, cap)));
 }
 
 export function warlordTargetXp(d: WarlordDef, ref: WarlordReference): number {
@@ -430,6 +437,14 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
     const state = npc.units[id] ?? { level: 1, count: 0 };
     const count = state.count ?? 0;
     if (count < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count + Math.ceil(want * step)) };
+  }
+  // v5.5 : armée trop forte (plafond relevé ou joueurs partis) : elle fond d'une part de l'excédent.
+  if (rt.seeded && empirePower(npc) > target * 1.1) {
+    for (const [id, state] of Object.entries(npc.units)) {
+      const want = desired[id] ?? 0;
+      const count = state?.count ?? 0;
+      if (count > want) npc.units[id] = { ...state, count: Math.max(want, count - Math.ceil((count - want) * step)) };
+    }
   }
   // Bâtiments : niveau moyen des actifs × facteur du palier, un niveau par 12 h au plus.
   const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 3600_000;

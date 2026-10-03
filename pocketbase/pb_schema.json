@@ -360,6 +360,11 @@
         "required": false,
         "maxSize": 2000,
         "presentable": false
+      },
+      {
+        "name": "testMode",
+        "type": "bool",
+        "required": false
       }
     ],
     "indexes": [

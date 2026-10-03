@@ -7,7 +7,7 @@ import { allianceShieldBonus } from "@/game/alliances";
 import { ASCENSION_RULES } from "@/game/ascension";
 import { COMMON_RESOURCES, ECONOMY_RULES, economySnapshot, getFleetUpkeep, KESH_BOOST_PCT, productionBonuses, protectedAmount, storageCapacityOf } from "@/game/economy";
 import { playerModifiers } from "@/game/modifiers";
-import { FACTIONS, pirateState, raidPower } from "@/game/pirates";
+import { FACTIONS, PIRATE_RULES, pirateState, raidPower } from "@/game/pirates";
 import { computeCombatXp, PVP_RULES } from "@/game/pvp";
 import { DEBRIS_RULES } from "@/game/debris";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -326,7 +326,8 @@ XP : vainqueur +40 × rapport de force (×0,1 à ×2) · attaquant battu −20 �
       <Block id="menaces" title="Raids et seigneurs de guerre" icon={Skull} intro="Les menaces se règlent sur ta propre force : elles restent à ta portée sans jamais devenir triviales.">
         <Formula>
           {`raid de faction = max(plancher + par niveau × niveaux de bâtiments,
-                      cible × (part de base + part par notoriété × notoriété))
+                      cible × (part de base + part par notoriété × notoriété) × adaptation)
+adaptation : +${PIRATE_RULES.adaptUp} par raid repoussé, −${PIRATE_RULES.adaptDown} par raid perdu, entre ×${PIRATE_RULES.adaptMin} et ×${PIRATE_RULES.adaptMax}
 cible : ta défense (base) ou ta flotte à quai (selon la faction)
 seigneur de guerre : attaque avec ${pct(WARLORD_RULES.attackPowerMin)} à ${pct(WARLORD_RULES.attackPowerMax)} de ta défense`}
         </Formula>
@@ -337,7 +338,7 @@ seigneur de guerre : attaque avec ${pct(WARLORD_RULES.attackPowerMin)} à ${pct(
             f.raid.target === "fleet" ? "flotte" : "base",
             pct(f.raid.basePct),
             pct(f.raid.perNotorietyPct),
-            p ? n(raidPower(f, p, pirateState(p, f.id).notoriety)) : f.raid.maxNotoriety,
+            p ? n(raidPower(f, p, pirateState(p, f.id).notoriety, pirateState(p, f.id).adapt)) : f.raid.maxNotoriety,
           ])}
         />
         {p && <Mine>{<Row label="Niveaux de bâtiments cumulés" value={buildingLevels} hint="servent au plancher des raids" />}</Mine>}

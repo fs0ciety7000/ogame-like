@@ -158,7 +158,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
   const floor = xpForLevel(level);
   const ceil = xpForLevel(level + 1);
   const movedAt = st.movedAtMs[def.id] ?? 0;
-  const cooldown = movedAt ? movedAt + COMMANDER_RULES.swapCooldownHours * 3600_000 - now : 0;
+  const cooldown = movedAt && !player.testMode ? movedAt + COMMANDER_RULES.swapCooldownHours * 3600_000 - now : 0;
   const slots = commanderSlots(player);
 
   const act = async (task: () => Promise<unknown>, msg: string) => {

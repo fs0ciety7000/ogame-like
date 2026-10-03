@@ -11,12 +11,15 @@ import type { PlayerState } from "@/types/game";
    l'affichage.
 ===================================================== */
 
-type TimePlayer = Pick<PlayerState, "techLevels" | "allianceResearch"> & Partial<Pick<PlayerState, "ascensions" | "ascendedAtMs" | "commanders" | "relics">>;
+type TimePlayer = Pick<PlayerState, "techLevels" | "allianceResearch"> & Partial<Pick<PlayerState, "ascensions" | "ascendedAtMs" | "commanders" | "relics" | "testMode">>;
 
 export function playerBuildTimeFactor(player: TimePlayer, now: number): number {
+  // v5.5 : compte test, chantier instantané.
+  if (player.testMode) return 0;
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 
 export function playerResearchTimeFactor(player: TimePlayer, now: number): number {
+  if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }

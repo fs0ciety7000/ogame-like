@@ -173,8 +173,8 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
                 <p className="text-xs text-slate-400">{nextIn !== null ? `Prochaine traque possible dans ~${formatDuration(nextIn)}.` : "Rien en vue pour l'instant."}</p>
               )}
               <p className="text-[11px] text-slate-500">
-                Force du prochain raid : {formatCompact(raidPower(faction, player, st.notoriety))} ({fleetOnly ? "ta flotte" : "tes défenses"} :{" "}
-                {formatCompact(targetPower(faction, player))}).
+                Force du prochain raid : {formatCompact(raidPower(faction, player, st.notoriety, st.adapt))} ({fleetOnly ? "ta flotte" : "tes défenses"} :{" "}
+                {formatCompact(targetPower(faction, player))}){st.adapt !== 1 && <> · adaptation ×{st.adapt.toFixed(2).replace(".", ",")} ({st.adapt > 1 ? "tu repousses ses raids, elle se renforce" : "elle a gagné, elle relâche la pression"})</>}.
               </p>
             </div>
             <div className="space-y-1">

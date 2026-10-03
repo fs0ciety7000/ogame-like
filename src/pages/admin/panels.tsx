@@ -20,13 +20,14 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
 import { MythicRelicsCard, TerritoriesAdminCard } from "@/pages/admin/EndgameCards";
 import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
+import { PlayerToolsCard } from "@/pages/admin/PlayerToolsCard";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -214,6 +215,10 @@ export function RulesPanel() {
             step={1}
             onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, maxOpenOffers: v ?? 0 } }))}
           />
+          <CheckboxField label="Courtier du Comptoir (marchand PNJ) actif" checked={rules.market.makerEnabled} onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, makerEnabled: v } }))} />
+          <NumberField label="Courtier : intervient sous N offres par ressource" value={rules.market.makerMinOffers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, makerMinOffers: v ?? 0 } }))} />
+          <NumberField label="Courtier : écart au taux du comptoir (0,12 = 12 %)" value={rules.market.makerSpread} min={0} step={0.01} onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, makerSpread: v ?? 0 } }))} />
+          <NumberField label="Courtier : taille d'une offre (h de production médiane)" value={rules.market.makerSizeHours} min={0} step={0.5} onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, makerSizeHours: v ?? 0 } }))} />
           <NumberField
             label="Achats par joueur et par jour"
             value={rules.market.maxBuysPerDay}
@@ -782,6 +787,7 @@ export function PlayersPanel() {
                 </Button>
               </div>
             </div>
+            <PlayerToolsCard player={draft} onDone={() => void reload()} />
             {gameStateChanged && (
               <label className="flex flex-col gap-1 text-xs text-gold-glow">
                 Motif de la modification (obligatoire, consigné au journal)

@@ -403,17 +403,62 @@ routerAdd("GET", "/api/cosmic/admin/stats", (e) => {
 routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);
   if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
-  const game = db.loadGame();
-  db.applyContent($app, game);
-  const now = Date.now();
-  const plain = (r) => Object.assign(db.toPlain(r), { uid: r.id });
-  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map(plain);
-  const warlords = $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).map(plain);
-  const reports = $app
-    .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
-    .map((r) => ({ attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") }));
-  return e.json(200, game.computeLiveBalance(players, warlords, reports, now, 30));
+  return e.json(200, db.liveBalance(Date.now(), true).live);
 }, $apis.requireAuth("users", "_superusers"));
+
+/** POST /api/cosmic/admin/balance/snapshot — photo du jour tout de suite (remplace celle du jour). */
+routerAdd("POST", "/api/cosmic/admin/balance/snapshot", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.balanceHistoryTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
+// v5.5 : saga d'alliance (classement chaque heure, clôture au changement de mois).
+cronAdd("cosmic_alliance_saga", "53 * * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).allianceSagaTick(Date.now());
+    if (out.generated || out.closed) console.log(`[cosmic] saga d'alliance : ${out.generated ? `écrite (${out.generated})` : ""}${out.closed ? ` close (${out.closed})` : ""}`);
+  } catch (err) {
+    console.log(`[cosmic] saga d'alliance : ${err}`);
+  }
+});
+
+/** POST /api/cosmic/admin/market-maker — passe du Courtier du Comptoir tout de suite. */
+routerAdd("POST", "/api/cosmic/admin/market-maker", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { created: db.marketMakerTick(Date.now()) });
+}, $apis.requireAuth("users", "_superusers"));
+
+/** POST /api/cosmic/admin/alliance-saga — recalcul immédiat (et écriture de la saga du mois si elle manque). */
+routerAdd("POST", "/api/cosmic/admin/alliance-saga", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.allianceSagaTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
+// v5.5 : Courtier du Comptoir (marchand PNJ) : une passe par heure.
+cronAdd("cosmic_market_maker", "47 * * * *", () => {
+  try {
+    const n = require(`${__hooks}/cosmic_db.js`).marketMakerTick(Date.now());
+    if (n > 0) console.log(`[cosmic] courtier : ${n} offre(s) publiée(s)`);
+  } catch (err) {
+    console.log(`[cosmic] courtier : ${err}`);
+  }
+});
+
+// v5.5 : photo quotidienne des indicateurs d'équilibrage (historique de 180 jours).
+cronAdd("cosmic_balance_history", "11 3 * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).balanceHistoryTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] historique d'équilibrage : ${err}`);
+  }
+});
+
+/* ---------- v5.5 : actions d'administration sur un joueur ---------- */
+
+routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAction(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- v5.4 : générateur procédural ---------- */
 

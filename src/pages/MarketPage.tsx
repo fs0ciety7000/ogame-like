@@ -5,6 +5,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Clock, Store } from "lucide-react";
+import { isMarketMaker } from "@/game/marketMaker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +66,11 @@ export function MarketPage() {
   const bounds = giveAmount > 0 && giveRes !== wantRes ? priceBounds(giveRes, giveAmount, wantRes) : null;
   const priceOk = !!bounds && wantAmount >= bounds.min && wantAmount <= bounds.max;
   const myOpen = data.open.filter((o) => o.sellerId === uid);
-  const others = useMemo(() => data.open.filter((o) => o.sellerId !== uid && (!filter || o.giveRes === filter || o.wantRes === filter)), [data.open, uid, filter]);
+  // v5.5 : les offres du Courtier du Comptoir passent après celles des joueurs.
+  const others = useMemo(
+    () => data.open.filter((o) => o.sellerId !== uid && (!filter || o.giveRes === filter || o.wantRes === filter)).sort((a, b) => Number(isMarketMaker(a.sellerId)) - Number(isMarketMaker(b.sellerId))),
+    [data.open, uid, filter],
+  );
 
   if (!player) return null;
   const have = (res: string) => player.resources[res as ResourceId] ?? 0;
@@ -217,7 +222,13 @@ export function MarketPage() {
                 return (
                   <div key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
                     <span className="min-w-0 truncate text-xs text-slate-400">
-                      <PlayerName uid={o.sellerId} pseudo={o.sellerPseudo} allianceId={o.sellerAllianceId || null} />
+                      {isMarketMaker(o.sellerId) ? (
+                        <span title="Marchand du jeu : il publie quand le marché est presque vide, un peu au-dessus (vente) ou en dessous (achat) du taux du comptoir.">
+                          {o.sellerPseudo} <HudTag tone="gold" className="ml-1">PNJ</HudTag>
+                        </span>
+                      ) : (
+                        <PlayerName uid={o.sellerId} pseudo={o.sellerPseudo} allianceId={o.sellerAllianceId || null} />
+                      )}
                       {ally && <HudTag tone="mint" className="ml-1.5">Allié</HudTag>}
                     </span>
                     {o.kind === "buy" ? (

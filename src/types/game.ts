@@ -84,6 +84,8 @@ export interface PlayerState {
   defeats: number;
   playtimeSeconds: number;
   /** v4.6 : dernière synchro réelle du navigateur (arrondie à 2 min). */
+  /** v5.5 : compte test (administration) : chantiers instantanés, aucun délai d'officier. */
+  testMode?: boolean;
   lastActiveMs?: number;
   resourcesUpdatedAtMs: number;
   resourceHistory?: ResourceHistoryPoint[];

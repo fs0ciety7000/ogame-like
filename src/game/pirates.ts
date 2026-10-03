@@ -280,7 +280,15 @@ export function findFaction(id: string): FactionDef | undefined {
 }
 
 /** Interrupteur général (règles « pirates »). */
-export const PIRATE_RULES = { enabled: true };
+export const PIRATE_RULES = {
+  enabled: true,
+  /** v5.5 : adaptation des raids à la réussite du joueur (par faction) : chaque raid
+   *  repoussé renforce le suivant, chaque défaite l'affaiblit. Équilibre vers 70 % repoussés. */
+  adaptUp: 0.04,
+  adaptDown: 0.1,
+  adaptMin: 0.9,
+  adaptMax: 1.5,
+};
 
 export const PIRATE_OWNER_UID = "pirates";
 /** Cible d'un assaut de repaire : lair_<faction>. */
@@ -308,6 +316,8 @@ export interface PirateState {
   raidsLost: number;
   tributesPaid: number;
   lairsTaken: number;
+  /** v5.5 : multiplicateur d'adaptation des raids (1 = neutre). */
+  adapt: number;
   /** Repère du déclencheur expansion : niveaux de bâtiments à une date. */
   mark?: { atMs: number; value: number } | null;
 }
@@ -328,6 +338,7 @@ function normalize(p: Partial<PirateState> | undefined, maxNotoriety = 8): Pirat
     raidsLost: p?.raidsLost ?? 0,
     tributesPaid: p?.tributesPaid ?? 0,
     lairsTaken: p?.lairsTaken ?? 0,
+    adapt: Number.isFinite(p?.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p!.adapt!)) : 1,
     mark: p?.mark ?? null,
   };
 }
@@ -404,11 +415,12 @@ export function targetPower(faction: FactionDef, player: Pick<PlayerState, "unit
   return faction.raid.target === "fleet" ? homeFleetPower(player) : defensivePower(player);
 }
 
-export function raidPower(faction: FactionDef, player: PlayerState, notoriety: number): number {
+/** `adapt` : multiplicateur d'adaptation du joueur pour cette faction (v5.5). */
+export function raidPower(faction: FactionDef, player: PlayerState, notoriety: number, adapt = 1): number {
   const levels = BUILDINGS.reduce((sum, b) => sum + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
   const pct = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct));
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct * adapt));
 }
 
 /** Activité guerrière récente d'un joueur (calculée par le serveur). */
@@ -569,7 +581,7 @@ export function pirateTick(
 }
 
 function launchRaid(player: PlayerState, faction: FactionDef, st: PirateState, now: number, random: () => number) {
-  const power = raidPower(faction, player, st.notoriety);
+  const power = raidPower(faction, player, st.notoriety, st.adapt);
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -682,6 +694,7 @@ export function resolvePirateRaid(
     }
     st.raidsLost += 1;
     st.notoriety = Math.max(0, st.notoriety - 1);
+    st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
     notifications.push(note("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emporté ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrepôts protégés n'ont rien laissé à prendre.`, now));
   } else {
@@ -693,6 +706,7 @@ export function resolvePirateRaid(
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor((destroyed * faction.bounty.debrisPerPower) / 2) };
     st.raidsWon += 1;
     st.repelled += 1;
+    st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
