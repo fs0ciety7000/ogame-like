@@ -4,6 +4,8 @@ import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { LeaderboardPodium, RankChip } from "@/components/game/LeaderboardPodium";
 import {
   Sword,
   Eye,
@@ -13,6 +15,7 @@ import {
   ShieldCheck,
   ShieldPlus,
   Mail,
+  Crosshair,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -29,7 +32,6 @@ import {
 import { checkAttackAllowed, PVP_RULES } from "@/game/pvp";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { subscribeAlliances } from "@/services/allianceService";
-import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
 import { cn, formatNumber } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
@@ -141,6 +143,16 @@ export function PlayersPage() {
     );
     return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
   }, [players, mode, season]);
+  const reduced = useReducedMotion() ?? false;
+  const displayXpOf = (p: LeaderboardEntry) => (mode === "season" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp);
+  const xpSuffix = mode === "season" ? " de saison" : "";
+  const myRank = ranked.find((p) => p.uid === uid)?.rank ?? null;
+  const showPodium = !search.trim() && ranked.length >= 3 && displayXpOf(ranked[0]) > 0;
+  const jumpToMe = () => {
+    setSearch("");
+    requestAnimationFrame(() => document.getElementById(`rang-${uid}`)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" }));
+  };
+  const topAllianceXp = allianceRanking[0]?.totalXp || 1;
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return ranked;
@@ -163,11 +175,18 @@ export function PlayersPage() {
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
           </TabsList>
         </Tabs>
-        {mode === "season" && (
-          <span className="hud-eyebrow text-slate-500">
-            {seasonLabel(season)}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {mode === "season" && (
+            <span className="hud-eyebrow text-slate-500">
+              {seasonLabel(season)}
+            </span>
+          )}
+          {mode !== "alliances" && myRank && (
+            <Button variant="secondary" size="sm" onClick={jumpToMe}>
+              <Crosshair className="h-3.5 w-3.5" /> Ma position · #{myRank}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="relative">
@@ -196,10 +215,16 @@ export function PlayersPage() {
               Aucune alliance ne correspond à « {search} ».
             </p>
           )}
-          {filteredAlliances.map((a) => (
-            <div key={a.id} className="flex items-center gap-3 p-3">
-              <span className="tabular-mono w-6 text-center text-xs text-slate-500">
-                #{a.rank}
+          {filteredAlliances.map((a, i) => (
+            <motion.div
+              key={a.id}
+              initial={reduced ? false : { opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25, delay: reduced ? 0 : Math.min(i, 15) * 0.035 }}
+              className="flex items-center gap-3 p-3"
+            >
+              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[#e19b6d]" : "text-slate-600")}>
+                {String(a.rank).padStart(2, "0")}
               </span>
               <Flag className="h-4 w-4 shrink-0 text-gold-glow" />
               <div className="flex-1">
@@ -209,15 +234,32 @@ export function PlayersPage() {
                 <p className="text-xs text-slate-500">
                   {a.members.length} membre{a.members.length > 1 ? "s" : ""}
                 </p>
+                <div className="mt-1.5 h-1 max-w-xs overflow-hidden bg-white/10">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-gold-glow/50 to-gold-glow"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.round((a.totalXp / topAllianceXp) * 100)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: reduced ? 0 : 0.15 + Math.min(i, 15) * 0.035 }}
+                  />
+                </div>
               </div>
               <span className="tabular-mono text-sm text-cyan-glow">
                 {formatNumber(a.totalXp)} XP
               </span>
-            </div>
+            </motion.div>
           ))}
         </Card>
       ) : (
-        <Card className="flex flex-col gap-2 p-3">
+        <>
+        {showPodium && (
+          <LeaderboardPodium
+            key={mode}
+            top={ranked.slice(0, 3).map((p) => ({ uid: p.uid, pseudo: p.pseudo, avatar: p.avatar, xp: displayXpOf(p) }))}
+            suffix={xpSuffix}
+            onOpen={(p) => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })}
+          />
+        )}
+        <Card key={mode} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
             <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
           )}
@@ -226,7 +268,7 @@ export function PlayersPage() {
               Aucun joueur ne correspond à « {search} ».
             </p>
           )}
-          {filtered.map((p) => {
+          {filtered.map((p, i) => {
             const isSelf = p.uid === uid;
             const me = players.find((x) => x.uid === uid);
             const attackCheck = isSelf
@@ -253,20 +295,20 @@ export function PlayersPage() {
             const isProtected =
               attackCheck?.reason === "newbie" ||
               attackCheck?.reason === "shield";
-            const displayXp =
-              mode === "season"
-                ? p.seasonId === season
-                  ? p.seasonXp
-                  : 0
-                : p.xp;
+            const displayXp = displayXpOf(p);
             // Rang et insigne suivent l'XP affichée (et donc l'ordre du classement) :
             // en saison, le rang de saison, pas celui de l'XP totale.
             return (
-              <div
+              <motion.div
                 key={p.uid}
+                id={`rang-${p.uid}`}
+                initial={reduced ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: "easeOut", delay: reduced ? 0 : Math.min(i, 20) * 0.03 }}
+                whileHover={reduced ? undefined : { x: 3 }}
                 className={cn(
-                  "relative grid grid-cols-[2.5rem_3rem_1fr_auto] items-center gap-3 border bg-gradient-to-r from-white/[0.035] to-transparent px-3 py-2.5 transition-colors [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] hover:border-cyan-glow/35 hover:from-cyan-glow/[0.08] max-sm:grid-cols-[2rem_2.75rem_1fr] max-sm:gap-2",
-                  isSelf ? "border-cyan-glow/60 from-cyan-glow/[0.12]" : "border-cyan-glow/[0.12]",
+                  "relative grid grid-cols-[2.5rem_3rem_minmax(0,1fr)_11rem_auto] items-center gap-3 border bg-gradient-to-r from-white/[0.035] to-transparent px-3 py-2.5 transition-colors [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] hover:border-cyan-glow/35 hover:from-cyan-glow/[0.08] max-lg:grid-cols-[2.5rem_3rem_minmax(0,1fr)_auto] max-sm:grid-cols-[2rem_2.75rem_1fr] max-sm:gap-2",
+                  isSelf ? "leaderboard-self border-cyan-glow/60 from-cyan-glow/[0.12]" : p.rank <= 3 ? "border-gold-glow/25" : "border-cyan-glow/[0.12]",
                 )}
               >
                 <span
@@ -279,7 +321,6 @@ export function PlayersPage() {
                 </span>
                 <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="relative h-12 w-12 max-sm:h-11 max-sm:w-11">
                   <PlayerAvatar uid={p.uid} pseudo={p.pseudo} file={p.avatar} className="h-full w-full" />
-                  <img src={getRankIcon(displayXp)} alt="" className="absolute -bottom-1.5 -right-1.5 h-6 w-6 object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.9)]" />
                 </button>
                 <div className="min-w-0">
                   <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
@@ -296,13 +337,15 @@ export function PlayersPage() {
                       </span>
                     )}
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {p.activeTitle && <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>}
-                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
-                      {getRankLabel(displayXp)} · {formatNumber(displayXp)} XP{mode === "season" ? " de saison" : ""}
-                    </span>
-                  </div>
+                  {p.activeTitle && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>
+                    </div>
+                  )}
+                  {/* Rang sous le pseudo quand la colonne dédiée n'a pas la place. */}
+                  <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="mt-1.5 lg:hidden" />
                 </div>
+                <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="max-lg:hidden" />
                 <div className="flex items-center divide-x divide-cyan-glow/15 border border-cyan-glow/15 max-sm:col-span-full max-sm:justify-self-end">
                   <Button
                     variant="ghost"
@@ -364,10 +407,11 @@ export function PlayersPage() {
                     <TargetReticle color="var(--color-mint-glow)" />
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </Card>
+        </>
       )}
 
       <PlayerSheetDialog
