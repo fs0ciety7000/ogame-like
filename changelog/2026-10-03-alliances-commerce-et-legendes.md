@@ -19,6 +19,14 @@ Les alliances se disputent la galaxie, le marché s'ouvre aux commandes et aux c
 - **Arbre de talents d'Ascension** (Bâtiments) : chaque ascension donne 3 points à placer dans 3 branches (Économie, Guerre, Logistique) de 5 talents, 3 rangs chacun (+2 % par rang). Tout peut être redistribué une fois par saison.
 - **Reliques mythiques** : une seule par saison, remise au n°1 du classement quand le boss qui la porte tombe (le Léviathan les mois impairs, le boss de saison les mois pairs). Quatre modèles tournent, dont le **Cœur du Léviathan** (+dégâts contre les boss). Elles ne se fusionnent ni ne se recyclent, et passent même quand l'inventaire est plein.
 
+## Colonies
+- **Biomes** : chaque colonie reçoit un biome tiré au hasard à sa fondation (Monde ferreux, Cimetière d'épaves, Marais de nanites ou Nécropole d'IA). Les colonies déjà fondées en reçoivent un aussi.
+- **Gisement** : le biome débloque un bâtiment propre à la colonie qui produit sa ressource rare (acier renforcé, modules cybernétiques, nanites ou fragments d'IA), de 0,1/s au niveau 1 à 3/s au niveau 15. Il s'améliore avec les ressources communes de la colonie ; la production se rapatrie par transport.
+
+## Combats
+- **Attaque contre défense** : chaque flotte hostile en approche (liste des flottes, alerte à 5 minutes, survol sur la galaxie) et chaque ultimatum pirate affichent la puissance d'attaque face à ta défense sur la planète visée, avec un verdict : défenses qui tiennent, combat serré ou défaite probable. L'estimation tient compte du bouclier, de ta posture et de tes bonus (hors garnisons).
+- **Butin détaillé** : les notifications de retour de flotte, de combat, de recyclage, de rapatriement et de raid pirate listent les ressources ressource par ressource (« 5 000 ferraille, 250 nanocomposants… ») au lieu d'un total.
+
 ## Profil
 - **Avatar** : envoie ton image (recadrée en carré). Elle s'affiche sur ta fiche publique. Sans image, un commandant casqué tient lieu d'avatar par défaut.
 - **Changer de pseudo** : une seule fois, pour 10 Ambre. Ton identifiant de connexion et ton nom dans l'alliance suivent ; les anciens rapports gardent l'ancien nom.

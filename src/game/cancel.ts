@@ -1,6 +1,6 @@
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
-import { colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds } from "@/game/colonies";
+import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds } from "@/game/colonies";
 import { GameActionError } from "@/game/errors";
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
@@ -132,12 +132,11 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
     case "colonyBuilding": {
       const colony = colonyOf(player, target.colonyId);
       const job = colony?.building;
-      const def = job ? findBuilding(job.id) : undefined;
-      if (!colony || !job || !def) throw new GameActionError("Aucune construction en cours sur cette colonie.");
+      if (!colony || !job) throw new GameActionError("Aucune construction en cours sur cette colonie.");
       const paid = job.paid ?? colonyUpgradeCost(player, job.id, job.level);
       const start = job.startedAtMs ?? job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1000;
       const fraction = refundFraction(start, job.endTime, now);
-      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${def.name} niveau ${job.level}` };
+      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}` };
     }
     case "colonyDefense": {
       const colony = colonyOf(player, target.colonyId);

@@ -2716,6 +2716,45 @@ var COLONY_RULES = {
   costFactor: 1.5
 };
 var HOUR2 = 36e5;
+var DEPOSIT_ID = "gisement";
+var BIOMES = {
+  reinforcedSteel: { name: "Monde ferreux", deposit: "Mine d'acier profond", lore: "Un noyau satur\xE9 de m\xE9tal : l'acier renforc\xE9 affleure presque \xE0 la surface.", tone: "#9fb4c8" },
+  cyberModule: { name: "Cimeti\xE8re d'\xE9paves", deposit: "Atelier de r\xE9cup\xE9ration", lore: "Des flottes enti\xE8res s'y sont \xE9cras\xE9es ; leurs modules dorment sous la poussi\xE8re.", tone: "#5de0ff" },
+  syntheticNanites: { name: "Marais de nanites", deposit: "Ruche de nanites", lore: "Une brume grise vivante, que l'on r\xE9colte comme du miel.", tone: "#7cf0b0" },
+  aiFragment: { name: "N\xE9cropole d'IA", deposit: "Excavation de noyaux", lore: "Les ruines d'une civilisation de machines, aux m\xE9moires encore chaudes.", tone: "#c792ff" }
+};
+var RARE_DEPOSITS = Object.keys(BIOMES);
+var DEPOSIT_RULES = {
+  /** Production par seconde, niveaux 1 à 15. */
+  perSecond: [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.4, 3],
+  /** Coût : celui d'un extracteur de colonie × ce facteur (plus nanocomposants et données). */
+  costFactor: 1.2,
+  /** Durée : celle d'un extracteur de colonie × ce facteur. */
+  timeFactor: 1.5
+};
+function hashString2(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function biomeFor(seed) {
+  return RARE_DEPOSITS[hashString2(seed) % RARE_DEPOSITS.length];
+}
+function colonyBiome(colony) {
+  return colony.biome && BIOMES[colony.biome] ? colony.biome : biomeFor(`${colony.id}:${colony.foundedAtMs}`);
+}
+function depositLevel(colony) {
+  var _a, _b;
+  return (_b = (_a = colony.buildings[DEPOSIT_ID]) == null ? void 0 : _a.level) != null ? _b : 1;
+}
+function depositPerSecond(level3) {
+  if (level3 <= 0) return 0;
+  return DEPOSIT_RULES.perSecond[Math.min(level3, DEPOSIT_RULES.perSecond.length) - 1];
+}
+function colonyBuildingName(colony, id) {
+  var _a, _b;
+  return id === DEPOSIT_ID ? BIOMES[colonyBiome(colony)].deposit : (_b = (_a = findBuilding(id)) == null ? void 0 : _a.name) != null ? _b : id;
+}
 function colonyBuildingIds() {
   return BUILDINGS.filter((b) => {
     var _a, _b;
@@ -2783,10 +2822,12 @@ function startColonization(player, nameIn, now) {
 }
 function foundColony(uid, job, at) {
   const buildings = {};
-  for (const id of colonyBuildingIds()) buildings[id] = { level: 1, unlocked: true };
+  for (const id2 of colonyBuildingIds()) buildings[id2] = { level: 1, unlocked: true };
   const resources = emptyResources();
   for (const res of COMMON_RESOURCES2) resources[res] = COLONY_RULES.startStock;
-  return { id: colonyId(uid, job.slot), slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null };
+  buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
+  const id = colonyId(uid, job.slot);
+  return { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
 }
 function economyInput(colony, player) {
   return {
@@ -2799,7 +2840,7 @@ function economyInput(colony, player) {
   };
 }
 function advanceColony(colony, player, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const notes = [];
   let at = colony.updatedAtMs || now;
   for (let guard = 0; guard < 10; guard++) {
@@ -2807,21 +2848,23 @@ function advanceColony(colony, player, now) {
     const until = Math.min(next, now);
     if (until > at) {
       colony.resources = advanceResources(economyInput(colony, player), (until - at) / 1e3, at);
+      const rare = colonyBiome(colony);
+      colony.resources[rare] = ((_e = colony.resources[rare]) != null ? _e : 0) + depositPerSecond(depositLevel(colony)) * ((until - at) / 1e3);
       at = until;
     }
     if (next > now) break;
     if (colony.building && colony.building.endTime <= now) {
       const job = colony.building;
-      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_e = colony.buildings[job.id]) != null ? _e : { unlocked: true }), { level: job.level });
+      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: job.level });
       colony.building = null;
-      notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${(_g = (_f = findBuilding(job.id)) == null ? void 0 : _f.name) != null ? _g : job.id} niveau ${job.level}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
       const job = colony.defenseJob;
-      const cur = (_j = colony.defenses[job.unitId]) != null ? _j : { level: (_i = (_h = player.units[job.unitId]) == null ? void 0 : _h.level) != null ? _i : 1, count: 0 };
-      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_l = (_k = player.units[job.unitId]) == null ? void 0 : _k.level) != null ? _l : 1), count: cur.count + job.qty };
+      const cur = (_i = colony.defenses[job.unitId]) != null ? _i : { level: (_h = (_g = player.units[job.unitId]) == null ? void 0 : _g.level) != null ? _h : 1, count: 0 };
+      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_k = (_j = player.units[job.unitId]) == null ? void 0 : _j.level) != null ? _k : 1), count: cur.count + job.qty };
       colony.defenseJob = null;
-      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_n = (_m = findUnit(job.unitId)) == null ? void 0 : _m.name) != null ? _n : job.unitId}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_m = (_l = findUnit(job.unitId)) == null ? void 0 : _l.name) != null ? _m : job.unitId}.`, createdAtMs: now, read: false });
     }
   }
   colony.updatedAtMs = now;
@@ -2847,13 +2890,19 @@ function payFrom(resources, cost, what) {
   for (const [res, n] of Object.entries(cost)) resources[res] -= n != null ? n : 0;
 }
 function colonyUpgradeCost(player, buildingId, nextLevel) {
-  var _a, _b;
+  var _a, _b, _c, _d;
+  if (buildingId === DEPOSIT_ID) {
+    const base2 = colonyUpgradeCost(player, "extracteur_ferraille", nextLevel);
+    const scrap = Math.ceil(((_a = base2.scrap) != null ? _a : 0) * DEPOSIT_RULES.costFactor);
+    return { scrap, energy: Math.ceil(((_b = base2.energy) != null ? _b : 0) * DEPOSIT_RULES.costFactor), nano: Math.ceil(scrap / 2), data: Math.ceil(scrap / 4) };
+  }
   const def3 = findBuilding(buildingId);
   if (!def3) return {};
-  const base = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_b = (_a = player.bonuses) == null ? void 0 : _a.buildingUpgradeDiscount) != null ? _b : 0);
+  const base = applyBuildingDiscount(getBuildingUpgradeCost(def3, nextLevel), (_d = (_c = player.bonuses) == null ? void 0 : _c.buildingUpgradeDiscount) != null ? _d : 0);
   return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil((n != null ? n : 0) * COLONY_RULES.costFactor)]));
 }
 function colonyUpgradeSeconds(player, buildingId, nextLevel, now) {
+  if (buildingId === DEPOSIT_ID) return Math.round(colonyUpgradeSeconds(player, "extracteur_ferraille", nextLevel, now) * DEPOSIT_RULES.timeFactor);
   const def3 = findBuilding(buildingId);
   return def3 ? Math.round(getBuildingUpgradeTime(def3, nextLevel) * playerBuildTimeFactor(player, now)) : 0;
 }
@@ -2861,9 +2910,9 @@ function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   var _a, _b;
   const colony = colonyOf(player, colonyIdIn);
   if (!colony) throw new GameActionError("Colonie introuvable.");
-  if (!colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce b\xE2timent ne se construit pas sur une colonie.");
+  if (buildingId !== DEPOSIT_ID && !colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce b\xE2timent ne se construit pas sur une colonie.");
   if (colony.building) throw new GameActionError("Une construction est d\xE9j\xE0 en cours sur cette colonie.");
-  const level3 = (_b = (_a = colony.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
+  const level3 = buildingId === DEPOSIT_ID ? depositLevel(colony) : (_b = (_a = colony.buildings[buildingId]) == null ? void 0 : _a.level) != null ? _b : 0;
   if (level3 >= colonyMaxLevel(buildingId)) throw new GameActionError(`Niveau maximum d'une colonie atteint (${colonyMaxLevel(buildingId)}).`);
   const paid = colonyUpgradeCost(player, buildingId, level3 + 1);
   payFrom(colony.resources, paid, "cette construction");
@@ -9037,12 +9086,11 @@ function quoteCancel(player, queues, target, now) {
     case "colonyBuilding": {
       const colony = colonyOf(player, target.colonyId);
       const job = colony == null ? void 0 : colony.building;
-      const def3 = job ? findBuilding(job.id) : void 0;
-      if (!colony || !job || !def3) throw new GameActionError("Aucune construction en cours sur cette colonie.");
+      if (!colony || !job) throw new GameActionError("Aucune construction en cours sur cette colonie.");
       const paid = (_j = job.paid) != null ? _j : colonyUpgradeCost(player, job.id, job.level);
       const start = (_k = job.startedAtMs) != null ? _k : job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1e3;
       const fraction = refundFraction(start, job.endTime, now);
-      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${def3.name} niveau ${job.level}` };
+      return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}` };
     }
     case "colonyDefense": {
       const colony = colonyOf(player, target.colonyId);
