@@ -9,12 +9,14 @@ import { errorKey, isIgnoredError } from "@/game/errorReports";
 const sent = new Set<string>();
 let installed = false;
 
-export function reportClientError(error: unknown, fallbackMessage = "") {
+/** `componentStack` (erreurs de rendu) : composants React en cause, joints à la pile. */
+export function reportClientError(error: unknown, fallbackMessage = "", componentStack = "") {
   try {
     if (!pb.authStore.isValid) return;
     const err = error instanceof Error ? error : null;
     const message = (err ? `${err.name}: ${err.message}` : String(error ?? fallbackMessage)).slice(0, 300);
-    const stack = (err?.stack ?? "").slice(0, 3000);
+    const components = componentStack.trim() ? `\n\nComposants :\n${componentStack.trim().split("\n").slice(0, 12).join("\n")}` : "";
+    const stack = ((err?.stack ?? "").slice(0, 3000 - Math.min(components.length, 1400)) + components.slice(0, 1400)).slice(0, 3000);
     if (!message || isIgnoredError(message, stack)) return;
     const key = errorKey(message, stack);
     if (sent.has(key) || sent.size >= 20) return;

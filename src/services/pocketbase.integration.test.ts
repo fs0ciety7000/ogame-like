@@ -1003,6 +1003,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const fleets: string[] = [];
     try {
       await expect(pb.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } })).rejects.toMatchObject({ status: 403 });
+      // Le premier week-end du mois, un vrai Léviathan apparaît tout seul : on le renvoie d'abord.
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
       await expect(ps.sendFleet("", { chasseur: 10 }, "leviathan")).rejects.toThrow(/pas là/);
       const started = await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } });
       expect(started.status).toBe("active");
