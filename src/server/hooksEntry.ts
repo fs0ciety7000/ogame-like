@@ -161,3 +161,6 @@ export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/g
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
 export { pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
+export { currentGameContent, validateGameContent } from "@/game/content";
+export { episodeUnlockMs } from "@/game/chronicles";
+export { chapterDifficulty, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";

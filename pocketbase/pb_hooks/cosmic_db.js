@@ -3974,6 +3974,111 @@ function runContentMigrations(app) {
   return changes;
 }
 
+/* ---------- v5.4 : générateur procédural (chapitres, passe, succès) ---------- */
+
+function writeConfig(txApp, key, data) {
+  let rec = configRecord(txApp, key);
+  if (!rec) {
+    rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+    rec.set("key", key);
+  }
+  rec.set("data", data);
+  txApp.save(rec);
+}
+
+function proceduralPlayers(txApp) {
+  return txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => Object.assign(toPlain(r), { uid: r.id }));
+}
+
+/**
+ * Écrit les chapitres manquants et les nouveaux paliers de succès.
+ * opts : { force, monthId, variant, achievements } (bouton de l'administration).
+ */
+function proceduralTick(now, opts) {
+  const o = opts || {};
+  const game = loadGame();
+  const out = { chapters: [], achievements: [] };
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.PROCEDURAL_KEY);
+    const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
+    if (!settings.enabled && !o.force) return;
+    const players = proceduralPlayers(txApp);
+    const content = game.currentGameContent();
+    let months = content.chronicles.months;
+    const targets = o.monthId ? [o.monthId] : settings.chapters && o.achievements !== true ? game.monthsToGenerate(months, now, settings.leadDay) : [];
+    if (targets.length > 0) {
+      const digest = game.worldDigest(players, now);
+      targets.forEach((id) => {
+        const month = game.generateChapter({ monthId: id, digest, existing: months.filter((m) => m.id !== id), settings, now, variant: o.variant || 0 });
+        months = months.filter((m) => m.id !== id).concat([month]).sort((a, b) => (a.id < b.id ? -1 : 1));
+        out.chapters.push({ id, title: month.title, boss: month.boss.name });
+      });
+      const errors = game.validateGameContent(Object.assign({}, content, { chronicles: { months } })).filter((x) => /^Chroniques/.test(x));
+      if (errors.length > 0) throw new Error(`chapitre invalide : ${errors.slice(0, 3).join(" ; ")}`);
+      writeConfig(txApp, "chronicles", { months });
+    }
+    if (settings.achievements && !o.monthId) {
+      const proposals = game.proposeAchievementTiers(content.achievements, players, now);
+      if (proposals.length > 0) {
+        writeConfig(txApp, "achievements", content.achievements.concat(proposals.map((p) => p.def)));
+        proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
+      }
+    }
+    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`));
+    if (lines.length > 0) {
+      settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
+      writeConfig(txApp, game.PROCEDURAL_KEY, settings);
+    }
+  });
+  return out;
+}
+
+/** GET/POST /api/cosmic/admin/procedural — aperçu, réglages, génération à la demande. */
+function adminProcedural(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  applyContent($app, game);
+  const rec = configRecord($app, game.PROCEDURAL_KEY);
+  const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
+  if (e.request.method === "POST") {
+    const req = body(e);
+    if (req.action === "settings") {
+      const next = game.normalizeProcedural(Object.assign({}, settings, req.settings || {}, { log: settings.log }));
+      $app.runInTransaction((txApp) => writeConfig(txApp, game.PROCEDURAL_KEY, next));
+      return e.json(200, { settings: next });
+    }
+    if (req.action === "generate") {
+      const monthId = String(req.monthId || "");
+      if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
+      const existing = game.chroniclesConfig().months.find((m) => m.id === monthId);
+      if (existing && !existing.auto) throw new BadRequestError("Ce mois a une chronique écrite à la main : elle n'est pas remplacée.");
+      if (existing && game.episodeUnlockMs(monthId, 0) <= now && !req.confirmStarted) throw new BadRequestError("Ce chapitre a déjà commencé : confirme pour le réécrire.");
+      return e.json(200, proceduralTick(now, { force: true, monthId, variant: Math.max(0, Math.floor(Number(req.variant) || 0)) }));
+    }
+    if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
+    throw new BadRequestError("Action inconnue.");
+  }
+  const players = proceduralPlayers($app);
+  const digest = game.worldDigest(players, now);
+  const months = game.chroniclesConfig().months;
+  const pending = game.monthsToGenerate(months, now, settings.leadDay);
+  // Aperçu : le mois à écrire, sinon le premier mois sans chronique après la dernière.
+  const last = months.map((x) => x.id).sort().pop() || game.chronicleMonthId(now);
+  const [y, m] = last.split("-").map(Number);
+  const previewId = pending[0] || (m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`);
+  return e.json(200, {
+    settings,
+    digest,
+    difficulty: game.chapterDifficulty(digest),
+    pending,
+    preview: previewId ? game.generateChapter({ monthId: previewId, digest, existing: months, settings, now }) : null,
+    months: months.map((x) => ({ id: x.id, title: x.title, auto: x.auto || null, boss: x.boss.name })),
+    achievements: game.proposeAchievementTiers(game.currentGameContent().achievements, players, now),
+  });
+}
+
 /** v5.1 : sur sa fiche publique, un joueur ne change que son avatar (le reste vient du serveur). */
 function guardProfileUpdate(e) {
   if (e.hasSuperuserAuth()) return;
@@ -5507,4 +5612,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

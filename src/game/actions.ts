@@ -389,7 +389,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       return { gained: claimPassTier(player, action.tier, now) };
 
     case "chronicleClaim":
-      return { points: claimChronicle(player, action.episode, now) };
+      return claimChronicle(player, action.episode, now);
 
     case "cancel":
       // v4.7 : annulation au prorata (100 % la première minute ou si rien n'a commencé).

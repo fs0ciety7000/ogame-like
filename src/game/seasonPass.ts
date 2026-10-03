@@ -132,6 +132,8 @@ const CAPSULE_AMBER = 15;
 export interface PassState {
   seasonId: string;
   points: number;
+  /** v5.4 : activité du mois par source (sert au générateur de chapitres). */
+  activity?: Record<string, number>;
   /** Paliers réclamés (1 à 30). */
   claimed: number[];
   /** Dernier jour (UTC) compté pour la connexion. */
@@ -150,18 +152,55 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
   const raw = (player.seasonPass ?? {}) as Partial<PassState>;
   const seasonId = currentSeasonId(now);
   const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
-  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed };
+  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
+  const activity: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw.activity ?? {})) if (Number(v) > 0) activity[k] = Number(v);
   return {
     seasonId,
     points: Math.max(0, Number(raw.points) || 0),
-    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= PASS_RULES.tiers),
+    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
     loginDay: String(raw.loginDay ?? ""),
     completed,
+    activity,
   };
 }
 
-export function passTier(points: number): number {
-  return Math.min(PASS_RULES.tiers, Math.floor(points / PASS_RULES.pointsPerTier));
+/* ---------- v5.4 : passe propre à un mois (chapitres générés) ---------- */
+
+export interface MonthPass {
+  pointsPerTier: number;
+  tiers: PassReward[][];
+}
+
+const MONTH_PASSES = new Map<string, MonthPass>();
+
+/** Passes mensuels déclarés par les chapitres (remplace le passe commun ce mois-là). */
+export function setMonthPasses(list: { id: string; pass?: MonthPass }[]): void {
+  MONTH_PASSES.clear();
+  for (const m of list) if (m.pass && m.pass.pointsPerTier >= 1 && Array.isArray(m.pass.tiers) && m.pass.tiers.length > 0) MONTH_PASSES.set(m.id, m.pass);
+}
+
+/** Paliers et points par palier du passe d'une saison. */
+export function activePass(seasonId: string = currentSeasonId()): MonthPass {
+  return MONTH_PASSES.get(seasonId) ?? { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+}
+
+export function passTier(points: number, seasonId: string = currentSeasonId()): number {
+  const pass = activePass(seasonId);
+  return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
+}
+
+function passMax(seasonId: string): number {
+  const pass = activePass(seasonId);
+  return pass.tiers.length * pass.pointsPerTier;
+}
+
+/** v5.4 : compte une action du mois (même sans points de passe : espionnage, marché…). */
+export function trackActivity(player: PlayerState, key: string, now: number, times = 1): void {
+  if (!(times > 0)) return;
+  const st = passState(player, now);
+  st.activity = { ...(st.activity ?? {}), [key]: (st.activity?.[key] ?? 0) + times };
+  player.seasonPass = st;
 }
 
 /** Ajoute des points (le passe plafonne à 30 paliers). Modifie le joueur. */
@@ -173,9 +212,9 @@ export function onPassPoints(hook: typeof passHook): void {
 
 export function addPassPoints(player: PlayerState, source: PassSource, now: number, times = 1): void {
   passHook?.(player, source, now, times);
+  trackActivity(player, source, now, times);
   const st = passState(player, now);
-  const max = PASS_RULES.tiers * PASS_RULES.pointsPerTier;
-  st.points = Math.min(max, st.points + PASS_POINTS[source] * Math.max(0, times));
+  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS[source] * Math.max(0, times));
   player.seasonPass = st;
 }
 
@@ -185,7 +224,8 @@ export function passDailyLogin(player: PlayerState, now: number): boolean {
   const day = new Date(now).toISOString().slice(0, 10);
   if (st.loginDay === day) return false;
   st.loginDay = day;
-  st.points = Math.min(PASS_RULES.tiers * PASS_RULES.pointsPerTier, st.points + PASS_POINTS.dailyLogin);
+  st.activity = { ...(st.activity ?? {}), dailyLogin: (st.activity?.dailyLogin ?? 0) + 1 };
+  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
   player.seasonPass = st;
   return true;
 }
@@ -201,63 +241,71 @@ export function describePassReward(r: PassReward, seasonId?: string): string {
     case "capsule":
       return `${CAPSULES[r.capsule].name} N${r.level}`;
     case "relic":
-      return `Relique ${r.rarity === "epic" ? "épique" : "rare"}`;
+      return `Relique ${RARITY_LABELS[r.rarity]}`;
     case "cosmetic":
       return seasonId ? `Bannière et titre « ${passTitle(seasonId)} »` : "Bannière et titre de la saison";
   }
 }
 
+const RARITY_LABELS: Record<RelicRarity, string> = { common: "commune", rare: "rare", epic: "épique", legendary: "légendaire", mythic: "mythique" };
+
+/** Applique une récompense de passe (paliers, épisodes et chapitres). Renvoie son libellé. */
+export function grantPassReward(player: PlayerState, r: PassReward, seasonId: string, now: number, random: () => number = Math.random): string {
+  if (r.kind === "production") {
+    for (const [res, n] of Object.entries(productionHours(player, r.hours)) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
+    return describePassReward(r);
+  }
+  if (r.kind === "amber") {
+    const b = bountyState(player);
+    b.amber += r.amount;
+    player.bounties = b;
+    return describePassReward(r);
+  }
+  if (r.kind === "dossier") {
+    addDossiers(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "capsule") {
+    const syn = synthesisState(player);
+    if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
+      syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
+      player.synthesis = syn;
+      return describePassReward(r);
+    }
+    const b = bountyState(player);
+    b.amber += CAPSULE_AMBER;
+    player.bounties = b;
+    return `${CAPSULE_AMBER} Ambre (réserve de capsules pleine)`;
+  }
+  if (r.kind === "relic") {
+    // Premier tirage à 0 : exactement la rareté promise, puis modèle au hasard.
+    let first = true;
+    const item = rollRelic("pass", now, () => (first ? ((first = false), 0) : random()), r.rarity);
+    if (addRelic(player, item)) return `Relique : ${relicLabel(item)}`;
+    const b = bountyState(player);
+    b.amber += 40;
+    player.bounties = b;
+    return "40 Ambre (collection de reliques pleine)";
+  }
+  const title = passTitle(seasonId);
+  if (!(player.titles ?? []).some((t) => t.label === title)) player.titles = [...(player.titles ?? []), { label: title, seasonId: `pass:${seasonId}`, rank: 1 }];
+  const st = passState(player, now);
+  if (!st.completed.includes(seasonId)) st.completed = [...st.completed, seasonId];
+  player.seasonPass = st;
+  return describePassReward(r, seasonId);
+}
+
 /** Réclame un palier atteint : le serveur applique la récompense. */
 export function claimPassTier(player: PlayerState, tierIn: unknown, now: number, random: () => number = Math.random): string[] {
   const tier = Math.floor(Number(tierIn));
-  if (!(tier >= 1 && tier <= PASS_RULES.tiers)) throw new GameActionError("Palier inconnu.");
   const st = passState(player, now);
+  const pass = activePass(st.seasonId);
+  if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
   if (st.claimed.includes(tier)) throw new GameActionError("Palier déjà réclamé.");
-  if (passTier(st.points) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * PASS_RULES.pointsPerTier} points).`);
-  const gained: string[] = [];
-  for (const r of PASS_TIERS[tier - 1]) {
-    if (r.kind === "production") {
-      for (const [res, n] of Object.entries(productionHours(player, r.hours)) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
-      gained.push(describePassReward(r));
-    } else if (r.kind === "amber") {
-      const b = bountyState(player);
-      b.amber += r.amount;
-      player.bounties = b;
-      gained.push(describePassReward(r));
-    } else if (r.kind === "dossier") {
-      addDossiers(player, r.count);
-      gained.push(describePassReward(r));
-    } else if (r.kind === "capsule") {
-      const syn = synthesisState(player);
-      if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
-        syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
-        player.synthesis = syn;
-        gained.push(describePassReward(r));
-      } else {
-        const b = bountyState(player);
-        b.amber += CAPSULE_AMBER;
-        player.bounties = b;
-        gained.push(`${CAPSULE_AMBER} Ambre (réserve de capsules pleine)`);
-      }
-    } else if (r.kind === "relic") {
-      // Premier tirage à 0 : exactement la rareté promise, puis modèle au hasard.
-      let first = true;
-      const item = rollRelic("pass", now, () => (first ? ((first = false), 0) : random()), r.rarity);
-      if (addRelic(player, item)) gained.push(`Relique : ${relicLabel(item)}`);
-      else {
-        const b = bountyState(player);
-        b.amber += 40;
-        player.bounties = b;
-        gained.push("40 Ambre (collection de reliques pleine)");
-      }
-    } else if (r.kind === "cosmetic") {
-      const title = passTitle(st.seasonId);
-      if (!(player.titles ?? []).some((t) => t.label === title)) player.titles = [...(player.titles ?? []), { label: title, seasonId: `pass:${st.seasonId}`, rank: 1 }];
-      if (!st.completed.includes(st.seasonId)) st.completed = [...st.completed, st.seasonId];
-      gained.push(describePassReward(r, st.seasonId));
-    }
-  }
-  st.claimed = [...st.claimed, tier].sort((a, b) => a - b);
-  player.seasonPass = st;
+  if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
+  const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
+  const after = passState(player, now);
+  after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
+  player.seasonPass = after;
   return gained;
 }

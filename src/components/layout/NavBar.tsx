@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -125,6 +125,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
+      { to: "/game/formules", label: "Formules", icon: Sigma },
       { to: "/game/journal", label: "Journal", icon: ScrollText },
     ],
   },
@@ -161,7 +162,7 @@ function useBadges(): (to: string) => number {
   const passClaimable = usePlayerStore((s) => {
     if (!s.player) return 0;
     const st = passState(s.player, Date.now());
-    return Math.max(0, passTier(st.points) - st.claimed.length);
+    return Math.max(0, passTier(st.points, st.seasonId) - st.claimed.length);
   });
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
