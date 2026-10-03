@@ -65,6 +65,8 @@ export interface Colony {
   defenseJob: ColonyDefenseJob | null;
   /** Dernière défaite (bouclier d'une heure, propre à la colonie). */
   lastDefeatAtMs?: number;
+  /** v5.1 : biome tiré à la fondation (ressource rare du gisement). */
+  biome?: RareResourceId;
 }
 
 export interface Colonizing {
@@ -74,6 +76,61 @@ export interface Colonizing {
 }
 
 const HOUR = 3600_000;
+
+/* ---------- v5.1 : biomes et gisements de ressource rare ---------- */
+
+export type RareResourceId = "reinforcedSteel" | "cyberModule" | "syntheticNanites" | "aiFragment";
+
+/** Bâtiment propre aux colonies : extrait la ressource rare du biome. */
+export const DEPOSIT_ID = "gisement";
+
+export const BIOMES: Record<RareResourceId, { name: string; deposit: string; lore: string; tone: string }> = {
+  reinforcedSteel: { name: "Monde ferreux", deposit: "Mine d'acier profond", lore: "Un noyau saturé de métal : l'acier renforcé affleure presque à la surface.", tone: "#9fb4c8" },
+  cyberModule: { name: "Cimetière d'épaves", deposit: "Atelier de récupération", lore: "Des flottes entières s'y sont écrasées ; leurs modules dorment sous la poussière.", tone: "#5de0ff" },
+  syntheticNanites: { name: "Marais de nanites", deposit: "Ruche de nanites", lore: "Une brume grise vivante, que l'on récolte comme du miel.", tone: "#7cf0b0" },
+  aiFragment: { name: "Nécropole d'IA", deposit: "Excavation de noyaux", lore: "Les ruines d'une civilisation de machines, aux mémoires encore chaudes.", tone: "#c792ff" },
+};
+
+export const RARE_DEPOSITS = Object.keys(BIOMES) as RareResourceId[];
+
+export const DEPOSIT_RULES = {
+  /** Production par seconde, niveaux 1 à 15. */
+  perSecond: [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1, 2.4, 3],
+  /** Coût : celui d'un extracteur de colonie × ce facteur (plus nanocomposants et données). */
+  costFactor: 1.2,
+  /** Durée : celle d'un extracteur de colonie × ce facteur. */
+  timeFactor: 1.5,
+};
+
+function hashString(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** Biome tiré au hasard (déterministe : même résultat côté serveur et navigateur). */
+export function biomeFor(seed: string): RareResourceId {
+  return RARE_DEPOSITS[hashString(seed) % RARE_DEPOSITS.length];
+}
+
+/** Biome d'une colonie (les colonies fondées avant la v5.1 en reçoivent un aussi). */
+export function colonyBiome(colony: Pick<Colony, "id" | "foundedAtMs" | "biome">): RareResourceId {
+  return colony.biome && BIOMES[colony.biome] ? colony.biome : biomeFor(`${colony.id}:${colony.foundedAtMs}`);
+}
+
+export function depositLevel(colony: Pick<Colony, "buildings">): number {
+  return colony.buildings[DEPOSIT_ID]?.level ?? 1;
+}
+
+export function depositPerSecond(level: number): number {
+  if (level <= 0) return 0;
+  return DEPOSIT_RULES.perSecond[Math.min(level, DEPOSIT_RULES.perSecond.length) - 1];
+}
+
+/** Nom d'un bâtiment de colonie (le gisement dépend du biome). */
+export function colonyBuildingName(colony: Pick<Colony, "id" | "foundedAtMs" | "biome">, id: string): string {
+  return id === DEPOSIT_ID ? BIOMES[colonyBiome(colony)].deposit : (findBuilding(id)?.name ?? id);
+}
 
 /** Bâtiments constructibles sur une colonie. */
 export function colonyBuildingIds(): string[] {
@@ -155,7 +212,9 @@ export function foundColony(uid: string, job: Colonizing, at: number): Colony {
   for (const id of colonyBuildingIds()) buildings[id] = { level: 1, unlocked: true };
   const resources = emptyResources();
   for (const res of COMMON_RESOURCES) resources[res] = COLONY_RULES.startStock;
-  return { id: colonyId(uid, job.slot), slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null };
+  buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
+  const id = colonyId(uid, job.slot);
+  return { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
 }
 
 /** Entrées économiques d'une colonie : technologies, alliance et ascensions de l'empire. */
@@ -177,7 +236,9 @@ export function colonyStorage(colony: Colony, player: Pick<PlayerState, "techLev
 /** Production horaire d'une colonie (affichage). */
 export function colonyHourlyRates(colony: Colony, player: PlayerState): Partial<Record<ResourceId, number>> {
   const a = advanceResources({ ...economyInput(colony, player), resources: emptyResources() }, 3600);
-  return Object.fromEntries(COMMON_RESOURCES.map((r) => [r, Math.round(a[r] ?? 0)]));
+  const out: Partial<Record<ResourceId, number>> = Object.fromEntries(COMMON_RESOURCES.map((r) => [r, Math.round(a[r] ?? 0)]));
+  out[colonyBiome(colony)] = Math.round(depositPerSecond(depositLevel(colony)) * 3600);
+  return out;
 }
 
 /** Rattrape une colonie jusqu'à `now` : production, construction, défenses. */
@@ -189,6 +250,9 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
     const until = Math.min(next, now);
     if (until > at) {
       colony.resources = advanceResources(economyInput(colony, player), (until - at) / 1000, at);
+      // v5.1 : gisement du biome (ressource rare, non plafonnée).
+      const rare = colonyBiome(colony);
+      colony.resources[rare] = (colony.resources[rare] ?? 0) + depositPerSecond(depositLevel(colony)) * ((until - at) / 1000);
       at = until;
     }
     if (next > now) break;
@@ -196,7 +260,7 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
       const job = colony.building;
       colony.buildings[job.id] = { ...(colony.buildings[job.id] ?? { unlocked: true }), level: job.level };
       colony.building = null;
-      notes.push({ kind: "building", title: "Colonie : construction terminée", message: `${colony.name} : ${findBuilding(job.id)?.name ?? job.id} niveau ${job.level}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : construction terminée", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
       const job = colony.defenseJob;
@@ -231,6 +295,12 @@ function payFrom(resources: Resources, cost: Partial<Record<string, number>>, wh
 }
 
 export function colonyUpgradeCost(player: Pick<PlayerState, "bonuses">, buildingId: string, nextLevel: number): Partial<Record<ResourceId, number>> {
+  if (buildingId === DEPOSIT_ID) {
+    // v5.1 : gisement, payé en ressources communes seulement.
+    const base = colonyUpgradeCost(player, "extracteur_ferraille", nextLevel);
+    const scrap = Math.ceil((base.scrap ?? 0) * DEPOSIT_RULES.costFactor);
+    return { scrap, energy: Math.ceil((base.energy ?? 0) * DEPOSIT_RULES.costFactor), nano: Math.ceil(scrap / 2), data: Math.ceil(scrap / 4) };
+  }
   const def = findBuilding(buildingId);
   if (!def) return {};
   const base = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0);
@@ -238,6 +308,7 @@ export function colonyUpgradeCost(player: Pick<PlayerState, "bonuses">, building
 }
 
 export function colonyUpgradeSeconds(player: PlayerState, buildingId: string, nextLevel: number, now: number): number {
+  if (buildingId === DEPOSIT_ID) return Math.round(colonyUpgradeSeconds(player, "extracteur_ferraille", nextLevel, now) * DEPOSIT_RULES.timeFactor);
   const def = findBuilding(buildingId);
   return def ? Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) : 0;
 }
@@ -245,9 +316,9 @@ export function colonyUpgradeSeconds(player: PlayerState, buildingId: string, ne
 export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, buildingId: string, now: number): ColonyBuildingJob {
   const colony = colonyOf(player, colonyIdIn);
   if (!colony) throw new GameActionError("Colonie introuvable.");
-  if (!colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce bâtiment ne se construit pas sur une colonie.");
+  if (buildingId !== DEPOSIT_ID && !colonyBuildingIds().includes(buildingId)) throw new GameActionError("Ce bâtiment ne se construit pas sur une colonie.");
   if (colony.building) throw new GameActionError("Une construction est déjà en cours sur cette colonie.");
-  const level = colony.buildings[buildingId]?.level ?? 0;
+  const level = buildingId === DEPOSIT_ID ? depositLevel(colony) : (colony.buildings[buildingId]?.level ?? 0);
   if (level >= colonyMaxLevel(buildingId)) throw new GameActionError(`Niveau maximum d'une colonie atteint (${colonyMaxLevel(buildingId)}).`);
   const paid = colonyUpgradeCost(player, buildingId, level + 1);
   payFrom(colony.resources, paid, "cette construction");

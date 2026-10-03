@@ -21,3 +21,12 @@ export function formatDecimal(value: number, maxDigits: number): string {
   const trimmed = frac.replace(/0+$/, "");
   return formatInt(Number(intPart)) + (trimmed ? `,${trimmed}` : "");
 }
+
+/** v5.1 : montants par ressource, « 1 200 ferraille, 300 énergie » (« rien » si vide). */
+export function describeGain(gain: Partial<Record<string, number>>): string {
+  const names: Record<string, string> = { scrap: "ferraille", energy: "énergie", nano: "nanocomposants", data: "données", reinforcedSteel: "acier renforcé", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain)
+    .filter(([, v]) => (v ?? 0) > 0)
+    .map(([k, v]) => `${formatInt(v ?? 0)} ${names[k] ?? k}`);
+  return parts.length ? parts.join(", ") : "rien";
+}

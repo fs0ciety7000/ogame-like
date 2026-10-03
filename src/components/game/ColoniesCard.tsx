@@ -2,8 +2,7 @@ import { Link } from "react-router-dom";
 import { Globe2, Hammer, Shield, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { advanceColonies, colonyHourlyRates, colonyStorage, COLONY_RULES } from "@/game/colonies";
-import { findBuilding } from "@/game/buildings";
+import { advanceColonies, colonyHourlyRates, colonyStorage, COLONY_RULES, BIOMES, colonyBiome, colonyBuildingName } from "@/game/colonies";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { usePlayerStore } from "@/store/playerStore";
@@ -41,13 +40,14 @@ export function ColoniesCard() {
             <Link key={c.id} to="/game/colonies" className="hud-cut-sm flex flex-col gap-1.5 border border-white/[0.07] bg-white/[0.02] p-3 transition-colors hover:border-violet-glow/40">
               <div className="flex items-baseline gap-2">
                 <span className="truncate font-display text-sm font-semibold text-white">{c.name}</span>
+                <span className="truncate text-[10px]" style={{ color: BIOMES[colonyBiome(c)].tone }}>{BIOMES[colonyBiome(c)].name}</span>
                 <span className="ml-auto inline-flex items-center gap-1 font-mono text-[11px] text-mint-glow">
                   <TrendingUp className="h-3 w-3" /> +{formatPerSecond(hourly)}
                 </span>
               </div>
               {job ? (
                 <p className="flex items-center gap-1.5 text-[11px] text-cyan-glow">
-                  <Hammer className="h-3 w-3" /> {findBuilding(job.id)?.name} niv. {job.level}
+                  <Hammer className="h-3 w-3" /> {colonyBuildingName(c, job.id)} niv. {job.level}
                   <span className="ml-auto font-mono">{formatDuration(Math.max(0, Math.floor((job.endTime - now) / 1000)))}</span>
                 </p>
               ) : (

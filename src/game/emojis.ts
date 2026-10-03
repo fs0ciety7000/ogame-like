@@ -73,6 +73,10 @@ export const GAME_EMOJI_GROUPS: { label: string; emojis: CustomEmoji[] }[] = [
       e("legende", "Légendaire"),
     ],
   },
+  {
+    label: "Mascottes",
+    emojis: [e("dino_furets", "Le dino aux furets")],
+  },
 ];
 
 /** Réactions des factions (stickers, 4 variantes chacune). */

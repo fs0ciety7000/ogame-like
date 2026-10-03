@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, homeLevels, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, DEPOSIT_ID, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, homeLevels, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
 import { findUnit, UNITS } from "@/game/units";
@@ -33,7 +33,7 @@ describe("colonies", () => {
     expect(p.colonies).toHaveLength(1);
     const c = p.colonies![0];
     expect(c.id).toBe("u1-c1");
-    expect(Object.keys(c.buildings).sort()).toEqual(colonyBuildingIds().sort());
+    expect(Object.keys(c.buildings).sort()).toEqual([...colonyBuildingIds(), DEPOSIT_ID].sort());
     // Elle produit depuis sa fondation (1 h avant ce rattrapage).
     expect(c.resources.scrap).toBeGreaterThan(COLONY_RULES.startStock);
     expect(nextColonySlot(p)).toEqual({ slot: 2, levels: 140 });

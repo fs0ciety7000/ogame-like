@@ -3,7 +3,8 @@ import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/r
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
-import { formatInt } from "@/game/format";
+import { describeGain, formatInt } from "@/game/format";
+export { describeGain };
 import { formationEffects } from "@/game/formations";
 import { FACTIONS, pirateState, productionHours, setFactionState } from "@/game/pirates";
 import { applyXpDelta } from "@/game/seasons";
@@ -82,14 +83,6 @@ function addLoot(fleet: ExpeditionFleet, gain: Partial<Record<ResourceId, number
 }
 
 /** Liste lisible : « 1 200 ferraille, 300 énergie ». */
-export function describeGain(gain: Partial<Record<string, number>>): string {
-  const names: Record<string, string> = { scrap: "ferraille", energy: "énergie", nano: "nanocomposants", data: "données", reinforcedSteel: "acier renforcé", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
-  const parts = Object.entries(gain)
-    .filter(([, v]) => (v ?? 0) > 0)
-    .map(([k, v]) => `${formatInt(v ?? 0)} ${names[k] ?? k}`);
-  return parts.length ? parts.join(", ") : "rien";
-}
-
 export function fleetShips(units: Record<string, number>): number {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
 }

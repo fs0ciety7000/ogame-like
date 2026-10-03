@@ -5,7 +5,7 @@ import { isActive } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { cn, formatCompact } from "@/lib/utils";
@@ -27,6 +27,27 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
+  /** v5.1 : page hors de l'application, ouverte dans un nouvel onglet. */
+  href?: string;
+}
+
+type ItemLinkProps = Omit<React.ComponentProps<typeof NavLink>, "to"> & { item: NavItem };
+
+/** NavLink, ou lien externe (nouvel onglet) pour les pages hors application. */
+function ItemLink({ item, className, children, end: _end, ...rest }: ItemLinkProps) {
+  if (item.href) {
+    const cls = typeof className === "function" ? className({ isActive: false, isPending: false, isTransitioning: false }) : className;
+    return (
+      <a href={item.href} target="_blank" rel="noopener" className={cls} title={rest.title} aria-label={rest["aria-label"]} onClick={rest.onClick as React.MouseEventHandler<HTMLAnchorElement>}>
+        {typeof children === "function" ? children({ isActive: false, isPending: false, isTransitioning: false }) : children}
+      </a>
+    );
+  }
+  return (
+    <NavLink to={item.to} end={item.end} className={className} {...rest}>
+      {children}
+    </NavLink>
+  );
 }
 
 interface NavGroup {
@@ -117,6 +138,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/nouveautes", label: "Nouveautés", icon: Sparkles },
       { to: "/game/annonces", label: "Annonces", icon: Megaphone },
       { to: "/game/signalements", label: "Signalements", icon: Bug },
+      { to: "/bible", href: "/bible/index.html", label: "Bible du jeu", icon: BookMarked },
     ],
   },
 ];
@@ -170,9 +192,8 @@ function Badge({ count }: { count: number }) {
 /** Lien de la barre latérale (bureau), aux couleurs de son groupe (--nav-accent). */
 function SideLink({ item, badge }: { item: NavItem; badge: number }) {
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
+    <ItemLink
+      item={item}
       className={({ isActive }) =>
         cn(
           "group relative flex items-center gap-2.5 py-1.5 pl-3 pr-2 font-display text-[12.5px] font-semibold uppercase tracking-[0.09em] transition-all duration-200",
@@ -203,7 +224,7 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
           {isActive && <span className="h-1.5 w-1.5 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
       )}
-    </NavLink>
+    </ItemLink>
   );
 }
 
@@ -256,11 +277,11 @@ function SideGroup({ group, collapsed, onToggle, badgeOf }: { group: NavGroup; c
 /** Pied de barre : pages du compte en rangée d'icônes. */
 function FooterLinks({ badgeOf }: { badgeOf: (to: string) => number }) {
   return (
-    <div className="grid grid-cols-4 gap-1 px-3 pb-2" style={{ "--nav-accent": FOOTER_GROUP.accent } as React.CSSProperties}>
+    <div className="grid grid-cols-5 gap-1 px-3 pb-2" style={{ "--nav-accent": FOOTER_GROUP.accent } as React.CSSProperties}>
       {FOOTER_GROUP.items.map((item) => (
-        <NavLink
+        <ItemLink
           key={item.to}
-          to={item.to}
+          item={item}
           title={item.label}
           aria-label={item.label}
           className={({ isActive }) =>
@@ -274,7 +295,7 @@ function FooterLinks({ badgeOf }: { badgeOf: (to: string) => number }) {
         >
           <item.icon className="h-4 w-4" />
           {badgeOf(item.to) > 0 && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
-        </NavLink>
+        </ItemLink>
       ))}
     </div>
   );
@@ -337,9 +358,8 @@ function useWideScreen(): boolean {
 
 function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
+    <ItemLink
+      item={item}
       title={item.label}
       aria-label={item.label}
       className={({ isActive }) =>
@@ -353,7 +373,7 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
     >
       <item.icon className="h-4 w-4" />
       {badge > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
-    </NavLink>
+    </ItemLink>
   );
 }
 
@@ -491,9 +511,8 @@ function saveTabs(tabs: string[]) {
 function TabLink({ item }: { item: NavItem }) {
   const badge = useBadge(item.to);
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
+    <ItemLink
+      item={item}
       className={({ isActive }) =>
         cn(
           "relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
@@ -507,7 +526,7 @@ function TabLink({ item }: { item: NavItem }) {
         <Badge count={badge} />
       </span>
       {item.label}
-    </NavLink>
+    </ItemLink>
   );
 }
 
@@ -581,9 +600,8 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
 function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
   const badge = useBadge(item.to);
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
+    <ItemLink
+      item={item}
       onClick={onClick}
       className={({ isActive }) =>
         cn(
@@ -597,7 +615,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
         <Badge count={badge} />
       </span>
       {item.label}
-    </NavLink>
+    </ItemLink>
   );
 }
 

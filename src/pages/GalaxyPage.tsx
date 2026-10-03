@@ -17,6 +17,8 @@ import { getRankLabel } from "@/game/ranks";
 import { formatClock, formatCompact, formatDuration, timeAgo } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
+import { ThreatGauge } from "@/components/game/ThreatGauge";
+import { isHostile } from "@/components/game/FleetsPanel";
 import { useFleetStore } from "@/store/fleetStore";
 import { SpyModal } from "@/components/game/SpyModal";
 import { AttackModal } from "@/components/game/AttackModal";
@@ -483,6 +485,7 @@ export function GalaxyPage() {
                   <p className="text-slate-200">
                     {f.status === "returning" ? `${f.targetPseudo} → ${f.ownerPseudo}` : `${f.ownerPseudo} → ${f.targetPseudo}`}
                   </p>
+                  {isHostile(f, uid ?? undefined) && <ThreatGauge fleet={f} compact className="mt-1 w-56" />}
                   {eta && (
                     <p className="font-mono text-slate-400">
                       {f.status === "returning" ? "Retour" : "Arrivée"} à {new Date(eta).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · dans {formatDuration(Math.max(0, (eta - now) / 1000))}
