@@ -1,0 +1,37 @@
+COSMIC EMPIRES · Annonce importante
+Le jeu déménage
+
+Commandant {{PSEUDO}},
+
+Le secteur change de quartier général. Cosmic Empires tourne désormais sur un nouveau serveur, avec une nouvelle adresse :
+
+>>> https://empire.fs0ciety.org <<<
+Ajoutez-la à vos favoris dès maintenant.
+
+RIEN N'EST PERDU
+Votre planète mère, vos colonies, votre flotte, votre alliance, votre Ambre et votre progression de saison vous attendent exactement là où vous les avez laissés. Vous vous connectez avec le même pseudo et le même mot de passe.
+
+LES TROIS GESTES À FAIRE EN ARRIVANT
+Votre navigateur range certaines préférences par adresse : sur la nouvelle, il repart de zéro sur ces points-là.
+1. Vous reconnecter, une seule fois, avec vos identifiants habituels.
+2. Réactiver les notifications (Réglages → Notifications du navigateur).
+3. Remettre vos réglages d'affichage (Réglages → Apparence) : thème, sons, disposition de l'accueil.
+
+VOS COMPOSITIONS DE FLOTTE
+Les compositions enregistrées (« Raid rapide », « Siège »…) sont gardées dans votre navigateur, pas sur le serveur. Notez-les avant de quitter l'ancienne adresse pour les recréer sur la nouvelle.
+
+SUR TÉLÉPHONE
+Supprimez l'ancien raccourci, ouvrez empire.fs0ciety.org, puis ajoutez-le à l'écran d'accueil.
+
+LE DEVBLOG
+Les nouvelles de l'équipe : https://devblog.fs0ciety.org
+L'article complet : https://devblog.fs0ciety.org/p/le-jeu-demenage-empire-fs0ciety-org
+
+Un souci après le déménagement ? Page Signalements du jeu : https://empire.fs0ciety.org/game/signalements
+
+On se retrouve dans le secteur, commandant.
+Thomas & Nicolas · L'équipe Cosmic Empires
+
+Jouer : https://empire.fs0ciety.org
+
+Ne plus recevoir ces nouvelles : {{UNSUBSCRIBE_URL}}
