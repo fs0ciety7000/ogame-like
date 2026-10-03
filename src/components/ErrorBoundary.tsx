@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Fichier d'une ancienne version : on recharge plutôt que d'afficher l'erreur.
     if (isStaleChunkError(error) && reloadForUpdate()) return;
     console.error("Erreur non interceptée :", error, info.componentStack);
-    reportClientError(error);
+    reportClientError(error, "", info.componentStack);
   }
 
   render() {

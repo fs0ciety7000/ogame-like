@@ -464,7 +464,7 @@
         "name": "attackerPseudo",
         "type": "text",
         "required": false,
-        "max": 40,
+        "max": 120,
         "presentable": false
       },
       {
@@ -478,7 +478,7 @@
         "name": "defenderPseudo",
         "type": "text",
         "required": false,
-        "max": 40,
+        "max": 120,
         "presentable": false
       },
       {
