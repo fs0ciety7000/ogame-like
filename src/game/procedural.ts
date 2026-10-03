@@ -518,7 +518,7 @@ export interface GenerateOptions {
 export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const rng = seededRandom(`${o.monthId}:${o.variant ?? 0}`);
   const d = o.digest;
-  const recent = [...o.existing].sort((a, b) => a.id.localeCompare(b.id)).slice(-2);
+  const recent = [...o.existing].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(-2);
   const recentArch = recent.map((m) => m.auto?.archetype ?? ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
   const arch = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
   const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));

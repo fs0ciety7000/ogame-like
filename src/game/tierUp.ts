@@ -1,5 +1,5 @@
 import { BUILDINGS, findBuilding, productionPerSecond, PRODUCTION_RESOURCE_BY_BUILDING, repairPercentAt, storageCapacityAt, visualTier, VISUAL_TIERS, type VisualTier } from "@/game/buildings";
-import { formatCompact } from "@/lib/utils";
+import { formatDecimal, formatShort as formatCompact } from "@/game/format";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { Buildings } from "@/types/game";
 
@@ -59,7 +59,7 @@ export function tierBonusText(buildingId: string, level: number): string | null 
     const before = productionPerSecond(buildingId, Math.max(1, level - 5));
     const name = RESOURCE_LIST.find((r) => r.id === res)?.name ?? res;
     const ratio = before > 0 && level > 5 ? now / before : 0;
-    const gain = ratio >= 2 ? ` (×${ratio.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} depuis le palier précédent)` : ratio > 1 ? ` (+${Math.round((ratio - 1) * 100)} % depuis le palier précédent)` : "";
+    const gain = ratio >= 2 ? ` (×${formatDecimal(ratio, 1)} depuis le palier précédent)` : ratio > 1 ? ` (+${Math.round((ratio - 1) * 100)} % depuis le palier précédent)` : "";
     return `${formatCompact(now)}/s de ${name.toLowerCase()}${gain}`;
   }
   switch (def.effect?.type) {
