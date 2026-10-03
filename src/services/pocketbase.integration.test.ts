@@ -2194,6 +2194,64 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("v5.5: admin player actions (test account, finish all, officers, grant with reason), refused to players", async () => {
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: bId, action: "finishAll" } })).rejects.toMatchObject({ status: 403 });
+    const before = await snap(bId);
+    const q = await admin.collection("queues").getOne(bId);
+    try {
+      const level = before.buildings.extracteur_ferraille.level;
+      await admin.collection("queues").update(bId, { buildingUpgrades: { extracteur_ferraille: { endTime: Date.now() + 3_600_000 } } });
+      const fin = await admin.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: bId, action: "finishAll" } });
+      expect(fin.buildings).toBe(1);
+      expect((await snap(bId)).buildings.extracteur_ferraille.level).toBe(level + 1);
+      await expect(admin.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: bId, action: "grant", resources: { scrap: 1234 } } })).rejects.toMatchObject({ status: 400 });
+      const scrap = (await snap(bId)).resources.scrap;
+      await admin.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: bId, action: "grant", resources: { scrap: 1234 }, reason: "test d'intégration" } });
+      expect((await snap(bId)).resources.scrap).toBeGreaterThanOrEqual(scrap + 1234);
+      await admin.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: bId, action: "testMode", on: true } });
+      expect((await snap(bId)).testMode).toBe(true);
+      const logs = await admin.collection("admin_logs").getList(1, 5, { filter: `recordId = "${bId}"`, sort: "-createdAtMs" });
+      expect(logs.items.some((l) => String(l.action).startsWith("joueur"))).toBe(true);
+    } finally {
+      await admin.collection("players").update(bId, { testMode: false, buildings: before.buildings, resources: before.resources, commanders: before.commanders ?? null });
+      await admin.collection("queues").update(bId, { buildingUpgrades: q.buildingUpgrades ?? {} });
+    }
+  });
+
+  it("v5.5: balance snapshot, alliance saga and market broker run on demand", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { history: await cfg("balance_history"), saga: await cfg("alliance_saga") };
+    try {
+      const snapDay = await admin.send("/api/cosmic/admin/balance/snapshot", { method: "POST" });
+      expect(snapDay.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const live = await admin.send("/api/cosmic/admin/balance", { method: "GET" });
+      expect(live.history.length).toBeGreaterThan(0);
+      await admin.send("/api/cosmic/admin/alliance-saga", { method: "POST" });
+      const saga = (await cfg("alliance_saga"))!.data;
+      expect(saga.sagas.length).toBeGreaterThan(0);
+      expect(saga.standing.rows).toBeDefined();
+
+      const made = await admin.send("/api/cosmic/admin/market-maker", { method: "POST" });
+      expect(made.created).toBeGreaterThanOrEqual(0);
+      const makerOffer = (await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker" && status = "open" && kind = "sell" && giveRes = "nano"' }))[0];
+      expect(makerOffer).toBeTruthy();
+      await loginPlayer(B.email, B.pw);
+      const bBefore = await snap(bId);
+      await admin.collection("players").update(bId, { resources: { ...bBefore.resources, [makerOffer.wantRes]: makerOffer.wantAmount + 10 } });
+      await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: makerOffer.id } });
+      expect((await snap(bId)).resources.nano).toBeGreaterThanOrEqual(makerOffer.giveAmount);
+      await admin.collection("players").update(bId, { resources: bBefore.resources });
+    } finally {
+      for (const r of await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker"' })) await admin.collection("market_offers").delete(r.id);
+      for (const [key, rec] of [["balance_history", keep.history], ["alliance_saga", keep.saga]] as const) {
+        const now = await cfg(key);
+        if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+        else if (now) await admin.collection("game_config").delete(now.id);
+      }
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

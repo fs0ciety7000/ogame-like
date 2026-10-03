@@ -423,6 +423,13 @@ cronAdd("cosmic_alliance_saga", "53 * * * *", () => {
   }
 });
 
+/** POST /api/cosmic/admin/market-maker — passe du Courtier du Comptoir tout de suite. */
+routerAdd("POST", "/api/cosmic/admin/market-maker", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, { created: db.marketMakerTick(Date.now()) });
+}, $apis.requireAuth("users", "_superusers"));
+
 /** POST /api/cosmic/admin/alliance-saga — recalcul immédiat (et écriture de la saga du mois si elle manque). */
 routerAdd("POST", "/api/cosmic/admin/alliance-saga", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);

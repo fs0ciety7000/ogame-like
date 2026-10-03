@@ -1,3 +1,5 @@
+import { WARLORD_RULES } from "@/game/warlords";
+import { TECHNOLOGIES, techEffects } from "@/game/technologies";
 import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
@@ -287,12 +289,12 @@ export function liveFindings(live: LiveBalance): Proposal[] {
   }
   const strongest = live.warlords[0];
   if (strongest && live.bestDefense > 0 && strongest.power > 2.5 * live.bestDefense) {
-    out.push({ id: "warlord-strong", severity: "warning", area: "Seigneurs", finding: `${strongest.pseudo} : ${fmt(strongest.power)} de puissance, ${(strongest.power / live.bestDefense).toFixed(1)} × la meilleure défense de joueur (${fmt(live.bestDefense)}). Hors d'atteinte pour une vendetta.`, proposal: "Croissance maximale par jour des seigneurs forts −0,02, ou plafond du rang fort 1,8 → 1,5.", where: "Seigneurs" });
+    out.push({ id: "warlord-strong", severity: "warning", area: "Seigneurs", finding: `${strongest.pseudo} : ${fmt(strongest.power)} de puissance, ${(strongest.power / live.bestDefense).toFixed(1)} × la meilleure défense de joueur (${fmt(live.bestDefense)}). Hors d'atteinte pour une vendetta.`, proposal: `Le plafond automatique (× ${WARLORD_RULES.maxDefenseRatio.toString().replace(".", ",")} la meilleure défense) le ramène peu à peu (${Math.round(WARLORD_RULES.growthPerDay * 100)} % de l'excédent par jour). Pour aller plus vite : baisser le multiplicateur de puissance des seigneurs.`, where: "Seigneurs" });
   }
   const top = live.players.slice(0, 5);
   const saturated = top.filter((p) => p.attackPlaces > 0 && p.attackPlacesUsed / p.attackPlaces >= 0.9);
   if (top.length >= 3 && saturated.length >= Math.ceil(top.length / 2)) {
-    out.push({ id: "hangars-full", severity: "info", area: "Hangars", finding: `${saturated.length} des ${top.length} meilleurs joueurs ont leur hangar d'attaque plein à 90 % ou plus.`, proposal: "Créer une technologie « Capacité des hangars » (+5 % par niveau, 10 niveaux, coût élevé en ressources rares).", where: "Technologies" });
+    out.push({ id: "hangars-full", severity: "info", area: "Hangars", finding: `${saturated.length} des ${top.length} meilleurs joueurs ont leur hangar d'attaque plein à 90 % ou plus.`, proposal: TECHNOLOGIES.some((t) => techEffects(t).some((e) => e.type === "hangar_capacity")) ? "Une technologie de capacité des hangars existe (Extension des hangars) : vérifier son coût et son gain par niveau." : "Créer une technologie « Capacité des hangars » (+5 % par niveau, 10 niveaux, coût élevé en ressources rares).", where: "Technologies" });
   }
   const outages = live.players.filter((p) => p.outage).length;
   if (live.players.length >= 5 && outages / live.players.length > 0.2) {

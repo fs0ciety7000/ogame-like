@@ -66,7 +66,11 @@ export function MarketPage() {
   const bounds = giveAmount > 0 && giveRes !== wantRes ? priceBounds(giveRes, giveAmount, wantRes) : null;
   const priceOk = !!bounds && wantAmount >= bounds.min && wantAmount <= bounds.max;
   const myOpen = data.open.filter((o) => o.sellerId === uid);
-  const others = useMemo(() => data.open.filter((o) => o.sellerId !== uid && (!filter || o.giveRes === filter || o.wantRes === filter)), [data.open, uid, filter]);
+  // v5.5 : les offres du Courtier du Comptoir passent après celles des joueurs.
+  const others = useMemo(
+    () => data.open.filter((o) => o.sellerId !== uid && (!filter || o.giveRes === filter || o.wantRes === filter)).sort((a, b) => Number(isMarketMaker(a.sellerId)) - Number(isMarketMaker(b.sellerId))),
+    [data.open, uid, filter],
+  );
 
   if (!player) return null;
   const have = (res: string) => player.resources[res as ResourceId] ?? 0;
