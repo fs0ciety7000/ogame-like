@@ -35,6 +35,7 @@ import { homeLevels,
 } from "@/game/colonies";
 import { RESOURCE_LIST } from "@/game/resources";
 import { iconUrl, type GameIconName } from "@/lib/icons";
+import { assetUrl } from "@/lib/assets";
 import { findUnit, getUnitBuildTime, OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import {
@@ -292,7 +293,8 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
 
 function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Colony; player: PlayerState; id: string; busy: boolean; onUpgrade: () => void; now: number }) {
   const deposit = id === DEPOSIT_ID;
-  const def = deposit ? { name: colonyBuildingName(colony, id), image: iconUrl(colonyBiome(colony) as GameIconName) } : findBuilding(id)!;
+  // v5.1 : illustration du gisement par biome (repli : icône de la ressource rare).
+  const def = deposit ? { name: colonyBuildingName(colony, id), image: assetUrl(`/assets/buildings/gisement_${colonyBiome(colony)}.webp`) } : findBuilding(id)!;
   const level = deposit ? depositLevel(colony) : (colony.buildings[id]?.level ?? 0);
   const max = colonyMaxLevel(id);
   const running = colony.building?.id === id ? colony.building : null;
@@ -311,7 +313,12 @@ function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Co
       )}
     >
       <div className="relative grid h-16 w-16 shrink-0 place-items-center border border-white/[0.06] bg-space-950/60">
-        <img src={def.image} alt="" className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105" />
+        <img
+          src={def.image}
+          alt=""
+          className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
+          onError={deposit ? (e) => { const fallback = iconUrl(colonyBiome(colony) as GameIconName); if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; } : undefined}
+        />
         <span className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap border px-1.5 font-mono text-[10px] font-bold", maxed ? "border-gold-glow/60 bg-space-950 text-gold-glow" : "border-mint-glow/40 bg-space-950 text-mint-glow")}>
           {maxed ? "MAX" : `NIV ${level}`}
         </span>

@@ -31,5 +31,9 @@ Les alliances se disputent la galaxie, le marché s'ouvre aux commandes et aux c
 - **Avatar** : envoie ton image (recadrée en carré). Elle s'affiche sur ta fiche publique. Sans image, un commandant casqué tient lieu d'avatar par défaut.
 - **Changer de pseudo** : une seule fois, pour 10 Ambre. Ton identifiant de connexion et ton nom dans l'alliance suivent ; les anciens rapports gardent l'ancien nom.
 
+## Divers
+- **Bible du jeu** : accessible depuis le pied de la barre latérale, le menu mobile et la recherche (Ctrl+K). Elle s'ouvre dans un nouvel onglet.
+- **Nouvel emoji** `:dino_furets:` dans les discussions (groupe « Mascottes »).
+
 ## Corrections
 - Colonies : la production s'affiche **par seconde**, comme sur la planète mère (avant, elle était affichée par heure, d'où des chiffres qui semblaient bien plus élevés).
