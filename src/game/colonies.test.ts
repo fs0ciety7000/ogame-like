@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, homeLevels, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
 import { findUnit, UNITS } from "@/game/units";
@@ -98,5 +98,14 @@ describe("colonies", () => {
     expect(taken).toEqual({ scrap: 1500, energy: 500 });
     expect(c.resources.scrap).toBe(1500);
     expect(collectFromColony(c, { energy: 100 }, 2000)).toEqual({ energy: 100 });
+  });
+});
+
+describe("v4.9.3 : niveaux requis pour fonder", () => {
+  it("les bâtiments de fin de partie comptent", () => {
+    const p = empire(0);
+    p.buildings.fonderie_quantique = { level: 5, unlocked: true };
+    p.buildings.generateur_bouclier = { level: 3, unlocked: true };
+    expect(homeLevels(p)).toBe(8);
   });
 });

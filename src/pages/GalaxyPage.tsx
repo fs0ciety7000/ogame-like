@@ -14,7 +14,7 @@ import { formatCoords, galaxyCoords } from "@/game/galaxy";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetProgress, mapPosition } from "@/game/fleets";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { getRankLabel } from "@/game/ranks";
-import { formatCompact, formatDuration, timeAgo } from "@/lib/utils";
+import { formatClock, formatCompact, formatDuration, timeAgo } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -309,18 +309,30 @@ export function GalaxyPage() {
                       x2={end.x}
                       y2={end.y}
                       stroke={style.color}
-                      strokeOpacity={0.7}
-                      strokeWidth={0.4 / k}
+                      strokeOpacity={style.hostile ? 0.95 : 0.7}
+                      strokeWidth={(style.hostile ? 0.75 : 0.4) / k}
                       strokeDasharray={`${1.5 / k} ${1 / k}`}
                       className="fleet-route"
                       style={{ animationDuration: `${1.2 / Math.max(1, k * 0.6)}s` }}
                     />
                     <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="transparent" strokeWidth={2.4 / k} className="cursor-help" />
-                    <g transform={`translate(${px} ${py}) rotate(${angle})`} style={{ transition: "transform 0.25s linear" }} className="cursor-help">
-                      <circle r={3 / k} fill={style.color} opacity={0.12} className={style.hostile ? "animate-pulse" : undefined} />
+                    {/* v4.9.3 : flotte hostile plus visible — cible encerclée, compte à rebours au-dessus de la flotte. */}
+                    {style.hostile && !returning && (
+                      <g transform={`translate(${to.x} ${to.y})`} className="pointer-events-none">
+                        <circle r={5 / k} fill="none" stroke={style.color} strokeWidth={0.35 / k} strokeOpacity={0.8} className="animate-ping [transform-box:fill-box] [transform-origin:center]" />
+                        <circle r={3.6 / k} fill="none" stroke={style.color} strokeWidth={0.3 / k} strokeDasharray={`${0.8 / k} ${0.5 / k}`} />
+                      </g>
+                    )}
+                    <g transform={`translate(${px} ${py}) rotate(${angle}) scale(${style.hostile ? 1.5 : 1})`} style={{ transition: "transform 0.25s linear" }} className="cursor-help">
+                      <circle r={3 / k} fill={style.color} opacity={style.hostile ? 0.22 : 0.12} className={style.hostile ? "animate-pulse" : undefined} />
                       <circle r={1.8 / k} fill={style.color} opacity={0.22} />
                       <path d={`M ${1.6 / k} 0 L ${-1 / k} ${-0.9 / k} L ${-0.4 / k} 0 L ${-1 / k} ${0.9 / k} Z`} fill={style.color} />
                     </g>
+                    {style.hostile && !returning && (
+                      <text x={px} y={py - 4.2 / k} textAnchor="middle" fontSize={2.2 / k} fontWeight={700} fill={style.color} className="pointer-events-none font-mono" style={{ paintOrder: "stroke", stroke: "rgba(5,8,22,0.85)", strokeWidth: 0.5 / k }}>
+                        {formatClock(Math.max(0, Math.floor((f.arriveAtMs - now) / 1000)))}
+                      </text>
+                    )}
                   </g>
                 );
               })}

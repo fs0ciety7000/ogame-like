@@ -37,3 +37,12 @@ describe("timeline scale", () => {
     expect(timelinePosition(NOW + 10 * 3600_000, NOW, 3600_000)).toBe(1);
   });
 });
+
+describe("v4.9.3 : colonies sur la frise", () => {
+  it("ajoute chantier, défenses et vaisseau colonial", () => {
+    const colony = { id: "u-c1", slot: 1, name: "Nova", building: { id: "entrepot", level: 3, endTime: NOW + 5_000 }, defenseJob: { unitId: "roquette", qty: 10, endTime: NOW + 9_000 } };
+    const events = upcomingEvents(null, NOW, [], "u", { colonies: [colony] as never, colonizing: { slot: 2, name: "Vega", endTime: NOW + 7_000 } });
+    expect(events.map((e) => e.id)).toEqual(["cb:u-c1", "colonizing", "cd:u-c1"]);
+    expect(events.every((e) => e.kind === "colony" && e.to === "/game/colonies")).toBe(true);
+  });
+});

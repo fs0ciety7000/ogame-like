@@ -3,7 +3,7 @@ import { findBuilding } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
-import type { QueuesState } from "@/types/game";
+import type { PlayerState, QueuesState } from "@/types/game";
 import type { Fleet } from "@/game/fleets";
 
 /* =====================================================
@@ -12,7 +12,7 @@ import type { Fleet } from "@/game/fleets";
    date de fin.
 ===================================================== */
 
-export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile";
+export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony";
 
 export interface TimelineEvent {
   id: string;
@@ -23,12 +23,24 @@ export interface TimelineEvent {
   to: string;
 }
 
-export function upcomingEvents(queues: QueuesState | null, now: number, fleets: Fleet[] = [], uid?: string): TimelineEvent[] {
+export function upcomingEvents(
+  queues: QueuesState | null,
+  now: number,
+  fleets: Fleet[] = [],
+  uid?: string,
+  /** v4.9.3 : chantiers des colonies et vaisseau colonial, sur la même frise. */
+  empire?: Pick<PlayerState, "colonies" | "colonizing"> | null,
+): TimelineEvent[] {
   const events: TimelineEvent[] = [];
+  for (const c of empire?.colonies ?? []) {
+    if (c.building) events.push({ id: `cb:${c.id}`, kind: "colony", label: `${c.name} : ${findBuilding(c.building.id)?.name ?? c.building.id} niv. ${c.building.level}`, endTime: c.building.endTime, to: "/game/colonies" });
+    if (c.defenseJob) events.push({ id: `cd:${c.id}`, kind: "colony", label: `${c.name} : ${c.defenseJob.qty} ${findUnit(c.defenseJob.unitId)?.name ?? c.defenseJob.unitId}`, endTime: c.defenseJob.endTime, to: "/game/colonies" });
+  }
+  if (empire?.colonizing) events.push({ id: "colonizing", kind: "colony", label: `Fondation de ${empire.colonizing.name}`, endTime: empire.colonizing.endTime, to: "/game/colonies" });
   for (const f of fleets) {
     const mission = f.mission ?? "attack";
     if (f.status === "outbound" && targetsPlayer(f, uid) && f.ownerUid !== uid && (mission === "attack" || mission === "pirate")) {
-      const label = mission === "pirate" ? `Raid du ${f.ownerPseudo}` : `Attaque de ${f.ownerPseudo}`;
+      const label = mission === "pirate" ? `Raid : ${f.ownerPseudo}` : `Attaque de ${f.ownerPseudo}`;
       events.push({ id: `h:${f.id}`, kind: "hostile", label, endTime: f.arriveAtMs, to: mission === "pirate" ? "/game/menaces" : "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "outbound") {
       const label =

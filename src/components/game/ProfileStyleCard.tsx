@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { bannerOptions, emblemOptions, PROFILE_RULES, profileStyle, type CosmeticOption } from "@/game/profile";
 import { getRankIcon } from "@/game/ranks";
+import { ACHIEVEMENTS, TIER_LABELS } from "@/game/achievements";
 import { GameActionError, saveProfileStyle } from "@/services/playerService";
 import { assetUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
@@ -42,16 +43,18 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
   const [banner, setBanner] = useState(current.banner);
   const [emblem, setEmblem] = useState(current.emblem);
   const [motto, setMotto] = useState(current.motto);
+  const [pinned, setPinned] = useState<string[]>(current.pinned);
+  const owned = ACHIEVEMENTS.filter((a) => (player.unlockedAchievements ?? []).includes(a.id));
   const [busy, setBusy] = useState(false);
   const banners = bannerOptions(player);
   const emblems = emblemOptions(player);
-  const changed = banner !== current.banner || emblem !== current.emblem || motto.trim() !== current.motto;
+  const changed = banner !== current.banner || emblem !== current.emblem || motto.trim() !== current.motto || pinned.join(",") !== current.pinned.join(",");
   const preview = banners.find((b) => b.id === banner);
 
   const save = async () => {
     setBusy(true);
     try {
-      await saveProfileStyle({ banner, emblem, motto });
+      await saveProfileStyle({ banner, emblem, motto, pinned });
       toast.success("Fiche publique mise à jour.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Enregistrement impossible.");
@@ -101,6 +104,38 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
           Devise ({motto.length}/{PROFILE_RULES.mottoMax})
           <Input value={motto} maxLength={PROFILE_RULES.mottoMax} onChange={(e) => setMotto(e.target.value)} placeholder="Ex. : Personne ne passe le Bastion." />
         </label>
+        <div>
+          <p className="hud-eyebrow mb-2 text-slate-400">
+            Succès en vitrine ({pinned.length}/{PROFILE_RULES.pinnedMax})
+          </p>
+          {owned.length === 0 ? (
+            <p className="text-xs text-slate-500">Obtiens des succès pour les afficher sur ta fiche.</p>
+          ) : (
+            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+              {owned.map((a) => {
+                const on = pinned.includes(a.id);
+                const full = !on && pinned.length >= PROFILE_RULES.pinnedMax;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    disabled={full}
+                    title={a.description}
+                    onClick={() => setPinned((p) => (on ? p.filter((x) => x !== a.id) : [...p, a.id]))}
+                    className={cn(
+                      "flex items-center gap-1.5 border px-2 py-1 text-xs transition-colors",
+                      on ? "border-gold-glow/70 bg-gold-glow/10 text-gold-glow" : "border-white/10 text-slate-300 hover:border-gold-glow/40",
+                      full && "cursor-not-allowed opacity-40",
+                    )}
+                  >
+                    <span>{a.emoji}</span> {a.name}
+                    <span className="font-mono text-[9px] uppercase opacity-60">{TIER_LABELS[a.tier]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-slate-500">Ta fiche montre aussi tes officiers en poste et tes reliques équipées.</p>
           <Button size="sm" disabled={!changed || busy} onClick={() => void save()}>

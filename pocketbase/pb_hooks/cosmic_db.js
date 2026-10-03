@@ -279,6 +279,7 @@ function showcaseOf(player) {
       bounties: parseJsonField(player, "bounties", null),
       stats: parseJsonField(player, "stats", null),
       profileStyle: parseJsonField(player, "profileStyle", null),
+      unlockedAchievements: parseJsonField(player, "unlockedAchievements", []),
       commanders: parseJsonField(player, "commanders", null),
       relics: parseJsonField(player, "relics", null),
       ascensions: player.getInt("ascensions"),
@@ -866,9 +867,55 @@ function processDueFleets(game, now, uid) {
       });
     } catch (err) {
       console.log(`[cosmic] flotte ${candidate.id} non traitée : ${err}`);
+      // v4.9.3 : dernière erreur gardée en mémoire pour l'alerte de l'admin.
+      try {
+        $app.store().set(`cosmic_fleet_err_${candidate.id}`, { message: String(err).slice(0, 300), atMs: Date.now() });
+      } catch (_) {
+        /* mémoire indisponible */
+      }
     }
   });
   return due.length;
+}
+
+/** Retard au-delà duquel une flotte est considérée bloquée. */
+const STUCK_FLEET_MS = 10 * 60_000;
+
+/** GET /api/cosmic/admin/stuck-fleets — flottes que la tâche n'arrive pas à traiter (v4.9.3). */
+function adminStuckFleets(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const now = Date.now();
+  const limit = now - STUCK_FLEET_MS;
+  const recs = $app.findRecordsByFilter(
+    "fleets",
+    '(status = "outbound" && arriveAtMs <= {:t}) || (status = "returning" && returnAtMs > 0 && returnAtMs <= {:t}) || ((status = "stationed" || status = "decision") && stationedUntilMs > 0 && stationedUntilMs <= {:t})',
+    "arriveAtMs",
+    100,
+    0,
+    { t: limit },
+  );
+  const items = recs.map((r) => {
+    const status = r.getString("status");
+    const dueAt = status === "outbound" ? r.getFloat("arriveAtMs") : status === "returning" ? r.getFloat("returnAtMs") : r.getFloat("stationedUntilMs");
+    let lastError = null;
+    try {
+      lastError = $app.store().get(`cosmic_fleet_err_${r.id}`) || null;
+    } catch (_) {
+      lastError = null;
+    }
+    return {
+      id: r.id,
+      mission: r.getString("mission"),
+      status,
+      ownerPseudo: r.getString("ownerPseudo"),
+      targetPseudo: r.getString("targetPseudo"),
+      factionId: r.getString("factionId"),
+      dueAtMs: dueAt,
+      lateMs: now - dueAt,
+      lastError,
+    };
+  });
+  return e.json(200, { thresholdMs: STUCK_FLEET_MS, count: items.length, items });
 }
 
 /** Décollage d'une flotte (routes /fleet/send et /attack). */
@@ -4942,4 +4989,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

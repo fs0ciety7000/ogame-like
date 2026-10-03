@@ -18,6 +18,8 @@ export interface ProfileStyle {
   banner: string;
   emblem: string;
   motto: string;
+  /** v4.9.3 : succès mis en avant sur la fiche publique (obtenus, 3 au plus). */
+  pinned: string[];
 }
 
 export interface CosmeticOption {
@@ -30,9 +32,9 @@ export interface CosmeticOption {
   unlocked: boolean;
 }
 
-export const PROFILE_RULES = { mottoMax: 60 };
+export const PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 
-type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle">>;
+type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle" | "unlockedAchievements">>;
 
 const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [
   { id: "nebula", label: "Nébuleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
@@ -96,7 +98,9 @@ export function emblemOptions(p: StylePlayer): CosmeticOption[] {
 
 export function profileStyle(p: StylePlayer): ProfileStyle {
   const raw = (p.profileStyle ?? {}) as Partial<ProfileStyle>;
-  return { banner: String(raw.banner ?? "nebula"), emblem: String(raw.emblem ?? "rank"), motto: String(raw.motto ?? "") };
+  const unlocked = new Set(p.unlockedAchievements ?? []);
+  const pinned = Array.isArray(raw.pinned) ? raw.pinned.filter((id, i, a) => typeof id === "string" && unlocked.has(id) && a.indexOf(id) === i).slice(0, PROFILE_RULES.pinnedMax) : [];
+  return { banner: String(raw.banner ?? "nebula"), emblem: String(raw.emblem ?? "rank"), motto: String(raw.motto ?? ""), pinned };
 }
 
 export function sanitizeMotto(text: unknown): string {
@@ -126,6 +130,14 @@ export function setProfileStyle(player: PlayerState, input: unknown): ProfileSty
     next.emblem = opt.id;
   }
   if (req.motto !== undefined) next.motto = sanitizeMotto(req.motto);
+  if (req.pinned !== undefined) {
+    if (!Array.isArray(req.pinned)) throw new GameActionError("Succès mis en avant invalides.");
+    const unlocked = new Set(player.unlockedAchievements ?? []);
+    const ids = [...new Set(req.pinned.map(String))];
+    if (ids.length > PROFILE_RULES.pinnedMax) throw new GameActionError(`${PROFILE_RULES.pinnedMax} succès au plus en vitrine.`);
+    if (ids.some((id) => !unlocked.has(id))) throw new GameActionError("Seuls les succès obtenus peuvent être mis en avant.");
+    next.pinned = ids;
+  }
   player.profileStyle = next;
   return next;
 }
@@ -134,6 +146,8 @@ export interface PublicShowcase {
   banner: { image?: string; gradient?: string };
   emblem: string | null;
   motto: string;
+  /** v4.9.3 : succès épinglés (id seulement ; le client retrouve nom, emoji et rang). */
+  achievements?: string[];
   commanders: { id: CommanderId; level: number }[];
   relics: { template: string; rarity: RelicRarity }[];
 }
@@ -148,6 +162,7 @@ export function publicShowcase(p: StylePlayer & Pick<PlayerState, "commanders" |
     banner: banner.image ? { image: banner.image } : { gradient: banner.gradient },
     emblem: emblem?.image ?? null,
     motto: style.motto,
+    achievements: style.pinned,
     commanders: st.active.map((id) => ({ id, level: commanderLevel(st.roster[id]?.xp ?? 0) })),
     relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity })),
   };

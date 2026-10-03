@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Card, HudBrackets } from "@/components/ui/card";
-import { CostPill, HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
+import { HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadialGauge } from "@/components/ui/radial-gauge";
@@ -25,7 +25,9 @@ import { unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
-import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { GameIcon } from "@/components/ui/game-icon";
+import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { useProductionRates } from "@/hooks/useLiveResources";
 
 export function UnitsPage() {
   useNowTicker();
@@ -36,6 +38,7 @@ export function UnitsPage() {
   const [pending, setPending] = useState<string | null>(null);
   const fleets = useFleetStore((s) => s.fleets);
   const away = useMemo(() => (uid ? unitsAwayOf(fleets, uid) : {}), [fleets, uid]);
+  const rates = useProductionRates(player);
 
   if (!player || !queues) return null;
 
@@ -267,11 +270,7 @@ export function UnitsPage() {
                         );
                       })()}
 
-                      <div className="flex flex-wrap gap-1.5">
-                        <CostPill><GameIcon name="duration" /> {formatDuration(buildTime)} <em className="text-[10px] not-italic opacity-60">/ unité</em></CostPill>
-                        <CostPill ok><ResourceIcon id="scrap" /> {formatNumber(unit.cost.scrap * qty(unit.id))}</CostPill>
-                        <CostPill ok><ResourceIcon id="energy" /> {formatNumber(unit.cost.energy * qty(unit.id))}</CostPill>
-                      </div>
+                      <CostPills cost={{ scrap: unit.cost.scrap * qty(unit.id), energy: unit.cost.energy * qty(unit.id) }} stock={player.resources} seconds={buildTime} perUnit />
 
                       {queueInfo ? (
                         <p className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-mint-glow">
@@ -301,14 +300,30 @@ export function UnitsPage() {
                         />
                       </div>
                       <QtyStepper value={qty(unit.id)} onChange={(v) => setQty(unit.id, v)} max={Math.max(1, Math.floor(freeSpace / unit.hangarSpace))} />
-                      <div className="flex gap-2">
-                        <Button className="flex-1" disabled={pending === unit.id || neededSpace > freeSpace} onClick={() => void handleBuild(unit.id)}>
-                          Construire ×{formatNumber(qty(unit.id))}
-                        </Button>
-                        <Button variant="outline" disabled={pending === unit.id || data.count === 0} onClick={() => void handleSell(unit.id)}>
-                          Vendre
-                        </Button>
-                      </div>
+                      {(() => {
+                        const batch = { scrap: unit.cost.scrap * qty(unit.id), energy: unit.cost.energy * qty(unit.id) };
+                        const wait = secondsToAfford(batch, player.resources, rates);
+                        const noRoom = neededSpace > freeSpace;
+                        return (
+                          <div>
+                            <div className="flex gap-2">
+                              <Button className="flex-1" disabled={pending === unit.id || noRoom || wait > 0} onClick={() => void handleBuild(unit.id)}>
+                                Construire ×{formatNumber(qty(unit.id))}
+                              </Button>
+                              <Button variant="outline" disabled={pending === unit.id || data.count === 0} onClick={() => void handleSell(unit.id)}>
+                                Vendre
+                              </Button>
+                            </div>
+                            {noRoom ? (
+                              <BlockedReason tone="block">
+                                Hangar {hangarLabel} trop petit : {formatNumber(neededSpace)} places demandées pour {formatNumber(freeSpace)} libres. Réduis la quantité ou agrandis le hangar.
+                              </BlockedReason>
+                            ) : wait > 0 ? (
+                              <BlockedReason>{affordText(wait)}</BlockedReason>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                     </>
                   )}
                 </div>

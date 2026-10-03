@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Compass, FlaskConical, Hammer, Rocket, type LucideIcon } from "lucide-react";
+import { Compass, FlaskConical, Globe2, Hammer, Rocket, type LucideIcon } from "lucide-react";
 import { upcomingEvents, type TimelineKind } from "@/game/timeline";
 import { useFleetStore } from "@/store/fleetStore";
+import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatDuration } from "@/lib/utils";
 import type { QueuesState } from "@/types/game";
 
@@ -18,12 +19,17 @@ const SLOTS: { kind: TimelineKind; icon: LucideIcon; idle: string; to: string; c
   { kind: "mission", icon: Compass, idle: "Aucune mission", to: "/game/missions", color: "text-mint-glow" },
 ];
 
+const COLONY_SLOT: (typeof SLOTS)[number] = { kind: "colony", icon: Globe2, idle: "Colonies à l'arrêt", to: "/game/colonies", color: "text-violet-glow" };
+
 export function QueueStrip({ queues, now }: { queues: QueuesState | null; now: number }) {
   const fleets = useFleetStore((s) => s.fleets);
-  const events = upcomingEvents(queues, now, fleets);
+  const player = usePlayerStore((s) => s.player);
+  const events = upcomingEvents(queues, now, fleets, undefined, player);
+  // v4.9.3 : case « Colonies » dès qu'une colonie existe ou est en route.
+  const slots = (player?.colonies?.length ?? 0) > 0 || player?.colonizing ? [...SLOTS, COLONY_SLOT] : SLOTS;
   return (
     <div className="sticky top-0 z-10 -mx-1 grid grid-cols-2 gap-1.5 border-b border-white/5 bg-space-950/80 px-1 py-1.5 backdrop-blur-md sm:flex">
-      {SLOTS.map((slot) => {
+      {slots.map((slot) => {
         const list = events.filter((e) => e.kind === slot.kind);
         const first = list[0];
         return (

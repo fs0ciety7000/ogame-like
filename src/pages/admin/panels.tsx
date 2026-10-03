@@ -24,6 +24,7 @@ import { NumberField, Section } from "@/pages/admin/fields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
+import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
 import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
 
 const HOUR = 3600 * 1000;
@@ -1000,6 +1001,7 @@ export function ToolsPanel() {
         )}
       </Card>
 
+      <StuckFleetsCard />
       <BackupsCard />
       <PirateTriggerCard />
       <HardResetCard />

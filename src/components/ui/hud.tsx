@@ -40,7 +40,7 @@ export function CostPill({ children, missing, ok, className }: { children: React
     <span
       className={cn(
         "inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-xs tabular-nums",
-        missing ? "border-danger-glow/55 bg-danger-glow/[0.08] text-danger-glow" : ok ? "border-mint-glow/30 bg-white/[0.03] text-slate-200" : "border-cyan-glow/15 bg-white/[0.03] text-slate-300",
+        missing ? "border-ember-glow/55 bg-ember-glow/[0.08] text-ember-glow" : ok ? "border-mint-glow/30 bg-white/[0.03] text-slate-200" : "border-cyan-glow/15 bg-white/[0.03] text-slate-300",
         className,
       )}
     >
