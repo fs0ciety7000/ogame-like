@@ -22,6 +22,7 @@ Une barre latérale réorganisée, une page Colonies entièrement redessinée, e
 - **Fonder une colonie** devient une liste de prérequis cochés : niveaux de la planète mère (avec jauge) et coût du vaisseau colonial ressource par ressource.
 
 ## Corrections
+- **Onglet Diplomatie de l'alliance** : « Une erreur est survenue — i is not a function » en ouvrant puis en quittant le canal d'un pacte, sur les navigateurs récents (Chrome, Edge). Corrigé.
 - **Raids de l'Inquisition de l'Aube Blanche** : la flotte du Lecteur arrivait à 00:00 puis restait affichée « en approche » sans jamais attaquer. Le nom du rapport de combat dépassait la taille prévue par le serveur, ce qui faisait échouer le raid. Les raids en attente sont résolus dès la mise à jour.
 - Les noms de faction et de repaire trop longs sont désormais tronqués dans les rapports et ne peuvent plus bloquer un combat.
 
