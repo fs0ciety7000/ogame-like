@@ -1,6 +1,6 @@
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
 import type { MissionDef } from "@/game/missions";
-import { getProductionRatesPerSecond } from "@/game/production";
+import { getProductionBonus, getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit } from "@/game/units";
 import { eventBoundaries, productionMultipliers } from "@/game/events";
@@ -8,6 +8,8 @@ import { allianceBastionBonus, allianceProductionFactor } from "@/game/alliances
 import { ascensionProductionFactor, upkeepFreeUntil } from "@/game/ascension";
 import type { Buildings, PlayerState, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 import { playerModifiers } from "@/game/modifiers";
+import { activeLevels } from "@/game/commanders";
+import { territoryBonus } from "@/game/territories";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
 /* =====================================================
@@ -50,6 +52,9 @@ export interface EconomyInput {
   /** v4.0 : officiers (Intendant) et reliques de production. */
   commanders?: PlayerState["commanders"];
   relics?: PlayerState["relics"];
+  /** v5.1 : bonus de secteur d'alliance et talents d'Ascension. */
+  territory?: PlayerState["territory"];
+  talents?: PlayerState["talents"];
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -102,13 +107,12 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
   const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
-  // v4.0 : Intendant en poste et reliques de production.
-  if (input.commanders || input.relics) {
-    const mods = playerModifiers(input);
-    for (const res of Object.keys(gross) as ResourceId[]) {
-      const f = 1 + mods.productionAll + (mods.production[res] ?? 0);
-      if (f !== 1) gross[res] = (gross[res] ?? 0) * f;
-    }
+  // v4.0 : Intendant en poste et reliques ; v5.2 : aussi secteur d'alliance et talents
+  // (auparavant ignorés sans officier ni relique).
+  const mods = playerModifiers(input);
+  for (const res of Object.keys(gross) as ResourceId[]) {
+    const f = 1 + mods.productionAll + (mods.production[res] ?? 0);
+    if (f !== 1) gross[res] = (gross[res] ?? 0) * f;
   }
   for (const [res, m] of Object.entries(multipliers)) {
     if (gross[res as ResourceId] && m) gross[res as ResourceId] = (gross[res as ResourceId] ?? 0) * m;
@@ -237,5 +241,27 @@ export function missionRewards(mission: MissionDef, player: { buildings: Buildin
       out[res] = Math.max(fixed, indexed);
     } else out[res] = Math.floor(fixed * rareScale);
   }
+  return out;
+}
+
+/** v5.2 : bonus de production actifs d'une ressource, pour l'affichage (0,1 = +10 %). */
+export function productionBonuses(input: EconomyInput, now: number, res: ResourceId): { label: string; pct: number }[] {
+  const out: { label: string; pct: number }[] = [];
+  const tech = getProductionBonus(input.techLevels) + techBonus(input.techLevels, "resource_production", res);
+  if (tech > 0) out.push({ label: "Technologies", pct: tech });
+  const alliance = allianceProductionFactor(input.allianceResearch) - 1;
+  if (alliance > 0) out.push({ label: "Recherche d'alliance", pct: alliance });
+  const asc = ascensionProductionFactor(input) - 1;
+  if (asc > 0) out.push({ label: "Ascensions", pct: asc });
+  const steward = activeLevels(input as Pick<PlayerState, "commanders">).steward * 0.01;
+  if (steward > 0) out.push({ label: "Intendant", pct: steward });
+  const territory = territoryBonus(input.territory, now);
+  if (territory > 0) out.push({ label: "Secteurs d'alliance", pct: territory });
+  const mods = playerModifiers(input);
+  const other = mods.productionAll - steward - territory + (mods.production[res] ?? 0);
+  if (other > 0.0001) out.push({ label: "Reliques et talents", pct: other });
+  if (boostAt(input, now) > 1) out.push({ label: "Gelée de la Reine", pct: KESH_BOOST_PCT });
+  const ev = productionMultipliers(now)[res];
+  if (ev && ev !== 1) out.push({ label: "Événement en cours", pct: ev - 1 });
   return out;
 }

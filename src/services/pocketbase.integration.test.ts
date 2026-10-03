@@ -1086,29 +1086,31 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(me.colonies[0].building.id).toBe("extracteur_ferraille");
       expect(me.resources.scrap).toBeGreaterThanOrEqual(homeScrap); // payé par la colonie
 
+      // v5.2 : une ressource rare autre que celle du gisement (qui produit en continu).
+      const rare = (["cyberModule", "syntheticNanites", "reinforcedSteel", "aiFragment"] as const).find((r) => r !== me.colonies[0].biome)!;
       // Livraison : quitte la planète mère, arrive dans le stock de la colonie.
-      const sent = await ps.sendTransport(colony.id, "deliver", { cargo: 20 }, { reinforcedSteel: 1000 });
+      const sent = await ps.sendTransport(colony.id, "deliver", { cargo: 20 }, { [rare]: 1000 });
       fleets.push(sent.id);
-      expect((await snap(bId)).resources.reinforcedSteel).toBe(200_000_000 - 1_000_000 - 1000);
+      expect((await snap(bId)).resources[rare]).toBe(200_000_000 - 1_000_000 - 1000);
       await expect(ps.sendTransport(colony.id, "deliver", { cargo: 1 }, { scrap: 10_000_000 })).rejects.toThrow(/soute/);
       await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
       await ps.syncPlayer("");
       me = await snap(bId);
-      expect(me.colonies[0].resources.reinforcedSteel).toBe(1000);
+      expect(me.colonies[0].resources[rare]).toBe(1000);
       expect((await pb.collection("fleets").getOne(sent.id)).status).toBe("returning");
 
       // Rapatriement : chargé à l'arrivée, crédité au retour.
-      const back = await ps.sendTransport(colony.id, "collect", { cargo: 20 }, { reinforcedSteel: 400 });
+      const back = await ps.sendTransport(colony.id, "collect", { cargo: 20 }, { [rare]: 400 });
       fleets.push(back.id);
       await admin.collection("fleets").update(back.id, { arriveAtMs: Date.now() - 1000 });
       await ps.syncPlayer("");
       const loaded = await pb.collection("fleets").getOne(back.id);
-      expect(loaded.loot).toEqual({ reinforcedSteel: 400 });
-      const steel = (await snap(bId)).resources.reinforcedSteel;
+      expect(loaded.loot).toEqual({ [rare]: 400 });
+      const steel = (await snap(bId)).resources[rare];
       await admin.collection("fleets").update(back.id, { returnAtMs: Date.now() - 1000 });
       await ps.syncPlayer("");
-      expect((await snap(bId)).resources.reinforcedSteel).toBe(steel + 400);
-      expect((await snap(bId)).colonies[0].resources.reinforcedSteel).toBe(600);
+      expect((await snap(bId)).resources[rare]).toBe(steel + 400);
+      expect((await snap(bId)).colonies[0].resources[rare]).toBe(600);
     } finally {
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
       await admin.collection("players").update(bId, { buildings: before!.buildings, resources: before!.resources, units: before!.units, colonies: [], colonizing: null });
