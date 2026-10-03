@@ -21,8 +21,31 @@ export function subscribeWars(allianceId: string, cb: (wars: AllianceWar[]) => v
   };
 }
 
-export function declareWar(targetAllianceId: string) {
-  return callGame<AllianceWar>("war", { action: "declare", targetAllianceId });
+/** v5.1 : `payFrom: "chest"` paie la déclaration avec le coffre de guerre. */
+export function declareWar(targetAllianceId: string, payFrom: "treasury" | "chest" = "treasury") {
+  return callGame<AllianceWar>("war", { action: "declare", targetAllianceId, payFrom });
+}
+
+/** v5.1 : bouclier de 2 h offert à un membre par le coffre de guerre. */
+export function chestShield(memberUid: string) {
+  return callGame<{ untilMs: number }>("war", { action: "chestShield", memberUid });
+}
+
+export interface SeasonWarRow {
+  allianceId: string;
+  tag: string;
+  name: string;
+  warPoints: number;
+  power: number;
+  powerPoints: number;
+  sectors: number;
+  score: number;
+  rank: number;
+}
+
+/** v5.1 : classement des guerres de la saison en cours. */
+export function fetchSeasonWar() {
+  return pb.send<{ seasonId: string; standings: SeasonWarRow[] }>("/api/cosmic/season-war", { method: "GET" });
 }
 
 export function surrenderWar(warId: string) {

@@ -1,6 +1,7 @@
 import { allianceRole, canDiplomacy } from "@/game/alliances";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
+import { payWarFromChest, type WarChest } from "@/game/seasonWars";
 import type { Alliance, CombatOutcome, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -103,7 +104,9 @@ export function declareWar(input: {
   /** Guerres (toutes) impliquant l'une ou l'autre alliance. */
   wars: Pick<AllianceWar, "attackerId" | "defenderId" | "status" | "startMs" | "endMs" | "endedAtMs">[];
   now: number;
-}): { war: Omit<AllianceWar, "id">; own: Alliance } {
+  /** v5.1 : coût payé par le coffre de guerre plutôt que par le trésor. */
+  chest?: WarChest | null;
+}): { war: Omit<AllianceWar, "id">; own: Alliance; chest: WarChest | null } {
   const { own, target, now } = input;
   const role = allianceRole(own, input.actorUid);
   if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent déclarer une guerre.");
@@ -117,14 +120,20 @@ export function declareWar(input: {
   const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR - now;
   if (lastPair > 0 && wait > 0) throw new GameActionError(`Dernière guerre contre [${target.tag}] trop récente : encore ${Math.ceil(wait / (24 * HOUR))} jour(s).`);
   const treasury = { ...(own.treasury ?? {}) } as Partial<Record<ResourceId, number>>;
-  if ((treasury.scrap ?? 0) < WAR_RULES.costScrap || (treasury.energy ?? 0) < WAR_RULES.costEnergy) {
-    throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} énergie dans le trésor.`);
+  const chest = input.chest ? { resources: { ...input.chest.resources }, cap: { ...input.chest.cap } } : null;
+  if (chest) {
+    payWarFromChest(chest, { scrap: WAR_RULES.costScrap, energy: WAR_RULES.costEnergy });
+  } else {
+    if ((treasury.scrap ?? 0) < WAR_RULES.costScrap || (treasury.energy ?? 0) < WAR_RULES.costEnergy) {
+      throw new GameActionError(`Il faut ${formatInt(WAR_RULES.costScrap)} ferraille et ${formatInt(WAR_RULES.costEnergy)} énergie dans le trésor.`);
+    }
+    treasury.scrap = (treasury.scrap ?? 0) - WAR_RULES.costScrap;
+    treasury.energy = (treasury.energy ?? 0) - WAR_RULES.costEnergy;
   }
-  treasury.scrap = (treasury.scrap ?? 0) - WAR_RULES.costScrap;
-  treasury.energy = (treasury.energy ?? 0) - WAR_RULES.costEnergy;
   const startMs = now + WAR_RULES.prepHours * HOUR;
   return {
     own: { ...own, treasury },
+    chest,
     war: {
       attackerId: own.id,
       attackerName: own.name,

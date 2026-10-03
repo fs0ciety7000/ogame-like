@@ -44,7 +44,7 @@ export function upcomingEvents(
       events.push({ id: `h:${f.id}`, kind: "hostile", label, endTime: f.arriveAtMs, to: mission === "pirate" ? "/game/menaces" : "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "outbound") {
       const label =
-        mission === "patrol" ? "Demi-tour de la patrouille" : mission === "spy" ? `Sondes sur ${f.targetPseudo}` : mission === "recycle" ? `Débris de ${f.targetPseudo}` : mission === "garrison" ? `Garnison chez ${f.targetPseudo}` : `Impact sur ${f.targetPseudo}`;
+        mission === "patrol" ? "Demi-tour de la patrouille" : mission === "spy" ? `Sondes sur ${f.targetPseudo}` : mission === "recycle" ? `Débris de ${f.targetPseudo}` : mission === "garrison" ? `Garnison chez ${f.targetPseudo}` : mission === "delivery" ? `Livraison à ${f.targetPseudo}` : `Impact sur ${f.targetPseudo}`;
       events.push({ id: `f:${f.id}`, kind: "fleet", label, endTime: f.arriveAtMs, to: "/game/galaxie" });
     } else if (f.ownerUid === uid && f.status === "stationed" && f.stationedUntilMs) {
       events.push({ id: `f:${f.id}`, kind: "fleet", label: `Fin de garnison chez ${f.targetPseudo}`, endTime: f.stationedUntilMs, to: "/game/galaxie" });

@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { AscensionCard } from "@/components/game/AscensionCard";
+import { TalentTreeCard } from "@/components/game/TalentTreeCard";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -94,6 +95,7 @@ export function BuildingsPage() {
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
       <AscensionCard />
+      <TalentTreeCard />
       <BuildPlanCard player={player} queues={queues} now={now} />
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">

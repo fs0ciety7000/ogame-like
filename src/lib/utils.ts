@@ -17,6 +17,14 @@ export function formatCompact(value: number): string {
   );
 }
 
+/** Débit horaire affiché par seconde, comme l'en-tête de la planète mère. */
+export function formatPerSecond(hourly: number): string {
+  const v = hourly / 3600;
+  if (v >= 1000) return `${formatCompact(v)}/s`;
+  if (v >= 10) return `${formatNumber(Math.round(v))}/s`;
+  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(v)}/s`;
+}
+
 export function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);

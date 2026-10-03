@@ -7,7 +7,7 @@ import { findBuilding } from "@/game/buildings";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { usePlayerStore } from "@/store/playerStore";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
 
 /* v4.9.3 : les colonies d'un coup d'œil sur l'accueil — production, chantier, stock le plus rempli. */
 
@@ -42,7 +42,7 @@ export function ColoniesCard() {
               <div className="flex items-baseline gap-2">
                 <span className="truncate font-display text-sm font-semibold text-white">{c.name}</span>
                 <span className="ml-auto inline-flex items-center gap-1 font-mono text-[11px] text-mint-glow">
-                  <TrendingUp className="h-3 w-3" /> {formatCompact(hourly)}/h
+                  <TrendingUp className="h-3 w-3" /> +{formatPerSecond(hourly)}
                 </span>
               </div>
               {job ? (

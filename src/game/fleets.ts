@@ -12,6 +12,7 @@ import { checkAttackAllowed } from "@/game/pvp";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
+import { checkDelivery } from "@/game/tradeContracts";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { fleetCargoCapacity } from "@/game/combat";
@@ -53,7 +54,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss" | "allianceboss";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss" | "allianceboss" | "delivery";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -70,6 +71,7 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   elite: "Proie d'élite",
   seasonboss: "Assaut du boss de saison",
   allianceboss: "Assaut du boss d'alliance",
+  delivery: "Livraison de contrat",
 };
 
 export interface Fleet {
@@ -289,7 +291,8 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     owner.units[unitId] = { ...state, count: state.count + qty };
   }
   // v3.5 : livraison rappelée avant d'atteindre la colonie, la cargaison revient.
-  if (fleet.mission === "transport" && fleet.recalled && fleet.transport?.direction === "deliver") {
+  // v5.1 : de même pour une livraison de contrat rappelée.
+  if ((fleet.mission === "transport" || fleet.mission === "delivery") && fleet.recalled && fleet.transport?.direction === "deliver") {
     for (const [res, amount] of Object.entries(fleet.transport.cargo ?? {})) owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   // Le butin arrive même si l'entrepôt est plein (comme une livraison).
@@ -325,6 +328,10 @@ function returnMessage(fleet: Fleet, lootTotal: number): { title: string; messag
       return fleet.transport?.direction === "collect" && !fleet.recalled
         ? { title: "Transport rentré", message: lootTotal > 0 ? `${formatInt(lootTotal)} ressources rapatriées de ${fleet.targetPseudo}.` : `Rien à rapatrier de ${fleet.targetPseudo}.` }
         : { title: "Transport rentré", message: `Tes vaisseaux de transport sont revenus de ${fleet.targetPseudo}${fleet.recalled ? " avec leur cargaison" : ""}.` };
+    case "delivery":
+      return fleet.recalled || lootTotal > 0
+        ? { title: "Livraison revenue", message: `Tes vaisseaux sont revenus de chez ${fleet.targetPseudo} avec la cargaison du contrat.` }
+        : { title: "Livreurs rentrés", message: `Tes vaisseaux de livraison sont revenus de chez ${fleet.targetPseudo}.` };
     case "garrison":
       return { title: "Garnison rentrée", message: `Ta garnison stationnée chez ${fleet.targetPseudo} est de retour.` };
     case "spy":
@@ -381,6 +388,8 @@ export interface LaunchRequest {
   bountyId?: string;
   /** v4.0 : capsules du Labo de synthèse embarquées (attaque de joueur). */
   capsules?: unknown;
+  /** v5.1 : contrat livré (vérifié par le serveur, qui fournit le client en `target`). */
+  delivery?: { id: string; status: string; supplierUid: string; deadlineMs: number; fleetId: string; wantRes: ResourceId; wantAmount: number };
   random?: () => number;
   eliteName?: string;
 }
@@ -443,6 +452,10 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
   }
   else if (mission === "transport") out = launchTransport(owner, req.fleet, req.transport ?? {}, now);
   else if (mission === "bounty") out = launchBounty(owner, req.bountyId ?? "", req.fleet, now);
+  else if (mission === "delivery") {
+    if (!target || !req.delivery) throw new GameActionError("Contrat introuvable.");
+    out = launchDelivery(owner, target, req.fleet, req.delivery, now);
+  }
   else if (mission === "elite") {
     const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'élite.");
     out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: req.eliteName ?? "Proie d'élite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 60_000), defenderNotifications: [] };
@@ -494,6 +507,32 @@ export function launchTransport(owner: PlayerState, raw: Record<string, unknown>
   return {
     attacker: owner,
     fleet: { ...newFleet(owner, { uid: colony.id, pseudo: colony.name }, "transport", units, now, arriveAtMs), transport: { direction, colonyId: colony.id, cargo } },
+    defenderNotifications: [],
+  };
+}
+
+/** v5.1 : livraison d'un contrat entre joueurs — cargaison chargée au départ, arrivée avant l'échéance. */
+export function launchDelivery(
+  owner: PlayerState,
+  client: PlayerState,
+  raw: Record<string, unknown>,
+  contract: NonNullable<LaunchRequest["delivery"]>,
+  now: number,
+): LaunchOutput {
+  if (contract.fleetId) throw new GameActionError("Une livraison est déjà en route pour ce contrat.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
+  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  checkDelivery(contract, owner.uid, capacity, arriveAtMs);
+  if ((owner.resources[contract.wantRes] ?? 0) < contract.wantAmount) throw new GameActionError("Ressources insuffisantes pour cette livraison.");
+  owner.resources[contract.wantRes] -= contract.wantAmount;
+  return {
+    attacker: owner,
+    fleet: {
+      ...newFleet(owner, { uid: client.uid, pseudo: client.pseudo }, "delivery", units, now, arriveAtMs),
+      transport: { direction: "deliver", colonyId: "", cargo: { [contract.wantRes]: contract.wantAmount }, contractId: contract.id },
+    },
     defenderNotifications: [],
   };
 }

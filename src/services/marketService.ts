@@ -29,12 +29,13 @@ export function subscribeOffers(onChange: (data: { open: MarketOffer[]; mine: Ma
   };
 }
 
-export function createMarketOffer(input: { giveRes: ResourceId; giveAmount: number; wantRes: ResourceId; wantAmount: number }) {
+export function createMarketOffer(input: { giveRes: ResourceId; giveAmount: number; wantRes: ResourceId; wantAmount: number; kind?: "sell" | "buy" }) {
   return callGame<MarketOffer>("market/create", input);
 }
 
-export function acceptMarketOffer(id: string) {
-  return callGame<MarketOffer>("market/accept", { id });
+/** `qty` : quantité livrée sur un ordre d'achat (v5.1) ; ignorée pour une offre de vente. */
+export function acceptMarketOffer(id: string, qty?: number) {
+  return callGame<MarketOffer>("market/accept", qty ? { id, qty } : { id });
 }
 
 export function cancelMarketOffer(id: string) {

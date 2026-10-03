@@ -3,6 +3,7 @@ import { colonyOf, colonyView } from "@/game/colonies";
 import { onVacation } from "@/game/vacation";
 import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
+import { addSeasonPower } from "@/game/seasonWars";
 import { bumpStat, setStat } from "@/game/stats";
 import { computeFullPower, getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -199,8 +200,13 @@ export function performAttack(input: AttackInput): AttackOutput {
     def.resources[res as ResourceId] = Math.max(0, (def.resources[res as ResourceId] ?? 0) - (amt ?? 0));
   }
   // v4.9 : puissance détruite de part et d'autre (objectifs du jour d'alliance).
-  bumpStat(attacker, "powerDestroyed", Math.round(lostPower(combat.defenderLosses, def.units, def.techLevels)));
-  bumpStat(def, "powerDestroyed", Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels)));
+  const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def.units, def.techLevels));
+  const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
+  bumpStat(attacker, "powerDestroyed", destroyedByAttacker);
+  bumpStat(def, "powerDestroyed", destroyedByDefender);
+  // v5.1 : compteur de saison (classement des guerres de saison).
+  addSeasonPower(attacker, destroyedByAttacker, now);
+  addSeasonPower(def, destroyedByDefender, now);
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }

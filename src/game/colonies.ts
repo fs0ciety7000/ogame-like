@@ -301,6 +301,8 @@ export interface TransportState {
   colonyId: string;
   /** Livraison : chargement au départ. Collecte : quantités demandées (vide = au maximum). */
   cargo: Partial<Record<ResourceId, number>>;
+  /** v5.1 : contrat entre joueurs livré par cette flotte. */
+  contractId?: string;
 }
 
 /** Montants valides d'un chargement, plafonnés à la soute. */
