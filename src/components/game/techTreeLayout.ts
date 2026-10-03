@@ -19,6 +19,8 @@ export const TECH_GRID: Record<string, { col: number; row: number }> = {
   // Économie
   tech4: { col: 1, row: 0 },
   tech6: { col: 2, row: 0 },
+  // v5.5 : Extension des hangars, après l'Infrastructure spatiale.
+  tech26: { col: 3, row: 0 },
   // Logistique
   tech9: { col: 1, row: 1 },
   tech20: { col: 2, row: 1 },

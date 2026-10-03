@@ -83,7 +83,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
               <span className="min-w-0 flex-1 truncate">
                 [{r.tag}] {r.name}
               </span>
-              {r.rank <= ALLIANCE_SAGA_RULES.rewardHours.length && <HudTag tone="gold">{ALLIANCE_SAGA_RULES.rewardHours[r.rank - 1]} h</HudTag>}
+              {r.rank <= ALLIANCE_SAGA_RULES.rewardHours.length && r.points > 0 && <HudTag tone="gold">{ALLIANCE_SAGA_RULES.rewardHours[r.rank - 1]} h</HudTag>}
               <span className="font-mono">{formatInt(r.points)} pts</span>
             </div>
           ))

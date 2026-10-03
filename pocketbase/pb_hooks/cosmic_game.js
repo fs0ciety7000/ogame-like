@@ -12575,7 +12575,7 @@ function generateAllianceSaga(monthId, digest, difficulty, now) {
   return {
     monthId,
     title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
-    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)\s/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
+    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)(?=\s)|^L'/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
     bossName,
     image: arch.image,
     accent: arch.accent,
