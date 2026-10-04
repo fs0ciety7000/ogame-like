@@ -49,7 +49,7 @@ export function BossLiveStrip() {
   const { pathname } = useLocation();
   const now = useMinute();
   const live = [
-    leviathan && isActive(leviathan, now) ? { to: "/game/leviathan", name: worldBossName(leviathan), state: leviathan, accent: worldBossOf(leviathan).accent } : null,
+    leviathan && isActive(leviathan, now) ? { to: "/game/uber", name: worldBossName(leviathan), state: leviathan, accent: worldBossOf(leviathan).accent } : null,
     seasonBoss && isActive(seasonBoss, now) ? { to: "/game/boss", name: bossMonthOf(seasonBoss)?.boss.name ?? "Le boss de saison", state: seasonBoss, accent: bossMonthOf(seasonBoss)?.theme.accent ?? "var(--color-ember-glow)" } : null,
   ].filter((b): b is NonNullable<typeof b> => !!b && !pathname.startsWith(b.to));
   if (live.length === 0) return null;

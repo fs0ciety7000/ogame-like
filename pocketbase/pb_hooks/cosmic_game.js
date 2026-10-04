@@ -443,6 +443,7 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   scoreSpin: () => scoreSpin,
+  seasonBossFlightMinutes: () => seasonBossFlightMinutes,
   seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
   seasonPowerOf: () => seasonPowerOf,
@@ -4399,82 +4400,6 @@ function clearDecoy(player, fleetId) {
   player.synthesis = st;
 }
 
-// src/game/loot.ts
-var LOOT_SOURCES = ["worldBoss", "seasonBoss", "allianceBoss", "expedition", "warlord", "threat", "pvp"];
-var LOOT_SOURCE_LABELS = {
-  worldBoss: "Boss mondial",
-  seasonBoss: "Boss de saison",
-  allianceBoss: "Boss d'alliance",
-  expedition: "Exp\xE9dition",
-  warlord: "Seigneur de guerre (vendetta, coalition)",
-  threat: "Menaces (repaire pris, raid repouss\xE9)",
-  pvp: "Attaque gagn\xE9e contre un joueur"
-};
-function defaultLootTables() {
-  return {
-    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6 },
-    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5 },
-    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5 },
-    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1 },
-    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1 },
-    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1 },
-    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1 }
-  };
-}
-var LOOT_TABLES = defaultLootTables();
-function setLootTables(tables) {
-  var _a;
-  const d = defaultLootTables();
-  for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
-}
-function validateLootTables(tables) {
-  var _a, _b;
-  const errors = [];
-  for (const src of LOOT_SOURCES) {
-    const t = tables == null ? void 0 : tables[src];
-    if (!t) continue;
-    const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
-    const pct5 = (v) => typeof v === "number" && v >= 0 && v <= 1;
-    if (t.relicChance !== void 0 && !pct5(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
-    if (t.capsuleChance !== void 0 && !pct5(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
-    if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
-    const min = (_a = t.capsuleMin) != null ? _a : 1;
-    const max = (_b = t.capsuleMax) != null ? _b : 10;
-    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
-    if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
-  }
-  return errors;
-}
-function rollLoot(player, source, now, rank2 = -1, random = Math.random) {
-  const t = LOOT_TABLES[source];
-  if (!t) return {};
-  const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
-  const drop = {};
-  if (random() < Math.min(1, t.relicChance * mult)) {
-    const item = rollRelic(`loot:${source}`, now, random, t.relicMinRarity);
-    if (addRelic(player, item)) drop.relic = relicLabel(item);
-  }
-  if (random() < Math.min(1, t.capsuleChance * mult)) {
-    const st = synthesisState(player);
-    const free = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
-    if (free.length > 0) {
-      const type = free[Math.floor(random() * free.length) % free.length];
-      const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
-      const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
-      const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-      if (addCapsule(player, type, level3)) drop.capsule = { type, level: level3, name: CAPSULES[type].name };
-    }
-  }
-  return drop;
-}
-function describeLoot(drop) {
-  if (!drop) return "";
-  const parts = [];
-  if (drop.relic) parts.push(`Relique : ${drop.relic}`);
-  if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
-  return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
-}
-
 // src/game/story.ts
 var STORY_SPEAKERS = {
   vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
@@ -5102,6 +5027,100 @@ function recordWin(state, win) {
     totalSpins: state.totalSpins + 1,
     updatedAtMs: win.atMs
   });
+}
+
+// src/game/loot.ts
+var LOOT_SOURCES = ["worldBoss", "seasonBoss", "allianceBoss", "expedition", "warlord", "threat", "pvp"];
+var LOOT_SOURCE_LABELS = {
+  worldBoss: "Boss mondial",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  expedition: "Exp\xE9dition",
+  warlord: "Seigneur de guerre (vendetta, coalition)",
+  threat: "Menaces (repaire pris, raid repouss\xE9)",
+  pvp: "Attaque gagn\xE9e contre un joueur"
+};
+function defaultLootTables() {
+  return {
+    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
+    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
+    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
+    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 },
+    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
+    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1 },
+    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 }
+  };
+}
+var LOOT_TABLES = defaultLootTables();
+function setLootTables(tables) {
+  var _a;
+  const d = defaultLootTables();
+  for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
+}
+function validateLootTables(tables) {
+  var _a, _b, _c, _d;
+  const errors = [];
+  for (const src of LOOT_SOURCES) {
+    const t = tables == null ? void 0 : tables[src];
+    if (!t) continue;
+    const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
+    const pct5 = (v) => typeof v === "number" && v >= 0 && v <= 1;
+    if (t.relicChance !== void 0 && !pct5(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
+    if (t.capsuleChance !== void 0 && !pct5(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
+    if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
+    const min = (_a = t.capsuleMin) != null ? _a : 1;
+    const max = (_b = t.capsuleMax) != null ? _b : 10;
+    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
+    if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
+    if (t.tokenChance !== void 0 && !pct5(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
+    const tmin = (_c = t.tokenMin) != null ? _c : 1;
+    const tmax = (_d = t.tokenMax) != null ? _d : 1;
+    if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
+  }
+  return errors;
+}
+function lootDifficulty(enemy, own) {
+  if (!(enemy > 0) || !(own > 0)) return 1;
+  return Math.max(0.5, Math.min(2, enemy / own));
+}
+function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficulty = 1) {
+  var _a, _b, _c, _d;
+  const t = LOOT_TABLES[source];
+  if (!t) return {};
+  const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
+  const drop = {};
+  if (random() < Math.min(1, t.relicChance * mult)) {
+    const item = rollRelic(`loot:${source}`, now, random, t.relicMinRarity);
+    if (addRelic(player, item)) drop.relic = relicLabel(item);
+  }
+  if (random() < Math.min(1, t.capsuleChance * mult)) {
+    const st = synthesisState(player);
+    const free = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
+    if (free.length > 0) {
+      const type = free[Math.floor(random() * free.length) % free.length];
+      const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
+      const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
+      const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+      if (addCapsule(player, type, level3)) drop.capsule = { type, level: level3, name: CAPSULES[type].name };
+    }
+  }
+  const diff = Math.max(0.5, Math.min(2, difficulty));
+  if (((_a = t.tokenChance) != null ? _a : 0) > 0 && random() < Math.min(1, ((_b = t.tokenChance) != null ? _b : 0) * mult * diff)) {
+    const lo = Math.max(1, Math.floor((_c = t.tokenMin) != null ? _c : 1));
+    const hi = Math.max(lo, Math.floor((_d = t.tokenMax) != null ? _d : lo));
+    const n = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+    const got = grantTokens(player, n);
+    if (got > 0) drop.tokens = got;
+  }
+  return drop;
+}
+function describeLoot(drop) {
+  if (!drop) return "";
+  const parts = [];
+  if (drop.relic) parts.push(`Relique : ${drop.relic}`);
+  if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
+  if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
+  return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
 }
 
 // src/game/formations.ts
@@ -6551,7 +6570,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
-    const raidLoot = describeLoot(rollLoot(player, "threat", now));
+    const raidLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.attackerPower, combat.defenderPower)));
     notifications.push(
       note3(
         "combat-defender",
@@ -6653,7 +6672,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
-    const lairLoot = describeLoot(rollLoot(player, "threat", now));
+    const lairLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower)));
     player.victories = ((_g = player.victories) != null ? _g : 0) + 1;
     notifications.push(
       note3(
@@ -6710,6 +6729,7 @@ function validateFactions(defs) {
 
 // src/game/achievements.ts
 var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
+var ACHIEVEMENT_TOKENS = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
 var TIER_REWARDS = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
@@ -7437,7 +7457,7 @@ function achievementTitle(a) {
   return (_b = (_a = findTitle(a.titleId)) == null ? void 0 : _a.label) != null ? _b : a.title;
 }
 function flushState(playerIn, queuesIn, now) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const player = structuredClone(playerIn);
   const queues = structuredClone(queuesIn);
   const notifications = [];
@@ -7589,6 +7609,8 @@ function flushState(playerIn, queuesIn, now) {
   if (newAchievements.length > 0) {
     player.unlockedAchievements = [...(_c = player.unlockedAchievements) != null ? _c : [], ...newAchievements.map((a) => a.id)];
     let totalXp = 0;
+    let totalTokens = 0;
+    const tokensOf = /* @__PURE__ */ new Map();
     const rewards = /* @__PURE__ */ new Map();
     const allRewards = {};
     for (const a of newAchievements) {
@@ -7600,13 +7622,16 @@ function flushState(playerIn, queuesIn, now) {
       }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
-      grantTitle(player, (_g = (_f = findTitle(a.titleId)) == null ? void 0 : _f.label) != null ? _g : a.title, `achievement:${a.id}`);
+      const tokens = grantTokens(player, (_f = ACHIEVEMENT_TOKENS[a.tier]) != null ? _f : 0);
+      if (tokens > 0) tokensOf.set(a.id, tokens);
+      totalTokens += tokens;
+      grantTitle(player, (_h = (_g = findTitle(a.titleId)) == null ? void 0 : _g.label) != null ? _h : a.title, `achievement:${a.id}`);
     }
     if (newAchievements.length > 3) {
       notifications.push({
         kind: "achievement",
         title: `${newAchievements.length} succ\xE8s d\xE9bloqu\xE9s !`,
-        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "\u2026" : ""} (+${formatInt(totalXp)} XP). D\xE9tails sur la page Succ\xE8s.`,
+        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "\u2026" : ""} (+${formatInt(totalXp)} XP${totalTokens > 0 ? `, +${totalTokens} jeton${totalTokens > 1 ? "s" : ""} du casino` : ""}). D\xE9tails sur la page Succ\xE8s.`,
         createdAtMs: now,
         read: false,
         link: "/game/succes",
@@ -7617,7 +7642,7 @@ function flushState(playerIn, queuesIn, now) {
         notifications.push({
           kind: "achievement",
           title: "Succ\xE8s d\xE9bloqu\xE9 !",
-          message: `${a.emoji} ${a.name} \u2014 ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` \xB7 titre \xAB ${achievementTitle(a)} \xBB` : ""}`,
+          message: `${a.emoji} ${a.name} \u2014 ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` \xB7 titre \xAB ${achievementTitle(a)} \xBB` : ""}${tokensOf.get(a.id) ? ` \xB7 +${tokensOf.get(a.id)} jeton${((_i = tokensOf.get(a.id)) != null ? _i : 0) > 1 ? "s" : ""} du casino` : ""}`,
           createdAtMs: now,
           read: false,
           link: "/game/succes",
@@ -8541,6 +8566,28 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
+var SEASON_BOSS_TUNING = {};
+var isSeasonBossState = (state) => {
+  var _a;
+  return !!((_a = state == null ? void 0 : state.id) == null ? void 0 : _a.startsWith("boss-"));
+};
+var seasonBossCooldownHours = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.cooldownHours) != null ? _a : LEVIATHAN_RULES.cooldownHours;
+};
+var seasonBossFlightMinutes = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.flightMinutes) != null ? _a : LEVIATHAN_RULES.flightMinutes;
+};
+function bossTuning(state) {
+  var _a, _b;
+  if (state.bossId) {
+    const b = findWorldBoss(String(state.bossId));
+    return { lossMult: b.lossMult, weakness: b.weakness };
+  }
+  if (isSeasonBossState(state)) return { lossMult: (_a = SEASON_BOSS_TUNING.lossMult) != null ? _a : 1, weakness: (_b = SEASON_BOSS_TUNING.weakness) != null ? _b : [] };
+  return { lossMult: 1, weakness: [] };
+}
 var BOSS_PHASE_RULES = {
   /** Phase 2 sous cette part de structure : riposte. */
   ripostePct: 0.5,
@@ -8556,7 +8603,7 @@ function bossFightPhase(state) {
   return pct5 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct5 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
 }
 function bossWeakness(state) {
-  const own = state.bossId ? findWorldBoss(state.bossId).weakness.filter((id) => OFFENSIVE_UNITS.includes(id)) : [];
+  const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
   const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
   const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
   let h = 0;
@@ -8581,7 +8628,7 @@ function bossAssaultEstimate(state, player, fleet, formation) {
   }
   const mods = playerModifiers(player);
   const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
-  const lossMult = "bossId" in state && state.bossId ? findWorldBoss(String(state.bossId)).lossMult : 1;
+  const lossMult = bossTuning(state).lossMult;
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
   return { power, lossPct, phase };
 }
@@ -9173,7 +9220,7 @@ function checkSeasonBossLaunch(state, uid, pseudo, now) {
   const name = state ? (_b = (_a = bossMonthOf(state)) == null ? void 0 : _a.boss.name) != null ? _b : "Le boss de saison" : "Le boss de saison";
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError(`${name} n'est pas l\xE0 en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR6 - now : 0;
+  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR6 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_c = c == null ? void 0 : c.damage) != null ? _c : 0, assaults: (_d = c == null ? void 0 : c.assaults) != null ? _d : 0, lastLaunchMs: now } }) });
 }
@@ -9560,7 +9607,7 @@ function finishExpedition(player, fleet, now, random = Math.random) {
     const item = rollRelic("expedition", now, random);
     if (addRelic(player, item)) relic = ` Relique trouv\xE9e : ${relicLabel(item)} !`;
   }
-  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random));
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours, 4)));
   return {
     kind: "fleet",
     title: relic ? "Exp\xE9dition termin\xE9e : relique !" : "Exp\xE9dition termin\xE9e",
@@ -10567,7 +10614,7 @@ function performLaunch(req) {
     if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "seasonboss", pseudo: (_j = req.eliteName) != null ? _j : "Boss de saison" }, "seasonboss", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
+      fleet: newFleet(owner, { uid: "seasonboss", pseudo: (_j = req.eliteName) != null ? _j : "Boss de saison" }, "seasonboss", units, now, now + seasonBossFlightMinutes() * 6e4),
       defenderNotifications: []
     };
   } else if (mission === "allianceboss") {
@@ -11562,7 +11609,7 @@ function performAttack(input) {
     grantCommanderXp(attacker, "corsair", COMMANDER_XP.attackWin);
   }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
-  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now)) : "";
+  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower))) : "";
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
@@ -14169,6 +14216,11 @@ function applyGameContent(overrides) {
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
   Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
+  const sb = content.rules.seasonBoss;
+  SEASON_BOSS_TUNING.cooldownHours = sb.cooldownHours;
+  SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
+  SEASON_BOSS_TUNING.lossMult = sb.lossMult;
+  SEASON_BOSS_TUNING.weakness = sb.weakness;
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -14220,6 +14272,10 @@ function validateRules(rules) {
   const merged = mergeRulesForCheck(rules);
   errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_b = merged.events.bossWeekend) != null ? _b : "first", startHour: (_c = merged.leviathan.startHour) != null ? _c : 18, durationHours: merged.leviathan.durationHours, dates: (_d = merged.events.bossDates) != null ? _d : [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  const sbr = merged.seasonBoss;
+  if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
+  if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
+  if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   return errors;
 }

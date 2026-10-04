@@ -71,7 +71,7 @@ const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
   message: "/game/messages",
   debris: "/game/galaxie",
   report: "/game/signalements",
-  season: "/game/palmares",
+  season: "/game/joueurs?mode=palmares",
   event: "/game",
   gift: "/game/ressources",
 };

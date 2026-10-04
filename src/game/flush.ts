@@ -7,7 +7,8 @@ import { MISSIONS } from "@/game/missions";
 import { missionRewardFactor } from "@/game/events";
 import { buildingsUnlockedByTech, findTech, techBonus, techEffects, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
-import { achievementReward, checkNewAchievements, type AchievementDef } from "@/game/achievements";
+import { ACHIEVEMENT_TOKENS, achievementReward, checkNewAchievements, type AchievementDef } from "@/game/achievements";
+import { grantTokens } from "@/game/casino";
 import { checkNewTitles, findTitle, grantTitle, titleStyle } from "@/game/titles";
 import { bumpStat, recordMission, setStat } from "@/game/stats";
 import { contractDay } from "@/game/contracts";
@@ -245,6 +246,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   if (newAchievements.length > 0) {
     player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
     let totalXp = 0;
+    let totalTokens = 0;
+    const tokensOf = new Map<string, number>();
     const rewards = new Map<string, Partial<Record<ResourceId, number>>>();
     const allRewards: Partial<Record<ResourceId, number>> = {};
     for (const a of newAchievements) {
@@ -256,6 +259,10 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
+      // 5.15 : jetons du casino selon le palier du succès.
+      const tokens = grantTokens(player, ACHIEVEMENT_TOKENS[a.tier] ?? 0);
+      if (tokens > 0) tokensOf.set(a.id, tokens);
+      totalTokens += tokens;
       // v5.10 : titre du catalogue (titleId) en priorité, sinon libellé libre.
       grantTitle(player, findTitle(a.titleId)?.label ?? a.title, `achievement:${a.id}`);
     }
@@ -264,7 +271,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       notifications.push({
         kind: "achievement",
         title: `${newAchievements.length} succès débloqués !`,
-        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP). Détails sur la page Succès.`,
+        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP${totalTokens > 0 ? `, +${totalTokens} jeton${totalTokens > 1 ? "s" : ""} du casino` : ""}). Détails sur la page Succès.`,
         createdAtMs: now,
         read: false,
         link: "/game/succes",
@@ -275,7 +282,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         notifications.push({
           kind: "achievement",
           title: "Succès débloqué !",
-          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` · titre « ${achievementTitle(a)} »` : ""}`,
+          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` · titre « ${achievementTitle(a)} »` : ""}${tokensOf.get(a.id) ? ` · +${tokensOf.get(a.id)} jeton${(tokensOf.get(a.id) ?? 0) > 1 ? "s" : ""} du casino` : ""}`,
           createdAtMs: now,
           read: false,
           link: "/game/succes",

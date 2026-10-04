@@ -91,7 +91,7 @@ export function safeHref(raw: string): { href: string; internal: boolean } | nul
   return null;
 }
 
-/** « Voir **ici** [le Léviathan](/game/leviathan) » → morceaux typés. */
+/** « Voir **ici** [le Léviathan](/game/uber) » → morceaux typés. */
 export function parseBannerText(text: string): BannerToken[] {
   const tokens: BannerToken[] = [];
   const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;

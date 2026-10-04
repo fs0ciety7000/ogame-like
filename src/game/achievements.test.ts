@@ -66,7 +66,10 @@ describe("succès (v2.3)", () => {
     expect(out.player.unlockedAchievements).toEqual(expect.arrayContaining(["first_blood", "eternal_conqueror"]));
     expect(out.player.xp).toBe(10 + 10 + 25 + 60 + 150);
     expect(out.player.titles?.map((t) => t.label)).toContain("Conquérant");
+    // 5.15 : jetons du casino — Or 1, Légendaire 2 (Bronze et Argent : aucun).
+    expect(out.player.casino?.tokens).toBe(3);
     expect(out.notifications.filter((n) => n.kind === "achievement")).toHaveLength(1); // regroupées
+    expect(out.notifications.find((n) => n.kind === "achievement")?.message).toMatch(/\+3 jetons du casino/);
     const again = flushState(out.player, out.queues, now + 1000);
     expect(again.notifications.filter((n) => n.kind === "achievement")).toHaveLength(0);
   });

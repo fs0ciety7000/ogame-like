@@ -22,7 +22,7 @@ import { SEASON_RULES } from "@/game/seasons";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
-import { LEVIATHAN_RULES } from "@/game/leviathan";
+import { LEVIATHAN_RULES, SEASON_BOSS_TUNING } from "@/game/leviathan";
 import { WAR_RULES } from "@/game/wars";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -227,6 +227,12 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
   Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
+  // 5.15 : réglages de combat du boss de saison, lus par le moteur des boss.
+  const sb = content.rules.seasonBoss;
+  SEASON_BOSS_TUNING.cooldownHours = sb.cooldownHours;
+  SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
+  SEASON_BOSS_TUNING.lossMult = sb.lossMult;
+  SEASON_BOSS_TUNING.weakness = sb.weakness;
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -287,6 +293,11 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   const merged = mergeRulesForCheck(rules);
   errors.push(...validateBossSchedule("Léviathan", { weekend: merged.events.bossWeekend ?? "first", startHour: merged.leviathan.startHour ?? 18, durationHours: merged.leviathan.durationHours, dates: merged.events.bossDates ?? [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  // 5.15 : réglages de combat du boss de saison (absents : ceux du boss mondial).
+  const sbr = merged.seasonBoss;
+  if (sbr.cooldownHours !== undefined && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : délai entre deux assauts entre 0,25 et 48 h.");
+  if (sbr.flightMinutes !== undefined && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
+  if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
   return errors;
 }

@@ -30,11 +30,11 @@ describe("banners", () => {
   });
 
   it("parses bold and safe links only", () => {
-    expect(parseBannerText("Le **Léviathan** arrive : [voir](/game/leviathan) ou [site](https://example.org) [x](javascript:alert(1))")).toEqual([
+    expect(parseBannerText("Le **Léviathan** arrive : [voir](/game/uber) ou [site](https://example.org) [x](javascript:alert(1))")).toEqual([
       { type: "text", text: "Le " },
       { type: "bold", text: "Léviathan" },
       { type: "text", text: " arrive : " },
-      { type: "link", text: "voir", href: "/game/leviathan", internal: true },
+      { type: "link", text: "voir", href: "/game/uber", internal: true },
       { type: "text", text: " ou " },
       { type: "link", text: "site", href: "https://example.org/", internal: false },
       { type: "text", text: " " },

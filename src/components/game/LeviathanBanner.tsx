@@ -15,7 +15,7 @@ export function LeviathanBanner() {
   const boss = worldBossOf(state);
   return (
     <Link
-      to="/game/leviathan"
+      to="/game/uber"
       className="hud-cut-sm group relative flex flex-wrap items-center gap-3 overflow-hidden border border-danger-glow/50 bg-danger-glow/[0.08] p-4 transition-colors hover:bg-danger-glow/15"
       style={{ backgroundImage: `linear-gradient(90deg, rgba(5,7,15,0.95) 35%, rgba(5,7,15,0.55)), url(${assetUrl(boss.image)}), url(${assetUrl("/assets/leviathan/leviathan.webp")})`, backgroundSize: "cover", backgroundPosition: "center 40%" }}
     >

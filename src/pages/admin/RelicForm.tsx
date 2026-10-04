@@ -228,9 +228,9 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
   return (
     <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
       <h4 className="font-display text-sm text-white">Tables de butin des combats</h4>
-      <p className="text-[11px] text-slate-500">En plus des récompenses habituelles. Chances en fraction (0,25 = 25 %). Sur un boss, le podium multiplie ses chances par le bonus indiqué.</p>
+      <p className="text-[11px] text-slate-500">En plus des récompenses habituelles. Chances en fraction (0,25 = 25 %). Sur un boss, le podium multiplie ses chances par le bonus indiqué. Jetons du casino : chance multipliée par la difficulté du combat (×0,5 à ×2 selon le rapport des forces ; vendetta forte ×1,5 ; expédition selon sa durée).</p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
               <th className="py-1 pr-2 font-normal">Source</th>
@@ -240,6 +240,9 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
               <th className="py-1 pr-2 font-normal">Niv. min</th>
               <th className="py-1 pr-2 font-normal">Niv. max</th>
               <th className="py-1 pr-2 font-normal">Podium ×</th>
+              <th className="py-1 pr-2 font-normal">Jetons</th>
+              <th className="py-1 pr-2 font-normal">Jetons min</th>
+              <th className="py-1 pr-2 font-normal">Jetons max</th>
             </tr>
           </thead>
           <tbody>
@@ -271,6 +274,15 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
                   </td>
                   <td className="py-1.5 pr-2">
                     <NumInput value={t.podiumMult} step={0.1} onChange={(podiumMult) => setRow(src, { podiumMult })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.tokenChance ?? 0} step={0.01} onChange={(tokenChance) => setRow(src, { tokenChance })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.tokenMin ?? 1} step={1} onChange={(tokenMin) => setRow(src, { tokenMin: Math.round(tokenMin) })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.tokenMax ?? 1} step={1} onChange={(tokenMax) => setRow(src, { tokenMax: Math.round(tokenMax) })} />
                   </td>
                 </tr>
               );

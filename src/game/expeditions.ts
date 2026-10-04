@@ -1,4 +1,4 @@
-import { describeLoot, rollLoot } from "@/game/loot";
+import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -270,7 +270,8 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
     if (addRelic(player, item)) relic = ` Relique trouvée : ${relicLabel(item)} !`;
   }
   // v5.14 : table de butin « expédition » (en plus de la relique ci-dessus).
-  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random));
+  // 5.15 : les longues expéditions (plus risquées) donnent plus souvent des jetons (4 h = difficulté 1).
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours, 4)));
   return {
     kind: "fleet",
     title: relic ? "Expédition terminée : relique !" : "Expédition terminée",

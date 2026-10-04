@@ -23,7 +23,7 @@ export const ASCENSION_RULES = {
 
 /** 5.15 : insigne d'ascension (illustration à venir, voir docs/prompts-ascension.md).
  *  Tant qu'il vaut null, l'interface affiche une icône vectorielle à la place. */
-export const ASCENSION_INSIGNIA: string | null = null;
+export const ASCENSION_INSIGNIA: string | null = "/assets/ascension/insigne.webp";
 
 const ROMAN = ["", "I", "II", "III", "IV", "V"];
 /** « Ascension III » */

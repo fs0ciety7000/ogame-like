@@ -13,11 +13,14 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { SlotMachine, SlotSymbolView } from "@/components/casino/SlotMachine";
 import { TournamentCard } from "@/components/casino/TournamentCard";
 import { WeekRecap } from "@/components/casino/WeekRecap";
-import { casinoOpen, dailyTokenReady, jackpotAmounts, jackpotOdds, nextCasinoOpening, OUTCOME_LABELS, playerCasino, type SlotSymbol, type SpinOutcome } from "@/game/casino";
+import { LEAGUE_TIERS } from "@/game/leagues";
+import { ACHIEVEMENT_TOKENS } from "@/game/achievements";
+import { LOOT_TABLES } from "@/game/loot";
+import { casinoOpen, dailyTokenReady, jackpotAmounts, jackpotOdds, nextCasinoOpening, OUTCOME_LABELS, playerCasino, type CasinoSettings, type SlotSymbol, type SpinOutcome } from "@/game/casino";
 import { claimDailyToken, spinSlot, useCasino, type SpinResult } from "@/services/casinoService";
 import { useServerPot } from "@/services/serverPotService";
 import { useAdminStatus } from "@/services/adminService";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { usePlayerStore } from "@/store/playerStore";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { playJackpot, playSlotPull, playSlotStop, playSlotWin } from "@/lib/sfx";
@@ -276,10 +279,10 @@ export function CasinoPage() {
             </AnimatePresence>
           </div>
           {admin && (
+            <div className="mx-auto flex flex-wrap justify-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              className="mx-auto"
               onClick={() => {
                 // 5.14.3 : voir l'écran du gros lot sans tirage (rien n'est versé).
                 setLast({ outcome: "jackpot", reels: ["seven", "seven", "seven"], resources: jackpot, token: false, tokens, fromPot: true });
@@ -288,6 +291,11 @@ export function CasinoPage() {
             >
               Aperçu de l'écran du gros lot (admin)
             </Button>
+            {/* 5.15 : les concours du pot commun quittent le menu (admins). */}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/game/concours">Concours du pot commun (admin)</Link>
+            </Button>
+            </div>
           )}
           {settings && !open && (
             <HudCallout tone="ember" className="mx-auto w-full max-w-[560px] text-sm">
@@ -331,6 +339,8 @@ export function CasinoPage() {
               </Button>
             )}
           </HudCallout>
+
+          {settings && <TokenSourcesCard settings={settings} />}
 
           <WeekRecap player={player} />
 
@@ -418,6 +428,40 @@ export function CasinoPage() {
 
       <AnimatePresence>{showJackpot && last && <JackpotOverlay result={last} pseudo={player.pseudo} onClose={() => setShowJackpot(false)} />}</AnimatePresence>
     </div>
+  );
+}
+
+/** 5.15 : toutes les façons de gagner des jetons, avec les chiffres en vigueur. */
+function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
+  const r = settings.rewards;
+  const pct = (v: number | undefined) => `${Math.round((v ?? 0) * 100)} %`;
+  const rows: [string, string][] = [
+    ["Jeton du jour", `${settings.dailyTokens} par jour (réserve de ${settings.maxTokens})`],
+    ["Défi de la semaine", r.challenge.join(" puis ")],
+    ["Boss abattu", `${r.bossWin} chacun, +${r.bossTop} au premier en dégâts`],
+    ["Proie d'élite Kesh'Vaar", String(r.elite)],
+    ["Seigneur de guerre pillé", String(r.warlord)],
+    ["Divisions (chaque lundi)", `${LEAGUE_TIERS[0].tokens} à ${LEAGUE_TIERS[LEAGUE_TIERS.length - 1].tokens} selon la division`],
+    ["Succès", `Or ${ACHIEVEMENT_TOKENS.or}, Légendaire ${ACHIEVEMENT_TOKENS.legendaire}, Mythique ${ACHIEVEMENT_TOKENS.mythique}`],
+    ["Butin des boss", `${pct(LOOT_TABLES.worldBoss.tokenChance)} de chances, plus au podium`],
+    ["Butin des combats", `seigneurs ${pct(LOOT_TABLES.warlord.tokenChance)}, menaces ${pct(LOOT_TABLES.threat.tokenChance)}, joueurs ${pct(LOOT_TABLES.pvp.tokenChance)}, expéditions ${pct(LOOT_TABLES.expedition.tokenChance)}`],
+    ["Tournoi du week-end", r.tournament.join(", ") + " pour le podium"],
+  ];
+  return (
+    <Card className="p-4">
+      <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-gold-glow">
+        <TokenIcon size={12} /> Gagner des jetons
+      </p>
+      <ul className="grid gap-1 text-xs">
+        {rows.map(([label, value]) => (
+          <li key={label} className="flex items-baseline justify-between gap-3 border-b border-white/5 pb-1 last:border-0">
+            <span className="text-slate-300">{label}</span>
+            <span className="text-right font-mono tabular-nums text-slate-100">{value}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] text-slate-500">Les chances de butin augmentent face à un adversaire plus fort que toi (jusqu'à ×2).</p>
+    </Card>
   );
 }
 

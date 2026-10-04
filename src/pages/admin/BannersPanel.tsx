@@ -96,13 +96,13 @@ function BannerEditor({ banner, onChange, onDelete }: { banner: Banner; onChange
         </Button>
       </div>
 
-      <Field label={`Texte (${banner.text.length}/${BANNER_MAX_LENGTH})`} hint="Emojis acceptés. **gras** et [texte du lien](/game/leviathan ou https://…).">
+      <Field label={`Texte (${banner.text.length}/${BANNER_MAX_LENGTH})`} hint="Emojis acceptés. **gras** et [texte du lien](/game/uber ou https://…).">
         <textarea
           ref={textRef}
           value={banner.text}
           onChange={(e) => set({ text: e.target.value.slice(0, BANNER_MAX_LENGTH) })}
           rows={3}
-          placeholder="🚀 La Matriarche arrive mardi 18 h : [préparez vos flottes](/game/leviathan) !"
+          placeholder="🚀 La Matriarche arrive mardi 18 h : [préparez vos flottes](/game/uber) !"
           className="resize-y border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-cyan-glow/60 focus:outline-none"
         />
       </Field>
@@ -122,7 +122,7 @@ function BannerEditor({ banner, onChange, onDelete }: { banner: Banner; onChange
           <Input value={linkText} onChange={(e) => setLinkText(e.target.value)} placeholder="Voir le boss mondial" />
         </Field>
         <Field label="Adresse" className="min-w-[12rem] flex-[2]">
-          <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/game/leviathan ou https://…" />
+          <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/game/uber ou https://…" />
         </Field>
         <Button
           variant="secondary"

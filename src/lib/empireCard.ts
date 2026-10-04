@@ -16,6 +16,8 @@ export interface EmpireCardInput {
   /** Ascensions (prestige des bâtiments) : 0 à 5, dessinées en étoiles. */
   ascensions?: number;
   ascensionLabel?: string;
+  /** Insigne d'ascension (image), dessiné avant les étoiles. */
+  ascensionIcon?: string;
   /** Titre affiché sous le pseudo (titre actif). */
   title?: string;
   avatar?: string;
@@ -167,7 +169,12 @@ export async function drawEmpireCard(canvas: HTMLCanvasElement, input: EmpireCar
   ctx.fillText(input.rank, tx + (rankIcon ? 44 : 0), ay + 130);
   // 5.15 : ascensions, cinq emplacements d'étoile après le rang.
   if ((input.ascensions ?? 0) > 0) {
-    const sx = tx + (rankIcon ? 44 : 0) + ctx.measureText(input.rank).width + 28;
+    let sx = tx + (rankIcon ? 44 : 0) + ctx.measureText(input.rank).width + 28;
+    const insignia = input.ascensionIcon ? await loadImage(input.ascensionIcon) : null;
+    if (insignia) {
+      ctx.drawImage(insignia, sx - 10, ay + 104, 34, 34);
+      sx += 36;
+    }
     for (let i = 0; i < 5; i++) {
       drawStar(ctx, sx + i * 26, ay + 121, 11, i < (input.ascensions ?? 0));
     }

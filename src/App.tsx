@@ -25,7 +25,6 @@ const GalaxyPage = lazy(() => import("@/pages/GalaxyPage").then((m) => ({ defaul
 const CombatLogPage = lazy(() => import("@/pages/CombatLogPage").then((m) => ({ default: m.CombatLogPage })));
 const AchievementsPage = lazy(() => import("@/pages/AchievementsPage").then((m) => ({ default: m.AchievementsPage })));
 const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ default: m.ThreatsPage })));
-const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const BlogEditorPage = lazy(() => import("@/pages/BlogEditorPage").then((m) => ({ default: m.BlogEditorPage })));
 const AscensionPage = lazy(() => import("@/pages/AscensionPage").then((m) => ({ default: m.AscensionPage })));
@@ -97,7 +96,9 @@ export default function App() {
                 <Route path="combats" element={<CombatLogPage />} />
                 <Route path="simulateur" element={<SimulatorPage />} />
                 <Route path="marche" element={<MarketPage />} />
-                <Route path="leviathan" element={<LeviathanPage />} />
+                <Route path="uber" element={<LeviathanPage />} />
+                {/* 5.15 : ancienne adresse du boss mondial (liens des notifications passées). */}
+                <Route path="leviathan" element={<Navigate to="/game/uber" replace />} />
                 <Route path="primes" element={<BountiesPage />} />
                 <Route path="etat-major" element={<CommandPage />} />
                 <Route path="passe" element={<SeasonPassPage />} />
@@ -105,7 +106,7 @@ export default function App() {
                 <Route path="statistiques" element={<EmpireStatsPage />} />
                 <Route path="ascension" element={<AscensionPage />} />
                 <Route path="redaction" element={<BlogEditorPage />} />
-                <Route path="palmares" element={<HallOfFamePage />} />
+                <Route path="palmares" element={<Navigate to="/game/joueurs?mode=palmares" replace />} />
                 <Route path="menaces" element={<ThreatsPage />} />
                 <Route path="seigneurs" element={<WarlordsPage />} />
                 <Route path="boss" element={<SeasonBossPage />} />

@@ -1,4 +1,4 @@
-import { describeLoot, rollLoot } from "@/game/loot";
+import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
@@ -241,7 +241,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
   // v5.14 : table de butin (joueur : très rare ; seigneur de guerre : un peu plus).
-  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now)) : "";
+  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower))) : "";
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);

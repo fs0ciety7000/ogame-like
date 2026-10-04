@@ -5,7 +5,7 @@ import { takeLaunchCapsules, type LaunchCapsules } from "@/game/synthesis";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { launchExpedition } from "@/game/expeditions";
 import { WAR_RULES } from "@/game/wars";
-import { LEVIATHAN_RULES } from "@/game/leviathan";
+import { LEVIATHAN_RULES, seasonBossFlightMinutes } from "@/game/leviathan";
 import { galaxyCoords } from "@/game/galaxy";
 import { GameActionError } from "@/game/errors";
 import { checkAttackAllowed } from "@/game/pvp";
@@ -437,7 +437,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "seasonboss", pseudo: req.eliteName ?? "Boss de saison" }, "seasonboss", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
+      fleet: newFleet(owner, { uid: "seasonboss", pseudo: req.eliteName ?? "Boss de saison" }, "seasonboss", units, now, now + seasonBossFlightMinutes() * 60_000),
       defenderNotifications: [],
     };
   }
