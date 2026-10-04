@@ -1,18 +1,32 @@
 ---
 slug: jetons-tournoi-et-couleurs
-title: "5.13 : jetons partout, tournoi du casino et économie assainie"
-excerpt: "Les jetons du casino se gagnent avec le passe, les défis et les boss, chaque ouverture devient un tournoi, le marché redevient 100 % joueurs, le passe se mérite au combat et le Léviathan récompense tous ses gros participants."
+title: "5.13 : un passe par mois, un commandant par passe"
+excerpt: "Chaque mois, un passe de saison inédit : un thème, un scénario, des paliers à prérequis et, au bout, un commandant d'état-major exclusif. Et aussi : jetons du casino partout, tournoi à chaque ouverture, marché 100 % joueurs, Léviathan mieux partagé."
 category: mises-a-jour
-tags: [casino, passe, boss, defis, titres, marche, equilibrage, interface]
+tags: [passe, commandants, casino, boss, defis, titres, marche, equilibrage, interface]
 version: "5.13"
 cover: /assets/casino/salle-777.webp
 ---
 > [!LORE] Anneau marchand de la station Vashka, salle des trois 7
 > Depuis le premier gros lot, la salle ne désemplit plus. Au-dessus du comptoir, un tableau lumineux affiche le nom de celui qui mène la partie. Il change toutes les heures.
 
-Une semaine après l'ouverture du **Casino orbital**, une question revenait sans cesse : *comment avoir plus de jetons ?* Réponse : en jouant au reste du jeu.
+## Un passe différent chaque mois
+
+Fini le même passe de mois en mois. Chaque saison a désormais **son thème** — une marée de guerre, une forge à reprendre, des archives volées, un hiver sans fin, une comète chargée de trésors… — avec son illustration, sa couleur et **son scénario**. Un mentor et un rival vous accompagnent : le prologue s'affiche dès l'ouverture, puis un nouvel acte se dévoile aux paliers 10, 20 et 30.
+
+Ces trois paliers ont aussi un **prérequis** : une action à accomplir dans le mois, propre au thème (gagner des combats, repousser des raids, remplir des primes, honorer des contrats…). La progression s'affiche directement sur le palier. Les objectifs sont calibrés sur ce que les commandants du serveur ont vraiment fait le mois précédent : ambitieux, jamais hors de portée.
+
+## Un commandant par passe
+
+Au **dernier palier**, un **commandant de saison** rejoint votre état-major, avec **300 Ambre**. Chacun est unique : un nom, une histoire, et un profil hybride — tout le bonus de son rôle principal, et la moitié de celui d'un second. Une archiviste qui espionne et frappe, une maître de forge qui bâtit et gère… Il progresse comme les autres officiers, jusqu'au niveau 20. Il ne se recrute pas : il se gagne, une seule fois, dans le passe de son mois.
+
+> [!NOTE] Côté coulisses
+> Chaque passe est écrit par le générateur, puis relu, retouché et publié par l'équipe. Les thèmes ne se répètent pas d'un mois sur l'autre.
 
 ## Des jetons à gagner partout
+
+Une semaine après l'ouverture du **Casino orbital**, une question revenait sans cesse : *comment avoir plus de jetons ?* Réponse : en jouant au reste du jeu.
+
 
 ![Des jetons du Casino orbital](/assets/casino/jetons-pile.webp "Octogonaux, cerclés d'or : les jetons du casino")
 

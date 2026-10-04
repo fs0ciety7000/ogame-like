@@ -13,6 +13,7 @@ import {
   COMMANDER_RULES,
   COMMANDER_SOURCES,
   COMMANDERS,
+  SEASON_COMMANDERS,
   commanderLevel,
   commanderSlots,
   commandersState,
@@ -106,8 +107,8 @@ const COMMANDER_ICONS: Record<CommanderId, typeof Swords> = {
 /** Portrait avec repli (initiales sur un dégradé) tant que l'image manque. */
 function Portrait({ def, className }: { def: CommanderDef; className?: string }) {
   const [broken, setBroken] = useState(false);
-  const tone = COMMANDER_TONES[def.id];
-  const Icon = COMMANDER_ICONS[def.id];
+  const tone = COMMANDER_TONES[def.role];
+  const Icon = COMMANDER_ICONS[def.role];
   return (
     <div
       className={cn("hud-cut relative grid place-items-center overflow-hidden border", className)}
@@ -151,7 +152,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
   const st = commandersState(player);
   const entry = st.roster[def.id];
   const active = st.active.includes(def.id);
-  const tone = COMMANDER_TONES[def.id];
+  const tone = COMMANDER_TONES[def.role];
   const [busy, setBusy] = useState(false);
   const free = recruitCost(player) === "free";
   const amber = bountyState(player).amber;
@@ -188,21 +189,27 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
             {def.title}
           </p>
           <h3 className="font-display text-lg font-semibold text-white">{def.name}</h3>
+          {def.season && (
+            <HudTag tone="gold" className="mt-1">
+              Passe de {def.season.label}
+            </HudTag>
+          )}
           {entry ? (
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
               <HudTag tone={active ? "mint" : "accent"}>{active ? "En poste" : "En réserve"}</HudTag>
               <span className="font-mono text-xs text-slate-300">Niv. {level}</span>
             </div>
           ) : (
-            <p className="mt-1 text-xs text-slate-500">Non recruté{free ? " · le premier est offert" : ""}</p>
+            <p className="mt-1 text-xs text-slate-500">{def.season ? "À débloquer" : `Non recruté${free ? " · le premier est offert" : ""}`}</p>
           )}
         </div>
       </div>
       <p className="text-sm text-slate-300">{def.bonus(Math.max(1, level))}{entry ? "" : " (au niveau 1)"}</p>
+      {def.lore && <p className="text-xs italic leading-relaxed text-slate-400">{def.lore}</p>}
       <div className="flex flex-col gap-1">
         <p className="text-xs text-slate-500">Progresse avec :</p>
         <div className="flex flex-wrap gap-1">
-          {COMMANDER_SOURCES[def.id].map((src) => (
+          {COMMANDER_SOURCES[def.role].map((src) => (
             <span key={src.label} className="hud-chip hud-chip-sm hud-tone-neutral max-w-full whitespace-normal">
               {src.label} <span className="font-mono" style={{ color: tone }}>+{src.xp}</span>
             </span>
@@ -217,7 +224,9 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
         </div>
       )}
       <div className="mt-auto flex flex-wrap gap-2">
-        {!entry ? (
+        {!entry && def.season ? (
+          <HudTag tone="gold">Dernier palier du passe de {def.season.label}</HudTag>
+        ) : !entry ? (
           free ? (
             <Button size="sm" disabled={busy} onClick={() => void act(() => recruitCommander(def.id, "amber"), `${def.title} ${def.name} rejoint ta flotte !`)}>
               <UserPlus className="h-3.5 w-3.5" /> Recruter (offert)
@@ -263,7 +272,7 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Postes" value={`${st.active.length} / ${slots}`} sub={slots < 3 ? "Un 3e poste au rang Platine" : "Rang Platine atteint"} icon={<Medal className="h-4 w-4" />} />
-        <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
+        <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length + SEASON_COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
         <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -271,6 +280,16 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
           <CommanderCard key={def.id} def={def} player={player} now={now} />
         ))}
       </div>
+      {SEASON_COMMANDERS.length > 0 && (
+        <>
+          <p className="hud-eyebrow text-[10px] text-gold-glow">Commandants de saison · un par passe, au dernier palier</p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {[...SEASON_COMMANDERS].reverse().map((def) => (
+              <CommanderCard key={def.id} def={def} player={player} now={now} />
+            ))}
+          </div>
+        </>
+      )}
       <p className="text-xs text-slate-500">Changer un officier de poste : une fois par {COMMANDER_RULES.swapCooldownHours} h et par officier. Niveau maximal : {COMMANDER_RULES.maxLevel}.</p>
     </div>
   );

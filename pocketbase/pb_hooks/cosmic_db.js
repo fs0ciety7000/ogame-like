@@ -4790,13 +4790,81 @@ function proceduralTick(now, opts) {
         proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
       }
     }
-    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`));
+    // v5.13 : passes de saison — brouillon du mois suivant, publication d'office et annonce au début du mois.
+    out.passes = [];
+    if (settings.pass && o.achievements !== true && !o.monthId) {
+      passSeasonsTick(txApp, game, players, now, out.passes);
+    }
+    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`)).concat(out.passes);
     if (lines.length > 0) {
       settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
       writeConfig(txApp, game.PROCEDURAL_KEY, settings);
     }
   });
   return out;
+}
+
+/** v5.13 : passes de saison procéduraux (brouillon à J-leadDay, publication d'office, annonce). */
+function readPassSeasons(txApp, game) {
+  const rec = configRecord(txApp, game.PASS_SEASONS_SECTION);
+  const data = rec ? toPlain(rec).data : null;
+  return data && Array.isArray(data.seasons) ? data : { seasons: [] };
+}
+
+function passSeasonDraft(game, players, cfg, monthId, now, variant) {
+  const digest = game.worldDigest(players, now);
+  const prev = cfg.seasons.filter((s) => s.id < monthId && s.status === "published").pop();
+  return game.generatePassSeason({ monthId, digest, existing: cfg.seasons.filter((s) => s.id !== monthId), now, variant: variant || 0, basePointsPerTier: prev ? prev.pointsPerTier : undefined });
+}
+
+function passSeasonsTick(txApp, game, players, now, lines) {
+  let cfg = readPassSeasons(txApp, game);
+  let changed = false;
+  const current = game.chronicleMonthId(now);
+  const next = game.nextMonthId(current);
+  const settings = game.normalizeProcedural((configRecord(txApp, game.PROCEDURAL_KEY) && toPlain(configRecord(txApp, game.PROCEDURAL_KEY)).data) || null);
+  // Brouillon du mois en cours (s'il manque) et du suivant à partir du jour J.
+  [current].concat(game.parisDayOfMonth(now) >= settings.leadDay ? [next] : []).forEach((id) => {
+    if (game.findPassSeason(cfg, id)) return;
+    cfg = game.upsertPassSeason(cfg, passSeasonDraft(game, players, cfg, id, now, 0));
+    changed = true;
+    lines.push(`Passe ${id} : brouillon écrit, à relire et publier (Admin → Passes de saison).`);
+  });
+  // Début du mois : un brouillon oublié est publié d'office, puis le passe est annoncé une fois.
+  const cur = game.findPassSeason(cfg, current);
+  if (cur && cur.status === "draft") {
+    cfg = game.upsertPassSeason(cfg, game.publishPassSeason(cur, now));
+    changed = true;
+    lines.push(`Passe ${current} publié d'office (brouillon non relu au début du mois).`);
+  }
+  const live = game.findPassSeason(cfg, current);
+  if (live && live.status === "published" && !live.announcedAtMs) {
+    cfg = game.upsertPassSeason(cfg, Object.assign({}, live, { announcedAtMs: now }));
+    changed = true;
+    players.forEach((p) => {
+      notify(txApp, p.uid, [{ kind: "event", title: `Nouveau passe de saison : ${live.theme.name}`, message: `${live.theme.tagline} Au dernier palier : ${live.commander.title} ${live.commander.name} rejoint ton état-major, avec ${live.tiers[live.tiers.length - 1].filter((r) => r.kind === "amber").reduce((a, r) => a + r.amount, 0)} Ambre.`, createdAtMs: now, read: false, link: "/game/passe", data: live.theme.image ? { image: live.theme.image } : undefined }]);
+    });
+    lines.push(`Passe ${current} annoncé aux joueurs.`);
+  }
+  if (changed) writeConfig(txApp, game.PASS_SEASONS_SECTION, cfg);
+}
+
+/** v5.13 : passage horaire des passes de saison (publication d'office et annonce dès le début du mois). */
+function passSeasonsRun(now) {
+  const game = loadGame();
+  const lines = [];
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.PROCEDURAL_KEY);
+    const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
+    if (!settings.enabled || !settings.pass) return;
+    passSeasonsTick(txApp, game, proceduralPlayers(txApp), now, lines);
+    if (lines.length > 0) {
+      settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
+      writeConfig(txApp, game.PROCEDURAL_KEY, settings);
+    }
+  });
+  return lines;
 }
 
 /** GET/POST /api/cosmic/admin/procedural — aperçu, réglages, génération à la demande. */
@@ -4823,6 +4891,23 @@ function adminProcedural(e) {
       return e.json(200, proceduralTick(now, { force: true, monthId, variant: Math.max(0, Math.floor(Number(req.variant) || 0)) }));
     }
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
+    if (req.action === "passSeasonsRun") return e.json(200, { lines: passSeasonsRun(now) });
+    // v5.13 : (ré)écrit le brouillon du passe d'un mois. Un passe publié n'est réécrit qu'après confirmation.
+    if (req.action === "passSeason") {
+      const monthId = String(req.monthId || "");
+      if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
+      let draft = null;
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const cfg = readPassSeasons(txApp, game);
+        const existing = game.findPassSeason(cfg, monthId);
+        if (existing && existing.status === "published" && !req.confirmPublished) throw new BadRequestError("Ce passe est déjà publié : confirme pour le remplacer par un nouveau brouillon.");
+        draft = passSeasonDraft(game, proceduralPlayers(txApp), cfg, monthId, now, Math.max(0, Math.floor(Number(req.variant) || 0)));
+        writeConfig(txApp, game.PASS_SEASONS_SECTION, game.upsertPassSeason(cfg, draft));
+        bossAdminLog(txApp, e, game.PASS_SEASONS_SECTION, `Passe ${monthId} : brouillon généré (variante ${draft.auto.variant})`, {}, now);
+      });
+      return e.json(200, { season: draft });
+    }
     throw new BadRequestError("Action inconnue.");
   }
   const players = proceduralPlayers($app);
@@ -6931,4 +7016,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

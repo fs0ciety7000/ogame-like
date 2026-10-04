@@ -332,6 +332,11 @@ export function adminProceduralGenerate(monthId: string, variant: number, confir
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId, variant, confirmStarted } });
 }
 
+/** v5.13 : (ré)écrit le brouillon du passe de saison d'un mois. */
+export function adminPassSeasonGenerate(monthId: string, variant: number, confirmPublished = false): Promise<{ season: import("@/game/passSeasons").PassSeason }> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeason", monthId, variant, confirmPublished } });
+}
+
 export function adminProceduralAchievements(): Promise<ProceduralResult> {
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
 }

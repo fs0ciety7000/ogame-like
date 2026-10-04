@@ -61,7 +61,7 @@ function blank(kind: PassReward["kind"]): PassReward {
 const sel = "h-8 border border-white/15 bg-space-950 px-1.5 text-xs text-slate-200";
 const num = { size: "sm", stepper: false, quick: false, meter: false, className: "w-20" } as const;
 
-function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
+export function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
   return (
     <span className="inline-flex max-w-full flex-wrap items-center gap-1 border border-white/10 bg-white/[0.02] p-1">
       <select className={sel} value={value.kind} onChange={(e) => onChange(blank(e.target.value as PassReward["kind"]))}>
@@ -127,7 +127,7 @@ export function PassPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Passe de saison</h2>
+        <h2 className="font-display text-base text-white">Passe par défaut</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <span className="text-xs text-slate-500">
           {cfg.tiers.length} paliers · <AmberAmount value={amber} /> et {tokens} jeton{tokens > 1 ? "s" : ""} du casino au total

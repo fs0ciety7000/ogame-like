@@ -143,6 +143,11 @@ export interface WorldDigest {
 
 type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
 
+/** Jour du mois à Paris (1 à 31). */
+export function parisDayOfMonth(now: number): number {
+  return parisDay(now);
+}
+
 function parisDay(now: number): number {
   return new Date(now + parisOffsetMs(now)).getUTCDate();
 }

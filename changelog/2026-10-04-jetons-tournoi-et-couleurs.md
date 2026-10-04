@@ -2,9 +2,15 @@
 version: 5.13.0
 iteration: 80
 date: 2026-10-04
-title: Jetons partout, tournoi du casino, économie assainie
+title: Passes de saison thématiques, jetons partout, économie assainie
 ---
 Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouverture devient un tournoi, le marché redevient 100 % joueurs, le passe se mérite au combat, et le Léviathan récompense mieux tous ses gros participants.
+
+## Passes de saison
+- [Nouveau] **Un passe différent chaque mois** : un thème (huit univers : Marée d'Acier, Forge Stellaire, L'Ombre des Archives, Hiver galactique, Comète écarlate, Saison des chasseurs, Le Grand Bazar, L'Appel du Vide…), son illustration et sa couleur, et un **scénario en quatre temps** qui se dévoile aux paliers 10, 20 et 30.
+- [Nouveau] **Prérequis aux paliers 10, 20 et 30** : une action à accomplir dans le mois (combats gagnés, raids repoussés, primes, contrats, espionnage…), avec la progression affichée sur le palier. Les objectifs sont calibrés sur l'activité réelle du serveur.
+- [Nouveau] **Dernier palier : un commandant de saison inédit** qui rejoint l'état-major (le bonus d'un rôle, plus la moitié d'un second), avec **300 Ambre**. Il n'existe que dans ce passe ; s'il sert déjà, 2 Dossiers d'entraînement à la place.
+- [Amélioration] L'état-major présente les commandants de saison (débloqués ou à venir), leur histoire et leur passe d'origine.
 
 ## Casino orbital
 - [Nouveau] **Des jetons à gagner partout** : paliers 7, 17 et 27 du **passe de saison**, **défi de la semaine** réussi (1 ou 2 jetons selon le palier), **boss abattus** (Léviathan, boss de saison, boss d'alliance : 1 jeton chacun, 3 pour le premier en dégâts).
@@ -32,4 +38,5 @@ Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouve
 ## Administration
 - [Admin] **Jetons gagnés en jeu** (onglet Pot commun → Casino) : jetons par palier du défi hebdo, par boss abattu ou retiré, bonus du premier, jetons du podium du tournoi, libellés des titres « As du casino » et « Main d'or ».
 - [Admin] **Passe de saison** : nouveau type de récompense « Jetons du casino » (le total des jetons s'affiche à côté de l'Ambre). Les missions ne figurent plus dans les points réglables (toujours 0).
+- [Admin] **Passes de saison générés** (onglet Passe) : le générateur écrit chaque mois un brouillon complet (thème, scénario, 30 paliers, prérequis, commandant de saison avec son prompt Midjourney) ; l'équipe le relit, modifie tout (textes, couleurs, illustration, paliers, prérequis, rôles et portrait du commandant), puis le **publie**. « Régénérer » propose un autre tirage. Un brouillon oublié est publié d'office au début de son mois, et chaque nouveau passe est annoncé aux joueurs.
 - [Admin] **Marché** : réglages du Courtier du Comptoir retirés. **Concours** : la page reste accessible aux administrateurs.

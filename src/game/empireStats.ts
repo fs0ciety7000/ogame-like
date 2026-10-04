@@ -4,7 +4,7 @@ import { chronicleState } from "@/game/chronicles";
 import { colonyBiome, colonyDefenseHangar, colonyHourlyRates, colonyStorage, depositLevel, type Colony } from "@/game/colonies";
 import { allianceShieldBonus } from "@/game/alliances";
 import { computeFullPower, getShieldPercent, homeDefensePower, unitStat } from "@/game/combat";
-import { COMMANDERS, commanderLevel, commanderSlots, commandersState, type CommanderId } from "@/game/commanders";
+import { commanderLevel, commanderSlots, commandersState, findCommander, type OfficerId } from "@/game/commanders";
 import { COMMON_RESOURCES, economySnapshot, protectedAmount } from "@/game/economy";
 import type { Fleet, FleetMission } from "@/game/fleets";
 import { playerModifiers, type Modifiers } from "@/game/modifiers";
@@ -90,7 +90,7 @@ export interface EmpireStats {
   fleets: { inFlight: number; byMission: Partial<Record<FleetMission, number>>; unitsAway: number };
   command: {
     slots: number;
-    active: { id: CommanderId; name: string; title: string; level: number }[];
+    active: { id: OfficerId; name: string; title: string; level: number }[];
     recruited: number;
     dossiers: number;
     relicsEquipped: string[];
@@ -253,7 +253,7 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
     command: {
       slots: commanderSlots(player),
       active: cmd.active.map((id) => {
-        const def = COMMANDERS.find((c) => c.id === id)!;
+        const def = findCommander(id)!;
         return { id, name: def.name, title: def.title, level: commanderLevel(cmd.roster[id]?.xp ?? 0) };
       }),
       recruited: Object.keys(cmd.roster).length,

@@ -2,6 +2,7 @@ import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChro
 import { DEFAULT_TITLES, setTitles, validateTitles, withLateDefaults, type TitleDef } from "@/game/titles";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
+import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
@@ -70,6 +71,8 @@ export interface GameContent {
   /** v4.3 : passe de saison (paliers et points) et chroniques mensuelles. */
   seasonPass: SeasonPassConfig;
   chronicles: ChroniclesConfig;
+  /** v5.13 : passes de saison générés (brouillons et publiés). */
+  passSeasons: PassSeasonsConfig;
   /** v5.9 : reliques (modèles, effets, images) et leurs réglages (raretés, emplacements, fusion). */
   relics: RelicTemplate[];
   relicSettings: RelicSettings;
@@ -78,7 +81,7 @@ export interface GameContent {
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings", "titles"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -116,6 +119,7 @@ export function defaultGameContent(): GameContent {
     warlords: defaultWarlordsConfig(),
     seasonPass: defaultSeasonPassConfig(),
     chronicles: defaultChroniclesConfig(),
+    passSeasons: defaultPassSeasonsConfig(),
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
     titles: DEFAULT_TITLES,
@@ -144,6 +148,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     warlords: overrides.warlords ?? defaults.warlords,
     seasonPass: overrides.seasonPass ?? defaults.seasonPass,
     chronicles: overrides.chronicles ?? defaults.chronicles,
+    passSeasons: overrides.passSeasons && Array.isArray(overrides.passSeasons.seasons) ? overrides.passSeasons : defaults.passSeasons,
     relics: overrides.relics ?? defaults.relics,
     titles: overrides.titles ?? defaults.titles,
     relicSettings: {
@@ -188,6 +193,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setWarlords(content.warlords);
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
+  // Après les chapitres : un passe de saison publié remplace le passe du chapitre.
+  setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
@@ -379,6 +386,7 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
+  errors.push(...validatePassSeasons(content.passSeasons));
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
   errors.push(...validateRelics(content.relics ?? [], content.relicSettings ?? defaultRelicSettings()));

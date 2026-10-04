@@ -460,6 +460,16 @@ routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/
 
 /* ---------- v5.4 : générateur procédural ---------- */
 
+// v5.13 : passes de saison — brouillon, publication d'office et annonce au début du mois (toutes les heures).
+cronAdd("cosmic_pass_seasons", "13 * * * *", () => {
+  try {
+    const lines = require(`${__hooks}/cosmic_db.js`).passSeasonsRun(Date.now());
+    if (lines.length > 0) console.log(`[cosmic] passes de saison : ${lines.join(" ")}`);
+  } catch (err) {
+    console.log(`[cosmic] passes de saison : ${err}`);
+  }
+});
+
 // Chaque jour : chapitre du mois (s'il manque), chapitre suivant à partir du jour réglé, paliers de succès.
 cronAdd("cosmic_procedural", "29 4 * * *", () => {
   try {
