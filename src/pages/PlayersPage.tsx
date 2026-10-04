@@ -4,7 +4,7 @@ import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { LeaderboardPodium, RankChip } from "@/components/game/LeaderboardPodium";
 import {
@@ -44,10 +44,11 @@ import type { Alliance } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
+const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 import { DivisionPanel, DivisionScore, useLeagues, type DivisionView } from "@/components/game/DivisionPanel";
 import { leagueStandings, leagueTier, type LeagueRow } from "@/game/leagues";
 
-type LeaderboardMode = "total" | "season" | "alliances";
+type LeaderboardMode = "total" | "season" | "alliances" | "palmares";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -90,7 +91,7 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total") setMode(wanted);
+    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "palmares") setMode(wanted);
     // 5.15 : les ligues sont devenues les divisions de l'onglet Saison.
     if (params.get("onglet") === "ligues" || wanted === "ligues") setMode("season");
     if (fiche) {
@@ -200,6 +201,7 @@ export function PlayersPage() {
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
+            <TabsTrigger value="palmares">Palmarès</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
@@ -208,7 +210,7 @@ export function PlayersPage() {
               {seasonLabel(season)}
             </span>
           )}
-          {mode !== "alliances" && myRank && (
+          {mode !== "alliances" && mode !== "palmares" && myRank && (
             <Button variant="secondary" size="sm" onClick={jumpToMe}>
               <Crosshair className="h-3.5 w-3.5" /> Ma position · #{myRank}
             </Button>
@@ -216,6 +218,12 @@ export function PlayersPage() {
         </div>
       </div>
 
+      {mode === "palmares" ? (
+        <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
+          <HallOfFamePage embedded />
+        </Suspense>
+      ) : (
+      <>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
         <Input
@@ -449,6 +457,8 @@ export function PlayersPage() {
           })}
         </Card>
         </>
+      )}
+      </>
       )}
 
       <PlayerSheetDialog

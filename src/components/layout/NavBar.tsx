@@ -105,7 +105,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Flame,
     accent: "var(--color-danger-glow)",
     items: [
-      { to: "/game/leviathan", label: "Boss mondial", icon: Fish },
+      { to: "/game/uber", label: "Boss mondial", icon: Fish },
       { to: "/game/boss", label: "Boss de saison", icon: Flame },
       { to: "/game/seigneurs", label: "Seigneurs", icon: Crown },
       { to: "/game/hall-of-fame", label: "Hall of fame des boss", icon: Trophy },
@@ -119,10 +119,9 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/game/alliance", label: "Alliance", icon: Flag },
       { to: "/game/messages", label: "Messages", icon: Mail },
-      { to: "/game/joueurs", label: "Joueurs", icon: Users },
+      { to: "/game/joueurs", label: "Classement", icon: Users },
       { to: "/game/marche", label: "Marché", icon: Store },
       { to: "/game/casino", label: "Casino", icon: Dices },
-      { to: "/game/concours", label: "Concours", icon: Gift },
       { to: "/game/gazette", label: "Gazette", icon: Newspaper },
     ],
   },
@@ -133,10 +132,8 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "var(--color-gold-glow)",
     items: [
       { to: "/game/passe", label: "Passe", icon: Ticket },
-      { to: "/game/palmares", label: "Palmarès", icon: Trophy },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
-      { to: "/game/formules", label: "Formules", icon: Sigma },
       { to: "/game/journal", label: "Journal", icon: ScrollText },
     ],
   },
@@ -181,7 +178,15 @@ function useNavGroups(): NavGroup[] {
 const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
 const FOOTER_GROUP = NAV_GROUPS[NAV_GROUPS.length - 1];
 
-export const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+/** 5.15 : pages sorties du menu mais toujours trouvables (Ctrl+K) : Formules (aussi depuis
+ *  Statistiques), Palmarès (onglet du Classement), Concours (depuis le Casino, admins). */
+const PALETTE_ONLY: NavItem[] = [
+  { to: "/game/formules", label: "Formules", icon: Sigma },
+  { to: "/game/joueurs?mode=palmares", label: "Palmarès", icon: Trophy },
+  { to: "/game/concours", label: "Concours", icon: Gift },
+];
+
+export const ALL_NAV_ITEMS = [...NAV_GROUPS.flatMap((g) => g.items), ...PALETTE_ONLY];
 const ALL_ITEMS = ALL_NAV_ITEMS;
 
 /** Pastilles de navigation : renvoie le compteur d'une page. */
@@ -203,7 +208,7 @@ function useBadges(): (to: string) => number {
     ({
       "/game/passe": passClaimable,
       "/game/messages": messagesUnread,
-      "/game/leviathan": leviathanNew,
+      "/game/uber": leviathanNew,
       "/game/alliance": allianceUnread,
       "/game/nouveautes": changelogUnread,
       "/game/signalements": reportsUnread,
@@ -246,7 +251,7 @@ function useBossNavPhase(to: string): BossPhase | null {
   const leviathan = useLeviathan();
   const seasonBoss = useSeasonBoss();
   const now = useMinute();
-  if (to === "/game/leviathan") return bossPhase(leviathan, now);
+  if (to === "/game/uber") return bossPhase(leviathan, now);
   if (to === "/game/boss") return bossPhase(seasonBoss, now);
   return null;
 }

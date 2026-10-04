@@ -20,3 +20,8 @@ Les ligues reviennent, fondues dans le classement de saison, et l'Ascension a en
 ## Administration : boss de saison
 - Nouvel onglet **Boss de saison**, sur le modèle des boss mondiaux : le boss de chaque mois (nom, titre, image, sceau, présentation), le calendrier, le combat (structure, **délai entre deux assauts**, **durée du trajet**, **pertes à chaque assaut**, **faiblesses** possibles en phase 3) et les récompenses (reliques du podium, **table de butin**).
 - Un réglage laissé vide reprend la valeur du boss mondial.
+
+## Navigation plus légère
+- Barre latérale allégée : **Palmarès** devient un onglet du **Classement** (ex-« Joueurs »), **Formules** s'ouvre depuis **Statistiques**, les **Concours** depuis le Casino (administrateurs). Tous restent trouvables avec la recherche (Ctrl+K).
+- **Alliance** : les quatorze onglets sont rangés en cinq sections (**QG**, **Activités**, **Économie**, **Opérations**, **Classement**), avec leurs sous-onglets. Les liens des notifications ouvrent toujours le bon onglet.
+- Le boss mondial a une nouvelle adresse : **/game/uber** (l'ancienne redirige).

@@ -54,7 +54,8 @@ function Podium({ results, uid }: { results: SeasonResult[]; uid?: string }) {
 }
 
 /** Palmarès des saisons : podium et top 10 de chaque mois terminé. */
-export function HallOfFamePage() {
+/** 5.15 : `embedded` — affiché comme onglet du Classement (sans en-tête de page). */
+export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}) {
   useNowTicker();
   const uid = useAuthStore((s) => s.user?.uid);
   const [results, setResults] = useState<SeasonResult[] | null>(null);
@@ -99,7 +100,7 @@ export function HallOfFamePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader backdrop="/assets/blog/articles/5-9/podium-or.webp" eyebrow="Cosmic Empires / Archives" title="Palmarès" description="Les meilleurs empires de chaque saison, et les récompenses de fin de mois." />
+      {!embedded && <PageHeader backdrop="/assets/blog/articles/5-9/podium-or.webp" eyebrow="Cosmic Empires / Archives" title="Palmarès" description="Les meilleurs empires de chaque saison, et les récompenses de fin de mois." />}
 
       <Card className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">

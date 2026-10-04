@@ -3,13 +3,23 @@ import { Link, useSearchParams } from "react-router-dom";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
 const ALLIANCE_TABS = ["fiche", "defi", "saga", "objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
+
+/** 5.15 : quatorze onglets regroupés en cinq sections, chacune avec ses sous-onglets. */
+const ALLIANCE_SECTIONS: { id: string; label: string; tabs: { id: string; label: string }[] }[] = [
+  { id: "qg", label: "QG", tabs: [{ id: "membres", label: "Membres et canal" }, { id: "fiche", label: "Fiche et rangs" }] },
+  { id: "activites", label: "Activités", tabs: [{ id: "objectif", label: "Objectif du jour" }, { id: "defi", label: "Défi de la semaine" }, { id: "saga", label: "Saga" }, { id: "calendrier", label: "Calendrier" }] },
+  { id: "economie", label: "Économie", tabs: [{ id: "tresor", label: "Trésor" }, { id: "recherches", label: "Recherches" }, { id: "projets", label: "Projets" }] },
+  { id: "operations", label: "Opérations", tabs: [{ id: "boss", label: "Boss" }, { id: "guerre", label: "Guerre" }, { id: "diplomatie", label: "Diplomatie" }, { id: "renseignement", label: "Renseignement" }] },
+  { id: "classement", label: "Classement", tabs: [{ id: "classement", label: "Classement" }] },
+];
+const sectionOf = (tab: string) => ALLIANCE_SECTIONS.find((s) => s.tabs.some((t) => t.id === tab)) ?? ALLIANCE_SECTIONS[0];
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useRef, useState } from "react";
 import { AllianceBossTab } from "@/components/game/AllianceBossTab";
 import { normalizeAllianceBoss } from "@/game/allianceBoss";
 import { isOnline } from "@/game/retention";
 import { useDirectoryStore } from "@/store/directoryStore";
-import { EmptyState } from "@/components/ui/hud";
+import { EmptyState, HudChip } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +46,7 @@ import {
 } from "@/services/allianceService";
 import { splitMentions } from "@/game/mentions";
 import { allianceRole, ALLIANCE_RULES, canDiplomacy } from "@/game/alliances";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AllianceProfileTab } from "@/components/game/AllianceProfileTab";
 import { ApplyDialog } from "@/components/game/ApplyDialog";
 import { AllianceChallengeTab } from "@/components/game/AllianceChallengeTab";
@@ -198,6 +208,9 @@ function AllianceRoom({
   const [messages, setMessages] = useState<AllianceMessage[]>([]);
   // v4.0 : onglet ouvert par un lien de notification, non lus du canal diplomatique.
   const tabParam = useSearchParams()[0].get("onglet");
+  const [tab, setTabState] = useState(() => (tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"));
+  // 5.15 : dernier sous-onglet ouvert dans chaque section (on y revient en changeant de section).
+  const memory = useRef<Record<string, string>>({});
   const pactUnread = usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const [text, setText] = useState("");
   const [leaving, setLeaving] = useState(false);
@@ -282,33 +295,51 @@ function AllianceRoom({
   const bossActive = !!bossState && bossState.status === "active" && Date.now() < bossState.endMs && bossState.hp > 0;
   const online = (m: string) => m === uid || isOnline(lastActiveOf[m], Date.now());
   const role = allianceRole(alliance, uid);
+  const setTab = (t: string) => {
+    memory.current[sectionOf(t).id] = t;
+    setTabState(t);
+  };
+  const section = sectionOf(tab);
+  const badges: Record<string, number> = { diplomatie: pactUnread, fiche: applications > 0 && canRecruit ? applications : 0 };
 
   return (
-    <Tabs defaultValue={tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"} className="flex flex-col gap-4">
-      <TabsList className="self-start">
-        <TabsTrigger value="membres">Membres et canal</TabsTrigger>
-        <TabsTrigger value="saga">Saga</TabsTrigger>
-        <TabsTrigger value="objectif">Objectif du jour</TabsTrigger>
-        <TabsTrigger value="calendrier">Calendrier</TabsTrigger>
-        <TabsTrigger value="boss" className="inline-flex items-center gap-1.5">
-          Boss {bossActive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger-glow" />}
-        </TabsTrigger>
-        <TabsTrigger value="tresor">Trésor</TabsTrigger>
-        <TabsTrigger value="recherches">Recherches</TabsTrigger>
-        <TabsTrigger value="projets">Projets</TabsTrigger>
-        <TabsTrigger value="renseignement">Renseignement</TabsTrigger>
-        <TabsTrigger value="guerre">Guerre</TabsTrigger>
-        <TabsTrigger value="diplomatie" className="inline-flex items-center gap-1.5">
-          Diplomatie
-          {pactUnread > 0 && <span className="min-w-4 rounded-full bg-ember-glow px-1 text-[10px] font-bold leading-4 text-space-950">{pactUnread}</span>}
-        </TabsTrigger>
-        <TabsTrigger value="classement">Classement</TabsTrigger>
-        <TabsTrigger value="defi">Défi de la semaine</TabsTrigger>
-        <TabsTrigger value="fiche" className="inline-flex items-center gap-1.5">
-          Fiche et rangs
-          {applications > 0 && canRecruit && <span className="grid h-4 min-w-4 place-items-center bg-danger-glow px-1 font-mono text-[9px] font-bold text-space-950">{applications}</span>}
-        </TabsTrigger>
-      </TabsList>
+    <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4">
+      {/* 5.15 : sections, puis sous-onglets en pastilles (docs/DESIGN.md). */}
+      <div className="flex flex-col gap-2">
+        <div role="tablist" aria-label="Sections de l'alliance" className="flex flex-wrap gap-1 border-b border-white/10 pb-2">
+          {ALLIANCE_SECTIONS.map((sec) => {
+            const badge = sec.tabs.reduce((n, t) => n + (badges[t.id] ?? 0), 0);
+            const on = section.id === sec.id;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(memory.current[sec.id] ?? sec.tabs[0].id)}
+                className={cn("hud-title inline-flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors", on ? "border-b-2 border-cyan-glow text-white" : "text-slate-400 hover:text-slate-200")}
+              >
+                {sec.label}
+                {badge > 0 && <span className="grid h-4 min-w-4 place-items-center bg-ember-glow px-1 font-mono text-[9px] font-bold text-space-950">{badge}</span>}
+                {sec.id === "operations" && bossActive && <span className="h-1.5 w-1.5 animate-pulse bg-danger-glow" aria-label="Boss en cours" />}
+              </button>
+            );
+          })}
+        </div>
+        {section.tabs.length > 1 && (
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={section.label}>
+            {section.tabs.map((t) => (
+              <HudChip key={t.id} asChild size="md" tone={tab === t.id ? "accent" : "neutral"}>
+                <button type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+                  {t.label}
+                  {(badges[t.id] ?? 0) > 0 && <span className="font-mono">· {badges[t.id]}</span>}
+                  {t.id === "boss" && bossActive && <span className="h-1.5 w-1.5 animate-pulse bg-danger-glow" aria-label="En cours" />}
+                </button>
+              </HudChip>
+            ))}
+          </div>
+        )}
+      </div>
       <TabsContent value="saga">
         <AllianceSagaTab allianceId={alliance.id} />
       </TabsContent>

@@ -333,14 +333,14 @@ export const ANNOUNCEMENTS: Announcement[] = [
     art: "/assets/leviathan/leviathan.webp",
     artMobile: "/assets/leviathan/leviathan-portrait.webp",
     features: [
-      { title: "Le Léviathan", text: "Vendredi 18 h → lundi 18 h. Un assaut toutes les 4 h, récompenses selon tes dégâts.", to: "/game/leviathan" },
+      { title: "Le Léviathan", text: "Vendredi 18 h → lundi 18 h. Un assaut toutes les 4 h, récompenses selon tes dégâts.", to: "/game/uber" },
       { title: "Expéditions", text: "2 à 8 h dans l'inconnu : gisements, épaves, embuscades, rencontres… et des choix.", to: "/game/missions" },
       { title: "Marché", text: "Échange tes surplus avec les autres commandants, sans passer par le comptoir.", to: "/game/marche" },
       { title: "Formations et posture", text: "Assaut, Prudente, Raid… et choisis comment ta base encaisse les attaques.", to: "/game/unites" },
       { title: "Simulateur", text: "Teste un combat sans risque avant d'envoyer ta flotte.", to: "/game/simulateur" },
       { title: "Guerres d'alliance", text: "Déclare la guerre, marque des points, remporte le trésor et le titre « Vainqueurs ».", to: "/game/alliance" },
     ],
-    cta: { label: "Voir le Léviathan", to: "/game/leviathan" },
+    cta: { label: "Voir le Léviathan", to: "/game/uber" },
   },
   {
     id: "v2.3-nouvelles-factions",

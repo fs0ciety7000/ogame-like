@@ -13,7 +13,7 @@ import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
 const LINKS = [
   { value: "", label: "Aucun lien" },
   { value: "/game", label: "Accueil" },
-  { value: "/game/leviathan", label: "Boss mondial" },
+  { value: "/game/uber", label: "Boss mondial" },
   { value: "/game/etat-major", label: "État-major (officiers, reliques, capsules)" },
   { value: "/game/boss", label: "Boss de saison" },
   { value: "/game/concours", label: "Concours" },

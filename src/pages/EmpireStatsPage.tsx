@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
-import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Skull, Sparkles, Swords, Trophy, Zap } from "lucide-react";
+import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -204,7 +205,18 @@ export function EmpireStatsPage() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="flex min-w-0 flex-col gap-5">
-        <PageHeader eyebrow="Empire" title="Statistiques" description="Tout ton empire en chiffres : planète mère et colonies, production, armée à quai et en vol, état-major, bonus, menaces et carrière." right={<EmpireShareActions player={player} stats={st} kind="empire" />} />
+        <PageHeader eyebrow="Empire" title="Statistiques" description="Tout ton empire en chiffres : planète mère et colonies, production, armée à quai et en vol, état-major, bonus, menaces et carrière." right={
+            <div className="flex flex-wrap gap-2">
+              {/* 5.15 : les Formules quittent le menu ; on les ouvre d'ici. */}
+              <Button size="sm" variant="secondary" asChild>
+                <Link to="/game/formules">
+                  <Sigma className="h-4 w-4" /> Formules
+                </Link>
+              </Button>
+              <EmpireShareActions player={player} stats={st} kind="empire" />
+            </div>
+          }
+        />
 
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <HeroTile label="Rang" display={o.rank} sub={`${n(o.xp)} XP · ${n(o.seasonXp)} cette saison`} icon={Crown} tone={GOLD} />

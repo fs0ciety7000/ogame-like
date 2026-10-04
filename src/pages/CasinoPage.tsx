@@ -17,7 +17,7 @@ import { casinoOpen, dailyTokenReady, jackpotAmounts, jackpotOdds, nextCasinoOpe
 import { claimDailyToken, spinSlot, useCasino, type SpinResult } from "@/services/casinoService";
 import { useServerPot } from "@/services/serverPotService";
 import { useAdminStatus } from "@/services/adminService";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { usePlayerStore } from "@/store/playerStore";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { playJackpot, playSlotPull, playSlotStop, playSlotWin } from "@/lib/sfx";
@@ -276,10 +276,10 @@ export function CasinoPage() {
             </AnimatePresence>
           </div>
           {admin && (
+            <div className="mx-auto flex flex-wrap justify-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              className="mx-auto"
               onClick={() => {
                 // 5.14.3 : voir l'écran du gros lot sans tirage (rien n'est versé).
                 setLast({ outcome: "jackpot", reels: ["seven", "seven", "seven"], resources: jackpot, token: false, tokens, fromPot: true });
@@ -288,6 +288,11 @@ export function CasinoPage() {
             >
               Aperçu de l'écran du gros lot (admin)
             </Button>
+            {/* 5.15 : les concours du pot commun quittent le menu (admins). */}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/game/concours">Concours du pot commun (admin)</Link>
+            </Button>
+            </div>
           )}
           {settings && !open && (
             <HudCallout tone="ember" className="mx-auto w-full max-w-[560px] text-sm">

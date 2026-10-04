@@ -2621,7 +2621,7 @@ function distributeLeviathan(txApp, game, state, now) {
         message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.worldBossTitle(state)} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${out.amber ? ` +${out.amber} Ambre (collection de reliques pleine).` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
         createdAtMs: now,
         read: false,
-        link: "/game/leviathan",
+        link: "/game/uber",
         data: tokenNotifData(Object.assign({}, bossNotifData(out.gain, out.relic, mythic) || {}, out.amber ? { amber: out.amber } : {}), tokens),
       },
     ]));
@@ -2691,7 +2691,7 @@ function leviathanArrival(txApp, game, rec, now) {
 function bossReminders(txApp, game, kind, state, next, now) {
   const isLev = kind === "leviathan";
   const month = !isLev && state ? game.bossMonthOf(state) : null;
-  const link = isLev ? "/game/leviathan" : "/game/boss";
+  const link = isLev ? "/game/uber" : "/game/boss";
   const actives = () => txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 });
   const send = (title, message) =>
     actives().forEach((r) => {
@@ -2762,7 +2762,7 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${game.worldBossName(state)} approche !`, message: `${game.worldBossOf(state).story.split(". ")[0]}. Unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Boss mondial).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${game.worldBossName(state)} approche !`, message: `${game.worldBossOf(state).story.split(". ")[0]}. Unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Boss mondial).`, createdAtMs: now, read: false, link: "/game/uber" }]);
         } catch (_) {
           /* facultatif */
         }

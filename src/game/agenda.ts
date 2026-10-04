@@ -52,7 +52,7 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
   const to = now + days * DAY;
   const items: AgendaItem[] = [];
   for (const w of bossWindows(now, leviathanSchedule(), 6)) {
-    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/leviathan", fixed: w.fixed, emoji: "🐋", ...(w.fixed ? { source: { type: "levDate" as const, startMs: w.startMs } } : {}) });
+    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "🐋", ...(w.fixed ? { source: { type: "levDate" as const, startMs: w.startMs } } : {}) });
   }
   const months = chroniclesConfig().months;
   for (const w of bossWindows(now, seasonBossSchedule(), 6)) {
@@ -70,6 +70,6 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
       if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : épisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/passe", emoji: "📜" });
     }
   }
-  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "🏆" });
+  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/joueurs?mode=palmares", emoji: "🏆" });
   return [...items, ...extra.filter((x) => (x.endMs ?? x.startMs) > now && x.startMs < to)].sort((a, b) => a.startMs - b.startMs);
 }
