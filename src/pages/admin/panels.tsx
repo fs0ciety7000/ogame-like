@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Badge } from "@/components/ui/badge";
-import { currentGameContent, validateGameContent, type GameContent, type GameRules } from "@/game/content";
+import { currentGameContent, validateGameContent, validateRules, type GameContent, type GameRules } from "@/game/content";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
@@ -48,7 +48,12 @@ export function RulesPanel() {
       ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
       : undefined;
 
+  const ruleErrors = useMemo(() => validateRules(rules), [rules]);
   const save = async () => {
+    if (ruleErrors.length > 0) {
+      toast.error(`Enregistrement refusé : ${ruleErrors.slice(0, 3).join(" · ")}`);
+      return;
+    }
     setBusy(true);
     try {
       await saveContentSection("rules", rules);
@@ -78,11 +83,21 @@ export function RulesPanel() {
           >
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Valeurs par défaut
           </Button>
-          <Button size="sm" disabled={busy} onClick={() => void save()}>
+          <Button size="sm" disabled={busy || ruleErrors.length > 0} onClick={() => void save()}>
             <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer
           </Button>
         </div>
       </div>
+      {ruleErrors.length > 0 && (
+        <div role="alert" className="border border-danger-glow/40 bg-danger-glow/10 p-3 text-sm text-danger-glow">
+          <p className="font-semibold">À corriger avant d'enregistrer :</p>
+          <ul className="mt-1 list-inside list-disc text-xs">
+            {ruleErrors.slice(0, 8).map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Protections">
           <NumberField label="Délai entre 2 attaques sur une même cible (h)" value={pvp.attackCooldownMs / HOUR} min={0} step={0.25} onChange={(v) => setPvp({ attackCooldownMs: (v ?? 0) * HOUR })} />

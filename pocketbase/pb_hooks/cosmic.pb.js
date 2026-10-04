@@ -669,6 +669,18 @@ routerAdd("POST", "/api/cosmic/admin/reports/github", (e) => require(`${__hooks}
 routerAdd("POST", "/api/cosmic/messages/send", (e) => require(`${__hooks}/cosmic_db.js`).messageSend(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/messages/read", (e) => require(`${__hooks}/cosmic_db.js`).messageRead(e), $apis.requireAuth("users"));
 
+/* ---------- v5.10.5 : règles vérifiées avant enregistrement ---------- */
+
+onRecordCreateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  e.next();
+}, "game_config");
+
+onRecordUpdateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  e.next();
+}, "game_config");
+
 /* ---------- Journal des actions d'administration ---------- */
 
 // Chaque modification faite par un administrateur (page Administration ou

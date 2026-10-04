@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { validateRules } from "@/game/content";
 import { bossEndLabel, bossWindows, describeBossSchedule, eveReminderDue, EVENT_RULES, parisRelativeLabel, parisWhenLabel, validateBossSchedule, type BossSchedule } from "@/game/events";
 import { endingReminderDue, leviathanWindow, LEVIATHAN_RULES, nextLeviathanStart, rescheduleBoss, type LeviathanState } from "@/game/leviathan";
 import { SEASON_BOSS_RULES, seasonBossWindow } from "@/game/chronicles";
@@ -122,5 +123,21 @@ describe("rappels des boss (v5.10.5)", () => {
     expect(endingReminderDue({ ...st, endMs: now + 10 * 3600_000 }, now)).toBe(false);
     expect(endingReminderDue({ ...st, hp: 0, status: "killed" }, now)).toBe(false);
     expect(rescheduleBoss({ ...st, endingNotified: true }, now + 24 * 3600_000, now).endingNotified).toBeUndefined();
+  });
+});
+
+describe("validation des règles (v5.10.5)", () => {
+  it("types, signes et parts", () => {
+    expect(validateRules({} as never)).toEqual([]);
+    const errs = validateRules({ market: { taxPct: 3 }, leviathan: { lossPct: -1, name: " " }, combat: { cautiousAttack: -2 }, events: { rotationEnabled: "oui" } } as never);
+    expect(errs).toEqual(
+      expect.arrayContaining([
+        "Marché : « taxPct » est une part (0,1 = 10 %), 1 au plus.",
+        "Léviathan : « lossPct » ne peut pas être négatif.",
+        "Combat : « cautiousAttack » doit être entre −1 et 0.",
+        "Événements : « rotationEnabled » doit être oui ou non.",
+        "Léviathan : nom vide.",
+      ]),
+    );
   });
 });

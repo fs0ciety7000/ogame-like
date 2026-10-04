@@ -414,6 +414,7 @@ __export(hooksEntry_exports, {
   updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
   validateGameContent: () => validateGameContent,
+  validateRules: () => validateRules,
   vendettaTitle: () => vendettaTitle,
   vendettaWinners: () => vendettaWinners,
   verifyAssertion: () => verifyAssertion,
@@ -11367,13 +11368,67 @@ function applyGameContent(overrides) {
   current = content;
   return content;
 }
+var RULE_GROUP_LABELS = {
+  pvp: "Protections",
+  combat: "Combat",
+  economy: "\xC9conomie",
+  fleets: "Flottes",
+  spy: "Espionnage",
+  debris: "D\xE9bris",
+  patrol: "Patrouilles",
+  events: "\xC9v\xE9nements",
+  seasons: "Saisons",
+  alliances: "Alliances",
+  pirates: "Pirates",
+  market: "March\xE9",
+  expeditions: "Exp\xE9ditions",
+  leviathan: "L\xE9viathan",
+  seasonBoss: "Boss de saison",
+  wars: "Guerres"
+};
+function validateRules(rules) {
+  var _a, _b, _c, _d, _e;
+  const errors = [];
+  if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
+  const defaults = defaultGameContent().rules;
+  for (const [group, value] of Object.entries(rules)) {
+    const def3 = defaults[group];
+    const label3 = (_a = RULE_GROUP_LABELS[group]) != null ? _a : group;
+    if (!def3) continue;
+    if (!value || typeof value !== "object") {
+      errors.push(`${label3} : section illisible.`);
+      continue;
+    }
+    for (const [key, v] of Object.entries(value)) {
+      const d = def3[key];
+      if (d === void 0 || v === void 0) continue;
+      if (typeof d === "number") {
+        if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un nombre.`);
+        else if (d >= 0 && v < 0) errors.push(`${label3} : \xAB ${key} \xBB ne peut pas \xEAtre n\xE9gatif.`);
+        else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre entre \u22121 et 0.`);
+        else if (/Pct$/.test(key) && v > 1) errors.push(`${label3} : \xAB ${key} \xBB est une part (0,1 = 10 %), 1 au plus.`);
+      } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre oui ou non.`);
+      else if (typeof d === "string" && typeof v !== "string") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un texte.`);
+      else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre une liste.`);
+    }
+  }
+  const merged = mergeRulesForCheck(rules);
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_b = merged.events.bossWeekend) != null ? _b : "first", startHour: (_c = merged.leviathan.startHour) != null ? _c : 18, durationHours: merged.leviathan.durationHours, dates: (_d = merged.events.bossDates) != null ? _d : [] }));
+  errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  return errors;
+}
+function mergeRulesForCheck(rules) {
+  const d = defaultGameContent().rules;
+  const out = __spreadValues({}, d);
+  for (const [k, v] of Object.entries(rules)) if (v && typeof v === "object" && !Array.isArray(v)) out[k] = __spreadValues(__spreadValues({}, d[k]), v);
+  return out;
+}
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const errors = [];
-  const lev = content.rules.leviathan;
-  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_a = content.rules.events.bossWeekend) != null ? _a : "first", startHour: (_b = lev.startHour) != null ? _b : 18, durationHours: lev.durationHours, dates: (_c = content.rules.events.bossDates) != null ? _c : [] }));
-  if (content.rules.seasonBoss) errors.push(...validateBossSchedule("Boss de saison", content.rules.seasonBoss));
+  errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
   const unitIds = new Set(content.units.map((u) => u.id));
@@ -11396,19 +11451,19 @@ function validateGameContent(content) {
     const label3 = `B\xE2timent ${b.name || b.id}`;
     if (!(b.maxLevel >= 1)) errors.push(`${label3} : niveau max doit \xEAtre \u2265 1.`);
     checkResources(`${label3} (d\xE9blocage)`, b.unlockCost);
-    checkResources(`${label3} (co\xFBt initial)`, (_d = b.upgrade) == null ? void 0 : _d.baseCost);
-    checkResources(`${label3} (co\xFBt max)`, (_e = b.upgrade) == null ? void 0 : _e.maxCost);
+    checkResources(`${label3} (co\xFBt initial)`, (_a = b.upgrade) == null ? void 0 : _a.baseCost);
+    checkResources(`${label3} (co\xFBt max)`, (_b = b.upgrade) == null ? void 0 : _b.maxCost);
     if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label3} : techno \xAB ${b.unlockedByTech} \xBB inexistante.`);
     if (b.production && !resources.has(b.production.resource)) errors.push(`${label3} : ressource produite inconnue.`);
     if (b.production && b.production.perSecond.length === 0) errors.push(`${label3} : table de production vide.`);
-    const t2 = (_f = b.upgrade) == null ? void 0 : _f.tier2;
+    const t2 = (_c = b.upgrade) == null ? void 0 : _c.tier2;
     if (t2) {
       if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label3} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
       checkResources(`${label3} (second palier, co\xFBt initial)`, t2.baseCost);
       checkResources(`${label3} (second palier, co\xFBt max)`, t2.maxCost);
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
     }
-    if (((_g = b.effect) == null ? void 0 : _g.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
+    if (((_d = b.effect) == null ? void 0 : _d.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
   checkIds("Unit\xE9s", content.units.map((u) => u.id));
@@ -11428,7 +11483,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_h = t.prereq) != null ? _h : {})) {
+    for (const req of Object.keys((_e = t.prereq) != null ? _e : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
     }
@@ -11453,21 +11508,21 @@ function validateGameContent(content) {
   for (const m of content.missions) {
     const label3 = `Mission ${m.name || m.key}`;
     if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_i = m.prereq) != null ? _i : {})) {
+    for (const unitId of Object.keys((_f = m.prereq) != null ? _f : {})) {
       if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
     }
-    const res = __spreadValues({}, (_j = m.reward) != null ? _j : {});
+    const res = __spreadValues({}, (_g = m.reward) != null ? _g : {});
     delete res.xp;
     checkResources(`${label3} (r\xE9compense)`, res);
   }
-  errors.push(...validateFactions((_k = content.factions) != null ? _k : []));
+  errors.push(...validateFactions((_h = content.factions) != null ? _h : []));
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
-  errors.push(...validateRanks((_l = content.ranks) != null ? _l : []));
-  errors.push(...validateAchievements((_m = content.achievements) != null ? _m : []));
-  errors.push(...validateRelics((_n = content.relics) != null ? _n : [], (_o = content.relicSettings) != null ? _o : defaultRelicSettings()));
-  errors.push(...validateTitles((_p = content.titles) != null ? _p : []));
+  errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
+  errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
+  errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
+  errors.push(...validateTitles((_m = content.titles) != null ? _m : []));
   return [...new Set(errors)];
 }
 
