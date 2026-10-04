@@ -1,5 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { familyIndex, getRankIndex } from "@/game/ranks";
+import type { EffectGrant, EffectStat } from "@/game/effects";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -245,6 +246,47 @@ export function activeLevels(player: Pick<PlayerState, "commanders">): Record<Co
     const level = commanderLevel(st.roster[id]?.xp ?? 0);
     out[def.role] += level;
     if (def.secondary) out[def.secondary] += level * SEASON_SECONDARY_SHARE;
+  }
+  return out;
+}
+
+/** v5.14 : effets de chaque rôle, par niveau (circuit d'effets, couche empire). */
+export interface RoleEffect {
+  stat: EffectStat;
+  perLevel: number;
+  target?: string;
+}
+
+export const ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = {
+  admiral: [{ stat: "attack", perLevel: 0.01 }],
+  strategist: [{ stat: "defense", perLevel: 0.01 }],
+  engineer: [
+    { stat: "buildTime", perLevel: 0.01 },
+    { stat: "researchTime", perLevel: 0.01 },
+  ],
+  spy: [
+    { stat: "spyLevel", perLevel: 0.2 },
+    { stat: "detection", perLevel: 0.01 },
+  ],
+  steward: [
+    { stat: "productionAll", perLevel: 0.01 },
+    { stat: "storage", perLevel: 0.02 },
+  ],
+};
+
+/** v5.14 : effets des officiers en poste, un par officier et par effet de rôle
+ *  (le second rôle d'un commandant de saison compte à SEASON_SECONDARY_SHARE). */
+export function commanderEffects(player: Pick<PlayerState, "commanders">): EffectGrant[] {
+  const st = commandersState(player);
+  const out: EffectGrant[] = [];
+  for (const id of st.active) {
+    const def = findCommander(id);
+    if (!def) continue;
+    const level = commanderLevel(st.roster[id]?.xp ?? 0);
+    const source = { kind: "officer" as const, id: def.id, label: def.name };
+    const roles: [CommanderId, number][] = [[def.role, level]];
+    if (def.secondary) roles.push([def.secondary, level * SEASON_SECONDARY_SHARE]);
+    for (const [role, lv] of roles) for (const e of ROLE_EFFECTS[role] ?? []) out.push({ stat: e.stat, target: e.target, value: lv * e.perLevel, layer: "empire", source });
   }
   return out;
 }

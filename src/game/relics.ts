@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import type { EffectGrant, EffectStat } from "@/game/effects";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -297,6 +298,36 @@ export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): str
     default:
       return "";
   }
+}
+
+/** v5.14 : grandeur du circuit d'effets de chaque effet de relique (échelle :
+ *  bonus de rareté × scale). « aegis » reste un effet spécial (pas de grandeur). */
+export const RELIC_EFFECT_STAT: Partial<Record<RelicEffect, { stat: EffectStat; target?: ResourceId; scale?: number }>> = {
+  attack: { stat: "attack" },
+  defense: { stat: "defense" },
+  build_time: { stat: "buildTime" },
+  research_time: { stat: "researchTime" },
+  repair: { stat: "repair" },
+  cargo: { stat: "cargo" },
+  spy: { stat: "spyLevel", scale: 10 },
+  production_all: { stat: "productionAll" },
+  boss_damage: { stat: "bossDamage" },
+  production_scrap: { stat: "production", target: "scrap" },
+  production_energy: { stat: "production", target: "energy" },
+  production_nano: { stat: "production", target: "nano" },
+  production_data: { stat: "production", target: "data" },
+};
+
+/** v5.14 : effets des reliques équipées. */
+export function relicEffects(player: Pick<PlayerState, "relics" | "ascensions">): EffectGrant[] {
+  const out: EffectGrant[] = [];
+  for (const item of equippedRelics(player)) {
+    const t = findTemplate(item.template);
+    const m = t ? RELIC_EFFECT_STAT[t.effect] : undefined;
+    if (!m) continue;
+    out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * (m.scale ?? 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
+  }
+  return out;
 }
 
 export const PRODUCTION_EFFECT: Partial<Record<RelicEffect, ResourceId>> = {

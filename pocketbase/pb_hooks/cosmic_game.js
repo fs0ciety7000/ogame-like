@@ -485,6 +485,57 @@ __export(hooksEntry_exports, {
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
+// src/game/effects.ts
+var TECH_REDUCTION_CAP = 0.75;
+var EMPIRE_TIME_CAP = 0.5;
+var EFFECT_STATS = {
+  attack: { label: "Attaque", unit: "pct", group: "combat" },
+  defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
+  bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
+  repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
+  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
+  production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
+  storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
+  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  buildingDiscount: { label: "Co\xFBt des b\xE2timents", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
+  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
+  spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
+  detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
+  counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
+};
+var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
+function inScope(g, scope) {
+  var _a;
+  const s = (_a = g.scope) != null ? _a : "all";
+  return s === "all" || s === scope;
+}
+function rawEffectTotal(grants, layer, stat, opts = {}) {
+  let total2 = 0;
+  for (const g of grants) {
+    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
+    if (opts.target !== void 0 && g.target !== opts.target) continue;
+    total2 += g.value;
+  }
+  return total2;
+}
+function clampEffect(stat, layer, total2) {
+  var _a;
+  const info = EFFECT_STATS[stat];
+  let v = total2;
+  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
+  if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
+  return v;
+}
+function effectTotal(grants, layer, stat, opts = {}) {
+  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
+}
+
 // src/game/technologies.ts
 var ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
 var TECH_EFFECT_DEFAULTS = {
@@ -504,7 +555,6 @@ var TECH_EFFECT_DEFAULTS = {
   counter_spy: 1,
   hangar_capacity: 0.05
 };
-var TECH_REDUCTION_CAP = 0.75;
 var TECH_EFFECT_LABELS = {
   unlock_recipe: "D\xE9bloque des recettes (niveau = nombre de recettes)",
   energy_efficiency: "Production de toutes les ressources (% par niveau)",
@@ -529,7 +579,6 @@ var TECH_EFFECT_LABELS = {
   hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)"
 };
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
-var CAPPED_TECH_EFFECTS = ["building_discount", "fleet_speed", "building_time", "unit_time", "research_time", "fleet_upkeep", "protected_storage"];
 var DEFAULT_TECHNOLOGIES = [
   { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
   { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
@@ -574,9 +623,43 @@ function effectValuePerLevel(effect) {
   var _a, _b;
   return (_b = (_a = effect.value) != null ? _a : TECH_EFFECT_DEFAULTS[effect.type]) != null ? _b : 0;
 }
+var TECH_EFFECT_STAT = {
+  energy_efficiency: "productionAll",
+  resource_production: "production",
+  unit_attack: "attack",
+  unit_defense: "defense",
+  building_discount: "buildingDiscount",
+  storage_capacity: "storage",
+  protected_storage: "protectedStorage",
+  fleet_speed: "fleetSpeed",
+  cargo_capacity: "cargo",
+  building_time: "buildTime",
+  unit_time: "unitTime",
+  research_time: "researchTime",
+  fleet_upkeep: "fleetUpkeep",
+  counter_spy: "counterSpy",
+  hangar_capacity: "hangarCapacity"
+};
+function techEffectGrants(techLevels2) {
+  var _a;
+  const out = [];
+  if (!techLevels2) return out;
+  for (const tech of TECHNOLOGIES) {
+    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
+    if (level3 <= 0) continue;
+    for (const e3 of techEffects(tech)) {
+      const stat = TECH_EFFECT_STAT[e3.type];
+      if (!stat) continue;
+      out.push({ stat, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+    }
+  }
+  return out;
+}
 function techBonus(techLevels2, type, target) {
   var _a;
   if (!techLevels2) return 0;
+  const stat = TECH_EFFECT_STAT[type];
+  if (stat) return effectTotal(techEffectGrants(techLevels2), "tech", stat, { target });
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
@@ -587,7 +670,7 @@ function techBonus(techLevels2, type, target) {
       total2 += level3 * effectValuePerLevel(e3);
     }
   }
-  return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total2)) : total2;
+  return total2;
 }
 function techReductionFactor(techLevels2, type) {
   return 1 - techBonus(techLevels2, type);
@@ -2618,6 +2701,37 @@ function activeLevels(player) {
   }
   return out;
 }
+var ROLE_EFFECTS = {
+  admiral: [{ stat: "attack", perLevel: 0.01 }],
+  strategist: [{ stat: "defense", perLevel: 0.01 }],
+  engineer: [
+    { stat: "buildTime", perLevel: 0.01 },
+    { stat: "researchTime", perLevel: 0.01 }
+  ],
+  spy: [
+    { stat: "spyLevel", perLevel: 0.2 },
+    { stat: "detection", perLevel: 0.01 }
+  ],
+  steward: [
+    { stat: "productionAll", perLevel: 0.01 },
+    { stat: "storage", perLevel: 0.02 }
+  ]
+};
+function commanderEffects(player) {
+  var _a, _b, _c;
+  const st = commandersState(player);
+  const out = [];
+  for (const id of st.active) {
+    const def3 = findCommander(id);
+    if (!def3) continue;
+    const level3 = commanderLevel((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0);
+    const source = { kind: "officer", id: def3.id, label: def3.name };
+    const roles = [[def3.role, level3]];
+    if (def3.secondary) roles.push([def3.secondary, level3 * SEASON_SECONDARY_SHARE]);
+    for (const [role, lv] of roles) for (const e3 of (_c = ROLE_EFFECTS[role]) != null ? _c : []) out.push({ stat: e3.stat, target: e3.target, value: lv * e3.perLevel, layer: "empire", source });
+  }
+  return out;
+}
 function grantCommanderXp(player, role, amount3) {
   var _a, _b;
   if (!(amount3 > 0)) return;
@@ -3501,12 +3615,32 @@ function relicLabel(item) {
   var _a, _b;
   return `${(_b = (_a = findTemplate(item.template)) == null ? void 0 : _a.name) != null ? _b : "Relique"} (${rarityInfo(item.rarity).label.toLowerCase()})`;
 }
-var PRODUCTION_EFFECT = {
-  production_scrap: "scrap",
-  production_energy: "energy",
-  production_nano: "nano",
-  production_data: "data"
+var RELIC_EFFECT_STAT = {
+  attack: { stat: "attack" },
+  defense: { stat: "defense" },
+  build_time: { stat: "buildTime" },
+  research_time: { stat: "researchTime" },
+  repair: { stat: "repair" },
+  cargo: { stat: "cargo" },
+  spy: { stat: "spyLevel", scale: 10 },
+  production_all: { stat: "productionAll" },
+  boss_damage: { stat: "bossDamage" },
+  production_scrap: { stat: "production", target: "scrap" },
+  production_energy: { stat: "production", target: "energy" },
+  production_nano: { stat: "production", target: "nano" },
+  production_data: { stat: "production", target: "data" }
 };
+function relicEffects(player) {
+  var _a;
+  const out = [];
+  for (const item of equippedRelics(player)) {
+    const t = findTemplate(item.template);
+    const m = t ? RELIC_EFFECT_STAT[t.effect] : void 0;
+    if (!m) continue;
+    out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * ((_a = m.scale) != null ? _a : 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
+  }
+  return out;
+}
 function newId(now, random) {
   return `${now.toString(36)}${Math.floor(random() * 1e9).toString(36)}`;
 }
@@ -3686,6 +3820,11 @@ function computeTerritories(players, now) {
 }
 function territoryBonus(t, now) {
   return t && t.untilMs > now ? Math.min(TERRITORY_RULES.maxBonus, Math.max(0, t.pct)) : 0;
+}
+function territoryEffects(t, now) {
+  var _a, _b;
+  const pct5 = territoryBonus(t, now);
+  return pct5 > 0 ? [{ stat: "productionAll", value: pct5, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
 }
 
 // src/game/production.ts
@@ -6633,50 +6772,51 @@ function talentBonuses(player) {
     return { def: def3, value: def3.perRank * ((_a = st.ranks[def3.id]) != null ? _a : 0) };
   });
 }
+function talentEffects(player) {
+  return talentBonuses(player).map(({ def: def3, value: value2 }) => ({
+    stat: def3.effect.kind,
+    target: def3.effect.kind === "production" ? def3.effect.res : void 0,
+    value: value2,
+    layer: "empire",
+    source: { kind: "talent", id: def3.id, label: def3.name }
+  }));
+}
 
 // src/game/modifiers.ts
 function emptyModifiers() {
   return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
 }
-function playerModifiers(player) {
-  var _a, _b, _c;
+function empireEffects(player, now = Date.now()) {
+  if (!player) return [];
+  return [
+    ...commanderEffects(player),
+    ...relicEffects(player),
+    ...talentEffects(player),
+    ...territoryEffects(player.territory, now)
+  ];
+}
+function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
-  if (!player) return m;
-  const lv = activeLevels(player);
-  m.attack += lv.admiral * 0.01;
-  m.defense += lv.strategist * 0.01;
-  m.buildTime += lv.engineer * 0.01;
-  m.researchTime += lv.engineer * 0.01;
-  m.spyLevel += lv.spy * 0.2;
-  m.detection += lv.spy * 0.01;
-  m.productionAll += lv.steward * 0.01;
-  m.productionAll += territoryBonus(player.territory, Date.now());
-  m.storage += lv.steward * 0.02;
-  for (const item of equippedRelics(player)) {
-    const effect = (_a = findTemplate(item.template)) == null ? void 0 : _a.effect;
-    const b = relicBonus(item);
-    if (effect === "attack") m.attack += b;
-    else if (effect === "defense") m.defense += b;
-    else if (effect === "build_time") m.buildTime += b;
-    else if (effect === "research_time") m.researchTime += b;
-    else if (effect === "repair") m.repair += b;
-    else if (effect === "cargo") m.cargo += b;
-    else if (effect === "spy") m.spyLevel += b * 10;
-    else if (effect === "production_all") m.productionAll += b;
-    else if (effect === "boss_damage") m.bossDamage += b;
-    else if (effect && PRODUCTION_EFFECT[effect]) {
-      const res = PRODUCTION_EFFECT[effect];
-      m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
-    }
+  const sum3 = (stat) => effectTotal(grants, "empire", stat, { scope });
+  m.attack = sum3("attack");
+  m.defense = sum3("defense");
+  m.buildTime = sum3("buildTime");
+  m.researchTime = sum3("researchTime");
+  m.productionAll = sum3("productionAll");
+  m.storage = sum3("storage");
+  m.spyLevel = sum3("spyLevel");
+  m.detection = sum3("detection");
+  m.repair = sum3("repair");
+  m.cargo = sum3("cargo");
+  m.bossDamage = sum3("bossDamage");
+  for (const g of grants) {
+    if (g.layer !== "empire" || g.stat !== "production" || !g.target || m.production[g.target] !== void 0) continue;
+    m.production[g.target] = rawEffectTotal(grants, "empire", "production", { target: g.target, scope });
   }
-  for (const { def: def3, value: value2 } of talentBonuses(player)) {
-    const e3 = def3.effect;
-    if (e3.kind === "production") m.production[e3.res] = ((_c = m.production[e3.res]) != null ? _c : 0) + value2;
-    else m[e3.kind] += value2;
-  }
-  m.buildTime = Math.min(0.5, m.buildTime);
-  m.researchTime = Math.min(0.5, m.researchTime);
   return m;
+}
+function playerModifiers(player, now = Date.now()) {
+  return modifiersFrom(empireEffects(player, now));
 }
 function withRepairBonus(base, player) {
   return Math.min(0.95, base + playerModifiers(player).repair);

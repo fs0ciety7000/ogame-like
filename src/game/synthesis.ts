@@ -2,6 +2,7 @@ import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { SYNTH_BUILDING, SYNTH_BUILDING_ID } from "@/game/buildings";
+import type { EffectGrant } from "@/game/effects";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -63,6 +64,14 @@ export interface SynthesisState {
   veil: { pct: number; untilMs: number } | null;
   /** Vraie composition des flottes leurrées, pour l'affichage chez leur propriétaire. */
   decoys: Record<string, Record<string, number>>;
+}
+
+/** v5.14 : capsules actives sur la base (circuit d'effets, portée « pvp » :
+ *  elles ne jouent qu'entre joueurs). La Carapace réactive est consommée par le combat. */
+export function synthesisEffects(player: Pick<PlayerState, "synthesis">, now: number): EffectGrant[] {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now || !(st.armor.pct > 0)) return [];
+  return [{ stat: "defense", value: st.armor.pct / 100, layer: "empire", scope: "pvp", source: { kind: "capsule", id: "armor", label: CAPSULES.armor.name } }];
 }
 
 export function capsulePct(level: number): number {

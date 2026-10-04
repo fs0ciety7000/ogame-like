@@ -1,3 +1,4 @@
+import { effectTotal, TECH_REDUCTION_CAP, type EffectGrant, type EffectStat } from "@/game/effects";
 /** Effets historiques (un seul par techno, avant la v2.6). */
 export type TechEffect =
   | "unlock_recipe"
@@ -81,7 +82,7 @@ export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
 };
 
 /** Plafond des réductions cumulées (temps, coûts, entretien) et de la part à l'abri. */
-export const TECH_REDUCTION_CAP = 0.75;
+export { TECH_REDUCTION_CAP };
 
 /** Libellés des effets, pour l'administration et le Labo. */
 export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
@@ -165,10 +166,49 @@ export function effectValuePerLevel(effect: TechEffectDef): number {
   return effect.value ?? TECH_EFFECT_DEFAULTS[effect.type] ?? 0;
 }
 
+/** v5.14 : grandeur du circuit d'effets que chaque effet chiffré alimente. */
+export const TECH_EFFECT_STAT: Partial<Record<TechEffectType, EffectStat>> = {
+  energy_efficiency: "productionAll",
+  resource_production: "production",
+  unit_attack: "attack",
+  unit_defense: "defense",
+  building_discount: "buildingDiscount",
+  storage_capacity: "storage",
+  protected_storage: "protectedStorage",
+  fleet_speed: "fleetSpeed",
+  cargo_capacity: "cargo",
+  building_time: "buildTime",
+  unit_time: "unitTime",
+  research_time: "researchTime",
+  fleet_upkeep: "fleetUpkeep",
+  counter_spy: "counterSpy",
+  hangar_capacity: "hangarCapacity",
+};
+
+/** v5.14 : effets déclarés par les technologies du joueur (couche « tech »).
+ *  Toute techno ajoutée au catalogue avec un effet chiffré est prise en compte. */
+export function techEffectGrants(techLevels: Record<string, number> | undefined): EffectGrant[] {
+  const out: EffectGrant[] = [];
+  if (!techLevels) return out;
+  for (const tech of TECHNOLOGIES) {
+    const level = techLevels[tech.id] ?? 0;
+    if (level <= 0) continue;
+    for (const e of techEffects(tech)) {
+      const stat = TECH_EFFECT_STAT[e.type];
+      if (!stat) continue;
+      out.push({ stat, target: e.target, value: level * effectValuePerLevel(e), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+    }
+  }
+  return out;
+}
+
 /** Bonus total d'un effet chiffré selon les niveaux du joueur (`target` :
  *  ressource visée pour resource_production). Les réductions sont plafonnées. */
 export function techBonus(techLevels: Record<string, number> | undefined, type: TechEffectType, target?: string): number {
   if (!techLevels) return 0;
+  const stat = TECH_EFFECT_STAT[type];
+  if (stat) return effectTotal(techEffectGrants(techLevels), "tech", stat, { target });
+  // Effets de déblocage : niveau × valeur, sans plafond.
   let total = 0;
   for (const tech of TECHNOLOGIES) {
     const level = techLevels[tech.id] ?? 0;
@@ -179,7 +219,7 @@ export function techBonus(techLevels: Record<string, number> | undefined, type: 
       total += level * effectValuePerLevel(e);
     }
   }
-  return CAPPED_TECH_EFFECTS.includes(type) ? Math.min(TECH_REDUCTION_CAP, Math.max(0, total)) : total;
+  return total;
 }
 
 /** Multiplicateur d'une réduction (1 − bonus plafonné) : temps, entretien… */

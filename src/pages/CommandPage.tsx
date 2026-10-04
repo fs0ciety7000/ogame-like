@@ -9,6 +9,7 @@ import { HudTag, StatTile } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EffectSheet } from "@/components/game/EffectSheet";
 import {
   COMMANDER_RULES,
   COMMANDER_SOURCES,
@@ -639,6 +640,7 @@ export function CommandPage() {
     { id: "commanders", label: "Commandants", icon: <Medal className="h-3.5 w-3.5" /> },
     { id: "relics", label: "Reliques", icon: <Gem className="h-3.5 w-3.5" /> },
     { id: "synthesis", label: "Labo de synthèse", icon: <FlaskConical className="h-3.5 w-3.5" /> },
+    { id: "effects", label: "Effets", icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
   return (
     <div className="flex flex-col gap-5">
@@ -664,6 +666,9 @@ export function CommandPage() {
         </TabsContent>
         <TabsContent value="synthesis" className="mt-4">
           <SynthesisTab player={player} now={now} />
+        </TabsContent>
+        <TabsContent value="effects" className="mt-4">
+          <EffectSheet player={player} now={now} />
         </TabsContent>
       </Tabs>
     </div>
