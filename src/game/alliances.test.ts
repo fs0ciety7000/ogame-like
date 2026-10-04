@@ -59,7 +59,7 @@ describe("alliance membership", () => {
     expect(after.createdBy).toBe("b");
     expect(allianceRole(after, "b")).toBe("founder");
     expect(removeMember(make(), "f")).toBeNull();
-    expect(() => kickMember(after, "a", "b")).toThrow(/fondateur/);
+    expect(() => kickMember(after, "a", "b")).toThrow(/Exclusion/);
     expect(kickMember(after, "b", "a").members).toEqual(["b"]);
   });
 });
@@ -77,7 +77,7 @@ describe("treasury", () => {
   it("limits distributions to 20 % of the stock and 10 a day, officers only", () => {
     let a = addMember(make(), { uid: "m", pseudo: "M" });
     a = { ...a, treasury: { scrap: 1000 } };
-    expect(() => distribute(a, "m", "f", { scrap: 10 }, NOW)).toThrow(/officiers/);
+    expect(() => distribute(a, "m", "f", { scrap: 10 }, NOW)).toThrow(/Trésor/);
     expect(() => distribute(a, "f", "m", { scrap: 201 }, NOW)).toThrow(/20 %/);
     for (let i = 0; i < ALLIANCE_RULES.distributionsPerDay; i++) a = distribute(a, "f", "m", { scrap: 10 }, NOW);
     expect(a.treasury?.scrap).toBe(900);

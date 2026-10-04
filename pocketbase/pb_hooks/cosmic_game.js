@@ -16,7 +16,7 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __defNormalProp = (obj, key, value2) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key] = value2;
 var __spreadValues = (a, b) => {
   for (var prop in b || (b = {}))
     if (__hasOwnProp.call(b, prop))
@@ -54,12 +54,14 @@ var __copyProps = (to, from, except, desc) => {
   return to;
 };
 var __toCommonJS = (mod2) => __copyProps(__defProp({}, "__esModule", { value: true }), mod2);
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value2);
 
 // src/server/hooksEntry.ts
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
+  ALLIANCE_CHALLENGE_KEY: () => ALLIANCE_CHALLENGE_KEY,
+  ALLIANCE_CHALLENGE_REWARDS: () => ALLIANCE_CHALLENGE_REWARDS,
   ALLIANCE_DAILY_RULES: () => ALLIANCE_DAILY_RULES,
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   ALLIANCE_SAGA_KEY: () => ALLIANCE_SAGA_KEY,
@@ -139,9 +141,11 @@ __export(hooksEntry_exports, {
   addToPot: () => addToPot,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
+  allianceChallengeReward: () => allianceChallengeReward,
   allianceNextDueMs: () => allianceNextDueMs,
   allianceRole: () => allianceRole,
   allianceStandings: () => allianceStandings,
+  allianceWeekId: () => allianceWeekId,
   anomalyChance: () => anomalyChance,
   answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
@@ -171,6 +175,7 @@ __export(hooksEntry_exports, {
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
   canDiplomacy: () => canDiplomacy,
+  canDiplomacyIn: () => canDiplomacyIn,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
   challengeClaimable: () => challengeClaimable,
@@ -251,6 +256,7 @@ __export(hooksEntry_exports, {
   factionOfLair: () => factionOfLair,
   failTradeContract: () => failTradeContract,
   fillBuyOrder: () => fillBuyOrder,
+  findAllianceChallenge: () => findAllianceChallenge,
   findFaction: () => findFaction,
   findWarlord: () => findWarlord,
   finishAllTimers: () => finishAllTimers,
@@ -303,6 +309,7 @@ __export(hooksEntry_exports, {
   nextMaintenance: () => nextMaintenance,
   nextMarketDelayMs: () => nextMarketDelayMs,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
+  normalizeAllianceChallenge: () => normalizeAllianceChallenge,
   normalizeBossHistory: () => normalizeBossHistory,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeContests: () => normalizeContests,
@@ -358,6 +365,7 @@ __export(hooksEntry_exports, {
   recordVendettaDamage: () => recordVendettaDamage,
   recyclerCapacity: () => recyclerCapacity,
   referralDue: () => referralDue,
+  refreshAllianceChallenge: () => refreshAllianceChallenge,
   refreshContest: () => refreshContest,
   refundOffer: () => refundOffer,
   releaseBounty: () => releaseBounty,
@@ -410,6 +418,7 @@ __export(hooksEntry_exports, {
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
   spawnSeasonBoss: () => spawnSeasonBoss,
+  startAllianceChallengeWeek: () => startAllianceChallengeWeek,
   startChallenge: () => startChallenge,
   startDaily: () => startDaily,
   startVacation: () => startVacation,
@@ -863,8 +872,8 @@ function getUnitBuildTime(unit, techLevels2) {
 }
 
 // src/game/format.ts
-function formatInt(value) {
-  const n = Math.round(Number(value) || 0);
+function formatInt(value2) {
+  const n = Math.round(Number(value2) || 0);
   const digits = String(Math.abs(n));
   let out = "";
   for (let i = 0; i < digits.length; i++) {
@@ -1300,19 +1309,19 @@ function unitStat(units, techLevels2, unitId, stat) {
   const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
-  let value = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat === "attack") value *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat === "defense") value *= 1 + techBonus(techLevels2, "unit_defense");
-  return value;
+  let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
+  if (stat === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  return value2;
 }
 function computeFleetPower(units, techLevels2, fleet, stats) {
   let total2 = 0;
   for (const id in fleet) {
     const qty = fleet[id];
     if (qty <= 0) continue;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
-    total2 += value * qty;
+    let value2 = 0;
+    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
+    total2 += value2 * qty;
   }
   return total2;
 }
@@ -1338,9 +1347,9 @@ function computeFullPower(units, techLevels2, idList, stats) {
   idList.forEach((id) => {
     var _a, _b;
     const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
-    let value = 0;
-    stats.forEach((s) => value += unitStat(units, techLevels2, id, s));
-    total2 += value * count2;
+    let value2 = 0;
+    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
+    total2 += value2 * count2;
   });
   return total2;
 }
@@ -1964,6 +1973,120 @@ function anomalyChance(player) {
   return Math.min(1, activeLevels(player).spy * COMMANDER_RULES.anomalyPerLevel);
 }
 
+// src/game/allianceProfile.ts
+var ALLIANCE_PERMS = [
+  { id: "treasury", label: "Tr\xE9sor", hint: "Verser des ressources du tr\xE9sor aux membres." },
+  { id: "research", label: "Recherches", hint: "Lancer les recherches d'alliance." },
+  { id: "projects", label: "Projets", hint: "Financer les projets avec le tr\xE9sor." },
+  { id: "diplomacy", label: "Diplomatie", hint: "Pactes, guerres et redditions." },
+  { id: "boss", label: "Boss", hint: "Appeler le boss d'alliance de la semaine." },
+  { id: "recruit", label: "Recrutement", hint: "Fiche publique, candidatures \xE0 accepter ou refuser." },
+  { id: "kick", label: "Exclusion", hint: "Exclure un membre (jamais le fondateur)." }
+];
+var ALLIANCE_PROFILE_RULES = { maxRanks: 6, maxApplications: 30, descriptionMax: 600, messageMax: 300 };
+var PERM_IDS = new Set(ALLIANCE_PERMS.map((p) => p.id));
+var COLOR = /^#[0-9a-fA-F]{6}$/;
+var LEGACY_PERMS = {
+  founder: ALLIANCE_PERMS.map((p) => p.id),
+  officer: ["treasury", "research", "projects", "diplomacy", "boss", "recruit"],
+  diplomat: ["diplomacy"],
+  member: []
+};
+function normalizeAllianceProfile(raw) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).filter((k) => k && typeof k.id === "string" && typeof k.name === "string").slice(0, ALLIANCE_PROFILE_RULES.maxRanks).map((k) => ({ id: k.id, name: k.name.slice(0, 24), color: COLOR.test(k.color) ? k.color : "#94a3b8", perms: (Array.isArray(k.perms) ? k.perms : []).filter((p) => PERM_IDS.has(p)) }));
+  const rankIds = new Set(ranks.map((k) => k.id));
+  const memberRanks = {};
+  for (const [uid, id] of Object.entries(r.memberRanks && typeof r.memberRanks === "object" ? r.memberRanks : {})) if (rankIds.has(String(id))) memberRanks[uid] = String(id);
+  return {
+    description: String((_a = r.description) != null ? _a : "").slice(0, ALLIANCE_PROFILE_RULES.descriptionMax),
+    recruiting: r.recruiting === "apply" || r.recruiting === "closed" ? r.recruiting : "open",
+    ranks,
+    memberRanks,
+    applications: (Array.isArray(r.applications) ? r.applications : []).filter((a) => a && typeof a.uid === "string").map((a) => {
+      var _a2, _b;
+      return { uid: a.uid, pseudo: String((_a2 = a.pseudo) != null ? _a2 : ""), message: String((_b = a.message) != null ? _b : "").slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: Number(a.atMs) || 0 };
+    }).slice(-ALLIANCE_PROFILE_RULES.maxApplications)
+  };
+}
+function alliancePerms(alliance, uid) {
+  var _a;
+  const role = allianceRole(alliance, uid);
+  if (!role) return /* @__PURE__ */ new Set();
+  const perms = new Set(LEGACY_PERMS[role]);
+  if (role !== "founder") {
+    const profile = normalizeAllianceProfile(alliance.profile);
+    const rank2 = profile.ranks.find((k) => k.id === profile.memberRanks[uid]);
+    for (const p of (_a = rank2 == null ? void 0 : rank2.perms) != null ? _a : []) perms.add(p);
+  }
+  return perms;
+}
+function hasAlliancePerm(alliance, uid, perm) {
+  return alliancePerms(alliance, uid).has(perm);
+}
+function withProfile(alliance, profile) {
+  return __spreadProps(__spreadValues({}, alliance), { profile });
+}
+function founderOnly(alliance, uid) {
+  if (allianceRole(alliance, uid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les rangs.");
+}
+function saveRank(alliance, actorUid, raw) {
+  var _a;
+  founderOnly(alliance, actorUid);
+  const profile = normalizeAllianceProfile(alliance.profile);
+  const name = String((_a = raw.name) != null ? _a : "").trim().slice(0, 24);
+  if (!name) throw new GameActionError("Donne un nom au rang.");
+  const color = COLOR.test(String(raw.color)) ? String(raw.color) : "#94a3b8";
+  const perms = (Array.isArray(raw.perms) ? raw.perms : []).filter((p) => PERM_IDS.has(p));
+  const id = raw.id && profile.ranks.some((k) => k.id === raw.id) ? raw.id : `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
+  if (!profile.ranks.some((k) => k.id === id) && profile.ranks.length >= ALLIANCE_PROFILE_RULES.maxRanks) throw new GameActionError(`${ALLIANCE_PROFILE_RULES.maxRanks} rangs au plus.`);
+  const rank2 = { id, name, color, perms };
+  const ranks = profile.ranks.some((k) => k.id === id) ? profile.ranks.map((k) => k.id === id ? rank2 : k) : [...profile.ranks, rank2];
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks }));
+}
+function deleteRank(alliance, actorUid, rankId) {
+  founderOnly(alliance, actorUid);
+  const profile = normalizeAllianceProfile(alliance.profile);
+  const memberRanks = Object.fromEntries(Object.entries(profile.memberRanks).filter(([, id]) => id !== rankId));
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks: profile.ranks.filter((k) => k.id !== rankId), memberRanks }));
+}
+function assignRank(alliance, actorUid, targetUid, rankId) {
+  founderOnly(alliance, actorUid);
+  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas recevoir de rang.");
+  const profile = normalizeAllianceProfile(alliance.profile);
+  if (rankId && !profile.ranks.some((k) => k.id === rankId)) throw new GameActionError("Rang inconnu.");
+  const memberRanks = __spreadValues({}, profile.memberRanks);
+  if (rankId) memberRanks[targetUid] = rankId;
+  else delete memberRanks[targetUid];
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { memberRanks }));
+}
+function setAllianceProfile(alliance, actorUid, patch) {
+  if (!hasAlliancePerm(alliance, actorUid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour modifier la fiche.");
+  const profile = normalizeAllianceProfile(alliance.profile);
+  return withProfile(alliance, __spreadValues(__spreadValues(__spreadValues({}, profile), patch.description !== void 0 ? { description: String(patch.description).trim().slice(0, ALLIANCE_PROFILE_RULES.descriptionMax) } : {}), patch.recruiting === "open" || patch.recruiting === "apply" || patch.recruiting === "closed" ? { recruiting: patch.recruiting } : {}));
+}
+function applyToAlliance(alliance, player, message, now) {
+  const profile = normalizeAllianceProfile(alliance.profile);
+  if (player.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu fais d\xE9j\xE0 partie de cette alliance.");
+  if (profile.recruiting === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
+  if (profile.recruiting === "open") throw new GameActionError("Cette alliance est ouverte : rejoins-la directement.");
+  if (profile.applications.some((a) => a.uid === player.uid)) throw new GameActionError("Ta candidature est d\xE9j\xE0 en attente.");
+  if (profile.applications.length >= ALLIANCE_PROFILE_RULES.maxApplications) throw new GameActionError("Trop de candidatures en attente : r\xE9essaie plus tard.");
+  const app = { uid: player.uid, pseudo: player.pseudo, message: String(message != null ? message : "").trim().slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: now };
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: [...profile.applications, app] }));
+}
+function dropApplication(alliance, uid) {
+  const profile = normalizeAllianceProfile(alliance.profile);
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: profile.applications.filter((a) => a.uid !== uid) }));
+}
+function assertCanJoin(alliance) {
+  const r = normalizeAllianceProfile(alliance.profile).recruiting;
+  if (r === "apply") throw new GameActionError("Cette alliance recrute sur candidature : postule depuis sa fiche.");
+  if (r === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
+}
+
 // src/game/stats.ts
 function playerStats(player) {
   var _a;
@@ -1974,9 +2097,9 @@ function bumpStat(player, key, n = 1) {
   if (!(n > 0)) return;
   player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
 }
-function setStat(player, key, value) {
+function setStat(player, key, value2) {
   var _a;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value });
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
 }
 function recordThreat(player, factionId) {
   var _a, _b, _c;
@@ -2050,6 +2173,9 @@ var ALLIANCE_RULES = {
 var MAX_DIPLOMATS = 2;
 function canDiplomacy(role) {
   return role === "founder" || role === "officer" || role === "diplomat";
+}
+function canDiplomacyIn(alliance, uid) {
+  return hasAlliancePerm(alliance, uid, "diplomacy");
 }
 var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
 function findAllianceResearch(id) {
@@ -2146,8 +2272,9 @@ function removeMember(alliance, uid) {
   return __spreadProps(__spreadValues({}, alliance), { members, memberPseudos, roles, createdBy });
 }
 function kickMember(alliance, actorUid, targetUid) {
-  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur peut exclure un membre.");
+  if (!hasAlliancePerm(alliance, actorUid, "kick")) throw new GameActionError("Il te faut le droit \xAB Exclusion \xBB pour exclure un membre.");
   if (actorUid === targetUid) throw new GameActionError("Tu ne peux pas t'exclure toi-m\xEAme.");
+  if (targetUid === alliance.createdBy) throw new GameActionError("Le fondateur ne peut pas \xEAtre exclu.");
   return removeMember(alliance, targetUid);
 }
 function setOfficer(alliance, actorUid, targetUid, officer) {
@@ -2168,8 +2295,8 @@ function setRole(alliance, actorUid, targetUid, role) {
 }
 function parseAmounts(raw) {
   const out = {};
-  for (const [res, value] of Object.entries(raw != null ? raw : {})) {
-    const n = Math.floor(Number(value));
+  for (const [res, value2] of Object.entries(raw != null ? raw : {})) {
+    const n = Math.floor(Number(value2));
     if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n <= 0) continue;
     out[res] = n;
   }
@@ -2194,8 +2321,7 @@ function utcDay(now) {
 }
 function distribute(alliance, actorUid, targetUid, amounts, now) {
   var _a, _b, _c, _d;
-  const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent verser le tr\xE9sor.");
+  if (!hasAlliancePerm(alliance, actorUid, "treasury")) throw new GameActionError("Il te faut le droit \xAB Tr\xE9sor \xBB pour verser des ressources.");
   if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
   const day = utcDay(now);
   const count2 = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
@@ -2221,8 +2347,7 @@ function allianceResearchSeconds(nextLevel) {
 }
 function startAllianceResearch(alliance, actorUid, researchId, now) {
   var _a, _b, _c;
-  const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers lancent les recherches.");
+  if (!hasAlliancePerm(alliance, actorUid, "research")) throw new GameActionError("Il te faut le droit \xAB Recherches \xBB pour lancer une recherche.");
   const def3 = findAllianceResearch(researchId);
   if (!def3) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
@@ -2280,7 +2405,7 @@ function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
   if (!def3) throw new GameActionError("Projet inconnu.");
   const role = allianceRole(alliance, actor.uid);
   if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  if (source === "treasury" && role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le tr\xE9sor.");
+  if (source === "treasury" && !hasAlliancePerm(alliance, actor.uid, "projects")) throw new GameActionError("Il te faut le droit \xAB Projets \xBB pour puiser dans le tr\xE9sor.");
   const state = projectState(alliance, def3.id);
   if (state.buildEndMs > 0) throw new GameActionError("Ce palier est d\xE9j\xE0 en construction.");
   const next = state.level + 1;
@@ -2358,7 +2483,7 @@ function note(title, message, now) {
   return { kind: "alliance", title, message, createdAtMs: now, read: false };
 }
 function performAllianceAction(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const { action, now, actor } = input;
   const alliance = input.alliance;
   const out = { alliance, actor, target: (_a = input.target) != null ? _a : null, memberships: {}, logs: [], notifications: {} };
@@ -2374,6 +2499,7 @@ function performAllianceAction(input) {
     case "join": {
       if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
       if (actor.allianceId && actor.allianceId !== alliance.id) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      assertCanJoin(alliance);
       out.alliance = addMember(alliance, { uid: actor.uid, pseudo: actor.pseudo });
       out.memberships[actor.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
       log({ kind: "join" });
@@ -2451,6 +2577,65 @@ function performAllianceAction(input) {
           out.notifications[uid] = [note("Projet d'alliance financ\xE9", `${def3.emoji} ${def3.name} niveau ${next} : construction lanc\xE9e.`, now)];
         }
       }
+      return out;
+    }
+    case "profile": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setAllianceProfile(alliance, actor.uid, { description: action.description, recruiting: action.recruiting });
+      return out;
+    }
+    case "rankSave": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = saveRank(alliance, actor.uid, action.rank);
+      return out;
+    }
+    case "rankDelete": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = deleteRank(alliance, actor.uid, String((_i = action.rankId) != null ? _i : ""));
+      return out;
+    }
+    case "rankAssign": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = assignRank(alliance, actor.uid, String((_j = action.targetUid) != null ? _j : ""), action.rankId ? String(action.rankId) : null);
+      return out;
+    }
+    case "apply": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = applyToAlliance(alliance, actor, action.message, now);
+      for (const uid of alliance.members) {
+        if (hasAlliancePerm(alliance, uid, "recruit")) out.notifications[uid] = [__spreadProps(__spreadValues({}, note("Nouvelle candidature", `${actor.pseudo} souhaite rejoindre [${alliance.tag}] : r\xE9ponds depuis l'onglet Fiche de l'alliance.`, now)), { link: "/game/alliance?onglet=fiche" })];
+      }
+      return out;
+    }
+    case "withdraw": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = dropApplication(alliance, actor.uid);
+      return out;
+    }
+    case "applicationAccept":
+    case "applicationDecline": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      if (!hasAlliancePerm(alliance, actor.uid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour r\xE9pondre aux candidatures.");
+      const targetUid = String((_k = action.targetUid) != null ? _k : "");
+      const app = normalizeAllianceProfile(alliance.profile).applications.find((a) => a.uid === targetUid);
+      if (!app) throw new GameActionError("Candidature introuvable.");
+      const cleaned = dropApplication(alliance, targetUid);
+      if (action.type === "applicationDecline") {
+        out.alliance = cleaned;
+        out.notifications[targetUid] = [note("Candidature refus\xE9e", `[${alliance.tag}] ${alliance.name} n'a pas retenu ta candidature cette fois.`, now)];
+        return out;
+      }
+      const target = input.target;
+      if (!target || target.uid !== targetUid) throw new GameActionError("Ce joueur est introuvable.");
+      if (target.allianceId) {
+        out.alliance = cleaned;
+        out.notifications[actor.uid] = [note("Candidature caduque", `${app.pseudo} a d\xE9j\xE0 rejoint une autre alliance.`, now)];
+        return out;
+      }
+      out.alliance = addMember(cleaned, { uid: target.uid, pseudo: target.pseudo });
+      out.memberships[target.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
+      out.notifications[target.uid] = [__spreadProps(__spreadValues({}, note("Candidature accept\xE9e !", `Bienvenue dans [${alliance.tag}] ${alliance.name}.`, now)), { link: "/game/alliance" })];
+      out.logs.push({ kind: "join", actorUid: target.uid, actorPseudo: target.pseudo, text: `(candidature accept\xE9e par ${actor.pseudo})`, createdAtMs: now });
       return out;
     }
     default:
@@ -5757,10 +5942,10 @@ function playerModifiers(player) {
       m.production[res] = ((_b = m.production[res]) != null ? _b : 0) + b;
     }
   }
-  for (const { def: def3, value } of talentBonuses(player)) {
+  for (const { def: def3, value: value2 } of talentBonuses(player)) {
     const e3 = def3.effect;
-    if (e3.kind === "production") m.production[e3.res] = ((_c = m.production[e3.res]) != null ? _c : 0) + value;
-    else m[e3.kind] += value;
+    if (e3.kind === "production") m.production[e3.res] = ((_c = m.production[e3.res]) != null ? _c : 0) + value2;
+    else m[e3.kind] += value2;
   }
   m.buildTime = Math.min(0.5, m.buildTime);
   m.researchTime = Math.min(0.5, m.researchTime);
@@ -7695,7 +7880,7 @@ function allianceBossHp(activeMembers) {
 }
 function canCallAllianceBoss(alliance, uid) {
   var _a;
-  return alliance.createdBy === uid || ((_a = alliance.roles) == null ? void 0 : _a[uid]) === "officer";
+  return hasAlliancePerm(__spreadProps(__spreadValues({}, alliance), { members: (_a = alliance.members) != null ? _a : [uid] }), uid, "boss");
 }
 function callAllianceBoss(alliance, previous, members, activeMembers, uid, now) {
   var _a, _b, _c;
@@ -7876,8 +8061,8 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     addLoot(fleet, gain);
     text = `Gisement rep\xE9r\xE9 et exploit\xE9 : ${describeGain(gain)}.`;
   } else if (kind === "rare") {
-    const value = sum2(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
-    const each = Math.max(1, Math.floor(value / Math.max(1, R.rareRate) / 4));
+    const value2 = sum2(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
+    const each = Math.max(1, Math.floor(value2 / Math.max(1, R.rareRate) / 4));
     const gain = { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each };
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
@@ -8120,8 +8305,7 @@ function sideOf(war, allianceId) {
 function declareWar(input) {
   var _a, _b, _c, _d, _e, _f;
   const { own, target, now } = input;
-  const role = allianceRole(own, input.actorUid);
-  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent d\xE9clarer une guerre.");
+  if (!canDiplomacyIn(own, input.actorUid)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent d\xE9clarer une guerre.");
   if (own.id === target.id) throw new GameActionError("Tu ne peux pas d\xE9clarer la guerre \xE0 ta propre alliance.");
   if (((_a = target.members) != null ? _a : []).length < WAR_RULES.minMembers) throw new GameActionError(`Cette alliance compte moins de ${WAR_RULES.minMembers} membres.`);
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
@@ -8193,8 +8377,7 @@ function surrender(war, alliance, actorUid, actorPseudo, now) {
   const side = sideOf(war, alliance.id);
   if (!side) throw new GameActionError("Ton alliance ne participe pas \xE0 cette guerre.");
   if (!isRunning(war, now)) throw new GameActionError("Cette guerre est termin\xE9e.");
-  const role = allianceRole(alliance, actorUid);
-  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
+  if (!canDiplomacyIn(alliance, actorUid)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
   const winnerId = side === "attacker" ? war.defenderId : war.attackerId;
   return __spreadProps(__spreadValues({}, war), { status: "ended", winnerId, surrenderedBy: alliance.id, endedAtMs: now, log: [...war.log, { atMs: now, text: `${actorPseudo} rend les armes au nom de [${alliance.tag}].` }] });
 }
@@ -9091,8 +9274,8 @@ function performTransportArrival(ownerIn, ownerQueues, fleet, now) {
 function takeUnits(owner, raw, allowed, wrongUnit) {
   var _a, _b;
   const units = {};
-  for (const [unitId, value] of Object.entries(raw != null ? raw : {})) {
-    const qty = Math.floor(Number(value));
+  for (const [unitId, value2] of Object.entries(raw != null ? raw : {})) {
+    const qty = Math.floor(Number(value2));
     if (!(qty > 0)) continue;
     if (!allowed(unitId)) throw new GameActionError(wrongUnit);
     if (((_b = (_a = owner.units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) < qty) throw new GameActionError("Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte.");
@@ -10433,8 +10616,8 @@ function addSeenAnnouncements(current2, ids) {
 // src/game/actions.ts
 var RESOURCE_IDS4 = new Set(RESOURCE_LIST.map((r) => r.id));
 var MAX_QTY = 1e5;
-function positiveInt(value, label3) {
-  const n = Math.floor(Number(value));
+function positiveInt(value2, label3) {
+  const n = Math.floor(Number(value2));
   if (!Number.isFinite(n) || n <= 0) throw new GameActionError(`${label3} invalide.`);
   return n;
 }
@@ -11475,15 +11658,15 @@ function validateRules(rules) {
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
-  for (const [group, value] of Object.entries(rules)) {
+  for (const [group, value2] of Object.entries(rules)) {
     const def3 = defaults[group];
     const label3 = (_a = RULE_GROUP_LABELS[group]) != null ? _a : group;
     if (!def3) continue;
-    if (!value || typeof value !== "object") {
+    if (!value2 || typeof value2 !== "object") {
       errors.push(`${label3} : section illisible.`);
       continue;
     }
-    for (const [key, v] of Object.entries(value)) {
+    for (const [key, v] of Object.entries(value2)) {
       const d = def3[key];
       if (d === void 0 || v === void 0) continue;
       if (typeof d === "number") {
@@ -12111,8 +12294,7 @@ function bindingPactBetween(pacts, a, b, now) {
   return (_a = pacts.find((p) => involves(p, a) && involves(p, b) && pactBinds(p, now))) != null ? _a : null;
 }
 function assertLeader(alliance, uid, what) {
-  const role = allianceRole(alliance, uid);
-  if (!canDiplomacy(role)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
+  if (!canDiplomacyIn(alliance, uid)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
 }
 function proposePact(input) {
   const { own, target, pacts, now } = input;
@@ -12999,10 +13181,10 @@ function chapterDifficulty(d) {
   });
   if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'\xE9pisode ouvert depuis ${MATURE_EPISODE_DAYS} jours : difficult\xE9 normale (\xD71).`] };
   const c = open.reduce((a, e3) => a + e3.completion, 0) / open.length;
-  const value = round2(clamp3(1 + (c - 0.5), 0.7, 1.4));
+  const value2 = round2(clamp3(1 + (c - 0.5), 0.7, 1.4));
   const pctTxt = Math.round(c * 100);
-  const why = value > 1.02 ? "les objectifs montent" : value < 0.98 ? "les objectifs baissent" : "difficult\xE9 inchang\xE9e";
-  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont termin\xE9 les ${open.length} \xE9pisode(s) ouverts depuis au moins ${MATURE_EPISODE_DAYS} jours (cible 50 %) : ${why} (\xD7${value}).`] };
+  const why = value2 > 1.02 ? "les objectifs montent" : value2 < 0.98 ? "les objectifs baissent" : "difficult\xE9 inchang\xE9e";
+  return { value: value2, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont termin\xE9 les ${open.length} \xE9pisode(s) ouverts depuis au moins ${MATURE_EPISODE_DAYS} jours (cible 50 %) : ${why} (\xD7${value2}).`] };
 }
 function objectiveCount(type, d, difficulty) {
   var _a;
@@ -14706,24 +14888,24 @@ function randomBytes(bytesLength = 32) {
 // node_modules/@noble/curves/esm/utils.js
 var _0n = /* @__PURE__ */ BigInt(0);
 var _1n = /* @__PURE__ */ BigInt(1);
-function _abool2(value, title = "") {
-  if (typeof value !== "boolean") {
+function _abool2(value2, title = "") {
+  if (typeof value2 !== "boolean") {
     const prefix = title && `"${title}"`;
-    throw new Error(prefix + "expected boolean, got type=" + typeof value);
+    throw new Error(prefix + "expected boolean, got type=" + typeof value2);
   }
-  return value;
+  return value2;
 }
-function _abytes2(value, length, title = "") {
-  const bytes = isBytes(value);
-  const len = value == null ? void 0 : value.length;
+function _abytes2(value2, length, title = "") {
+  const bytes = isBytes(value2);
+  const len = value2 == null ? void 0 : value2.length;
   const needsLen = length !== void 0;
   if (!bytes || needsLen && len !== length) {
     const prefix = title && `"${title}" `;
     const ofLen = needsLen ? ` of length ${length}` : "";
-    const got = bytes ? `length=${len}` : `type=${typeof value}`;
+    const got = bytes ? `length=${len}` : `type=${typeof value2}`;
     throw new Error(prefix + "expected Uint8Array" + ofLen + ", got " + got);
   }
-  return value;
+  return value2;
 }
 function numberToHexUnpadded(num3) {
   const hex = num3.toString(16);
@@ -15194,13 +15376,13 @@ function mapHashToField(key, fieldOrder, isLE = false) {
 }
 
 // node_modules/@noble/hashes/esm/_md.js
-function setBigUint64(view, byteOffset, value, isLE) {
+function setBigUint64(view, byteOffset, value2, isLE) {
   if (typeof view.setBigUint64 === "function")
-    return view.setBigUint64(byteOffset, value, isLE);
+    return view.setBigUint64(byteOffset, value2, isLE);
   const _32n2 = BigInt(32);
   const _u32_max = BigInt(4294967295);
-  const wh = Number(value >> _32n2 & _u32_max);
-  const wl = Number(value & _u32_max);
+  const wh = Number(value2 >> _32n2 & _u32_max);
+  const wl = Number(value2 & _u32_max);
   const h = isLE ? 4 : 0;
   const l = isLE ? 0 : 4;
   view.setUint32(byteOffset + h, wh, isLE);
@@ -17337,8 +17519,8 @@ function cborDecode(bytes) {
         throw new PasskeyError("Type CBOR inconnu.");
     }
   };
-  const value = item(0);
-  return { value, length: pos };
+  const value2 = item(0);
+  return { value: value2, length: pos };
 }
 function parseAuthData(data) {
   if (data.length < 37) throw new PasskeyError("Donn\xE9es d'authentification trop courtes.");
@@ -17363,19 +17545,19 @@ function parseAuthData(data) {
 var COSE_ES256 = -7;
 var COSE_RS256 = -257;
 function parseCoseKey(bytes) {
-  const { value } = cborDecode(bytes);
-  if (!(value instanceof Map)) throw new PasskeyError("Cl\xE9 publique illisible.");
-  const kty = value.get(1);
-  const alg = Number(value.get(3));
-  if (kty === 2 && alg === COSE_ES256 && value.get(-1) === 1) {
-    const x = value.get(-2);
-    const y = value.get(-3);
+  const { value: value2 } = cborDecode(bytes);
+  if (!(value2 instanceof Map)) throw new PasskeyError("Cl\xE9 publique illisible.");
+  const kty = value2.get(1);
+  const alg = Number(value2.get(3));
+  if (kty === 2 && alg === COSE_ES256 && value2.get(-1) === 1) {
+    const x = value2.get(-2);
+    const y = value2.get(-3);
     if (!(x instanceof Uint8Array) || !(y instanceof Uint8Array) || x.length !== 32 || y.length !== 32) throw new PasskeyError("Cl\xE9 P-256 invalide.");
     return { alg, x, y };
   }
   if (kty === 3 && alg === COSE_RS256) {
-    const n = value.get(-1);
-    const e3 = value.get(-2);
+    const n = value2.get(-1);
+    const e3 = value2.get(-2);
     if (!(n instanceof Uint8Array) || !(e3 instanceof Uint8Array) || n.length < 256) throw new PasskeyError("Cl\xE9 RSA invalide.");
     return { alg, n, e: e3 };
   }
@@ -17461,9 +17643,9 @@ function checkAuthData(auth, ctx) {
 function verifyRegistration(input, ctx) {
   const { data } = readClientData(input.clientDataJSON);
   checkClientData(data, "webauthn.create", ctx);
-  const { value } = cborDecode(b64urlDecode(input.attestationObject));
-  if (!(value instanceof Map)) throw new PasskeyError("Attestation illisible.");
-  const authBytes = value.get("authData");
+  const { value: value2 } = cborDecode(b64urlDecode(input.attestationObject));
+  if (!(value2 instanceof Map)) throw new PasskeyError("Attestation illisible.");
+  const authBytes = value2.get("authData");
   if (!(authBytes instanceof Uint8Array)) throw new PasskeyError("Attestation sans donn\xE9es.");
   const auth = parseAuthData(authBytes);
   checkAuthData(auth, ctx);
@@ -17627,6 +17809,75 @@ function validateBroadcast(b) {
   if (((_d = b.message) != null ? _d : "").length > 500) errors.push("Message : 500 caract\xE8res au plus.");
   if (b.link && !/^\/game(\/|$)/.test(b.link)) errors.push("Le lien doit \xEAtre une page du jeu (/game/\u2026).");
   return errors;
+}
+
+// src/game/allianceChallenge.ts
+var ALLIANCE_CHALLENGE_KEY = "alliance_challenge";
+var ALLIANCE_CHALLENGES = [
+  { id: "pillards", name: "Les pillards", emoji: "\u{1F4B0}", metric: "loot", hint: "Ressources pill\xE9es par les membres." },
+  { id: "explorateurs", name: "Les explorateurs", emoji: "\u{1F9ED}", metric: "missions", hint: "Missions termin\xE9es par les membres." },
+  { id: "arsenal", name: "L'arsenal", emoji: "\u{1F6E0}\uFE0F", metric: "unitsBuilt", hint: "Unit\xE9s construites par les membres." },
+  { id: "ferrailleurs", name: "Les ferrailleurs", emoji: "\u267B\uFE0F", metric: "recycled", hint: "D\xE9bris recycl\xE9s par les membres." },
+  { id: "conquerants", name: "Les conqu\xE9rants", emoji: "\u2694\uFE0F", metric: "victories", hint: "Victoires des membres." },
+  { id: "negociants", name: "Les n\xE9gociants", emoji: "\u{1F4DC}", metric: "contracts", hint: "Contrats remplis par les membres." }
+];
+var ALLIANCE_CHALLENGE_REWARDS = [6, 4, 2];
+function challengeOfWeek(weekId2) {
+  const index = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
+  return ALLIANCE_CHALLENGES[(index % ALLIANCE_CHALLENGES.length + ALLIANCE_CHALLENGES.length) % ALLIANCE_CHALLENGES.length];
+}
+function findAllianceChallenge(id) {
+  var _a;
+  return (_a = ALLIANCE_CHALLENGES.find((c) => c.id === id)) != null ? _a : ALLIANCE_CHALLENGES[0];
+}
+function normalizeAllianceChallenge(raw, now) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const weekId2 = typeof r.weekId === "string" ? r.weekId : allianceWeekId(now);
+  return {
+    weekId: weekId2,
+    challengeId: typeof r.challengeId === "string" ? r.challengeId : challengeOfWeek(weekId2).id,
+    baselines: r.baselines && typeof r.baselines === "object" ? r.baselines : {},
+    standings: Array.isArray(r.standings) ? r.standings : [],
+    updatedAtMs: Number(r.updatedAtMs) || 0,
+    previous: r.previous && typeof r.previous === "object" ? r.previous : null
+  };
+}
+function value(metric, p) {
+  var _a;
+  return Math.max(0, Number((_a = METRICS[metric]) == null ? void 0 : _a.value(p)) || 0);
+}
+function refreshAllianceChallenge(state, players, alliances, now) {
+  var _a;
+  const metric = findAllianceChallenge(state.challengeId).metric;
+  const baselines = __spreadValues({}, state.baselines);
+  for (const p of players) if (baselines[p.uid] === void 0) baselines[p.uid] = value(metric, p);
+  const byAlliance = /* @__PURE__ */ new Map();
+  for (const p of players) {
+    if (!p.allianceId) continue;
+    const gain = Math.max(0, value(metric, p) - baselines[p.uid]);
+    const cur = (_a = byAlliance.get(p.allianceId)) != null ? _a : { score: 0, contributors: 0 };
+    byAlliance.set(p.allianceId, { score: cur.score + gain, contributors: cur.contributors + (gain > 0 ? 1 : 0) });
+  }
+  const standings = alliances.map((a) => {
+    var _a2;
+    return __spreadValues({ allianceId: a.id, tag: a.tag, name: a.name }, (_a2 = byAlliance.get(a.id)) != null ? _a2 : { score: 0, contributors: 0 });
+  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 20);
+  return __spreadProps(__spreadValues({}, state), { baselines, standings, updatedAtMs: now });
+}
+function allianceChallengeReward(rank2, members) {
+  var _a, _b;
+  const hours2 = (_a = ALLIANCE_CHALLENGE_REWARDS[rank2 - 1]) != null ? _a : 0;
+  const out = {};
+  if (!hours2) return out;
+  for (const m of members) for (const [k, v] of Object.entries(productionHours(m, hours2))) out[k] = ((_b = out[k]) != null ? _b : 0) + v;
+  return out;
+}
+function startAllianceChallengeWeek(players, now, previous) {
+  const weekId2 = allianceWeekId(now);
+  const challenge = challengeOfWeek(weekId2);
+  const baselines = {};
+  for (const p of players) baselines[p.uid] = value(challenge.metric, p);
+  return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
 }
 
 // src/server/hooksEntry.ts

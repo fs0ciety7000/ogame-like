@@ -560,6 +560,11 @@ cronAdd("cosmic_contests", "*/15 * * * *", () => {
   } catch (err) {
     console.log(`[cosmic] concours : ${err}`);
   }
+  try {
+    require(`${__hooks}/cosmic_db.js`).allianceChallengeTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] défi d'alliance : ${err}`);
+  }
 });
 
 cronAdd("cosmic_challenge", "*/10 * * * *", () => {

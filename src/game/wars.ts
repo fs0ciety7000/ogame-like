@@ -1,4 +1,4 @@
-import { allianceRole, canDiplomacy } from "@/game/alliances";
+import { canDiplomacyIn } from "@/game/alliances";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { payWarFromChest, type WarChest } from "@/game/seasonWars";
@@ -108,8 +108,7 @@ export function declareWar(input: {
   chest?: WarChest | null;
 }): { war: Omit<AllianceWar, "id">; own: Alliance; chest: WarChest | null } {
   const { own, target, now } = input;
-  const role = allianceRole(own, input.actorUid);
-  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent déclarer une guerre.");
+  if (!canDiplomacyIn(own, input.actorUid)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent déclarer une guerre.");
   if (own.id === target.id) throw new GameActionError("Tu ne peux pas déclarer la guerre à ta propre alliance.");
   if ((target.members ?? []).length < WAR_RULES.minMembers) throw new GameActionError(`Cette alliance compte moins de ${WAR_RULES.minMembers} membres.`);
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est déjà en guerre.");
@@ -195,8 +194,7 @@ export function surrender(war: AllianceWar, alliance: Alliance, actorUid: string
   const side = sideOf(war, alliance.id);
   if (!side) throw new GameActionError("Ton alliance ne participe pas à cette guerre.");
   if (!isRunning(war, now)) throw new GameActionError("Cette guerre est terminée.");
-  const role = allianceRole(alliance, actorUid);
-  if (!canDiplomacy(role)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
+  if (!canDiplomacyIn(alliance, actorUid)) throw new GameActionError("Seuls le fondateur, les officiers et les diplomates peuvent se rendre.");
   const winnerId = side === "attacker" ? war.defenderId : war.attackerId;
   return { ...war, status: "ended", winnerId, surrenderedBy: alliance.id, endedAtMs: now, log: [...war.log, { atMs: now, text: `${actorPseudo} rend les armes au nom de [${alliance.tag}].` }] };
 }

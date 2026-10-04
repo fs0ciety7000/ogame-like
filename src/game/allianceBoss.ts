@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import { hasAlliancePerm } from "@/game/allianceProfile";
 import { parisLocalToUtc } from "@/game/events";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -122,8 +123,9 @@ export function allianceBossHp(activeMembers: Pick<PlayerState, "units" | "techL
   return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
 }
 
-export function canCallAllianceBoss(alliance: Pick<Alliance, "createdBy" | "roles">, uid: string): boolean {
-  return alliance.createdBy === uid || alliance.roles?.[uid] === "officer";
+export function canCallAllianceBoss(alliance: Pick<Alliance, "createdBy" | "roles" | "members"> & { profile?: unknown }, uid: string): boolean {
+  // v5.10.5 : droit « Boss » (fondateur, officiers, ou rang personnalisé).
+  return hasAlliancePerm({ ...alliance, members: alliance.members ?? [uid] }, uid, "boss");
 }
 
 /** Appel du boss : rôle, une fois par semaine, trésor suffisant. Débite le trésor. */

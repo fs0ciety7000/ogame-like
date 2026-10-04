@@ -1489,7 +1489,7 @@ function closeSeason(game, now, seasonIdIn) {
 }
 /* ---------- Alliances (v1.9) ---------- */
 
-const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors"];
+const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors", "profile"];
 
 function allianceFromRecord(rec) {
   const a = toPlain(rec);
@@ -1502,6 +1502,7 @@ function allianceFromRecord(rec) {
   a.distributions = a.distributions || { day: "", count: 0 };
   a.projects = a.projects || {};
   a.projectContributors = a.projectContributors || {};
+  a.profile = a.profile || null;
   return a;
 }
 
@@ -1567,13 +1568,15 @@ function allianceRequest(e) {
     // Alliance disparue ou dont on a été retiré : on repart de zéro.
     const current = actor.player.allianceId ? findOrNull(txApp, "alliances", actor.player.allianceId) : null;
     if (!current || (toPlain(current).members || []).indexOf(uid) < 0) flushed.player.allianceId = "";
-    const allianceId = action.type === "join" ? String(action.allianceId || "") : String(flushed.player.allianceId || "");
+    // v5.10.5 : candidatures (postuler, retirer) visent une autre alliance que la sienne.
+    const external = action.type === "join" || action.type === "apply" || action.type === "withdraw";
+    const allianceId = external ? String(action.allianceId || "") : String(flushed.player.allianceId || "");
     let allianceRec = null;
     if (action.type !== "create" && allianceId) {
       allianceRec = findOrNull(txApp, "alliances", allianceId);
     }
     let target = null;
-    if (action.type === "distribute") {
+    if (action.type === "distribute" || action.type === "applicationAccept") {
       const targetUid = String(action.targetUid || "");
       if (targetUid === uid) target = { loaded: actor, flushed };
       else if (findOrNull(txApp, "players", targetUid)) {
@@ -2167,7 +2170,7 @@ function warRequest(e) {
       out = warJson(rec);
     } else if (req.action === "chestShield") {
       // v5.1 : bouclier de 2 h offert à un membre par le coffre de guerre.
-      if (!game.canDiplomacy(game.allianceRole(own, uid))) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
+      if (!game.canDiplomacyIn(own, uid)) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
       const memberUid = String(req.memberUid || "");
       if ((own.members || []).indexOf(memberUid) < 0) throw new BadRequestError("Ce commandant n'est pas membre de l'alliance.");
       const member = loadFlushed(txApp, game, memberUid);
@@ -4576,6 +4579,53 @@ function adminBroadcast(e) {
   return e.json(200, { count, sent: !req.dryRun });
 }
 
+/* ---------- v5.10.5 : défi d'alliance de la semaine ---------- */
+
+/** Tâche planifiée (avec les concours) : relevé du classement, et le lundi, prix au podium. */
+function allianceChallengeTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.ALLIANCE_CHALLENGE_KEY);
+    const players = proceduralPlayers(txApp);
+    const allianceRecs = txApp.findAllRecords("alliances");
+    const alliances = allianceRecs.map((a) => ({ id: a.id, tag: a.getString("tag"), name: a.getString("name") }));
+    if (!rec) {
+      writeConfig(txApp, game.ALLIANCE_CHALLENGE_KEY, game.startAllianceChallengeWeek(players, now, null));
+      return;
+    }
+    let state = game.normalizeAllianceChallenge(toPlain(rec).data, now);
+    state = game.refreshAllianceChallenge(state, players, alliances, now);
+    if (state.weekId !== game.allianceWeekId(now)) {
+      const challenge = game.findAllianceChallenge(state.challengeId);
+      const results = [];
+      state.standings.slice(0, game.ALLIANCE_CHALLENGE_REWARDS.length).forEach((st, i) => {
+        const aRec = allianceRecs.find((a) => a.id === st.allianceId);
+        if (!aRec) return;
+        const members = players.filter((p) => p.allianceId === st.allianceId);
+        const reward = game.allianceChallengeReward(i + 1, members);
+        const treasury = Object.assign({}, toPlain(aRec).treasury || {});
+        Object.keys(reward).forEach((k) => (treasury[k] = (treasury[k] || 0) + reward[k]));
+        aRec.set("treasury", treasury);
+        txApp.save(aRec);
+        const log = new Record(txApp.findCollectionByNameOrId("alliance_logs"));
+        log.load({ allianceId: aRec.id, kind: "deposit", actorUid: "", actorPseudo: "Défi de la semaine", text: `${challenge.emoji} ${challenge.name} : ${i + 1 === 1 ? "1re" : `${i + 1}e`} place`, resources: reward, createdAtMs: now });
+        txApp.save(log);
+        members.forEach((m) => {
+          try {
+            notify(txApp, m.uid, [{ kind: "alliance", title: `Défi d'alliance : ${i + 1 === 1 ? "victoire" : `${i + 1}e place`} !`, message: `${challenge.emoji} ${challenge.name} : ${game.describeGain(reward)} versés au trésor.`, createdAtMs: now, read: false, link: "/game/alliance?onglet=defi" }]);
+          } catch (_) {
+            /* facultatif */
+          }
+        });
+        results.push(Object.assign({}, st, { rank: i + 1, reward }));
+      });
+      state = game.startAllianceChallengeWeek(players, now, { weekId: state.weekId, challengeId: state.challengeId, results });
+    }
+    writeConfig(txApp, game.ALLIANCE_CHALLENGE_KEY, state);
+  });
+}
+
 /* ---------- v5.10.5 : concours du pot commun ---------- */
 
 function readContests(txApp, game) {
@@ -6729,4 +6779,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

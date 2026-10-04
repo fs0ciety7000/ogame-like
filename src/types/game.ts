@@ -298,6 +298,8 @@ export interface Alliance {
   daily?: unknown;
   /** v5.1 : coffre de guerre (dépôts des objectifs du jour). */
   warChest?: import("@/game/seasonWars").WarChest | null;
+  /** v5.10.5 : fiche publique, recrutement, rangs personnalisés, candidatures. */
+  profile?: unknown;
 }
 
 export interface AllianceLog {

@@ -158,7 +158,7 @@ export {
 export { CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
 export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, previousSummary, proposeDaily, readDaily, startDaily, updateDailyProgress, voteDaily } from "@/game/allianceDaily";
 export { parisDay } from "@/game/retention";
-export { allianceRole, canDiplomacy } from "@/game/alliances";
+export { allianceRole, canDiplomacy, canDiplomacyIn } from "@/game/alliances";
 export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/game/territories";
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
@@ -185,3 +185,5 @@ export { BLOG_WELCOME } from "@/game/blogWelcome";
 export { challengeFromBytes, cleanPasskeyName, clientChallenge, PASSKEY_RULES, PasskeyError, utf8Encode as passkeyUtf8, verifyAssertion, verifyRegistration } from "@/game/webauthn";
 export { CONTESTS_KEY, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
 export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
+export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
+export { allianceWeekId } from "@/game/allianceBoss";
