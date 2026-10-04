@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { PenLine } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -88,7 +89,7 @@ export function RenameCard({ player }: { player: PlayerState }) {
           </Button>
         )}
       </div>
-      {error ? <p className="text-xs text-ember-glow">{error}</p> : short ? <p className="text-xs text-ember-glow">Il te faut {RENAME_RULES.amber} Ambre (tu en as {amber}). Gagne-en avec les primes Kesh'Vaar.</p> : null}
+      {error ? <p className="text-xs text-ember-glow">{error}</p> : short ? <p className="text-xs text-ember-glow">Il te faut <AmberAmount value={RENAME_RULES.amber} /> (tu en as {amber}). Gagne-en avec les primes Kesh'Vaar.</p> : null}
     </Card>
   );
 }

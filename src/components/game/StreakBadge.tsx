@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { Flame } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -76,7 +77,7 @@ export function StreakBadge() {
         ) : (
           <p className="text-[11px]">
             Aujourd'hui : {describeGain(reward.resources)}
-            {reward.amber ? ` et ${reward.amber} Ambre` : ""}.{status.current === 0 && st.count > 0 ? " Ta série précédente s'est arrêtée : elle repart à 1." : ""}
+            {reward.amber ? <> et <AmberAmount value={reward.amber} /></> : ""}.{status.current === 0 && st.count > 0 ? " Ta série précédente s'est arrêtée : elle repart à 1." : ""}
           </p>
         )}
         {track}

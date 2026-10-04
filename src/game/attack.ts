@@ -6,7 +6,7 @@ import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
 import { addSeasonPower } from "@/game/seasonWars";
 import { bumpStat, setStat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -155,9 +155,11 @@ export function performAttack(input: AttackInput): AttackOutput {
   const armor = consumeArmor(owner, now) / 100;
   const combat = resolveCombat({
     ...formation,
-    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault),
+    // v5.9 : les Traqueurs Kesh gardent leur +50 % contre les seigneurs de guerre (PNJ).
+    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault) * (owner.npc ? pveAttackFactor(attacker.units, attacker.techLevels, fleet) : 1),
     cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
-    defenderPowerFactor: 1 + defMods.defense + armor,
+    // v5.9 : un seigneur de guerre (PNJ) qui attaque affronte aussi le bonus des Traqueurs à quai.
+    defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor(def.units ?? {}, def.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     lootMultiplier: lootFactor(now),

@@ -36,7 +36,7 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   name: "Traqueur Kesh",
   image: "/assets/units/traqueur_kesh.webp",
   maxLevel: 1,
-  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le Léviathan, en attaque comme en défense.",
   cost: { scrap: 6000, energy: 3000 },
   stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
   category: "attack",
@@ -50,7 +50,7 @@ export function ownedBlueprints(player: { bounties?: { owned?: string[] } }): st
   return player.bounties?.owned?.includes("blueprint") ? [KESH_HUNTER_UNIT.id] : [];
 }
 
-/** Bonus d'attaque du Traqueur contre les PNJ (factions, primes, Léviathan). */
+/** Bonus d'attaque du Traqueur contre les PNJ (seigneurs, menaces, primes, boss, Léviathan), en attaque comme en défense. */
 export const KESH_PVE_BONUS = 0.5;
 
 /** Gain d'attaque et de défense par niveau, pour les unités qui n'en précisent pas. */

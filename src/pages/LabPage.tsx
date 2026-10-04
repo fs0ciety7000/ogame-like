@@ -1,4 +1,5 @@
 import { playerResearchTimeFactor } from "@/game/bonuses";
+import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -11,8 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
-import { assetUrl } from "@/lib/assets";
-import { bountyState, KESH } from "@/game/bounties";
+import { bountyState } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
 import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
@@ -153,7 +153,7 @@ export function LabPage() {
                 {amberCost > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <CostPill ok={amberLack <= 0} missing={amberLack > 0 ? `manque ${formatNumber(amberLack)}` : undefined}>
-                      <img src={assetUrl(KESH.amberIcon)} alt="Ambre" className="h-3.5 w-3.5 object-contain" /> {formatNumber(amberCost)} ambre
+                      <AmberAmount value={amberCost} />
                     </CostPill>
                   </div>
                 )}
@@ -193,7 +193,7 @@ export function LabPage() {
                         {MAX_CONCURRENT_RESEARCH} recherches en cours au plus : attends la fin de l'une d'elles.
                       </BlockedReason>
                     ) : amberLack > 0 ? (
-                      <BlockedReason tone="block">Il te manque {formatNumber(amberLack)} ambre : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>
+                      <BlockedReason tone="block">Il te manque <AmberAmount value={amberLack} /> : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>
                     ) : wait > 0 ? (
                       <BlockedReason>{affordText(wait)}</BlockedReason>
                     ) : null}

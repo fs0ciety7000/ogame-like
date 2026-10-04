@@ -1,4 +1,4 @@
-import { getShieldPercent, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { getShieldPercent, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
@@ -93,6 +93,8 @@ export function simulateAgainstReport(
   formation?: string,
   /** v4.0 : bonus d'attaque du joueur (officiers, reliques, stimulant d'assaut). */
   attackBonus = 0,
+  /** v5.9 : cible PNJ (seigneur de guerre) : bonus des Traqueurs Kesh. */
+  pve = false,
 ): SimOutcome | null {
   const data = report.data;
   if (!data || (report.tier ?? 0) < 2 || (!data.units && !data.defenses)) return null;
@@ -120,7 +122,7 @@ export function simulateAgainstReport(
   const fx = formationEffects(formation);
   const combat = resolveCombat({
     ...fx,
-    attackFactor: fx.attackFactor * (1 + attackBonus),
+    attackFactor: fx.attackFactor * (1 + attackBonus) * (pve ? pveAttackFactor(attacker.units, attacker.techLevels, cleanFleet(fleet)) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     attackerUnits: attacker.units,

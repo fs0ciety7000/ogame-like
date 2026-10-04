@@ -587,7 +587,7 @@ var KESH_HUNTER_UNIT = {
   name: "Traqueur Kesh",
   image: "/assets/units/traqueur_kesh.webp",
   maxLevel: 1,
-  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre les factions et les cibles des primes (+50 % d'attaque contre les PNJ).",
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le L\xE9viathan, en attaque comme en d\xE9fense.",
   cost: { scrap: 6e3, energy: 3e3 },
   stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
   category: "attack",
@@ -1276,6 +1276,15 @@ function pveAttackFactor(units, techLevels2, fleet) {
   const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
   if (!(all > 0)) return 1;
   return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
+}
+function pveHomeDefenseFactor(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
+  var _a, _b;
+  const hunters = (_b = (_a = units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _a.count) != null ? _b : 0;
+  if (!(hunters > 0)) return 1;
+  const base = homeDefensePower(units, techLevels2, homeFleetFactor, defenseFactor);
+  if (!(base > 0)) return 1;
+  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
+  return 1 + extra / base;
 }
 function computeFullPower(units, techLevels2, idList, stats) {
   let total2 = 0;
@@ -3937,7 +3946,7 @@ function answerUltimatum(player, answer, now, random = Math.random) {
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
 function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   if (options.evading) bumpStat(player, "evasions");
@@ -3961,7 +3970,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     homeFleetFactor: posture.homeFleetFactor,
     defenseFactor: posture.defenseFactor,
     // v4.0 : Stratège et reliques (les capsules ne jouent pas contre les PNJ).
-    defenderPowerFactor: 1 + playerModifiers(player).defense
+    // v5.9 : Traqueurs Kesh à quai, +50 % d'attaque contre les PNJ.
+    defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, (_e = player.techLevels) != null ? _e : {}, posture.homeFleetFactor, posture.defenseFactor)
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
@@ -3974,11 +3984,11 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES2;
     for (const res of kinds) {
-      const exposed = Math.max(0, ((_e = player.resources[res]) != null ? _e : 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
+      const exposed = Math.max(0, ((_f = player.resources[res]) != null ? _f : 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
-        player.resources[res] = ((_f = player.resources[res]) != null ? _f : 0) - taken;
+        player.resources[res] = ((_g = player.resources[res]) != null ? _g : 0) - taken;
       }
     }
     st.raidsLost += 1;
@@ -3989,8 +3999,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
-    for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_g = bounty[r]) != null ? _g : 0) + faction.bounty.rare;
-    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_h = player.resources[res]) != null ? _h : 0) + amount3;
+    for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_h = bounty[r]) != null ? _h : 0) + faction.bounty.rare;
+    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_i = player.resources[res]) != null ? _i : 0) + amount3;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
@@ -4000,7 +4010,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
-    player.victories = ((_i = player.victories) != null ? _i : 0) + 1;
+    player.victories = ((_j = player.victories) != null ? _j : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     notifications.push(
@@ -5605,7 +5615,7 @@ var SHOP_ITEMS = [
   { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
   { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
-  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre les PNJ." },
+  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
   { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
   { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
@@ -9291,7 +9301,7 @@ function warlordPublic(d, npc, rt, state, now) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -9346,46 +9356,48 @@ function performAttack(input) {
   const assault = Math.max(0, Math.min(50, Number((_l = input.boosts) == null ? void 0 : _l.assault) || 0)) / 100;
   const armor = consumeArmor(owner, now) / 100;
   const combat = resolveCombat(__spreadProps(__spreadValues({}, formation), {
-    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault),
+    // v5.9 : les Traqueurs Kesh gardent leur +50 % contre les seigneurs de guerre (PNJ).
+    attackFactor: formation.attackFactor * (1 + atkMods.attack + assault) * (owner.npc ? pveAttackFactor(attacker.units, attacker.techLevels, fleet) : 1),
     cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
-    defenderPowerFactor: 1 + defMods.defense + armor,
+    // v5.9 : un seigneur de guerre (PNJ) qui attaque affronte aussi le bonus des Traqueurs à quai.
+    defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_m = def3.units) != null ? _m : {}, (_n = def3.techLevels) != null ? _n : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     lootMultiplier: lootFactor(now),
-    garrisons: (_m = input.garrisons) != null ? _m : [],
+    garrisons: (_o = input.garrisons) != null ? _o : [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
     fleet,
-    defenderUnits: (_n = def3.units) != null ? _n : {},
-    defenderTechLevels: (_o = def3.techLevels) != null ? _o : {},
+    defenderUnits: (_p = def3.units) != null ? _p : {},
+    defenderTechLevels: (_q = def3.techLevels) != null ? _q : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
     defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_p = def3.resources) != null ? _p : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
+      Object.entries((_r = def3.resources) != null ? _r : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
     )
   }));
-  const aegis = combat.outcome === "attacker_win" && Object.values((_q = combat.loot) != null ? _q : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
+  const aegis = combat.outcome === "attacker_win" && Object.values((_s = combat.loot) != null ? _s : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
   if (aegis) combat.loot = {};
   if (input.lootCap !== void 0 && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap);
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
   const survivors = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_r = combat.attackerLosses[unitId]) != null ? _r : 0));
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_t = combat.attackerLosses[unitId]) != null ? _t : 0));
   if (input.inFlight) {
     for (const [unitId, qty] of Object.entries(survivors)) {
       if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
     }
   }
-  for (const [res, amt] of Object.entries((_s = combat.loot) != null ? _s : {})) {
+  for (const [res, amt] of Object.entries((_u = combat.loot) != null ? _u : {})) {
     if (!input.inFlight) {
-      attacker.resources[res] = ((_t = attacker.resources[res]) != null ? _t : 0) + (amt != null ? amt : 0);
+      attacker.resources[res] = ((_v = attacker.resources[res]) != null ? _v : 0) + (amt != null ? amt : 0);
       bumpStat(attacker, "loot", amt != null ? amt : 0);
     }
-    def3.resources[res] = Math.max(0, ((_u = def3.resources[res]) != null ? _u : 0) - (amt != null ? amt : 0));
+    def3.resources[res] = Math.max(0, ((_w = def3.resources[res]) != null ? _w : 0) - (amt != null ? amt : 0));
   }
   const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels));
   const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
@@ -9400,13 +9412,13 @@ function performAttack(input) {
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
-    attacker.victories = ((_v = attacker.victories) != null ? _v : 0) + 1;
-  } else if (combat.outcome === "defender_win") attacker.defeats = ((_w = attacker.defeats) != null ? _w : 0) + 1;
+    attacker.victories = ((_x = attacker.victories) != null ? _x : 0) + 1;
+  } else if (combat.outcome === "defender_win") attacker.defeats = ((_y = attacker.defeats) != null ? _y : 0) + 1;
   applyXpDelta(attacker, xp.attackerXp, now);
   attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") owner.victories = ((_x = owner.victories) != null ? _x : 0) + 1;
+  if (combat.outcome === "defender_win") owner.victories = ((_z = owner.victories) != null ? _z : 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    owner.defeats = ((_y = owner.defeats) != null ? _y : 0) + 1;
+    owner.defeats = ((_A = owner.defeats) != null ? _A : 0) + 1;
     if (colony) colony.lastDefeatAtMs = now;
     else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
@@ -9427,7 +9439,7 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_z = outcomeTitle[combat.outcome]) != null ? _z : "Rapport de combat",
+      title: (_B = outcomeTitle[combat.outcome]) != null ? _B : "Rapport de combat",
       message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
       read: false
@@ -9442,7 +9454,7 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_A = defenderTitle[combat.outcome]) != null ? _A : "Rapport de combat",
+      title: (_C = defenderTitle[combat.outcome]) != null ? _C : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
       read: false
@@ -9468,7 +9480,7 @@ function performAttack(input) {
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
     defenderApplied: true,
-    garrisons: ((_B = input.garrisons) != null ? _B : []).map((g, i) => {
+    garrisons: ((_D = input.garrisons) != null ? _D : []).map((g, i) => {
       var _a2, _b2;
       return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
     }),
@@ -9486,8 +9498,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_C = combat.loot) != null ? _C : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_D = combat.garrisonLosses) != null ? _D : []], (_E = eventDebrisPercent(now)) != null ? _E : DEBRIS_RULES.percent)
+    loot: (_E = combat.loot) != null ? _E : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_F = combat.garrisonLosses) != null ? _F : []], (_G = eventDebrisPercent(now)) != null ? _G : DEBRIS_RULES.percent)
   };
 }
 function lostPower(losses, units, techLevels2) {
