@@ -5,7 +5,7 @@ excerpt: "Un vrai catalogue de titres, un pot commun nourri par les taxes, un Ha
 category: mises-a-jour
 tags: [titres, pot-commun, boss, hall-of-fame, cadeaux, defis]
 version: "5.10"
-cover: /assets/leviathan/leviathan.webp
+cover: /assets/blog/articles/5-10/couverture.webp
 ---
 > [!LORE] Registre du Conseil, archives orbitales
 > Les scribes du Conseil ont reçu une consigne nouvelle : tout consigner. Qui a frappé le colosse, qui l'a achevé, qui a partagé ses vivres avec un voisin affamé. Un secteur sans mémoire finit toujours par recommencer les mêmes guerres.
@@ -15,6 +15,8 @@ La 5.9 s'occupait du moment où l'on reçoit une récompense. La 5.10 s'intéres
 ## Des titres qui ont enfin du caractère
 
 Jusqu'ici, un titre n'était qu'un texte doré à côté du pseudo. Que vous l'ayez gagné en terminant le passe ou en écrasant mille adversaires, il avait la même allure. Ce n'était pas juste.
+
+![Cinq insignes, du commun au mythique](/assets/blog/articles/5-10/titres.webp "Chaque rareté a sa couleur")
 
 Les titres ont maintenant leur **catalogue**. Chacun a une icône, une description et une **rareté** : commun, rare, épique, légendaire ou mythique. La rareté donne sa couleur au titre partout où il s'affiche : dans le classement, sur votre fiche, sur la carte de la galaxie et dans votre profil. Un *Fléau du Léviathan* mythique ne passe plus inaperçu à côté d'un *Éclaireur*.
 
@@ -36,6 +38,8 @@ Côté équipe, les titres se créent et se modifient désormais depuis l'admini
 
 Chaque vente au marché paie une petite taxe. Jusqu'ici, elle disparaissait purement et simplement. C'était de l'argent perdu pour tout le monde.
 
+![La salle du pot commun](/assets/blog/articles/5-10/pot-commun.webp "Au cœur de la station, le pot commun se remplit")
+
 Ces taxes alimentent maintenant un **pot commun du serveur**. La part perdue des cadeaux hors alliance aussi (on y revient juste après). Le solde est visible en haut de la page **Marché**, pour que chacun sache ce qui s'y accumule.
 
 À quoi va-t-il servir ? Aux **concours** et aux **récompenses collectives**. L'équipe peut verser une partie du pot à un joueur, avec un motif qu'il voit dans sa notification : vainqueur d'un concours d'Halloween, meilleure capture d'écran du mois, gagnant d'un tournoi d'alliances. Chaque versement est tracé dans le journal de l'administration.
@@ -53,11 +57,15 @@ La fenêtre d'envoi vous prévient avant que vous validiez. La notification du d
 
 Quand un Léviathan tombait, son souvenir s'effaçait avec l'arrivée du suivant. Plus maintenant.
 
+![Le Hall of fame des colosses](/assets/blog/articles/5-10/couverture.webp "Les trophées des colosses abattus")
+
 Le **Hall of fame des boss** (menu *Grands ennemis*) archive chaque combat contre le Léviathan, les boss de saison et votre boss d'alliance :
 
 - l'issue, la durée, les dégâts totaux et le nombre de commandants ;
 - le podium des dégâts ;
 - et, nouveauté, le **coup de grâce**. Le jeu retient désormais qui a porté le dernier assaut, celui qui a fait tomber le colosse.
+
+![Le coup de grâce](/assets/blog/articles/5-10/coup-de-grace.webp "Un seul tir, et le colosse se disloque")
 
 En haut de la page, les **records** : le plus gros total de dégâts sur un seul boss, la victoire la plus rapide, les commandants le plus souvent n° 1, et ceux qui collectionnent les coups de grâce.
 

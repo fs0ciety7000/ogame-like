@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { COLONY_RULES, advanceColonies, buildColonyDefense, colonyBuildingIds, DEPOSIT_ID, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, homeLevels, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { COLONY_RULES, advanceColonies, foundationLevel, buildColonyDefense, colonyBuildingIds, DEPOSIT_ID, colonyDefenseHangar, colonyDefenseSeconds, colonyHourlyRates, colonyUpgradeCost, collectFromColony, deliverToColony, homeLevels, nextColonySlot, parseCargo, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
+import { advanceResources } from "@/game/economy";
 import { findUnit, UNITS } from "@/game/units";
 import type { PlayerState } from "@/types/game";
 
@@ -46,16 +47,17 @@ describe("colonies", () => {
     const c = p.colonies![0];
     const homeScrap = p.resources.scrap;
     const extractor = colonyBuildingIds()[0];
-    const cost = colonyUpgradeCost(p, extractor, 2);
+    const startLevel = c.buildings[extractor].level;
+    const cost = colonyUpgradeCost(p, extractor, startLevel + 1);
     const before = c.resources.scrap;
     const job = upgradeColonyBuilding(p, c.id, extractor, NOW + 2 * H);
     expect(c.resources.scrap).toBe(before - (cost.scrap ?? 0));
     expect(p.resources.scrap).toBe(homeScrap);
     expect(() => upgradeColonyBuilding(p, c.id, extractor, NOW + 2 * H)).toThrow(/déjà en cours/);
     advanceColonies(p, job.endTime + 1);
-    expect(c.buildings[extractor].level).toBe(2);
-    // Coût × 1,5, niveau 15 au plus.
-    c.buildings[extractor].level = 15;
+    expect(c.buildings[extractor].level).toBe(startLevel + 1);
+    // v5.10 : niveau 18 au plus.
+    c.buildings[extractor].level = COLONY_RULES.maxLevel;
     expect(() => upgradeColonyBuilding(p, c.id, extractor, job.endTime + 2)).toThrow(/maximum/);
     // Défenses : débloquées sur la planète mère, payées par la colonie.
     const def = UNITS.find((u) => u.category === "defense")!;
@@ -107,5 +109,29 @@ describe("v4.9.3 : niveaux requis pour fonder", () => {
     p.buildings.fonderie_quantique = { level: 5, unlocked: true };
     p.buildings.generateur_bouclier = { level: 3, unlocked: true };
     expect(homeLevels(p)).toBe(8);
+  });
+
+  it("v5.10 : fondation à la moitié de la planète mère (8 au plus), +50 % de production, colonies anciennes relevées", () => {
+    expect(foundationLevel(0)).toBe(1);
+    expect(foundationLevel(10)).toBe(5);
+    expect(foundationLevel(20)).toBe(8);
+    const p = empire();
+    p.buildings.extracteur_ferraille = { level: 14, unlocked: true };
+    startColonization(p, "Néo", NOW);
+    advanceColonies(p, NOW + 2 * H);
+    const c = p.colonies![0];
+    expect(c.buildings.extracteur_ferraille.level).toBe(7);
+    expect(c.foundation).toBe(1);
+    // +50 % par rapport à la même mine sur la planète mère.
+    const rates = colonyHourlyRates(c, p);
+    const homeLike = advanceResources({ buildings: c.buildings, techLevels: p.techLevels, resources: { scrap: 0 } } as never, 3600);
+    expect(rates.scrap).toBe(Math.round((homeLike.scrap ?? 0) * 1.5));
+    // Colonie fondée avant la 5.10 : relevée au premier rattrapage, avec une notification.
+    const old = { ...c, foundation: undefined, buildings: { ...c.buildings, extracteur_ferraille: { level: 2, unlocked: true } } };
+    p.colonies = [old];
+    const notes = advanceColonies(p, NOW + 3 * H);
+    expect(old.buildings.extracteur_ferraille.level).toBe(7);
+    expect(notes.some((n) => n.title === "Colonie modernisée")).toBe(true);
+    expect(advanceColonies(p, NOW + 4 * H).some((n) => n.title === "Colonie modernisée")).toBe(false);
   });
 });

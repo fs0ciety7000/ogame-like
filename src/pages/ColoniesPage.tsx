@@ -514,7 +514,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <div>
           <SectionTitle
             icon={Hammer}
-            aside={<span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · coûts × {COLONY_RULES.costFactor} · un chantier à la fois</span>}
+            aside={<span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>}
           >
             Bâtiments
           </SectionTitle>
@@ -670,8 +670,9 @@ function FoundColony({ player }: { player: PlayerState }) {
           <p className="hud-eyebrow text-[10px] text-cyan-glow">Expansion · emplacement {next.slot} / {COLONY_RULES.maxColonies}</p>
           <h2 className="font-display text-xl font-bold tracking-[0.04em] text-white">Fonder la colonie {next.slot}</h2>
           <p className="mt-1 max-w-2xl text-xs text-slate-400">
-            Un vaisseau colonial part de ta planète mère et fonde la colonie en {COLONY_RULES.foundHours} h. Elle démarre avec {formatCompact(COLONY_RULES.startStock)} de chaque ressource commune, ses
-            extracteurs, son entrepôt et son hangar de défense au niveau 1. Son biome est tiré au hasard : il lui donne un gisement de ressource rare (acier renforcé, modules
+            Un vaisseau colonial part de ta planète mère et fonde la colonie en {COLONY_RULES.foundHours} h. Elle démarre avec {formatCompact(COLONY_RULES.startStock)} de chaque ressource commune. Ses
+            extracteurs et son entrepôt démarrent à la moitié du niveau de ceux de ta planète mère (niveau {COLONY_RULES.foundationMax} au plus), et ses terres neuves produisent{" "}
+            {Math.round(COLONY_RULES.productionBonus * 100)} % de plus. Son biome est tiré au hasard : il lui donne un gisement de ressource rare (acier renforcé, modules
             cybernétiques, nanites ou fragments d'IA) qui produit dès la fondation.
           </p>
         </div>
