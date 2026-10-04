@@ -71,6 +71,8 @@ export function PlayersPage() {
   const [tradeTarget, setTradeTarget] = useState<{
     uid: string;
     pseudo: string;
+    allianceId?: string | null;
+    createdAtMs?: number;
   } | null>(null);
 
   useNowTicker();
@@ -400,7 +402,7 @@ export function PlayersPage() {
                     disabled={isSelf || !!p.npc}
                     className="group relative"
                     onClick={() =>
-                      setTradeTarget({ uid: p.uid, pseudo: p.pseudo })
+                      setTradeTarget({ uid: p.uid, pseudo: p.pseudo, allianceId: p.allianceId ?? null, createdAtMs: p.createdAtMs })
                     }
                   >
                     <Gift className="h-4 w-4" />

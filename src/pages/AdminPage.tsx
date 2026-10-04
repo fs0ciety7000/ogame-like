@@ -5,6 +5,7 @@ import {
   Award,
   BarChart3,
   Calculator,
+  Coins,
   Building2,
   Compass,
   Construction,
@@ -39,6 +40,7 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
+import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
@@ -102,6 +104,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : solde, mouvements, versements (concours)." },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
@@ -299,6 +302,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="procedural">
           <ProceduralPanel />
+        </TabsContent>
+        <TabsContent value="serverpot">
+          <ServerPotPanel />
         </TabsContent>
         <TabsContent value="warlords">
           <WarlordsPanel />

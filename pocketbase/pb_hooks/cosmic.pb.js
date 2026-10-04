@@ -161,7 +161,9 @@ routerAdd(
         claimed: true,
       });
       txApp.save(gift);
-      response = { resources: out.resources };
+      // v5.10 : la part perdue hors alliance va au pot commun du serveur.
+      db.addServerPot(txApp, game, "gift", game.giftTax(out.resources, out.delivered), now);
+      response = { resources: out.resources, delivered: out.delivered };
     });
 
     return e.json(200, response);
@@ -528,6 +530,8 @@ cronAdd("cosmic_wars", "*/5 * * * *", () => {
 routerAdd("POST", "/api/cosmic/expedition/choose", (e) => require(`${__hooks}/cosmic_db.js`).expeditionChoose(e), $apis.requireAuth("users"));
 
 /** Léviathan (v3.1) : apparition, échéance et récompenses ; lancement manuel par l'équipe. */
+routerAdd("GET", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/leviathan", (e) => require(`${__hooks}/cosmic_db.js`).adminLeviathan(e), $apis.requireAuth("users", "_superusers"));
 cronAdd("cosmic_leviathan", "*/5 * * * *", () => {
   try {

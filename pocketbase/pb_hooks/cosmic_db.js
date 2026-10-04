@@ -2703,6 +2703,7 @@ function marketAccept(e) {
       ]));
       rec.set("filled", fill.filled);
       rec.set("tax", rec.getFloat("tax") + fill.tax);
+      if (fill.tax > 0) addServerPot(txApp, game, "market", { [offer.wantRes]: fill.tax }, now);
       rec.set("buyerId", uid);
       rec.set("buyerPseudo", buyer.player.pseudo);
       if (fill.done) {
@@ -2745,6 +2746,7 @@ function marketAccept(e) {
     rec.set("filledAtMs", now);
     rec.set("tax", res.tax);
     txApp.save(rec);
+    if (res.tax > 0) addServerPot(txApp, game, "market", { [offer.wantRes]: res.tax }, now);
     out = offerJson(rec);
   });
   return e.json(200, out);
@@ -4278,6 +4280,64 @@ function adminPlayerAction(e) {
 }
 
 /* ---------- v5.4 : générateur procédural (chapitres, passe, succès) ---------- */
+
+/** v5.10 : verse des ressources au pot commun « Serveur » (taxes). */
+function addServerPot(txApp, game, source, amounts, now, note) {
+  const rec = configRecord(txApp, game.SERVER_POT_KEY);
+  const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+  const next = game.addToPot(pot, source, amounts || {}, now, note);
+  if (next !== pot) writeConfig(txApp, game.SERVER_POT_KEY, next);
+}
+
+/** GET/POST /api/cosmic/admin/serverpot — solde, mouvements, versement à un joueur. */
+function adminServerPot(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  if (e.request.method !== "POST") {
+    const rec = configRecord($app, game.SERVER_POT_KEY);
+    return e.json(200, game.normalizeServerPot(rec ? toPlain(rec).data : null));
+  }
+  const req = body(e);
+  if (req.action !== "grant") throw new BadRequestError("Action inconnue.");
+  const toUid = String(req.toUid || "");
+  const note = String(req.note || "").trim().slice(0, 200);
+  if (!note) throw new BadRequestError("Indique le motif (concours, événement…).");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    if (!findOrNull(txApp, "players", toUid)) throw new BadRequestError("Joueur introuvable.");
+    const rec = configRecord(txApp, game.SERVER_POT_KEY);
+    const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+    const owner = loadPlayer(txApp, game, toUid);
+    const next = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
+    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
+    const given = {};
+    const last = next.log[next.log.length - 1];
+    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    notify(txApp, toUid, flushed.notifications.concat([
+      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${game.describeGain(given)} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
+    ]));
+    writeConfig(txApp, game.SERVER_POT_KEY, next);
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "update",
+      targetCollection: "game_config",
+      recordId: game.SERVER_POT_KEY,
+      recordLabel: `Pot commun : ${note}`,
+      changes: { versé: given, joueur: owner.player.pseudo },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+    out = next;
+  });
+  return e.json(200, out);
+}
 
 function writeConfig(txApp, key, data) {
   let rec = configRecord(txApp, key);
@@ -6296,4 +6356,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -113,6 +113,7 @@ __export(hooksEntry_exports, {
   SEASON_RULES: () => SEASON_RULES,
   SEASON_WAR_RULES: () => SEASON_WAR_RULES,
   SECTOR_COUNT: () => SECTOR_COUNT,
+  SERVER_POT_KEY: () => SERVER_POT_KEY,
   STAFF_KEY: () => STAFF_KEY,
   TERRITORY_RULES: () => TERRITORY_RULES,
   TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
@@ -132,6 +133,7 @@ __export(hooksEntry_exports, {
   addRelic: () => addRelic,
   addReportComment: () => addReportComment,
   addSeasonPower: () => addSeasonPower,
+  addToPot: () => addToPot,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceNextDueMs: () => allianceNextDueMs,
@@ -223,6 +225,7 @@ __export(hooksEntry_exports, {
   empirePower: () => empirePower,
   empowerWarlord: () => empowerWarlord,
   emptyRuntime: () => emptyRuntime,
+  emptyServerPot: () => emptyServerPot,
   endGarrison: () => endGarrison,
   endVacation: () => endVacation,
   episodeUnlockMs: () => episodeUnlockMs,
@@ -247,6 +250,7 @@ __export(hooksEntry_exports, {
   generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
   getProductionRatesPerSecond: () => getProductionRatesPerSecond,
+  giftTax: () => giftTax,
   githubIssueBody: () => githubIssueBody,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
@@ -289,6 +293,7 @@ __export(hooksEntry_exports, {
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeProcedural: () => normalizeProcedural,
+  normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
   offerReserved: () => offerReserved,
   onVacation: () => onVacation,
@@ -385,6 +390,7 @@ __export(hooksEntry_exports, {
   startVacation: () => startVacation,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  takeFromPot: () => takeFromPot,
   tutorialRaidPower: () => tutorialRaidPower,
   unitsAwayOf: () => unitsAwayOf,
   updateDailyProgress: () => updateDailyProgress,
@@ -3903,8 +3909,8 @@ function tributeFor(faction, player, aggression) {
   const floor = productionHours(player, faction.tribute.minHours);
   return total(fromPlunder) >= total(floor) ? fromPlunder : floor;
 }
-function note2(kind, title, message, now) {
-  return { kind, title, message, createdAtMs: now, read: false };
+function note2(kind, title, message, now, data) {
+  return __spreadValues({ kind, title, message, createdAtMs: now, read: false }, data ? { data } : {});
 }
 function pirateTick(player, now, options = {}) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
@@ -4028,7 +4034,7 @@ function answerUltimatum(player, answer, now, random = Math.random) {
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
 function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   if (options.evading) bumpStat(player, "evasions");
@@ -4074,6 +4080,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
       }
     }
     st.raidsLost += 1;
+    player.defeats = ((_h = player.defeats) != null ? _h : 0) + 1;
     grantCommanderXp(player, "strategist", COMMANDER_XP.defenseLost);
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
@@ -4081,8 +4088,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
-    for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_h = bounty[r]) != null ? _h : 0) + faction.bounty.rare;
-    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_i = player.resources[res]) != null ? _i : 0) + amount3;
+    for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
+    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_j = player.resources[res]) != null ? _j : 0) + amount3;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
@@ -4092,7 +4099,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
-    player.victories = ((_j = player.victories) != null ? _j : 0) + 1;
+    player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     notifications.push(
@@ -4100,7 +4107,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
         `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
-        now
+        now,
+        { resources: bounty, xp: faction.bounty.xp || void 0 }
       )
     );
     if (lairNow) notifications.push(note2("fleet", `${faction.lair.name} localis\xE9`, "Sa position a fuit\xE9 : lance l'assaut depuis la page Menaces !", now));
@@ -7870,7 +7878,7 @@ function checkAttackAllowed(ctx) {
 
 // src/game/market.ts
 var MARKET_RULES = {
-  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), retirée du jeu. */
+  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), versée au pot commun du serveur (v5.10). */
   taxPct: 0.05,
   /** Taxe entre membres d'une même alliance. */
   allianceTaxPct: 0.02,
@@ -10234,11 +10242,28 @@ function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
   );
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
 }
+var GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
+function giftDeliveryRate(sender, recipient) {
+  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax;
+}
+function giftAgeBlock(p, now) {
+  var _a;
+  const created = (_a = p.createdAtMs) != null ? _a : 0;
+  if (!created) return null;
+  const left = created + GIFT_RULES.minAccountDays * 864e5 - now;
+  if (left <= 0) return null;
+  const hours2 = Math.ceil(left / 36e5);
+  return hours2 > 24 ? `encore ${Math.ceil(hours2 / 24)} jour(s)` : `encore ${hours2} h`;
+}
 function performGift(sender, senderQueues, recipient, recipientQueues, rawResources, now) {
   var _a;
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources \xE0 toi-m\xEAme !");
   if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau \xE0 un seigneur de guerre.");
   if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
+  const senderWait = giftAgeBlock(sender, now);
+  if (senderWait) throw new GameActionError(`Les cadeaux s'ouvrent apr\xE8s ${GIFT_RULES.minAccountDays} jours de jeu (${senderWait}).`);
+  const recipientWait = giftAgeBlock(recipient, now);
+  if (recipientWait) throw new GameActionError(`${recipient.pseudo} est arriv\xE9 il y a moins de ${GIFT_RULES.minAccountDays} jours : il ne peut pas encore recevoir de cadeau (${recipientWait}).`);
   const resources = {};
   for (const [res, raw] of Object.entries(rawResources != null ? rawResources : {})) {
     const n = Math.floor(Number(raw));
@@ -10250,22 +10275,28 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings, recipient.resources) }), recipientQueues, now);
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
+  const rate = giftDeliveryRate(sender, recipient);
+  const delivered = {};
   for (const [res, amt] of Object.entries(resources)) {
-    r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + (amt != null ? amt : 0);
+    const got = Math.floor(amt * rate);
+    if (got <= 0) continue;
+    delivered[res] = got;
+    r.player.resources[res] = ((_a = r.player.resources[res]) != null ? _a : 0) + got;
   }
+  const taxNote = rate < 1 ? ` (${Math.round((1 - rate) * 100)} % perdus en route hors alliance)` : "";
   r.notifications.push({
     kind: "gift",
     title: `Cadeau de ${sender.pseudo}`,
-    message: `${sender.pseudo} t'a envoy\xE9 ${describeGain(resources)}.`,
+    message: `${sender.pseudo} t'a envoy\xE9 ${describeGain(delivered)}${taxNote}.`,
     createdAtMs: now,
     read: false,
     link: `/game/joueurs?fiche=${sender.uid}`,
-    data: { resources, fromUid: sender.uid, fromPseudo: sender.pseudo }
+    data: { resources: delivered, fromUid: sender.uid, fromPseudo: sender.pseudo }
   });
   s.notifications.push({
     kind: "gift",
     title: `Cadeau livr\xE9 \xE0 ${recipient.pseudo}`,
-    message: `Tu as envoy\xE9 ${describeGain(resources)} \xE0 ${recipient.pseudo}.`,
+    message: `Tu as envoy\xE9 ${describeGain(resources)} \xE0 ${recipient.pseudo}${rate < 1 ? ` : ${describeGain(delivered)} arrivent${taxNote}` : ""}.`,
     createdAtMs: now,
     read: true,
     link: `/game/joueurs?fiche=${recipient.uid}`,
@@ -10278,7 +10309,8 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
     recipient: r.player,
     recipientQueues: r.queues,
     recipientNotifications: r.notifications,
-    resources
+    resources,
+    delivered
   };
 }
 function newPlayerProfile(uid, rawPseudo, now) {
@@ -11253,6 +11285,85 @@ function addOccurrence(report, pseudo, now) {
 }
 function errorQuotaKey(uid, now) {
   return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
+}
+
+// src/game/serverPot.ts
+var SERVER_POT_KEY = "server_pot";
+var POT_SOURCE_LABELS = {
+  market: "Taxes du march\xE9",
+  gift: "Taxe des cadeaux",
+  admin: "Administration"
+};
+function emptyServerPot() {
+  return { resources: {}, totals: {}, log: [], updatedAtMs: 0 };
+}
+function cleanAmounts(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const n = Math.floor(Number(v));
+    if (Number.isFinite(n) && n !== 0) out[k] = n;
+  }
+  return out;
+}
+function normalizeServerPot(raw) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const totals = {};
+  for (const src of Object.keys(POT_SOURCE_LABELS)) {
+    const t = cleanAmounts((_a = r.totals) == null ? void 0 : _a[src]);
+    if (Object.keys(t).length) totals[src] = t;
+  }
+  return {
+    resources: cleanAmounts(r.resources),
+    totals,
+    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
+    updatedAtMs: Number(r.updatedAtMs) || 0
+  };
+}
+function addToPot(pot, source, amounts, now, note4) {
+  var _a, _b, _c;
+  const add2 = {};
+  for (const [k, v] of Object.entries(amounts)) {
+    const n = Math.floor(Number(v));
+    if (Number.isFinite(n) && n > 0) add2[k] = n;
+  }
+  if (Object.keys(add2).length === 0) return pot;
+  const resources = __spreadValues({}, pot.resources);
+  const total2 = __spreadValues({}, (_a = pot.totals[source]) != null ? _a : {});
+  for (const [k, n] of Object.entries(add2)) {
+    resources[k] = ((_b = resources[k]) != null ? _b : 0) + n;
+    total2[k] = ((_c = total2[k]) != null ? _c : 0) + n;
+  }
+  return {
+    resources,
+    totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
+    log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
+    updatedAtMs: now
+  };
+}
+function takeFromPot(pot, amounts, now, note4) {
+  var _a, _b;
+  const resources = __spreadValues({}, pot.resources);
+  const taken = {};
+  for (const [k, v] of Object.entries(amounts)) {
+    const want = Math.floor(Number(v));
+    if (!Number.isFinite(want) || want <= 0) continue;
+    const n = Math.min(want, (_a = resources[k]) != null ? _a : 0);
+    if (n <= 0) continue;
+    resources[k] = ((_b = resources[k]) != null ? _b : 0) - n;
+    taken[k] = -n;
+  }
+  if (Object.keys(taken).length === 0) return pot;
+  return __spreadProps(__spreadValues({}, pot), { resources, log: [...pot.log, { atMs: now, source: "admin", resources: taken, note: note4 }].slice(-100), updatedAtMs: now });
+}
+function giftTax(sent, delivered) {
+  const out = {};
+  for (const [k, v] of Object.entries(sent)) {
+    const lost = Math.floor(Number(v) || 0) - Math.floor(Number(delivered[k]) || 0);
+    if (lost > 0) out[k] = lost;
+  }
+  return out;
 }
 
 // src/game/messages.ts

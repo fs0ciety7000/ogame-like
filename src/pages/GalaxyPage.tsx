@@ -98,7 +98,7 @@ export function GalaxyPage() {
   const now = useSmoothNow();
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
-  const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
+  const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string; allianceId?: string | null; createdAtMs?: number } | null>(null);
   const [debrisFields, setDebrisFields] = useState<DebrisField[]>([]);
   const [recycleField, setRecycleField] = useState<DebrisField | null>(null);
   const [garrisonTarget, setGarrisonTarget] = useState<{ uid: string; pseudo: string } | null>(null);
@@ -606,7 +606,7 @@ export function GalaxyPage() {
                     <Eye className="h-4 w-4" />
                   </Button>
                   {!("npc" in selected && selected.npc) && (
-                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo, allianceId: "allianceId" in selected ? (selected.allianceId ?? null) : undefined, createdAtMs: "createdAtMs" in selected ? selected.createdAtMs : undefined })}>
                       <Gift className="h-4 w-4" />
                     </Button>
                   )}
