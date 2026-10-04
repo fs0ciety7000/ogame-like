@@ -41,6 +41,7 @@ import { useAuthStore } from "@/store/authStore";
 import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
+import { ImpactReportPanel } from "@/pages/admin/ImpactReportPanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
@@ -250,8 +251,9 @@ export function AdminPage() {
         <TabsContent value="stats">
           <StatsPanel />
         </TabsContent>
-        <TabsContent value="balance">
+        <TabsContent value="balance" className="flex flex-col gap-4">
           <BalancePanel />
+          <ImpactReportPanel />
         </TabsContent>
         <TabsContent value="buildings">
           <ContentEditor

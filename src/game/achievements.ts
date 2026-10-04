@@ -1,3 +1,6 @@
+import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/game/commanders";
+import { SEASON_CATALOG } from "@/game/seasonCatalog";
+import { WORLD_BOSSES } from "@/game/worldBosses";
 import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
@@ -136,6 +139,10 @@ export const METRICS = {
   bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },
   passesCompleted: { label: "Passes de saison terminés", value: (p: PlayerState) => ((p.seasonPass as { completed?: string[] } | undefined)?.completed ?? []).length },
   playtimeHours: { label: "Heures de jeu", value: (p: PlayerState) => Math.floor((p.playtimeSeconds ?? 0) / 3600) },
+  // v5.14 : collections tirées des catalogues (officiers rares, commandants de saison, boss mondiaux).
+  rareOfficers: { label: "Officiers rares dans l'état-major", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => findCommander(id)?.rare).length },
+  seasonCommanders: { label: "Commandants de saison gagnés", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => isSeasonOfficer(id)).length },
+  worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -248,8 +255,26 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
 
 /** Registre courant (remplacé par applyGameContent). */
 export const ACHIEVEMENTS: AchievementDef[] = [];
+/** v5.14 : succès dérivés des catalogues. Leurs paliers suivent la taille des
+ *  catalogues (rôles rares, saisons, boss mondiaux) : en ajouter met les succès à jour. */
+export function derivedAchievements(): AchievementDef[] {
+  const rare = RARE_ROLES.length;
+  const bosses = WORLD_BOSSES.length;
+  return [
+    def("officier_rare_1", "prestige", "or", "rareOfficers", 1, "Recrue d'exception", "Accueillir un officier rare dans l'état-major.", "🎖️", { auto: true }),
+    def("officier_rare_all", "prestige", "legendaire", "rareOfficers", rare, "État-major complet", `Réunir les ${rare} officiers rares.`, "🏅", { auto: true, secret: true }),
+    def("commandant_saison_1", "prestige", "argent", "seasonCommanders", 1, "Fin de saison", "Gagner un commandant de saison au dernier palier d'un passe.", "🎟️", { auto: true }),
+    def("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une année de passes", "Gagner douze commandants de saison.", "📅", { auto: true }),
+    def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "🗓️", { auto: true, secret: true }),
+    def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
+    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
+  ];
+}
+
 export function setAchievements(defs: AchievementDef[]) {
-  ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs);
+  // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
+  const have = new Set(defs.map((d) => d.id));
+  ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 

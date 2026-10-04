@@ -36,6 +36,8 @@ export interface WorldBossDef {
   phases: [WorldBossPhase, WorldBossPhase, WorldBossPhase];
   /** Titre (7 jours) du premier en dégâts quand il tombe. */
   title: string;
+  /** Couleur (bannière de profil, liserés). */
+  accent: string;
   /** Multiplicateur des heures de production de récompense. */
   rewardMult: number;
 }
@@ -43,6 +45,7 @@ export interface WorldBossDef {
 export const WORLD_BOSSES: WorldBossDef[] = [
   {
     id: "leviathan",
+    accent: "#4be8ff",
     name: "Le Léviathan",
     epithet: "le dévoreur des abysses",
     story: "Né dans les profondeurs d'une géante gazeuse morte, le Léviathan remonte à la surface du secteur quand la faim le prend. Sa carapace a avalé des flottes entières ; ses écailles en gardent les épaves.",
@@ -61,6 +64,7 @@ export const WORLD_BOSSES: WorldBossDef[] = [
   },
   {
     id: "matriarche",
+    accent: "#ffd86b",
     name: "La Matriarche",
     epithet: "mère de l'Essaim",
     story: "Quand la Reine des Kesh'Vaar a disparu, sa sœur a pris le trône de chitine. La Matriarche ne combat pas seule : chaque blessure libère une nuée de rejetons qui harcèlent les flottes.",
@@ -79,6 +83,7 @@ export const WORLD_BOSSES: WorldBossDef[] = [
   },
   {
     id: "titan",
+    accent: "#ff8a3d",
     name: "Le Titan de rouille",
     epithet: "la forge qui marche",
     story: "Une station-forge de l'ancien empire, devenue folle après trois siècles seule. Elle dévore les épaves pour grandir, et refait ses blindages à mesure qu'on les arrache.",
@@ -97,6 +102,7 @@ export const WORLD_BOSSES: WorldBossDef[] = [
   },
   {
     id: "spectre",
+    accent: "#a78bfa",
     name: "Le Spectre du Chœur",
     epithet: "la voix dans le silence",
     story: "Le Chœur Silencieux a laissé derrière lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'à ce que les équipages perdent la raison.",
@@ -115,6 +121,7 @@ export const WORLD_BOSSES: WorldBossDef[] = [
   },
   {
     id: "cometophage",
+    accent: "#ff5c7a",
     name: "Le Cométophage",
     epithet: "le mangeur d'étoiles filantes",
     story: "Il suit les comètes depuis des millénaires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de traînées de feu : chacune est un fragment qu'il a recraché.",
@@ -133,6 +140,7 @@ export const WORLD_BOSSES: WorldBossDef[] = [
   },
   {
     id: "abyssal",
+    accent: "#ff5fd2",
     name: "L'Abyssal",
     epithet: "ce qui dort sous le Vide",
     story: "Personne ne l'a jamais vu en entier. Les éclaireurs parlent d'un œil grand comme une lune et d'une ombre qui éteint les étoiles. Quand l'Abyssal se réveille, même les seigneurs de guerre rentrent au port.",

@@ -431,7 +431,13 @@ export function grantLeviathanReward(state: LeviathanState, player: PlayerState,
   const hours = rewardHours(state, player.uid);
   const gain = hours > 0 ? productionHours(player, hours) : {};
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
-  if (state.status === "killed" && hours > 0) bumpStat(player, "leviathanKills");
+  if (state.status === "killed" && hours > 0) {
+    bumpStat(player, "leviathanKills");
+    // v5.14 : boss mondiaux abattus (succès, bannières).
+    const id = worldBossOf(state).id;
+    const seen = player.stats?.worldBossKilled ?? [];
+    if (!seen.includes(id)) player.stats = { ...(player.stats ?? {}), worldBossKilled: [...seen, id] };
+  }
   const top = leviathanRanking(state)[0];
   const title = !!top && top.uid === player.uid && state.status === "killed";
   const label = worldBossTitle(state);

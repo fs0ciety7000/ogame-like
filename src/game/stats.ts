@@ -41,6 +41,8 @@ export interface PlayerStats {
   ultimatums?: number;
   /** Factions qui ont déjà adressé un ultimatum au joueur. */
   threatenedBy?: string[];
+  /** v5.14 : boss mondiaux abattus (identifiants, une fois chacun). */
+  worldBossKilled?: string[];
   /** Raids subis pendant qu'une flotte était en patrouille. */
   evasions?: number;
   /** Victoire dans l'heure suivant une défaite. */
