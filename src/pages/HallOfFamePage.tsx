@@ -99,7 +99,7 @@ export function HallOfFamePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Archives" title="Palmarès" description="Les meilleurs empires de chaque saison, et les récompenses de fin de mois." />
+      <PageHeader backdrop="/assets/blog/articles/5-9/podium-or.webp" eyebrow="Cosmic Empires / Archives" title="Palmarès" description="Les meilleurs empires de chaque saison, et les récompenses de fin de mois." />
 
       <Card className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-center gap-2">

@@ -146,7 +146,7 @@ export function BossHallPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
+      <PageHeader backdrop="/assets/blog/articles/5-10/couverture.webp"
         eyebrow="Grands ennemis"
         title="Hall of fame des boss"
         description="Chaque colosse affronté par le serveur, ses chiffres et ceux qui l'ont fait plier. Records et champions sont calculés sur le Léviathan et les boss de saison."

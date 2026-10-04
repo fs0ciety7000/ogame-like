@@ -35,6 +35,8 @@ export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
+  // Au-delà de 48 h, des jours (« 27j 11h » plutôt que « 659h »).
+  if (h >= 48) return `${Math.floor(h / 24)}j ${h % 24}h`;
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m ${sec}s`;
   return `${sec}s`;

@@ -1,7 +1,7 @@
 ---
 slug: casino-orbital
 title: "5.12 : le Casino orbital ouvre ses portes"
-excerpt: "Le pot commun devient un gros lot. Une machine à sous 777, un jeton par jour d'ouverture, et la moitié du pot pour qui aligne trois 7."
+excerpt: "Le pot commun devient un gros lot. Une machine à sous 777, des jetons à gagner partout dans le jeu, un tournoi à chaque ouverture, et la moitié du pot pour qui aligne trois 7."
 category: mises-a-jour
 tags: [casino, pot-commun, evenements, interface]
 version: "5.12"
@@ -40,8 +40,20 @@ On ne mise rien de son empire : on joue avec des **jetons**.
 ![Des jetons du Casino orbital](/assets/casino/jetons-pile.webp "Octogonaux, cerclés d'or : les jetons du casino")
 
 - Chaque jour d'ouverture, un **jeton du jour** vous attend sur la page du casino.
+- Le **passe de saison** en glisse aux paliers 7, 17 et 27.
+- Le **défi de la semaine** réussi en rapporte 1, ou 2 si l'objectif est dépassé de moitié.
+- Chaque **boss abattu** (Léviathan, boss de saison, boss d'alliance) en verse un à tous ses participants, et trois au premier en dégâts.
 - L'équipe en **distribue** aussi lors des évènements, à tout le serveur ou aux plus actifs.
 - Une cerise sur la ligne vous rend votre jeton.
+
+## Le tournoi de chaque ouverture
+
+Chaque ouverture est un tournoi. Chaque tirage rapporte des points : 100 pour trois 7, 30 pour trois étoiles, 20 pour trois planètes… et rien pour un tirage perdu. Le classement s'affiche en direct sur la page du casino, avec le compte à rebours de la fermeture.
+
+À la fermeture, le podium remporte **5, 3 et 2 jetons**, et le premier porte le titre **« As du casino »** jusqu'au tournoi suivant. Celui qui aligne trois 7 gagne en plus un titre à vie : **« Main d'or »**.
+
+> [!TIP] Un œil sur l'accueil
+> Quand le casino est ouvert, un bandeau sur l'accueil rappelle l'heure de fermeture, vos jetons en réserve et votre place au tournoi. Sur la page, « Ma semaine au casino » fait le bilan depuis lundi.
 
 ## Ouvert… quand il est ouvert
 
@@ -54,6 +66,6 @@ Le casino n'est pas ouvert en permanence. Par défaut, il ouvre **chaque week-en
 Trois 7 alignés, c'est une pluie de pièces sur l'écran du gagnant, et une notification pour **tous les joueurs** du serveur. Son nom rejoint le palmarès des **gros lots**, visible sur la page, à côté du fil des derniers gains.
 
 > [!NOTE] Côté interface
-> On en a profité pour finir d'harmoniser l'interface : une même situation garde la même couleur partout (un chantier à l'arrêt, c'est une action à mener ; un entrepôt plein, une alerte), et le passe affiche sa fin de saison en jours.
+> On en a profité pour finir d'harmoniser l'interface : une même situation garde la même couleur partout (un chantier à l'arrêt, c'est une action à mener ; un entrepôt plein, une alerte), toutes les couleurs (médailles, raretés, commandants…) suivent maintenant votre thème, quatre pages ont leur illustration d'en-tête, et les longues durées s'affichent en jours.
 
 Bonne chance, commandants. Et que les 7 soient avec vous. :rocket:

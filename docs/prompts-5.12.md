@@ -55,3 +55,21 @@ Section « Trois 7 et tout le serveur le sait ». Fichier suggéré : `gros-lot.
 ```
 /imagine prompt: cinematic sci-fi illustration, the moment of a jackpot in a space station casino, three glowing golden #ffd86b sevens aligned on dark reel screens, a cascade of octagonal tokens with cut corners bursting out of the machine, gold light flooding the room, crowds of officers turning their heads, holographic broadcast panels relaying the news across the station, cyan #4be8ff accents, dramatic motion, painterly concept art, highly detailed, no text, no numbers, no letters --ar 3:2 --v 7 --s 250
 ```
+
+## Fonds d'en-tête des pages « lieu » (`PageHeader backdrop`)
+
+Format 21:9 (une bande large), exporté en 1600 × 680, WebP qualité 82, dans `public/assets/headers/`. Le sujet
+doit être **à droite** : le titre de la page s'affiche à gauche, sur la partie fondue de l'image. Déjà en place :
+Casino (salle aux trois 7), État-major (poste de commandement), Palmarès (podium d'or), Hall of fame des boss.
+
+### Marché (`public/assets/headers/marche.webp`)
+
+```
+/imagine prompt: wide cinematic sci-fi illustration, a bustling orbital trading hall seen from a high gallery, rows of cargo containers and holographic price boards on the right side of the frame, traders and drones moving between stalls, cyan #4be8ff price charts and gold #ffd86b crates of ore, a docked freighter visible through a huge window, left third of the image dark and empty for a title, deep navy palette, volumetric light, painterly concept art, highly detailed, no text, no numbers, no letters --ar 21:9 --v 7 --s 200
+```
+
+### Laboratoire (`public/assets/headers/labo.webp`)
+
+```
+/imagine prompt: wide cinematic sci-fi illustration, a quiet research laboratory aboard a starship, glowing containment cylinders and floating holographic molecules on the right side of the frame, a scientist silhouette examining a violet #a78bfa energy sample, cyan #4be8ff interface light, clean metal benches, left third of the image dark and empty for a title, deep navy palette, soft volumetric light, painterly concept art, highly detailed, no text, no letters --ar 21:9 --v 7 --s 200
+```

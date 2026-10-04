@@ -203,7 +203,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
         <p className="text-xs text-slate-500">Progresse avec :</p>
         <div className="flex flex-wrap gap-1">
           {COMMANDER_SOURCES[def.id].map((src) => (
-            <span key={src.label} className="hud-chip hud-chip-sm hud-tone-neutral">
+            <span key={src.label} className="hud-chip hud-chip-sm hud-tone-neutral max-w-full whitespace-normal">
               {src.label} <span className="font-mono" style={{ color: tone }}>+{src.xp}</span>
             </span>
           ))}
@@ -266,7 +266,7 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
         <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
         <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {COMMANDERS.map((def) => (
           <CommanderCard key={def.id} def={def} player={player} now={now} />
         ))}
@@ -623,7 +623,7 @@ export function CommandPage() {
   ];
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
+      <PageHeader backdrop="/assets/blog/articles/5-9/poste-commandement.webp"
         eyebrow="Commandement"
         title="État-major"
         description="Tes officiers, tes reliques et ton Labo de synthèse : des bonus permanents et des coups tordus."
