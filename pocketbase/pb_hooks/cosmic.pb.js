@@ -556,6 +556,9 @@ cronAdd("cosmic_challenge", "*/10 * * * *", () => {
   }
 });
 
+/** POST /api/cosmic/challenge/claim — v5.10 : récompense du défi à réclamer. */
+routerAdd("POST", "/api/cosmic/challenge/claim", (e) => require(`${__hooks}/cosmic_db.js`).challengeClaim(e), $apis.requireAuth("users"));
+
 /** POST /api/cosmic/admin/challenge — lance la tâche du défi tout de suite (tests, administration). */
 routerAdd("POST", "/api/cosmic/admin/challenge", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);

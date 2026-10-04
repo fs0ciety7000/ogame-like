@@ -28,3 +28,24 @@ describe("v5.10 notification « palier du passe prêt »", () => {
     expect(flushState(p, defaultQueues(), NOW).notifications.some((n) => n.link === "/game/passe")).toBe(false);
   });
 });
+
+describe("v5.10 défi de la semaine à réclamer", async () => {
+  const { claimChallengeReward, challengeClaimable, unclaimedRewardees } = await import("@/game/challenges");
+  const ch = {
+    id: "w1", type: "missions" as const, target: 100, startMs: 0, endMs: 1, total: 120, status: "done" as const, success: true,
+    contributions: { a: { pseudo: "A", amount: 80 }, b: { pseudo: "B", amount: 40 }, c: { pseudo: "C", amount: 0.5 } },
+  };
+  it("crédite une fois les ressources (sans le titre) et note la réclamation", () => {
+    const pa = player({ uid: "a", titles: [] });
+    expect(challengeClaimable(ch, "a")).toBe(true);
+    expect(challengeClaimable(ch, "c")).toBe(false);
+    const before = pa.resources.scrap ?? 0;
+    const out = claimChallengeReward(ch, pa);
+    expect((pa.resources.scrap ?? 0) > before).toBe(true);
+    expect(pa.titles ?? []).toEqual([]);
+    expect(out.challenge.claimed).toEqual(["a"]);
+    expect(() => claimChallengeReward(out.challenge, pa)).toThrow(/déjà/);
+    expect(unclaimedRewardees(out.challenge)).toEqual(["b"]);
+    expect(() => claimChallengeReward(out.challenge, player({ uid: "c" }))).toThrow(/Pas de récompense/);
+  });
+});

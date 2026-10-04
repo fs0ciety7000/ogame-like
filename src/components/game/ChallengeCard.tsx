@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Target, Trophy } from "lucide-react";
+import { toast } from "sonner";
+import { Gift, Target, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { GameActionError } from "@/services/playerService";
+import { describeGain } from "@/game/format";
 import { Card } from "@/components/ui/card";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { useChallengeStore } from "@/services/challengeService";
+import { claimChallenge, useChallengeStore } from "@/services/challengeService";
 import { useAuthStore } from "@/store/authStore";
-import { CHALLENGE_RULES, CHALLENGE_TYPES, challengeRanking, challengeTier } from "@/game/challenges";
+import { CHALLENGE_RULES, CHALLENGE_TYPES, challengeClaimable, challengeRanking, challengeTier, type Challenge } from "@/game/challenges";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 
 /* Accueil (v3.8) : défi hebdomadaire du serveur, progression commune. */
@@ -14,13 +19,60 @@ function timeLeft(ms: number) {
   return days >= 1 ? `${days} j ${Math.floor((ms % 86_400_000) / 3_600_000)} h` : formatDuration(Math.max(0, ms) / 1000);
 }
 
+/** v5.10 : récompense du défi terminé, à récupérer d'un clic. */
+function ClaimBanner({ previous }: { previous: Challenge }) {
+  const [busy, setBusy] = useState(false);
+  const tier = challengeTier(previous);
+  const claim = async () => {
+    setBusy(true);
+    try {
+      const out = await claimChallenge();
+      toast.success(`Récompense du défi : +${describeGain(out.gain)}`);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Récupération impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-wrap items-center gap-3 border border-gold-glow/40 bg-gold-glow/[0.07] px-4 py-3 text-sm"
+    >
+      <Gift className="h-5 w-5 shrink-0 animate-pulse text-gold-glow" />
+      <span className="min-w-0 flex-1 text-slate-200">
+        Défi « {CHALLENGE_TYPES[previous.type].label.toLowerCase()} » réussi ! Ta récompense t'attend
+        {tier ? ` : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare` : ""}.
+        <span className="block text-[11px] text-slate-500">Non récupérée, elle sera versée d'office à la fin du défi suivant.</span>
+      </span>
+      <Button size="sm" disabled={busy} onClick={() => void claim()}>
+        Récupérer
+      </Button>
+    </motion.div>
+  );
+}
+
 export function ChallengeCard() {
+  const uid = useAuthStore((s) => s.user?.uid) ?? "";
+  const { previous } = useChallengeStore();
+  const claimable = challengeClaimable(previous, uid);
+  return (
+    <div className="flex flex-col gap-3 empty:hidden">
+      {claimable && previous && <ClaimBanner previous={previous} />}
+      <ChallengeProgress hideResult={claimable} />
+    </div>
+  );
+}
+
+function ChallengeProgress({ hideResult }: { hideResult: boolean }) {
   useNowTicker();
   const uid = useAuthStore((s) => s.user?.uid) ?? "";
   const { current, previous } = useChallengeStore();
   const now = Date.now();
 
   if (!current) {
+    if (hideResult) return null;
     // Résultat du défi précédent pendant 2 jours, ou pause du Léviathan.
     if (previous && now - previous.endMs < 2 * 86_400_000) {
       const ratio = previous.target > 0 ? previous.total / previous.target : 0;

@@ -166,6 +166,7 @@ __export(hooksEntry_exports, {
   canDiplomacy: () => canDiplomacy,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
+  challengeClaimable: () => challengeClaimable,
   challengeFromBytes: () => challengeFromBytes,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
@@ -180,6 +181,7 @@ __export(hooksEntry_exports, {
   chestShieldCost: () => chestShieldCost,
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
+  claimChallengeReward: () => claimChallengeReward,
   cleanNewPseudo: () => cleanNewPseudo,
   cleanPasskeyName: () => cleanPasskeyName,
   clearDecoy: () => clearDecoy,
@@ -392,6 +394,7 @@ __export(hooksEntry_exports, {
   surrender: () => surrender,
   takeFromPot: () => takeFromPot,
   tutorialRaidPower: () => tutorialRaidPower,
+  unclaimedRewardees: () => unclaimedRewardees,
   unitsAwayOf: () => unitsAwayOf,
   updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
@@ -11615,18 +11618,40 @@ function challengeRewardees(ch) {
   if (!challengeTier(ch)) return [];
   return challengeRanking(ch).filter((c) => c.amount >= ch.target * CHALLENGE_RULES.minShare).map((c) => c.uid);
 }
-function grantChallengeReward(ch, player) {
+function grantChallengeReward(ch, player, opts = {}) {
   var _a, _b, _c, _d;
   const tier = challengeTier(ch);
   if (!tier || !challengeRewardees(ch).includes(player.uid)) return {};
-  const gain = __spreadValues({}, productionHours(player, tier.hours));
-  for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = ((_a = gain[r.id]) != null ? _a : 0) + tier.rare;
-  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
-  if (((_c = challengeRanking(ch)[0]) == null ? void 0 : _c.uid) === player.uid) {
+  const gain = {};
+  if (opts.resources !== false) {
+    Object.assign(gain, productionHours(player, tier.hours));
+    for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = ((_a = gain[r.id]) != null ? _a : 0) + tier.rare;
+    for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  }
+  if (opts.title !== false && ((_c = challengeRanking(ch)[0]) == null ? void 0 : _c.uid) === player.uid) {
     player.titles = [...((_d = player.titles) != null ? _d : []).filter((t) => t.label !== CHALLENGE_RULES.title), { label: CHALLENGE_RULES.title, seasonId: `challenge:${ch.id}`, rank: 1 }];
     player.activeTitle = CHALLENGE_RULES.title;
   }
   return gain;
+}
+function challengeClaimable(ch, uid) {
+  var _a;
+  return !!ch && ch.status === "done" && !!challengeTier(ch) && challengeRewardees(ch).includes(uid) && !((_a = ch.claimed) != null ? _a : []).includes(uid);
+}
+function claimChallengeReward(ch, player) {
+  var _a, _b;
+  if (!ch || ch.status !== "done") throw new GameActionError("Aucun d\xE9fi termin\xE9 \xE0 r\xE9cup\xE9rer.");
+  if (((_a = ch.claimed) != null ? _a : []).includes(player.uid)) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (!challengeClaimable(ch, player.uid)) throw new GameActionError("Pas de r\xE9compense pour toi sur ce d\xE9fi.");
+  const gain = grantChallengeReward(ch, player, { title: false });
+  return { challenge: __spreadProps(__spreadValues({}, ch), { claimed: [...(_b = ch.claimed) != null ? _b : [], player.uid] }), gain };
+}
+function unclaimedRewardees(ch) {
+  if (!ch || ch.status !== "done") return [];
+  return challengeRewardees(ch).filter((uid) => {
+    var _a;
+    return !((_a = ch.claimed) != null ? _a : []).includes(uid);
+  });
 }
 function removeChallengeTitle(player) {
   var _a, _b;
