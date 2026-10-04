@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Markdown } from "@/components/ui/markdown";
+import { ChangelogBadgePill, Markdown } from "@/components/ui/markdown";
+import { countBadges } from "@/lib/changelogBadges";
 import { CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
 import { CHANGELOG } from "@/lib/changelogEntries";
 
@@ -47,6 +48,16 @@ export function ChangelogPage() {
                   {formatDate(entry.date)}
                 </span>
               </div>
+              {countBadges(entry.body).length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {countBadges(entry.body).map(({ badge, count }) => (
+                    <span key={badge.id} className="inline-flex items-center text-xs text-slate-400">
+                      <ChangelogBadgePill badge={badge} className="mr-1" />
+                      {count} {count > 1 ? badge.plural.toLowerCase() : badge.label.toLowerCase()}
+                    </span>
+                  ))}
+                </div>
+              )}
               {entry.image && <img src={assetUrl(entry.image)} alt="" className="mb-3 max-h-80 w-full rounded-lg object-cover object-top" />}
               <Markdown source={entry.body} />
             </Card>

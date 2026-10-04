@@ -2542,7 +2542,7 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false }]);
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -3712,9 +3712,11 @@ function challengeTick(now) {
       game.challengeRewardees(done).forEach((uid) => {
         if (!findOrNull(txApp, "players", uid)) return;
         const loaded = loadPlayer(txApp, game, uid);
-        game.grantChallengeReward(done, loaded.player);
-        savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
-        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Récompense versée : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.`, createdAtMs: now, read: false }]);
+        // v5.9 : rattrapage avant de créditer (sinon la production en attente bute sur le stock gonflé).
+        const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+        const gain = game.grantChallengeReward(done, flushed.player);
+        savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+        notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Récompense versée : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.`, createdAtMs: now, read: false, link: "/game", data: { resources: gain } }]));
       });
       const top = game.challengeRanking(done)[0];
       state = Object.assign({}, state, {
@@ -4693,16 +4695,18 @@ function referralTick(now) {
         txApp.save(recruit.rec);
         txApp.save(sponsor.rec);
         const R = game.REFERRAL_RULES;
-        notify(txApp, cand.id, [{ kind: "achievement", title: "Parrainage récompensé", message: `Bronze I atteint : +${R.amberRecruit} Ambre de Ruche, offert par ton parrain ${sponsor.player.pseudo}.`, createdAtMs: now, read: false }]);
+        notify(txApp, cand.id, [{ kind: "event", title: "Parrainage récompensé", message: `Bronze I atteint : +${R.amberRecruit} Ambre de Ruche, offert par ton parrain ${sponsor.player.pseudo}.`, createdAtMs: now, read: false, link: "/game/profil", data: { amber: R.amberRecruit, fromUid: sponsorId, fromPseudo: sponsor.player.pseudo } }]);
         notify(txApp, sponsorId, [
           {
-            kind: "achievement",
+            kind: "event",
             title: res.capped ? "Filleul arrivé à Bronze I" : "Parrainage récompensé",
             message: res.capped
               ? `${recruit.player.pseudo} a atteint Bronze I. Plafond de ${R.perMonth} récompenses ce mois-ci atteint : la prochaine viendra le mois prochain.`
               : `${recruit.player.pseudo} a atteint Bronze I : +${R.amberSponsor} Ambre de Ruche et la bannière « Recruteur ».`,
             createdAtMs: now,
             read: false,
+            link: "/game/profil",
+            data: res.capped ? null : { amber: R.amberSponsor },
           },
         ]);
         rewarded += 1;
@@ -5279,7 +5283,7 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     savePlayer(txApp, game, loaded, p, loaded.queues);
     notify(txApp, w, [
       {
-        kind: "achievement",
+        kind: "event",
         title: "Vendetta gagnée !",
         message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.`,
         createdAtMs: now,
@@ -5329,7 +5333,7 @@ function finishCoalitionWon(txApp, game, state, coal, co, now) {
     savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
     notify(txApp, c.uid, [
       {
-        kind: "achievement",
+        kind: "event",
         title: `Coalition victorieuse contre ${d.name}`,
         message: out.eligible
           ? `+${game.PASS_POINTS.coalition} points de passe, ${game.COALITION_RULES.rewardHours} h de production${out.relic ? `, relique : ${out.relic}` : ""}${out.title ? `, titre « ${out.title} »` : ""}.`

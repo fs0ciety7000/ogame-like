@@ -304,7 +304,7 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
   const lootTotal = Object.values(fleet.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
   if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
   else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
-  return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false }] };
+  return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false, ...(lootTotal > 0 ? { data: { resources: fleet.loot ?? undefined } } : {}) }] };
 }
 
 function returnMessage(fleet: Fleet, lootTotal: number): { title: string; message: string } {
