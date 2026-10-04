@@ -318,3 +318,10 @@ export function NumberInput(props: NumberInputProps) {
     </div>
   );
 }
+
+/** 5.15.4 : pas « rond » d'environ 1 % du maximum (1, 10, 100…), pour les montants de
+ *  ressources (− / + et appui maintenu utiles même sur des milliards). */
+export function resourceStep(max: number | undefined): number {
+  if (!max || !Number.isFinite(max) || max < 100) return 1;
+  return 10 ** Math.floor(Math.log10(max / 100));
+}

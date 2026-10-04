@@ -41,6 +41,9 @@ export interface AllianceChallengeState {
   baselines: Record<string, number>;
   standings: AllianceChallengeStanding[];
   updatedAtMs: number;
+  /** 5.15.4 : valeurs du défi de la semaine suivante au dernier relevé (départ de la semaine
+   *  prochaine : ce qui est fait entre lundi 0 h et le premier relevé compte bien). */
+  next?: { weekId: string; baselines: Record<string, number> } | null;
   previous?: { weekId: string; challengeId: string; results: (AllianceChallengeStanding & { rank: number; reward: Partial<Record<ResourceId, number>> })[] } | null;
 }
 
@@ -63,7 +66,13 @@ export function normalizeAllianceChallenge(raw: unknown, now: number): AllianceC
     standings: Array.isArray(r.standings) ? r.standings : [],
     updatedAtMs: Number(r.updatedAtMs) || 0,
     previous: r.previous && typeof r.previous === "object" ? r.previous : null,
+    next: r.next && typeof r.next === "object" && typeof r.next.weekId === "string" && r.next.baselines && typeof r.next.baselines === "object" ? r.next : null,
   };
+}
+
+/** Semaine qui suit `weekId` (lundi suivant). */
+export function nextAllianceWeekId(weekId: string): string {
+  return allianceWeekId(Date.parse(`${weekId}T12:00:00Z`) + 7 * 24 * 3600_000);
 }
 
 function value(metric: AchievementMetric, p: PlayerState): number {
@@ -87,7 +96,15 @@ export function refreshAllianceChallenge(state: AllianceChallengeState, players:
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
-  return { ...state, baselines, standings, updatedAtMs: now };
+  // Départ de la semaine suivante : valeurs à ce relevé, tant que la semaine n'a pas changé
+  // (au relevé qui suit lundi 0 h, on garde celles d'avant minuit).
+  let next = state.next ?? null;
+  if (allianceWeekId(now) === state.weekId) {
+    const weekId = nextAllianceWeekId(state.weekId);
+    const nextMetric = challengeOfWeek(weekId).metric;
+    next = { weekId, baselines: Object.fromEntries(players.map((p) => [p.uid, value(nextMetric, p)])) };
+  }
+  return { ...state, baselines, standings, updatedAtMs: now, next };
 }
 
 /** Récompense d'une place : heures de production cumulée des membres. */
@@ -100,10 +117,12 @@ export function allianceChallengeReward(rank: number, members: Pick<PlayerState,
 }
 
 /** Nouvelle semaine : défi suivant, valeurs de départ = valeurs actuelles. */
-export function startAllianceChallengeWeek(players: PlayerState[], now: number, previous: AllianceChallengeState["previous"]): AllianceChallengeState {
+export function startAllianceChallengeWeek(players: PlayerState[], now: number, previous: AllianceChallengeState["previous"], next?: AllianceChallengeState["next"]): AllianceChallengeState {
   const weekId = allianceWeekId(now);
   const challenge = challengeOfWeek(weekId);
+  // 5.15.4 : valeurs relevées juste avant lundi 0 h si on les a (sinon : valeurs actuelles).
+  const before = next && next.weekId === weekId ? next.baselines : null;
   const baselines: Record<string, number> = {};
-  for (const p of players) baselines[p.uid] = value(challenge.metric, p);
+  for (const p of players) baselines[p.uid] = Math.min(value(challenge.metric, p), before?.[p.uid] ?? Infinity);
   return { weekId, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous ?? null };
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { HudToaster } from "@/components/ui/hud-toast";
@@ -7,62 +7,63 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
+import { lazyPage } from "@/lib/lazyPage";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
 // pour ne pas alourdir le bundle initial (écran de connexion) avec des
 // écrans que le joueur ne visitera peut-être pas tout de suite.
 // Pages publiques chargées à la demande : le formulaire de connexion
 // (react-hook-form) ne pèse plus sur le bundle du jeu.
-const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
-const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
-const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
-const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
-const ResourcesPage = lazy(() => import("@/pages/ResourcesPage").then((m) => ({ default: m.ResourcesPage })));
-const BuildingsPage = lazy(() => import("@/pages/BuildingsPage").then((m) => ({ default: m.BuildingsPage })));
-const UnitsPage = lazy(() => import("@/pages/UnitsPage").then((m) => ({ default: m.UnitsPage })));
-const LabPage = lazy(() => import("@/pages/LabPage").then((m) => ({ default: m.LabPage })));
-const MissionsPage = lazy(() => import("@/pages/MissionsPage").then((m) => ({ default: m.MissionsPage })));
-const PlayersPage = lazy(() => import("@/pages/PlayersPage").then((m) => ({ default: m.PlayersPage })));
-const AlliancePage = lazy(() => import("@/pages/AlliancePage").then((m) => ({ default: m.AlliancePage })));
-const GalaxyPage = lazy(() => import("@/pages/GalaxyPage").then((m) => ({ default: m.GalaxyPage })));
-const CombatLogPage = lazy(() => import("@/pages/CombatLogPage").then((m) => ({ default: m.CombatLogPage })));
-const AchievementsPage = lazy(() => import("@/pages/AchievementsPage").then((m) => ({ default: m.AchievementsPage })));
-const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ default: m.ThreatsPage })));
-const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
-const BlogEditorPage = lazy(() => import("@/pages/BlogEditorPage").then((m) => ({ default: m.BlogEditorPage })));
-const AscensionPage = lazy(() => import("@/pages/AscensionPage").then((m) => ({ default: m.AscensionPage })));
-const EmpireStatsPage = lazy(() => import("@/pages/EmpireStatsPage").then((m) => ({ default: m.EmpireStatsPage })));
-const FormulasPage = lazy(() => import("@/pages/FormulasPage").then((m) => ({ default: m.FormulasPage })));
-const PublicFormulasPage = lazy(() => import("@/pages/PublicFormulasPage").then((m) => ({ default: m.PublicFormulasPage })));
-const CodexPage = lazy(() => import("@/pages/CodexPage").then((m) => ({ default: m.CodexPage })));
-const AnnouncementsPage = lazy(() => import("@/pages/AnnouncementsPage").then((m) => ({ default: m.AnnouncementsPage })));
-const ChangelogPage = lazy(() => import("@/pages/ChangelogPage").then((m) => ({ default: m.ChangelogPage })));
-const AdminPage = lazy(() => import("@/pages/AdminPage").then((m) => ({ default: m.AdminPage })));
-const ReportsPage = lazy(() => import("@/pages/ReportsPage").then((m) => ({ default: m.ReportsPage })));
+const LoginPage = lazyPage(() => import("@/pages/LoginPage"), "LoginPage");
+const ResetPasswordPage = lazyPage(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage");
+const HallOfFamePage = lazyPage(() => import("@/pages/HallOfFamePage"), "HallOfFamePage");
+const DashboardPage = lazyPage(() => import("@/pages/DashboardPage"), "DashboardPage");
+const ResourcesPage = lazyPage(() => import("@/pages/ResourcesPage"), "ResourcesPage");
+const BuildingsPage = lazyPage(() => import("@/pages/BuildingsPage"), "BuildingsPage");
+const UnitsPage = lazyPage(() => import("@/pages/UnitsPage"), "UnitsPage");
+const LabPage = lazyPage(() => import("@/pages/LabPage"), "LabPage");
+const MissionsPage = lazyPage(() => import("@/pages/MissionsPage"), "MissionsPage");
+const PlayersPage = lazyPage(() => import("@/pages/PlayersPage"), "PlayersPage");
+const AlliancePage = lazyPage(() => import("@/pages/AlliancePage"), "AlliancePage");
+const GalaxyPage = lazyPage(() => import("@/pages/GalaxyPage"), "GalaxyPage");
+const CombatLogPage = lazyPage(() => import("@/pages/CombatLogPage"), "CombatLogPage");
+const AchievementsPage = lazyPage(() => import("@/pages/AchievementsPage"), "AchievementsPage");
+const ThreatsPage = lazyPage(() => import("@/pages/ThreatsPage"), "ThreatsPage");
+const ProfilePage = lazyPage(() => import("@/pages/ProfilePage"), "ProfilePage");
+const BlogEditorPage = lazyPage(() => import("@/pages/BlogEditorPage"), "BlogEditorPage");
+const AscensionPage = lazyPage(() => import("@/pages/AscensionPage"), "AscensionPage");
+const EmpireStatsPage = lazyPage(() => import("@/pages/EmpireStatsPage"), "EmpireStatsPage");
+const FormulasPage = lazyPage(() => import("@/pages/FormulasPage"), "FormulasPage");
+const PublicFormulasPage = lazyPage(() => import("@/pages/PublicFormulasPage"), "PublicFormulasPage");
+const CodexPage = lazyPage(() => import("@/pages/CodexPage"), "CodexPage");
+const AnnouncementsPage = lazyPage(() => import("@/pages/AnnouncementsPage"), "AnnouncementsPage");
+const ChangelogPage = lazyPage(() => import("@/pages/ChangelogPage"), "ChangelogPage");
+const AdminPage = lazyPage(() => import("@/pages/AdminPage"), "AdminPage");
+const ReportsPage = lazyPage(() => import("@/pages/ReportsPage"), "ReportsPage");
 // Bible visuelle : page statique publique (public/bible), hors de l'application.
 function BibleRedirect() {
   window.location.replace("/bible/index.html");
   return null;
 }
 
-const SimulatorPage = lazy(() => import("@/pages/SimulatorPage").then((m) => ({ default: m.SimulatorPage })));
-const MarketPage = lazy(() => import("@/pages/MarketPage").then((m) => ({ default: m.MarketPage })));
-const ColoniesPage = lazy(() => import("@/pages/ColoniesPage").then((m) => ({ default: m.ColoniesPage })));
-const LeviathanPage = lazy(() => import("@/pages/LeviathanPage").then((m) => ({ default: m.LeviathanPage })));
-const GazettePage = lazy(() => import("@/pages/GazettePage").then((m) => ({ default: m.GazettePage })));
-const SeasonBossPage = lazy(() => import("@/pages/SeasonBossPage").then((m) => ({ default: m.SeasonBossPage })));
-const BossHallPage = lazy(() => import("@/pages/BossHallPage").then((m) => ({ default: m.BossHallPage })));
-const AlliancePublicPage = lazy(() => import("@/pages/AlliancePublicPage").then((m) => ({ default: m.AlliancePublicPage })));
-const CasinoPage = lazy(() => import("@/pages/CasinoPage").then((m) => ({ default: m.CasinoPage })));
-const ContestsPage = lazy(() => import("@/pages/ContestsPage").then((m) => ({ default: m.ContestsPage })));
-const WarlordsPage = lazy(() => import("@/pages/WarlordsPage").then((m) => ({ default: m.WarlordsPage })));
-const SeasonPassPage = lazy(() => import("@/pages/SeasonPassPage").then((m) => ({ default: m.SeasonPassPage })));
-const CommandPage = lazy(() => import("@/pages/CommandPage").then((m) => ({ default: m.CommandPage })));
-const BountiesPage = lazy(() => import("@/pages/BountiesPage").then((m) => ({ default: m.BountiesPage })));
-const MessagesPage = lazy(() => import("@/pages/MessagesPage").then((m) => ({ default: m.MessagesPage })));
-const SharedReportPage = lazy(() => import("@/pages/SharedReportPage").then((m) => ({ default: m.SharedReportPage })));
-const JournalPage = lazy(() => import("@/pages/JournalPage").then((m) => ({ default: m.JournalPage })));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const SimulatorPage = lazyPage(() => import("@/pages/SimulatorPage"), "SimulatorPage");
+const MarketPage = lazyPage(() => import("@/pages/MarketPage"), "MarketPage");
+const ColoniesPage = lazyPage(() => import("@/pages/ColoniesPage"), "ColoniesPage");
+const LeviathanPage = lazyPage(() => import("@/pages/LeviathanPage"), "LeviathanPage");
+const GazettePage = lazyPage(() => import("@/pages/GazettePage"), "GazettePage");
+const SeasonBossPage = lazyPage(() => import("@/pages/SeasonBossPage"), "SeasonBossPage");
+const BossHallPage = lazyPage(() => import("@/pages/BossHallPage"), "BossHallPage");
+const AlliancePublicPage = lazyPage(() => import("@/pages/AlliancePublicPage"), "AlliancePublicPage");
+const CasinoPage = lazyPage(() => import("@/pages/CasinoPage"), "CasinoPage");
+const ContestsPage = lazyPage(() => import("@/pages/ContestsPage"), "ContestsPage");
+const WarlordsPage = lazyPage(() => import("@/pages/WarlordsPage"), "WarlordsPage");
+const SeasonPassPage = lazyPage(() => import("@/pages/SeasonPassPage"), "SeasonPassPage");
+const CommandPage = lazyPage(() => import("@/pages/CommandPage"), "CommandPage");
+const BountiesPage = lazyPage(() => import("@/pages/BountiesPage"), "BountiesPage");
+const MessagesPage = lazyPage(() => import("@/pages/MessagesPage"), "MessagesPage");
+const SharedReportPage = lazyPage(() => import("@/pages/SharedReportPage"), "SharedReportPage");
+const JournalPage = lazyPage(() => import("@/pages/JournalPage"), "JournalPage");
+const SettingsPage = lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage");
 
 export default function App() {
   return (

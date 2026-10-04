@@ -1,12 +1,13 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 // Page de maintenance chargée seulement quand elle sert.
-const MaintenancePage = lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenancePage })));
-const MaintenanceOver = lazy(() => import("@/pages/MaintenancePage").then((m) => ({ default: m.MaintenanceOver })));
+const MaintenancePage = lazyPage(() => import("@/pages/MaintenancePage"), "MaintenancePage");
+const MaintenanceOver = lazyPage(() => import("@/pages/MaintenancePage"), "MaintenanceOver");
 import { useAdminStatus, useMaintenanceStore } from "@/services/maintenanceService";
 import { useAuthStore } from "@/store/authStore";
 import { logout } from "@/services/authService";
+import { lazyPage } from "@/lib/lazyPage";
 
 /** Ferme le jeu aux joueurs pendant la maintenance (v2.5). Les
  *  administrateurs passent ; les autres voient la page de maintenance,

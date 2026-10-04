@@ -55,4 +55,30 @@ describe("défi d'alliance de la semaine (v5.10.5)", () => {
     expect(Object.keys(allianceChallengeReward(1, [player("a")])).length).toBeGreaterThan(0);
     expect(allianceChallengeReward(9, [player("a")])).toEqual({});
   });
+
+  it("5.15.4 : ce qui est fait entre lundi 0 h et le premier relevé compte pour la nouvelle semaine", () => {
+    // Dimanche 23 h 50 (Paris) : dernier relevé de la semaine.
+    const SUN = Date.UTC(2026, 9, 11, 21, 50);
+    const MON_0015 = Date.UTC(2026, 9, 11, 22, 15);
+    const sundayWeek = startAllianceChallengeWeek([player("a", { allianceId: "al1" })], SUN, null);
+    const nextMetricPlayer = (n: number) => {
+      const p = player("a", { allianceId: "al1" });
+      // Toutes les mesures possibles du défi suivant (quelle que soit la semaine).
+      p.stats = { ...(p.stats ?? {}), recycled: n, missions: n, loot: n, unitsBuilt: n, contracts: n } as PlayerState["stats"];
+      p.victories = n;
+      return p;
+    };
+    let st = refreshAllianceChallenge(sundayWeek, [nextMetricPlayer(1000)], [{ id: "al1", tag: "A", name: "A" }], SUN);
+    expect(st.next?.weekId).toBe("2026-10-12");
+    // 00:08 : gros recyclage ; 00:15 : premier relevé de la nouvelle semaine.
+    const after = [nextMetricPlayer(1_386_000)];
+    st = refreshAllianceChallenge(st, after, [{ id: "al1", tag: "A", name: "A" }], MON_0015);
+    expect(st.next?.weekId).toBe("2026-10-12"); // pas réécrit après minuit
+    const week = startAllianceChallengeWeek(after, MON_0015, null, st.next);
+    expect(week.weekId).toBe("2026-10-12");
+    expect(week.baselines.a).toBe(1000);
+    const live = refreshAllianceChallenge(week, after, [{ id: "al1", tag: "A", name: "A" }], MON_0015);
+    expect(live.standings[0]?.score).toBe(1_385_000);
+  });
 });
+

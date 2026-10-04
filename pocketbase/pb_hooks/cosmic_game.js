@@ -20023,15 +20023,19 @@ function normalizeAllianceChallenge(raw, now) {
     baselines: r.baselines && typeof r.baselines === "object" ? r.baselines : {},
     standings: Array.isArray(r.standings) ? r.standings : [],
     updatedAtMs: Number(r.updatedAtMs) || 0,
-    previous: r.previous && typeof r.previous === "object" ? r.previous : null
+    previous: r.previous && typeof r.previous === "object" ? r.previous : null,
+    next: r.next && typeof r.next === "object" && typeof r.next.weekId === "string" && r.next.baselines && typeof r.next.baselines === "object" ? r.next : null
   };
+}
+function nextAllianceWeekId(weekId2) {
+  return allianceWeekId(Date.parse(`${weekId2}T12:00:00Z`) + 7 * 24 * 36e5);
 }
 function value(metric, p) {
   var _a;
   return Math.max(0, Number((_a = METRICS[metric]) == null ? void 0 : _a.value(p)) || 0);
 }
 function refreshAllianceChallenge(state, players, alliances, now) {
-  var _a;
+  var _a, _b;
   const metric = findAllianceChallenge(state.challengeId).metric;
   const baselines = __spreadValues({}, state.baselines);
   for (const p of players) if (baselines[p.uid] === void 0) baselines[p.uid] = value(metric, p);
@@ -20046,7 +20050,13 @@ function refreshAllianceChallenge(state, players, alliances, now) {
     var _a2;
     return __spreadValues({ allianceId: a.id, tag: a.tag, name: a.name }, (_a2 = byAlliance.get(a.id)) != null ? _a2 : { score: 0, contributors: 0 });
   }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 20);
-  return __spreadProps(__spreadValues({}, state), { baselines, standings, updatedAtMs: now });
+  let next = (_b = state.next) != null ? _b : null;
+  if (allianceWeekId(now) === state.weekId) {
+    const weekId2 = nextAllianceWeekId(state.weekId);
+    const nextMetric = challengeOfWeek(weekId2).metric;
+    next = { weekId: weekId2, baselines: Object.fromEntries(players.map((p) => [p.uid, value(nextMetric, p)])) };
+  }
+  return __spreadProps(__spreadValues({}, state), { baselines, standings, updatedAtMs: now, next });
 }
 function allianceChallengeReward(rank2, members) {
   var _a, _b;
@@ -20056,11 +20066,13 @@ function allianceChallengeReward(rank2, members) {
   for (const m of members) for (const [k, v] of Object.entries(productionHours(m, hours2))) out[k] = ((_b = out[k]) != null ? _b : 0) + v;
   return out;
 }
-function startAllianceChallengeWeek(players, now, previous) {
+function startAllianceChallengeWeek(players, now, previous, next) {
+  var _a;
   const weekId2 = allianceWeekId(now);
   const challenge = challengeOfWeek(weekId2);
+  const before = next && next.weekId === weekId2 ? next.baselines : null;
   const baselines = {};
-  for (const p of players) baselines[p.uid] = value(challenge.metric, p);
+  for (const p of players) baselines[p.uid] = Math.min(value(challenge.metric, p), (_a = before == null ? void 0 : before[p.uid]) != null ? _a : Infinity);
   return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
 }
 
