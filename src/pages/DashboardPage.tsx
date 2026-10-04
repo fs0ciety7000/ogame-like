@@ -40,6 +40,7 @@ import { equippedRelics } from "@/game/relics";
 import { parisHour } from "@/game/stats";
 import { useCockpitView } from "@/lib/cockpitView";
 import { CockpitHub } from "@/components/cockpit/CockpitHub";
+import { CommanderGuideCard } from "@/components/game/CommanderGuideCard";
 
 export function DashboardPage() {
   useNowTicker();
@@ -60,6 +61,7 @@ export function DashboardPage() {
         <OnboardingChecklist player={player} />
         <StoryDialog player={player} />
         <CockpitHub />
+        <CommanderGuideCard player={player} />
         <NextActionsCard max={3} />
       </div>
     );
@@ -184,6 +186,7 @@ export function DashboardPage() {
       <QueueStrip queues={queues} now={now} />
 
       <OnboardingChecklist player={player} />
+      <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
 
       {layout.order

@@ -406,6 +406,14 @@ export function startMission(_uid: string, missionKey: string) {
   return act({ type: "mission", missionKey });
 }
 
+export function claimGuide(stepId: string) {
+  return act<{ resources: Partial<Record<import("@/types/game").ResourceId, number>>; amber: number }>({ type: "claimGuide", stepId });
+}
+
+export function hideGuide(hidden: boolean) {
+  return act({ type: "hideGuide", hidden });
+}
+
 export function claimOnboarding(stepId: string) {
   return act<Partial<Record<import("@/types/game").ResourceId, number>>>({ type: "claimOnboarding", stepId });
 }

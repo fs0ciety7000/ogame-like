@@ -7672,7 +7672,11 @@ var ONBOARDING_STEPS = [
 function onboardingState(p) {
   const raw = p.onboarding;
   const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  return __spreadValues({ claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: (raw == null ? void 0 : raw.hidden) === true }, tutorialRaid ? { tutorialRaid } : {});
+  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
+  return __spreadValues(__spreadValues(__spreadValues({
+    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
+    hidden: (raw == null ? void 0 : raw.hidden) === true
+  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
 }
 function onboardingEligible(p) {
   var _a;
@@ -10354,6 +10358,121 @@ function claimStreak(player, now) {
   return __spreadValues({ count: count2 }, reward);
 }
 
+// src/game/advancedGuide.ts
+var colonies = (p) => {
+  var _a;
+  return (_a = p.colonies) != null ? _a : [];
+};
+var GUIDE_STEPS = [
+  {
+    id: "colonyReady",
+    chapter: "colonies",
+    label: `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de b\xE2timents`,
+    learn: "Une colonie se m\xE9rite : il faut une plan\xE8te m\xE8re d\xE9velopp\xE9e. Chaque niveau de b\xE2timent compte, fin de partie comprise.",
+    to: "/game/batiments",
+    reward: { scrap: 2e6, energy: 2e6 },
+    done: (p) => homeLevels(p) >= COLONY_RULES.levelsRequired[0]
+  },
+  {
+    id: "colonyFound",
+    chapter: "colonies",
+    label: "Fonder une colonie",
+    learn: "Une colonie a son propre stock, ses b\xE2timents et ses d\xE9fenses, et produit 50 % de plus que la plan\xE8te m\xE8re. Ses ressources reviennent par transport.",
+    to: "/game/colonies",
+    reward: { reinforcedSteel: 2e5, cyberModule: 2e5 },
+    done: (p) => colonies(p).length >= 1
+  },
+  {
+    id: "colonySpec",
+    chapter: "colonies",
+    label: "Sp\xE9cialiser une colonie",
+    learn: "Forge, Comptoir minier, Bastion ou D\xE9p\xF4t : chaque sp\xE9cialisation a un bonus et une contrepartie. Le premier choix est libre, puis un changement par semaine.",
+    to: "/game/colonies",
+    reward: { syntheticNanites: 2e5, aiFragment: 2e5 },
+    done: (p) => colonies(p).some((c) => !!c.spec)
+  },
+  {
+    id: "relicFound",
+    chapter: "relics",
+    label: "Obtenir une relique",
+    learn: "Les reliques tombent des exp\xE9ditions longues, des boss et des primes. Plus l'exp\xE9dition est longue, plus la chance est grande.",
+    to: "/game/missions",
+    reward: { scrap: 5e5, energy: 5e5 },
+    done: (p) => relicsState(p).items.length >= 1
+  },
+  {
+    id: "relicEquip",
+    chapter: "relics",
+    label: "\xC9quiper une relique",
+    learn: "Une relique ne compte que si elle est \xE9quip\xE9e. Trois reliques identiques se fusionnent en une raret\xE9 sup\xE9rieure.",
+    to: "/game/etat-major",
+    reward: {},
+    amber: 10,
+    done: (p) => equippedRelics(p).length >= 1
+  },
+  {
+    id: "commander",
+    chapter: "relics",
+    label: "Mettre un commandant en poste",
+    learn: "Chaque commandant donne un bonus (production, combat, construction\u2026) et progresse avec l'usage. Seuls les commandants en poste agissent.",
+    to: "/game/etat-major",
+    reward: { nano: 1e6, data: 1e6 },
+    done: (p) => commandersState(p).active.length >= 1
+  },
+  {
+    id: "ascend",
+    chapter: "ascension",
+    label: "R\xE9aliser une Ascension",
+    learn: "Tous les b\xE2timents au maximum : l'Ascension les remet au niveau 1 contre +10 % de production et \u22125 % de temps de construction, pour toujours, et un point de talent.",
+    to: "/game/profil",
+    reward: {},
+    amber: 25,
+    done: (p) => {
+      var _a;
+      return ((_a = p.ascensions) != null ? _a : 0) >= 1;
+    }
+  },
+  {
+    id: "talent",
+    chapter: "ascension",
+    label: "Apprendre un talent",
+    learn: "Chaque Ascension donne un point de talent \xE0 placer dans l'arbre. On peut redistribuer, mais pas trop souvent.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 5e5, cyberModule: 5e5, syntheticNanites: 5e5, aiFragment: 5e5 },
+    done: (p) => talentPoints(p).spent >= 1
+  }
+];
+var GUIDE_TITLE = "Commandant aguerri";
+function guideClaimed(p) {
+  var _a;
+  return (_a = onboardingState(p).advanced) != null ? _a : [];
+}
+function claimGuideStep(player, stepId) {
+  var _a, _b, _c, _d;
+  const step = GUIDE_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  const claimed = guideClaimed(player);
+  if (claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, n] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (step.amber) {
+    const st = bountyState(player);
+    st.amber += step.amber;
+    player.bounties = st;
+  }
+  const next = [...claimed, step.id];
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { advanced: next });
+  if (next.length >= GUIDE_STEPS.length && !((_b = player.titles) != null ? _b : []).some((t) => t.label === GUIDE_TITLE)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: GUIDE_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return { resources: step.reward, amber: (_d = step.amber) != null ? _d : 0 };
+}
+function setGuideHidden(player, hidden) {
+  const st = onboardingState(player);
+  delete st.advancedHidden;
+  player.onboarding = hidden ? __spreadProps(__spreadValues({}, st), { advancedHidden: true }) : st;
+}
+
 // src/game/cancel.ts
 var CANCEL_RULES = {
   /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
@@ -10688,9 +10807,9 @@ function hangarUsed(units, away, category) {
   }
   return used;
 }
-var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -10829,6 +10948,11 @@ function applyAction(s, action) {
       return player.activeTitle;
     case "claimOnboarding":
       return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
+    case "claimGuide":
+      return claimGuideStep(player, String((_q = action.stepId) != null ? _q : ""));
+    case "hideGuide":
+      setGuideHidden(player, action.hidden === true);
+      return void 0;
     case "setPosture":
       return setPosture(player, action.posture, now);
     case "planBuilding":
@@ -10848,14 +10972,14 @@ function applyAction(s, action) {
     case "colonize":
       return startColonization(player, action.name, now);
     case "colonyUpgrade":
-      return upgradeColonyBuilding(player, String((_q = action.colonyId) != null ? _q : ""), String((_r = action.buildingId) != null ? _r : ""), now);
+      return upgradeColonyBuilding(player, String((_r = action.colonyId) != null ? _r : ""), String((_s = action.buildingId) != null ? _s : ""), now);
     case "colonyDefense":
-      return buildColonyDefense(player, String((_s = action.colonyId) != null ? _s : ""), String((_t = action.unitId) != null ? _t : ""), action.qty, now);
+      return buildColonyDefense(player, String((_t = action.colonyId) != null ? _t : ""), String((_u = action.unitId) != null ? _u : ""), action.qty, now);
     case "colonyRename":
-      renameColony(player, String((_u = action.colonyId) != null ? _u : ""), action.name);
+      renameColony(player, String((_v = action.colonyId) != null ? _v : ""), action.name);
       return void 0;
     case "colonySpec":
-      setColonySpec(player, String((_v = action.colonyId) != null ? _v : ""), String((_w = action.spec) != null ? _w : ""), now);
+      setColonySpec(player, String((_w = action.colonyId) != null ? _w : ""), String((_x = action.spec) != null ? _x : ""), now);
       return void 0;
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";

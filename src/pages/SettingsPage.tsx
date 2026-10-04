@@ -11,13 +11,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { HudSwitch } from "@/components/ui/hud";
+import { GUIDE_STEPS, guideClaimed, guideHidden } from "@/game/advancedGuide";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
-import { GameActionError, hideOnboarding, syncPlayer } from "@/services/playerService";
+import { GameActionError, hideOnboarding, syncPlayer, hideGuide } from "@/services/playerService";
 import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
@@ -538,6 +539,7 @@ function HelpCard() {
   const [tips, setTips] = useState(tipsEnabled);
   const hidden = player ? onboardingState(player).hidden === true : false;
   const eligible = player ? onboardingEligible(player) : false;
+  const guideHiddenNow = player ? guideHidden(player) && guideClaimed(player).length < GUIDE_STEPS.length : false;
   return (
     <Card>
       <CardHeader>
@@ -567,6 +569,19 @@ function HelpCard() {
             }
           >
             Réafficher les objectifs de prise en main
+          </Button>
+        )}
+        {guideHiddenNow && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void hideGuide(false)
+                .then(() => toast.success("Le Carnet du commandant est de retour sur l'accueil."))
+                .catch((err) => toast.error(err instanceof GameActionError ? err.message : "Action impossible."))
+            }
+          >
+            Rouvrir le Carnet du commandant
           </Button>
         )}
       </CardContent>

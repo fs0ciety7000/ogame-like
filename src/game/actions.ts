@@ -6,6 +6,7 @@ import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses"
 import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
+import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -66,6 +67,8 @@ export type GameAction =
   | { type: "rerollContract"; contractId: string }
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
+  | { type: "claimGuide"; stepId: string }
+  | { type: "hideGuide"; hidden: boolean }
   | { type: "hideOnboarding"; hidden: boolean }
   | { type: "setPosture"; posture: string }
   | { type: "ascend" }
@@ -146,7 +149,7 @@ interface ActionState {
 }
 
 /** v4.2 : seules ces actions restent possibles pendant les vacances. */
-const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 
 function applyAction(s: ActionState, action: GameAction): unknown {
   const { player, queues, now } = s;
@@ -302,6 +305,13 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "claimOnboarding":
       return claimOnboarding(player, String(action.stepId ?? ""));
+
+    case "claimGuide":
+      return claimGuideStep(player, String(action.stepId ?? ""));
+
+    case "hideGuide":
+      setGuideHidden(player, action.hidden === true);
+      return undefined;
 
     case "setPosture":
       return setPosture(player, action.posture, now);
