@@ -17,3 +17,4 @@ La page du Léviathan changeait de visage selon le combat. C'est maintenant auss
 
 ## Hall of fame
 - [Fix] Les boss abattus **avant la 5.10** retrouvent leur **coup de grâce** : le serveur retrouve la flotte qui a porté le dernier assaut et met à jour le Hall of fame et la page du boss. Le Léviathan d'hier y figure avec son tueur.
+- [Amélioration] Hall of fame vide : le message ne dit plus que seuls les boss tombés « depuis cette mise à jour » y entreront. Chaque boss abattu ou retiré y entre à la fin de son combat.

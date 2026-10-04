@@ -137,7 +137,7 @@ export function BossHallPage() {
       ) : visible.length === 0 ? (
         <Card>
           <EmptyState icon={<Crown className="h-10 w-10 text-gold-glow" />} title="Le Hall attend ses légendes">
-            Le premier boss abattu (ou retiré) depuis cette mise à jour inaugurera le Hall of fame.
+            Chaque boss abattu ou retiré y entre dès la fin de son combat.
           </EmptyState>
         </Card>
       ) : (
