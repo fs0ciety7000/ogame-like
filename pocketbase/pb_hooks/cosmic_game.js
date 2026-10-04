@@ -29,6 +29,18 @@ var __spreadValues = (a, b) => {
   return a;
 };
 var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
+var __objRest = (source, exclude) => {
+  var target = {};
+  for (var prop in source)
+    if (__hasOwnProp.call(source, prop) && exclude.indexOf(prop) < 0)
+      target[prop] = source[prop];
+  if (source != null && __getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(source)) {
+      if (exclude.indexOf(prop) < 0 && __propIsEnum.call(source, prop))
+        target[prop] = source[prop];
+    }
+  return target;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -2361,7 +2373,7 @@ var RARITIES = [
   // v5.1 : une seule par saison sur tout le serveur, jamais tirée au hasard.
   { id: "mythic", label: "Mythique", pct: 0.2, weight: 0, recycle: 0, color: "#ff5df0" }
 ];
-var RELICS = [
+var DEFAULT_RELICS = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arrach\xE9 au poste de tir d'un croiseur de la Confr\xE9rie." },
   { id: "ecaille_leviathan", name: "\xC9caille de L\xE9viathan", effect: "defense", lore: "Une plaque de carapace qui encaisse encore les tirs." },
   { id: "noyau_forge", name: "Noyau de forge", effect: "build_time", lore: "Il chauffe sans jamais s'\xE9teindre." },
@@ -2381,11 +2393,79 @@ var RELICS = [
   { id: "oeil_neant", name: "\u0152il du N\xE9ant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
   { id: "egide_stellaire", name: "\xC9gide stellaire", effect: "defense", lore: "Un bouclier forg\xE9 au c\u0153ur d'une \xE9toile mourante.", mythicOnly: true }
 ];
-var MYTHIC_TEMPLATES = RELICS.filter((t) => t.mythicOnly);
+var RELICS = DEFAULT_RELICS.map((t) => __spreadValues({}, t));
+var DEFAULT_RARITY_VALUES = Object.fromEntries(
+  RARITIES.map((r) => [r.id, { pct: r.pct, weight: r.weight, recycle: r.recycle }])
+);
+function defaultRelicSettings() {
+  return {
+    slots: 3,
+    extraSlotAscensions: 1,
+    maxItems: 30,
+    fuseCount: 3,
+    expeditionBase: 0.05,
+    expeditionPerHour: 0.1 / 6,
+    expeditionMax: 0.15,
+    rarities: structuredClone(DEFAULT_RARITY_VALUES)
+  };
+}
+function setRelics(defs, settings) {
+  const byId = new Map(DEFAULT_RELICS.map((t) => [t.id, __spreadProps(__spreadValues({}, t), { disabled: true })]));
+  for (const t of defs) byId.set(t.id, __spreadValues({}, t));
+  RELICS.splice(0, RELICS.length, ...byId.values());
+  const _a = settings, { rarities } = _a, rules = __objRest(_a, ["rarities"]);
+  Object.assign(RELIC_RULES, rules);
+  for (const r of RARITIES) {
+    const v = rarities == null ? void 0 : rarities[r.id];
+    if (!v) continue;
+    r.pct = Number(v.pct) || 0;
+    r.weight = r.id === "mythic" ? 0 : Math.max(0, Number(v.weight) || 0);
+    r.recycle = Math.max(0, Math.round(Number(v.recycle) || 0));
+  }
+}
+function mythicTemplates() {
+  const active = RELICS.filter((t) => t.mythicOnly && !t.disabled);
+  return active.length > 0 ? active : DEFAULT_RELICS.filter((t) => t.mythicOnly);
+}
 function mythicFor(seasonId) {
   const [y, m] = seasonId.split("-").map(Number);
   const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
-  return { template: MYTHIC_TEMPLATES[index % MYTHIC_TEMPLATES.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+  const pool = mythicTemplates();
+  return { template: pool[index % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+}
+var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
+function validateRelics(defs, settings) {
+  var _a, _b, _c;
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const t of defs) {
+    const label3 = `Relique ${t.name || t.id}`;
+    if (!/^[a-z0-9_]+$/.test((_a = t.id) != null ? _a : "")) errors.push(`${label3} : identifiant invalide (minuscules, chiffres, _).`);
+    if (ids.has(t.id)) errors.push(`${label3} : identifiant en double.`);
+    ids.add(t.id);
+    if (!((_b = t.name) == null ? void 0 : _b.trim())) errors.push(`${label3} : nom manquant.`);
+    if (!RELIC_EFFECT_IDS.includes(t.effect)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
+    if (t.legendaryOnly && t.mythicOnly) errors.push(`${label3} : r\xE9serv\xE9e aux l\xE9gendaires OU aux mythiques, pas les deux.`);
+  }
+  if (!defs.some((t) => !t.disabled && !t.legendaryOnly && !t.mythicOnly)) errors.push("Reliques : il faut au moins une relique active ordinaire (tirable \xE0 toutes les raret\xE9s).");
+  const int = (v, min) => Number.isInteger(v) && v >= min;
+  if (!int(settings.slots, 1)) errors.push("Reliques : emplacements \u2265 1.");
+  if (!int(settings.maxItems, 1)) errors.push("Reliques : inventaire \u2265 1.");
+  if (!int(settings.fuseCount, 2)) errors.push("Reliques : fusion \u2265 2 reliques.");
+  if (!(settings.expeditionBase >= 0 && settings.expeditionBase <= 1)) errors.push("Reliques : chance en exp\xE9dition entre 0 et 1.");
+  if (!(settings.expeditionMax >= 0 && settings.expeditionMax <= 1)) errors.push("Reliques : plafond en exp\xE9dition entre 0 et 1.");
+  if (!(settings.expeditionPerHour >= 0)) errors.push("Reliques : chance par heure \u2265 0.");
+  for (const r of RARITIES) {
+    const v = (_c = settings.rarities) == null ? void 0 : _c[r.id];
+    if (!v) continue;
+    if (!(v.pct >= 0 && v.pct <= 1)) errors.push(`Reliques, ${r.label} : bonus entre 0 et 1 (0,06 = 6 %).`);
+    if (r.id !== "mythic" && !(v.weight >= 0)) errors.push(`Reliques, ${r.label} : poids de tirage \u2265 0.`);
+  }
+  if (RARITIES.filter((r) => r.id !== "mythic").every((r) => {
+    var _a2, _b2;
+    return !(((_b2 = (_a2 = settings.rarities) == null ? void 0 : _a2[r.id]) == null ? void 0 : _b2.weight) > 0);
+  })) errors.push("Reliques : au moins une raret\xE9 doit avoir un poids de tirage.");
+  return errors;
 }
 function mythicRelic(seasonId, now, random = Math.random) {
   return { id: newId(now, random), template: mythicFor(seasonId).template.id, rarity: "mythic", foundAtMs: now, source: `mythic:${seasonId}` };
@@ -2398,7 +2478,9 @@ var RELIC_RULES = {
   fuseCount: 3,
   /** Expédition : 5 % à 2 h, jusqu'à 15 % à 8 h. */
   expeditionBase: 0.05,
-  expeditionPerHour: 0.1 / 6
+  expeditionPerHour: 0.1 / 6,
+  /** Plafond de la chance en expédition. */
+  expeditionMax: 0.15
 };
 function relicsState(player) {
   var _a, _b;
@@ -2453,7 +2535,7 @@ function rollRelic(source, now, random = Math.random, minRarity = "common") {
       break;
     }
   }
-  const templates = RELICS.filter((t) => !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
+  const templates = RELICS.filter((t) => !t.disabled && !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
@@ -2475,7 +2557,7 @@ function grantMythicRelic(player, source, now, given, random = Math.random) {
   return { given: __spreadProps(__spreadValues({}, given), { [seasonId]: player.uid }), name: def3.template.name };
 }
 function expeditionRelicChance(hours2) {
-  return Math.min(0.15, RELIC_RULES.expeditionBase + Math.max(0, hours2 - 2) * RELIC_RULES.expeditionPerHour);
+  return Math.min(RELIC_RULES.expeditionMax, RELIC_RULES.expeditionBase + Math.max(0, hours2 - 2) * RELIC_RULES.expeditionPerHour);
 }
 function equipRelic(player, slotIn, relicId) {
   var _a;
@@ -4079,6 +4161,8 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
     // v3.3 : Batterie de siège de l'alliance.
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
+    // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.
+    cargoFactor: fx.cargoFactor * (1 + playerModifiers(player).cargo),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
@@ -5320,6 +5404,9 @@ function playerModifiers(player) {
 }
 function withRepairBonus(base, player) {
   return Math.min(0.95, base + playerModifiers(player).repair);
+}
+function playerCargoCapacity(player, fleet) {
+  return Math.floor(fleetCargoCapacity(player.units, fleet, player.techLevels) * (1 + playerModifiers(player).cargo));
 }
 
 // src/game/bounties.ts
@@ -8469,7 +8556,7 @@ function launchTransport(owner, raw, req, now) {
   if (!colony) throw new GameActionError("Colonie introuvable.");
   const direction = req.direction === "collect" ? "collect" : "deliver";
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent transporter.");
-  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const capacity = playerCargoCapacity(owner, units);
   if (capacity <= 0) throw new GameActionError("Ces vaisseaux n'ont pas de soute.");
   const cargo = parseCargo(req.cargo, direction === "deliver" ? capacity : Infinity);
   if (direction === "deliver") {
@@ -8492,7 +8579,7 @@ function launchDelivery(owner, client, raw, contract, now) {
   var _a;
   if (contract.fleetId) throw new GameActionError("Une livraison est d\xE9j\xE0 en route pour ce contrat.");
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
-  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const capacity = playerCargoCapacity(owner, units);
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
   checkDelivery(contract, owner.uid, capacity, arriveAtMs);
@@ -8522,7 +8609,7 @@ function performTransportArrival(ownerIn, ownerQueues, fleet, now) {
     notes.push({ kind: "fleet", title: "Livraison effectu\xE9e", message: `${formatInt(total2)} ressources livr\xE9es \xE0 ${colony.name}.`, createdAtMs: now, read: false });
     return { owner, queues: flushed.queues, notifications: notes, loot: null, outcome: "delivered" };
   }
-  const taken = collectFromColony(colony, t.cargo, fleetCargoCapacity(owner.units, fleet.units, owner.techLevels));
+  const taken = collectFromColony(colony, t.cargo, playerCargoCapacity(owner, fleet.units));
   return { owner, queues: flushed.queues, notifications: notes, loot: taken, outcome: "collected" };
 }
 function takeUnits(owner, raw, allowed, wrongUnit) {
@@ -10730,7 +10817,7 @@ var GAME_FIELDS = [
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings"];
 function withFixedUnits(units) {
   return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
 }
@@ -10761,6 +10848,8 @@ function defaultGameContent() {
     warlords: defaultWarlordsConfig(),
     seasonPass: defaultSeasonPassConfig(),
     chronicles: defaultChroniclesConfig(),
+    relics: DEFAULT_RELICS,
+    relicSettings: defaultRelicSettings(),
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
@@ -10769,7 +10858,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -10782,24 +10871,33 @@ function applyGameContent(overrides) {
     warlords: (_h = overrides.warlords) != null ? _h : defaults.warlords,
     seasonPass: (_i = overrides.seasonPass) != null ? _i : defaults.seasonPass,
     chronicles: (_j = overrides.chronicles) != null ? _j : defaults.chronicles,
+    relics: (_k = overrides.relics) != null ? _k : defaults.relics,
+    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_l = overrides.relicSettings) != null ? _l : {}), {
+      rarities: Object.fromEntries(
+        Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
+          var _a2, _b2, _c2;
+          return [id, __spreadValues(__spreadValues({}, v), (_c2 = (_b2 = (_a2 = overrides.relicSettings) == null ? void 0 : _a2.rarities) == null ? void 0 : _b2[id]) != null ? _c2 : {})];
+        })
+      )
+    }),
     rules: {
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_l = (_k = overrides.rules) == null ? void 0 : _k.pvp) != null ? _l : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_n = (_m = overrides.rules) == null ? void 0 : _m.combat) != null ? _n : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_p = (_o = overrides.rules) == null ? void 0 : _o.economy) != null ? _p : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_r = (_q = overrides.rules) == null ? void 0 : _q.fleets) != null ? _r : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_t = (_s = overrides.rules) == null ? void 0 : _s.spy) != null ? _t : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_v = (_u = overrides.rules) == null ? void 0 : _u.debris) != null ? _v : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_x = (_w = overrides.rules) == null ? void 0 : _w.patrol) != null ? _x : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_z = (_y = overrides.rules) == null ? void 0 : _y.events) != null ? _z : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_B = (_A = overrides.rules) == null ? void 0 : _A.seasons) != null ? _B : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_D = (_C = overrides.rules) == null ? void 0 : _C.alliances) != null ? _D : {}),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_F = (_E = overrides.rules) == null ? void 0 : _E.pirates) != null ? _F : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_H = (_G = overrides.rules) == null ? void 0 : _G.market) != null ? _H : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_J = (_I = overrides.rules) == null ? void 0 : _I.expeditions) != null ? _J : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_M = (_L = (_K = overrides.rules) == null ? void 0 : _K.expeditions) == null ? void 0 : _L.weights) != null ? _M : {})
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_n = (_m = overrides.rules) == null ? void 0 : _m.pvp) != null ? _n : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_p = (_o = overrides.rules) == null ? void 0 : _o.combat) != null ? _p : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_r = (_q = overrides.rules) == null ? void 0 : _q.economy) != null ? _r : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_t = (_s = overrides.rules) == null ? void 0 : _s.fleets) != null ? _t : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_v = (_u = overrides.rules) == null ? void 0 : _u.spy) != null ? _v : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_x = (_w = overrides.rules) == null ? void 0 : _w.debris) != null ? _x : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_z = (_y = overrides.rules) == null ? void 0 : _y.patrol) != null ? _z : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_B = (_A = overrides.rules) == null ? void 0 : _A.events) != null ? _B : {}),
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_D = (_C = overrides.rules) == null ? void 0 : _C.seasons) != null ? _D : {}),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_F = (_E = overrides.rules) == null ? void 0 : _E.alliances) != null ? _F : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_H = (_G = overrides.rules) == null ? void 0 : _G.pirates) != null ? _H : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_J = (_I = overrides.rules) == null ? void 0 : _I.market) != null ? _J : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_L = (_K = overrides.rules) == null ? void 0 : _K.expeditions) != null ? _L : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_O = (_N = (_M = overrides.rules) == null ? void 0 : _M.expeditions) == null ? void 0 : _N.weights) != null ? _O : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_O = (_N = overrides.rules) == null ? void 0 : _N.leviathan) != null ? _O : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_Q = (_P = overrides.rules) == null ? void 0 : _P.wars) != null ? _Q : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_Q = (_P = overrides.rules) == null ? void 0 : _P.leviathan) != null ? _Q : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_S = (_R = overrides.rules) == null ? void 0 : _R.wars) != null ? _S : {})
     }
   };
   setBuildings(content.buildings);
@@ -10813,6 +10911,7 @@ function applyGameContent(overrides) {
   setWarlords(content.warlords);
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
+  setRelics(content.relics, content.relicSettings);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -10833,7 +10932,7 @@ function applyGameContent(overrides) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
   const errors = [];
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
@@ -10927,6 +11026,7 @@ function validateGameContent(content) {
   errors.push(...validateChronicles(content.chronicles));
   errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
   errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
+  errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
   return [...new Set(errors)];
 }
 

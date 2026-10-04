@@ -2,6 +2,7 @@ import { activeLevels } from "@/game/commanders";
 import { equippedRelics, findTemplate, PRODUCTION_EFFECT, relicBonus } from "@/game/relics";
 import { territoryBonus } from "@/game/territories";
 import { talentBonuses } from "@/game/talents";
+import { fleetCargoCapacity } from "@/game/combat";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -86,4 +87,10 @@ export function productionFactor(player: ModPlayer | null | undefined, res: Reso
 /** Part des vaisseaux réparés, bonus compris (plafond 95 %). */
 export function withRepairBonus(base: number, player: ModPlayer | null | undefined): number {
   return Math.min(0.95, base + playerModifiers(player).repair);
+}
+
+/** v5.9 : soute d'une flotte, bonus de soute compris (Soute pliée, talents…).
+ *  Sert partout où la cargaison compte : butin, transports, livraisons. */
+export function playerCargoCapacity(player: ModPlayer & Pick<PlayerState, "units" | "techLevels">, fleet: Record<string, number>): number {
+  return Math.floor(fleetCargoCapacity(player.units, fleet, player.techLevels) * (1 + playerModifiers(player).cargo));
 }

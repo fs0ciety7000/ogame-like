@@ -796,6 +796,8 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     ...fx,
     // v3.3 : Batterie de siège de l'alliance.
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
+    // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.
+    cargoFactor: fx.cargoFactor * (1 + playerModifiers(player).cargo),
     attackerUnits: player.units,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
