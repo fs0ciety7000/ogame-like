@@ -180,16 +180,22 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <TextField label="Saison : titre de l'alliance gagnante" value={rules.alliances.seasonTitle} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonTitle: v } }))} />
       </Section>
       <Section title="Récompenses de fin de saison">
-        {seasons.tiers.map((t, i) => (
-          <div key={i} className="grid grid-cols-1 gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
-            <NumberField label="Jusqu'au rang" value={t.maxRank} min={1} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, maxRank: v ?? 1 } : x)) })} />
-            <NumberField label="Heures de production" value={t.hours} min={0} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, hours: v ?? 0 } : x)) })} />
-            <NumberField label="Bonus de chaque rare" value={t.rare} min={0} step={50} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, rare: v ?? 0 } : x)) })} />
-            <TextField label="Titre (+ « de Mois Année »)" value={t.title} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, title: v } : x)) })} />
+        {(
+          [
+            ["champion", "1er (champion)"],
+            ["podium", "2e et 3e (lot partagé au prorata de l'XP)"],
+            ["participation", "Chaque joueur actif (en plus)"],
+          ] as const
+        ).map(([key, label]) => (
+          <div key={key} className="grid grid-cols-1 gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 sm:col-span-4">{label}</p>
+            <NumberField label="Jetons du casino" value={seasons[key].tokens} min={0} step={5} onChange={(v) => setSeasons({ [key]: { ...seasons[key], tokens: v ?? 0 } })} />
+            <NumberField label="Ambre" value={seasons[key].amber} min={0} step={5} onChange={(v) => setSeasons({ [key]: { ...seasons[key], amber: v ?? 0 } })} />
+            <NumberField label="Chaque ressource commune" value={seasons[key].common} min={0} step={1_000_000} onChange={(v) => setSeasons({ [key]: { ...seasons[key], common: v ?? 0 } })} />
+            {key === "champion" && <TextField label="Titre (+ « du mois d'octobre 2026 »)" value={seasons.champion.title} onChange={(v) => setSeasons({ champion: { ...seasons.champion, title: v } })} />}
           </div>
         ))}
-        <NumberField label="Participation : XP de saison minimale" value={seasons.participationXp} min={0} step={10} onChange={(v) => setSeasons({ participationXp: v ?? 0 })} />
-        <NumberField label="Participation : heures de production" value={seasons.participationHours} min={0} step={1} onChange={(v) => setSeasons({ participationHours: v ?? 0 })} />
+        <NumberField label="Joueur actif : XP de saison minimale" value={seasons.participationXp} min={0} step={10} onChange={(v) => setSeasons({ participationXp: v ?? 0 })} />
         <div className="sm:col-span-2">
           <Button variant="outline" size="sm" className="h-auto min-h-8 whitespace-normal py-1.5 text-left" disabled={closing} onClick={() => void closeSeason()}>
             <Trophy className="mr-1 h-3.5 w-3.5" /> Clôturer la saison {seasonLabel(previousSeasonId())} maintenant

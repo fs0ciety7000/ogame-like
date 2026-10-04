@@ -7779,16 +7779,20 @@ function applyXpDelta(player, delta, now) {
   player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
 }
 var SEASON_RULES = {
-  tiers: [
-    { maxRank: 1, hours: 24, rare: 500, title: "Champion" },
-    { maxRank: 3, hours: 16, rare: 300, title: "Podium" },
-    { maxRank: 10, hours: 8, rare: 150, title: "\xC9lite" }
-  ],
+  champion: { title: "Champion du mois", tokens: 50, amber: 200, common: 5e8 },
+  podium: { tokens: 50, amber: 100, common: 5e7 },
+  participation: { tokens: 15, amber: 35, common: 1e7 },
   participationXp: 100,
-  participationHours: 2,
   /** Première saison close automatiquement (les précédentes ne sont pas récompensées). */
   firstSeasonId: "2026-09"
 };
+var MONTHS_LOWER = SEASON_MONTHS.map((m) => m.toLowerCase());
+function seasonMonthPhrase(seasonId) {
+  var _a;
+  const [year, month2] = seasonId.split("-").map(Number);
+  const name = (_a = MONTHS_LOWER[(month2 != null ? month2 : 1) - 1]) != null ? _a : "?";
+  return `${/^[aeiouyéè]/.test(name) ? "d'" : "de "}${name} ${year != null ? year : ""}`.trim();
+}
 function previousSeasonId(now = Date.now()) {
   const d = new Date(now);
   return currentSeasonId(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 1);
@@ -7808,32 +7812,62 @@ function seasonStandings(entries, seasonId) {
     return { uid: x.e.uid, pseudo: x.e.pseudo, allianceId: (_a = x.e.allianceId) != null ? _a : "", rank: i + 1, seasonXp: x.seasonXp };
   });
 }
-function seasonRewardFor(rank2, seasonXp) {
-  const tier = [...SEASON_RULES.tiers].sort((a, b) => a.maxRank - b.maxRank).find((t) => rank2 <= t.maxRank);
-  if (tier) return { hours: tier.hours, rare: tier.rare, title: tier.title };
-  if (seasonXp >= SEASON_RULES.participationXp) return { hours: SEASON_RULES.participationHours, rare: 0, title: "" };
-  return null;
+function seasonRewardFor(rank2, seasonXp, seasonId, standings = []) {
+  const add2 = (a, b, f = 1) => ({
+    tokens: a.tokens + Math.floor(b.tokens * f),
+    amber: a.amber + Math.floor(b.amber * f),
+    common: a.common + Math.floor(b.common * f)
+  });
+  let prize = { tokens: 0, amber: 0, common: 0 };
+  let title = "";
+  if (seasonXp >= SEASON_RULES.participationXp) prize = add2(prize, SEASON_RULES.participation);
+  if (rank2 === 1 && seasonXp > 0) {
+    prize = add2(prize, SEASON_RULES.champion);
+    if (SEASON_RULES.champion.title) title = `${SEASON_RULES.champion.title} ${seasonMonthPhrase(seasonId)}`;
+  } else if ((rank2 === 2 || rank2 === 3) && seasonXp > 0) {
+    const podium = standings.filter((s) => s.rank === 2 || s.rank === 3);
+    const total2 = podium.reduce((a, s) => a + s.seasonXp, 0) || seasonXp;
+    prize = add2(prize, SEASON_RULES.podium, seasonXp / total2);
+  }
+  if (!prize.tokens && !prize.amber && !prize.common && !title) return null;
+  return __spreadValues({ hours: 0, rare: 0, title }, prize);
 }
 function performSeasonReward(playerIn, queuesIn, standing, reward, now, headline) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const gained = {};
   for (const r of RESOURCE_LIST) {
-    const amount3 = Math.floor(((_a = rates[r.id]) != null ? _a : 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0);
+    const amount3 = Math.floor(((_a = rates[r.id]) != null ? _a : 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0) + (r.rarity === "common" ? Math.floor((_b = reward.common) != null ? _b : 0) : 0);
     if (amount3 <= 0) continue;
     gained[r.id] = amount3;
-    player.resources[r.id] = ((_b = player.resources[r.id]) != null ? _b : 0) + amount3;
+    player.resources[r.id] = ((_c = player.resources[r.id]) != null ? _c : 0) + amount3;
+  }
+  const tokens = Math.max(0, Math.floor((_d = reward.tokens) != null ? _d : 0));
+  if (tokens > 0) {
+    const c = (_e = player.casino) != null ? _e : {};
+    player.casino = __spreadProps(__spreadValues({}, (_f = player.casino) != null ? _f : {}), { tokens: (Number(c.tokens) || 0) + tokens });
+  }
+  const amber = Math.max(0, Math.floor((_g = reward.amber) != null ? _g : 0));
+  if (amber > 0) {
+    const b = (_h = player.bounties) != null ? _h : {};
+    player.bounties = __spreadProps(__spreadValues({}, (_i = player.bounties) != null ? _i : {}), { amber: (Number(b.amber) || 0) + amber, amberEarned: (Number(b.amberEarned) || 0) + amber });
   }
   let titleText = "";
   if (reward.title) {
-    titleText = `${reward.title} de ${seasonLabel(standing.seasonId)}`;
+    titleText = reward.hours > 0 && !/ (de |d')\S+ \d{4}$/.test(reward.title) ? `${reward.title} de ${seasonLabel(standing.seasonId)}` : reward.title;
     const title = { label: titleText, seasonId: standing.seasonId, rank: standing.rank };
-    player.titles = [...((_c = player.titles) != null ? _c : []).filter((t) => t.label !== titleText), title];
+    player.titles = [...((_j = player.titles) != null ? _j : []).filter((t) => t.label !== titleText), title];
     if (!player.activeTitle) player.activeTitle = titleText;
   }
   const total2 = Object.values(gained).reduce((a, b) => a + (b != null ? b : 0), 0);
+  const parts = [
+    tokens ? `${formatInt(tokens)} jeton${tokens > 1 ? "s" : ""} du casino` : "",
+    amber ? `${formatInt(amber)} Ambre` : "",
+    total2 ? `${formatInt(total2)} ressources` : "",
+    titleText ? `le titre \xAB ${titleText} \xBB` : ""
+  ].filter(Boolean);
   return {
     player,
     queues: flushed.queues,
@@ -7843,7 +7877,7 @@ function performSeasonReward(playerIn, queuesIn, standing, reward, now, headline
       {
         kind: "season",
         title: headline != null ? headline : `Saison ${seasonLabel(standing.seasonId)} termin\xE9e : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
-        message: `${formatInt(standing.seasonXp)} XP de saison. R\xE9compense : ${formatInt(total2)} ressources${titleText ? ` et le titre \xAB ${titleText} \xBB` : ""}.`,
+        message: `${formatInt(standing.seasonXp)} XP de saison. R\xE9compense : ${parts.join(", ").replace(/, ([^,]*)$/, " et $1")}.`,
         createdAtMs: now,
         read: false
       }
@@ -14146,7 +14180,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14181,17 +14215,25 @@ function applyGameContent(overrides) {
       debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_y = (_x = overrides.rules) == null ? void 0 : _x.debris) != null ? _y : {}),
       patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_A = (_z = overrides.rules) == null ? void 0 : _z.patrol) != null ? _A : {}),
       events: __spreadValues(__spreadValues({}, defaults.rules.events), (_C = (_B = overrides.rules) == null ? void 0 : _B.events) != null ? _C : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_E = (_D = overrides.rules) == null ? void 0 : _D.seasons) != null ? _E : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_G = (_F = overrides.rules) == null ? void 0 : _F.alliances) != null ? _G : {}),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_I = (_H = overrides.rules) == null ? void 0 : _H.pirates) != null ? _I : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_K = (_J = overrides.rules) == null ? void 0 : _J.market) != null ? _K : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_M = (_L = overrides.rules) == null ? void 0 : _L.expeditions) != null ? _M : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_P = (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) == null ? void 0 : _O.weights) != null ? _P : {})
+      seasons: (() => {
+        var _a2, _b2, _d2, _e2, _f2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
+        const d = defaults.rules.seasons;
+        const _c2 = o, { tiers: _tiers, participationHours: _hours } = _c2, rest = __objRest(_c2, ["tiers", "participationHours"]);
+        void _tiers;
+        void _hours;
+        return __spreadProps(__spreadValues(__spreadValues({}, d), rest), { champion: __spreadValues(__spreadValues({}, d.champion), (_d2 = o.champion) != null ? _d2 : {}), podium: __spreadValues(__spreadValues({}, d.podium), (_e2 = o.podium) != null ? _e2 : {}), participation: __spreadValues(__spreadValues({}, d.participation), (_f2 = o.participation) != null ? _f2 : {}) });
+      })(),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_E = (_D = overrides.rules) == null ? void 0 : _D.alliances) != null ? _E : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_G = (_F = overrides.rules) == null ? void 0 : _F.pirates) != null ? _G : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_I = (_H = overrides.rules) == null ? void 0 : _H.market) != null ? _I : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_K = (_J = overrides.rules) == null ? void 0 : _J.expeditions) != null ? _K : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_N = (_M = (_L = overrides.rules) == null ? void 0 : _L.expeditions) == null ? void 0 : _M.weights) != null ? _N : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.leviathan) != null ? _R : {}),
-      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.seasonBoss) != null ? _T : {}),
-      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_V = (_U = overrides.rules) == null ? void 0 : _U.allianceBoss) != null ? _V : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_X = (_W = overrides.rules) == null ? void 0 : _W.wars) != null ? _X : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_P = (_O = overrides.rules) == null ? void 0 : _O.leviathan) != null ? _P : {}),
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {})
     }
   };
   setBuildings(content.buildings);
@@ -14209,7 +14251,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot);
+  setLootTables((_W = content.relicSettings) == null ? void 0 : _W.loot);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14231,7 +14273,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _Z = content.rules.allianceBoss, { bosses: allianceBosses } = _Z, allianceBossRules = __objRest(_Z, ["bosses"]);
+  const _X = content.rules.allianceBoss, { bosses: allianceBosses } = _X, allianceBossRules = __objRest(_X, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);

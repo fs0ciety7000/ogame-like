@@ -7,6 +7,7 @@ import {
   previousSeasonId,
   seasonEndMs,
   seasonLabel,
+  seasonMonthPhrase,
   seasonRewardFor,
   seasonStandings,
   setActiveTitle,
@@ -98,25 +99,48 @@ describe("season closing (v1.8)", () => {
     expect(standings.map((s) => `${s.rank}:${s.uid}`)).toEqual(["1:b", "2:d", "3:a"]);
   });
 
-  it("rewards by rank, with participation above the XP threshold", () => {
-    expect(seasonRewardFor(1, 10)).toMatchObject({ hours: 24, rare: 500, title: "Champion" });
-    expect(seasonRewardFor(3, 10)).toMatchObject({ hours: 16, title: "Podium" });
-    expect(seasonRewardFor(10, 10)).toMatchObject({ hours: 8, title: "Élite" });
-    expect(seasonRewardFor(11, 150)).toMatchObject({ hours: 2, rare: 0, title: "" });
-    expect(seasonRewardFor(11, 50)).toBeNull();
+  it("5.15.4 : champion, 2e-3e au prorata de l'XP, participation pour chaque joueur actif", () => {
+    const standings = [
+      { rank: 1, seasonXp: 5000 },
+      { rank: 2, seasonXp: 3000 },
+      { rank: 3, seasonXp: 1000 },
+      { rank: 4, seasonXp: 150 },
+      { rank: 5, seasonXp: 50 },
+    ];
+    // 1er : champion + participation.
+    expect(seasonRewardFor(1, 5000, "2026-10", standings)).toMatchObject({ title: "Champion du mois d'octobre 2026", tokens: 65, amber: 235, common: 510_000_000 });
+    // 2e : 3/4 du lot du podium (3000 / 4000), 3e : 1/4, + participation.
+    expect(seasonRewardFor(2, 3000, "2026-10", standings)).toMatchObject({ title: "", tokens: 15 + 37, amber: 35 + 75, common: 10_000_000 + 37_500_000 });
+    expect(seasonRewardFor(3, 1000, "2026-11", standings)).toMatchObject({ tokens: 15 + 12, amber: 35 + 25, common: 10_000_000 + 12_500_000 });
+    // 4e : participation seulement ; sous le seuil : rien.
+    expect(seasonRewardFor(4, 150, "2026-10", standings)).toMatchObject({ tokens: 15, amber: 35, common: 10_000_000, title: "" });
+    expect(seasonRewardFor(5, 50, "2026-10", standings)).toBeNull();
+    expect(seasonMonthPhrase("2026-11")).toBe("de novembre 2026");
+    expect(seasonMonthPhrase("2026-04")).toBe("d'avril 2026");
   });
 
-  it("pays the reward and grants a title", () => {
+  it("verse jetons, Ambre, ressources communes et le titre", () => {
     const now = JAN_15_2026;
     const player = makePlayer({ resourcesUpdatedAtMs: now, seasonId: "2026-01" });
-    const before = player.resources.reinforcedSteel ?? 0;
-    const out = performSeasonReward(player, defaultQueues(), { seasonId: "2025-12", rank: 1, seasonXp: 800 }, seasonRewardFor(1, 800)!, now);
-    expect(out.player.resources.reinforcedSteel).toBe(before + 500);
-    expect(out.gained.scrap).toBeGreaterThan(0);
-    expect(out.player.activeTitle).toBe("Champion de Décembre 2025");
-    expect(out.notifications.at(-1)?.kind).toBe("season");
+    const scrap = player.resources.scrap ?? 0;
+    const rare = player.resources.reinforcedSteel ?? 0;
+    const reward = seasonRewardFor(1, 800, "2025-12", [{ rank: 1, seasonXp: 800 }])!;
+    const out = performSeasonReward(player, defaultQueues(), { seasonId: "2025-12", rank: 1, seasonXp: 800 }, reward, now);
+    expect(out.player.resources.scrap).toBeGreaterThanOrEqual(scrap + 510_000_000);
+    expect(out.player.resources.reinforcedSteel).toBe(rare);
+    expect(out.player.casino?.tokens).toBe(65);
+    expect(out.player.bounties?.amber).toBe(235);
+    expect(out.player.activeTitle).toBe("Champion du mois de décembre 2025");
+    expect(out.notifications.at(-1)?.message).toMatch(/65 jetons du casino, 235 Ambre, .* ressources et le titre/);
     expect(() => setActiveTitle(out.player, "Roi du monde")).toThrow();
     setActiveTitle(out.player, "");
     expect(out.player.activeTitle).toBe("");
+  });
+
+  it("récompense d'alliance (heures de production) : titre « de Mois Année » inchangé", () => {
+    const now = JAN_15_2026;
+    const out = performSeasonReward(makePlayer({ resourcesUpdatedAtMs: now }), defaultQueues(), { seasonId: "2025-12", rank: 1, seasonXp: 800 }, { hours: 4, rare: 0, title: "Alliance championne" }, now);
+    expect(out.player.titles?.at(-1)?.label).toBe("Alliance championne de Décembre 2025");
+    expect(out.gained.scrap).toBeGreaterThan(0);
   });
 });

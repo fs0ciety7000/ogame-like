@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchSeasonResults, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { currentSeasonId, SEASON_RULES, seasonEndMs, seasonLabel } from "@/game/seasons";
+import { SeasonRewardsCard } from "@/components/game/SeasonRewardsCard";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { useAuthStore } from "@/store/authStore";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
@@ -153,23 +154,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
             </p>
           </div>
         )}
-        <div className="grid gap-2 border-l-2 border-gold-glow/50 bg-gold-glow/[0.04] p-3 text-xs text-slate-400 sm:grid-cols-2">
-          {[...SEASON_RULES.tiers]
-            .sort((a, b) => a.maxRank - b.maxRank)
-            .map((t, i, all) => {
-              const from = i === 0 ? 1 : all[i - 1].maxRank + 1;
-              return (
-                <p key={t.maxRank}>
-                  <strong className="text-slate-200">{from === t.maxRank ? `${from}er` : `${from}e – ${t.maxRank}e`}</strong> : {t.hours} h de production
-                  {t.rare > 0 && ` + ${t.rare} de chaque ressource rare`}
-                  {t.title && ` · titre « ${t.title} »`}
-                </p>
-              );
-            })}
-          <p>
-            <strong className="text-slate-200">Participants</strong> (≥ {SEASON_RULES.participationXp} XP de saison) : {SEASON_RULES.participationHours} h de production
-          </p>
-        </div>
+        <SeasonRewardsCard seasonId={currentSeasonId()} />
       </Card>
 
       {results === null ? (

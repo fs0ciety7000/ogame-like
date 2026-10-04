@@ -1408,7 +1408,7 @@ function closeSeason(game, now, seasonIdIn) {
     const standings = game.seasonStandings(entries, seasonId);
     const collection = txApp.findCollectionByNameOrId("season_results");
     standings.forEach((st) => {
-      const reward = game.seasonRewardFor(st.rank, st.seasonXp);
+      const reward = game.seasonRewardFor(st.rank, st.seasonXp, seasonId, standings);
       let gained = null;
       if (reward) {
         const loaded = loadPlayer(txApp, game, st.uid);

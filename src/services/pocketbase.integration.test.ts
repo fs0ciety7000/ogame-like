@@ -540,8 +540,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const results = await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="player"`, sort: "rank" });
       expect(results.map((r) => [r.uid, r.rank])).toEqual([[aId, 1], [bId, 2]]);
       const aAfter = await snap(aId);
-      expect(aAfter.resources.reinforcedSteel).toBeGreaterThanOrEqual(aBefore.resources.reinforcedSteel + 500);
-      expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
+      // 5.15.4 : champion = 50 jetons, 200 Ambre, 500 M de chaque commune (+ participation : 15, 35, 10 M).
+      expect(aAfter.resources.scrap).toBeGreaterThanOrEqual(aBefore.resources.scrap + 510_000_000);
+      expect(aAfter.casino?.tokens ?? 0).toBeGreaterThanOrEqual((aBefore.casino?.tokens ?? 0) + 65);
+      expect(aAfter.bounties?.amber ?? 0).toBe((aBefore.bounties?.amber ?? 0) + 235);
+      expect(aAfter.activeTitle).toBe("Champion du mois de décembre 1999");
       // A reçoit sa récompense individuelle et celle de son alliance championne.
       const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
       // Individuelle et alliance championne (5.15 : les divisions se clôturent le lundi, plus avec la saison).
@@ -550,11 +553,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect((await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="alliance"` }))[0]?.allianceId).toBe(allianceId);
 
       // B choisit son titre, pas celui d'un autre ; il est public.
-      await expect(ps.setActiveTitle("Champion de Décembre 1999")).rejects.toThrow(/gagné/);
+      // B, 2e et seul du podium : tout le lot du podium + la participation, pas de titre.
+      const bAfter = await snap(bId);
+      expect(bAfter.bounties?.amber ?? 0).toBeGreaterThanOrEqual(135);
+      await expect(ps.setActiveTitle("Champion du mois de décembre 1999")).rejects.toThrow(/gagné/);
       await expect(pb.collection("players").update(bId, { activeTitle: "Tricheur" })).rejects.toBeTruthy();
       await ps.setActiveTitle("");
-      await ps.setActiveTitle("Podium de Décembre 1999");
-      expect((await pb.collection("profiles").getOne(bId)).activeTitle).toBe("Podium de Décembre 1999");
       await expect(admin.send("/api/cosmic/admin/close-season", { method: "POST", body: { seasonId: "2999-01" } })).rejects.toMatchObject({ status: 400 });
     } finally {
       await clean();
