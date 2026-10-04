@@ -19,7 +19,7 @@ import { WARLORD_RULES } from "@/game/warlords";
 import { BASE_COUNTS } from "@/game/procedural";
 import { OBJECTIVE_LABELS } from "@/game/chronicles";
 import type { PlayerState, ResourceId } from "@/types/game";
-import { cn, formatCompact } from "@/lib/utils";
+import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
 /* =====================================================
    v5.4 : les formules du jeu, expliquées. Les valeurs viennent du contenu
@@ -28,7 +28,7 @@ import { cn, formatCompact } from "@/lib/utils";
    « ton calcul » ; sinon, un exemple.
 ===================================================== */
 
-const pct = (x: number, digits = 0) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: digits })} %`;
+const pct = (x: number, digits = 0) => `${formatDecimal(x * 100, digits)} %`;
 const n = (x: number) => (Number.isFinite(x) ? formatCompact(Math.round(x)) : "∞");
 const PASS_LABELS: Record<string, string> = {
   contract: "Contrat du jour récupéré",
@@ -68,7 +68,7 @@ function Formula({ children }: { children: ReactNode }) {
 function Mine({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <div className="border border-mint-glow/25 bg-mint-glow/[0.04] p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-mint-glow">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-mint-glow">
         <Gauge className="h-3.5 w-3.5" /> {title ?? "Ton calcul"}
       </p>
       <div className="flex flex-col gap-1 text-sm text-slate-200">{children}</div>
@@ -157,7 +157,7 @@ function CombatCalculator({ attack, defense, shield }: { attack: number; defense
   const outcome = out.r.outcome === "attacker_win" ? "L'attaquant gagne" : out.r.outcome === "defender_win" ? "Le défenseur tient" : "Égalité";
   return (
     <div className="border border-gold-glow/30 bg-gold-glow/[0.04] p-3">
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-gold-glow">
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-gold-glow">
         <Calculator className="h-3.5 w-3.5" /> Calculette
       </p>
       <div className="grid gap-2 sm:grid-cols-3">

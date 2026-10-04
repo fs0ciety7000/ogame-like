@@ -1574,3 +1574,14 @@ body {
   clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
 }
 :root[data-theme="holo"] .hud-dialog-icon { clip-path: none; }
+
+/* 5.15 : « réduire les animations » : plus de pulsations ni d'échos (Tailwind) ;
+   l'état reste lisible par la couleur et le texte. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-pulse-slow,
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
+}

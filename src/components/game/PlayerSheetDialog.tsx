@@ -139,7 +139,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
 
         {lord && (
           <div className="mt-3 border-l-2 pl-3 text-xs leading-relaxed text-slate-400" style={{ borderColor: lord.color }}>
-            <p className="mb-1 uppercase tracking-[0.14em] text-slate-500">
+            <p className="mb-1 font-mono uppercase tracking-[0.14em] text-slate-500">
               {lord.originLabel} · {PERSONALITY_LABELS[lord.personality]} · {TIER_LABELS[lord.tier]}
             </p>
             {lord.bio}{" "}

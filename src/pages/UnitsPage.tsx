@@ -9,7 +9,7 @@ import { Card, HudBrackets } from "@/components/ui/card";
 import { HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { RadialGauge } from "@/components/ui/radial-gauge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PostureCard } from "@/components/game/PostureCard";
 import { usePlayerStore } from "@/store/playerStore";
@@ -235,7 +235,15 @@ export function UnitsPage() {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Base {unit.stats.attaque} + {(data.level - 1) * unitLevelBonus(unit)} (niveau) {attackTechBonus > 0 && `× ${attackTechBonus}% (tech Puissance d'attaque)`}
+                                <TooltipCard
+                                  title="Attaque"
+                                  rows={[
+                                    { label: "Base", value: formatNumber(unit.stats.attaque) },
+                                    { label: `Niveau ${data.level}`, value: `+${formatNumber((data.level - 1) * unitLevelBonus(unit))}` },
+                                    ...(attackTechBonus > 0 ? [{ label: "Puissance d'attaque (tech)", value: `+${attackTechBonus} %`, tone: "mint" as const }] : []),
+                                    { label: "Total", value: formatNumber(atk), tone: "accent" },
+                                  ]}
+                                />
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -245,7 +253,15 @@ export function UnitsPage() {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Base {unit.stats.defense} + {(data.level - 1) * unitLevelBonus(unit)} (niveau) {defenseTechBonus > 0 && `× ${defenseTechBonus}% (tech Blindage avancé)`}
+                                <TooltipCard
+                                  title="Défense"
+                                  rows={[
+                                    { label: "Base", value: formatNumber(unit.stats.defense) },
+                                    { label: `Niveau ${data.level}`, value: `+${formatNumber((data.level - 1) * unitLevelBonus(unit))}` },
+                                    ...(defenseTechBonus > 0 ? [{ label: "Blindage avancé (tech)", value: `+${defenseTechBonus} %`, tone: "mint" as const }] : []),
+                                    { label: "Total", value: formatNumber(def), tone: "accent" },
+                                  ]}
+                                />
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -255,7 +271,15 @@ export function UnitsPage() {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Base {unit.stats.vitesse} × niveau {data.level}. Une flotte avance à la vitesse de son vaisseau le plus lent.
+                                <TooltipCard
+                                  title="Vitesse"
+                                  rows={[
+                                    { label: "Base", value: formatNumber(unit.stats.vitesse) },
+                                    { label: "Niveau", value: `× ${data.level}` },
+                                    { label: "Total", value: formatNumber(unit.stats.vitesse * data.level), tone: "accent" },
+                                  ]}
+                                  note="Une flotte avance à la vitesse de son vaisseau le plus lent."
+                                />
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
@@ -264,7 +288,16 @@ export function UnitsPage() {
                                   <StatBar label="CAP" value={unit.stats.cargo * data.level} max={statMax.cargo} color="var(--color-gold-glow)" />
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent>Base {unit.stats.cargo} × niveau {data.level}.</TooltipContent>
+                              <TooltipContent>
+                                <TooltipCard
+                                  title="Capacité de soute"
+                                  rows={[
+                                    { label: "Base", value: formatNumber(unit.stats.cargo) },
+                                    { label: "Niveau", value: `× ${data.level}` },
+                                    { label: "Total", value: formatNumber(unit.stats.cargo * data.level), tone: "accent" },
+                                  ]}
+                                />
+                              </TooltipContent>
                             </Tooltip>
                           </div>
                         );

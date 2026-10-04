@@ -156,7 +156,7 @@ export function LoginPage() {
           className="w-full max-w-sm justify-self-center lg:justify-self-end"
         >
           <div className="mb-8 flex flex-col items-center gap-3 text-center lg:hidden">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
+            <div className="hud-cut flex h-14 w-14 items-center justify-center bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
               <Rocket className="h-7 w-7" />
             </div>
             <h1 className="font-display text-3xl tracking-wide text-white glow-text">Cosmic Empires</h1>
@@ -179,7 +179,7 @@ export function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="glass-panel hud-cut flex flex-col gap-3 p-6">
             <CornerBrackets />
             <p className="hud-eyebrow hidden text-slate-500 lg:block">
               {mode === "login" ? "Accès commandement" : mode === "register" ? "Nouvel empire" : "Récupération"}

@@ -59,7 +59,7 @@ export function IconSelect<T extends string>({
           align="start"
           sideOffset={4}
           collisionPadding={8}
-          className="z-50 max-h-[min(22rem,var(--radix-dropdown-menu-content-available-height))] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto glass-panel p-1 shadow-2xl data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95 [animation-iteration-count:1]"
+          className="z-50 max-h-[min(22rem,var(--radix-dropdown-menu-content-available-height))] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto glass-panel p-1 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95 [animation-iteration-count:1]"
         >
           <DropdownMenuPrimitive.RadioGroup value={value} onValueChange={(v) => onChange(v as T)}>
             {options.map((o) => (

@@ -58,7 +58,7 @@ export function CodexPage() {
             </span>
             <span className="font-mono text-lg text-gold-glow">{progress.pct} %</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+          <div className="h-2 overflow-hidden bg-white/5">
             <motion.div className="h-full bg-gradient-to-r from-gold-glow/60 to-gold-glow" initial={{ width: 0 }} animate={{ width: `${progress.pct}%` }} transition={{ duration: 0.9, ease: "easeOut" }} />
           </div>
           <p className="mt-1.5 text-[11px] text-slate-500">À 100 % : le titre « {CODEX_TITLE} ».</p>
@@ -131,7 +131,7 @@ export function CodexPage() {
               <div className="flex max-h-[70vh] flex-1 flex-col gap-2 overflow-y-auto p-5">
                 <p className="hud-eyebrow text-[10px] text-gold-glow">{CODEX_CATEGORIES.find((c) => c.id === open.category)?.label}</p>
                 <DialogTitle className="text-xl">{open.name}</DialogTitle>
-                <p className="-mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">{open.subtitle}</p>
+                <p className="-mt-1 text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{open.subtitle}</p>
                 {open.text.split(/\n\s*\n/).map((para, i) => (
                   <p key={i} className="text-sm leading-relaxed text-slate-300">
                     {para}

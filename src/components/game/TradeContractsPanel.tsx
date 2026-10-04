@@ -234,9 +234,9 @@ export function TradeContractsPanel() {
                       {c.targetUid && <HudTag tone="gold" className="ml-1.5">Pour toi</HudTag>}
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase text-slate-500">livre</span>
+                      <span className="text-[10px] font-mono uppercase text-slate-500">livre</span>
                       <Amount res={c.wantRes} n={c.wantAmount} />
-                      <span className="text-[10px] uppercase text-slate-500">sous {c.hours} h, reçois</span>
+                      <span className="text-[10px] font-mono uppercase text-slate-500">sous {c.hours} h, reçois</span>
                       <Amount res={c.payRes} n={c.payAmount} className="text-mint-glow" />
                     </span>
                     <span className="ml-auto flex items-center gap-2">

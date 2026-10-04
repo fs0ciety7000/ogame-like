@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { HudToaster } from "@/components/ui/hud-toast";
 import { ConfirmHost } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -64,6 +65,8 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ de
 
 export default function App() {
   return (
+    // 5.15 : « réduire les animations » du système respecté partout (Framer Motion).
+    <MotionConfig reducedMotion="user">
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MaintenanceGate>
@@ -141,6 +144,7 @@ export default function App() {
       <HudToaster />
       <ConfirmHost />
     </TooltipProvider>
+    </MotionConfig>
   );
 }
 

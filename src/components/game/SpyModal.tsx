@@ -25,7 +25,7 @@ import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{title}</h4>
+      <h4 className="mb-1 text-[11px] font-semibold font-mono uppercase tracking-wide text-slate-500">{title}</h4>
       <ul className="space-y-0.5 text-xs text-slate-300">{children}</ul>
     </div>
   );

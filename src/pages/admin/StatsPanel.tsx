@@ -43,8 +43,8 @@ function Bar({ label, value, max, display, color = "var(--color-cyan-glow)", tit
   return (
     <div className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-2 text-xs" title={title}>
       <span className="truncate text-slate-300">{label}</span>
-      <div className="h-2 overflow-hidden rounded-full bg-white/5">
-        <motion.div className="h-full rounded-full" style={{ background: color }} initial={{ width: 0 }} animate={{ width: `${width}%` }} transition={{ duration: 0.6 }} />
+      <div className="h-2 overflow-hidden bg-white/5">
+        <motion.div className="h-full" style={{ background: color }} initial={{ width: 0 }} animate={{ width: `${width}%` }} transition={{ duration: 0.6 }} />
       </div>
       <span className="tabular-mono w-16 text-right text-slate-400">{display}</span>
     </div>
@@ -174,7 +174,7 @@ export function StatsPanel() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Panel title="Économie (médiane par joueur)">
           <div className="grid gap-1.5 text-xs">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 text-[10px] uppercase tracking-wide text-slate-500">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 text-[10px] font-mono uppercase tracking-wide text-slate-500">
               <span>Ressource</span>
               <span className="text-right">Stock médian</span>
               <span className="text-right">Prod. médiane</span>
@@ -266,7 +266,7 @@ function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
           ].map(([label, n]) => (
             <div key={label} className="border border-white/5 p-2">
               <p className="font-display text-xl text-white">{n}</p>
-              <p className="text-[10px] uppercase tracking-wide text-slate-500">actifs {label}</p>
+              <p className="text-[10px] font-mono uppercase tracking-wide text-slate-500">actifs {label}</p>
             </div>
           ))}
         </div>
@@ -298,7 +298,7 @@ function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
           ))
         )}
         <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">Factions</p>
-        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 text-[10px] font-mono uppercase tracking-wide text-slate-500">
           <span>Faction</span>
           <span className="text-right">Raids repoussés</span>
           <span className="text-right">Repaires pris</span>
@@ -427,7 +427,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
           ].map(([label, value]) => (
             <div key={label as string} className="border border-white/5 bg-white/[0.02] p-2">
               <p className="font-display text-xl text-white">{value}</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-slate-500">{label}</p>
             </div>
           ))}
         </div>
@@ -460,7 +460,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
       <Panel title="Rétention · cohortes d'inscrits par semaine">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            <tr className="text-left text-[10px] font-mono uppercase tracking-[0.12em] text-slate-500">
               <th className="py-1 font-normal">Semaine du</th>
               <th className="py-1 text-right font-normal">Inscrits</th>
               <th className="py-1 text-right font-normal" title="Revenus le lendemain de l'inscription">J+1</th>

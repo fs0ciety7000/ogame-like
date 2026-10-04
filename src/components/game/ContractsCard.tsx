@@ -10,7 +10,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { CONTRACT_LABELS, CONTRACT_RULES, contractDay, contractReward, streakBonus, type Contract } from "@/game/contracts";
 import { getRewardText } from "@/game/missions";
-import { formatClock } from "@/lib/utils";
+import { formatClock, formatNumber } from "@/lib/utils";
 import { claimContract, GameActionError, rerollContract } from "@/services/playerService";
 import { playUnlock } from "@/lib/sfx";
 import { EmojiText } from "@/components/ui/game-icon";
@@ -106,7 +106,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
                 {!c.claimed && (
                   <div className="flex gap-1.5">
                     <Button size="sm" className="h-7 flex-1 text-xs" disabled={!done || pending === c.id} onClick={() => void claim(c)}>
-                      {done ? "Récupérer" : `${Math.floor(c.progress).toLocaleString("fr-FR")} / ${c.target.toLocaleString("fr-FR")}`}
+                      {done ? "Récupérer" : `${formatNumber(c.progress)} / ${formatNumber(c.target)}`}
                     </Button>
                     {!state?.rerolled && !done && (
                       <Button

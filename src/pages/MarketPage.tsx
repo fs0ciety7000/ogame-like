@@ -136,7 +136,7 @@ export function MarketPage() {
         <Card className="flex flex-col gap-3 p-4">
           <div className="flex items-center gap-2">
             <h2 className="hud-title text-sm">{mode === "buy" ? "Passer un ordre d'achat" : "Publier une offre"}</h2>
-            <div className="ml-auto flex border border-white/10 text-[11px] font-semibold uppercase tracking-[0.1em]">
+            <div className="ml-auto flex border border-white/10 text-[11px] font-semibold font-display uppercase tracking-[0.1em]">
               {(["sell", "buy"] as const).map((m) => (
                 <button key={m} type="button" onClick={() => setMode(m)} className={cn("px-2.5 py-1 transition-colors", mode === m ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500 hover:text-slate-300")}>
                   {m === "sell" ? "Vendre" : "Acheter"}
@@ -229,14 +229,14 @@ export function MarketPage() {
                       <span className="flex items-center gap-2">
                         <HudTag tone="accent">Achète</HudTag>
                         <Amount res={o.wantRes} n={o.wantAmount} />
-                        <span className="text-[10px] uppercase text-slate-500">paie</span>
+                        <span className="text-[10px] font-mono uppercase text-slate-500">paie</span>
                         <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase text-slate-500">tu reçois</span>
+                        <span className="text-[10px] font-mono uppercase text-slate-500">tu reçois</span>
                         <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
-                        <span className="text-[10px] uppercase text-slate-500">contre</span>
+                        <span className="text-[10px] font-mono uppercase text-slate-500">contre</span>
                         <Amount res={o.wantRes} n={o.wantAmount} />
                       </span>
                     )}

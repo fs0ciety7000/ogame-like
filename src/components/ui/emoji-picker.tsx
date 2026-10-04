@@ -45,7 +45,7 @@ export function EmojiPicker({ onPick, className }: { onPick: (text: string) => v
           align="end"
           sideOffset={6}
           collisionPadding={8}
-          className="z-50 max-h-96 w-[min(20rem,calc(100vw-1rem))] overflow-y-auto glass-panel p-2 shadow-2xl data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95"
+          className="z-50 max-h-96 w-[min(20rem,calc(100vw-1rem))] overflow-y-auto glass-panel p-2 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95"
         >
           {custom.length > 0 && <ImageSection label="Cosmic Empires" emojis={custom} onPick={onPick} />}
           {keshOwned && <ImageSection label="Kesh'Vaar" emojis={KESH_EMOJIS} onPick={onPick} />}

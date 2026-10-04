@@ -69,7 +69,7 @@ export function AgendaCard({ now }: { now: number }) {
             <div className="mt-1 flex flex-col gap-1">
               {rows.map((k) => (
                 <div key={k} className="flex items-center gap-2">
-                  <span className="shrink-0 truncate text-[10px] uppercase tracking-[0.12em] text-slate-500" style={{ width: "6.5rem" }}>
+                  <span className="shrink-0 truncate text-[10px] font-mono uppercase tracking-[0.12em] text-slate-500" style={{ width: "6.5rem" }}>
                     {AGENDA_LABELS[k]}
                   </span>
                   <div className="relative h-5 flex-1 bg-white/[0.02]">

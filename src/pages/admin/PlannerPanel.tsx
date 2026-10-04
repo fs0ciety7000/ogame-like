@@ -129,7 +129,7 @@ export function PlannerPanel() {
         Glisse une date précise (boss) ou un événement programmé sur un autre jour, ou survole-le pour le retirer. « + » ajoute une apparition le jour choisi à 18 h. Les rendez-vous mensuels (week-end du Léviathan, du boss de saison, rotation) se règlent dans l'onglet Règles.
       </p>
       {errors.length > 0 && <p className="text-xs text-danger-glow">{errors.slice(0, 3).join(" · ")}</p>}
-      <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.12em] text-slate-400">
+      <div className="flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400">
         {(Object.keys(AGENDA_LABELS) as (keyof typeof AGENDA_LABELS)[]).map((k) => (
           <span key={k} className="inline-flex items-center gap-1">
             <i className="h-2 w-2 rounded-full" style={{ background: AGENDA_COLORS[k] }} /> {AGENDA_LABELS[k]}
@@ -188,7 +188,7 @@ export function PlannerPanel() {
                   </div>
                 ))}
                 {adding === d && (
-                  <div className="absolute left-1 top-6 z-10 flex w-48 flex-col gap-0.5 border border-cyan-glow/30 bg-space-900 p-1 text-xs shadow-xl">
+                  <div className="absolute left-1 top-6 z-10 flex w-48 flex-col gap-0.5 border border-cyan-glow/30 bg-space-900 p-1 text-xs">
                     <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "levDate")}>
                       🐋 Boss mondial (date précise)
                     </button>

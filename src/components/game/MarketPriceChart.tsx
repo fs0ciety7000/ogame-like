@@ -7,6 +7,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { MARKET_HISTORY_RULES, priceHistory, referencePrice } from "@/game/marketHistory";
 import type { MarketOffer } from "@/game/market";
 import type { ResourceId } from "@/types/game";
+import { formatDecimal } from "@/lib/utils";
 
 /* v4.8 : prix des échanges conclus, par ressource, relatif au comptoir. */
 
@@ -17,7 +18,7 @@ const PAD = 18;
 type Trade = Pick<MarketOffer, "giveRes" | "giveAmount" | "wantRes" | "wantAmount" | "filledAtMs">;
 
 export function formatRatio(r: number): string {
-  return `× ${(Math.round(r * 100) / 100).toLocaleString("fr-FR")}`;
+  return `× ${formatDecimal(r, 2)}`;
 }
 
 export function MarketPriceChart({ trades, now }: { trades: Trade[]; now: number }) {

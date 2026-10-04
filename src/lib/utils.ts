@@ -16,6 +16,11 @@ export function formatNumber(value: number): string {
   return new Intl.NumberFormat("fr-FR").format(v);
 }
 
+/** 5.15 : nombre à virgule (fr-FR), `digits` décimales au plus : « 1,25 ». */
+export function formatDecimal(value: number, digits = 2): string {
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }).format(value);
+}
+
 export function formatCompact(value: number): string {
   return new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 }).format(
     Math.floor(value),

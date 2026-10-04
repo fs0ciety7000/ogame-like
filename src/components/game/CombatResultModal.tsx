@@ -142,17 +142,17 @@ export function CombatResultModal() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Tes pertes</h4>
+              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Tes pertes</h4>
               <LossList losses={current.myLosses} recovered={current.myRecovered} />
             </div>
             <div>
-              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Pertes adverses</h4>
+              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Pertes adverses</h4>
               <LossList losses={current.opponentLosses} recovered={current.opponentRecovered} />
             </div>
           </div>
 
           <div className="mt-4">
-            <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">
               {current.perspective === "attacker" ? "Butin" : "Ressources perdues"}
             </h4>
             {current.loot && Object.values(current.loot).some((v) => v && v > 0) ? (

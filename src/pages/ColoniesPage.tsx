@@ -322,7 +322,7 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
         <ResourceIcon id={id} className="h-6 w-6 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="tabular-mono truncate text-sm font-semibold text-slate-100">{formatCompact(stock)}</p>
-          <p className="truncate text-[10px] uppercase tracking-[0.08em] text-slate-500">{def.name}</p>
+          <p className="truncate text-[10px] font-mono uppercase tracking-[0.08em] text-slate-500">{def.name}</p>
         </div>
       </div>
       {common ? (

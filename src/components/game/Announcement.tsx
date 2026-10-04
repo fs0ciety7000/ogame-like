@@ -483,7 +483,7 @@ export function AnnouncementDialog() {
               <img src={assetUrl(shown.spotlight.image)} alt={shown.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_rgba(255,180,60,0.35)]" />
               <figcaption className="border border-gold-glow/30 bg-space-950/85 p-2 backdrop-blur-sm">
                 <p className="font-display text-sm text-gold-glow">{shown.spotlight.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{shown.spotlight.role}</p>
+                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-slate-400">{shown.spotlight.role}</p>
                 <p className="mt-1 text-[11px] italic leading-snug text-slate-300">« {shown.spotlight.quote} »</p>
               </figcaption>
             </motion.figure>

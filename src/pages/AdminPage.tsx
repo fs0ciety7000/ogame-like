@@ -82,7 +82,7 @@ import { AdminStatusStrip } from "@/pages/admin/AdminStatusStrip";
 import { useMaintenance } from "@/services/maintenanceService";
 import { useContentStore } from "@/services/contentService";
 import type { ContentSection } from "@/game/content";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 /** Groupes repliés de la barre de l'administration (préférence du navigateur). */
 const COLLAPSED_KEY = "cosmic-empires:admin-nav-collapsed";
@@ -425,7 +425,7 @@ export function AdminPage() {
             section="ranks"
             title="Rangs"
             getId={(r) => r.id}
-            getLabel={(r) => `${r.name} · ${r.xp.toLocaleString("fr-FR")} XP`}
+            getLabel={(r) => `${r.name} · ${formatNumber(r.xp)} XP`}
             setId={(r, id) => ({ ...r, id })}
             createItem={newRank}
             renderForm={(r, onChange, isNew) => <RankForm value={r} onChange={onChange} isNew={isNew} />}

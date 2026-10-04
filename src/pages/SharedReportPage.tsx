@@ -109,7 +109,7 @@ export function SharedReportPage() {
       )}
       {shared?.kind === "battle" && (
         <>
-          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.16em] text-slate-500">
             <Swords className="h-3.5 w-3.5" /> Rapport de combat
           </p>
           <BattleView report={shared.data as BattleReport} />
@@ -117,7 +117,7 @@ export function SharedReportPage() {
       )}
       {shared?.kind === "spy" && (
         <>
-          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+          <p className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.16em] text-slate-500">
             <Eye className="h-3.5 w-3.5" /> Rapport d'espionnage · cible {(shared.data as SpyReport).targetPseudo}
           </p>
           <Card className="p-4">

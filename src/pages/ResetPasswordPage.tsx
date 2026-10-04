@@ -60,7 +60,7 @@ export function ResetPasswordPage() {
         </div>
 
         {!token ? (
-          <div className="glass-panel flex flex-col gap-3 rounded-2xl p-6 text-center">
+          <div className="glass-panel hud-cut flex flex-col gap-3 p-6 text-center">
             <CornerBrackets />
             <p className="text-sm text-slate-300">Ce lien de réinitialisation est incomplet.</p>
             <p className="text-xs text-slate-500">Ouvre le lien reçu par email tel quel, ou refais une demande.</p>
@@ -69,7 +69,7 @@ export function ResetPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="glass-panel flex flex-col gap-3 rounded-2xl p-6">
+          <form onSubmit={handleSubmit} className="glass-panel hud-cut flex flex-col gap-3 p-6">
             <CornerBrackets />
             <p className="hud-eyebrow flex items-center gap-2 text-slate-500">
               <KeyRound className="h-3.5 w-3.5" /> Nouveau mot de passe
