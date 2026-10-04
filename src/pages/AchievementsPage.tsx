@@ -30,11 +30,10 @@ const TIER_STYLE: Record<AchievementTier, { text: string; border: string }> = {
 export function AchievementMedal({ a, unlocked, size = 72 }: { a: AchievementDef; unlocked: boolean; size?: number }) {
   return (
     <div className={cn("relative shrink-0", !unlocked && "opacity-40 grayscale")} style={{ width: size, height: size }}>
-      {/* v5.14.2 : médaille mythique — celle du légendaire, auréolée, en attendant son illustration. */}
       <img
-        src={assetUrl(`/assets/achievements/${a.tier === "mythique" ? "legendaire" : a.tier}.webp`)}
+        src={assetUrl(`/assets/achievements/${a.tier}.webp`)}
         alt=""
-        className={cn("absolute inset-0 h-full w-full object-contain", a.tier === "mythique" && "drop-shadow-[0_0_10px_var(--th-rarity-mythic)] hue-rotate-[200deg]")}
+        className={cn("absolute inset-0 h-full w-full object-contain", a.tier === "mythique" && "drop-shadow-[0_0_10px_var(--th-rarity-mythic)]")}
         loading="lazy"
       />
       <span className="absolute inset-0 flex items-center justify-center" style={{ fontSize: size * 0.32 }}>

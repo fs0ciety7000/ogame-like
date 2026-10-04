@@ -81,7 +81,7 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     category: "legends",
     name: "La Main d'or",
     subtitle: "Casino orbital · gros lot 7-7-7",
-    image: "/assets/casino/salle-777.webp",
+    image: "/assets/casino/main-or.webp",
     text: "Au fond de la salle des machines, une colonne de sept dorés s'illumine une fois tous les mille tirages, à peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est gravé sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent « la Main d'or ». Ils disent qu'elle ne revient jamais deux fois au même pilote. Ils mentent.",
     unlocked: Math.floor(Number((player.casino as { jackpots?: number } | undefined)?.jackpots) || 0) > 0,
   });

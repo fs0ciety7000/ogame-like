@@ -1117,6 +1117,33 @@ body {
   color: transparent;
 }
 .slot-jackpot { display: grid; justify-items: center; gap: 4px; }
+/* 5.14.3 : écran du gros lot — salle en fond (zoom lent), rayons dorés qui
+   tournent, flash et onde de choc à l'ouverture, sceau qui s'imprime. */
+.jackpot-scene { background: var(--color-space-950); }
+.jackpot-scene-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; animation: jackpot-zoom 14s ease-out forwards; }
+.jackpot-scene-veil { position: absolute; inset: 0; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-space-950) 35%, transparent), color-mix(in srgb, var(--color-space-950) 92%, transparent) 75%); }
+.jackpot-rays {
+  position: absolute; left: 50%; top: 50%; width: 180vmax; height: 180vmax; translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--th-gold) 9%, transparent) 0deg 5deg, transparent 5deg 20deg);
+  mask-image: radial-gradient(circle, black 0%, transparent 32%);
+  animation: jackpot-rays 24s linear infinite, jackpot-fade-in 1.2s ease-out both;
+}
+.jackpot-flash { position: absolute; inset: 0; background: var(--th-gold); mix-blend-mode: screen; animation: jackpot-flash 0.9s ease-out forwards; pointer-events: none; }
+.jackpot-shockwave {
+  position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; translate: -50% -50%; border-radius: 9999px;
+  border: 3px solid var(--th-gold); box-shadow: 0 0 40px var(--th-gold);
+  animation: jackpot-shock 1.4s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s forwards; opacity: 0;
+}
+.jackpot-seal { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--th-gold) 70%, transparent)); }
+@keyframes jackpot-zoom { from { scale: 1.15; } to { scale: 1; } }
+@keyframes jackpot-rays { to { rotate: 360deg; } }
+@keyframes jackpot-fade-in { from { opacity: 0; } }
+@keyframes jackpot-flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+@keyframes jackpot-shock { 0% { opacity: 1; width: 40px; height: 40px; } 100% { opacity: 0; width: 160vmax; height: 160vmax; border-width: 1px; } }
+@media (prefers-reduced-motion: reduce) {
+  .jackpot-scene-bg { animation: none; }
+}
+
 /* Afficheur : chiffres mono tabulaires sur écran sombre. */
 .slot-led {
   font-family: var(--font-mono);

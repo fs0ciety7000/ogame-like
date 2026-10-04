@@ -7,6 +7,7 @@ import { assetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { HudCallout, HudChip, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { SlotMachine, SlotSymbolView } from "@/components/casino/SlotMachine";
@@ -51,19 +52,35 @@ const PAYTABLE: { combo: SlotSymbol[]; outcome: SpinOutcome }[] = [
 
 function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseudo: string; onClose: () => void }) {
   const reduce = useReducedMotion();
-  const coins = useMemo(() => Array.from({ length: reduce ? 0 : 46 }, (_, i) => ({ id: i, x: Math.random() * 100, delay: Math.random() * 1.6, dur: 1.8 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 720 })), [reduce]);
+  const coins = useMemo(() => Array.from({ length: reduce ? 0 : 46 }, (_, i) => ({ id: i, x: Math.random() * 100, delay: 0.6 + Math.random() * 1.6, dur: 1.8 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 720 })), [reduce]);
+  const gains = (Object.entries(result.resources) as [ResourceId, number][]).filter(([, n]) => n > 0);
   return (
-    <motion.div className="fixed inset-0 z-[80] grid place-items-center overflow-hidden bg-space-950/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal aria-label="Gros lot">
+    <motion.div className="jackpot-scene fixed inset-0 z-[80] grid place-items-center overflow-hidden p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal aria-label="Gros lot">
+      {/* 5.14.3 : la salle du casino en fond, qui avance lentement vers le joueur. */}
+      <img src={assetUrl("/assets/casino/banniere-777.webp")} alt="" aria-hidden className="jackpot-scene-bg" />
+      <div className="jackpot-scene-veil" aria-hidden />
+      {!reduce && <div className="jackpot-rays" aria-hidden />}
+      {!reduce && <div className="jackpot-flash" aria-hidden />}
+      {!reduce && <div className="jackpot-shockwave" aria-hidden />}
       {coins.map((c) => (
         <motion.span key={c.id} className="slot-coin" style={{ left: `${c.x}%` }} initial={{ y: -60, rotate: 0 }} animate={{ y: "110vh", rotate: c.rot }} transition={{ duration: c.dur, delay: c.delay, repeat: Infinity, ease: "easeIn" }}>
           <TokenIcon size={30} variant="art" />
         </motion.span>
       ))}
       <motion.div className="relative z-10 grid justify-items-center gap-3 text-center" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.15 }}>
+        <motion.img
+          src={assetUrl("/assets/casino/sceau-777.webp")}
+          alt=""
+          aria-hidden
+          className="jackpot-seal h-24 w-24 object-contain sm:h-28 sm:w-28"
+          initial={reduce ? false : { scale: 2.4, opacity: 0, rotate: -25 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ delay: 1.1, type: "spring", stiffness: 260, damping: 13 }}
+        />
         <div className="flex gap-2">
           {[0, 1, 2].map((i) => (
             <motion.span key={i} initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 + i * 0.15, type: "spring", stiffness: 300 }}>
-              <SlotSymbolView symbol="seven" size={110} />
+              <SlotSymbolView symbol="seven" size={96} />
             </motion.span>
           ))}
         </div>
@@ -73,7 +90,13 @@ function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseud
         <p className="text-lg text-slate-200">
           Bravo <b className="text-gold-glow">{pseudo}</b>, le Casino orbital te verse :
         </p>
-        <Gains resources={result.resources} className="flex flex-wrap items-center justify-center gap-4 font-mono text-2xl font-bold text-white tabular-nums" />
+        <span className="flex flex-wrap items-center justify-center gap-4 font-mono text-2xl font-bold tabular-nums text-white">
+          {gains.map(([res, n]) => (
+            <span key={res} className="inline-flex items-center gap-1">
+              <ResourceIcon id={res} className="h-5 w-5" /> {reduce ? formatCompact(n) : <AnimatedNumber value={n} countUp format={formatCompact} />}
+            </span>
+          ))}
+        </span>
         <p className="text-xs text-slate-400">{result.fromPot ? "Pris dans le pot commun du serveur. Tout le monde est prévenu !" : "Le pot commun était vide : 12 h de production à la place."}</p>
         <Button size="lg" className="mt-2" onClick={onClose}>
           Encaisser
@@ -233,6 +256,20 @@ export function CasinoPage() {
               )}
             </AnimatePresence>
           </div>
+          {admin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mx-auto"
+              onClick={() => {
+                // 5.14.3 : voir l'écran du gros lot sans tirage (rien n'est versé).
+                setLast({ outcome: "jackpot", reels: ["seven", "seven", "seven"], resources: jackpot, token: false, tokens, fromPot: true });
+                setShowJackpot(true);
+              }}
+            >
+              Aperçu de l'écran du gros lot (admin)
+            </Button>
+          )}
           {settings && !open && (
             <HudCallout tone="ember" className="mx-auto w-full max-w-[560px] text-sm">
               <b className="text-slate-100">Fermé aux joueurs.</b> Tu le vois parce que tu es administrateur (tirages de test possibles).

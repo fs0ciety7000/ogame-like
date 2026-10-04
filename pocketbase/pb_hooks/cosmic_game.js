@@ -12986,7 +12986,7 @@ function bannerOptions(p) {
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
-    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/banniere-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v5.14 : une bannière par boss mondial, tirée du catalogue.
     ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => {
       var _a2, _b2;
@@ -13045,7 +13045,7 @@ function emblemOptions(p) {
     { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
-    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/sceau-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => __spreadProps(__spreadValues({}, b), { hint: "Participer \xE0 la chute du boss de saison" }))
   ];
@@ -15307,7 +15307,7 @@ function codexEntries(player, fought, now) {
     category: "legends",
     name: "La Main d'or",
     subtitle: "Casino orbital \xB7 gros lot 7-7-7",
-    image: "/assets/casino/salle-777.webp",
+    image: "/assets/casino/main-or.webp",
     text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
     unlocked: Math.floor(Number((_i = player.casino) == null ? void 0 : _i.jackpots) || 0) > 0
   });

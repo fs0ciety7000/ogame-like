@@ -3,9 +3,9 @@
 Même ambiance que le reste du jeu : espace sombre, néons cyan `#4be8ff` et or `#ffd86b`, interfaces holographiques,
 coins coupés (voir `docs/DESIGN.md`). Aucun texte dans l'image. Exports WebP qualité 85.
 
-Tant qu'une image manque, le jeu utilise une image existante : la salle du casino pour la bannière et le codex, le jeton
-pour le sceau, la médaille légendaire (auréolée) pour le palier Mythique. Une fois l'image déposée au bon chemin, il
-suffit de changer le chemin dans le code (`src/game/profile.ts`, `src/game/codex.ts`, `src/pages/AchievementsPage.tsx`).
+5.14.4 : les quatre images sont livrées (planches Midjourney découpées ; sceau et médaille détourés). Pour une
+meilleure définition, refaire un « Upscale » de la vignette choisie et remplacer le fichier au même chemin, puis
+augmenter `ASSET_VERSION` dans `src/lib/assets.ts`.
 
 ## Médaille du palier Mythique (`public/assets/achievements/mythique.webp`, 512 × 512, fond transparent)
 
