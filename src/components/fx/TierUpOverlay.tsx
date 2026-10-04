@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { assetUrl } from "@/lib/assets";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { buildingImage, findBuilding, type VisualTier } from "@/game/buildings";
 import { TIER_NAMES, tierBonusText } from "@/game/tierUp";
@@ -62,7 +63,7 @@ export function TierUpOverlay() {
             <div className="hud-cut absolute inset-0 overflow-hidden border-2 bg-space-900" style={{ borderColor: color, boxShadow: `0 0 40px -8px ${color}` }}>
               {/* Ancienne vignette : se dissout */}
               <motion.img
-                src={buildingImage(def, current.tier - 1)}
+                src={assetUrl(buildingImage(def, current.tier - 1))}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
                 initial={{ opacity: 1, filter: "blur(0px) brightness(1)" }}
@@ -71,7 +72,7 @@ export function TierUpOverlay() {
               />
               {/* Nouvelle vignette : révélée derrière le balayage */}
               <motion.img
-                src={buildingImage(def, current.level)}
+                src={assetUrl(buildingImage(def, current.level))}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
                 initial={{ clipPath: reduced ? "inset(0 0 0 0)" : "inset(0 100% 0 0)", opacity: reduced ? 0 : 1 }}
