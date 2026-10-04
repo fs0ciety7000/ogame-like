@@ -170,7 +170,7 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
         <span>{bossPhaseLabel(state, phase).desc}</span>
         {weak && (
           <span className="inline-flex items-center gap-1.5 border border-[#ff5df0]/50 bg-[#ff5df0]/10 px-2 py-0.5 text-[#ff5df0]">
-            <img src={weak.image} alt="" className="h-5 w-5 object-contain" /> Faiblesse : {weak.name}
+            <img src={assetUrl(weak.image)} alt="" className="h-5 w-5 object-contain" /> Faiblesse : {weak.name}
           </span>
         )}
         {phase < 3 && <span className="text-slate-500">Sa faiblesse se révélera sous {Math.round(BOSS_PHASE_RULES.shieldPct * 100)} %.</span>}
