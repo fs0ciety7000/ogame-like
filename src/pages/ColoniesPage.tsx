@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { playerCargoCapacity } from "@/game/modifiers";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { toast } from "sonner";
 import { Check, Clock, Globe2, Hammer, Lock, Package, Pencil, Rocket, Shield, Sparkles, TrendingUp, Truck, Warehouse, X } from "lucide-react";
@@ -12,7 +13,6 @@ import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { findBuilding } from "@/game/buildings";
-import { fleetCargoCapacity } from "@/game/combat";
 import { homeLevels,
   advanceColonies,
   COLONY_RULES,
@@ -90,7 +90,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
   if (!player || !direction) return null;
   const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
-  const capacity = fleetCargoCapacity(player.units, selected, player.techLevels);
+  const capacity = playerCargoCapacity(player, selected);
   const loaded = Object.values(cargo).reduce((a: number, b) => a + (b ?? 0), 0);
   const source = direction === "deliver" ? player.resources : colony.resources;
 

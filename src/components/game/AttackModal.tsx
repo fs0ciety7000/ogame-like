@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
-import { COMBAT_RULES, computeFleetPower, fleetCargoCapacity, pveAttackFactor } from "@/game/combat";
+import { COMBAT_RULES, computeFleetPower, pveAttackFactor } from "@/game/combat";
 import { formationEffects } from "@/game/formations";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
 import { formatDuration, formatNumber } from "@/lib/utils";
@@ -28,7 +28,7 @@ import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { GameIcon } from "@/components/ui/game-icon";
-import { playerModifiers } from "@/game/modifiers";
+import { playerCargoCapacity, playerModifiers } from "@/game/modifiers";
 import { CAPSULES, capsulePct, synthesisState } from "@/game/synthesis";
 import { FlaskConical } from "lucide-react";
 
@@ -225,7 +225,7 @@ export function AttackModal({
                   );
                 })()}
                 <p>
-                  <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet, player.techLevels))}</strong>{" "}
+                  <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(Math.floor(playerCargoCapacity(player, selected) * formationEffects(formation).cargoFactor))}</strong>{" "}
                   ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources communes et{" "}
                   {Math.round(COMBAT_RULES.lootPercent * 100)} % des rares, dans la limite de la cargaison des survivants ; le butin
                   arrive au retour de la flotte.

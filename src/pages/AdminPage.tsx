@@ -10,6 +10,7 @@ import {
   Construction,
   FlaskConical,
   Medal,
+  Gem,
   Rocket,
   Scale,
   Sparkles,
@@ -42,6 +43,7 @@ import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, T
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { newRank, RankForm } from "@/pages/admin/RankForm";
+import { newRelic, RelicForm, RelicSettingsCard, relicListLabel } from "@/pages/admin/RelicForm";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
@@ -91,6 +93,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
+      { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion et recyclage." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
     ],
@@ -310,6 +313,20 @@ export function AdminPage() {
             createItem={newRank}
             renderForm={(r, onChange, isNew) => <RankForm value={r} onChange={onChange} isNew={isNew} />}
           />
+        </TabsContent>
+        <TabsContent value="relics">
+          <div className="flex flex-col gap-4">
+            <ContentEditor
+              section="relics"
+              title="Reliques"
+              getId={(t) => t.id}
+              getLabel={relicListLabel}
+              setId={(t, id) => ({ ...t, id, image: t.image })}
+              createItem={newRelic}
+              renderForm={(t, onChange, isNew) => <RelicForm value={t} onChange={onChange} isNew={isNew} />}
+            />
+            <RelicSettingsCard />
+          </div>
         </TabsContent>
         <TabsContent value="achievements">
           <ContentEditor

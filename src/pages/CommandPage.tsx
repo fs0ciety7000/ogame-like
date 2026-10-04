@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { BookOpen, Coins, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
@@ -305,7 +306,7 @@ function RelicBadge({ item, className }: { item: Pick<RelicItem, "template" | "r
       style={{ borderColor: `${r.color}88`, background: `radial-gradient(circle, ${r.color}2a, transparent 75%), #070a14`, boxShadow: item.rarity === "legendary" || item.rarity === "mythic" ? `0 0 16px -4px ${r.color}` : undefined }}
     >
       {!broken ? (
-        <img src={assetUrl(`/assets/relics/${item.template}.webp`)} alt="" className="h-full w-full object-contain p-1" onError={() => setBroken(true)} />
+        <img src={assetUrl(relicImage(item.template))} alt="" className="h-full w-full object-contain p-1" onError={() => setBroken(true)} />
       ) : (
         <Icon className="h-1/2 w-1/2" style={{ color: r.color }} />
       )}

@@ -6,7 +6,8 @@ import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
-import { cn, timeAgo } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { NotificationCard } from "@/components/game/NotificationCard";
 
 export function NotificationBell() {
   const items = useNotificationStore((s) => s.items);
@@ -84,31 +85,25 @@ export function NotificationBell() {
             );
           })}
         </div>
-        <div className="flex flex-col gap-1 overflow-y-auto">
+        <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
           {shown.length === 0 && <p className="px-3 py-4 text-sm text-slate-500">Rien dans cette catégorie pour l'instant.</p>}
           {shown.map((n) => {
             const link = notificationLink(n);
             return (
-            <button
-              key={n.id}
-              type="button"
-              disabled={!link}
-              onClick={() => {
-                if (!link) return;
-                setBellOpen(false);
-                navigate(link);
-              }}
-              className={cn(
-                "block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors enabled:hover:bg-white/5 disabled:cursor-default",
-                freshIds.has(n.id) ? "bg-cyan-glow/5 text-slate-100" : "text-slate-400",
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{n.title}</span>
-                <span className="shrink-0 text-[11px] text-slate-500">{timeAgo(n.createdAtMs)}</span>
-              </div>
-              <p className="mt-0.5 text-xs text-slate-400">{n.message}</p>
-            </button>
+              <NotificationCard
+                key={n.id}
+                n={n}
+                compact
+                fresh={freshIds.has(n.id)}
+                onOpen={
+                  link
+                    ? () => {
+                        setBellOpen(false);
+                        navigate(link);
+                      }
+                    : undefined
+                }
+              />
             );
           })}
         </div>

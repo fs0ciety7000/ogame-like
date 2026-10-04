@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { playerCargoCapacity } from "@/game/modifiers";
 import { toast } from "sonner";
 import { ArrowRight, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -12,7 +13,6 @@ import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { priceBounds } from "@/game/market";
 import { contractDeposit, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
 import { distanceBetween, fleetSpeed, travelSeconds } from "@/game/fleets";
-import { fleetCargoCapacity } from "@/game/combat";
 import { allianceFlightFactor } from "@/game/alliances";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -56,7 +56,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
   if (!contract) return null;
   const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
-  const capacity = fleetCargoCapacity(player.units, selected, player.techLevels);
+  const capacity = playerCargoCapacity(player, selected);
   const speed = Object.keys(selected).length ? fleetSpeed(player.units, selected) : 0;
   const trip = speed > 0 ? travelSeconds(distanceBetween(player.uid, contract.clientUid), speed, allianceFlightFactor(player.allianceResearch, player.techLevels)) : 0;
   const late = speed > 0 && Date.now() + trip * 1000 > contract.deadlineMs;

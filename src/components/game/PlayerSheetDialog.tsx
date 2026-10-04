@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { relicImage } from "@/game/relics";
 import { Link } from "react-router-dom";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
@@ -196,7 +197,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                   })}
                   {feats.showcase.relics.map((r, i) => (
                     <span key={i} title={describeRelic(r)} className="flex items-center gap-1.5 border px-2 py-1 text-xs" style={{ borderColor: `${rarityInfo(r.rarity).color}55`, color: rarityInfo(r.rarity).color }}>
-                      <img src={assetUrl(`/assets/relics/${r.template}.webp`)} alt="" className="h-6 w-6 object-contain" />
+                      <img src={assetUrl(relicImage(r.template))} alt="" className="h-6 w-6 object-contain" />
                       {findTemplate(r.template)?.name}
                     </span>
                   ))}

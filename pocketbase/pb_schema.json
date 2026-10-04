@@ -470,6 +470,13 @@
         "required": false,
         "max": 300,
         "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000,
+        "id": "json_notif_data"
       }
     ],
     "indexes": [

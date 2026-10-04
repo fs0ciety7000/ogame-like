@@ -1,4 +1,5 @@
 import { claimStreak } from "@/game/streak";
+import { describeGain } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
@@ -471,12 +472,24 @@ export function performGift(
   for (const [res, amt] of Object.entries(resources)) {
     r.player.resources[res as ResourceId] = (r.player.resources[res as ResourceId] ?? 0) + (amt ?? 0);
   }
+  // v5.9 : le détail du cadeau (quantités, expéditeur) pour le destinataire, et une trace pour l'expéditeur.
   r.notifications.push({
     kind: "gift",
-    title: "Ressources reçues !",
-    message: `${sender.pseudo} t'a envoyé des ressources.`,
+    title: `Cadeau de ${sender.pseudo}`,
+    message: `${sender.pseudo} t'a envoyé ${describeGain(resources)}.`,
     createdAtMs: now,
     read: false,
+    link: `/game/joueurs?fiche=${sender.uid}`,
+    data: { resources, fromUid: sender.uid, fromPseudo: sender.pseudo },
+  });
+  s.notifications.push({
+    kind: "gift",
+    title: `Cadeau livré à ${recipient.pseudo}`,
+    message: `Tu as envoyé ${describeGain(resources)} à ${recipient.pseudo}.`,
+    createdAtMs: now,
+    read: true,
+    link: `/game/joueurs?fiche=${recipient.uid}`,
+    data: { resources, toUid: recipient.uid, toPseudo: recipient.pseudo },
   });
 
   return {
@@ -545,6 +558,7 @@ export function applyLegacyGift(
     const n = Math.floor(Number(amt));
     if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + n;
   }
-  notifications.push({ kind: "gift", title: "Ressources reçues !", message: `${gift.fromPseudo} t'a envoyé des ressources.`, createdAtMs: now, read: false });
+  const received = Object.fromEntries(Object.entries(gift.resources ?? {}).map(([k, v]) => [k, Math.floor(Number(v)) || 0]).filter(([k, v]) => RESOURCE_IDS.has(k as string) && (v as number) > 0)) as Partial<Record<ResourceId, number>>;
+  notifications.push({ kind: "gift", title: `Cadeau de ${gift.fromPseudo}`, message: `${gift.fromPseudo} t'a envoyé ${describeGain(received)}.`, createdAtMs: now, read: false, data: { resources: received, fromPseudo: gift.fromPseudo } });
   return { player, queues, notifications };
 }

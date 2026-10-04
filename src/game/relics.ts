@@ -43,9 +43,13 @@ export interface RelicTemplate {
   legendaryOnly?: boolean;
   /** v5.1 : relique mythique (une par saison, décernée au n°1 d'un boss). */
   mythicOnly?: boolean;
+  /** v5.9 : image (défaut : /assets/relics/<id>.webp). */
+  image?: string;
+  /** v5.9 : retirée des tirages et de la rotation des mythiques (les exemplaires déjà trouvés gardent leur effet). */
+  disabled?: boolean;
 }
 
-export const RELICS: RelicTemplate[] = [
+export const DEFAULT_RELICS: RelicTemplate[] = [
   { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arraché au poste de tir d'un croiseur de la Confrérie." },
   { id: "ecaille_leviathan", name: "Écaille de Léviathan", effect: "defense", lore: "Une plaque de carapace qui encaisse encore les tirs." },
   { id: "noyau_forge", name: "Noyau de forge", effect: "build_time", lore: "Il chauffe sans jamais s'éteindre." },
@@ -66,13 +70,123 @@ export const RELICS: RelicTemplate[] = [
   { id: "egide_stellaire", name: "Égide stellaire", effect: "defense", lore: "Un bouclier forgé au cœur d'une étoile mourante.", mythicOnly: true },
 ];
 
-/** v5.1 : reliques mythiques — modèle et source (Léviathan les mois impairs, boss de saison les mois pairs). */
-export const MYTHIC_TEMPLATES = RELICS.filter((t) => t.mythicOnly);
+/** Registre courant (v5.9 : remplacé par le contenu de l'administration). */
+export const RELICS: RelicTemplate[] = DEFAULT_RELICS.map((t) => ({ ...t }));
+
+/** Valeurs par défaut des raretés (bonus, poids de tirage, recyclage). */
+export const DEFAULT_RARITY_VALUES: Record<RelicRarity, { pct: number; weight: number; recycle: number }> = Object.fromEntries(
+  RARITIES.map((r) => [r.id, { pct: r.pct, weight: r.weight, recycle: r.recycle }]),
+) as Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
+
+/** v5.9 : réglages des reliques modifiables dans l'administration. */
+export interface RelicSettings {
+  slots: number;
+  extraSlotAscensions: number;
+  maxItems: number;
+  fuseCount: number;
+  expeditionBase: number;
+  expeditionPerHour: number;
+  expeditionMax: number;
+  rarities: Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
+}
+
+export function defaultRelicSettings(): RelicSettings {
+  return {
+    slots: 3,
+    extraSlotAscensions: 1,
+    maxItems: 30,
+    fuseCount: 3,
+    expeditionBase: 0.05,
+    expeditionPerHour: 0.1 / 6,
+    expeditionMax: 0.15,
+    rarities: structuredClone(DEFAULT_RARITY_VALUES),
+  };
+}
+
+/** Applique les reliques et leurs réglages (appelé par applyGameContent). */
+export function setRelics(defs: RelicTemplate[], settings: RelicSettings): void {
+  // Les modèles du code restent connus (objets déjà trouvés) même s'ils ont été retirés de la liste.
+  const byId = new Map<string, RelicTemplate>(DEFAULT_RELICS.map((t) => [t.id, { ...t, disabled: true }]));
+  for (const t of defs) byId.set(t.id, { ...t });
+  RELICS.splice(0, RELICS.length, ...byId.values());
+  const { rarities, ...rules } = settings;
+  Object.assign(RELIC_RULES, rules);
+  for (const r of RARITIES) {
+    const v = rarities?.[r.id];
+    if (!v) continue;
+    r.pct = Number(v.pct) || 0;
+    r.weight = r.id === "mythic" ? 0 : Math.max(0, Number(v.weight) || 0);
+    r.recycle = Math.max(0, Math.round(Number(v.recycle) || 0));
+  }
+}
+
+/** Image d'une relique (celle choisie dans l'administration, sinon celle du code). */
+export function relicImage(templateId: string): string {
+  return findTemplate(templateId)?.image || `/assets/relics/${templateId}.webp`;
+}
+
+/** v5.1 : reliques mythiques actives — modèle et source (Léviathan les mois impairs, boss de saison les mois pairs). */
+export function mythicTemplates(): RelicTemplate[] {
+  const active = RELICS.filter((t) => t.mythicOnly && !t.disabled);
+  return active.length > 0 ? active : DEFAULT_RELICS.filter((t) => t.mythicOnly);
+}
 
 export function mythicFor(seasonId: string): { template: RelicTemplate; source: "leviathan" | "seasonboss" } {
   const [y, m] = seasonId.split("-").map(Number);
   const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
-  return { template: MYTHIC_TEMPLATES[index % MYTHIC_TEMPLATES.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+  const pool = mythicTemplates();
+  return { template: pool[index % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+}
+
+const RELIC_EFFECT_IDS: RelicEffect[] = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
+
+/** Libellés des effets (administration). */
+export const RELIC_EFFECT_LABELS: Record<RelicEffect, string> = {
+  attack: "Attaque",
+  defense: "Défense",
+  build_time: "Temps de construction",
+  research_time: "Temps de recherche",
+  repair: "Réparation après combat",
+  cargo: "Soute (butin, transports, livraisons)",
+  spy: "Niveau d'espionnage",
+  production_scrap: "Production de ferraille",
+  production_energy: "Production d'énergie",
+  production_nano: "Production de nanocomposants",
+  production_data: "Production de données anciennes",
+  production_all: "Toute la production",
+  aegis: "Égide (1re défaite de la semaine non pillée)",
+  boss_damage: "Dégâts contre les boss",
+};
+
+/** Validation des reliques et de leurs réglages (administration). */
+export function validateRelics(defs: RelicTemplate[], settings: RelicSettings): string[] {
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const t of defs) {
+    const label = `Relique ${t.name || t.id}`;
+    if (!/^[a-z0-9_]+$/.test(t.id ?? "")) errors.push(`${label} : identifiant invalide (minuscules, chiffres, _).`);
+    if (ids.has(t.id)) errors.push(`${label} : identifiant en double.`);
+    ids.add(t.id);
+    if (!t.name?.trim()) errors.push(`${label} : nom manquant.`);
+    if (!RELIC_EFFECT_IDS.includes(t.effect)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
+    if (t.legendaryOnly && t.mythicOnly) errors.push(`${label} : réservée aux légendaires OU aux mythiques, pas les deux.`);
+  }
+  if (!defs.some((t) => !t.disabled && !t.legendaryOnly && !t.mythicOnly)) errors.push("Reliques : il faut au moins une relique active ordinaire (tirable à toutes les raretés).");
+  const int = (v: number, min: number) => Number.isInteger(v) && v >= min;
+  if (!int(settings.slots, 1)) errors.push("Reliques : emplacements ≥ 1.");
+  if (!int(settings.maxItems, 1)) errors.push("Reliques : inventaire ≥ 1.");
+  if (!int(settings.fuseCount, 2)) errors.push("Reliques : fusion ≥ 2 reliques.");
+  if (!(settings.expeditionBase >= 0 && settings.expeditionBase <= 1)) errors.push("Reliques : chance en expédition entre 0 et 1.");
+  if (!(settings.expeditionMax >= 0 && settings.expeditionMax <= 1)) errors.push("Reliques : plafond en expédition entre 0 et 1.");
+  if (!(settings.expeditionPerHour >= 0)) errors.push("Reliques : chance par heure ≥ 0.");
+  for (const r of RARITIES) {
+    const v = settings.rarities?.[r.id];
+    if (!v) continue;
+    if (!(v.pct >= 0 && v.pct <= 1)) errors.push(`Reliques, ${r.label} : bonus entre 0 et 1 (0,06 = 6 %).`);
+    if (r.id !== "mythic" && !(v.weight >= 0)) errors.push(`Reliques, ${r.label} : poids de tirage ≥ 0.`);
+  }
+  if (RARITIES.filter((r) => r.id !== "mythic").every((r) => !(settings.rarities?.[r.id]?.weight > 0))) errors.push("Reliques : au moins une rareté doit avoir un poids de tirage.");
+  return errors;
 }
 
 /** Relique mythique de la saison pour le vainqueur. */
@@ -89,6 +203,8 @@ export const RELIC_RULES = {
   /** Expédition : 5 % à 2 h, jusqu'à 15 % à 8 h. */
   expeditionBase: 0.05,
   expeditionPerHour: 0.1 / 6,
+  /** Plafond de la chance en expédition. */
+  expeditionMax: 0.15,
 };
 
 export interface RelicItem {
@@ -209,7 +325,7 @@ export function rollRelic(source: string, now: number, random: () => number = Ma
       break;
     }
   }
-  const templates = RELICS.filter((t) => !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
+  const templates = RELICS.filter((t) => !t.disabled && !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
@@ -243,7 +359,7 @@ export function grantMythicRelic(
 }
 
 export function expeditionRelicChance(hours: number): number {
-  return Math.min(0.15, RELIC_RULES.expeditionBase + Math.max(0, hours - 2) * RELIC_RULES.expeditionPerHour);
+  return Math.min(RELIC_RULES.expeditionMax, RELIC_RULES.expeditionBase + Math.max(0, hours - 2) * RELIC_RULES.expeditionPerHour);
 }
 
 export function equipRelic(player: PlayerState, slotIn: unknown, relicId: unknown): void {

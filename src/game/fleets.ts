@@ -15,9 +15,9 @@ import { withMissingBuildings } from "@/game/buildings";
 import { checkDelivery } from "@/game/tradeContracts";
 import type { PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 import { describeGain, formatInt } from "@/game/format";
-import { computeFleetPower, fleetCargoCapacity } from "@/game/combat";
+import { computeFleetPower } from "@/game/combat";
 import { formationEffects } from "@/game/formations";
-import { playerModifiers } from "@/game/modifiers";
+import { playerCargoCapacity, playerModifiers } from "@/game/modifiers";
 import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColony, parseCargo, type TransportDirection, type TransportState } from "@/game/colonies";
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
@@ -500,7 +500,7 @@ export function launchTransport(owner: PlayerState, raw: Record<string, unknown>
   if (!colony) throw new GameActionError("Colonie introuvable.");
   const direction: TransportDirection = req.direction === "collect" ? "collect" : "deliver";
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent transporter.");
-  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const capacity = playerCargoCapacity(owner, units);
   if (capacity <= 0) throw new GameActionError("Ces vaisseaux n'ont pas de soute.");
   const cargo = parseCargo(req.cargo, direction === "deliver" ? capacity : Infinity);
   if (direction === "deliver") {
@@ -530,7 +530,7 @@ export function launchDelivery(
 ): LaunchOutput {
   if (contract.fleetId) throw new GameActionError("Une livraison est déjà en route pour ce contrat.");
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
-  const capacity = fleetCargoCapacity(owner.units, units, owner.techLevels);
+  const capacity = playerCargoCapacity(owner, units);
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
   checkDelivery(contract, owner.uid, capacity, arriveAtMs);
@@ -568,7 +568,7 @@ export function performTransportArrival(
     notes.push({ kind: "fleet", title: "Livraison effectuée", message: `${formatInt(total)} ressources livrées à ${colony.name}.`, createdAtMs: now, read: false });
     return { owner, queues: flushed.queues, notifications: notes, loot: null, outcome: "delivered" };
   }
-  const taken = collectFromColony(colony, t.cargo, fleetCargoCapacity(owner.units, fleet.units, owner.techLevels));
+  const taken = collectFromColony(colony, t.cargo, playerCargoCapacity(owner, fleet.units));
   return { owner, queues: flushed.queues, notifications: notes, loot: taken, outcome: "collected" };
 }
 

@@ -11,6 +11,7 @@ import { GameActionError, saveProfileStyle } from "@/services/playerService";
 import { assetUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { setPlayerData, usePlayerStore } from "@/store/playerStore";
 
 /* v4.0 : bannière, emblème et devise de la fiche publique. Les options se
    débloquent par les exploits ; le serveur revérifie chaque choix. */
@@ -54,7 +55,16 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
   const save = async () => {
     setBusy(true);
     try {
-      await saveProfileStyle({ banner, emblem, motto, pinned });
+      const saved = await saveProfileStyle({ banner, emblem, motto, pinned });
+      // v5.9 : le style validé par le serveur s'affiche tout de suite, sans attendre la synchronisation.
+      const latest = usePlayerStore.getState().player;
+      if (latest && saved) setPlayerData({ ...latest, profileStyle: saved });
+      if (saved) {
+        setBanner(saved.banner);
+        setEmblem(saved.emblem);
+        setMotto(saved.motto);
+        setPinned(saved.pinned);
+      }
       toast.success("Fiche publique mise à jour.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Enregistrement impossible.");
