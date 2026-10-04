@@ -278,6 +278,24 @@ export function checkLeviathanLaunch(state: LeviathanState | null, uid: string, 
    (dégâts réduits) mais révèle une faiblesse à un type de vaisseau.
 ===================================================== */
 
+/** 5.15 : réglages de combat propres au boss de saison (règles « seasonBoss »,
+ *  recopiés ici par content.ts). Absents : ceux du boss mondial. */
+export const SEASON_BOSS_TUNING: { cooldownHours?: number; flightMinutes?: number; lossMult?: number; weakness?: string[] } = {};
+
+export const isSeasonBossState = (state: Pick<LeviathanState, "id"> | null | undefined): boolean => !!state?.id?.startsWith("boss-");
+export const seasonBossCooldownHours = (): number => SEASON_BOSS_TUNING.cooldownHours ?? LEVIATHAN_RULES.cooldownHours;
+export const seasonBossFlightMinutes = (): number => SEASON_BOSS_TUNING.flightMinutes ?? LEVIATHAN_RULES.flightMinutes;
+
+/** Multiplicateur de pertes et faiblesses possibles du boss d'un combat. */
+function bossTuning(state: Pick<LeviathanState, "id"> & { bossId?: string }): { lossMult: number; weakness: string[] } {
+  if (state.bossId) {
+    const b = findWorldBoss(String(state.bossId));
+    return { lossMult: b.lossMult, weakness: b.weakness };
+  }
+  if (isSeasonBossState(state)) return { lossMult: SEASON_BOSS_TUNING.lossMult ?? 1, weakness: SEASON_BOSS_TUNING.weakness ?? [] };
+  return { lossMult: 1, weakness: [] };
+}
+
 export const BOSS_PHASE_RULES = {
   /** Phase 2 sous cette part de structure : riposte. */
   ripostePct: 0.5,
@@ -301,7 +319,7 @@ export function bossFightPhase(state: Pick<LeviathanState, "hp" | "maxHp">): Bos
 /** Faiblesse de phase 3 : un type de vaisseau tiré de l'identifiant du combat (stable).
  *  v5.14 : parmi les faiblesses propres au boss mondial du combat. */
 export function bossWeakness(state: Pick<LeviathanState, "id"> & { bossId?: string }): string {
-  const own = state.bossId ? findWorldBoss(state.bossId).weakness.filter((id) => OFFENSIVE_UNITS.includes(id)) : [];
+  const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
   const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
   const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
   let h = 0;
@@ -341,7 +359,7 @@ export function bossAssaultEstimate(
   }
   const mods = playerModifiers(player as PlayerState);
   const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
-  const lossMult = "bossId" in state && state.bossId ? findWorldBoss(String(state.bossId)).lossMult : 1;
+  const lossMult = bossTuning(state as Pick<LeviathanState, "id"> & { bossId?: string }).lossMult;
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
   return { power, lossPct, phase };
 }

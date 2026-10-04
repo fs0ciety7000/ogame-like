@@ -27,5 +27,9 @@ L'Ascension vivait dans une carte en haut de la page Bâtiments. Elle a maintena
 
 Et un empire ascendé se reconnaît : **un insigne et ses étoiles**, jusqu'à cinq, à côté du pseudo dans le classement, sur le podium, la fiche joueur, le profil et la carte de profil à partager.
 
+## Le boss de saison, réglé comme les boss mondiaux
+
+Côté coulisses, le boss des Chroniques a désormais ses propres réglages : temps entre deux assauts, durée du trajet, pertes à chaque assaut, faiblesses, butin. On pourra lui donner un rythme différent du boss mondial, au besoin d'un mois à l'autre.
+
 > [!TIP] Où se placer ?
 > Ta division, ton rang, ton XP de la semaine et le temps restant sont en haut de l'onglet Saison en cours.

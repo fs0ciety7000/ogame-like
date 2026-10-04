@@ -45,6 +45,7 @@ import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ImpactReportPanel } from "@/pages/admin/ImpactReportPanel";
 import { WorldBossesPanel } from "@/pages/admin/WorldBossesPanel";
+import { SeasonBossPanel } from "@/pages/admin/SeasonBossPanel";
 import { OfficersPanel } from "@/pages/admin/OfficersPanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
@@ -111,6 +112,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
       { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion, recyclage et tables de butin des combats." },
       { id: "worldBosses", label: "Boss mondiaux", icon: Fish, hint: "Les six colosses de la rotation hebdomadaire : identité, histoire, statistiques, phases, faiblesses, titre." },
+      { id: "seasonBoss", label: "Boss de saison", icon: Crown, hint: "Le boss des Chroniques : boss du mois, calendrier, combat (délai, trajet, pertes, faiblesses), reliques et butin." },
       { id: "officers", label: "Officiers", icon: UserCog, hint: "Douze rôles : noms, effets par niveau, recrutement, chances de trouver un officier rare." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "titles", label: "Titres", icon: Crown, hint: "Catalogue des titres : libellé, rareté, icône, déblocage automatique ; décernés aussi par les succès." },
@@ -375,6 +377,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="worldBosses">
           <WorldBossesPanel />
+        </TabsContent>
+        <TabsContent value="seasonBoss">
+          <SeasonBossPanel />
         </TabsContent>
         <TabsContent value="officers">
           <OfficersPanel />

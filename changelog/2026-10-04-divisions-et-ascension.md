@@ -16,3 +16,7 @@ Les ligues reviennent, fondues dans le classement de saison, et l'Ascension a en
 ## Ascension
 - Nouvelle page **Ascension** : lancement et arbre de talents. Un raccourci apparaît en haut de **Bâtiments** dès que l'Ascension est possible ; la page rejoint la barre latérale (Empire) après ta première ascension.
 - Un **insigne et une à cinq étoiles** signalent les empires ascendés : classement, podium, fiche joueur, profil, barre latérale et **carte de profil partagée** (les cinq emplacements, « Ascension III »).
+
+## Administration : boss de saison
+- Nouvel onglet **Boss de saison**, sur le modèle des boss mondiaux : le boss de chaque mois (nom, titre, image, sceau, présentation), le calendrier, le combat (structure, **délai entre deux assauts**, **durée du trajet**, **pertes à chaque assaut**, **faiblesses** possibles en phase 3) et les récompenses (reliques du podium, **table de butin**).
+- Un réglage laissé vide reprend la valeur du boss mondial.

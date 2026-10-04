@@ -11,7 +11,7 @@ import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossSchedule, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
 import { describeBossSchedule, hasBossSchedule } from "@/game/events";
-import { LEVIATHAN_RULES, leviathanRanking } from "@/game/leviathan";
+import { leviathanRanking, seasonBossCooldownHours, seasonBossFlightMinutes } from "@/game/leviathan";
 import { PASS_POINTS } from "@/game/seasonPass";
 import { sendSeasonBossAssault, useSeasonBoss } from "@/services/seasonBossService";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
@@ -45,7 +45,7 @@ export function SeasonBossPage() {
   const month = (state ? bossMonthOf(state) : null) ?? (next ? chronicleOf(next) : null) ?? chronicleOf(now);
   const boss = month?.boss;
   const mine = state?.contributions[player.uid];
-  const wait = mine ? mine.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * 3600_000 - now : 0;
+  const wait = mine ? mine.lastLaunchMs + seasonBossCooldownHours() * 3600_000 - now : 0;
   const rank = state ? leviathanRanking(state).findIndex((r) => r.uid === player.uid) : -1;
   const art: BossArt = {
     name: boss?.name ?? "Boss de saison",
@@ -115,7 +115,7 @@ export function SeasonBossPage() {
             <Button variant="danger" disabled={wait > 0} onClick={() => setOpen(true)}>
               <Crosshair className="mr-1.5 h-4 w-4" /> {wait > 0 ? `Prochain assaut dans ${formatDuration(Math.ceil(wait / 1000))}` : "Lancer un assaut"}
             </Button>
-            <span className="text-xs text-slate-500">Un assaut toutes les {LEVIATHAN_RULES.cooldownHours} h, {LEVIATHAN_RULES.flightMinutes} min de trajet.</span>
+            <span className="text-xs text-slate-500">Un assaut toutes les {seasonBossCooldownHours()} h, {seasonBossFlightMinutes()} min de trajet.</span>
           </div>
         </Card>
       )}

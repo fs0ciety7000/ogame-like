@@ -6468,7 +6468,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
 
 function seasonBossArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
-  const backAt = now + game.LEVIATHAN_RULES.flightMinutes * 60000;
+  const backAt = now + game.seasonBossFlightMinutes() * 60000;
   const state = readSeasonBoss(txApp, game);
   if (!findOrNull(txApp, "players", fleet.ownerUid)) {
     rec.set("status", "done");

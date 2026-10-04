@@ -23,9 +23,8 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { NumberField, Section } from "@/pages/admin/fields";
 import { BossScheduleFields } from "@/pages/admin/bossFields";
-import { leviathanSchedule } from "@/game/leviathan";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -545,39 +544,7 @@ export function RulesPanel() {
           />
         </Section>
         <Section title="Boss de saison">
-          {/* v5.14.2 : chaque semaine, en alternance avec le boss mondial. */}
-          <CheckboxField
-            label="Boss de saison : chaque semaine, en alternance avec le boss mondial"
-            checked={rules.seasonBoss.alternate !== false}
-            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, alternate: v } }))}
-            hint="Une apparition entre deux passages du boss mondial (le lendemain de sa fin si l'écart le permet, sinon à sa fin), jamais en même temps. Décoché : un week-end par mois."
-          />
-          <BossScheduleFields
-            label="Boss de saison"
-            value={rules.seasonBoss.alternate !== false ? { ...rules.seasonBoss, weekly: { minGapDays: 0, between: leviathanSchedule() } } : rules.seasonBoss}
-            onChange={(p) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, ...p } }))}
-            clash={bossClash}
-          />
-          <NumberField
-            label="Structure : facteur × puissance d'attaque des actifs"
-            value={rules.seasonBoss.hpFactor}
-            step={0.5}
-            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, hpFactor: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Structure minimale"
-            value={rules.seasonBoss.minHp}
-            step={100000}
-            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, minHp: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Reliques épiques pour les N premiers"
-            value={rules.seasonBoss.topRelics}
-            min={0}
-            step={1}
-            hint="Le boss (nom, image, titre) change chaque mois : il se règle dans l'onglet Chroniques."
-            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, topRelics: Math.max(0, Math.round(v ?? 0)) } }))}
-          />
+          <p className="text-sm text-slate-400 sm:col-span-2">5.15 : calendrier, combat, reliques et butin du boss de saison se règlent dans l'onglet « Boss de saison ».</p>
         </Section>
         <Section title="Flottes en vol">
           <NumberField

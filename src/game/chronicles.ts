@@ -5,7 +5,7 @@ import { addPassPoints, grantPassReward, OBJECTIVE_LABELS, onPassPoints, PASS_PO
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { leviathanRanking, LEVIATHAN_RULES, type LeviathanState } from "@/game/leviathan";
+import { leviathanRanking, seasonBossCooldownHours, type LeviathanState } from "@/game/leviathan";
 import type { StoryLine } from "@/game/story";
 import type { PlayerState } from "@/types/game";
 
@@ -542,6 +542,14 @@ export const SEASON_BOSS_RULES: {
   topRelics: number;
   /** v5.14.2 : chaque semaine, en alternance avec le boss mondial (sinon : un week-end par mois). */
   alternate?: boolean;
+  /** 5.15 : un assaut toutes les N heures par joueur (absent : comme le boss mondial). */
+  cooldownHours?: number;
+  /** 5.15 : trajet aller (et retour), en minutes. */
+  flightMinutes?: number;
+  /** 5.15 : multiplicateur des pertes à chaque assaut (1 = boss mondial). */
+  lossMult?: number;
+  /** 5.15 : vaisseaux qui peuvent être sa faiblesse en phase 3 (vide : liste commune). */
+  weakness?: string[];
 } = {
   enabled: true,
   weekend: "last",
@@ -599,7 +607,7 @@ export function checkSeasonBossLaunch(state: LeviathanState | null, uid: string,
   const name = state ? bossMonthOf(state)?.boss.name ?? "Le boss de saison" : "Le boss de saison";
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError(`${name} n'est pas là en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR - now : 0;
+  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 60_000)} min.`);
   return { ...state, contributions: { ...state.contributions, [uid]: { pseudo, damage: c?.damage ?? 0, assaults: c?.assaults ?? 0, lastLaunchMs: now } } };
 }

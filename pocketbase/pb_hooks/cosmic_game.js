@@ -443,6 +443,7 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
   scoreSpin: () => scoreSpin,
+  seasonBossFlightMinutes: () => seasonBossFlightMinutes,
   seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
   seasonPowerOf: () => seasonPowerOf,
@@ -8541,6 +8542,28 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
+var SEASON_BOSS_TUNING = {};
+var isSeasonBossState = (state) => {
+  var _a;
+  return !!((_a = state == null ? void 0 : state.id) == null ? void 0 : _a.startsWith("boss-"));
+};
+var seasonBossCooldownHours = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.cooldownHours) != null ? _a : LEVIATHAN_RULES.cooldownHours;
+};
+var seasonBossFlightMinutes = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.flightMinutes) != null ? _a : LEVIATHAN_RULES.flightMinutes;
+};
+function bossTuning(state) {
+  var _a, _b;
+  if (state.bossId) {
+    const b = findWorldBoss(String(state.bossId));
+    return { lossMult: b.lossMult, weakness: b.weakness };
+  }
+  if (isSeasonBossState(state)) return { lossMult: (_a = SEASON_BOSS_TUNING.lossMult) != null ? _a : 1, weakness: (_b = SEASON_BOSS_TUNING.weakness) != null ? _b : [] };
+  return { lossMult: 1, weakness: [] };
+}
 var BOSS_PHASE_RULES = {
   /** Phase 2 sous cette part de structure : riposte. */
   ripostePct: 0.5,
@@ -8556,7 +8579,7 @@ function bossFightPhase(state) {
   return pct5 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct5 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
 }
 function bossWeakness(state) {
-  const own = state.bossId ? findWorldBoss(state.bossId).weakness.filter((id) => OFFENSIVE_UNITS.includes(id)) : [];
+  const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
   const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
   const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
   let h = 0;
@@ -8581,7 +8604,7 @@ function bossAssaultEstimate(state, player, fleet, formation) {
   }
   const mods = playerModifiers(player);
   const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
-  const lossMult = "bossId" in state && state.bossId ? findWorldBoss(String(state.bossId)).lossMult : 1;
+  const lossMult = bossTuning(state).lossMult;
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
   return { power, lossPct, phase };
 }
@@ -9173,7 +9196,7 @@ function checkSeasonBossLaunch(state, uid, pseudo, now) {
   const name = state ? (_b = (_a = bossMonthOf(state)) == null ? void 0 : _a.boss.name) != null ? _b : "Le boss de saison" : "Le boss de saison";
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError(`${name} n'est pas l\xE0 en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR6 - now : 0;
+  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR6 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_c = c == null ? void 0 : c.damage) != null ? _c : 0, assaults: (_d = c == null ? void 0 : c.assaults) != null ? _d : 0, lastLaunchMs: now } }) });
 }
@@ -10567,7 +10590,7 @@ function performLaunch(req) {
     if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "seasonboss", pseudo: (_j = req.eliteName) != null ? _j : "Boss de saison" }, "seasonboss", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
+      fleet: newFleet(owner, { uid: "seasonboss", pseudo: (_j = req.eliteName) != null ? _j : "Boss de saison" }, "seasonboss", units, now, now + seasonBossFlightMinutes() * 6e4),
       defenderNotifications: []
     };
   } else if (mission === "allianceboss") {
@@ -14169,6 +14192,11 @@ function applyGameContent(overrides) {
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
   Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
+  const sb = content.rules.seasonBoss;
+  SEASON_BOSS_TUNING.cooldownHours = sb.cooldownHours;
+  SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
+  SEASON_BOSS_TUNING.lossMult = sb.lossMult;
+  SEASON_BOSS_TUNING.weakness = sb.weakness;
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -14220,6 +14248,10 @@ function validateRules(rules) {
   const merged = mergeRulesForCheck(rules);
   errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_b = merged.events.bossWeekend) != null ? _b : "first", startHour: (_c = merged.leviathan.startHour) != null ? _c : 18, durationHours: merged.leviathan.durationHours, dates: (_d = merged.events.bossDates) != null ? _d : [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  const sbr = merged.seasonBoss;
+  if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
+  if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
+  if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   return errors;
 }

@@ -5,6 +5,10 @@ import { EVENT_RULES } from "@/game/events";
 import {
   BOSS_PHASE_RULES,
   bossAssaultEstimate,
+  LEVIATHAN_RULES,
+  SEASON_BOSS_TUNING,
+  seasonBossCooldownHours,
+  seasonBossFlightMinutes,
   bossFightPhase,
   bossWeakness,
   checkLeviathanLaunch,
@@ -168,6 +172,25 @@ describe("phases de combat et fil (v5.10.5)", () => {
     const weak = bossWeakness(st3);
     const p3 = bossAssaultEstimate(st3, a, { chasseur: 1000 }, undefined);
     expect(p3.power).toBe(Math.round(p1.power * (weak === "chasseur" ? BOSS_PHASE_RULES.weaknessFactor : BOSS_PHASE_RULES.shieldDamageFactor)));
+  });
+
+  it("5.15 boss de saison : pertes, faiblesses, délai et trajet réglables (repli : boss mondial)", () => {
+    const a = player("a", 1000);
+    const season = { ...live(900_000), id: "boss-2026-10-w2" };
+    const base = bossAssaultEstimate(season, a, { chasseur: 1000 }, undefined).lossPct;
+    expect(seasonBossCooldownHours()).toBe(LEVIATHAN_RULES.cooldownHours);
+    expect(seasonBossFlightMinutes()).toBe(LEVIATHAN_RULES.flightMinutes);
+    Object.assign(SEASON_BOSS_TUNING, { lossMult: 2, weakness: ["fregate"], cooldownHours: 2, flightMinutes: 10 });
+    try {
+      expect(bossAssaultEstimate(season, a, { chasseur: 1000 }, undefined).lossPct).toBeCloseTo(base * 2);
+      expect(bossWeakness(season)).toBe("fregate");
+      expect(seasonBossCooldownHours()).toBe(2);
+      expect(seasonBossFlightMinutes()).toBe(10);
+      // Le boss mondial (ou un combat sans boss) n'est pas touché.
+      expect(bossAssaultEstimate(live(900_000), a, { chasseur: 1000 }, undefined).lossPct).toBeCloseTo(base);
+    } finally {
+      for (const k of Object.keys(SEASON_BOSS_TUNING)) delete (SEASON_BOSS_TUNING as Record<string, unknown>)[k];
+    }
   });
 
   it("le fil garde l'assaut et annonce le passage de phase", () => {
