@@ -351,4 +351,17 @@ export interface GameNotification {
   read: boolean;
   /** v3.8 : page à ouvrir au clic (sinon, page associée au type). */
   link?: string;
+  /** v5.9 : détails structurés (ressources, joueur concerné…) pour les cartes de notification. */
+  data?: NotificationData;
+}
+
+export interface NotificationData {
+  resources?: Partial<Record<ResourceId, number>>;
+  fromUid?: string;
+  fromPseudo?: string;
+  toUid?: string;
+  toPseudo?: string;
+  amber?: number;
+  xp?: number;
+  relic?: string;
 }

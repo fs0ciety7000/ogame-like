@@ -10241,10 +10241,21 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   }
   r.notifications.push({
     kind: "gift",
-    title: "Ressources re\xE7ues !",
-    message: `${sender.pseudo} t'a envoy\xE9 des ressources.`,
+    title: `Cadeau de ${sender.pseudo}`,
+    message: `${sender.pseudo} t'a envoy\xE9 ${describeGain(resources)}.`,
     createdAtMs: now,
-    read: false
+    read: false,
+    link: `/game/joueurs?fiche=${sender.uid}`,
+    data: { resources, fromUid: sender.uid, fromPseudo: sender.pseudo }
+  });
+  s.notifications.push({
+    kind: "gift",
+    title: `Cadeau livr\xE9 \xE0 ${recipient.pseudo}`,
+    message: `Tu as envoy\xE9 ${describeGain(resources)} \xE0 ${recipient.pseudo}.`,
+    createdAtMs: now,
+    read: true,
+    link: `/game/joueurs?fiche=${recipient.uid}`,
+    data: { resources, toUid: recipient.uid, toPseudo: recipient.pseudo }
   });
   return {
     sender: s.player,
@@ -10285,13 +10296,14 @@ function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
   return { player, queues, notifications };
 }
 function applyLegacyGift(playerIn, queuesIn, gift, now) {
-  var _a, _b;
+  var _a, _b, _c;
   const { player, queues, notifications } = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   for (const [res, amt] of Object.entries((_a = gift.resources) != null ? _a : {})) {
     const n = Math.floor(Number(amt));
     if (RESOURCE_IDS4.has(res) && Number.isFinite(n) && n > 0) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
   }
-  notifications.push({ kind: "gift", title: "Ressources re\xE7ues !", message: `${gift.fromPseudo} t'a envoy\xE9 des ressources.`, createdAtMs: now, read: false });
+  const received = Object.fromEntries(Object.entries((_c = gift.resources) != null ? _c : {}).map(([k, v]) => [k, Math.floor(Number(v)) || 0]).filter(([k, v]) => RESOURCE_IDS4.has(k) && v > 0));
+  notifications.push({ kind: "gift", title: `Cadeau de ${gift.fromPseudo}`, message: `${gift.fromPseudo} t'a envoy\xE9 ${describeGain(received)}.`, createdAtMs: now, read: false, data: { resources: received, fromPseudo: gift.fromPseudo } });
   return { player, queues, notifications };
 }
 

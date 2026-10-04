@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { NotificationCard } from "@/components/game/NotificationCard";
 import { Building2, Gift, Loader2, ScrollText, Shield, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { fetchNotificationHistory } from "@/services/playerService";
 import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, summarizeKinds, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
-import type { GameNotification, NotificationKind } from "@/types/game";
+import type { GameNotification } from "@/types/game";
 
 /* =====================================================
    Journal d'empire : tout l'historique des notifications, jour par jour,
@@ -40,12 +41,6 @@ const CATEGORY_STYLE: Record<Exclude<NotificationCategory, "all">, { icon: typeo
   social: { icon: Shield, className: "text-violet-glow border-violet-glow/30 bg-violet-glow/10" },
 };
 
-function categoryOf(kind: NotificationKind): Exclude<NotificationCategory, "all"> {
-  const found = NOTIFICATION_CATEGORIES.find((c) => c.id !== "all" && inCategory(kind, c.id))?.id;
-  return (found ?? "social") as Exclude<NotificationCategory, "all">;
-}
-
-
 function dayLabel(ms: number): string {
   const d = new Date(ms);
   const today = new Date();
@@ -60,6 +55,7 @@ function hourLabel(ms: number): string {
 }
 
 export function JournalPage() {
+  const navigate = useNavigate();
   const uid = useAuthStore((s) => s.user?.uid);
   // Dernière visite figée à l'ouverture : le résumé reste affiché pendant la lecture.
   const [lastVisit] = useState(readLastVisit);
@@ -173,33 +169,13 @@ export function JournalPage() {
       {days.map((day) => (
         <section key={day.label} className="flex flex-col gap-2">
           <h2 className="hud-eyebrow first-letter:uppercase text-slate-400">{day.label}</h2>
-          <Card className="divide-y divide-white/5 p-0">
+          <div className="flex flex-col gap-1.5">
             {day.items.map((n) => {
-              const style = CATEGORY_STYLE[categoryOf(n.kind)];
-              const Icon = style.icon;
               const link = notificationLink(n);
               const fresh = n.createdAtMs > lastVisit && lastVisit > 0;
-              return (
-                <div key={n.id} className={cn("flex gap-3 px-3 py-2.5", fresh && "bg-cyan-glow/5")}>
-                  <span className={cn("mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-md border", style.className)}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className={cn("text-sm font-medium", fresh ? "text-slate-100" : "text-slate-300")}>{n.title}</span>
-                      <span className="shrink-0 font-mono text-[11px] text-slate-500">{hourLabel(n.createdAtMs)}</span>
-                    </div>
-                    <p className="mt-0.5 break-words text-xs text-slate-400">{n.message}</p>
-                    {link && (
-                      <Link to={link} className="mt-1 inline-block text-[11px] text-cyan-glow/80 hover:text-cyan-glow">
-                        Voir →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
+              return <NotificationCard key={n.id} n={n} fresh={fresh} time={hourLabel(n.createdAtMs)} onOpen={link ? () => navigate(link) : undefined} />;
             })}
-          </Card>
+          </div>
         </section>
       ))}
 

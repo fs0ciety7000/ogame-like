@@ -253,13 +253,13 @@ export function PlayersPage() {
         <>
         {showPodium && (
           <LeaderboardPodium
-            key={mode}
+            key={`podium-${mode}`}
             top={ranked.slice(0, 3).map((p) => ({ uid: p.uid, pseudo: p.pseudo, avatar: p.avatar, xp: displayXpOf(p) }))}
             suffix={xpSuffix}
             onOpen={(p) => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })}
           />
         )}
-        <Card key={mode} className="flex flex-col gap-2 p-3">
+        <Card key={`list-${mode}`} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
             <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
           )}
