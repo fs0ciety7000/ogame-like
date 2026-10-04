@@ -38,7 +38,9 @@ export function BossScheduleFields({
   const now = Date.now();
   const upcoming = bossWindows(now, value, weekly?.on ? 6 : 4);
   const dates = value.dates ?? [];
-  const isWeekly = !!weekly?.on;
+  // v5.14.2 : en alternance avec le boss mondial, le jour et l'heure suivent sa fin.
+  const alternating = !!value.weekly?.between;
+  const isWeekly = !!weekly?.on || alternating;
   return (
     <>
       {weekly && (
@@ -60,7 +62,7 @@ export function BossScheduleFields({
           <SelectField<BossWeekend> label="Week-end du mois" value={value.weekend} options={BOSS_WEEKENDS.map((w) => ({ value: w.id, label: w.label }))} onChange={(v) => onChange({ weekend: v })} />
         </>
       )}
-      <NumberField label={isWeekly ? "Heure d'apparition (heure de Paris)" : "Départ le vendredi à (heure de Paris)"} value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />
+      {!alternating && <NumberField label={isWeekly ? "Heure d'apparition (heure de Paris)" : "Départ le vendredi à (heure de Paris)"} value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />}
       <NumberField label="Durée de présence (h)" value={value.durationHours} min={1} step={1} onChange={(v) => onChange({ durationHours: Math.min(160, Math.max(1, Math.round(v ?? 1))) })} />
       <BossDatesEditor dates={dates} defaultHours={value.durationHours} onChange={(d) => onChange({ dates: d })} />
       <Field label="Prochaines apparitions" hint={clash} className="sm:col-span-2">

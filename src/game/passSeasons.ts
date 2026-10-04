@@ -29,7 +29,8 @@ export const PASS_FINAL_AMBER = 300;
 /** v5.14.1 : actions possibles dans un défi de palier. Les raids repoussés et les assauts
  *  de boss n'en font pas partie : le joueur ne les déclenche pas quand il veut, et un
  *  défi bloque les suivants. */
-export const CHALLENGE_KEYS: ChronicleObjective[] = ["victory", "contract", "mission", "spy", "market", "bounty", "warlordWin"];
+export const CHALLENGE_KEYS: ChronicleObjective[] = ["victory", "contract", "spy", "market", "bounty", "warlordWin"];
+// v5.14.2 : les missions terminées sortent du roulement (bien trop faciles).
 
 /** Nombre de prérequis d'un palier : un au début, deux à partir du 11e, trois aux paliers 20 et 30. */
 export function challengeSize(tier: number): number {
@@ -64,7 +65,10 @@ export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "wee
  *  qui revient ne demande jamais moins, et deux paliers n'ont jamais le même défi. Le mois
  *  d'activité de chaque action est réparti sur ses paliers, plus lourdement en fin de passe. */
 export function generateTierChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
-  const pool = [...focus.filter((k) => CHALLENGE_KEYS.includes(k)), ...CHALLENGE_KEYS.filter((k) => !focus.includes(k))];
+  // v5.14.2 : les seigneurs de guerre seulement si des joueurs en battent vraiment (sinon un
+  // débutant, ou un serveur sans seigneurs, resterait bloqué : un défi bloque les suivants).
+  const playable = CHALLENGE_KEYS.filter((k) => k !== "warlordWin" || (d.weeklyMedian.warlordWin ?? 0) > 0);
+  const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   // 1. Actions de chaque palier : les moins utilisées d'abord (le thème à égalité), jamais celles du palier précédent.
   const used: Record<string, number> = {};
   const plan: ChronicleObjective[][] = [];
@@ -349,6 +353,20 @@ const shuffle = <T>(rng: () => number, xs: T[]): T[] => {
   }
   return a;
 };
+
+/** v5.14.2 : le passe a-t-il un défi à chaque palier ? (sinon : ancien format, à compléter) */
+export function hasFullChallenges(s: Pick<PassSeason, "tiers" | "requirements">): boolean {
+  return (s.tiers ?? []).every((_, i) => normalizeTierReqs(s.requirements?.[String(i + 1)]).length > 0);
+}
+
+/** v5.14.2 : réécrit seulement les défis d'un passe (thème, récompenses et points par
+ *  palier inchangés : la progression des joueurs ne bouge pas). */
+export function regenerateChallenges(season: PassSeason, digest: Pick<WorldDigest, "weeklyMedian">, variant = 0): PassSeason {
+  const theme = PASS_THEMES.find((t) => t.id === season.theme.id) ?? PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme) ?? PASS_THEMES[0];
+  const rng = seededRandom(`challenges:${season.id}:${variant}`);
+  const focus = shuffle(rng, theme.focus);
+  return { ...season, requirements: generateTierChallenges(rng, focus, digest, season.tiers.length) };
+}
 
 export interface GeneratePassSeasonOptions {
   monthId: string;

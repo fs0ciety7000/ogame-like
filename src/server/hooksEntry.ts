@@ -29,6 +29,7 @@ export { applyStaffTitle, DEFAULT_STAFF_BY_PSEUDO, isStaffRole, normalizeStaff, 
 export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody, reportStatusLabel, sanitizeNewReport } from "@/game/reports";
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
 export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, MARKET_RULES, offerReserved, refundOffer, utcDayStart } from "@/game/market";
+export { RESOURCE_LIST } from "@/game/resources";
 export { addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeFromPot } from "@/game/serverPot";
 export { isFormation } from "@/game/formations";
 export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
@@ -167,7 +168,7 @@ export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { currentGameContent, validateGameContent, validateRules } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
-export { autoDraftMonths, findPassSeason, generatePassSeason, nextMonthId, PASS_SEASONS_SECTION, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
+export { autoDraftMonths, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, PASS_SEASONS_SECTION, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
 export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";

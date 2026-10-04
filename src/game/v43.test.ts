@@ -7,10 +7,25 @@ import {
   claimChronicle,
   grantSeasonBossReward,
   recordChronicle,
+  SEASON_BOSS_RULES,
+  seasonBossSchedule,
   seasonBossWindow,
   spawnSeasonBoss,
   unlockedEpisodes,
 } from "@/game/chronicles";
+import { bossWindows } from "@/game/events";
+import { leviathanSchedule } from "@/game/leviathan";
+
+/** v5.14.2 : le rendez-vous mensuel d'avant l'alternance (repli quand elle est décochée). */
+function monthly<T>(fn: () => T): T {
+  const saved = { alternate: SEASON_BOSS_RULES.alternate, durationHours: SEASON_BOSS_RULES.durationHours };
+  Object.assign(SEASON_BOSS_RULES, { alternate: false, durationHours: 53 });
+  try {
+    return fn();
+  } finally {
+    Object.assign(SEASON_BOSS_RULES, saved);
+  }
+}
 import { addPassPoints, defaultSeasonPassConfig, PASS_POINTS, PASS_RULES, PASS_TIERS, passState, setSeasonPass } from "@/game/seasonPass";
 import { emblemOptions } from "@/game/profile";
 import { performPlayerAction } from "@/game/actions";
@@ -62,7 +77,7 @@ describe("v4.3 chronicles", () => {
     expect(chronicleState(p, Date.UTC(2026, 10, 2)).emblems).toEqual(["2026-10"]);
   });
 
-  it("season boss: last weekend of the month, Friday 18:00 to Sunday 23:00 (Paris)", () => {
+  it("season boss (monthly fallback): last weekend of the month, Friday 18:00 to Sunday 23:00 (Paris)", () => monthly(() => {
     const w = seasonBossWindow(Date.UTC(2026, 9, 30, 20), false)!;
     expect(w.monthId).toBe("2026-10");
     expect(new Date(w.startMs).toISOString()).toBe("2026-10-30T17:00:00.000Z");
@@ -71,9 +86,23 @@ describe("v4.3 chronicles", () => {
     expect(seasonBossWindow(OCT13, true)?.startMs).toBe(w.startMs);
     // Pas de chronique en avril 2027 : pas de boss.
     expect(seasonBossWindow(Date.UTC(2027, 3, 30, 20), false)).toBeNull();
+  }));
+
+  it("v5.14.2 : season boss every week, alternating with the world boss, never at the same time", () => {
+    const now = Date.UTC(2026, 9, 5);
+    const world = bossWindows(now, leviathanSchedule(), 12);
+    const season = bossWindows(now, seasonBossSchedule(), 12);
+    expect(season.length).toBeGreaterThanOrEqual(8);
+    for (const s of season) {
+      expect(s.endMs - s.startMs).toBe(48 * 3600_000);
+      for (const w of world) expect(s.endMs <= w.startMs || s.startMs >= w.endMs).toBe(true);
+    }
+    // Un combat par apparition : identifiants distincts.
+    const ids = new Set(season.slice(0, 6).map((s) => seasonBossWindow(s.startMs + 1000, false)?.id));
+    expect(ids.size).toBe(6);
   });
 
-  it("rewards: pass points for all, title and unique sceau if killed, epic relic for the podium", () => {
+  it("rewards: pass points for all, title and unique sceau if killed, epic relic for the podium", () => monthly(() => {
     const w = seasonBossWindow(Date.UTC(2026, 9, 30, 20), false)!;
     const state = spawnSeasonBoss(w, []);
     const players = ["a", "b", "c", "d"].map((uid) => player(uid));
@@ -91,7 +120,7 @@ describe("v4.3 chronicles", () => {
     expect(bossEmblems(players[3]).find((b) => b.id === "boss:2026-10")?.unlocked).toBe(true);
     expect(emblemOptions(players[3]).find((o) => o.id === "boss:2026-10")?.unlocked).toBe(true);
     expect(grantSeasonBossReward(killed, player("nobody"), now).points).toBe(0);
-  });
+  }));
 });
 
 describe("v4.3 admin-editable pass", () => {

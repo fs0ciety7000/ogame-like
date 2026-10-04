@@ -170,6 +170,8 @@ export function CasinoAdmin() {
           <NumberField label="Boss abattu (chacun)" value={rw.bossWin} min={0} onChange={(v) => setRw({ bossWin: v ?? 0 })} />
           <NumberField label="Boss : bonus du 1er (½ aux 2e et 3e)" value={rw.bossTop} min={0} onChange={(v) => setRw({ bossTop: v ?? 0 })} />
           <NumberField label="Boss retiré (chacun)" value={rw.bossFail} min={0} onChange={(v) => setRw({ bossFail: v ?? 0 })} />
+          <NumberField label="Proie d'élite abattue (chaque chasseur)" value={rw.elite} min={0} onChange={(v) => setRw({ elite: v ?? 0 })} />
+          <NumberField label="Seigneur de guerre pillé" value={rw.warlord} min={0} onChange={(v) => setRw({ warlord: v ?? 0 })} />
         </div>
         <p className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
           <Trophy className="h-3.5 w-3.5 text-gold-glow" /> Tournoi de chaque ouverture

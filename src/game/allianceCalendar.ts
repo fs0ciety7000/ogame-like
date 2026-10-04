@@ -1,6 +1,6 @@
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
 import { allianceBossDef, allianceBossOfWeek, allianceWeekId, type AllianceBossState } from "@/game/allianceBoss";
-import { seasonBossWindow } from "@/game/chronicles";
+import { seasonBossSchedule, seasonBossWindow } from "@/game/chronicles";
 import { parisLocalToUtc } from "@/game/events";
 import { gazettePublishAt } from "@/game/gazette";
 import { nextLeviathanStart, worldBossForStart, worldBossName, type LeviathanState } from "@/game/leviathan";
@@ -65,7 +65,7 @@ export function allianceCalendar(input: CalendarInput, now: number, horizonDays 
   }
 
   const sb = seasonBossWindow(now, true);
-  if (sb && sb.endMs > now && sb.startMs <= horizon) out.push({ kind: "seasonBoss", title: "Boss de saison", detail: "Dernier week-end du mois", startMs: sb.startMs, endMs: sb.endMs, to: "/game/boss" });
+  if (sb && sb.endMs > now && sb.startMs <= horizon) out.push({ kind: "seasonBoss", title: "Boss de saison", detail: seasonBossSchedule().weekly?.between ? "Entre deux boss mondiaux" : "Dernier week-end du mois", startMs: sb.startMs, endMs: sb.endMs, to: "/game/boss" });
 
   let gz = gazettePublishAt(now);
   if (gz <= now) gz = gazettePublishAt(now + 7 * DAY);

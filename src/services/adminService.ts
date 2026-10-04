@@ -337,6 +337,11 @@ export function adminPassSeasonGenerate(monthId: string, variant: number, confir
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeason", monthId, variant, confirmPublished } });
 }
 
+/** v5.14.2 : réécrit seulement les défis d'un passe (thème, récompenses, points inchangés). */
+export function adminPassSeasonChallenges(monthId: string, variant: number): Promise<{ season: import("@/game/passSeasons").PassSeason }> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passChallenges", monthId, variant } });
+}
+
 export function adminProceduralAchievements(): Promise<ProceduralResult> {
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
 }

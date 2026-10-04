@@ -117,6 +117,7 @@ __export(hooksEntry_exports, {
   RARE_OFFICER_RULES: () => RARE_OFFICER_RULES,
   REFERRAL_RULES: () => REFERRAL_RULES,
   RENAME_RULES: () => RENAME_RULES,
+  RESOURCE_LIST: () => RESOURCE_LIST,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
@@ -305,6 +306,7 @@ __export(hooksEntry_exports, {
   grantSeasonBossReward: () => grantSeasonBossReward,
   grantTokens: () => grantTokens,
   growWarlord: () => growWarlord,
+  hasFullChallenges: () => hasFullChallenges,
   inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
   isFormation: () => isFormation,
@@ -397,6 +399,7 @@ __export(hooksEntry_exports, {
   refreshAllianceChallenge: () => refreshAllianceChallenge,
   refreshContest: () => refreshContest,
   refundOffer: () => refundOffer,
+  regenerateChallenges: () => regenerateChallenges,
   releaseBounty: () => releaseBounty,
   relicLabel: () => relicLabel,
   removeChallengeTitle: () => removeChallengeTitle,
@@ -3212,9 +3215,12 @@ function onWeekend(w, which) {
   return w.nth === NTH[which != null ? which : "first"];
 }
 function bossWindows(now, s, count2 = 1) {
-  var _a;
+  var _a, _b, _c;
   const out = [];
-  if (s.enabled && s.weekly) {
+  const alternating = !!(((_b = (_a = s.weekly) == null ? void 0 : _a.between) == null ? void 0 : _b.enabled) && s.weekly.between.weekly);
+  if (s.enabled && alternating) {
+    for (const win of alternateWindows(now, s, s.weekly.between, count2)) out.push(win);
+  } else if (s.enabled && s.weekly && !s.weekly.between) {
     const w0 = weekOfLocal(now + parisOffsetMs(now));
     for (let w = w0 - 1; w <= w0 + count2 + 1; w++) {
       const d = worldBossDay(w, s.weekly.minGapDays);
@@ -3223,18 +3229,38 @@ function bossWindows(now, s, count2 = 1) {
       if (endMs > now) out.push({ startMs, endMs });
     }
   }
-  for (let i = -1; s.enabled && !s.weekly && i < 60 && out.length < count2; i++) {
+  const monthly = !s.weekly || !!s.weekly.between && !alternating;
+  for (let i = -1; s.enabled && monthly && i < 60 && out.length < count2; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
     const endMs = startMs + s.durationHours * HOUR;
     if (endMs > now) out.push({ startMs, endMs });
   }
-  for (const d of (_a = s.dates) != null ? _a : []) {
+  for (const d of (_c = s.dates) != null ? _c : []) {
     const endMs = d.startMs + d.durationHours * HOUR;
     if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
   }
   return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
+}
+function weeklyWindow(w, s) {
+  var _a;
+  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
+  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR);
+  return { startMs, endMs: startMs + s.durationHours * HOUR };
+}
+function alternateWindows(now, s, other, count2) {
+  const out = [];
+  const w0 = weekOfLocal(now + parisOffsetMs(now));
+  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
+    const a = weeklyWindow(w, other);
+    const b = weeklyWindow(w + 1, other);
+    const dur = s.durationHours * HOUR;
+    const startMs = a.endMs + DAY3 + dur <= b.startMs ? a.endMs + DAY3 : a.endMs + dur <= b.startMs ? a.endMs : null;
+    if (startMs === null) continue;
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
 }
 var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 function hourLabel(h) {
@@ -4763,11 +4789,13 @@ var DEFAULT_CASINO = {
   windows: [],
   dailyTokens: 1,
   maxTokens: 20,
-  jackpotShare: 0.5,
+  // v5.14.2 : 90 % du pot au gros lot (contre 50 %).
+  jackpotShare: 0.9,
   jackpotFallbackHours: 12,
-  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  // v5.14.2 : 777 à 0,5 % (contre 0,2 %) : environ 170 jetons en moyenne au lieu de 425.
+  odds: { jackpot: 5e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
   hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
-  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" }
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or", elite: 2, warlord: 1 }
 };
 var OUTCOME_POINTS = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
 var OUTCOME_LABELS = {
@@ -4820,7 +4848,9 @@ function normalizeRewards(raw) {
     bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
     tournament: list(r.tournament, d.tournament),
     tournamentTitle: label3(r.tournamentTitle, d.tournamentTitle),
-    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle)
+    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle),
+    elite: Math.floor(num(r.elite, d.elite, 0, 100)),
+    warlord: Math.floor(num(r.warlord, d.warlord, 0, 100))
   };
 }
 function cleanTournament(raw) {
@@ -6676,12 +6706,14 @@ function validateFactions(defs) {
 }
 
 // src/game/achievements.ts
-var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire" };
+var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
 var TIER_REWARDS = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
   or: { xp: 60, hours: 2 },
-  legendaire: { xp: 150, hours: 6 }
+  legendaire: { xp: 150, hours: 6 },
+  // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
+  mythique: { xp: 400, hours: 12 }
 };
 var CATEGORY_LABELS = {
   combat: { label: "Combat", emoji: "\u2694\uFE0F" },
@@ -6887,6 +6919,11 @@ var METRICS = {
   worldBossTypes: { label: "Boss mondiaux diff\xE9rents abattus", value: (p) => {
     var _a;
     return ((_a = playerStats(p).worldBossKilled) != null ? _a : []).length;
+  } },
+  // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
+  casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p) => {
+    var _a;
+    return Math.max(0, Math.floor(Number((_a = p.casino) == null ? void 0 : _a.jackpots) || 0));
   } }
 };
 function def(id, category, tier, metric, threshold, name, description, emoji, extra = {}) {
@@ -6992,7 +7029,9 @@ function derivedAchievements() {
     def("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une ann\xE9e de passes", "Gagner douze commandants de saison.", "\u{1F4C5}", { auto: true }),
     def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "\u{1F5D3}\uFE0F", { auto: true, secret: true }),
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux diff\xE9rents.", "\u{1F409}", { auto: true }),
-    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true })
+    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true }),
+    // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "\u{1F3B0}", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" })
   ];
 }
 function setAchievements(defs) {
@@ -9085,21 +9124,30 @@ var SEASON_BOSS_RULES = {
   startHour: 18,
   hpFactor: 3,
   minHp: 1e5,
-  durationHours: 53,
-  topRelics: 3
+  durationHours: 48,
+  topRelics: 3,
+  alternate: true
 };
 function seasonBossSchedule() {
   var _a, _b, _c;
-  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last", startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : [] };
+  return __spreadValues({
+    enabled: SEASON_BOSS_RULES.enabled !== false,
+    weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last",
+    startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18,
+    durationHours: SEASON_BOSS_RULES.durationHours,
+    dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : []
+  }, SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {});
 }
 function seasonBossWindow(now, includeUpcoming = false) {
+  var _a, _b;
   const [w] = bossWindows(now, seasonBossSchedule(), 1);
   if (!w) return null;
   const friday = parisDate(w.startMs);
   const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
-  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
+  const weekly = !w.fixed && !!((_b = (_a = seasonBossSchedule().weekly) == null ? void 0 : _a.between) == null ? void 0 : _b.weekly);
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : weekly ? `boss-${monthId}-w${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 function seasonBossHp(activePlayers) {
   const power = activePlayers.reduce((a, p) => {
@@ -9235,11 +9283,12 @@ function canCallAllianceBoss(alliance, uid) {
   var _a;
   return hasAlliancePerm(__spreadProps(__spreadValues({}, alliance), { members: (_a = alliance.members) != null ? _a : [uid] }), uid, "boss");
 }
-function callAllianceBoss(alliance, previous, members, activeMembers, uid, now) {
+function callAllianceBoss(alliance, previous, members, activeMembers, uid, now, worldBoss = null) {
   var _a, _b, _c;
   if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
   const weekId2 = allianceWeekId(now);
   if (previous && previous.weekId === weekId2) throw new GameActionError("Le boss d'alliance a d\xE9j\xE0 \xE9t\xE9 appel\xE9 cette semaine (prochain lundi).");
+  if (worldBoss && worldBoss.endMs > now) throw new GameActionError(`En alternance avec le boss mondial : il est l\xE0 jusqu'au ${parisWhenLabel(worldBoss.endMs)}. Appelle le boss d'alliance apr\xE8s son d\xE9part.`);
   const cost = allianceBossCost(members);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
   for (const [res, n] of Object.entries(cost)) {
@@ -12441,7 +12490,7 @@ function monthsToGenerate(existing, now, leadDay) {
   return out;
 }
 var NO_EXTENSION = /* @__PURE__ */ new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel"]);
-var NEXT_TIER = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire" };
+var NEXT_TIER = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 function niceNumber(x) {
   const p = 10 ** Math.max(0, Math.floor(Math.log10(x)) - 1);
@@ -12497,7 +12546,7 @@ function proposeAchievementTiers(defs, players, now) {
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
-var CHALLENGE_KEYS = ["victory", "contract", "mission", "spy", "market", "bounty", "warlordWin"];
+var CHALLENGE_KEYS = ["victory", "contract", "spy", "market", "bounty", "warlordWin"];
 function challengeSize(tier) {
   if (tier === 20 || tier === 30) return 3;
   if (tier === 10) return 2;
@@ -12517,7 +12566,11 @@ function monthlyBudget(key, d) {
   return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
 }
 function generateTierChallenges(rng, focus, d, tiers2) {
-  const pool = [...focus.filter((k) => CHALLENGE_KEYS.includes(k)), ...CHALLENGE_KEYS.filter((k) => !focus.includes(k))];
+  const playable = CHALLENGE_KEYS.filter((k) => {
+    var _a;
+    return k !== "warlordWin" || ((_a = d.weeklyMedian.warlordWin) != null ? _a : 0) > 0;
+  });
+  const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   const used = {};
   const plan = [];
   let prev = [];
@@ -12756,6 +12809,20 @@ var shuffle = (rng, xs) => {
   }
   return a;
 };
+function hasFullChallenges(s) {
+  var _a;
+  return ((_a = s.tiers) != null ? _a : []).every((_, i) => {
+    var _a2;
+    return normalizeTierReqs((_a2 = s.requirements) == null ? void 0 : _a2[String(i + 1)]).length > 0;
+  });
+}
+function regenerateChallenges(season, digest, variant = 0) {
+  var _a, _b;
+  const theme = (_b = (_a = PASS_THEMES.find((t) => t.id === season.theme.id)) != null ? _a : PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme)) != null ? _b : PASS_THEMES[0];
+  const rng = seededRandom2(`challenges:${season.id}:${variant}`);
+  const focus = shuffle(rng, theme.focus);
+  return __spreadProps(__spreadValues({}, season), { requirements: generateTierChallenges(rng, focus, digest, season.tiers.length) });
+}
 function generatePassSeason(o) {
   var _a, _b, _c;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));
@@ -12900,6 +12967,10 @@ function leviathanKills(p) {
   var _a;
   return Number((_a = p.stats) == null ? void 0 : _a.leviathanKills) || 0;
 }
+function jackpots(p) {
+  var _a;
+  return Math.max(0, Math.floor(Number((_a = p.casino) == null ? void 0 : _a.jackpots) || 0));
+}
 function bannerOptions(p) {
   var _a, _b, _c, _d;
   const kesh = bountyState(p);
@@ -12914,6 +12985,8 @@ function bannerOptions(p) {
     })),
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v5.14 : une bannière par boss mondial, tirée du catalogue.
     ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => {
       var _a2, _b2;
@@ -12971,6 +13044,8 @@ function emblemOptions(p) {
     })),
     { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => __spreadProps(__spreadValues({}, b), { hint: "Participer \xE0 la chute du boss de saison" }))
   ];
@@ -15198,7 +15273,7 @@ function publishGazette(state, issue, players) {
 // src/game/codex.ts
 var CODEX_TITLE = "Archiviste";
 function codexEntries(player, fought, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const out = [];
   const threatened = new Set((_b = (_a = player.stats) == null ? void 0 : _a.threatenedBy) != null ? _b : []);
   for (const f of FACTIONS.filter((x) => x.enabled)) {
@@ -15227,8 +15302,17 @@ function codexEntries(player, fought, now) {
     });
     for (const c of (_h = m.codex) != null ? _h : []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
+  out.push({
+    id: "legend:main_or",
+    category: "legends",
+    name: "La Main d'or",
+    subtitle: "Casino orbital \xB7 gros lot 7-7-7",
+    image: "/assets/casino/salle-777.webp",
+    text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
+    unlocked: Math.floor(Number((_i = player.casino) == null ? void 0 : _i.jackpots) || 0) > 0
+  });
   for (const u of UNITS) {
-    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_i = player.units) == null ? void 0 : _i[u.id]) });
+    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_j = player.units) == null ? void 0 : _j[u.id]) });
   }
   return out;
 }

@@ -608,7 +608,7 @@ export function monthsToGenerate(existing: Pick<ChronicleMonth, "id">[], now: nu
 /* ---------- succès : paliers suivants ---------- */
 
 const NO_EXTENSION = new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel"]);
-const NEXT_TIER: Record<AchievementTier, AchievementTier> = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire" };
+const NEXT_TIER: Record<AchievementTier, AchievementTier> = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
 function niceNumber(x: number): number {

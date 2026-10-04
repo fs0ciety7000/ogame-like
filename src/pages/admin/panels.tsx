@@ -23,8 +23,9 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { BossScheduleFields } from "@/pages/admin/bossFields";
+import { leviathanSchedule } from "@/game/leviathan";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -544,7 +545,19 @@ export function RulesPanel() {
           />
         </Section>
         <Section title="Boss de saison">
-          <BossScheduleFields label="Boss de saison" value={rules.seasonBoss} onChange={(p) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, ...p } }))} clash={bossClash} />
+          {/* v5.14.2 : chaque semaine, en alternance avec le boss mondial. */}
+          <CheckboxField
+            label="Boss de saison : chaque semaine, en alternance avec le boss mondial"
+            checked={rules.seasonBoss.alternate !== false}
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, alternate: v } }))}
+            hint="Une apparition entre deux passages du boss mondial (le lendemain de sa fin si l'écart le permet, sinon à sa fin), jamais en même temps. Décoché : un week-end par mois."
+          />
+          <BossScheduleFields
+            label="Boss de saison"
+            value={rules.seasonBoss.alternate !== false ? { ...rules.seasonBoss, weekly: { minGapDays: 0, between: leviathanSchedule() } } : rules.seasonBoss}
+            onChange={(p) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, ...p } }))}
+            clash={bossClash}
+          />
           <NumberField
             label="Structure : facteur × puissance d'attaque des actifs"
             value={rules.seasonBoss.hpFactor}

@@ -686,6 +686,8 @@ routerAdd("POST", "/api/cosmic/admin/reports/github", (e) => require(`${__hooks}
 /** POST /api/cosmic/messages/send { to, text } · /read { with } */
 routerAdd("POST", "/api/cosmic/messages/send", (e) => require(`${__hooks}/cosmic_db.js`).messageSend(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/messages/read", (e) => require(`${__hooks}/cosmic_db.js`).messageRead(e), $apis.requireAuth("users"));
+// v5.14.2 : « … écrit » dans les messages privés.
+routerAdd("POST", "/api/cosmic/messages/typing", (e) => require(`${__hooks}/cosmic_db.js`).messageTyping(e), $apis.requireAuth("users"));
 
 /* ---------- v5.10.5 : règles vérifiées avant enregistrement ---------- */
 

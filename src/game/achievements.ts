@@ -17,7 +17,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    de production et éventuellement un titre.
 ===================================================== */
 
-export type AchievementTier = "bronze" | "argent" | "or" | "legendaire";
+export type AchievementTier = "bronze" | "argent" | "or" | "legendaire" | "mythique";
 export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "alliance" | "menaces" | "prestige";
 
 export interface AchievementDef {
@@ -43,12 +43,14 @@ export interface AchievementDef {
   auto?: boolean;
 }
 
-export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire" };
+export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire", mythique: "Mythique" };
 export const TIER_REWARDS: Record<AchievementTier, { xp: number; hours: number }> = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
   or: { xp: 60, hours: 2 },
   legendaire: { xp: 150, hours: 6 },
+  // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
+  mythique: { xp: 400, hours: 12 },
 };
 export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji: string }> = {
   combat: { label: "Combat", emoji: "⚔️" },
@@ -143,6 +145,8 @@ export const METRICS = {
   rareOfficers: { label: "Officiers rares dans l'état-major", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => findCommander(id)?.rare).length },
   seasonCommanders: { label: "Commandants de saison gagnés", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => isSeasonOfficer(id)).length },
   worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
+  // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
+  casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -268,6 +272,8 @@ export function derivedAchievements(): AchievementDef[] {
     def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "🗓️", { auto: true, secret: true }),
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
     def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
+    // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
   ];
 }
 

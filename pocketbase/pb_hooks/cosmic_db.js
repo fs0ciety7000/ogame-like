@@ -1036,6 +1036,11 @@ function resolveAttackArrival(txApp, game, rec, now) {
     return;
   }
   game.clearDecoy(result.attacker, rec.id);
+  // v5.14.2 : seigneur de guerre pillé → jetons du casino.
+  if (defender.player.npc && result.combat.outcome === "attacker_win") {
+    const won = game.grantTokens(result.attacker, readCasino(txApp, game).settings.rewards.warlord);
+    if (won > 0) result.notifications = (result.notifications || []).concat([{ kind: "event", title: `+${game.tokensLabel(won)}`, message: `Seigneur de guerre pillé : ${game.tokensLabel(won)} pour le Casino orbital.`, createdAtMs: now, read: false, link: "/game/casino", data: tokenNotifData(null, won) }]);
+  }
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   // v5.10 : le rapport d'abord, pour que les notifications de combat y mènent.
@@ -4110,8 +4115,15 @@ function distributeElite(txApp, game, state, now) {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const loaded = loadPlayer(txApp, game, c.uid);
     const reward = game.grantEliteReward(state, loaded.player, now);
+    // v5.14.2 : proie abattue → jetons du casino pour chaque chasseur récompensé.
+    const tokens = state.status === "killed" && reward.amber > 0 ? game.grantTokens(loaded.player, readCasino(txApp, game).settings.rewards.elite) : 0;
     savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
-    notify(txApp, c.uid, [game.eliteNotice(state, reward, now)]);
+    const notice = game.eliteNotice(state, reward, now);
+    if (tokens > 0) {
+      notice.message += ` +${game.tokensLabel(tokens)}.`;
+      notice.data = tokenNotifData(notice.data || null, tokens);
+    }
+    notify(txApp, c.uid, [notice]);
   });
   return Object.assign({}, state, { rewarded: true });
 }
@@ -4257,13 +4269,52 @@ const CONTENT_MIGRATIONS = [
     id: "pass-octobre-rollback-5.14.1",
     key: "passSeasons",
     patches: [],
+    // v5.14.2 : neutralisée (le passe d'octobre reste en place, il reçoit ses défis ci-dessous).
+    run() {
+      return false;
+    },
+  },
+  // v5.14.2 : casino — 777 à 0,5 % et 90 % du pot au gros lot, si les réglages
+  // enregistrés sont encore les anciennes valeurs par défaut (0,2 % et 50 %).
+  {
+    id: "casino-777-5.14.2",
+    key: "casino",
+    patches: [],
     run(data, changes) {
+      const s = data && data.settings;
+      if (!s || typeof s !== "object") return false;
+      let touched = false;
+      if (s.odds && s.odds.jackpot === 0.002) {
+        s.odds.jackpot = 0.005;
+        touched = true;
+        changes.push("casino : 777 à 0,5 %");
+      }
+      if (s.jackpotShare === 0.5) {
+        s.jackpotShare = 0.9;
+        touched = true;
+        changes.push("casino : 90 % du pot au gros lot");
+      }
+      return touched;
+    },
+  },
+  // v5.14.2 : les passes d'avant les défis par palier (prérequis aux paliers 10, 20, 30
+  // seulement) reçoivent un défi à chaque palier ; thème, récompenses et points inchangés.
+  {
+    id: "pass-defis-30-paliers-5.14.2",
+    key: "passSeasons",
+    patches: [],
+    run(data, changes, txApp) {
       if (!data || !Array.isArray(data.seasons)) return false;
-      const keep = data.seasons.filter((s) => !(s && s.id < "2026-11" && s.auto));
-      if (keep.length === data.seasons.length) return false;
-      data.seasons.filter((s) => keep.indexOf(s) < 0).forEach((s) => changes.push(`passe ${s.id} retiré (retour au passe des Chroniques)`));
-      data.seasons = keep;
-      return true;
+      const game = loadGame();
+      const digest = game.worldDigest(proceduralPlayers(txApp), Date.now());
+      let touched = false;
+      data.seasons = data.seasons.map((s) => {
+        if (!s || !Array.isArray(s.tiers) || game.hasFullChallenges(s)) return s;
+        touched = true;
+        changes.push(`passe ${s.id} : un défi à chacun des ${s.tiers.length} paliers`);
+        return game.regenerateChallenges(s, digest);
+      });
+      return touched;
     },
   },
 ];
@@ -4295,7 +4346,7 @@ function runContentMigrations(app) {
       const rec = configRecord(txApp, m.key);
       const items = rec ? toPlain(rec).data : null;
       if (m.run) {
-        if (rec && m.run(items, changes)) {
+        if (rec && m.run(items, changes, txApp)) {
           rec.set("data", items);
           txApp.save(rec);
         }
@@ -4580,6 +4631,28 @@ function adminServerPot(e) {
     return e.json(200, game.normalizeServerPot(rec ? toPlain(rec).data : null));
   }
   const req = body(e);
+  // v5.14.2 : dépôt de l'administration (ressources créées et ajoutées au pot).
+  if (req.action === "deposit") {
+    const note = String(req.note || "").trim().slice(0, 200);
+    if (!note) throw new BadRequestError("Indique le motif (événement, gros lot à animer…).");
+    const amounts = {};
+    const known = game.RESOURCE_LIST.map((r) => r.id);
+    Object.keys(req.resources || {}).filter((k) => known.indexOf(k) >= 0).forEach((k) => {
+      const n = Math.floor(Number(req.resources[k]));
+      if (Number.isFinite(n) && n > 0 && n <= 1e12) amounts[k] = n;
+    });
+    if (Object.keys(amounts).length === 0) throw new BadRequestError("Rien à déposer (montants vides).");
+    let out = null;
+    $app.runInTransaction((txApp) => {
+      const now = Date.now();
+      const rec = configRecord(txApp, game.SERVER_POT_KEY);
+      const next = game.addToPot(game.normalizeServerPot(rec ? toPlain(rec).data : null), "admin", amounts, now, note);
+      writeConfig(txApp, game.SERVER_POT_KEY, next);
+      bossAdminLog(txApp, e, game.SERVER_POT_KEY, `Pot commun : dépôt (${note})`, { déposé: { avant: "", après: game.describeGain(amounts) } }, now);
+      out = next;
+    });
+    return e.json(200, out);
+  }
   if (req.action !== "grant") throw new BadRequestError("Action inconnue.");
   const toUid = String(req.toUid || "");
   const note = String(req.note || "").trim().slice(0, 200);
@@ -4958,6 +5031,21 @@ function adminProcedural(e) {
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
     if (req.action === "passSeasonsRun") return e.json(200, { lines: passSeasonsRun(now) });
     // v5.13 : (ré)écrit le brouillon du passe d'un mois. Un passe publié n'est réécrit qu'après confirmation.
+    // v5.14.2 : réécrit seulement les défis d'un passe (n'importe quel mois, même en cours).
+    if (req.action === "passChallenges") {
+      const monthId = String(req.monthId || "");
+      let season = null;
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const cfg = readPassSeasons(txApp, game);
+        const existing = game.findPassSeason(cfg, monthId);
+        if (!existing) throw new BadRequestError("Passe introuvable.");
+        season = game.regenerateChallenges(existing, game.worldDigest(proceduralPlayers(txApp), now), Math.max(0, Math.floor(Number(req.variant) || 0)));
+        writeConfig(txApp, game.PASS_SEASONS_SECTION, game.upsertPassSeason(cfg, season));
+        bossAdminLog(txApp, e, game.PASS_SEASONS_SECTION, `Passe ${monthId} : défis réécrits`, {}, now);
+      });
+      return e.json(200, { season });
+    }
     if (req.action === "passSeason") {
       const monthId = String(req.monthId || "");
       if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
@@ -6441,7 +6529,7 @@ function seasonBossTick(now) {
       const month = game.bossMonthOf(state);
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -6599,7 +6687,9 @@ function allianceBossRequest(e) {
     const { members, actives } = allianceMembers(txApp, alliance, now);
     let state;
     try {
-      state = game.callAllianceBoss(alliance, readAllianceBoss(game, allianceRec), members, actives, uid, now);
+      // v5.14.2 : en alternance avec le boss mondial (pas d'appel pendant son passage).
+      const lev = readLeviathan(txApp, game);
+      state = game.callAllianceBoss(alliance, readAllianceBoss(game, allianceRec), members, actives, uid, now, lev && lev.status === "active" && now < lev.endMs ? lev : null);
     } catch (err) {
       throw asHttpError(game, err);
     }
@@ -6812,6 +6902,31 @@ function allianceTyping(e) {
   for (const id in clients) {
     try {
       if (clients[id].hasSubscription(topic)) clients[id].send(message);
+    } catch (_) {
+      /* client déconnecté */
+    }
+  }
+  return e.json(200, { ok: true });
+}
+
+/** v5.14.2 : « … écrit » dans les messages privés. Le signal ne part qu'au destinataire
+ *  (client authentifié sous son compte), jamais s'il a bloqué l'auteur. */
+function messageTyping(e) {
+  const uid = e.auth.id;
+  const to = String(body(e).to || "");
+  if (!to || to === uid) return e.json(200, { ok: false });
+  if ($app.findRecordsByFilter("message_blocks", "ownerUid = {:to} && blockedUid = {:uid}", "", 1, 0, { to, uid }).length > 0) return e.json(200, { ok: false });
+  const player = findOrNull($app, "players", uid);
+  const topic = `dmtyping_${to}`;
+  const message = new SubscriptionMessage({ name: topic, data: JSON.stringify({ uid, pseudo: player ? player.getString("pseudo") : "", at: Date.now() }) });
+  const clients = $app.subscriptionsBroker().clients();
+  for (const id in clients) {
+    try {
+      const c = clients[id];
+      if (!c.hasSubscription(topic)) continue;
+      const auth = c.get("auth");
+      if (!auth || auth.id !== to) continue;
+      c.send(message);
     } catch (_) {
       /* client déconnecté */
     }
@@ -7100,4 +7215,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

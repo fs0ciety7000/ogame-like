@@ -29,6 +29,11 @@ export function adminServerPot(): Promise<ServerPot> {
   return pb.send("/api/cosmic/admin/serverpot", { method: "GET" });
 }
 
+/** v5.14.2 : dépôt de l'administration dans le pot (ressources créées). */
+export function adminServerPotDeposit(resources: Record<string, number>, note: string): Promise<ServerPot> {
+  return pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources, note } });
+}
+
 export function adminServerPotGrant(toUid: string, resources: Record<string, number>, note: string): Promise<ServerPot> {
   return pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "grant", toUid, resources, note } });
 }

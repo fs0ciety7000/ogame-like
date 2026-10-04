@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Coins, RefreshCw, Send } from "lucide-react";
+import { Coins, PlusCircle, RefreshCw, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -9,7 +9,7 @@ import { pb } from "@/lib/pocketbase";
 import { formatCompact, formatNumber, timeAgo } from "@/lib/utils";
 import { RESOURCE_LIST } from "@/game/resources";
 import { POT_SOURCE_LABELS, type PotSource, type ServerPot } from "@/game/serverPot";
-import { adminServerPot, adminServerPotGrant } from "@/services/serverPotService";
+import { adminServerPot, adminServerPotDeposit, adminServerPotGrant } from "@/services/serverPotService";
 import type { ResourceId } from "@/types/game";
 
 /* v5.10 : pot commun « Serveur » — solde, provenance, mouvements, et
@@ -39,6 +39,9 @@ export function ServerPotPanel() {
   const [pseudo, setPseudo] = useState("");
   const [note, setNote] = useState("");
   const [amounts, setAmounts] = useState<Record<string, number>>({});
+  // v5.14.2 : dépôt de l'administration (ressources créées, ajoutées au pot).
+  const [depNote, setDepNote] = useState("");
+  const [deposit, setDeposit] = useState<Record<string, number>>({});
 
   const load = async () => {
     try {
@@ -61,6 +64,23 @@ export function ServerPotPanel() {
     } catch (err) {
       const msg = (err as { response?: { message?: string } })?.response?.message ?? (err as Error).message;
       toast.error(msg.includes("wasn't found") || msg.includes("404") ? "Joueur introuvable (pseudo exact)." : msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const depositNow = async () => {
+    const total = Object.values(deposit).reduce((a, b) => a + (b || 0), 0);
+    if (total <= 0) return toast.error("Indique au moins un montant.");
+    if (!confirm("Ces ressources sont créées de toutes pièces et ajoutées au pot commun. Confirmer ?")) return;
+    setBusy(true);
+    try {
+      setPot(await adminServerPotDeposit(deposit, depNote));
+      setDeposit({});
+      setDepNote("");
+      toast.success("Ressources ajoutées au pot commun.");
+    } catch (err) {
+      toast.error((err as { response?: { message?: string } }).response?.message ?? "Dépôt impossible.");
     } finally {
       setBusy(false);
     }
@@ -95,6 +115,30 @@ export function ServerPotPanel() {
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card className="flex flex-col gap-3 p-4">
+        <h3 className="flex items-center gap-2 font-display text-sm text-white">
+          <PlusCircle className="h-4 w-4 text-gold-glow" /> Alimenter le pot
+        </h3>
+        <p className="text-xs text-slate-400">Ressources créées par l'équipe et ajoutées au pot (gros lot du casino, concours). Elles s'ajoutent à l'économie du serveur : le dépôt est inscrit au journal et dans les mouvements.</p>
+        <label className="flex flex-col gap-1 text-xs text-slate-400">
+          Motif
+          <input value={depNote} onChange={(e) => setDepNote(e.target.value)} placeholder="Gros lot d'Halloween" className="h-9 border border-white/10 bg-black/30 px-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/50" />
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {RESOURCE_LIST.map((r) => (
+            <div key={r.id} className="flex items-center gap-2 text-sm">
+              <span className="flex-1 text-slate-300">
+                <ResourceIcon id={r.id} /> {r.name}
+              </span>
+              <NumberInput size="sm" value={deposit[r.id] ?? 0} onChange={(v) => setDeposit((a) => ({ ...a, [r.id]: v }))} className="w-36" aria-label={`Dépôt ${r.name}`} />
+            </div>
+          ))}
+        </div>
+        <Button className="self-start" variant="secondary" disabled={busy || !depNote.trim()} onClick={() => void depositNow()}>
+          Ajouter au pot
+        </Button>
       </Card>
 
       <Card className="flex flex-col gap-3 p-4">
