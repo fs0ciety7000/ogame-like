@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { assetUrl } from "@/lib/assets";
 import { useSearchParams } from "react-router-dom";
 import { Calculator, Shield, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -51,7 +52,7 @@ function UnitRows({
         const cap = max?.[id];
         return (
           <div key={id} className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-            <img src={def.image} alt="" className="h-8 w-8 shrink-0 object-contain" loading="lazy" />
+            <img src={assetUrl(def.image)} alt="" className="h-8 w-8 shrink-0 object-contain" loading="lazy" />
             <span className="min-w-[7rem] flex-1 truncate text-sm text-slate-300">{def.name}</span>
             {withLevel && (
               <label className="flex items-center gap-1 font-mono text-[10px] text-slate-500">

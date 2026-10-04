@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { assetUrl } from "@/lib/assets";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { toast } from "sonner";
 import { ArrowRight, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
@@ -87,7 +88,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
             const owned = player.units[id]?.count ?? 0;
             return (
               <div key={id} className="flex items-center gap-2 text-sm">
-                <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
+                <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
                 <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>

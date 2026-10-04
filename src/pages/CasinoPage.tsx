@@ -343,11 +343,15 @@ export function CasinoPage() {
             ) : (
               <ul className="grid gap-1">
                 {casino!.recent.slice(0, 10).map((w) => (
-                  <li key={`${w.uid}-${w.atMs}`} className="flex items-center gap-2 text-xs">
+                  <li key={`${w.uid}-${w.atMs}`} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                     <span className="min-w-0 flex-1 truncate text-slate-300">
                       <b className="text-slate-100">{w.pseudo}</b> · {OUTCOME_LABELS[w.outcome]}
                     </span>
-                    {w.token ? <span className="font-mono text-mint-glow">+1 jeton</span> : <Gains resources={w.resources} className="flex gap-2 font-mono text-slate-200" />}
+                    {w.token ? (
+                      <span className="shrink-0 font-mono text-mint-glow">+1 jeton</span>
+                    ) : (
+                      <Gains resources={w.resources} className="flex w-full flex-wrap gap-x-3 gap-y-0.5 font-mono tabular-nums text-slate-200" />
+                    )}
                   </li>
                 ))}
               </ul>

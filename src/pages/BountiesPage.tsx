@@ -135,7 +135,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
             const owned = player.units[id]?.count ?? 0;
             return (
               <div key={id} className="flex items-center gap-2 text-sm">
-                <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
+                <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">
                   {findUnit(id)?.name}
                   {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[10px] text-gold-glow">+50 % PNJ</span>}

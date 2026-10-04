@@ -132,7 +132,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
             const owned = player.units[id]?.count ?? 0;
             return (
               <div key={id} className="flex items-center gap-2 text-sm">
-                <img src={findUnit(id)?.image} alt="" className="h-7 w-7 object-contain" />
+                <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
                 <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
@@ -364,7 +364,7 @@ function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Co
     >
       <div className="relative grid h-16 w-16 shrink-0 place-items-center border border-white/[0.06] bg-space-950/60">
         <img
-          src={def.image}
+          src={assetUrl(def.image)}
           alt=""
           className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
           onError={deposit ? (e) => { const fallback = iconUrl(colonyBiome(colony) as GameIconName); if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; } : undefined}
@@ -591,7 +591,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             <div className="mb-3 flex flex-wrap gap-2">
               {placed.map(([id, st]) => (
                 <span key={id} className="hud-cut-sm flex items-center gap-2 border border-white/[0.07] bg-white/[0.03] py-1 pl-1 pr-2.5" title={findUnit(id)?.name}>
-                  <img src={findUnit(id)?.image} alt="" className="h-8 w-8 object-contain" />
+                  <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-8 w-8 object-contain" />
                   <span className="flex flex-col leading-tight">
                     <span className="tabular-mono text-sm font-semibold text-slate-100">{formatCompact(st.count)}</span>
                     <span className="text-[10px] text-slate-500">{findUnit(id)?.name ?? id}</span>
@@ -608,7 +608,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
               return (
                 <div className="border border-cyan-glow/30 bg-cyan-glow/[0.04] p-2.5">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-cyan-glow">
-                    <img src={findUnit(job.unitId)?.image} alt="" className="h-7 w-7 object-contain" />
+                    <img src={assetUrl(findUnit(job.unitId)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                     <span className="flex-1">
                       {formatCompact(job.qty)} {findUnit(job.unitId)?.name} en construction
                     </span>
@@ -636,7 +636,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                       defense.unitId === u.id ? "border-cyan-glow/70 bg-cyan-glow/10 text-cyan-glow" : "border-white/[0.07] bg-white/[0.02] text-slate-300 hover:border-cyan-glow/40",
                     )}
                   >
-                    <img src={u.image} alt="" className="h-9 w-9 object-contain" />
+                    <img src={assetUrl(u.image)} alt="" className="h-9 w-9 object-contain" />
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="truncate font-semibold">{u.name}</span>
                       <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />

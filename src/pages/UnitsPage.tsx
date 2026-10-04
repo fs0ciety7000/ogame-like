@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -189,7 +190,7 @@ export function UnitsPage() {
                     </div>
                   )}
                   <img
-                    src={unit.image}
+                    src={assetUrl(unit.image)}
                     alt={unit.name}
                     className={cn("hud-float relative max-h-40 w-[78%] object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.6)]", isLocked && "opacity-40 grayscale")}
                     onError={(e) => {
