@@ -112,14 +112,19 @@ export function CasinoPage() {
     setBusy(true);
     setWin("none");
     setLast(null);
-    playSlotPull();
     try {
+      playSlotPull();
       const r = await spinSlot();
       pending.current = r;
       stops.current = 0;
       setOverride({ tokens: r.tokens, base });
       setReels(r.reels);
       setSpinKey((k) => k + 1);
+      // v5.14.2 : filet de sécurité — si un rouleau ne signale pas son arrêt, le tirage
+      // se termine quand même (sinon le bouton restait grisé jusqu'au rechargement).
+      window.setTimeout(() => {
+        if (pending.current === r) for (let i = stops.current; i < 3; i++) onReelStopRef.current(i);
+      }, 8000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Tirage impossible.");
       setBusy(false);
@@ -127,8 +132,8 @@ export function CasinoPage() {
   };
 
   const onReelStop = (i: number) => {
-    playSlotStop(i);
     stops.current += 1;
+    playSlotStop(i);
     if (stops.current < 3 || !pending.current) return;
     const r = pending.current;
     pending.current = null;
@@ -144,6 +149,9 @@ export function CasinoPage() {
     }
     reloadCasino();
   };
+
+  const onReelStopRef = useRef(onReelStop);
+  onReelStopRef.current = onReelStop;
 
   // Espace : tirer (hors saisie).
   const pullRef = useRef(pull);

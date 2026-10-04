@@ -21,3 +21,6 @@ Le passe d'octobre reçoit ses défis, le boss de saison suit le rythme du boss 
 - [Nouveau] **« Nouveaux défis »** réécrit seulement les défis d'un passe, même en cours, sans toucher au thème, aux récompenses ni à la progression.
 - [Nouveau] **Supprimer un bâtiment, une unité, une technologie…** directement depuis la liste, avec la mention « ajouté » sur les éléments créés depuis l'administration. La suppression est enregistrée tout de suite, et refusée si un autre élément en dépend.
 - [Nouveau] Boss de saison : case « chaque semaine, en alternance avec le boss mondial » dans les Règles. Décochée, on revient au week-end mensuel.
+
+## Casino
+- [Correctif] **Le tirage ne peut plus rester bloqué** : sur certains téléphones, une erreur du son laissait la machine en « tirage » et le bouton grisé, même avec des jetons. Les sons ne peuvent plus interrompre une action, et un tirage se termine toujours.
