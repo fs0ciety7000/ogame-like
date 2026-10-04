@@ -9,6 +9,7 @@ import { REFERRAL_RULES, referralLink, referralState } from "@/game/referral";
 import { declareSponsor, fetchReferralInfo, sendVerificationEmail, type ReferralInfo } from "@/services/referralService";
 import { GameActionError } from "@/services/playerService";
 import type { PlayerState } from "@/types/game";
+import { formatNumber } from "@/lib/utils";
 
 /* v4.1 : lien de parrainage, filleuls récompensés, parrain déclaré. */
 
@@ -94,7 +95,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
         <div className="hud-cut-sm border border-white/10 bg-white/[0.02] p-3 text-xs">
           <p className="mb-2 text-slate-300">Pour la récompense de parrainage :</p>
           <ul className="flex flex-col gap-1">
-            <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`Bronze I : ${Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp).toLocaleString("fr-FR")} / ${REFERRAL_RULES.rewardXp.toLocaleString("fr-FR")} XP`} />
+            <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`Bronze I : ${formatNumber(Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp))} / ${formatNumber(REFERRAL_RULES.rewardXp)} XP`} />
             <Cond ok={ageDays(player.createdAtMs ?? Date.now()) >= REFERRAL_RULES.minAgeDays} label={`Compte de ${REFERRAL_RULES.minAgeDays} jours (${Math.min(ageDays(player.createdAtMs ?? Date.now()), REFERRAL_RULES.minAgeDays)} / ${REFERRAL_RULES.minAgeDays})`} />
             <Cond ok={!!info?.verified} label="E-mail confirmé" />
           </ul>
@@ -116,7 +117,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
               ) : (
                 <>
                   <span className={r.xp >= info.rules.rewardXp ? "text-mint-glow" : "text-slate-400"}>
-                    {Math.min(r.xp, info.rules.rewardXp).toLocaleString("fr-FR")} / {info.rules.rewardXp.toLocaleString("fr-FR")} XP
+                    {formatNumber(Math.min(r.xp, info.rules.rewardXp))} / {formatNumber(info.rules.rewardXp)} XP
                   </span>
                   <span className={ageDays(r.createdAtMs) >= info.rules.minAgeDays ? "text-mint-glow" : "text-slate-400"}>
                     {Math.min(ageDays(r.createdAtMs), info.rules.minAgeDays)} / {info.rules.minAgeDays} j

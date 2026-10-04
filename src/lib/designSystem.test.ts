@@ -56,4 +56,41 @@ describe("design system", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  /** Lignes de .tsx (tests exclus) qui vérifient `bad`, hors `allow`. */
+  function scan(bad: (line: string) => boolean, allow: RegExp = /$^/): string[] {
+    const offenders: string[] = [];
+    for (const file of files("src")) {
+      if (file.includes(".test.") || allow.test(file)) continue;
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (bad(line)) offenders.push(`${file}:${i + 1}`);
+        });
+    }
+    return offenders;
+  }
+
+  it("5.15 : ni gros arrondis ni ombres lourdes (coins coupés : hud-cut)", () => {
+    expect(scan((l) => /\brounded-(?:2xl|3xl)\b/.test(l))).toEqual([]);
+    expect(scan((l) => /\bshadow-(?:lg|xl|2xl)\b/.test(l))).toEqual([]);
+  });
+
+  it("5.15 : pas de pilule (pastille arrondie avec du texte) : HudChip ou carré", () => {
+    expect(scan((l) => /\brounded-full\b[^"`]*\bpx-\d/.test(l) || /\bpx-\d[^"`]*\brounded-full\b/.test(l))).toEqual([]);
+  });
+
+  it("5.15 : libellés en capitales en police mono (ou titre / bouton du HUD)", () => {
+    const re = /className="([^"]*)"/g;
+    expect(
+      scan((l) =>
+        [...l.matchAll(re)].some(([, c]) => /(?<![\w:-])uppercase\b/.test(c) && !/font-mono|hud-eyebrow|hud-title|font-display|hud-chip/.test(c)),
+      ),
+    ).toEqual([]);
+  });
+
+  it("5.15 : nombres via formatNumber / formatDecimal, pas toLocaleString", () => {
+    expect(scan((l) => /\.toLocaleString\(/.test(l) && !/Date\(|dateStyle|timeStyle|weekday|hour:|month:|day:/.test(l))).toEqual([]);
+  });
 });
+

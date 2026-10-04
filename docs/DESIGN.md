@@ -46,6 +46,9 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   `tone` : `accent` (courant), `ember` (attention, bouton orange), `danger` (perte, suppression : bouton rouge), `gold` (dépense).
   Le verbe du bouton dit l'action (« Acheter », « Supprimer »), pas « OK ». Hôte unique `<ConfirmHost />` monté dans `App`.
 - **`DialogContent`** (`src/components/ui/dialog.tsx`) : fenêtre modale (coin coupé, sans ombre ni arrondi), tiroir sur mobile.
+- **`TooltipCard`** (`src/components/ui/tooltip.tsx`), dans un `TooltipContent` : infobulle structurée. Titre en capitales mono
+  (+ icône), lignes `{ label, value, tone? }` alignées (valeurs en mono tabulaire), `sections` séparées par un filet, `note`.
+  Une infobulle qui contient des chiffres passe par elle plutôt que par une phrase.
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
@@ -55,8 +58,14 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 
 ## À faire / à éviter
 
-- Faire : nombres en `font-mono` tabulaire ; trois niveaux de texte maximum par panneau ; coins coupés ou droits.
+- Faire : nombres en `font-mono` tabulaire, formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`), jamais
+  `toLocaleString` sur un nombre ; trois niveaux de texte maximum par panneau ; coins coupés ou droits.
+- Faire : libellés en capitales en `font-mono` (ou `hud-eyebrow`) ; les titres en `hud-title`, les boutons et onglets en `font-display`.
+- Faire : `prefers-reduced-motion` est respecté partout (`MotionConfig reducedMotion="user"` dans `App`, pulsations Tailwind coupées).
 - Faire : animer pour signaler un état (alerte qui clignote, balayage = chargement) et respecter `prefers-reduced-motion`.
 - Éviter : `rounded-lg border px-2 py-1 text-[11px]` écrits à la main → `HudChip`.
 - Éviter : encadrés `rounded-lg border bg-x/10 p-3` → `HudCallout`.
-- Éviter : gros arrondis, ombres douces, pilules, plusieurs glows forts dans une même vue.
+- Éviter : gros arrondis, ombres douces, pilules, plusieurs glows forts dans une même vue. Les cercles restent pour ce qui est
+  rond par nature (planètes, radar, halos, points d'état, particules).
+- Garde-fous (`src/lib/designSystem.test.ts`) : couleurs hex, pastilles arrondies, `rounded-2xl/3xl`, `shadow-lg/xl/2xl`,
+  pilules `rounded-full` + `px-*`, capitales hors mono, `toLocaleString` sur un nombre, boîtes natives du navigateur.

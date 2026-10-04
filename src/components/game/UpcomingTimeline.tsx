@@ -50,7 +50,7 @@ export function UpcomingTimeline({ queues, now }: { queues: QueuesState | null; 
         ) : (
           <>
             {/* Frise */}
-            <div className="relative mx-3 mb-5 mt-6 h-1 rounded-full bg-white/10">
+            <div className="relative mx-3 mb-5 mt-6 h-1 bg-white/10">
               <span className="absolute -left-3 top-3 text-[10px] text-slate-500">maint.</span>
               <span className="absolute -right-2 top-3 text-[10px] text-slate-500">{horizonLabel(horizon)}</span>
               <motion.span

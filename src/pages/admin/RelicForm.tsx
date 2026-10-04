@@ -144,7 +144,7 @@ export function RelicSettingsCard() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
+            <tr className="text-left text-[11px] font-mono uppercase tracking-wider text-slate-500">
               <th className="py-1 pr-2 font-normal">Rareté</th>
               <th className="py-1 pr-2 font-normal">Bonus (0,06 = 6 %)</th>
               <th className="py-1 pr-2 font-normal">Poids de tirage</th>
@@ -232,7 +232,7 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1000px] text-sm">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
+            <tr className="text-left text-[11px] font-mono uppercase tracking-wider text-slate-500">
               <th className="py-1 pr-2 font-normal">Source</th>
               <th className="py-1 pr-2 font-normal">Relique</th>
               <th className="py-1 pr-2 font-normal">Rareté min.</th>

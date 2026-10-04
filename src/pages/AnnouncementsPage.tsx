@@ -40,7 +40,7 @@ export function AnnouncementsPage() {
                   <div className="relative h-36 w-full overflow-hidden bg-space-950">
                     {art && <img src={assetUrl(art)} alt="" loading="lazy" className="h-full w-full object-cover object-[center_70%] transition-transform duration-500 group-hover:scale-105" />}
                     <div className="absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/40 to-transparent" />
-                    <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/20 bg-space-950/70 text-white opacity-80 transition-opacity group-hover:opacity-100">
+                    <span className="absolute right-3 top-3 hud-cut-sm grid h-9 w-9 place-items-center border border-white/20 bg-space-950/70 text-white opacity-80 transition-opacity group-hover:opacity-100">
                       <Play className="h-4 w-4" />
                     </span>
                     {!seen.includes(a.id) && (

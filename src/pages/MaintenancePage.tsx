@@ -128,8 +128,8 @@ function TerminalLog() {
     <div className="hud-cut-sm border border-white/[0.07] bg-black/45 px-3 py-2.5 font-mono text-[11px] leading-relaxed backdrop-blur-sm">
       <div className="mb-2 flex items-center gap-2 border-b border-white/[0.06] pb-2">
         <img src={assetUrl("/assets/maintenance/operator-avatar.webp")} alt="" className="h-8 w-8 rounded-full border border-cyan-glow/40 object-cover shadow-[0_0_10px_-2px_var(--color-cyan-glow)]" />
-        <span className="uppercase tracking-[0.16em] text-slate-300">Opérateur K-7</span>
-        <span className="ml-auto flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-mint-glow">
+        <span className="font-mono uppercase tracking-[0.16em] text-slate-300">Opérateur K-7</span>
+        <span className="ml-auto flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.16em] text-mint-glow">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint-glow" /> en intervention
         </span>
       </div>

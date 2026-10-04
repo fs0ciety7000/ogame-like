@@ -142,7 +142,7 @@ export function WarlordsPage() {
                       </h3>
                       <NpcBadge />
                     </div>
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{w.originLabel}</p>
+                    <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{w.originLabel}</p>
                     <div className="flex flex-wrap gap-1.5 text-[11px]">
                       <span className={cn("border px-1.5 py-px", PERSONALITY_TONE[w.personality])}>{PERSONALITY_LABELS[w.personality]}</span>
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">{TIER_LABELS[w.tier]}</span>

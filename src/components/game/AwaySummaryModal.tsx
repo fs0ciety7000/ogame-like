@@ -40,7 +40,7 @@ export function AwaySummaryModal() {
 
           {Object.keys(current.resourceGains).length > 0 && (
             <div className="mt-4">
-              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Production accumulée</h4>
+              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Production accumulée</h4>
               <div className="flex flex-wrap gap-2">
                 {RESOURCE_LIST.filter((r) => (current.resourceGains[r.id as ResourceId] ?? 0) > 0).map((r) => (
                   <span key={r.id} className="hud-chip hud-chip-sm hud-tone-mint">
@@ -53,7 +53,7 @@ export function AwaySummaryModal() {
 
           {current.notifications.length > 0 && (
             <div className="mt-4">
-              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Évènements</h4>
+              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Évènements</h4>
               <ul className="space-y-1.5 text-sm text-slate-300">
                 {current.notifications.map((n, i) => (
                   <li key={i} className="flex items-start justify-between gap-3">

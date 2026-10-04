@@ -477,7 +477,7 @@ export function GalaxyPage() {
               const eta = f.status === "returning" ? f.returnAtMs : f.arriveAtMs;
               return (
                 <div
-                  className="pointer-events-none absolute z-10 max-w-[16rem] border bg-space-950/90 px-2.5 py-1.5 text-xs shadow-lg backdrop-blur"
+                  className="pointer-events-none absolute z-10 max-w-[16rem] border bg-space-950/90 px-2.5 py-1.5 text-xs backdrop-blur"
                   style={{ left: Math.min(hoverFleet.x + 14, (cardRef.current?.clientWidth ?? 400) - 260), top: hoverFleet.y + 14, borderColor: style.color }}
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: style.color }}>

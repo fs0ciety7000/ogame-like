@@ -147,7 +147,7 @@ function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: Al
           )}
           <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
             <MessagesSquare className="h-3.5 w-3.5" /> Canal
-            {unread > 0 && !open && <span className="ml-1 min-w-4 rounded-full bg-ember-glow px-1 text-[10px] font-bold leading-4 text-space-950">{unread}</span>}
+            {unread > 0 && !open && <span className="ml-1 min-w-4 bg-ember-glow px-1 font-mono text-[10px] font-bold leading-4 tabular-nums text-space-950">{unread}</span>}
           </Button>
         </div>
       </div>

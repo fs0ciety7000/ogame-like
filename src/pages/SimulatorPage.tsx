@@ -18,7 +18,7 @@ import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { subscribeSpyLog } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
-import { cn, formatCompact, formatNumber, timeAgo } from "@/lib/utils";
+import { cn, formatCompact, formatDecimal, formatNumber, timeAgo } from "@/lib/utils";
 import type { SpyReport, Units } from "@/types/game";
 
 type TargetKind = "player" | "lair" | "raid" | "sandbox";
@@ -115,7 +115,7 @@ function ResultPanel({ result, defending }: { result: SimOutcome | null; defendi
         </span>
         {Number.isFinite(factor) && !defending && (
           <span className="text-xs text-slate-400">
-            {factor < 1 ? `Marge : ta flotte pourrait être ${Math.round((1 - factor) * 100)} % plus petite.` : `Il faudrait ×${(Math.ceil(factor * 100 + 1) / 100).toLocaleString("fr-FR")} de puissance pour gagner.`}
+            {factor < 1 ? `Marge : ta flotte pourrait être ${Math.round((1 - factor) * 100)} % plus petite.` : `Il faudrait ×${formatDecimal(Math.ceil(factor * 100 + 1) / 100, 2)} de puissance pour gagner.`}
           </span>
         )}
         {Number.isFinite(factor) && defending && (

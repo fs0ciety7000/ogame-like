@@ -250,7 +250,7 @@ function ContractCard({ contract, player, st, onHunt }: { contract: BountyContra
         </div>
         <div>
           <p className="hud-title text-lg leading-tight text-white">{fugitive.name}</p>
-          <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{faction?.name ?? "Indépendant"}</p>
+          <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{faction?.name ?? "Indépendant"}</p>
         </div>
         <p className="text-sm italic text-slate-300">« {fugitive.crime[0].toUpperCase() + fugitive.crime.slice(1)}. »</p>
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-xs">
@@ -360,7 +360,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
           <div>
             <p className="hud-title text-2xl text-white">{f.name}</p>
             <p className="text-sm italic text-slate-300">« {f.crime[0].toUpperCase() + f.crime.slice(1)}. »</p>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{faction?.name}</p>
+            <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{faction?.name}</p>
           </div>
           <div>
             <div className="flex justify-between font-mono text-xs text-slate-400">

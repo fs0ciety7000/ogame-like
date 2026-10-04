@@ -162,7 +162,7 @@ const TechNode = memo(function TechNode({ data }: NodeProps<TechFlowNode>) {
 const LaneNode = memo(function LaneNode({ data, width, height }: NodeProps<LaneFlowNode>) {
   return (
     <div
-      className="relative rounded-2xl border border-white/5 bg-white/[0.015]"
+      className="hud-cut relative border border-white/5 bg-white/[0.015]"
       style={{ width, height }}
     >
       <span className="absolute left-3 top-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
@@ -289,7 +289,7 @@ export function TechTree({
     <div className={cn("flex flex-col gap-2", fullscreen && "min-h-0 flex-1")}>
       <div
         className={cn(
-          "glass-panel tech-flow overflow-hidden rounded-2xl",
+          "glass-panel tech-flow hud-cut overflow-hidden",
           fullscreen ? "min-h-0 flex-1" : "h-[min(75vh,760px)] min-h-[520px]",
         )}
       >

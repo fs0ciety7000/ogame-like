@@ -155,7 +155,7 @@ export function MessagesPage() {
                 <span className="flex items-center justify-between gap-2">
                   <PlayerName uid={c.uid} pseudo={c.pseudo} className={cn("truncate text-sm", c.unread ? "font-semibold text-white" : "text-slate-300")} />
                   {c.unread > 0 ? (
-                    <span className="rounded-full bg-danger-glow px-1.5 text-[10px] font-bold text-space-950">{c.unread}</span>
+                    <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{c.unread}</span>
                   ) : (
                     <span className="shrink-0 text-[10px] text-slate-500">{timeAgo(c.last.createdAtMs)}</span>
                   )}

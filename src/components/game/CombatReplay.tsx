@@ -246,7 +246,7 @@ export function CombatReplay({
           );
         })}
       </div>
-      <div className="absolute inset-x-2 top-1.5 flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="absolute inset-x-2 top-1.5 flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-500">
         <span className="text-cyan-glow/80">Toi</span>
         <span className="text-danger-glow/80">Adversaire</span>
       </div>

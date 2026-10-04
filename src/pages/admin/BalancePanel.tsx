@@ -199,7 +199,7 @@ export function BalancePanel() {
       <Section title="Unités — niveau max, technologies au maximum" aside={<span className="text-[11px] text-slate-500">Clique une ligne pour l'essayer dans le bac à sable</span>}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[46rem] text-left text-xs">
-            <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
+            <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
               <tr>
                 <th className="py-1">Unité</th>
                 <th>Places</th>
@@ -240,7 +240,7 @@ export function BalancePanel() {
         <Section title="Joueurs actifs — puissance et hangars" aside={<span className="text-[11px] text-slate-500">Bonus officiers, reliques et talents compris</span>}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[44rem] text-left text-xs">
-              <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
+              <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
                 <tr>
                   <th className="py-1">Joueur</th>
                   <th>Attaque</th>
@@ -294,7 +294,7 @@ export function BalancePanel() {
               </li>
             </ul>
             <table className="w-full text-left text-xs">
-              <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
+              <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
                 <tr>
                   <th className="py-1">Faction</th>
                   <th>Raids repoussés</th>
@@ -334,7 +334,7 @@ export function BalancePanel() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Extracteurs — amortissement (technologies au maximum)">
           <table className="w-full text-left text-xs">
-            <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
+            <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
               <tr>
                 <th className="py-1">Niveau</th>
                 <th>Coût</th>
@@ -356,7 +356,7 @@ export function BalancePanel() {
         </Section>
         <Section title="Missions — heures de production gagnées par heure">
           <table className="w-full text-left text-xs">
-            <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">
+            <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
               <tr>
                 <th className="py-1">Mission</th>
                 <th>Début</th>

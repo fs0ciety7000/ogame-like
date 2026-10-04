@@ -137,7 +137,7 @@ export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabe
             <DialogTitle className="text-lg" style={{ color: sp.color }}>
               {sp.name}
             </DialogTitle>
-            <p className="-mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">{sp.role}</p>
+            <p className="-mt-2 text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{sp.role}</p>
             <AnimatePresence mode="wait">
               <motion.p key={index} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="min-h-[5.5rem] text-[15px] leading-relaxed text-slate-200">
                 « {storyText(line, pseudo)} »

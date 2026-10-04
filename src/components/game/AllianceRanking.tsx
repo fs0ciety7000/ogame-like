@@ -62,7 +62,7 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            <tr className="text-left text-[10px] font-mono uppercase tracking-[0.12em] text-slate-500">
               <th className="py-1.5 pr-2">#</th>
               <th className="py-1.5 pr-2">Alliance</th>
               <th className="py-1.5 pr-2 text-right">Score saison</th>

@@ -159,7 +159,7 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1.5 text-[10px] uppercase tracking-[0.14em]">
+      <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono uppercase tracking-[0.14em]">
         {([1, 2, 3] as BossFightPhase[]).map((p) => (
           <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
             {p}. {bossPhaseLabel(state, p).name}

@@ -164,7 +164,7 @@ export function LabPage() {
                 if (check.list.length > 0) {
                   return (
                     <div className="hud-callout hud-tone-accent mt-3 p-3 text-xs">
-                      <p className="mb-1 font-semibold uppercase tracking-wide text-cyan-glow">Prérequis</p>
+                      <p className="mb-1 font-semibold font-mono uppercase tracking-wide text-cyan-glow">Prérequis</p>
                       {check.list.map((r) => (
                         <p key={r.id} className={r.valide ? "text-mint-glow" : "text-danger-glow"}>
                           {r.valide ? "✅" : "❌"} {r.nom}{" "}
