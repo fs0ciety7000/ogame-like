@@ -7,7 +7,7 @@ import { HudTag, StatTile } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { BossRecapPanel } from "@/components/game/BossRecap";
-import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
+import { BossDeathOverlay, BossFeed, BossHero, BossNextCard, BossPhasePanel, bossPhase, type BossArt } from "@/components/game/BossStage";
 import {
   ALLIANCE_BOSS_RULES,
   allianceBossCost,
@@ -22,7 +22,7 @@ import { leviathanRanking } from "@/game/leviathan";
 import { AllianceError, callAllianceBoss } from "@/services/allianceService";
 import { callGame } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
 
 /* v4.6 : boss d'alliance, une fois par semaine. */
@@ -90,17 +90,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
               {active ? `repart dans ${formatDuration(Math.max(0, (state.endMs - now) / 1000))}` : "prochain appel lundi"}
             </span>
           </div>
-          <div>
-            <div className="flex justify-between font-mono text-xs text-slate-400">
-              <span>Structure</span>
-              <span>
-                {formatNumber(state.hp)} / {formatNumber(state.maxHp)}
-              </span>
-            </div>
-            <div className="mt-1 h-4 overflow-hidden border border-danger-glow/40 bg-danger-glow/10">
-              <i className="hud-sheen block h-full transition-[width] duration-700" style={{ width: `${(state.hp / state.maxHp) * 100}%`, background: "linear-gradient(90deg, var(--color-danger-glow), var(--color-ember-glow))" }} />
-            </div>
-          </div>
+          <BossPhasePanel state={state} />
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${Math.round(share * 100)} % du total · ${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
             <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank === 0 ? "Relique rare s'il tombe" : "Le premier gagne une relique rare"} tone="var(--color-gold-glow)" />
@@ -141,6 +131,8 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
         </Card>
       )}
 
+      {shown && <BossFeed state={shown} uid={player.uid} now={now} />}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="hud-title flex items-center gap-2 text-sm">
@@ -160,7 +152,8 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
         </Card>
       </div>
 
-      <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${def.name}`} send={sendAllianceBossAssault} flightMinutes={ALLIANCE_BOSS_RULES.flightMinutes} />
+      <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${def.name}`} send={sendAllianceBossAssault} flightMinutes={ALLIANCE_BOSS_RULES.flightMinutes} state={shown} />
+      <BossDeathOverlay phase={phase} name={def.name} killer={shown?.killedBy} />
     </div>
   );
 }

@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { EVENT_RULES } from "@/game/events";
 import {
+  BOSS_PHASE_RULES,
+  bossAssaultEstimate,
+  bossFightPhase,
+  bossWeakness,
   checkLeviathanLaunch,
   closeLeviathan,
   grantLeviathanReward,
@@ -14,6 +18,7 @@ import {
   resolveLeviathanAssault,
   rewardHours,
   spawnLeviathan,
+  type LeviathanState,
 } from "@/game/leviathan";
 import type { PlayerState } from "@/types/game";
 
@@ -112,5 +117,35 @@ describe("leviathan live tracking", () => {
     expect(r.hp).toBe(600_000);
     expect(() => resizeLeviathan(s, 150_000, START + 2 * H)).toThrow();
     expect(() => resizeLeviathan(s, 900_000, START + 80 * H)).toThrow();
+  });
+});
+
+describe("phases de combat et fil (v5.10.5)", () => {
+  const live = (hp: number): LeviathanState => ({ id: "lev-phases", startMs: START, endMs: START + 72 * H, maxHp: 1_000_000, hp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [] });
+
+  it("phases à 50 % et 25 % de structure", () => {
+    expect(bossFightPhase(live(1_000_000))).toBe(1);
+    expect(bossFightPhase(live(500_000))).toBe(2);
+    expect(bossFightPhase(live(250_000))).toBe(3);
+  });
+
+  it("riposte : pertes accrues ; bouclier : dégâts réduits sauf la faiblesse", () => {
+    const a = player("a", 1000);
+    const p1 = bossAssaultEstimate(live(900_000), a, { chasseur: 1000 }, undefined);
+    const p2 = bossAssaultEstimate(live(400_000), a, { chasseur: 1000 }, undefined);
+    expect(p2.lossPct).toBeCloseTo(p1.lossPct * BOSS_PHASE_RULES.riposteLossFactor);
+    expect(p2.power).toBe(p1.power);
+    const st3 = live(200_000);
+    const weak = bossWeakness(st3);
+    const p3 = bossAssaultEstimate(st3, a, { chasseur: 1000 }, undefined);
+    expect(p3.power).toBe(Math.round(p1.power * (weak === "chasseur" ? BOSS_PHASE_RULES.weaknessFactor : BOSS_PHASE_RULES.shieldDamageFactor)));
+  });
+
+  it("le fil garde l'assaut et annonce le passage de phase", () => {
+    const a = player("a", 100_000);
+    const st = live(510_000);
+    const res = resolveLeviathanAssault(st, a, { chasseur: 100_000 }, undefined, START + H);
+    expect(res.state.feed?.[0]).toMatchObject({ uid: "a", damage: res.damage });
+    if (res.state.hp > 0 && bossFightPhase(res.state) > 1) expect(res.state.feed?.[1]).toMatchObject({ phase: bossFightPhase(res.state) });
   });
 });

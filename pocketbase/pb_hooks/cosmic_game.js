@@ -6581,6 +6581,7 @@ function claimPassTier(player, tierIn, now, random = Math.random) {
 
 // src/game/leviathan.ts
 var LEVIATHAN_KEY = "leviathan";
+var FEED_MAX = 40;
 var LEVIATHAN_RULES = {
   name: "Le L\xE9viathan",
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
@@ -6610,7 +6611,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6622,7 +6623,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {}), r.endingNotified === true ? { endingNotified: true } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {}), r.endingNotified === true ? { endingNotified: true } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
 }
 function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
   var _a;
@@ -6673,14 +6674,54 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
-function resolveLeviathanAssault(state, player, fleet, formation, now) {
-  var _a;
+var BOSS_PHASE_RULES = {
+  /** Phase 2 sous cette part de structure : riposte. */
+  ripostePct: 0.5,
+  riposteLossFactor: 1.5,
+  /** Phase 3 sous cette part : bouclier et faiblesse. */
+  shieldPct: 0.25,
+  shieldDamageFactor: 0.85,
+  weaknessFactor: 1.5
+};
+var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
+function bossFightPhase(state) {
+  const pct5 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct5 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct5 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+}
+function bossWeakness(state) {
+  const pool = WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
+  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
+  let h = 0;
+  for (const ch of state.id) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return list.length ? list[h % list.length] : "";
+}
+var BOSS_PHASE_INFO = {
+  1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
+  2: { name: "Riposte", desc: `Bless\xE9, il riposte : pertes \xD7${BOSS_PHASE_RULES.riposteLossFactor} \xE0 chaque assaut.` },
+  3: { name: "Carapace fissur\xE9e", desc: `Il se replie derri\xE8re un bouclier (\u2212${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de d\xE9g\xE2ts), mais sa faiblesse est expos\xE9e : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de d\xE9g\xE2ts pour ce type de vaisseau.` }
+};
+function bossAssaultEstimate(state, player, fleet, formation) {
   const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage));
+  const base = computeFleetPower(player.units, player.techLevels, fleet, ["attack"]);
+  const phase = bossFightPhase(state);
+  let phaseFactor = 1;
+  if (phase === 3 && base > 0) {
+    const weak = bossWeakness(state);
+    const weakPower = fleet[weak] ? computeFleetPower(player.units, player.techLevels, { [weak]: fleet[weak] }, ["attack"]) : 0;
+    const share = Math.min(1, weakPower / base);
+    phaseFactor = share * BOSS_PHASE_RULES.weaknessFactor + (1 - share) * BOSS_PHASE_RULES.shieldDamageFactor;
+  }
+  const mods = playerModifiers(player);
+  const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
+  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
+  return { power, lossPct, phase };
+}
+function resolveLeviathanAssault(state, player, fleet, formation, now) {
+  var _a, _b;
+  const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
   const survivors = {};
   const lost = {};
   for (const [id, qty] of Object.entries(fleet)) {
@@ -6692,8 +6733,16 @@ function resolveLeviathanAssault(state, player, fleet, formation, now) {
   const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
+  let feed = (_b = state.feed) != null ? _b : [];
+  if (active && damage > 0) {
+    const before = bossFightPhase(state);
+    const after = bossFightPhase({ hp: Math.max(0, hp), maxHp: state.maxHp });
+    feed = [...feed, __spreadValues({ t: now, uid: player.uid, pseudo: player.pseudo, damage }, killed ? { killed: true } : {})];
+    if (!killed && after > before) feed = [...feed, { t: now, phase: after }];
+    feed = feed.slice(-FEED_MAX);
+  }
   return {
-    state: __spreadProps(__spreadValues(__spreadProps(__spreadValues({}, state), {
+    state: __spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({}, state), feed.length ? { feed } : {}), {
       hp: Math.max(0, hp),
       status: killed ? "killed" : state.status,
       endedAtMs: killed ? now : state.endedAtMs
@@ -7575,7 +7624,7 @@ function normalizeAllianceBoss(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -7591,7 +7640,7 @@ function normalizeAllianceBoss(raw) {
     bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
     launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
     cost: r.cost && typeof r.cost === "object" ? r.cost : {}
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_d = r.killedBy.pseudo) != null ? _d : "") } } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_d = r.killedBy.pseudo) != null ? _d : "") } } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
 }
 function allianceBossCost(members) {
   var _a, _b;

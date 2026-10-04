@@ -22,6 +22,9 @@ import type { PlayerState, ResourceId } from "@/types/game";
 
 export const LEVIATHAN_KEY = "leviathan";
 
+/** v5.10.5 : entrées gardées dans le fil du combat. */
+export const FEED_MAX = 40;
+
 export const LEVIATHAN_RULES = {
   name: "Le Léviathan",
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
@@ -77,6 +80,8 @@ export interface LeviathanState {
   legacyChecked?: boolean;
   /** v5.10.5 : rappel « plus que N heures » déjà envoyé. */
   endingNotified?: boolean;
+  /** v5.10.5 : fil des derniers assauts. */
+  feed?: BossFeedEntry[];
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -145,6 +150,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     ...(r.archived === true ? { archived: true } : {}),
     ...(r.legacyChecked === true ? { legacyChecked: true } : {}),
     ...(r.endingNotified === true ? { endingNotified: true } : {}),
+    ...(Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {}),
   };
 }
 
@@ -226,6 +232,82 @@ export function checkLeviathanLaunch(state: LeviathanState | null, uid: string, 
   return { ...state, contributions: { ...state.contributions, [uid]: { pseudo, damage: c?.damage ?? 0, assaults: c?.assaults ?? 0, lastLaunchMs: now } } };
 }
 
+/* =====================================================
+   v5.10.5 : phases de combat. Sous 50 % de structure, le boss riposte
+   (pertes accrues) ; sous 25 %, il se replie derrière un bouclier
+   (dégâts réduits) mais révèle une faiblesse à un type de vaisseau.
+===================================================== */
+
+export const BOSS_PHASE_RULES = {
+  /** Phase 2 sous cette part de structure : riposte. */
+  ripostePct: 0.5,
+  riposteLossFactor: 1.5,
+  /** Phase 3 sous cette part : bouclier et faiblesse. */
+  shieldPct: 0.25,
+  shieldDamageFactor: 0.85,
+  weaknessFactor: 1.5,
+};
+
+/** Vaisseaux qui peuvent être la faiblesse d'un boss (s'ils existent dans le contenu). */
+const WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
+
+export type BossFightPhase = 1 | 2 | 3;
+
+export function bossFightPhase(state: Pick<LeviathanState, "hp" | "maxHp">): BossFightPhase {
+  const pct = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct <= BOSS_PHASE_RULES.shieldPct ? 3 : pct <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+}
+
+/** Faiblesse de phase 3 : un type de vaisseau tiré de l'identifiant du combat (stable). */
+export function bossWeakness(state: Pick<LeviathanState, "id">): string {
+  const pool = WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
+  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
+  let h = 0;
+  for (const ch of state.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return list.length ? list[h % list.length] : "";
+}
+
+export const BOSS_PHASE_INFO: Record<BossFightPhase, { name: string; desc: string }> = {
+  1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
+  2: { name: "Riposte", desc: `Blessé, il riposte : pertes ×${BOSS_PHASE_RULES.riposteLossFactor} à chaque assaut.` },
+  3: { name: "Carapace fissurée", desc: `Il se replie derrière un bouclier (−${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de dégâts), mais sa faiblesse est exposée : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de dégâts pour ce type de vaisseau.` },
+};
+
+/** Dégâts et pertes d'un assaut selon la flotte, la formation et la phase du boss (sert aussi à l'estimation). */
+export function bossAssaultEstimate(
+  state: Pick<LeviathanState, "id" | "hp" | "maxHp">,
+  player: Pick<PlayerState, "units" | "techLevels" | "allianceResearch"> & Partial<PlayerState>,
+  fleet: Record<string, number>,
+  formation: string | undefined,
+): { power: number; lossPct: number; phase: BossFightPhase } {
+  const fx = formationEffects(formation);
+  const base = computeFleetPower(player.units, player.techLevels, fleet, ["attack"]);
+  const phase = bossFightPhase(state);
+  let phaseFactor = 1;
+  if (phase === 3 && base > 0) {
+    const weak = bossWeakness(state);
+    const weakPower = fleet[weak] ? computeFleetPower(player.units, player.techLevels, { [weak]: fleet[weak] }, ["attack"]) : 0;
+    const share = Math.min(1, weakPower / base);
+    phaseFactor = share * BOSS_PHASE_RULES.weaknessFactor + (1 - share) * BOSS_PHASE_RULES.shieldDamageFactor;
+  }
+  const mods = playerModifiers(player as PlayerState);
+  const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
+  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
+  return { power, lossPct, phase };
+}
+
+/** v5.10.5 : fil du combat (derniers assauts et changements de phase). */
+export interface BossFeedEntry {
+  t: number;
+  uid?: string;
+  pseudo?: string;
+  damage?: number;
+  killed?: boolean;
+  /** Entrée de changement de phase. */
+  phase?: BossFightPhase;
+}
+
+
 /** Assaut à l'arrivée : dégâts, pertes de la flotte (réparées en partie). */
 export function resolveLeviathanAssault(
   state: LeviathanState,
@@ -234,12 +316,10 @@ export function resolveLeviathanAssault(
   formation: string | undefined,
   now: number,
 ): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
-  const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage));
+  const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};
   for (const [id, qty] of Object.entries(fleet)) {
@@ -251,9 +331,19 @@ export function resolveLeviathanAssault(
   const c = state.contributions[player.uid] ?? { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
+  // Fil du combat : l'assaut, puis le passage de phase s'il y en a un.
+  let feed = state.feed ?? [];
+  if (active && damage > 0) {
+    const before = bossFightPhase(state);
+    const after = bossFightPhase({ hp: Math.max(0, hp), maxHp: state.maxHp });
+    feed = [...feed, { t: now, uid: player.uid, pseudo: player.pseudo, damage, ...(killed ? { killed: true } : {}) }];
+    if (!killed && after > before) feed = [...feed, { t: now, phase: after }];
+    feed = feed.slice(-FEED_MAX);
+  }
   return {
     state: {
       ...state,
+      ...(feed.length ? { feed } : {}),
       hp: Math.max(0, hp),
       status: killed ? "killed" : state.status,
       endedAtMs: killed ? now : state.endedAtMs,

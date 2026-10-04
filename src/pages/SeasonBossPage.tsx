@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BossRecapPanel } from "@/components/game/BossRecap";
-import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
+import { BossDeathOverlay, BossFeed, BossHero, BossNextCard, BossPhasePanel, bossPhase, type BossArt } from "@/components/game/BossStage";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossSchedule, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
@@ -18,7 +18,7 @@ import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDuration } from "@/lib/utils";
 
 /* v4.3 : boss de saison, un week-end par mois (le dernier par défaut ; moteur du Léviathan). */
 
@@ -46,7 +46,6 @@ export function SeasonBossPage() {
   const boss = month?.boss;
   const mine = state?.contributions[player.uid];
   const wait = mine ? mine.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * 3600_000 - now : 0;
-  const hpPct = state ? (state.hp / state.maxHp) * 100 : 0;
   const rank = state ? leviathanRanking(state).findIndex((r) => r.uid === player.uid) : -1;
   const art: BossArt = {
     name: boss?.name ?? "Boss de saison",
@@ -106,17 +105,7 @@ export function SeasonBossPage() {
             <HudTag tone="danger">En cours</HudTag>
             <span className="ml-auto font-mono text-xs text-slate-400">repart dans {formatDuration(Math.max(0, Math.floor((state.endMs - now) / 1000)))}</span>
           </div>
-          <div>
-            <div className="flex justify-between font-mono text-xs text-slate-400">
-              <span>Structure</span>
-              <span>
-                {formatNumber(state.hp)} / {formatNumber(state.maxHp)}
-              </span>
-            </div>
-            <div className="mt-1 h-4 overflow-hidden border border-danger-glow/40 bg-danger-glow/10">
-              <i className="hud-sheen block h-full transition-[width] duration-700" style={{ width: `${hpPct}%`, background: `linear-gradient(90deg, var(--color-danger-glow), ${month?.theme.accent ?? "var(--color-ember-glow)"})` }} />
-            </div>
-          </div>
+          <BossPhasePanel state={state} accent={month?.theme.accent} />
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
             <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank >= 0 && rank < SEASON_BOSS_RULES.topRelics ? "Relique épique si le boss tombe" : `Top ${SEASON_BOSS_RULES.topRelics} : relique épique`} tone="var(--color-gold-glow)" />
@@ -130,6 +119,8 @@ export function SeasonBossPage() {
           </div>
         </Card>
       )}
+
+      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {state && phase !== "dormant" && (
@@ -151,7 +142,8 @@ export function SeasonBossPage() {
       {admin === true && <LeviathanAdminPanel state={state} kind="seasonboss" />}
       {admin === true && <BossRewardsAdmin state={state} kind="seasonboss" />}
 
-      <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${boss?.name ?? "boss de saison"}`} send={sendSeasonBossAssault} />
+      <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${boss?.name ?? "boss de saison"}`} send={sendSeasonBossAssault} state={state} />
+      <BossDeathOverlay phase={phase} name={boss?.name ?? "Le boss de saison"} killer={state?.killedBy} />
     </div>
   );
 }

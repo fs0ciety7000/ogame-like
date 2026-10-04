@@ -1,11 +1,13 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Skull, Trophy } from "lucide-react";
+import { Crosshair, Radio, Skull, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PlayerName } from "@/components/ui/player-name";
-import { bossPhase, type BossPhase, type LeviathanState } from "@/game/leviathan";
+import { BOSS_PHASE_INFO, BOSS_PHASE_RULES, bossFightPhase, bossPhase, bossWeakness, type BossFightPhase, type BossPhase, type LeviathanState } from "@/game/leviathan";
+import { findUnit } from "@/game/units";
 import { assetUrl } from "@/lib/assets";
-import { cn } from "@/lib/utils";
+import { cn, formatCompact, formatNumber } from "@/lib/utils";
 
 /* =====================================================
    v5.10 : mise en scène commune des boss (Léviathan, boss de saison) :
@@ -129,5 +131,142 @@ export function BossNextCard({ art, next, now, phase, tip }: { art: BossArt; nex
         <Trophy className="h-3.5 w-3.5" /> Hall of fame
       </Link>
     </Card>
+  );
+}
+
+/* ---------- v5.10.5 : boss vivants (phases, fil du combat, chute) ---------- */
+
+/** Phases du combat : barre découpée à 50 % et 25 %, phase en cours et faiblesse révélée. */
+export function BossPhasePanel({ state, accent }: { state: LeviathanState; accent?: string }) {
+  const phase = bossFightPhase(state);
+  const pct = state.maxHp > 0 ? (state.hp / state.maxHp) * 100 : 0;
+  const weak = phase === 3 ? findUnit(bossWeakness(state)) : undefined;
+  const marks = [BOSS_PHASE_RULES.ripostePct * 100, BOSS_PHASE_RULES.shieldPct * 100];
+  const tone = phase === 1 ? "#4be8ff" : phase === 2 ? "#ff8a4c" : "#ff5df0";
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <div className="flex justify-between font-mono text-xs text-slate-400">
+          <span>Structure</span>
+          <span>
+            {formatNumber(state.hp)} / {formatNumber(state.maxHp)}
+          </span>
+        </div>
+        <div className="relative mt-1 h-4 border border-danger-glow/40 bg-danger-glow/10">
+          <i className="hud-sheen block h-full transition-[width] duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, var(--color-danger-glow), ${accent ?? tone})` }} />
+          {marks.map((m) => (
+            <span key={m} className="absolute inset-y-[-4px] w-0.5 bg-white/60" style={{ left: `${m}%` }} title={`Phase suivante sous ${m} %`} aria-hidden />
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5 text-[10px] uppercase tracking-[0.14em]">
+        {([1, 2, 3] as BossFightPhase[]).map((p) => (
+          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${tone}88`, background: `${tone}18`, color: tone } : undefined}>
+            {p}. {BOSS_PHASE_INFO[p].name}
+          </span>
+        ))}
+      </div>
+      <p className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+        <span>{BOSS_PHASE_INFO[phase].desc}</span>
+        {weak && (
+          <span className="inline-flex items-center gap-1.5 border border-[#ff5df0]/50 bg-[#ff5df0]/10 px-2 py-0.5 text-[#ff5df0]">
+            <img src={weak.image} alt="" className="h-5 w-5 object-contain" /> Faiblesse : {weak.name}
+          </span>
+        )}
+        {phase < 3 && <span className="text-slate-500">Sa faiblesse se révélera sous {Math.round(BOSS_PHASE_RULES.shieldPct * 100)} %.</span>}
+      </p>
+    </div>
+  );
+}
+
+function agoLabel(ms: number): string {
+  const m = Math.max(0, Math.round(ms / 60_000));
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `il y a ${h} h` : `il y a ${Math.floor(h / 24)} j`;
+}
+
+/** Fil du combat : derniers assauts (et passages de phase), le plus récent en haut. */
+export function BossFeed({ state, uid, now, max = 12 }: { state: LeviathanState; uid: string; now: number; max?: number }) {
+  const feed = [...(state.feed ?? [])].reverse().slice(0, max);
+  return (
+    <Card className="flex flex-col gap-2 p-4">
+      <h2 className="hud-title flex items-center gap-2 text-sm">
+        <Radio className="h-4 w-4 text-danger-glow" /> Fil du combat
+      </h2>
+      {feed.length === 0 ? (
+        <p className="text-xs text-slate-500">Aucun assaut pour l'instant. Le premier à frapper ouvrira le fil.</p>
+      ) : (
+        <ol className="flex flex-col gap-1">
+          <AnimatePresence initial={false}>
+            {feed.map((f) => (
+              <motion.li key={`${f.t}-${f.uid ?? f.phase}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className={cn("flex items-center gap-2 text-xs", f.uid === uid && "text-cyan-glow")}>
+                {f.phase ? (
+                  <span className="flex-1 border-l-2 border-[#ff5df0] pl-2 font-semibold text-[#ff5df0]">
+                    Phase {f.phase} : {BOSS_PHASE_INFO[f.phase].name} ! {f.phase === 3 ? `Faiblesse révélée : ${findUnit(bossWeakness(state))?.name ?? "?"}.` : "Il riposte."}
+                  </span>
+                ) : (
+                  <>
+                    {f.killed ? <Skull className="h-3.5 w-3.5 shrink-0 text-mint-glow" /> : <Crosshair className="h-3.5 w-3.5 shrink-0 text-ember-glow" />}
+                    <span className="min-w-0 flex-1 truncate">
+                      {f.uid ? <PlayerName uid={f.uid} pseudo={f.pseudo ?? "?"} className="font-semibold" /> : f.pseudo} {f.killed ? "porte le coup de grâce" : "frappe"} :{" "}
+                      <strong className="font-mono tabular-nums text-white">{formatCompact(f.damage ?? 0)}</strong>
+                    </span>
+                  </>
+                )}
+                <span className="shrink-0 font-mono text-[10px] text-slate-500">{agoLabel(now - f.t)}</span>
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </ol>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Chute du boss en direct : si la page était ouverte pendant le combat et qu'il
+ * tombe, éclair, tampon « ABATTU » qui s'abat, puis le bilan prend le relais.
+ */
+export function BossDeathOverlay({ phase, name, killer }: { phase: BossPhase; name: string; killer?: { uid: string; pseudo: string } }) {
+  const prev = useRef<BossPhase>(phase);
+  const [show, setShow] = useState(false);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (prev.current === "active" && phase === "killed") {
+      setShow(true);
+      const t = setTimeout(() => setShow(false), reduce ? 1500 : 3200);
+      prev.current = phase;
+      return () => clearTimeout(t);
+    }
+    prev.current = phase;
+  }, [phase, reduce]);
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div className="fixed inset-0 z-[60] grid place-items-center bg-space-950/85 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShow(false)} role="status" aria-live="assertive">
+          {!reduce && <motion.div className="absolute inset-0 bg-white" initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.6 }} />}
+          <div className="relative flex flex-col items-center gap-3 text-center">
+            <motion.div
+              initial={reduce ? false : { scale: 3, rotate: -18, opacity: 0 }}
+              animate={{ scale: 1, rotate: -6, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.25 }}
+              className="border-[6px] border-mint-glow px-8 py-2 font-display text-5xl font-black uppercase tracking-[0.3em] text-mint-glow shadow-[0_0_60px_rgba(92,242,176,0.5)] sm:text-7xl"
+            >
+              Abattu
+            </motion.div>
+            <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="hud-title text-lg text-white">
+              {name} est tombé !
+            </motion.p>
+            {killer && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }} className="flex items-center gap-1.5 text-sm text-slate-300">
+                <Skull className="h-4 w-4 text-danger-glow" /> Coup de grâce : <span className="font-semibold text-white">{killer.pseudo}</span>
+              </motion.p>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

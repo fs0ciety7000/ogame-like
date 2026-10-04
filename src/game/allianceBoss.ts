@@ -2,7 +2,7 @@ import { GameActionError } from "@/game/errors";
 import { parisLocalToUtc } from "@/game/events";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { leviathanRanking, type LeviathanState } from "@/game/leviathan";
+import { FEED_MAX, leviathanRanking, type LeviathanState } from "@/game/leviathan";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
@@ -103,6 +103,7 @@ export function normalizeAllianceBoss(raw: unknown): AllianceBossState | null {
     cost: r.cost && typeof r.cost === "object" ? r.cost : {},
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
+    ...(Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {}),
   };
 }
 

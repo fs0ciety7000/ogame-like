@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
-import { SeasonGlow } from "@/components/layout/SeasonGlow";
+import { BossLiveStrip, SeasonGlow } from "@/components/layout/SeasonGlow";
 import { Snowfall } from "@/components/fx/Snowfall";
 import { TierUpOverlay } from "@/components/fx/TierUpOverlay";
 import { useAmbience } from "@/hooks/useAmbience";
@@ -174,6 +174,7 @@ export function AppShell() {
         <MaintenanceBanner />
         <VacationBanner />
         <AnnouncementBanners />
+        <BossLiveStrip />
         <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
           <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">
