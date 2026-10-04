@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ignoreShortcut } from "@/lib/shortcuts";
 import { HudChip } from "@/components/ui/hud";
 import { CockpitViewport, type ViewportFleet } from "@/components/cockpit/CockpitViewport";
 import { useAgenda } from "@/components/game/AgendaCard";
@@ -130,9 +131,7 @@ export function CockpitHub() {
   // Raccourcis 1 à 6 de la console (hors saisie).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const el = e.target as HTMLElement | null;
-      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (ignoreShortcut(e)) return;
       const q = QUICK.find((x) => x.key === e.key);
       if (q) navigate(q.to);
     };

@@ -46,6 +46,7 @@ import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
 import { UltimatumDialog } from "@/components/game/PirateUltimatum";
 import { AnnouncementDialog } from "@/components/game/Announcement";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
 import { toggleCommandPalette } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
 import { playClick } from "@/lib/sfx";
@@ -260,6 +261,7 @@ export function AppShell() {
       <UltimatumDialog />
       <AnnouncementDialog />
       <CommandPalette />
+      <ShortcutsDialog />
       <FxLayer />
       <FleetReturnFx />
     </div>
