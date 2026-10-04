@@ -11,6 +11,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { POT_SOURCE_LABELS, type PotSource, type ServerPot } from "@/game/serverPot";
 import { adminServerPot, adminServerPotDeposit, adminServerPotGrant } from "@/services/serverPotService";
 import type { ResourceId } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.10 : pot commun « Serveur » — solde, provenance, mouvements, et
    versement à un joueur (concours, événements). */
@@ -72,7 +73,7 @@ export function ServerPotPanel() {
   const depositNow = async () => {
     const total = Object.values(deposit).reduce((a, b) => a + (b || 0), 0);
     if (total <= 0) return toast.error("Indique au moins un montant.");
-    if (!confirm("Ces ressources sont créées de toutes pièces et ajoutées au pot commun. Confirmer ?")) return;
+    if (!(await askConfirm({ title: "Ajouter ces ressources au pot commun ?", message: "Elles sont créées de toutes pièces.", confirmLabel: "Ajouter", tone: "ember" }))) return;
     setBusy(true);
     try {
       setPot(await adminServerPotDeposit(deposit, depNote));

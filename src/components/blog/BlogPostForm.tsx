@@ -11,6 +11,7 @@ import { BLOG_CATEGORIES, BLOG_RULES, isPublic, normalizeTags, slugify, type Blo
 import { BLOG_URL, createBlogPost, deleteBlogPost, removeBlogImage, slugTaken, updateBlogPost, uploadBlogImage, type BlogDraft } from "@/services/blogService";
 import { pb } from "@/lib/pocketbase";
 import { cn, alpha } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.8 : écriture d'un article du devblog (création ou modification). */
 
@@ -142,7 +143,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
   };
 
   const remove = async () => {
-    if (!id || !window.confirm("Supprimer définitivement cet article et ses images ?")) return;
+    if (!id || !(await askConfirm({ title: "Supprimer cet article ?", message: "Suppression définitive de l'article et de ses images.", confirmLabel: "Supprimer", tone: "danger" }))) return;
     await deleteBlogPost(id);
     toast.success("Article supprimé.");
     onSaved();
@@ -185,7 +186,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
     <div className="flex min-w-0 flex-col gap-4">
       {/* Barre d'actions */}
       <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-white/5 bg-space-950/90 px-1 py-2 backdrop-blur">
-        <Button size="sm" variant="ghost" onClick={() => (!dirty || window.confirm("Quitter sans enregistrer ?")) && onBack()}>
+        <Button size="sm" variant="ghost" onClick={() => void (dirty ? askConfirm({ title: "Quitter sans enregistrer ?", message: "Les modifications en cours seront perdues.", confirmLabel: "Quitter", tone: "ember" }) : Promise.resolve(true)).then((ok) => { if (ok) void onBack(); })}>
           <ArrowLeft className="h-4 w-4" /> Articles
         </Button>
         <span className={cn("font-mono text-[10px] uppercase tracking-[0.16em]", liveNow ? "text-mint-glow" : saved?.status === "published" ? "text-gold-glow" : "text-slate-500")}>

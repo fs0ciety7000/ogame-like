@@ -42,11 +42,19 @@ export interface AllianceBossDef {
   lore: string;
 }
 
-export const ALLIANCE_BOSSES: AllianceBossDef[] = [
+export const DEFAULT_ALLIANCE_BOSSES: AllianceBossDef[] = [
   { id: "gravhorn", name: "Cuirassé Gravhorn", image: "/assets/story/gravhorn.webp", lore: "Un cuirassé du Syndicat, blindé comme un coffre-fort, venu saisir les dettes de ton alliance." },
   { id: "kesh", name: "Nid-mère Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche renégate en dérive : chaque heure, de nouvelles larves éclosent dans ses flancs." },
   { id: "confrerie", name: "Croiseur de la Confrérie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoyé pour rayer ton alliance de la Liste. À coups de canon." },
 ];
+
+/** Catalogue en vigueur (5.15 : réglable dans l'administration, règles « allianceBoss.bosses »). */
+export const ALLIANCE_BOSSES: AllianceBossDef[] = DEFAULT_ALLIANCE_BOSSES.map((b) => ({ ...b }));
+
+export function setAllianceBosses(defs: AllianceBossDef[] | undefined): void {
+  const list = (defs ?? []).filter((b) => b && /^[a-z0-9_]+$/.test(b.id ?? "") && String(b.name ?? "").trim());
+  ALLIANCE_BOSSES.splice(0, ALLIANCE_BOSSES.length, ...(list.length ? list : DEFAULT_ALLIANCE_BOSSES).map((b) => ({ ...b })));
+}
 
 export interface AllianceBossState extends LeviathanState {
   weekId: string;

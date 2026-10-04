@@ -40,6 +40,12 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 - **`HudToaster`** (`src/components/ui/hud-toast.tsx`) : toasts sonner au style du HUD (coin coupé, liseré et icône
   de la couleur sémantique, titre en capitales, action en pastille). `toast.success/error/warning` prennent mint / danger /
   ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind).tone`).
+- **`askConfirm`** (`src/components/ui/confirm-dialog.tsx`) : toute confirmation, jamais `window.confirm` / `alert` / `prompt`
+  (boîte grise du navigateur, hors thème ; un test échoue). `await askConfirm({ title, message, details, confirmLabel, tone })` rend
+  `true` si le joueur confirme. Titre = la question courte ; `message` = la conséquence ; `details` = coût, solde (`CostPill`).
+  `tone` : `accent` (courant), `ember` (attention, bouton orange), `danger` (perte, suppression : bouton rouge), `gold` (dépense).
+  Le verbe du bouton dit l'action (« Acheter », « Supprimer »), pas « OK ». Hôte unique `<ConfirmHost />` monté dans `App`.
+- **`DialogContent`** (`src/components/ui/dialog.tsx`) : fenêtre modale (coin coupé, sans ombre ni arrondi), tiroir sur mobile.
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.

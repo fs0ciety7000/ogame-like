@@ -30,6 +30,7 @@ import { GoogleMark } from "@/components/auth/AltSignIn";
 import { defaultPasskeyName, deletePasskey, listPasskeys, passkeyErrorMessage, passkeysSupported, registerPasskey, renamePasskey, type PasskeyInfo } from "@/services/passkeyService";
 import { enabledOAuthProviders, linkProvider, listLinkedAccounts, oauthErrorMessage, unlinkAccount, OAUTH_PROVIDERS, type LinkedAccount, type OAuthProviderId } from "@/services/oauthService";
 import { changePassword, deleteAccount, hasRecoveryEmail, translateAuthError, validatePassword } from "@/services/authService";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 interface PasswordFormValues {
   currentPassword: string;
@@ -203,8 +204,8 @@ function SignInMethodsCard() {
                     title="Supprimer"
                     className="text-slate-500 transition hover:text-danger-glow disabled:opacity-40"
                     disabled={busy !== null}
-                    onClick={() => {
-                      if (window.confirm(`Supprimer la passkey « ${k.name} » ?`)) void run(k.id, () => deletePasskey(k.id), "Passkey supprimée.", passkeyErrorMessage);
+                    onClick={async () => {
+                      if (await askConfirm({ title: `Supprimer la passkey « ${k.name} » ?`, confirmLabel: "Supprimer", tone: "danger" })) void run(k.id, () => deletePasskey(k.id), "Passkey supprimée.", passkeyErrorMessage);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -231,8 +232,8 @@ function SignInMethodsCard() {
                         size="sm"
                         variant="ghost"
                         disabled={busy !== null}
-                        onClick={() => {
-                          if (window.confirm(`Délier ton compte ${p.label} ?`)) void run(link.id, () => unlinkAccount(link.id), `Compte ${p.label} délié.`, oauthErrorMessage);
+                        onClick={async () => {
+                          if (await askConfirm({ title: `Délier ton compte ${p.label} ?`, confirmLabel: "Délier", tone: "danger" })) void run(link.id, () => unlinkAccount(link.id), `Compte ${p.label} délié.`, oauthErrorMessage);
                         }}
                       >
                         Délier

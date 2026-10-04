@@ -8,6 +8,7 @@ import { currentSeasonId } from "@/game/seasons";
 import { GameActionError, learnTalent, resetTalents } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.1 : arbre de talents d'Ascension — 3 points par ascension, 3 branches de 5 talents, 3 rangs. */
 
@@ -50,7 +51,7 @@ export function TalentTreeCard() {
           className="ml-auto"
           disabled={busy !== null || resetDone || pts.spent === 0}
           title={resetDone ? "Déjà redistribué cette saison" : "Rendre tous les points (une fois par saison)"}
-          onClick={() => window.confirm("Redistribuer tous tes talents ? Possible une seule fois par saison.") && void run("reset", resetTalents, "Talents redistribués : tous tes points sont libres.")}
+          onClick={() => void askConfirm({ title: "Redistribuer tous tes talents ?", message: "Possible une seule fois par saison.", confirmLabel: "Redistribuer", tone: "ember" }).then((ok) => { if (ok) void run("reset", resetTalents, "Talents redistribués : tous tes points sont libres."); })}
         >
           <RotateCcw className="h-3.5 w-3.5" /> Redistribuer
         </Button>

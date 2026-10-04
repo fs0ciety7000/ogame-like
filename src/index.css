@@ -1555,3 +1555,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .leaderboard-self { animation: none; }
 }
+
+/* 5.15 : fenêtre de confirmation (ConfirmHost) : liseré haut et pastille
+   d'icône de la couleur sémantique, comme HudCallout. */
+.hud-dialog {
+  --c: var(--th-accent);
+  border-top: 2px solid var(--c);
+}
+.hud-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
+}
+:root[data-theme="holo"] .hud-dialog-icon { clip-path: none; }

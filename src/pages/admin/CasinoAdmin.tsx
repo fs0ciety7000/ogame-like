@@ -9,6 +9,7 @@ import { HudChip, HudSwitch } from "@/components/ui/hud";
 import { CASINO_MODES, casinoOpen, expectedHours, nextCasinoOpening, OUTCOME_LABELS, validateCasinoSettings, type CasinoMode, type CasinoSettings } from "@/game/casino";
 import { adminCasinoSettings, adminGrantTokens, refreshCasino, useCasino } from "@/services/casinoService";
 import { Field, NumberField, SelectField } from "@/pages/admin/fields";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.12 : administration du Casino orbital — ouverture, gains, jetons offerts. */
 
@@ -61,7 +62,7 @@ export function CasinoAdmin() {
   const grant = async () => {
     const who = target === "player" ? pseudo.trim() : target;
     if (!who) return;
-    if (!confirm(`Offrir ${tokens} jeton(s) à ${target === "all" ? "tous les joueurs" : target === "active" ? "tous les joueurs actifs (7 jours)" : who} ?`)) return;
+    if (!(await askConfirm({ title: `Offrir ${tokens} jeton(s) ?`, message: `Destinataires : ${target === "all" ? "tous les joueurs" : target === "active" ? "tous les joueurs actifs (7 jours)" : who}.`, confirmLabel: "Offrir", tone: "gold" }))) return;
     setBusy(true);
     try {
       const out = await adminGrantTokens(who, tokens, note);

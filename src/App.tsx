@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { HudToaster } from "@/components/ui/hud-toast";
+import { ConfirmHost } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
@@ -138,6 +139,7 @@ export default function App() {
       </BrowserRouter>
 
       <HudToaster />
+      <ConfirmHost />
     </TooltipProvider>
   );
 }

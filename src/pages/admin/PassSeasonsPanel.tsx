@@ -17,6 +17,7 @@ import { saveContentSection, useContentStore } from "@/services/contentService";
 import { RewardEditor } from "@/pages/admin/PassPanel";
 import { Field, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* =====================================================
    v5.13 : passes de saison générés. Le générateur écrit un brouillon par
@@ -65,8 +66,8 @@ export function PassSeasonsPanel() {
 
   const generate = async (monthId: string, variant: number) => {
     const existing = seasons.find((s) => s.id === monthId);
-    if (existing?.status === "published" && !confirm(`Le passe ${monthId} est publié${monthId <= current ? " et déjà en cours" : ""}. Le remplacer par un nouveau brouillon ?`)) return;
-    if (existing && dirty && !confirm("Tes modifications non enregistrées seront perdues. Continuer ?")) return;
+    if (existing?.status === "published" && !(await askConfirm({ title: `Remplacer le passe ${monthId} ?`, message: `Il est publié${monthId <= current ? " et déjà en cours" : ""} : un nouveau brouillon prend sa place.`, confirmLabel: "Remplacer", tone: "danger" }))) return;
+    if (existing && dirty && !(await askConfirm({ title: "Continuer sans enregistrer ?", message: "Tes modifications non enregistrées seront perdues.", confirmLabel: "Continuer", tone: "ember" }))) return;
     setBusy(true);
     try {
       const out = await adminPassSeasonGenerate(monthId, variant, existing?.status === "published");
@@ -83,7 +84,7 @@ export function PassSeasonsPanel() {
 
   // v5.14.2 : nouveaux défis seulement (n'importe quel mois, même en cours).
   const rerollChallenges = async (s: PassSeason) => {
-    if (s.status === "published" && s.id <= current && !confirm(`Le passe ${seasonLabel(s.id)} est en cours : ses défis seront réécrits (thème, récompenses et points ne bougent pas). Continuer ?`)) return;
+    if (s.status === "published" && s.id <= current && !(await askConfirm({ title: `Réécrire les défis du passe ${seasonLabel(s.id)} ?`, message: "Il est en cours. Thème, récompenses et points ne bougent pas.", confirmLabel: "Réécrire", tone: "ember" }))) return;
     setBusy(true);
     try {
       const out = await adminPassSeasonChallenges(s.id, Date.now() % 1000);

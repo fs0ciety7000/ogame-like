@@ -32,7 +32,7 @@ function SheetHandle({ onDrag, closeRef }: { onDrag: (dy: number) => void; close
         onDrag(0);
       }}
     >
-      <span className="h-1.5 w-10 rounded-full bg-white/25" />
+      <span className="h-1 w-10 bg-white/25" />
     </div>
   );
 }
@@ -55,10 +55,10 @@ export function DialogContent({
           // plus loin dans la feuille de style, elle écraserait sinon le
           // position:fixed de Tailwind, faisant sortir la modale du viewport
           // (seul le fond flou de l'overlay resterait visible).
-          "!fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 glass-panel p-6 shadow-2xl focus:outline-none max-h-[85vh] overflow-y-auto [animation-iteration-count:1]",
+          "!fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 glass-panel hud-cut p-6 focus:outline-none max-h-[85vh] overflow-y-auto [animation-iteration-count:1]",
           "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95",
           // v4.5 : sur mobile, la fenêtre devient un tiroir qui monte du bas.
-          "max-sm:!top-auto max-sm:!bottom-0 max-sm:!translate-y-0 max-sm:!w-full max-sm:!max-w-none max-sm:!max-h-[88vh] max-sm:!rounded-t-2xl max-sm:!px-4 max-sm:!pt-4 max-sm:!pb-[calc(env(safe-area-inset-bottom)+1.25rem)]",
+          "max-sm:!top-auto max-sm:!bottom-0 max-sm:!translate-y-0 max-sm:!w-full max-sm:!max-w-none max-sm:!max-h-[88vh] max-sm:!px-4 max-sm:!pt-4 max-sm:!pb-[calc(env(safe-area-inset-bottom)+1.25rem)]",
           "max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=open]:slide-in-from-bottom-1/2",
           className,
         )}
@@ -67,7 +67,7 @@ export function DialogContent({
       >
         <SheetHandle onDrag={setDrag} closeRef={closeRef} />
         {children}
-        <DialogPrimitive.Close ref={closeRef} className="absolute right-4 top-4 rounded-md p-1 text-slate-400 transition hover:text-white hover:bg-white/10">
+        <DialogPrimitive.Close ref={closeRef} aria-label="Fermer" className="hud-cut-sm absolute right-4 top-4 p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-glow/60">
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>

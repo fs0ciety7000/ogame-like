@@ -13,6 +13,7 @@ import { STORY_SPEAKERS } from "@/game/story";
 import { seasonLabel } from "@/game/seasons";
 import { timeAgo } from "@/lib/utils";
 import { AllianceSagaAdmin } from "@/pages/admin/AllianceSagaAdmin";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.4 : générateur procédural. Ce que le serveur sait du mois en cours,
    l'aperçu du prochain chapitre, les réglages et le journal des écritures. */
@@ -148,7 +149,7 @@ export function ProceduralPanel() {
   };
 
   const generate = async (monthId: string, started: boolean) => {
-    if (started && !confirm(`Le chapitre ${monthId} a déjà commencé : la progression des joueurs sur ses épisodes sera perdue. Réécrire quand même ?`)) return;
+    if (started && !(await askConfirm({ title: `Réécrire le chapitre ${monthId} ?`, message: "Il a déjà commencé : la progression des joueurs sur ses épisodes sera perdue.", confirmLabel: "Réécrire", tone: "danger" }))) return;
     setBusy(true);
     try {
       report(await adminProceduralGenerate(monthId, variant, started));

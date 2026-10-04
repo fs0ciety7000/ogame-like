@@ -24,6 +24,7 @@ import { callGame } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.6 : boss d'alliance, une fois par semaine. */
 
@@ -57,7 +58,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
   const share = total > 0 && mine ? mine.damage / total : 0;
 
   const call = async () => {
-    if (!confirm(`Appeler ${def.name} ? Le trésor paie ${ALLIANCE_BOSS_RULES.costHours} h de production cumulée des membres.`)) return;
+    if (!(await askConfirm({ title: `Appeler ${def.name} ?`, message: `Le trésor paie ${ALLIANCE_BOSS_RULES.costHours} h de production cumulée des membres.`, confirmLabel: "Appeler", tone: "gold" }))) return;
     setBusy(true);
     try {
       await callAllianceBoss();

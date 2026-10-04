@@ -15,6 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import { DIPLOMACY_RULES, involves, pactOpen, pactStatusAt, type AlliancePact } from "@/game/diplomacy";
 import { cn, formatDuration, timeAgo } from "@/lib/utils";
 import type { Alliance } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* Onglet Diplomatie (v3.8) : pactes de non-agression et canal partagé. */
 
@@ -95,7 +96,7 @@ function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: Al
   const otherName = mine ? pact.nameB : pact.nameA;
 
   const act = async (action: "accept" | "decline" | "cancel" | "break") => {
-    if (action === "break" && !window.confirm(`Rompre le pacte avec [${otherTag}] ? Il restera en vigueur ${DIPLOMACY_RULES.breakNoticeHours} h.`)) return;
+    if (action === "break" && !(await askConfirm({ title: `Rompre le pacte avec [${otherTag}] ?`, message: `Il restera en vigueur ${DIPLOMACY_RULES.breakNoticeHours} h.`, confirmLabel: "Rompre", tone: "danger" }))) return;
     setBusy(true);
     try {
       await diplomacy(action, { pactId: pact.id });

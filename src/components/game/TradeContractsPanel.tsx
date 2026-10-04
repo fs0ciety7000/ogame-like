@@ -24,6 +24,7 @@ import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.1 : contrats entre joueurs — « livre-moi X avant tel délai contre Y ». */
 
@@ -289,7 +290,7 @@ export function TradeContractsPanel() {
                           <Button size="sm" disabled={busy !== null} onClick={() => setDelivering(c)}>
                             <Truck className="h-3.5 w-3.5" /> Livrer
                           </Button>
-                          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => window.confirm(`Abandonner ? Ta caution de ${formatNumber(c.deposit)} ${resName(c.payRes)} reviendra à ${c.clientPseudo}.`) && void run(c.id, () => tradeContractAction("abandon", c.id), "Contrat abandonné.")}>
+                          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => void askConfirm({ title: "Abandonner le contrat ?", message: `Ta caution de ${formatNumber(c.deposit)} ${resName(c.payRes)} reviendra à ${c.clientPseudo}.`, confirmLabel: "Abandonner", tone: "danger" }).then((ok) => { if (ok) void run(c.id, () => tradeContractAction("abandon", c.id), "Contrat abandonné."); })}>
                             Abandonner
                           </Button>
                         </>

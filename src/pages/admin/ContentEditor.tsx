@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { currentGameContent, defaultGameContent, validateGameContent, type GameContent } from "@/game/content";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles";
 type Item<S extends ListSection> = GameContent[S][number];
@@ -59,10 +60,10 @@ export function ContentEditor<S extends ListSection>({
     const item = draft[index];
     if (!item) return;
     const fromCode = codeIds.has(getId(item));
-    const msg = fromCode
-      ? `« ${getLabel(item)} » fait partie du jeu de base. Le supprimer quand même ? Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché (« Valeurs par défaut » le fait revenir).`
-      : `Supprimer « ${getLabel(item)} » ? Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché.`;
-    if (!confirm(msg)) return;
+    const message = fromCode
+      ? "Il fait partie du jeu de base. Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché (« Valeurs par défaut » le fait revenir)."
+      : "Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché.";
+    if (!(await askConfirm({ title: `Supprimer « ${getLabel(item)} » ?`, message: message, confirmLabel: "Supprimer", tone: "danger" }))) return;
     const next = draft.filter((_, i) => i !== index);
     const errs = validateGameContent({ ...currentGameContent(), [section]: next });
     if (errs.length > 0) {
@@ -127,7 +128,7 @@ export function ContentEditor<S extends ListSection>({
   };
 
   const restoreDefaults = async () => {
-    if (!confirm(`Revenir aux ${title.toLowerCase()} par défaut du code ? Les personnalisations seront perdues.`)) return;
+    if (!(await askConfirm({ title: `Revenir aux ${title.toLowerCase()} par défaut ?`, message: "Les personnalisations seront perdues.", confirmLabel: "Rétablir", tone: "danger" }))) return;
     setBusy(true);
     try {
       await resetContentSection(section);

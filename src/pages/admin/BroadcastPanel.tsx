@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BROADCAST_SEGMENTS, validateBroadcast, type BroadcastSegment } from "@/game/broadcast";
 import { pb } from "@/lib/pocketbase";
 import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.10.5 : messages ciblés — une notification dans le jeu pour un groupe de joueurs. */
 
@@ -61,7 +62,7 @@ export function BroadcastPanel() {
   const seg = BROADCAST_SEGMENTS.find((s) => s.id === segment)!;
 
   const submit = async () => {
-    if (!confirm(`Envoyer cette notification à ${count ?? "?"} joueur(s) ?`)) return;
+    if (!(await askConfirm({ title: `Envoyer à ${count ?? "?"} joueur(s) ?`, message: "La notification part tout de suite.", confirmLabel: "Envoyer" }))) return;
     setBusy(true);
     try {
       const r = await send({ segment, allianceId, title, message, link });

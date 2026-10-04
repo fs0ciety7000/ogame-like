@@ -1,5 +1,3 @@
-import { WORLD_BOSS_RULES } from "@/game/worldBosses";
-import { worldBossForStart } from "@/game/leviathan";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rocket, CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
@@ -24,7 +22,6 @@ import {
   type AdminPlayer,
 } from "@/services/adminService";
 import { NumberField, Section } from "@/pages/admin/fields";
-import { BossScheduleFields } from "@/pages/admin/bossFields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -32,6 +29,7 @@ import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
 import { MythicRelicsCard, TerritoriesAdminCard } from "@/pages/admin/EndgameCards";
 import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
 import { PlayerToolsCard } from "@/pages/admin/PlayerToolsCard";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 const HOUR = 3600 * 1000;
 const MIN = 60 * 1000;
@@ -44,11 +42,6 @@ export function RulesPanel() {
   const [busy, setBusy] = useState(false);
   const pvp = rules.pvp;
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
-  // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
-  const bossClash =
-    rules.events.bossWeekly === false && rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
-      ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
-      : undefined;
 
   const ruleErrors = useMemo(() => validateRules(rules), [rules]);
   const save = async () => {
@@ -466,85 +459,8 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, titleDays: v ?? 0 } }))}
           />
         </Section>
-        <Section title="Boss mondiaux (Léviathan et ses cinq rivaux)">
-          <BossScheduleFields
-            label="Boss mondiaux"
-            value={{
-              enabled: rules.events.bossWeekly !== false || rules.events.bossMonthly !== false,
-              weekend: rules.events.bossWeekend ?? "first",
-              startHour: rules.leviathan.startHour ?? 18,
-              durationHours: rules.leviathan.durationHours,
-              dates: rules.events.bossDates ?? [],
-              ...(rules.events.bossWeekly !== false ? { weekly: { minGapDays: Math.min(6, Math.max(WORLD_BOSS_RULES.minGapDays, Math.ceil(rules.leviathan.durationHours / 24))) } } : {}),
-            }}
-            weekly={{ on: rules.events.bossWeekly !== false, onChange: (v) => setRules((r) => ({ ...r, events: { ...r.events, bossWeekly: v } })) }}
-            nameFor={(ms) => worldBossForStart(ms).name}
-            onChange={(p) =>
-              setRules((r) => ({
-                ...r,
-                events: { ...r.events, ...(p.enabled !== undefined ? { bossMonthly: p.enabled } : {}), ...(p.weekend ? { bossWeekend: p.weekend } : {}), ...(p.dates ? { bossDates: p.dates } : {}) },
-                leviathan: { ...r.leviathan, ...(p.startHour !== undefined ? { startHour: p.startHour } : {}), ...(p.durationHours !== undefined ? { durationHours: p.durationHours } : {}) },
-              }))
-            }
-            clash={bossClash}
-          />
-          <NumberField
-            label="Structure : facteur × puissance d'attaque des actifs (× celui de chaque boss)"
-            value={rules.leviathan.hpFactor}
-            step={0.5}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, hpFactor: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Structure minimale"
-            value={rules.leviathan.minHp}
-            step={100000}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, minHp: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Délai entre deux assauts d'un joueur (h)"
-            value={rules.leviathan.cooldownHours}
-            step={0.5}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, cooldownHours: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Trajet aller (min)"
-            value={rules.leviathan.flightMinutes}
-            step={5}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, flightMinutes: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Pertes par assaut (0,08 = 8 %)"
-            value={rules.leviathan.lossPct}
-            step={0.01}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, lossPct: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Récompense de base (heures de production)"
-            value={rules.leviathan.baseRewardHours}
-            step={0.5}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, baseRewardHours: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Bonus max selon les dégâts (heures)"
-            value={rules.leviathan.bonusRewardHours}
-            step={0.5}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, bonusRewardHours: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Récompenses s'il survit (0,5 = moitié)"
-            value={rules.leviathan.failedRewardFactor}
-            step={0.1}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, failedRewardFactor: v ?? 0 } }))}
-          />
-          <NumberField
-            label="Durée du titre (jours)"
-            value={rules.leviathan.titleDays}
-            step={1}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, titleDays: v ?? 0 } }))}
-          />
-        </Section>
-        <Section title="Boss de saison">
-          <p className="text-sm text-slate-400 sm:col-span-2">5.15 : calendrier, combat, reliques et butin du boss de saison se règlent dans l'onglet « Boss de saison ».</p>
+        <Section title="Boss">
+          <p className="text-sm text-slate-400 sm:col-span-2">5.15 : boss mondiaux, boss de saison et boss d'alliance (calendrier, combat, récompenses, butin) se règlent dans l'onglet « Boss ».</p>
         </Section>
         <Section title="Flottes en vol">
           <NumberField
@@ -819,7 +735,7 @@ export function PlayersPanel() {
                   variant="ghost"
                   size="sm"
                   onClick={async () => {
-                    if (!confirm("Vider toutes les files (constructions, unités, recherches, missions) de ce joueur ?")) return;
+                    if (!(await askConfirm({ title: "Vider toutes les files de ce joueur ?", message: "Constructions, unités, recherches et missions en cours.", confirmLabel: "Vider", tone: "danger" }))) return;
                     await adminClearQueues(draft.id);
                     toast.success("Files vidées.");
                   }}
@@ -923,7 +839,7 @@ export function ToolsPanel() {
   const [deployReport, setDeployReport] = useState<DeployReport | null>(null);
 
   const deploy = async () => {
-    if (!confirm("Déployer la dernière version de main ? Une sauvegarde est faite d'abord, puis le schéma et les hooks sont mis à jour (le serveur redémarre quelques secondes).")) return;
+    if (!(await askConfirm({ title: "Déployer la dernière version de main ?", message: "Une sauvegarde est faite d'abord, puis le schéma et les hooks sont mis à jour (le serveur redémarre quelques secondes).", confirmLabel: "Déployer", tone: "ember" }))) return;
     setDeploying(true);
     try {
       const report = await adminDeploy();
@@ -973,7 +889,7 @@ export function ToolsPanel() {
       toast.error(`Import refusé : ${errors.slice(0, 3).join(" · ")}`);
       return;
     }
-    if (!confirm("Remplacer tout le contenu du jeu par ce fichier ?")) return;
+    if (!(await askConfirm({ title: "Remplacer tout le contenu du jeu ?", message: "Bâtiments, unités, technologies, missions et règles sont remplacés par ceux du fichier.", confirmLabel: "Remplacer", tone: "danger" }))) return;
     for (const section of ["buildings", "units", "technologies", "missions", "rules"] as const) {
       await saveContentSection(section, data[section] as never);
     }
@@ -1056,7 +972,16 @@ export function ToolsPanel() {
           className="self-start"
           disabled={progress !== null}
           onClick={async () => {
-            if (prompt("Tape RESET pour confirmer la remise à zéro de l'XP de tous les joueurs.") !== "RESET") return;
+            if (
+              !(await askConfirm({
+                title: "Remettre l'XP de tous les joueurs à zéro ?",
+                message: "Ressources, bâtiments et unités sont conservés. Irréversible.",
+                requireText: "RESET",
+                confirmLabel: "Remettre à zéro",
+                tone: "danger",
+              }))
+            )
+              return;
             try {
               const n = await adminResetAllXp((done, total) => setProgress(`${done} / ${total}`));
               toast.success(`XP remise à zéro pour ${n} joueurs.`);

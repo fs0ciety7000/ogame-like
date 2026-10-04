@@ -8,6 +8,7 @@ import type { EventEffects, EventType } from "@/game/events";
 import { previousSeasonId, seasonLabel } from "@/game/seasons";
 import { adminCloseSeason } from "@/services/adminService";
 import { CheckboxField, Field, NumberField, Section, SelectField, TextField } from "@/pages/admin/fields";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
@@ -44,7 +45,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
 
   const closeSeason = async () => {
     const id = previousSeasonId();
-    if (!window.confirm(`Clôturer la saison ${seasonLabel(id)} maintenant ? (déjà faite automatiquement si elle est close)`)) return;
+    if (!(await askConfirm({ title: `Clôturer la saison ${seasonLabel(id)} ?`, message: "Déjà faite automatiquement si elle est close.", confirmLabel: "Clôturer", tone: "ember" }))) return;
     setClosing(true);
     try {
       const out = await adminCloseSeason(id);

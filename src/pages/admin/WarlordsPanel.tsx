@@ -12,6 +12,7 @@ import { resetContentSection, saveContentSection, useContentStore } from "@/serv
 import { fetchWarlords } from "@/services/warlordService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { formatNumber } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.2 : réglages et fiches des seigneurs de guerre, sans toucher au code. */
 
@@ -81,7 +82,7 @@ export function WarlordsPanel() {
         <h2 className="font-display text-base text-white">Seigneurs de guerre</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => confirm("Arrêter la coalition en cours ? Elle compte comme un échec.") && void run("coalitionStop")}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void askConfirm({ title: "Arrêter la coalition en cours ?", message: "Elle compte comme un échec.", confirmLabel: "Arrêter", tone: "danger" }).then((ok) => { if (ok) void run("coalitionStop"); })}>
             Arrêter la coalition
           </Button>
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => void run("tick")}>
@@ -166,10 +167,10 @@ export function WarlordsPanel() {
                   <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => void run("attack", d.id)}>
                     <Sword className="mr-1 h-3.5 w-3.5" /> Forcer une attaque
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => confirm(`Lancer une coalition de 5 jours contre ${d.name} ?`) && void run("coalitionStart", d.id)}>
+                  <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => void askConfirm({ title: `Lancer une coalition contre ${d.name} ?`, message: "Elle dure 5 jours.", confirmLabel: "Lancer" }).then((ok) => { if (ok) void run("coalitionStart", d.id); })}>
                     <Handshake className="mr-1 h-3.5 w-3.5" /> Lancer une coalition
                   </Button>
-                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => confirm(`Recréer ${d.name} de zéro ?`) && void run("reset", d.id)}>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => void askConfirm({ title: `Recréer ${d.name} de zéro ?`, confirmLabel: "Recréer", tone: "danger" }).then((ok) => { if (ok) void run("reset", d.id); })}>
                     <Trash2 className="mr-1 h-3.5 w-3.5" /> Recréer l'empire
                   </Button>
                 </div>
