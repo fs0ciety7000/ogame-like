@@ -270,6 +270,7 @@ __export(hooksEntry_exports, {
   grantSeasonBossReward: () => grantSeasonBossReward,
   growWarlord: () => growWarlord,
   inVendetta: () => inVendetta,
+  inferKilledBy: () => inferKilledBy,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isMarketMaker: () => isMarketMaker,
@@ -6508,7 +6509,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6520,7 +6521,20 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {});
+}
+function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
+  var _a;
+  if (state.status !== "killed" || state.killedBy) return (_a = state.killedBy) != null ? _a : null;
+  const end = state.endedAtMs || state.endMs;
+  let best = null;
+  for (const [uid, c] of Object.entries(state.contributions)) {
+    if (!c || !(c.damage > 0) || !(c.lastLaunchMs >= state.startMs)) continue;
+    const at = c.lastLaunchMs + flightMinutes * 6e4;
+    if (at > end + 6e4) continue;
+    if (!best || at > best.at) best = { uid, pseudo: c.pseudo, at };
+  }
+  return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
