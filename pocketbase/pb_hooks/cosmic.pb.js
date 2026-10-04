@@ -364,6 +364,24 @@ cronAdd("cosmic_seasons", "7 * * * *", () => {
   }
 });
 
+// 5.15 : divisions du classement de saison (placement, clôture du lundi).
+cronAdd("cosmic_leagues", "9 * * * *", () => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  try {
+    const out = db.leaguesTick(Date.now());
+    if (out.closed) console.log(`[cosmic] divisions : semaine ${out.closed} close, ${out.rewarded} récompensés`);
+  } catch (err) {
+    console.log(`[cosmic] divisions : ${err}`);
+  }
+});
+
+/** POST /api/cosmic/admin/leagues — 5.15 : passage immédiat des divisions (ce que fait la tâche de chaque heure). */
+routerAdd("POST", "/api/cosmic/admin/leagues", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.leaguesTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
 /**
  * POST /api/cosmic/admin/close-season  { seasonId? } — administrateurs.
  * Clôture immédiate (par défaut : la saison précédente).

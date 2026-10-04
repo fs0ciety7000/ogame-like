@@ -1,3 +1,4 @@
+import { AscensionStars } from "@/components/game/AscensionCard";
 import { assetUrl } from "@/lib/assets";
 import { LevelTicks, StatTile } from "@/components/ui/hud";
 import { useRef, useState } from "react";
@@ -68,6 +69,7 @@ export function ProfilePage() {
         </RadialGauge>
         <div className="flex-1">
           <p className="font-display text-xl text-white">{getRankLabel(player.xp)}</p>
+          <AscensionStars count={player.ascensions} full className="my-1" />
           <p className="text-xs text-slate-500">
             {rankIndex > 0 ? `Rang précédent : ${RANKS[rankIndex - 1]?.name}` : "Aucun rang précédent"}
           </p>

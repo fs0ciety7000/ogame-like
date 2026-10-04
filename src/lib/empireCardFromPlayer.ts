@@ -1,3 +1,4 @@
+import { ascensionCount, ascensionLabel } from "@/game/ascension";
 import type { EmpireStats } from "@/game/empireStats";
 import { publicShowcase } from "@/game/profile";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
@@ -38,6 +39,8 @@ export function empireCardFromPlayer(
     tag: opts.tag || undefined,
     rank: getRankLabel(player.xp ?? 0),
     rankIcon: getRankIcon(player.xp ?? 0),
+    ascensions: ascensionCount(player),
+    ascensionLabel: ascensionLabel(ascensionCount(player)),
     title: player.activeTitle || undefined,
     avatar: opts.avatar || undefined,
     banner: show.banner,

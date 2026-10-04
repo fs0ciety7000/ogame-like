@@ -1,3 +1,4 @@
+import { AscensionStars } from "@/components/game/AscensionCard";
 import { motion, useReducedMotion } from "framer-motion";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -11,6 +12,8 @@ export interface PodiumEntry {
   pseudo: string;
   avatar?: string;
   xp: number;
+  /** Ascensions (prestige des bâtiments, 5 au plus). */
+  ascensions?: number;
 }
 
 const PLACES = [
@@ -72,6 +75,7 @@ export function LeaderboardPodium({ top, onOpen, suffix = "" }: { top: PodiumEnt
 
               <div className="relative w-full min-w-0">
                 <p className="hud-title truncate text-sm normal-case tracking-[0.03em] text-white group-hover:text-cyan-glow sm:text-lg">{p.pseudo}</p>
+                <AscensionStars count={p.ascensions} className="mt-0.5 justify-center" />
                 <div className="mt-1 flex flex-col items-center gap-1 sm:mt-2">
                   <motion.img
                     src={getRankIcon(p.xp)}

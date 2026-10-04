@@ -5,26 +5,45 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { ASCENSION_RULES, ascensionCount, ascensionShieldUntil, canAscend, upkeepFreeUntil } from "@/game/ascension";
+import { ASCENSION_INSIGNIA, ASCENSION_RULES, ascensionCount, ascensionLabel, ascensionShieldUntil, canAscend, upkeepFreeUntil } from "@/game/ascension";
+import { assetUrl } from "@/lib/assets";
 import { BUILDINGS } from "@/game/buildings";
 import { ascendEmpire, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatDuration } from "@/lib/utils";
 
-/** Étoiles d'ascension (v3.4), à côté d'un pseudo. */
-export function AscensionStars({ count, className }: { count?: number; className?: string }) {
+/** Insigne d'ascension (v3.4, 5.15) : l'insigne et une étoile par ascension.
+ *  `full` montre les cinq emplacements (étoiles vides comprises) et « Ascension III ». */
+export function AscensionStars({ count, full, className }: { count?: number; full?: boolean; className?: string }) {
   const n = ascensionCount({ ascensions: count });
   if (n <= 0) return null;
+  const label = ascensionLabel(n);
+  const slots = full ? ASCENSION_RULES.maxAscensions : n;
   return (
-    <span className={cn("inline-flex items-center gap-px text-gold-glow", className)} title={`${n} ascension${n > 1 ? "s" : ""}`}>
-      {Array.from({ length: n }, (_, i) => (
-        <Star key={i} className="h-3 w-3 fill-current" />
-      ))}
+    <span className={cn("inline-flex items-center gap-1 text-gold-glow", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
+      {ASCENSION_INSIGNIA ? <img src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={full ? "h-6 w-6 object-contain" : "h-4 w-4 object-contain"} /> : <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />}
+      <span className="inline-flex items-center gap-px">
+        {Array.from({ length: slots }, (_, i) => (
+          <Star key={i} className={cn(full ? "h-3.5 w-3.5" : "h-3 w-3", i < n ? "fill-current" : "text-slate-600")} />
+        ))}
+      </span>
+      {full && <span className="font-mono text-[10px] uppercase tracking-[0.16em]">{label}</span>}
     </span>
   );
 }
 
-/** Carte d'ascension, page Bâtiments : bonus actuels, conditions, lancement. */
+/** 5.15 : seuil d'apparition de l'Ascension (75 % des niveaux des bâtiments de base, ou déjà ascendé). */
+export const ASCENSION_UNLOCK_PCT = 0.75;
+
+export function ascensionProgress(player: { buildings: Record<string, { level?: number } | undefined>; ascensions?: number }) {
+  const base = BUILDINGS.filter((b) => !b.endgame);
+  const levels = base.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  const maxLevels = base.reduce((a, b) => a + b.maxLevel, 0);
+  const needed = Math.ceil(maxLevels * ASCENSION_UNLOCK_PCT);
+  return { levels, maxLevels, needed, unlocked: ascensionCount(player) > 0 || levels >= needed };
+}
+
+/** Carte d'ascension (page Ascension) : bonus actuels, conditions, lancement. */
 export function AscensionCard() {
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
@@ -34,10 +53,7 @@ export function AscensionCard() {
   if (!player) return null;
   const now = Date.now();
   const count = ascensionCount(player);
-  const base = BUILDINGS.filter((b) => !b.endgame);
-  const levels = base.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
-  const maxLevels = base.reduce((a, b) => a + b.maxLevel, 0);
-  if (count === 0 && levels < maxLevels * 0.75) return null;
+  if (!ascensionProgress(player).unlocked) return null;
   const check = canAscend(player, queues, now);
   const shield = ascensionShieldUntil(player) - now;
   const upkeep = upkeepFreeUntil(player) - now;

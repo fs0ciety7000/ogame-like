@@ -1488,30 +1488,46 @@ function closeSeason(game, now, seasonIdIn) {
       a.set("treasury", treasury);
       txApp.save(a);
     });
-    // v5.10.5 : ligues — montées, descentes et récompense selon la ligue.
-    try {
-      const lrec = configRecord(txApp, game.LEAGUES_KEY);
-      const leagues = game.normalizeLeagues(lrec ? toPlain(lrec).data : null);
-      const everyone = proceduralPlayers(txApp);
-      const closed = game.closeLeagues(leagues, everyone, seasonId, game.currentSeasonId(now));
-      closed.rewards.forEach((r) => {
-        if (!findOrNull(txApp, "players", r.uid)) return;
-        const info = game.leagueInfo(r.tier);
-        const next = game.leagueInfo(r.to);
-        const loaded = loadPlayer(txApp, game, r.uid);
-        const headline = r.move === "up" ? `Ligue : promotion en ${next.label} ${next.emoji} !` : r.move === "down" ? `Ligue : retour en ${next.label}` : `Ligue ${info.label} : ${r.rank}${r.rank === 1 ? "er" : "e"}`;
-        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: r.rank, seasonXp: 0 }, { hours: r.hours, rare: 0, title: "" }, now, headline);
-        savePlayer(txApp, game, loaded, out.player, out.queues);
-        notify(txApp, r.uid, out.notifications.map((n) => (n.kind === "season" && n.title === headline ? Object.assign({}, n, { message: `${info.emoji} Ligue ${info.label}, ${r.rank}${r.rank === 1 ? "er" : "e"} : ${r.hours} h de production versées.`, link: "/game/joueurs?onglet=ligues" }) : n)));
-      });
-      writeConfig(txApp, game.LEAGUES_KEY, closed.state);
-    } catch (err) {
-      console.log(`[cosmic] ligues : ${err}`);
-    }
+    // 5.15 : les ligues sont devenues des divisions hebdomadaires (leaguesTick).
     summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length, seasonWar: war.length };
   });
   return summary;
 }
+/**
+ * 5.15 : divisions du classement de saison, chaque heure. Place les nouveaux
+ * venus ; le lundi, fige la semaine : montées, descentes, jetons du casino
+ * selon la division et titre « Champion <division> » pour le premier.
+ */
+function leaguesTick(now) {
+  const game = loadGame();
+  let out = { closed: null, rewarded: 0 };
+  $app.runInTransaction((txApp) => {
+    const rec = configRecord(txApp, game.LEAGUES_KEY);
+    const before = game.normalizeLeagues(rec ? toPlain(rec).data : null);
+    const tick = game.leagueTick(before, proceduralPlayers(txApp), now);
+    tick.rewards.forEach((r) => {
+      if (!findOrNull(txApp, "players", r.uid)) return;
+      const loaded = loadPlayer(txApp, game, r.uid);
+      const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+      const tokens = game.grantTokens(flushed.player, r.tokens);
+      game.grantLeagueTitle(flushed.player, r.title, r.rank, now);
+      savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+      const info = game.leagueInfo(r.tier);
+      const next = game.leagueInfo(r.to);
+      const rank = `${r.rank}${r.rank === 1 ? "er" : "e"}`;
+      const headline = r.move === "up" ? `Division : promotion en ${next.label} !` : r.move === "down" ? `Division : retour en ${next.label}` : `Division ${info.label} : ${rank}`;
+      const parts = [`${game.leagueWeekLabel(tick.closedWeekId)}, ${info.label} : ${rank}.`];
+      if (tokens > 0) parts.push(`+${tokens} jeton${tokens > 1 ? "s" : ""} du casino.`);
+      if (r.title) parts.push(`Titre « ${r.title} ».`);
+      notify(txApp, r.uid, flushed.notifications.concat([{ kind: "season", title: headline, message: parts.join(" "), createdAtMs: now, read: false, link: "/game/joueurs?mode=season" }]));
+      out.rewarded++;
+    });
+    if (tick.state !== before) writeConfig(txApp, game.LEAGUES_KEY, tick.state);
+    out.closed = tick.closedWeekId;
+  });
+  return out;
+}
+
 /* ---------- Alliances (v1.9) ---------- */
 
 const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors", "profile"];
@@ -7215,4 +7231,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

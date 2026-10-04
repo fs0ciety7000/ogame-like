@@ -44,11 +44,10 @@ import type { Alliance } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
-import { LeaguePanel } from "@/components/game/LeaguePanel";
+import { DivisionPanel, DivisionScore, useLeagues, type DivisionView } from "@/components/game/DivisionPanel";
+import { leagueStandings, leagueTier, type LeagueRow } from "@/game/leagues";
 
-type LeaderboardMode = "total" | "season" | "alliances" | "ligues";
-/** v5.14.2 : ligues en pause — onglet masqué (le code et les données restent en place). */
-const LEAGUES_PAUSED = true;
+type LeaderboardMode = "total" | "season" | "alliances";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -91,8 +90,9 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total" || (wanted === "ligues" && !LEAGUES_PAUSED)) setMode(wanted);
-    if (params.get("onglet") === "ligues" && !LEAGUES_PAUSED) setMode("ligues");
+    if (wanted === "alliances" || wanted === "season" || wanted === "total") setMode(wanted);
+    // 5.15 : les ligues sont devenues les divisions de l'onglet Saison.
+    if (params.get("onglet") === "ligues" || wanted === "ligues") setMode("season");
     if (fiche) {
       const p = players.find((x) => x.uid === fiche);
       setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
@@ -111,6 +111,20 @@ export function PlayersPage() {
   useEffect(() => subscribeAlliances(setAlliances), []);
 
   const season = useMemo(() => currentSeasonId(), []);
+  // 5.15 : divisions (onglet Saison) — par défaut, celle du joueur.
+  const leagues = useLeagues();
+  const [divisionPick, setDivisionPick] = useState<DivisionView | null>(null);
+  const humans = useMemo(() => players.filter((p) => !p.npc), [players]);
+  const division: DivisionView = divisionPick ?? (leagues ? leagueTier(leagues, uid ?? "", humans) : "general");
+  const divisionRows = useMemo(() => {
+    if (mode !== "season" || !leagues || division === "general") return null;
+    return new Map<string, LeagueRow>(leagueStandings(humans, leagues, division).map((r) => [r.uid, r]));
+  }, [mode, leagues, division, humans]);
+  const generalSeasonRank = useMemo(() => {
+    const sorted = [...humans].sort((a, b) => (b.seasonId === season ? b.seasonXp : 0) - (a.seasonId === season ? a.seasonXp : 0));
+    const i = sorted.findIndex((p) => p.uid === uid);
+    return i >= 0 ? i + 1 : null;
+  }, [humans, season, uid]);
 
   // Agrégation client-side à partir du classement déjà chargé (top 100 par
   // XP) : les membres hors de ce top 100 ne comptent pas dans le total —
@@ -140,6 +154,13 @@ export function PlayersPage() {
   // saison se fait ici côté client (top 100 déjà chargé) plutôt que via
   // un second abonnement temps réel.
   const ranked = useMemo(() => {
+    // 5.15 : dans une division, l'ordre et le rang sont ceux de la semaine.
+    if (divisionRows) {
+      return humans
+        .filter((p) => divisionRows.has(p.uid))
+        .map((p) => ({ ...p, rank: divisionRows.get(p.uid)!.rank }))
+        .sort((a, b) => a.rank - b.rank);
+    }
     // Les seigneurs de guerre (PNJ) ne sont pas classés.
     const sorted = players.filter((p) => !p.npc).sort((a, b) =>
       mode === "season"
@@ -148,10 +169,10 @@ export function PlayersPage() {
         : b.xp - a.xp,
     );
     return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
-  }, [players, mode, season]);
+  }, [players, mode, season, divisionRows, humans]);
   const reduced = useReducedMotion() ?? false;
-  const displayXpOf = (p: LeaderboardEntry) => (mode === "season" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp);
-  const xpSuffix = mode === "season" ? " de saison" : "";
+  const displayXpOf = (p: LeaderboardEntry) => (divisionRows ? (divisionRows.get(p.uid)?.score ?? 0) : mode === "season" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp);
+  const xpSuffix = divisionRows ? " cette semaine" : mode === "season" ? " de saison" : "";
   const myRank = ranked.find((p) => p.uid === uid)?.rank ?? null;
   const showPodium = !search.trim() && ranked.length >= 3 && displayXpOf(ranked[0]) > 0;
   const jumpToMe = () => {
@@ -179,7 +200,6 @@ export function PlayersPage() {
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
-            {!LEAGUES_PAUSED && <TabsTrigger value="ligues">Ligues</TabsTrigger>}
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
@@ -188,7 +208,7 @@ export function PlayersPage() {
               {seasonLabel(season)}
             </span>
           )}
-          {mode !== "alliances" && mode !== "ligues" && myRank && (
+          {mode !== "alliances" && myRank && (
             <Button variant="secondary" size="sm" onClick={jumpToMe}>
               <Crosshair className="h-3.5 w-3.5" /> Ma position · #{myRank}
             </Button>
@@ -210,9 +230,9 @@ export function PlayersPage() {
         />
       </div>
 
-      {mode === "ligues" ? (
-        <LeaguePanel players={players} uid={uid ?? ""} />
-      ) : mode === "alliances" ? (
+      {mode === "season" && leagues && <DivisionPanel state={leagues} entries={humans} uid={uid ?? ""} view={division} onView={setDivisionPick} generalRank={generalSeasonRank} />}
+
+      {mode === "alliances" ? (
         <Card className="divide-y divide-white/5">
           {allianceRanking.length === 0 && (
             <p className="p-4 text-sm text-slate-500">
@@ -262,13 +282,13 @@ export function PlayersPage() {
         <>
         {showPodium && (
           <LeaderboardPodium
-            key={`podium-${mode}`}
-            top={ranked.slice(0, 3).map((p) => ({ uid: p.uid, pseudo: p.pseudo, avatar: p.avatar, xp: displayXpOf(p) }))}
+            key={`podium-${mode}-${division}`}
+            top={ranked.slice(0, 3).map((p) => ({ uid: p.uid, pseudo: p.pseudo, avatar: p.avatar, xp: displayXpOf(p), ascensions: p.ascensions }))}
             suffix={xpSuffix}
             onOpen={(p) => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })}
           />
         )}
-        <Card key={`list-${mode}`} className="flex flex-col gap-2 p-3">
+        <Card key={`list-${mode}-${division}`} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
             <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
           )}
@@ -352,9 +372,17 @@ export function PlayersPage() {
                     </div>
                   )}
                   {/* Rang sous le pseudo quand la colonne dédiée n'a pas la place. */}
-                  <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="mt-1.5 lg:hidden" />
+                  {divisionRows ? (
+                    <DivisionScore row={divisionRows.get(p.uid) ?? { score: 0, zone: "stay" }} className="mt-1.5 justify-start lg:hidden" />
+                  ) : (
+                    <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="mt-1.5 lg:hidden" />
+                  )}
                 </div>
-                <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="max-lg:hidden" />
+                {divisionRows ? (
+                  <DivisionScore row={divisionRows.get(p.uid) ?? { score: 0, zone: "stay" }} className="max-lg:hidden" />
+                ) : (
+                  <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="max-lg:hidden" />
+                )}
                 <div className="flex items-center divide-x divide-cyan-glow/15 border border-cyan-glow/15 max-sm:col-span-full max-sm:justify-self-end">
                   <Button
                     variant="ghost"

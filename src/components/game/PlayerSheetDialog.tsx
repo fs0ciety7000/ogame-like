@@ -108,10 +108,10 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
           <div className="min-w-0">
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
               <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} />
-              <AscensionStars count={entry?.ascensions} />
               {entry?.npc && <NpcBadge />}
               {(entry?.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={entry!.vacationUntilMs!} />}
             </DialogTitle>
+            <AscensionStars count={entry?.ascensions} full className="mt-1" />
             {entry && (
               <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow">
                 {getRankLabel(entry.xp)} · {formatNumber(entry.xp)} XP
