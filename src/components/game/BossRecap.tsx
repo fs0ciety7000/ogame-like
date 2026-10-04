@@ -264,11 +264,11 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
   return (
     <>
       <Card className="flex flex-col gap-3 p-5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> Bilan du combat
           </h2>
-          <span className="ml-auto flex gap-1">
+          <span className="ml-auto flex flex-wrap justify-end gap-1">
             <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
               <PackageOpen className="mr-1 h-3.5 w-3.5" /> Voir le bilan
             </Button>

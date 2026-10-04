@@ -158,6 +158,13 @@ export function nextLeviathanStart(now: number): number | null {
   return null;
 }
 
+/** v5.10 : prochaine apparition strictement à venir (pas la fenêtre en cours, déjà ouverte). */
+export function upcomingLeviathanStart(now: number): number | null {
+  const n = nextLeviathanStart(now);
+  if (n === null || n > now) return n;
+  return nextLeviathanStart(n + LEVIATHAN_RULES.durationHours * HOUR);
+}
+
 export function isActive(state: LeviathanState | null, now: number): boolean {
   return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
 }
