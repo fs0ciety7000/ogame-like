@@ -68,6 +68,8 @@ export interface LeviathanState {
   rewards?: Record<string, BossReward>;
   /** v5.10 : auteur du coup de grâce. */
   killedBy?: { uid: string; pseudo: string };
+  /** v5.10 : combat archivé dans le Hall of fame. */
+  archived?: boolean;
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -132,6 +134,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : [],
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
+    ...(r.archived === true ? { archived: true } : {}),
   };
 }
 
@@ -153,6 +156,13 @@ export function nextLeviathanStart(now: number): number | null {
     if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR > now) return w.startMs;
   }
   return null;
+}
+
+/** v5.10 : prochaine apparition strictement à venir (pas la fenêtre en cours, déjà ouverte). */
+export function upcomingLeviathanStart(now: number): number | null {
+  const n = nextLeviathanStart(now);
+  if (n === null || n > now) return n;
+  return nextLeviathanStart(n + LEVIATHAN_RULES.durationHours * HOUR);
 }
 
 export function isActive(state: LeviathanState | null, now: number): boolean {

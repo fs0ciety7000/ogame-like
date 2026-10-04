@@ -2947,17 +2947,17 @@ function getFleetUpkeep(units, techLevels2) {
   return upkeep * techReductionFactor(techLevels2, "fleet_upkeep");
 }
 function boostedRates(input, multipliers, boost = 1) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
-  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_a = gross[res]) != null ? _a : 0) * alliance;
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost * ((_a = input.productionFactor) != null ? _a : 1);
+  if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_b = gross[res]) != null ? _b : 0) * alliance;
   const mods = playerModifiers(input);
   for (const res of Object.keys(gross)) {
-    const f = 1 + mods.productionAll + ((_b = mods.production[res]) != null ? _b : 0);
-    if (f !== 1) gross[res] = ((_c = gross[res]) != null ? _c : 0) * f;
+    const f = 1 + mods.productionAll + ((_c = mods.production[res]) != null ? _c : 0);
+    if (f !== 1) gross[res] = ((_d = gross[res]) != null ? _d : 0) * f;
   }
   for (const [res, m] of Object.entries(multipliers)) {
-    if (gross[res] && m) gross[res] = ((_d = gross[res]) != null ? _d : 0) * m;
+    if (gross[res] && m) gross[res] = ((_e = gross[res]) != null ? _e : 0) * m;
   }
   return gross;
 }
@@ -3078,12 +3078,38 @@ var COLONY_RULES = {
   foundRareCost: 1e6,
   /** Voyage du vaisseau colonial (heures). */
   foundHours: 2,
-  /** Stock de départ de chaque ressource commune. */
-  startStock: 1e6,
-  maxLevel: 15,
-  /** Coût des bâtiments d'une colonie : × ce facteur par rapport à la planète mère. */
-  costFactor: 1.5
+  /** Stock de départ de chaque ressource commune (v5.10 : 1 M → 5 M). */
+  startStock: 5e6,
+  /** v5.10 : 15 → 18. */
+  maxLevel: 18,
+  /** Coût des bâtiments d'une colonie : × ce facteur par rapport à la planète mère (v5.10 : 1,5 → 1). */
+  costFactor: 1,
+  /** v5.10 : terres neuves — production des colonies × (1 + bonus). */
+  productionBonus: 0.5,
+  /** v5.10 : à la fondation, chaque extracteur et l'entrepôt démarrent à cette part du niveau de la planète mère… */
+  foundationShare: 0.5,
+  /** …sans dépasser ce niveau. */
+  foundationMax: 8
 };
+function foundationBuildingIds() {
+  return colonyBuildingIds().filter((id) => {
+    var _a, _b;
+    const res = PRODUCTION_RESOURCE_BY_BUILDING[id];
+    return res && COMMON_RESOURCES2.includes(res) || ((_b = (_a = findBuilding(id)) == null ? void 0 : _a.effect) == null ? void 0 : _b.type) === "storage";
+  });
+}
+function foundationLevel(homeLevel) {
+  return Math.max(1, Math.min(COLONY_RULES.foundationMax, Math.floor((homeLevel || 0) * COLONY_RULES.foundationShare)));
+}
+function applyFoundation(colony, home) {
+  var _a, _b, _c, _d, _e;
+  for (const id of foundationBuildingIds()) {
+    const target = foundationLevel((_b = (_a = home == null ? void 0 : home[id]) == null ? void 0 : _a.level) != null ? _b : 0);
+    const cur = (_d = (_c = colony.buildings[id]) == null ? void 0 : _c.level) != null ? _d : 1;
+    if (target > cur) colony.buildings[id] = __spreadProps(__spreadValues({}, (_e = colony.buildings[id]) != null ? _e : { unlocked: true }), { level: target, unlocked: true });
+  }
+  colony.foundation = 1;
+}
 var HOUR2 = 36e5;
 var DEPOSIT_ID = "gisement";
 var BIOMES = {
@@ -3189,14 +3215,16 @@ function startColonization(player, nameIn, now) {
   player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR2 };
   return player.colonizing;
 }
-function foundColony(uid, job, at) {
+function foundColony(uid, job, at, home) {
   const buildings = {};
   for (const id2 of colonyBuildingIds()) buildings[id2] = { level: 1, unlocked: true };
   const resources = emptyResources();
   for (const res of COMMON_RESOURCES2) resources[res] = COLONY_RULES.startStock;
   buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
   const id = colonyId(uid, job.slot);
-  return { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
+  const colony = { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
+  applyFoundation(colony, home);
+  return colony;
 }
 function economyInput(colony, player) {
   return {
@@ -3206,6 +3234,7 @@ function economyInput(colony, player) {
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
+    productionFactor: 1 + COLONY_RULES.productionBonus,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
     relics: player.relics,
@@ -3215,8 +3244,9 @@ function economyInput(colony, player) {
   };
 }
 function advanceColony(colony, player, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const notes = [];
+  const upgradeOld = !colony.foundation;
   let at = colony.updatedAtMs || now;
   for (let guard = 0; guard < 10; guard++) {
     const next = Math.min((_b = (_a = colony.building) == null ? void 0 : _a.endTime) != null ? _b : Infinity, (_d = (_c = colony.defenseJob) == null ? void 0 : _c.endTime) != null ? _d : Infinity);
@@ -3230,20 +3260,24 @@ function advanceColony(colony, player, now) {
     if (next > now) break;
     if (colony.building && colony.building.endTime <= now) {
       const job = colony.building;
-      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: job.level });
+      colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: Math.max(job.level, (_h = (_g = colony.buildings[job.id]) == null ? void 0 : _g.level) != null ? _h : 0) });
       colony.building = null;
       grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
       notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
       const job = colony.defenseJob;
-      const cur = (_i = colony.defenses[job.unitId]) != null ? _i : { level: (_h = (_g = player.units[job.unitId]) == null ? void 0 : _g.level) != null ? _h : 1, count: 0 };
-      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_k = (_j = player.units[job.unitId]) == null ? void 0 : _j.level) != null ? _k : 1), count: cur.count + job.qty };
+      const cur = (_k = colony.defenses[job.unitId]) != null ? _k : { level: (_j = (_i = player.units[job.unitId]) == null ? void 0 : _i.level) != null ? _j : 1, count: 0 };
+      colony.defenses[job.unitId] = { level: Math.max(cur.level, (_m = (_l = player.units[job.unitId]) == null ? void 0 : _l.level) != null ? _m : 1), count: cur.count + job.qty };
       colony.defenseJob = null;
-      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_m = (_l = findUnit(job.unitId)) == null ? void 0 : _l.name) != null ? _m : job.unitId}.`, createdAtMs: now, read: false });
+      notes.push({ kind: "building", title: "Colonie : d\xE9fenses pr\xEAtes", message: `${colony.name} : ${formatInt(job.qty)} ${(_o = (_n = findUnit(job.unitId)) == null ? void 0 : _n.name) != null ? _o : job.unitId}.`, createdAtMs: now, read: false });
     }
   }
   colony.updatedAtMs = now;
+  if (upgradeOld) {
+    applyFoundation(colony, player.buildings);
+    notes.push({ kind: "building", title: "Colonie modernis\xE9e", message: `${colony.name} : ses extracteurs et son entrep\xF4t ont \xE9t\xE9 relev\xE9s au niveau de fondation, et les colonies produisent d\xE9sormais 50 % de plus.`, createdAtMs: now, read: false, link: "/game/colonies" });
+  }
   return notes;
 }
 function advanceColonies(player, now) {
@@ -3251,7 +3285,7 @@ function advanceColonies(player, now) {
   const notes = [];
   if (player.colonizing && player.colonizing.endTime <= now) {
     const job = player.colonizing;
-    player.colonies = [...(_a = player.colonies) != null ? _a : [], foundColony(player.uid, job, job.endTime)];
+    player.colonies = [...(_a = player.colonies) != null ? _a : [], foundColony(player.uid, job, job.endTime, player.buildings)];
     player.colonizing = null;
     notes.push({ kind: "building", title: "Nouvelle colonie !", message: `${job.name} est fond\xE9e : construis ses extracteurs et envoie-lui des ressources.`, createdAtMs: now, read: false });
   }
@@ -6474,7 +6508,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6486,7 +6520,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {});
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;

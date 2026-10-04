@@ -3,6 +3,7 @@
 Illustrations pour l'article du devblog `content/blog/11-titres-pot-commun-hall-of-fame.md`.
 
 - **Couverture** : format 16:9, exportée en 1600 × 900, WebP qualité 85, à placer dans `public/assets/blog/articles/5-10/couverture.webp`.
+- **Images reçues** (5.10) : couverture (Hall of fame), coup de grâce, titres, pot commun. Les visuels « cadeaux » et « coffre » restent à faire.
 - **Visuels de section** : format 3:2, dans le même dossier (noms suggérés à chaque section).
 
 Même ambiance que le reste du jeu : espace sombre, néons cyan `#4be8ff` et or `#ffd86b`, interfaces holographiques. Aucun texte dans l'image : Midjourney écrit mal, et les titres sont ajoutés par l'article.
