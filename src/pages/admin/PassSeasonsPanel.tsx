@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Plus, RefreshCw, Rocket, Save, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { Copy, Dices, Plus, Radio, RefreshCw, Rocket, Save, Sparkles, Trash2, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudCallout, HudChip } from "@/components/ui/hud";
 import { currentGameContent } from "@/game/content";
 import { chronicleMonthId } from "@/game/chronicles";
 import { COMMANDER_ROLES, COMMANDERS, seasonCommanderDef, type CommanderId } from "@/game/commanders";
-import { CHALLENGE_KEYS, nextMonthId, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { CHALLENGE_KEYS, hasFullChallenges, nextMonthId, passSeasonAllowed, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { describePassReward, normalizeTierReqs, OBJECTIVE_LABELS, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { CATALOG_START, catalogEntryFor, THEME_PRIMARY } from "@/game/seasonCatalog";
 import { STORY_SPEAKERS, type Speaker } from "@/game/story";
-import { adminPassSeasonGenerate } from "@/services/adminService";
+import { adminPassSeasonChallenges, adminPassSeasonGenerate } from "@/services/adminService";
 import { saveContentSection, useContentStore } from "@/services/contentService";
 import { RewardEditor } from "@/pages/admin/PassPanel";
 import { Field, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
@@ -47,7 +47,7 @@ export function PassSeasonsPanel() {
   // Sélection par défaut : le prochain brouillon, sinon le passe en cours.
   useEffect(() => {
     if (selected && seasons.some((s) => s.id === selected)) return;
-    const pick = seasons.find((s) => s.status === "draft") ?? seasons.find((s) => s.id === current) ?? seasons[seasons.length - 1];
+    const pick = seasons.find((s) => s.id === current && s.status === "published") ?? seasons.find((s) => s.status === "draft") ?? seasons[seasons.length - 1];
     setSelected(pick?.id ?? null);
   }, [seasons, selected, current]);
 
@@ -56,6 +56,9 @@ export function PassSeasonsPanel() {
     setDraft(s ? structuredClone(s) : null);
   }, [selected, seasons]);
 
+  const live = seasons.find((s) => s.id === current && s.status === "published") ?? null;
+  const upcoming = seasons.filter((s) => s.id > current || (s.id === current && s.status !== "published"));
+  const past = seasons.filter((s) => s.id < current);
   const errors = useMemo(() => (draft ? validatePassSeasons({ seasons: [draft] }) : []), [draft]);
   const dirty = !!draft && JSON.stringify(draft) !== JSON.stringify(seasons.find((s) => s.id === draft.id));
   const started = !!draft && draft.id <= current;
@@ -73,6 +76,21 @@ export function PassSeasonsPanel() {
       toast.success(`Brouillon du passe ${monthId} écrit : « ${out.season.theme.name} ».`);
     } catch (err) {
       toast.error((err as { response?: { message?: string } }).response?.message ?? "Génération impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // v5.14.2 : nouveaux défis seulement (n'importe quel mois, même en cours).
+  const rerollChallenges = async (s: PassSeason) => {
+    if (s.status === "published" && s.id <= current && !confirm(`Le passe ${seasonLabel(s.id)} est en cours : ses défis seront réécrits (thème, récompenses et points ne bougent pas). Continuer ?`)) return;
+    setBusy(true);
+    try {
+      const out = await adminPassSeasonChallenges(s.id, Date.now() % 1000);
+      setDraft(out.season);
+      toast.success(`Défis du passe ${seasonLabel(s.id)} réécrits.`);
+    } catch (err) {
+      toast.error((err as { response?: { message?: string } }).response?.message ?? "Réécriture impossible.");
     } finally {
       setBusy(false);
     }
@@ -102,44 +120,83 @@ export function PassSeasonsPanel() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">Passes de saison générés</h2>
+        <h2 className="hud-title text-sm text-white">Passes de saison</h2>
         <Button size="sm" variant="outline" className="ml-auto" disabled={busy} onClick={() => void generate(nextToWrite, 0)}>
-          <Plus className="h-3.5 w-3.5" /> Générer {seasonLabel(nextToWrite)}
+          <Plus className="h-3.5 w-3.5" /> Écrire le brouillon de {seasonLabel(nextToWrite)}
         </Button>
       </div>
+
+      {/* v5.14.2 : d'abord ce que les joueurs ont sous les yeux, puis le reste. */}
+      <div className="hud-cut-sm flex flex-wrap items-center gap-3 border border-mint-glow/40 bg-mint-glow/[0.04] p-3">
+        <Radio className="h-4 w-4 text-mint-glow" />
+        <div className="min-w-0 flex-1">
+          <p className="hud-eyebrow text-[10px] text-mint-glow">Passe actif · {seasonLabel(current)}</p>
+          {live ? (
+            <p className="text-sm text-white">
+              « {live.theme.name} » <span className="text-xs text-slate-400">· passe de saison publié · {hasFullChallenges(live) ? "un défi par palier" : "défis incomplets"}</span>
+            </p>
+          ) : (
+            <p className="text-sm text-white">
+              Passe par défaut <span className="text-xs text-slate-400">· aucun passe de saison publié ce mois-ci : c'est le passe du bloc « Passe par défaut » (plus bas) qui s'applique.</span>
+            </p>
+          )}
+        </div>
+        {live && (
+          <Button size="sm" variant={selected === live.id ? "secondary" : "outline"} onClick={() => setSelected(live.id)}>
+            Ouvrir
+          </Button>
+        )}
+      </div>
+
       <p className="text-xs text-slate-400">
-        Chaque mois, le générateur écrit un brouillon : thème, scénario en quatre temps, 30 paliers, prérequis aux paliers 10, 20 et 30, et au dernier palier un commandant de saison inédit avec {PASS_FINAL_AMBER} Ambre. Relis, retouche, puis publie. Un brouillon non publié au début de son mois est publié d'office ; un passe publié remplace le passe par défaut (en dessous) ce mois-là.
+        À partir de {seasonLabel(CATALOG_START)}, le générateur écrit chaque mois un brouillon : thème du catalogue, scénario en quatre temps, 30 paliers avec chacun son défi, et au dernier palier un commandant de saison inédit avec {PASS_FINAL_AMBER} Ambre. Relis, retouche, puis publie avant le 1er : un brouillon non publié est publié d'office le 1er du mois.
       </p>
 
       <CatalogOverview current={current} />
 
-      {seasons.length === 0 ? (
-        <p className="text-sm text-slate-500">Aucun passe généré pour l'instant.</p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {seasons.map((s) => (
-            <HudChip key={s.id} asChild size="md" tone={s.id === selected ? "accent" : s.status === "published" ? "mint" : "ember"}>
-              <button type="button" className="hud-chip-action" onClick={() => setSelected(s.id)}>
-                {seasonLabel(s.id)} · {s.status === "published" ? (s.id === current ? "en cours" : s.id < current ? "terminé" : "publié") : "brouillon"}
-              </button>
-            </HudChip>
-          ))}
-        </div>
+      {([
+        ["À venir", upcoming, "Brouillons et passes publiés des mois suivants."],
+        ["Terminés", past, "Mois passés : en lecture, pour mémoire."],
+      ] as const).map(([label, list, hint]) =>
+        list.length === 0 ? null : (
+          <div key={label} className="flex flex-col gap-1.5">
+            <p className="hud-eyebrow text-[10px] text-slate-400">
+              {label} <span className="normal-case tracking-normal text-slate-500">· {hint}</span>
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {list.map((s) => (
+                <HudChip key={s.id} asChild size="md" tone={s.id === selected ? "accent" : s.status === "published" ? "mint" : "ember"}>
+                  <button type="button" className="hud-chip-action" onClick={() => setSelected(s.id)}>
+                    {seasonLabel(s.id)} · {s.status === "published" ? "publié" : "brouillon"}
+                  </button>
+                </HudChip>
+              ))}
+            </div>
+          </div>
+        ),
       )}
+      {seasons.length === 0 && <p className="text-sm text-slate-500">Aucun passe de saison pour l'instant.</p>}
 
       {draft && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
             <span className="h-3 w-3 shrink-0" style={{ background: draft.theme.accent }} />
-            <h3 className="hud-title text-base text-white">{draft.theme.name}</h3>
-            <HudChip size="sm" tone={draft.status === "published" ? "mint" : "ember"} alert={draft.status === "draft"}>
-              {draft.status === "published" ? "Publié" : "Brouillon"}
+            <h3 className="hud-title text-base text-white">
+              {seasonLabel(draft.id)} · {draft.theme.name}
+            </h3>
+            <HudChip size="sm" tone={draft.id === live?.id ? "mint" : draft.id < current ? "neutral" : draft.status === "published" ? "accent" : "ember"} alert={draft.status === "draft"}>
+              {draft.id === live?.id ? "Actif : les joueurs l'utilisent" : draft.id < current ? "Terminé" : draft.status === "published" ? `Publié · démarre en ${seasonLabel(draft.id).toLowerCase()}` : "Brouillon"}
             </HudChip>
             {dirty && <HudChip size="sm" tone="gold">Modifié</HudChip>}
             <div className="ml-auto flex flex-wrap gap-2">
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void generate(draft.id, (draft.auto?.variant ?? 0) + 1)} title="Nouveau tirage : paliers, prérequis et répliques (thème et commandant suivent le catalogue)">
-                <RefreshCw className="h-3.5 w-3.5" /> Régénérer
+              <Button size="sm" variant="ghost" disabled={busy || draft.id < current} onClick={() => void rerollChallenges(draft)} title="Nouveaux défis seulement : thème, récompenses et points par palier ne bougent pas (possible sur le passe actif)">
+                <Dices className="h-3.5 w-3.5" /> Nouveaux défis
               </Button>
+              {draft.id > current && passSeasonAllowed(draft.id) && (
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void generate(draft.id, (draft.auto?.variant ?? 0) + 1)} title="Nouveau tirage complet : paliers, défis et répliques (thème et commandant suivent le catalogue)">
+                  <RefreshCw className="h-3.5 w-3.5" /> Tout régénérer
+                </Button>
+              )}
               <Button size="sm" variant="outline" disabled={busy || !dirty || errors.length > 0} onClick={() => void save(draft, "Passe enregistré.")}>
                 <Save className="h-3.5 w-3.5" /> Enregistrer
               </Button>
@@ -216,10 +273,10 @@ export function PassSeasonsPanel() {
             <p className="hud-eyebrow text-[10px] text-slate-400">Paliers et prérequis</p>
             {/* v5.14.1 : un prérequis par palier au tirage ; on signale ceux qui n'en ont pas (retouche manuelle). */}
             {(() => {
-              const without = draft.tiers.map((_, i) => i + 1).filter((t) => !draft.requirements[String(t)]);
+              const without = draft.tiers.map((_, i) => i + 1).filter((t) => normalizeTierReqs(draft.requirements[String(t)]).length === 0);
               return (
                 <p className="text-xs text-slate-400">
-                  {without.length === 0 ? `Chaque palier a un prérequis (${draft.tiers.length} sur ${draft.tiers.length}).` : `Paliers sans prérequis : ${without.join(", ")}.`}
+                  {without.length === 0 ? `Chaque palier a son défi (${draft.tiers.length} sur ${draft.tiers.length}).` : `Paliers sans défi : ${without.join(", ")}. « Nouveaux défis » en donne un à chaque palier.`}
                 </p>
               );
             })()}

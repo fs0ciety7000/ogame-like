@@ -305,6 +305,7 @@ __export(hooksEntry_exports, {
   grantSeasonBossReward: () => grantSeasonBossReward,
   grantTokens: () => grantTokens,
   growWarlord: () => growWarlord,
+  hasFullChallenges: () => hasFullChallenges,
   inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
   isFormation: () => isFormation,
@@ -397,6 +398,7 @@ __export(hooksEntry_exports, {
   refreshAllianceChallenge: () => refreshAllianceChallenge,
   refreshContest: () => refreshContest,
   refundOffer: () => refundOffer,
+  regenerateChallenges: () => regenerateChallenges,
   releaseBounty: () => releaseBounty,
   relicLabel: () => relicLabel,
   removeChallengeTitle: () => removeChallengeTitle,
@@ -3212,9 +3214,12 @@ function onWeekend(w, which) {
   return w.nth === NTH[which != null ? which : "first"];
 }
 function bossWindows(now, s, count2 = 1) {
-  var _a;
+  var _a, _b, _c;
   const out = [];
-  if (s.enabled && s.weekly) {
+  const alternating = !!(((_b = (_a = s.weekly) == null ? void 0 : _a.between) == null ? void 0 : _b.enabled) && s.weekly.between.weekly);
+  if (s.enabled && alternating) {
+    for (const win of alternateWindows(now, s, s.weekly.between, count2)) out.push(win);
+  } else if (s.enabled && s.weekly && !s.weekly.between) {
     const w0 = weekOfLocal(now + parisOffsetMs(now));
     for (let w = w0 - 1; w <= w0 + count2 + 1; w++) {
       const d = worldBossDay(w, s.weekly.minGapDays);
@@ -3223,18 +3228,38 @@ function bossWindows(now, s, count2 = 1) {
       if (endMs > now) out.push({ startMs, endMs });
     }
   }
-  for (let i = -1; s.enabled && !s.weekly && i < 60 && out.length < count2; i++) {
+  const monthly = !s.weekly || !!s.weekly.between && !alternating;
+  for (let i = -1; s.enabled && monthly && i < 60 && out.length < count2; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
     const endMs = startMs + s.durationHours * HOUR;
     if (endMs > now) out.push({ startMs, endMs });
   }
-  for (const d of (_a = s.dates) != null ? _a : []) {
+  for (const d of (_c = s.dates) != null ? _c : []) {
     const endMs = d.startMs + d.durationHours * HOUR;
     if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
   }
   return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
+}
+function weeklyWindow(w, s) {
+  var _a;
+  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
+  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR);
+  return { startMs, endMs: startMs + s.durationHours * HOUR };
+}
+function alternateWindows(now, s, other, count2) {
+  const out = [];
+  const w0 = weekOfLocal(now + parisOffsetMs(now));
+  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
+    const a = weeklyWindow(w, other);
+    const b = weeklyWindow(w + 1, other);
+    const dur = s.durationHours * HOUR;
+    const startMs = a.endMs + DAY3 + dur <= b.startMs ? a.endMs + DAY3 : a.endMs + dur <= b.startMs ? a.endMs : null;
+    if (startMs === null) continue;
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
 }
 var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 function hourLabel(h) {
@@ -9085,21 +9110,30 @@ var SEASON_BOSS_RULES = {
   startHour: 18,
   hpFactor: 3,
   minHp: 1e5,
-  durationHours: 53,
-  topRelics: 3
+  durationHours: 48,
+  topRelics: 3,
+  alternate: true
 };
 function seasonBossSchedule() {
   var _a, _b, _c;
-  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last", startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : [] };
+  return __spreadValues({
+    enabled: SEASON_BOSS_RULES.enabled !== false,
+    weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last",
+    startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18,
+    durationHours: SEASON_BOSS_RULES.durationHours,
+    dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : []
+  }, SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {});
 }
 function seasonBossWindow(now, includeUpcoming = false) {
+  var _a, _b;
   const [w] = bossWindows(now, seasonBossSchedule(), 1);
   if (!w) return null;
   const friday = parisDate(w.startMs);
   const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
-  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
+  const weekly = !w.fixed && !!((_b = (_a = seasonBossSchedule().weekly) == null ? void 0 : _a.between) == null ? void 0 : _b.weekly);
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : weekly ? `boss-${monthId}-w${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 function seasonBossHp(activePlayers) {
   const power = activePlayers.reduce((a, p) => {
@@ -9235,11 +9269,12 @@ function canCallAllianceBoss(alliance, uid) {
   var _a;
   return hasAlliancePerm(__spreadProps(__spreadValues({}, alliance), { members: (_a = alliance.members) != null ? _a : [uid] }), uid, "boss");
 }
-function callAllianceBoss(alliance, previous, members, activeMembers, uid, now) {
+function callAllianceBoss(alliance, previous, members, activeMembers, uid, now, worldBoss = null) {
   var _a, _b, _c;
   if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
   const weekId2 = allianceWeekId(now);
   if (previous && previous.weekId === weekId2) throw new GameActionError("Le boss d'alliance a d\xE9j\xE0 \xE9t\xE9 appel\xE9 cette semaine (prochain lundi).");
+  if (worldBoss && worldBoss.endMs > now) throw new GameActionError(`En alternance avec le boss mondial : il est l\xE0 jusqu'au ${parisWhenLabel(worldBoss.endMs)}. Appelle le boss d'alliance apr\xE8s son d\xE9part.`);
   const cost = allianceBossCost(members);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
   for (const [res, n] of Object.entries(cost)) {
@@ -12497,7 +12532,7 @@ function proposeAchievementTiers(defs, players, now) {
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
-var CHALLENGE_KEYS = ["victory", "contract", "mission", "spy", "market", "bounty", "warlordWin"];
+var CHALLENGE_KEYS = ["victory", "contract", "spy", "market", "bounty", "warlordWin"];
 function challengeSize(tier) {
   if (tier === 20 || tier === 30) return 3;
   if (tier === 10) return 2;
@@ -12517,7 +12552,11 @@ function monthlyBudget(key, d) {
   return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
 }
 function generateTierChallenges(rng, focus, d, tiers2) {
-  const pool = [...focus.filter((k) => CHALLENGE_KEYS.includes(k)), ...CHALLENGE_KEYS.filter((k) => !focus.includes(k))];
+  const playable = CHALLENGE_KEYS.filter((k) => {
+    var _a;
+    return k !== "warlordWin" || ((_a = d.weeklyMedian.warlordWin) != null ? _a : 0) > 0;
+  });
+  const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   const used = {};
   const plan = [];
   let prev = [];
@@ -12756,6 +12795,20 @@ var shuffle = (rng, xs) => {
   }
   return a;
 };
+function hasFullChallenges(s) {
+  var _a;
+  return ((_a = s.tiers) != null ? _a : []).every((_, i) => {
+    var _a2;
+    return normalizeTierReqs((_a2 = s.requirements) == null ? void 0 : _a2[String(i + 1)]).length > 0;
+  });
+}
+function regenerateChallenges(season, digest, variant = 0) {
+  var _a, _b;
+  const theme = (_b = (_a = PASS_THEMES.find((t) => t.id === season.theme.id)) != null ? _a : PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme)) != null ? _b : PASS_THEMES[0];
+  const rng = seededRandom2(`challenges:${season.id}:${variant}`);
+  const focus = shuffle(rng, theme.focus);
+  return __spreadProps(__spreadValues({}, season), { requirements: generateTierChallenges(rng, focus, digest, season.tiers.length) });
+}
 function generatePassSeason(o) {
   var _a, _b, _c;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));

@@ -4257,13 +4257,29 @@ const CONTENT_MIGRATIONS = [
     id: "pass-octobre-rollback-5.14.1",
     key: "passSeasons",
     patches: [],
-    run(data, changes) {
+    // v5.14.2 : neutralisée (le passe d'octobre reste en place, il reçoit ses défis ci-dessous).
+    run() {
+      return false;
+    },
+  },
+  // v5.14.2 : les passes d'avant les défis par palier (prérequis aux paliers 10, 20, 30
+  // seulement) reçoivent un défi à chaque palier ; thème, récompenses et points inchangés.
+  {
+    id: "pass-defis-30-paliers-5.14.2",
+    key: "passSeasons",
+    patches: [],
+    run(data, changes, txApp) {
       if (!data || !Array.isArray(data.seasons)) return false;
-      const keep = data.seasons.filter((s) => !(s && s.id < "2026-11" && s.auto));
-      if (keep.length === data.seasons.length) return false;
-      data.seasons.filter((s) => keep.indexOf(s) < 0).forEach((s) => changes.push(`passe ${s.id} retiré (retour au passe des Chroniques)`));
-      data.seasons = keep;
-      return true;
+      const game = loadGame();
+      const digest = game.worldDigest(proceduralPlayers(txApp), Date.now());
+      let touched = false;
+      data.seasons = data.seasons.map((s) => {
+        if (!s || !Array.isArray(s.tiers) || game.hasFullChallenges(s)) return s;
+        touched = true;
+        changes.push(`passe ${s.id} : un défi à chacun des ${s.tiers.length} paliers`);
+        return game.regenerateChallenges(s, digest);
+      });
+      return touched;
     },
   },
 ];
@@ -4295,7 +4311,7 @@ function runContentMigrations(app) {
       const rec = configRecord(txApp, m.key);
       const items = rec ? toPlain(rec).data : null;
       if (m.run) {
-        if (rec && m.run(items, changes)) {
+        if (rec && m.run(items, changes, txApp)) {
           rec.set("data", items);
           txApp.save(rec);
         }
@@ -4958,6 +4974,21 @@ function adminProcedural(e) {
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
     if (req.action === "passSeasonsRun") return e.json(200, { lines: passSeasonsRun(now) });
     // v5.13 : (ré)écrit le brouillon du passe d'un mois. Un passe publié n'est réécrit qu'après confirmation.
+    // v5.14.2 : réécrit seulement les défis d'un passe (n'importe quel mois, même en cours).
+    if (req.action === "passChallenges") {
+      const monthId = String(req.monthId || "");
+      let season = null;
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const cfg = readPassSeasons(txApp, game);
+        const existing = game.findPassSeason(cfg, monthId);
+        if (!existing) throw new BadRequestError("Passe introuvable.");
+        season = game.regenerateChallenges(existing, game.worldDigest(proceduralPlayers(txApp), now), Math.max(0, Math.floor(Number(req.variant) || 0)));
+        writeConfig(txApp, game.PASS_SEASONS_SECTION, game.upsertPassSeason(cfg, season));
+        bossAdminLog(txApp, e, game.PASS_SEASONS_SECTION, `Passe ${monthId} : défis réécrits`, {}, now);
+      });
+      return e.json(200, { season });
+    }
     if (req.action === "passSeason") {
       const monthId = String(req.monthId || "");
       if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
@@ -6441,7 +6472,7 @@ function seasonBossTick(now) {
       const month = game.bossMonthOf(state);
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -6599,7 +6630,9 @@ function allianceBossRequest(e) {
     const { members, actives } = allianceMembers(txApp, alliance, now);
     let state;
     try {
-      state = game.callAllianceBoss(alliance, readAllianceBoss(game, allianceRec), members, actives, uid, now);
+      // v5.14.2 : en alternance avec le boss mondial (pas d'appel pendant son passage).
+      const lev = readLeviathan(txApp, game);
+      state = game.callAllianceBoss(alliance, readAllianceBoss(game, allianceRec), members, actives, uid, now, lev && lev.status === "active" && now < lev.endMs ? lev : null);
     } catch (err) {
       throw asHttpError(game, err);
     }

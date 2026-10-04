@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { currentGameContent, validateGameContent, type GameContent } from "@/game/content";
+import { currentGameContent, defaultGameContent, validateGameContent, type GameContent } from "@/game/content";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 
 type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles";
@@ -50,6 +50,47 @@ export function ContentEditor<S extends ListSection>({
       const q = filter.trim().toLowerCase();
       return !q || getLabel(item).toLowerCase().includes(q) || getId(item).toLowerCase().includes(q);
     });
+
+  // v5.14.2 : éléments absents du code (ajoutés depuis l'administration).
+  const codeIds = useMemo(() => new Set((defaultGameContent()[section] as Item<S>[]).map(getId)), [section, getId]);
+
+  /** Supprime un élément et enregistre aussitôt (refusé si d'autres éléments en dépendent). */
+  const remove = async (index: number) => {
+    const item = draft[index];
+    if (!item) return;
+    const fromCode = codeIds.has(getId(item));
+    const msg = fromCode
+      ? `« ${getLabel(item)} » fait partie du jeu de base. Le supprimer quand même ? Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché (« Valeurs par défaut » le fait revenir).`
+      : `Supprimer « ${getLabel(item)} » ? Les joueurs qui en possèdent le gardent en base, mais il ne sera plus affiché.`;
+    if (!confirm(msg)) return;
+    const next = draft.filter((_, i) => i !== index);
+    const errs = validateGameContent({ ...currentGameContent(), [section]: next });
+    if (errs.length > 0) {
+      toast.error(`Suppression impossible : ${errs[0]}`, { description: errs.length > 1 ? `${errs.length - 1} autre(s) problème(s).` : undefined });
+      return;
+    }
+    // Jamais enregistré : il suffit de le retirer du brouillon.
+    if (!saved.some((x) => getId(x) === getId(item))) {
+      setDraft(next);
+      setSelected((s) => Math.max(0, Math.min(s >= index ? s - 1 : s, next.length - 1)));
+      toast.success(`« ${getLabel(item)} » retiré.`);
+      return;
+    }
+    setBusy(true);
+    try {
+      // Les autres modifications en cours restent en brouillon : on n'enregistre que la suppression.
+      const savedNext = saved.filter((x) => getId(x) !== getId(item));
+      await saveContentSection(section, savedNext as GameContent[S]);
+      setSaved(savedNext);
+      setDraft(next);
+      setSelected((s) => Math.max(0, Math.min(s >= index ? s - 1 : s, next.length - 1)));
+      toast.success(`« ${getLabel(item)} » supprimé.`);
+    } catch (err) {
+      toast.error(`Suppression impossible : ${(err as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const update = (next: Item<S>) => setDraft((d) => d.map((it, i) => (i === selected ? next : it)));
 
@@ -145,17 +186,21 @@ export function ContentEditor<S extends ListSection>({
           <Input placeholder="Filtrer…" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-8" />
           <div className="flex-1 overflow-y-auto">
             {visible.map(({ item, index }) => (
-              <button
+              <div
                 key={`${getId(item)}-${index}`}
-                onClick={() => setSelected(index)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition",
-                  index === selected ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5",
-                )}
+                className={cn("group flex w-full items-center gap-1 rounded-lg pr-1 text-sm transition", index === selected ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5")}
               >
-                <span className="truncate">{getLabel(item) || "(sans nom)"}</span>
-                <span className="shrink-0 font-mono text-[10px] text-slate-500">{getId(item)}</span>
-              </button>
+                <button type="button" onClick={() => setSelected(index)} className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2 py-1.5 text-left">
+                  <span className="truncate">{getLabel(item) || "(sans nom)"}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {!codeIds.has(getId(item)) && <span className="font-mono text-[9px] uppercase tracking-wider text-gold-glow">ajouté</span>}
+                    <span className="font-mono text-[10px] text-slate-500">{getId(item)}</span>
+                  </span>
+                </button>
+                <button type="button" title="Supprimer" aria-label={`Supprimer ${getLabel(item)}`} disabled={busy} onClick={() => void remove(index)} className="shrink-0 p-1 text-slate-600 hover:text-danger-glow">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
           <p className="px-1 text-[11px] text-slate-500">{draft.length} élément(s)</p>
@@ -170,11 +215,8 @@ export function ContentEditor<S extends ListSection>({
                   variant="ghost"
                   size="sm"
                   className="text-danger-glow"
-                  onClick={() => {
-                    if (!confirm(`Supprimer « ${getLabel(current)} » ? Les joueurs qui en possèdent le conservent en base mais il ne sera plus affiché.`)) return;
-                    setDraft((d) => d.filter((_, i) => i !== selected));
-                    setSelected((s) => Math.max(0, s - 1));
-                  }}
+                  disabled={busy}
+                  onClick={() => void remove(selected)}
                 >
                   <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer
                 </Button>

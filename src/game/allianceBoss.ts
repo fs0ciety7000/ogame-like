@@ -1,6 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { hasAlliancePerm } from "@/game/allianceProfile";
-import { parisLocalToUtc } from "@/game/events";
+import { parisLocalToUtc, parisWhenLabel } from "@/game/events";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { FEED_MAX, leviathanRanking, type LeviathanState } from "@/game/leviathan";
@@ -136,10 +136,13 @@ export function callAllianceBoss(
   activeMembers: PlayerState[],
   uid: string,
   now: number,
+  /** v5.14.2 : boss mondial présent (en alternance : pas d'appel pendant son passage). */
+  worldBoss: { endMs: number } | null = null,
 ): AllianceBossState {
   if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
   const weekId = allianceWeekId(now);
   if (previous && previous.weekId === weekId) throw new GameActionError("Le boss d'alliance a déjà été appelé cette semaine (prochain lundi).");
+  if (worldBoss && worldBoss.endMs > now) throw new GameActionError(`En alternance avec le boss mondial : il est là jusqu'au ${parisWhenLabel(worldBoss.endMs)}. Appelle le boss d'alliance après son départ.`);
   const cost = allianceBossCost(members);
   const treasury = { ...(alliance.treasury ?? {}) };
   for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {

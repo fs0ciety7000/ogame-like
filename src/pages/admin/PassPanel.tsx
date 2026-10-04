@@ -128,6 +128,8 @@ export function PassPanel() {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Passe par défaut</h2>
+        {/* v5.14.2 : ne pas le confondre avec les passes de saison (bloc du dessus). */}
+        <span className="w-full text-xs text-slate-400 sm:order-last">Sert seulement les mois sans passe de saison publié (ni chapitre qui apporte le sien) : paliers et points, sans thème ni défis.</span>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <span className="text-xs text-slate-500">
           {cfg.tiers.length} paliers · <AmberAmount value={amber} /> et {tokens} jeton{tokens > 1 ? "s" : ""} du casino au total

@@ -1901,6 +1901,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Boss d'alliance : un simple membre ne peut pas l'appeler, le fondateur si.
       await admin.collection("alliances").update(allianceBossId, { boss: null, treasury: { scrap: 1e12, energy: 1e12, nano: 1e12, data: 1e12 } });
       await expect(al.callAllianceBoss()).rejects.toThrow(/fondateur et les officiers/);
+      // v5.14.2 : pas d'appel pendant le boss mondial (en alternance) : on le renvoie s'il est là.
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
       await aClient.send("/api/cosmic/allianceboss", { method: "POST", body: { action: "call" } });
       let alliance = await admin.collection("alliances").getOne(allianceBossId);
       expect(alliance.boss.status).toBe("active");

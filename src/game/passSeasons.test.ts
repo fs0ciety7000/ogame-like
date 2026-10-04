@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyGameContent, validateGameContent, currentGameContent } from "@/game/content";
 import { activeLevels, assignCommanders, findCommander, recruitCommander, SEASON_SECONDARY_SHARE, commandersState, grantCommanderXp, xpForLevel } from "@/game/commanders";
 import { activePass, addPassPoints, claimPassTier, passState, tierRequirements, trackActivity } from "@/game/seasonPass";
-import { CHALLENGE_KEYS, challengeSize, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_FINAL_AMBER, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { CHALLENGE_KEYS, challengeSize, hasFullChallenges, regenerateChallenges, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_FINAL_AMBER, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { bountyState } from "@/game/bounties";
 import { defaultPlayerState } from "@/game/defaults";
 import type { WorldDigest } from "@/game/procedural";
@@ -85,11 +85,26 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(challengeSize(1)).toBe(1);
     expect(challengeSize(30)).toBe(3);
     // Contenu d'un mois : chaque action demande au moins un mois d'activité médiane.
-    for (const k of CHALLENGE_KEYS) expect(totals[k]).toBeGreaterThanOrEqual(monthlyBudget(k, d) - 2);
+    for (const k of CHALLENGE_KEYS.filter((x) => x !== "warlordWin")) expect(totals[k]).toBeGreaterThanOrEqual(monthlyBudget(k, d) - 2);
+    // Personne ne bat de seigneur de guerre : pas de défi qui en demande.
+    expect(totals.warlordWin).toBeUndefined();
+    const withWarlords = generateTierChallenges(rng, ["victory"], { weeklyMedian: { warlordWin: 1 } }, 30);
+    expect(Object.values(withWarlords).flat().some((r) => r.key === "warlordWin")).toBe(true);
     expect(monthlyBudget("victory", d)).toBe(26);
     // Les derniers paliers pèsent plus que les premiers.
     const weight = (t: number) => req[String(t)].reduce((a, r) => a + r.count, 0);
     expect(weight(29) + weight(30)).toBeGreaterThan(3 * (weight(1) + weight(2)));
+  });
+
+  it("v5.14.2 : un ancien passe (prérequis aux paliers 10, 20, 30) reçoit un défi par palier, le reste inchangé", () => {
+    const s = generatePassSeason({ monthId: "2026-11", digest: digest(), existing: [], now: NOV_10 });
+    const old = { ...s, requirements: { "10": { key: "victory", count: 3 }, "20": { key: "bounty", count: 4 }, "30": { key: "contract", count: 9 } } } as unknown as PassSeason;
+    expect(hasFullChallenges(old)).toBe(false);
+    const next = regenerateChallenges(old, digest());
+    expect(hasFullChallenges(next)).toBe(true);
+    expect({ ...next, requirements: undefined }).toEqual({ ...old, requirements: undefined });
+    expect(CHALLENGE_KEYS).not.toContain("mission");
+    expect(Object.values(next.requirements).flat().some((r) => r.key === "mission")).toBe(false);
   });
 
   it("publié : remplace le passe du mois, verrouille les paliers à prérequis et donne le commandant", () => {

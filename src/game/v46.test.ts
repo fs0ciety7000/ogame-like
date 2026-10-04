@@ -53,6 +53,8 @@ describe("v4.6 alliance boss", () => {
     const cost = allianceBossCost(members);
     expect(cost.scrap).toBeGreaterThan(0);
     const before = al.treasury!.scrap!;
+    // v5.14.2 : en alternance avec le boss mondial.
+    expect(() => callAllianceBoss(structuredClone(al), null, members, members, "b", NOW, { endMs: NOW + 3600_000 })).toThrow(/boss mondial/);
     const st = callAllianceBoss(al, null, members, members, "b", NOW);
     expect(al.treasury!.scrap).toBe(before - cost.scrap!);
     expect(st.endMs - st.startMs).toBe(ALLIANCE_BOSS_RULES.durationHours * H);
