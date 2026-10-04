@@ -66,6 +66,8 @@ export interface LeviathanState {
   timeline: { t: number; hp: number }[];
   /** v5.9 : récompenses remises à chaque participant (bilan affiché après le combat). */
   rewards?: Record<string, BossReward>;
+  /** v5.10 : auteur du coup de grâce. */
+  killedBy?: { uid: string; pseudo: string };
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -129,6 +131,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : [],
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
+    ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
   };
 }
 
@@ -207,6 +210,7 @@ export function resolveLeviathanAssault(
       hp: Math.max(0, hp),
       status: killed ? "killed" : state.status,
       endedAtMs: killed ? now : state.endedAtMs,
+      ...(killed ? { killedBy: { uid: player.uid, pseudo: player.pseudo } } : {}),
       contributions: active ? { ...state.contributions, [player.uid]: { ...c, pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 } } : state.contributions,
     },
     damage,

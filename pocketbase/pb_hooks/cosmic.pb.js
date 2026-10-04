@@ -530,6 +530,7 @@ cronAdd("cosmic_wars", "*/5 * * * *", () => {
 routerAdd("POST", "/api/cosmic/expedition/choose", (e) => require(`${__hooks}/cosmic_db.js`).expeditionChoose(e), $apis.requireAuth("users"));
 
 /** Léviathan (v3.1) : apparition, échéance et récompenses ; lancement manuel par l'équipe. */
+routerAdd("POST", "/api/cosmic/admin/bossrewards", (e) => require(`${__hooks}/cosmic_db.js`).adminBossRewards(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/leviathan", (e) => require(`${__hooks}/cosmic_db.js`).adminLeviathan(e), $apis.requireAuth("users", "_superusers"));

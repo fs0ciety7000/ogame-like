@@ -71,6 +71,7 @@ __export(hooksEntry_exports, {
   BLOG_CSS: () => BLOG_CSS,
   BLOG_JS: () => BLOG_JS,
   BLOG_WELCOME: () => BLOG_WELCOME,
+  BOSS_HISTORY_KEY: () => BOSS_HISTORY_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
@@ -157,6 +158,7 @@ __export(hooksEntry_exports, {
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
   blogPostFromRecord: () => blogPostFromRecord,
+  bossHistoryEntry: () => bossHistoryEntry,
   bossMonthOf: () => bossMonthOf,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
@@ -289,6 +291,7 @@ __export(hooksEntry_exports, {
   nextMaintenance: () => nextMaintenance,
   nextMarketDelayMs: () => nextMarketDelayMs,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
+  normalizeBossHistory: () => normalizeBossHistory,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeCustomEmojis: () => normalizeCustomEmojis,
   normalizeElite: () => normalizeElite,
@@ -326,6 +329,7 @@ __export(hooksEntry_exports, {
   publicPosts: () => publicPosts,
   publicShowcase: () => publicShowcase,
   publishGazette: () => publishGazette,
+  pushBossHistory: () => pushBossHistory,
   pushSnapshot: () => pushSnapshot,
   readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
@@ -6396,10 +6400,11 @@ var LEVIATHAN_RULES = {
 };
 var HOUR5 = 36e5;
 function normalizeLeviathan(raw) {
+  var _a;
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues({
+  return __spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6411,7 +6416,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {});
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
@@ -6472,10 +6477,11 @@ function resolveLeviathanAssault(state, player, fleet, formation, now) {
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
   return {
-    state: __spreadProps(__spreadValues({}, state), {
+    state: __spreadProps(__spreadValues(__spreadProps(__spreadValues({}, state), {
       hp: Math.max(0, hp),
       status: killed ? "killed" : state.status,
-      endedAtMs: killed ? now : state.endedAtMs,
+      endedAtMs: killed ? now : state.endedAtMs
+    }), killed ? { killedBy: { uid: player.uid, pseudo: player.pseudo } } : {}), {
       contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
     }),
     damage,
@@ -7338,11 +7344,11 @@ function allianceBossDef(state) {
   return (_a = ALLIANCE_BOSSES.find((b) => b.id === state.bossId)) != null ? _a : ALLIANCE_BOSSES[0];
 }
 function normalizeAllianceBoss(raw) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues({
+  return __spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -7358,7 +7364,7 @@ function normalizeAllianceBoss(raw) {
     bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
     launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
     cost: r.cost && typeof r.cost === "object" ? r.cost : {}
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_d = r.killedBy.pseudo) != null ? _d : "") } } : {});
 }
 function allianceBossCost(members) {
   var _a, _b;
@@ -11662,6 +11668,41 @@ function normalizeChallengeState(raw) {
   var _a, _b, _c;
   const r = raw && typeof raw === "object" ? raw : {};
   return { current: (_a = r.current) != null ? _a : null, previous: (_b = r.previous) != null ? _b : null, titleHolder: (_c = r.titleHolder) != null ? _c : null };
+}
+
+// src/game/bossHistory.ts
+var BOSS_HISTORY_KEY = "boss_history";
+var MAX_ENTRIES = 120;
+var BOSS_KIND_LABELS = {
+  leviathan: "L\xE9viathan",
+  seasonboss: "Boss de saison",
+  allianceboss: "Boss d'alliance"
+};
+function bossHistoryEntry(kind, state, meta) {
+  var _a;
+  const ranking = leviathanRanking(state);
+  const ended = state.endedAtMs || state.endMs;
+  return __spreadValues(__spreadProps(__spreadValues(__spreadValues({
+    id: `${kind}:${state.id}`,
+    kind,
+    name: meta.name
+  }, meta.image ? { image: meta.image } : {}), meta.allianceId ? { allianceId: meta.allianceId, allianceName: (_a = meta.allianceName) != null ? _a : "" } : {}), {
+    startMs: state.startMs,
+    endedAtMs: ended,
+    won: state.status === "killed",
+    maxHp: state.maxHp,
+    totalDamage: ranking.reduce((a, c) => a + c.damage, 0),
+    participants: ranking.length,
+    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
+    top: ranking.slice(0, 5).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage }))
+  }), state.killedBy ? { killedBy: state.killedBy } : {});
+}
+function normalizeBossHistory(raw) {
+  const list = raw && typeof raw === "object" && Array.isArray(raw.entries) ? raw.entries : [];
+  return list.filter((e3) => !!e3 && typeof e3 === "object" && typeof e3.id === "string" && e3.kind in BOSS_KIND_LABELS);
+}
+function pushBossHistory(list, entry) {
+  return [entry, ...list.filter((e3) => e3.id !== entry.id)].sort((a, b) => b.endedAtMs - a.endedAtMs).slice(0, MAX_ENTRIES);
 }
 
 // src/game/diplomacy.ts

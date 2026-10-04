@@ -2434,6 +2434,58 @@ function bossNotifData(gain, relic, mythic) {
   return data;
 }
 
+/**
+ * POST /api/cosmic/admin/bossrewards { kind: "leviathan" | "seasonboss", action: "distribute" }
+ * v5.10 : relance une distribution restée bloquée (boss terminé, récompenses non versées).
+ * Refusée si la distribution a déjà eu lieu : jamais de double paiement.
+ */
+function adminBossRewards(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const kind = String(req.kind || "");
+  if (kind !== "leviathan" && kind !== "seasonboss") throw new BadRequestError("Boss inconnu.");
+  if (req.action !== "distribute") throw new BadRequestError("Action inconnue.");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    let state = kind === "leviathan" ? readLeviathan(txApp, game) : readSeasonBoss(txApp, game);
+    if (!state) throw new BadRequestError("Aucun boss enregistré.");
+    if (state.rewarded) throw new BadRequestError("Récompenses déjà versées : rien à rejouer.");
+    if (state.status === "active" && now < state.endMs && state.hp > 0) throw new BadRequestError("Le combat est encore en cours.");
+    if (state.status === "active") state = Object.assign({}, state, { status: state.hp <= 0 ? "killed" : "failed", endedAtMs: state.endedAtMs || now });
+    state = kind === "leviathan" ? distributeLeviathan(txApp, game, state, now) : distributeSeasonBoss(txApp, game, state, now);
+    if (kind === "leviathan") writeLeviathan(txApp, state);
+    else writeSeasonBoss(txApp, game, state);
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "update",
+      targetCollection: "game_config",
+      recordId: kind,
+      recordLabel: `${kind === "leviathan" ? "Léviathan" : "Boss de saison"} : distribution relancée`,
+      changes: { participants: Object.keys(state.rewards || {}).length },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+    out = state;
+  });
+  return e.json(200, out);
+}
+
+/** v5.10 : archive le combat dans le Hall of fame (game_config boss_history). */
+function archiveBoss(txApp, game, kind, state, meta) {
+  try {
+    const rec = configRecord(txApp, game.BOSS_HISTORY_KEY);
+    const list = game.normalizeBossHistory(rec ? toPlain(rec).data : null);
+    writeConfig(txApp, game.BOSS_HISTORY_KEY, { entries: game.pushBossHistory(list, game.bossHistoryEntry(kind, state, meta)) });
+  } catch (err) {
+    console.log(`[cosmic] hall of fame : ${err}`);
+  }
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
@@ -2460,6 +2512,7 @@ function distributeLeviathan(txApp, game, state, now) {
     ]));
   });
   const top = ranking[0];
+  archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
   return Object.assign({}, state, {
     rewarded: true,
     rewards,
@@ -5878,6 +5931,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
       },
     ]));
   });
+  archiveBoss(txApp, game, "seasonboss", state, { name, image: month ? month.boss.image : undefined });
   return Object.assign({}, state, { rewarded: true, rewards });
 }
 
@@ -6062,6 +6116,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     allianceRec.set("treasury", treasury);
   }
   allianceBossLog(txApp, allianceRec.id, "", name, state.status === "killed" ? `${name} abattu : la moitié du coût revient au trésor.` : `${name} a survécu.`, Object.keys(refund).length ? refund : null);
+  archiveBoss(txApp, game, "allianceboss", state, { name, image: game.allianceBossDef(state).image, allianceId: allianceRec.id, allianceName: allianceRec.getString("name") });
   return Object.assign({}, state, { rewarded: true, rewards });
 }
 
@@ -6401,4 +6456,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
