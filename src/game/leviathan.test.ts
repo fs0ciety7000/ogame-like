@@ -5,7 +5,6 @@ import { EVENT_RULES } from "@/game/events";
 import {
   BOSS_PHASE_RULES,
   bossAssaultEstimate,
-  LEVIATHAN_RULES,
   SEASON_BOSS_TUNING,
   seasonBossCooldownHours,
   seasonBossFlightMinutes,
