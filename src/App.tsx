@@ -15,6 +15,7 @@ import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
 // (react-hook-form) ne pèse plus sur le bundle du jeu.
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ResourcesPage = lazy(() => import("@/pages/ResourcesPage").then((m) => ({ default: m.ResourcesPage })));
 const BuildingsPage = lazy(() => import("@/pages/BuildingsPage").then((m) => ({ default: m.BuildingsPage })));
@@ -110,7 +111,7 @@ export default function App() {
                 <Route path="statistiques" element={<EmpireStatsPage />} />
                 <Route path="ascension" element={<AscensionPage />} />
                 <Route path="redaction" element={<BlogEditorPage />} />
-                <Route path="palmares" element={<Navigate to="/game/joueurs?mode=palmares" replace />} />
+                <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />
                 <Route path="seigneurs" element={<WarlordsPage />} />
                 <Route path="boss" element={<SeasonBossPage />} />

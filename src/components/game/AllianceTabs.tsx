@@ -31,10 +31,12 @@ function AmountsForm({ value, onChange, max }: { value: Amounts; onChange: (v: A
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {RESOURCE_LIST.map((r) => (
-        <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
-          <span>
-            <ResourceIcon id={r.id} /> {r.name}
-            {max && <span className="ml-1 text-slate-600">(max {formatCompact(max(r.id))})</span>}
+        <label key={r.id} className="flex min-w-0 flex-col gap-1 text-[11px] text-slate-400">
+          {/* 5.15.4 : une seule ligne (nom tronqué, max à droite) : les champs restent alignés. */}
+          <span className="flex min-w-0 items-center gap-1.5" title={max ? `${r.name} : max ${formatNumber(max(r.id))}` : r.name}>
+            <ResourceIcon id={r.id} className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{r.name}</span>
+            {max && <span className="ml-auto shrink-0 font-mono tabular-nums text-slate-500">max {formatCompact(max(r.id))}</span>}
           </span>
           <NumberInput size="sm" stepper={false} value={value[r.id] ?? 0} max={max ? Math.max(0, max(r.id)) : undefined} onChange={(v) => onChange({ ...value, [r.id]: v })} aria-label={r.name} className="w-full" />
         </label>
@@ -103,19 +105,19 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="flex flex-col gap-3 p-4">
-        <h3 className="flex items-center gap-2 font-display text-sm text-white">
+        <h3 className="hud-title flex items-center gap-2 text-sm text-white">
           <Landmark className="h-4 w-4 text-gold-glow" /> Trésor de l'alliance
         </h3>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {RESOURCE_LIST.map((r) => (
-            <p key={r.id} className="flex justify-between gap-2">
-              <ResourceIcon id={r.id} className="h-5 w-5" />
-              <span className="tabular-mono text-slate-200">{formatCompact(treasury[r.id] ?? 0)}</span>
+            <p key={r.id} title={`${r.name} : ${formatNumber(treasury[r.id] ?? 0)}`} className="hud-cut-sm flex items-center gap-2 border border-white/5 bg-white/[0.02] px-2 py-1.5">
+              <ResourceIcon id={r.id} className="h-5 w-5 shrink-0" />
+              <span className="ml-auto font-mono text-sm tabular-nums text-slate-100">{formatCompact(treasury[r.id] ?? 0)}</span>
             </p>
           ))}
         </div>
         <div className="border-t border-white/5 pt-3">
-          <p className="mb-2 text-xs text-slate-400">Déposer (depuis tes stocks)</p>
+          <p className="hud-eyebrow mb-2 text-slate-400">Déposer depuis tes stocks</p>
           <AmountsForm value={dep} onChange={setDep} max={(res) => Math.floor(player?.resources[res] ?? 0)} />
           <Button className="mt-2" size="sm" disabled={busy || Object.keys(clean(dep)).length === 0} onClick={() => void run(() => depositToTreasury(clean(dep)), "Dépôt effectué.", () => setDep({}))}>
             Déposer
@@ -123,8 +125,9 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
         </div>
         {canDistribute && (
           <div className="border-t border-white/5 pt-3">
-            <p className="mb-2 text-xs text-slate-400">
-              Verser à un membre : au plus {Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock par ressource, {ALLIANCE_RULES.distributionsPerDay} versements par jour
+            <p className="hud-eyebrow mb-1 text-slate-400">Verser à un membre</p>
+            <p className="mb-2 text-xs text-slate-500">
+              Au plus {Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock par ressource, {ALLIANCE_RULES.distributionsPerDay} versements par jour
               ({usedToday} aujourd'hui).
             </p>
             <select
@@ -153,16 +156,22 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
       </Card>
 
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="font-display text-sm text-white">Journal du trésor</h3>
+        <h3 className="hud-title text-sm text-white">Journal du trésor</h3>
         {logs.length === 0 && <p className="text-xs text-slate-500">Rien pour l'instant.</p>}
-        <ul className="max-h-[28rem] space-y-1.5 overflow-y-auto text-xs">
+        <ul className="max-h-[36rem] divide-y divide-white/5 overflow-y-auto text-xs">
           {logs.map((l) => (
-            <li key={l.id} className="text-slate-300">
-              <span className="text-slate-500">{timeAgo(l.createdAtMs)} · </span>
-              {l.actorPseudo && <strong className="text-slate-100">{l.actorPseudo} </strong>}
-              {LOG_LABEL[l.kind] ?? l.kind} {l.targetPseudo && <strong className="text-slate-100">{l.targetPseudo} </strong>}
-              {l.text && <span>{l.text} </span>}
-              {l.resources && <span className="text-slate-400"><AmountsText res={l.resources} /></span>}
+            <li key={l.id} className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 py-1.5">
+              <span className="font-mono text-[11px] tabular-nums text-slate-500">{timeAgo(l.createdAtMs).replace(/^il y a /, "")}</span>
+              <span className="min-w-0 text-slate-300">
+                {l.actorPseudo && <strong className="text-slate-100">{l.actorPseudo} </strong>}
+                {LOG_LABEL[l.kind] ?? l.kind} {l.targetPseudo && <strong className="text-slate-100">{l.targetPseudo} </strong>}
+                {l.text && <span>{l.text}</span>}
+                {l.resources && (
+                  <span className="mt-0.5 block font-mono tabular-nums text-slate-400">
+                    <AmountsText res={l.resources} />
+                  </span>
+                )}
+              </span>
             </li>
           ))}
         </ul>

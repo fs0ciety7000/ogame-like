@@ -56,28 +56,41 @@ export function applyXpDelta(player: PlayerState, delta: number, now: number): v
    début du mois suivant, archive le résultat et verse les récompenses.
 ===================================================== */
 
-export interface SeasonRewardTier {
-  /** Rang maximal couvert par ce palier (1 = premier seulement). */
-  maxRank: number;
-  /** Heures de production offertes. */
-  hours: number;
-  /** Bonus de chaque ressource rare. */
-  rare: number;
-  /** Titre décerné (suivi du nom de la saison), vide = aucun. */
-  title: string;
+/** Lot de récompenses (5.15.4) : jetons du casino, Ambre de Ruche et
+ *  ressources communes (chacune des quatre). */
+export interface SeasonPrize {
+  tokens: number;
+  amber: number;
+  /** Quantité de CHAQUE ressource commune. */
+  common: number;
 }
 
-export const SEASON_RULES: { tiers: SeasonRewardTier[]; participationXp: number; participationHours: number; firstSeasonId: string } = {
-  tiers: [
-    { maxRank: 1, hours: 24, rare: 500, title: "Champion" },
-    { maxRank: 3, hours: 16, rare: 300, title: "Podium" },
-    { maxRank: 10, hours: 8, rare: 150, title: "Élite" },
-  ],
+export const SEASON_RULES: {
+  /** 1er : titre (« Champion du mois d'octobre 2026 ») et lot. */
+  champion: SeasonPrize & { title: string };
+  /** Lot partagé entre le 2e et le 3e, au prorata de leur XP de saison. */
+  podium: SeasonPrize;
+  /** Chaque joueur actif de la saison (XP ≥ participationXp), en plus du reste. */
+  participation: SeasonPrize;
+  participationXp: number;
+  firstSeasonId: string;
+} = {
+  champion: { title: "Champion du mois", tokens: 50, amber: 200, common: 500_000_000 },
+  podium: { tokens: 50, amber: 100, common: 50_000_000 },
+  participation: { tokens: 15, amber: 35, common: 10_000_000 },
   participationXp: 100,
-  participationHours: 2,
   /** Première saison close automatiquement (les précédentes ne sont pas récompensées). */
   firstSeasonId: "2026-09",
 };
+
+const MONTHS_LOWER = SEASON_MONTHS.map((m) => m.toLowerCase());
+
+/** « du mois d'octobre 2026 », « du mois de novembre 2026 » (élision devant une voyelle). */
+export function seasonMonthPhrase(seasonId: string): string {
+  const [year, month] = seasonId.split("-").map(Number);
+  const name = MONTHS_LOWER[(month ?? 1) - 1] ?? "?";
+  return `${/^[aeiouyéè]/.test(name) ? "d'" : "de "}${name} ${year ?? ""}`.trim();
+}
 
 export function previousSeasonId(now: number = Date.now()): string {
   const d = new Date(now);
@@ -126,16 +139,41 @@ export function seasonStandings(entries: SeasonEntry[], seasonId: string): Seaso
 }
 
 export interface SeasonReward {
+  /** Heures de production (récompense d'alliance) ; 0 pour le classement individuel. */
   hours: number;
+  /** Bonus de chaque ressource rare. */
   rare: number;
+  /** Titre complet décerné (vide = aucun). */
   title: string;
+  tokens?: number;
+  amber?: number;
+  /** Quantité de chaque ressource commune. */
+  common?: number;
 }
 
-export function seasonRewardFor(rank: number, seasonXp: number): SeasonReward | null {
-  const tier = [...SEASON_RULES.tiers].sort((a, b) => a.maxRank - b.maxRank).find((t) => rank <= t.maxRank);
-  if (tier) return { hours: tier.hours, rare: tier.rare, title: tier.title };
-  if (seasonXp >= SEASON_RULES.participationXp) return { hours: SEASON_RULES.participationHours, rare: 0, title: "" };
-  return null;
+/** Récompense du joueur classé `rank` (5.15.4) : la participation pour
+ *  chaque joueur actif, plus le lot du champion (1er) ou sa part du lot
+ *  du podium (2e et 3e, au prorata de leur XP de saison). `standings` :
+ *  classement complet (pour le partage du podium). */
+export function seasonRewardFor(rank: number, seasonXp: number, seasonId: string, standings: Pick<SeasonStanding, "rank" | "seasonXp">[] = []): SeasonReward | null {
+  const add = (a: SeasonPrize, b: SeasonPrize, f = 1): SeasonPrize => ({
+    tokens: a.tokens + Math.floor(b.tokens * f),
+    amber: a.amber + Math.floor(b.amber * f),
+    common: a.common + Math.floor(b.common * f),
+  });
+  let prize: SeasonPrize = { tokens: 0, amber: 0, common: 0 };
+  let title = "";
+  if (seasonXp >= SEASON_RULES.participationXp) prize = add(prize, SEASON_RULES.participation);
+  if (rank === 1 && seasonXp > 0) {
+    prize = add(prize, SEASON_RULES.champion);
+    if (SEASON_RULES.champion.title) title = `${SEASON_RULES.champion.title} ${seasonMonthPhrase(seasonId)}`;
+  } else if ((rank === 2 || rank === 3) && seasonXp > 0) {
+    const podium = standings.filter((s) => s.rank === 2 || s.rank === 3);
+    const total = podium.reduce((a, s) => a + s.seasonXp, 0) || seasonXp;
+    prize = add(prize, SEASON_RULES.podium, seasonXp / total);
+  }
+  if (!prize.tokens && !prize.amber && !prize.common && !title) return null;
+  return { hours: 0, rare: 0, title, ...prize };
 }
 
 /** Verse la récompense de fin de saison (production rattrapée avant). */
@@ -153,19 +191,37 @@ export function performSeasonReward(
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const gained: Partial<Record<ResourceId, number>> = {};
   for (const r of RESOURCE_LIST) {
-    const amount = Math.floor((rates[r.id] ?? 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0);
+    const amount =
+      Math.floor((rates[r.id] ?? 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0) + (r.rarity === "common" ? Math.floor(reward.common ?? 0) : 0);
     if (amount <= 0) continue;
     gained[r.id] = amount;
     player.resources[r.id] = (player.resources[r.id] ?? 0) + amount;
   }
+  const tokens = Math.max(0, Math.floor(reward.tokens ?? 0));
+  if (tokens > 0) {
+    const c = (player.casino ?? {}) as { tokens?: number };
+    player.casino = { ...(player.casino ?? {}), tokens: (Number(c.tokens) || 0) + tokens } as PlayerState["casino"];
+  }
+  const amber = Math.max(0, Math.floor(reward.amber ?? 0));
+  if (amber > 0) {
+    const b = (player.bounties ?? {}) as { amber?: number; amberEarned?: number };
+    player.bounties = { ...(player.bounties ?? {}), amber: (Number(b.amber) || 0) + amber, amberEarned: (Number(b.amberEarned) || 0) + amber } as PlayerState["bounties"];
+  }
   let titleText = "";
   if (reward.title) {
-    titleText = `${reward.title} de ${seasonLabel(standing.seasonId)}`;
+    // Ancien format (alliances) : « Titre » + « de Mois Année ».
+    titleText = reward.hours > 0 && !/ (de |d')\S+ \d{4}$/.test(reward.title) ? `${reward.title} de ${seasonLabel(standing.seasonId)}` : reward.title;
     const title: PlayerTitle = { label: titleText, seasonId: standing.seasonId, rank: standing.rank };
     player.titles = [...(player.titles ?? []).filter((t) => t.label !== titleText), title];
     if (!player.activeTitle) player.activeTitle = titleText;
   }
   const total = Object.values(gained).reduce((a: number, b) => a + (b ?? 0), 0);
+  const parts = [
+    tokens ? `${formatInt(tokens)} jeton${tokens > 1 ? "s" : ""} du casino` : "",
+    amber ? `${formatInt(amber)} Ambre` : "",
+    total ? `${formatInt(total)} ressources` : "",
+    titleText ? `le titre « ${titleText} »` : "",
+  ].filter(Boolean);
   return {
     player,
     queues: flushed.queues,
@@ -175,7 +231,7 @@ export function performSeasonReward(
       {
         kind: "season",
         title: headline ?? `Saison ${seasonLabel(standing.seasonId)} terminée : ${standing.rank}${standing.rank === 1 ? "er" : "e"} !`,
-        message: `${formatInt(standing.seasonXp)} XP de saison. Récompense : ${formatInt(total)} ressources${titleText ? ` et le titre « ${titleText} »` : ""}.`,
+        message: `${formatInt(standing.seasonXp)} XP de saison. Récompense : ${parts.join(", ").replace(/, ([^,]*)$/, " et $1")}.`,
         createdAtMs: now,
         read: false,
       },

@@ -70,6 +70,6 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
       if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : épisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/passe", emoji: "📜" });
     }
   }
-  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/joueurs?mode=palmares", emoji: "🏆" });
+  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "🏆" });
   return [...items, ...extra.filter((x) => (x.endMs ?? x.startMs) > now && x.startMs < to)].sort((a, b) => a.startMs - b.startMs);
 }

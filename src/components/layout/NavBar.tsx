@@ -179,10 +179,10 @@ const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
 const FOOTER_GROUP = NAV_GROUPS[NAV_GROUPS.length - 1];
 
 /** 5.15 : pages sorties du menu mais toujours trouvables (Ctrl+K) : Formules (aussi depuis
- *  Statistiques), Palmarès (onglet du Classement), Concours (depuis le Casino, admins). */
+ *  Statistiques), Palmarès (lien des notifications de fin de saison), Concours (depuis le Casino, admins). */
 const PALETTE_ONLY: NavItem[] = [
   { to: "/game/formules", label: "Formules", icon: Sigma },
-  { to: "/game/joueurs?mode=palmares", label: "Palmarès", icon: Trophy },
+  { to: "/game/palmares", label: "Palmarès", icon: Trophy },
   { to: "/game/concours", label: "Concours", icon: Gift },
 ];
 

@@ -79,7 +79,7 @@ export function EventCard() {
       ) : (
         <p className="text-xs text-slate-500">Aucun événement programmé.</p>
       )}
-      <Link to="/game/joueurs?mode=palmares" className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200">
+      <Link to="/game/palmares" className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200">
         <Trophy className="h-3.5 w-3.5 text-gold-glow" />
         Saison {seasonLabel(currentSeasonId(now))} : fin dans {remaining(seasonEndMs(now))}
         <span className="ml-auto text-cyan-glow">Palmarès →</span>

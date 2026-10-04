@@ -4,9 +4,9 @@ import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { LeaderboardPodium, RankChip } from "@/components/game/LeaderboardPodium";
+import { RankChip } from "@/components/game/LeaderboardPodium";
 import {
   Sword,
   Eye,
@@ -44,11 +44,11 @@ import type { Alliance } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
-const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
+import { SeasonRewardsCard } from "@/components/game/SeasonRewardsCard";
 import { DivisionPanel, DivisionScore, useLeagues, type DivisionView } from "@/components/game/DivisionPanel";
 import { leagueStandings, leagueTier, type LeagueRow } from "@/game/leagues";
 
-type LeaderboardMode = "total" | "season" | "alliances" | "palmares";
+type LeaderboardMode = "total" | "season" | "alliances" | "divisions";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -91,9 +91,10 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "palmares") setMode(wanted);
-    // 5.15 : les ligues sont devenues les divisions de l'onglet Saison.
-    if (params.get("onglet") === "ligues" || wanted === "ligues") setMode("season");
+    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "divisions") setMode(wanted);
+    // 5.15.4 : le palmarès quitte le classement (page /game/palmares), les divisions ont leur onglet.
+    if (wanted === "palmares") setMode("season");
+    if (params.get("onglet") === "ligues" || wanted === "ligues") setMode("divisions");
     if (fiche) {
       const p = players.find((x) => x.uid === fiche);
       setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
@@ -118,7 +119,7 @@ export function PlayersPage() {
   const humans = useMemo(() => players.filter((p) => !p.npc), [players]);
   const division: DivisionView = divisionPick ?? (leagues ? leagueTier(leagues, uid ?? "", humans) : "general");
   const divisionRows = useMemo(() => {
-    if (mode !== "season" || !leagues || division === "general") return null;
+    if (mode !== "divisions" || !leagues || division === "general") return null;
     return new Map<string, LeagueRow>(leagueStandings(humans, leagues, division).map((r) => [r.uid, r]));
   }, [mode, leagues, division, humans]);
   const generalSeasonRank = useMemo(() => {
@@ -164,7 +165,7 @@ export function PlayersPage() {
     }
     // Les seigneurs de guerre (PNJ) ne sont pas classés.
     const sorted = players.filter((p) => !p.npc).sort((a, b) =>
-      mode === "season"
+      mode === "season" || mode === "divisions"
         ? (b.seasonId === season ? b.seasonXp : 0) -
           (a.seasonId === season ? a.seasonXp : 0)
         : b.xp - a.xp,
@@ -172,10 +173,9 @@ export function PlayersPage() {
     return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
   }, [players, mode, season, divisionRows, humans]);
   const reduced = useReducedMotion() ?? false;
-  const displayXpOf = (p: LeaderboardEntry) => (divisionRows ? (divisionRows.get(p.uid)?.score ?? 0) : mode === "season" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp);
-  const xpSuffix = divisionRows ? " cette semaine" : mode === "season" ? " de saison" : "";
+  const displayXpOf = (p: LeaderboardEntry) => (divisionRows ? (divisionRows.get(p.uid)?.score ?? 0) : mode === "season" || mode === "divisions" ? (p.seasonId === season ? p.seasonXp : 0) : p.xp);
+  const xpSuffix = divisionRows ? " cette semaine" : mode === "season" || mode === "divisions" ? " de saison" : "";
   const myRank = ranked.find((p) => p.uid === uid)?.rank ?? null;
-  const showPodium = !search.trim() && ranked.length >= 3 && displayXpOf(ranked[0]) > 0;
   const jumpToMe = () => {
     setSearch("");
     requestAnimationFrame(() => document.getElementById(`rang-${uid}`)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" }));
@@ -201,7 +201,7 @@ export function PlayersPage() {
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
-            <TabsTrigger value="palmares">Palmarès</TabsTrigger>
+            <TabsTrigger value="divisions">Divisions</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
@@ -210,7 +210,7 @@ export function PlayersPage() {
               {seasonLabel(season)}
             </span>
           )}
-          {mode !== "alliances" && mode !== "palmares" && myRank && (
+          {mode !== "alliances" && myRank && (
             <Button variant="secondary" size="sm" onClick={jumpToMe}>
               <Crosshair className="h-3.5 w-3.5" /> Ma position · #{myRank}
             </Button>
@@ -218,11 +218,6 @@ export function PlayersPage() {
         </div>
       </div>
 
-      {mode === "palmares" ? (
-        <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
-          <HallOfFamePage embedded />
-        </Suspense>
-      ) : (
       <>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -238,7 +233,8 @@ export function PlayersPage() {
         />
       </div>
 
-      {mode === "season" && leagues && <DivisionPanel state={leagues} entries={humans} uid={uid ?? ""} view={division} onView={setDivisionPick} generalRank={generalSeasonRank} />}
+      {mode === "season" && <SeasonRewardsCard seasonId={season} />}
+      {mode === "divisions" && leagues && <DivisionPanel state={leagues} entries={humans} uid={uid ?? ""} view={division} onView={setDivisionPick} generalRank={generalSeasonRank} />}
 
       {mode === "alliances" ? (
         <Card className="divide-y divide-white/5">
@@ -288,14 +284,6 @@ export function PlayersPage() {
         </Card>
       ) : (
         <>
-        {showPodium && (
-          <LeaderboardPodium
-            key={`podium-${mode}-${division}`}
-            top={ranked.slice(0, 3).map((p) => ({ uid: p.uid, pseudo: p.pseudo, avatar: p.avatar, xp: displayXpOf(p), ascensions: p.ascensions }))}
-            suffix={xpSuffix}
-            onOpen={(p) => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })}
-          />
-        )}
         <Card key={`list-${mode}-${division}`} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
             <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
@@ -459,7 +447,6 @@ export function PlayersPage() {
         </>
       )}
       </>
-      )}
 
       <PlayerSheetDialog
         target={sheetTarget}

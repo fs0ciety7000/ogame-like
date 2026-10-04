@@ -182,7 +182,15 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
       events: { ...defaults.rules.events, ...(overrides.rules?.events ?? {}) },
-      seasons: { ...defaults.rules.seasons, ...(overrides.rules?.seasons ?? {}) },
+      seasons: (() => {
+        // 5.15.4 : lots imbriqués fusionnés un à un (anciens réglages « tiers » ignorés).
+        const o = (overrides.rules?.seasons ?? {}) as Partial<GameRules["seasons"]> & { tiers?: unknown; participationHours?: unknown };
+        const d = defaults.rules.seasons;
+        const { tiers: _tiers, participationHours: _hours, ...rest } = o;
+        void _tiers;
+        void _hours;
+        return { ...d, ...rest, champion: { ...d.champion, ...(o.champion ?? {}) }, podium: { ...d.podium, ...(o.podium ?? {}) }, participation: { ...d.participation, ...(o.participation ?? {}) } };
+      })(),
       alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
       pirates: { ...defaults.rules.pirates, ...(overrides.rules?.pirates ?? {}) },
       market: { ...defaults.rules.market, ...(overrides.rules?.market ?? {}) },
