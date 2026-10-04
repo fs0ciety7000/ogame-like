@@ -1,5 +1,6 @@
 import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
 import { DEFAULT_TITLES, setTitles, validateTitles, withLateDefaults, type TitleDef } from "@/game/titles";
+import { setLootTables, validateLootTables } from "@/game/loot";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
@@ -196,6 +197,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   // Après les chapitres : un passe de saison publié remplace le passe du chapitre.
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
+  setLootTables(content.relicSettings?.loot as Parameters<typeof setLootTables>[0]);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -390,6 +392,7 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
   errors.push(...validateRelics(content.relics ?? [], content.relicSettings ?? defaultRelicSettings()));
+  errors.push(...validateLootTables(content.relicSettings?.loot as Parameters<typeof validateLootTables>[0]));
   errors.push(...validateTitles(content.titles ?? []));
 
   return [...new Set(errors)];

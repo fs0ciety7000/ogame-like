@@ -1,3 +1,4 @@
+import { describeLoot, rollLoot } from "@/game/loot";
 import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
@@ -239,6 +240,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     grantCommanderXp(attacker, "corsair", COMMANDER_XP.attackWin);
   }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  // v5.14 : table de butin (joueur : très rare ; seigneur de guerre : un peu plus).
+  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now)) : "";
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
@@ -254,7 +257,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-attacker",
       title: outcomeTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
+      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}${extraLoot}`,
       createdAtMs: now,
       read: false,
       data: { resources: combat.loot ?? undefined, xp: xp.attackerXp > 0 ? xp.attackerXp : undefined, toUid: def.uid, toPseudo: def.pseudo },

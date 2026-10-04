@@ -1,3 +1,4 @@
+import { describeLoot, rollLoot } from "@/game/loot";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -719,11 +720,13 @@ export function resolvePirateRaid(
     player.victories = (player.victories ?? 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
+    // v5.14 : table de butin « menaces ».
+    const raidLoot = describeLoot(rollLoot(player, "threat", now));
     notifications.push(
       note(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
-        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.${raidLoot}`,
         now,
         { resources: bounty, xp: faction.bounty.xp || undefined },
       ),
@@ -835,12 +838,13 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
+    const lairLoot = describeLoot(rollLoot(player, "threat", now));
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(
       note(
         "combat-attacker",
         `${faction.lair.name} est tombé !`,
-        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.${lairLoot}`,
         now,
       ),
     );

@@ -100,6 +100,7 @@ __export(hooksEntry_exports, {
   LEAGUES_KEY: () => LEAGUES_KEY,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
+  LOOT_TABLES: () => LOOT_TABLES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
@@ -245,6 +246,7 @@ __export(hooksEntry_exports, {
   describeAnomalies: () => describeAnomalies,
   describeElite: () => describeElite,
   describeGain: () => describeGain,
+  describeLoot: () => describeLoot,
   detectResourceAnomalies: () => detectResourceAnomalies,
   eliteNotice: () => eliteNotice,
   eliteRanking: () => eliteRanking,
@@ -412,6 +414,7 @@ __export(hooksEntry_exports, {
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
+  rollLoot: () => rollLoot,
   rollOutcome: () => rollOutcome,
   rollRareOfficer: () => rollRareOfficer,
   rollRelic: () => rollRelic,
@@ -1001,7 +1004,8 @@ function setRelics(defs, settings) {
   const byId = new Map(DEFAULT_RELICS.map((t) => [t.id, __spreadProps(__spreadValues({}, t), { disabled: true })]));
   for (const t of defs) byId.set(t.id, __spreadValues({}, t));
   RELICS.splice(0, RELICS.length, ...byId.values());
-  const _a = settings, { rarities } = _a, rules = __objRest(_a, ["rarities"]);
+  const _a = settings, { rarities, loot: _loot } = _a, rules = __objRest(_a, ["rarities", "loot"]);
+  void _loot;
   Object.assign(RELIC_RULES, rules);
   for (const r of RARITIES) {
     const v = rarities == null ? void 0 : rarities[r.id];
@@ -3797,6 +3801,261 @@ function hasPrerequisites(mission, units) {
   });
 }
 
+// src/game/synthesis.ts
+var CAPSULES = {
+  assault: {
+    name: "Stimulant d'assaut",
+    short: "Attaque",
+    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
+    use: "launch"
+  },
+  armor: {
+    name: "Carapace r\xE9active",
+    short: "D\xE9fense",
+    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
+    use: "activate"
+  },
+  decoy: {
+    name: "Brouilleur d'approche",
+    short: "Leurre",
+    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
+    use: "launch"
+  },
+  veil: {
+    name: "Brouilleur de d\xE9fense",
+    short: "Voile",
+    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
+    use: "activate"
+  }
+};
+var CAPSULE_TYPES = Object.keys(CAPSULES);
+var SYNTH_RULES = {
+  pctPerLevel: 5,
+  maxStock: 3,
+  activeHours: 12,
+  /** Coût : 2 h de production commune par niveau de capsule. */
+  costHoursPerLevel: 2,
+  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
+  baseMinutes: 30,
+  minutesPerLevel: 77
+};
+function capsulePct(level3) {
+  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
+}
+function synthesisState(player) {
+  var _a, _b, _c, _d;
+  const raw = (_a = player.synthesis) != null ? _a : {};
+  const stock = {};
+  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
+  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
+  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
+  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
+}
+function synthLevel(player) {
+  var _a, _b;
+  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
+  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
+}
+function craftSeconds(level3) {
+  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
+}
+function capsuleCost(player, level3) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
+  const out = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
+  return out;
+}
+function advanceSynthesis(player, now) {
+  const st = synthesisState(player);
+  if (!st.crafting || st.crafting.endsAtMs > now) return null;
+  const done = { type: st.crafting.type, level: st.crafting.level };
+  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
+  st.crafting = null;
+  player.synthesis = st;
+  return done;
+}
+function craftCapsule(player, typeIn, levelIn, now) {
+  var _a, _b, _c;
+  const type = typeIn;
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const level3 = Math.floor(Number(levelIn));
+  const max = synthLevel(player);
+  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
+  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
+  const st = synthesisState(player);
+  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
+  const cost = capsuleCost(player, level3);
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
+  }
+  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
+  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
+  player.synthesis = st;
+  return st.crafting;
+}
+function takeCapsule(player, type, levelIn) {
+  const st = synthesisState(player);
+  const stock = [...st.stock[type]].sort((a, b) => b - a);
+  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
+  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
+  const i = stock.indexOf(wanted);
+  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
+  stock.splice(i, 1);
+  st.stock[type] = stock;
+  player.synthesis = st;
+  return capsulePct(wanted);
+}
+function activateCapsule(player, typeIn, levelIn, now) {
+  const type = typeIn;
+  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
+  const st = synthesisState(player);
+  const current2 = st[type];
+  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
+  const pct5 = takeCapsule(player, type, levelIn);
+  const after = synthesisState(player);
+  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  player.synthesis = after;
+  return pct5;
+}
+function consumeArmor(player, now) {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now) return 0;
+  const pct5 = st.armor.pct;
+  st.armor = null;
+  player.synthesis = st;
+  return pct5;
+}
+function activeVeil(player, now) {
+  const v = synthesisState(player).veil;
+  return v && v.untilMs > now ? v.pct : 0;
+}
+function decoyUnits(real, pct5, pool, random = Math.random) {
+  var _a;
+  const out = {};
+  const swing = pct5 / 100;
+  for (const [id, qty] of Object.entries(real)) {
+    if (!(qty > 0)) continue;
+    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
+    let target = id;
+    if (pool.length > 1 && random() < swing) {
+      const others = pool.filter((p) => p !== id);
+      target = others[Math.floor(random() * others.length) % others.length];
+    }
+    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
+  }
+  return out;
+}
+function veilCounts(entries, pct5, random = Math.random) {
+  if (!entries) return entries;
+  const swing = pct5 / 100;
+  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
+}
+function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
+  const req = request && typeof request === "object" ? request : {};
+  const out = { boosts: {}, fakeUnits: null };
+  const level3 = (v) => v === true ? void 0 : v;
+  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
+  if (req.decoy) {
+    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
+    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
+  }
+  return out;
+}
+function recordDecoy(player, fleetId, units) {
+  const st = synthesisState(player);
+  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
+  player.synthesis = st;
+}
+function clearDecoy(player, fleetId) {
+  const st = synthesisState(player);
+  if (!st.decoys[fleetId]) return;
+  const next = __spreadValues({}, st.decoys);
+  delete next[fleetId];
+  st.decoys = next;
+  player.synthesis = st;
+}
+
+// src/game/loot.ts
+var LOOT_SOURCES = ["worldBoss", "seasonBoss", "allianceBoss", "expedition", "warlord", "threat", "pvp"];
+var LOOT_SOURCE_LABELS = {
+  worldBoss: "Boss mondial",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  expedition: "Exp\xE9dition",
+  warlord: "Seigneur de guerre (vendetta, coalition)",
+  threat: "Menaces (repaire pris, raid repouss\xE9)",
+  pvp: "Attaque gagn\xE9e contre un joueur"
+};
+function defaultLootTables() {
+  return {
+    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6 },
+    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5 },
+    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5 },
+    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1 },
+    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1 },
+    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1 },
+    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1 }
+  };
+}
+var LOOT_TABLES = defaultLootTables();
+function setLootTables(tables) {
+  var _a;
+  const d = defaultLootTables();
+  for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
+}
+function validateLootTables(tables) {
+  var _a, _b;
+  const errors = [];
+  for (const src of LOOT_SOURCES) {
+    const t = tables == null ? void 0 : tables[src];
+    if (!t) continue;
+    const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
+    const pct5 = (v) => typeof v === "number" && v >= 0 && v <= 1;
+    if (t.relicChance !== void 0 && !pct5(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
+    if (t.capsuleChance !== void 0 && !pct5(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
+    if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
+    const min = (_a = t.capsuleMin) != null ? _a : 1;
+    const max = (_b = t.capsuleMax) != null ? _b : 10;
+    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
+    if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
+  }
+  return errors;
+}
+function rollLoot(player, source, now, rank2 = -1, random = Math.random) {
+  const t = LOOT_TABLES[source];
+  if (!t) return {};
+  const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
+  const drop = {};
+  if (random() < Math.min(1, t.relicChance * mult)) {
+    const item = rollRelic(`loot:${source}`, now, random, t.relicMinRarity);
+    if (addRelic(player, item)) drop.relic = relicLabel(item);
+  }
+  if (random() < Math.min(1, t.capsuleChance * mult)) {
+    const st = synthesisState(player);
+    const free = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
+    if (free.length > 0) {
+      const type = free[Math.floor(random() * free.length) % free.length];
+      const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
+      const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
+      const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+      st.stock[type] = [...st.stock[type], level3];
+      player.synthesis = st;
+      drop.capsule = { type, level: level3, name: CAPSULES[type].name };
+    }
+  }
+  return drop;
+}
+function describeLoot(drop) {
+  if (!drop) return "";
+  const parts = [];
+  if (drop.relic) parts.push(`Relique : ${drop.relic}`);
+  if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
+  return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
+}
+
 // src/game/story.ts
 var STORY_SPEAKERS = {
   vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
@@ -5055,183 +5314,6 @@ function eliteNotice(state, reward, now) {
   );
 }
 
-// src/game/synthesis.ts
-var CAPSULES = {
-  assault: {
-    name: "Stimulant d'assaut",
-    short: "Attaque",
-    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
-    use: "launch"
-  },
-  armor: {
-    name: "Carapace r\xE9active",
-    short: "D\xE9fense",
-    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
-    use: "activate"
-  },
-  decoy: {
-    name: "Brouilleur d'approche",
-    short: "Leurre",
-    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
-    use: "launch"
-  },
-  veil: {
-    name: "Brouilleur de d\xE9fense",
-    short: "Voile",
-    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
-    use: "activate"
-  }
-};
-var CAPSULE_TYPES = Object.keys(CAPSULES);
-var SYNTH_RULES = {
-  pctPerLevel: 5,
-  maxStock: 3,
-  activeHours: 12,
-  /** Coût : 2 h de production commune par niveau de capsule. */
-  costHoursPerLevel: 2,
-  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
-  baseMinutes: 30,
-  minutesPerLevel: 77
-};
-function capsulePct(level3) {
-  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
-}
-function synthesisState(player) {
-  var _a, _b, _c, _d;
-  const raw = (_a = player.synthesis) != null ? _a : {};
-  const stock = {};
-  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
-  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
-  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
-  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
-}
-function synthLevel(player) {
-  var _a, _b;
-  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
-  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
-}
-function craftSeconds(level3) {
-  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
-}
-function capsuleCost(player, level3) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
-  const out = {};
-  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
-  return out;
-}
-function advanceSynthesis(player, now) {
-  const st = synthesisState(player);
-  if (!st.crafting || st.crafting.endsAtMs > now) return null;
-  const done = { type: st.crafting.type, level: st.crafting.level };
-  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
-  st.crafting = null;
-  player.synthesis = st;
-  return done;
-}
-function craftCapsule(player, typeIn, levelIn, now) {
-  var _a, _b, _c;
-  const type = typeIn;
-  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
-  const level3 = Math.floor(Number(levelIn));
-  const max = synthLevel(player);
-  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
-  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
-  const st = synthesisState(player);
-  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
-  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
-  const cost = capsuleCost(player, level3);
-  for (const [res, n] of Object.entries(cost)) {
-    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
-  }
-  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
-  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
-  player.synthesis = st;
-  return st.crafting;
-}
-function takeCapsule(player, type, levelIn) {
-  const st = synthesisState(player);
-  const stock = [...st.stock[type]].sort((a, b) => b - a);
-  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
-  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
-  const i = stock.indexOf(wanted);
-  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
-  stock.splice(i, 1);
-  st.stock[type] = stock;
-  player.synthesis = st;
-  return capsulePct(wanted);
-}
-function activateCapsule(player, typeIn, levelIn, now) {
-  const type = typeIn;
-  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
-  const st = synthesisState(player);
-  const current2 = st[type];
-  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct5 = takeCapsule(player, type, levelIn);
-  const after = synthesisState(player);
-  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
-  player.synthesis = after;
-  return pct5;
-}
-function consumeArmor(player, now) {
-  const st = synthesisState(player);
-  if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct5 = st.armor.pct;
-  st.armor = null;
-  player.synthesis = st;
-  return pct5;
-}
-function activeVeil(player, now) {
-  const v = synthesisState(player).veil;
-  return v && v.untilMs > now ? v.pct : 0;
-}
-function decoyUnits(real, pct5, pool, random = Math.random) {
-  var _a;
-  const out = {};
-  const swing = pct5 / 100;
-  for (const [id, qty] of Object.entries(real)) {
-    if (!(qty > 0)) continue;
-    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
-    let target = id;
-    if (pool.length > 1 && random() < swing) {
-      const others = pool.filter((p) => p !== id);
-      target = others[Math.floor(random() * others.length) % others.length];
-    }
-    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
-  }
-  return out;
-}
-function veilCounts(entries, pct5, random = Math.random) {
-  if (!entries) return entries;
-  const swing = pct5 / 100;
-  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
-}
-function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
-  const req = request && typeof request === "object" ? request : {};
-  const out = { boosts: {}, fakeUnits: null };
-  const level3 = (v) => v === true ? void 0 : v;
-  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
-  if (req.decoy) {
-    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
-    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
-  }
-  return out;
-}
-function recordDecoy(player, fleetId, units) {
-  const st = synthesisState(player);
-  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
-  player.synthesis = st;
-}
-function clearDecoy(player, fleetId) {
-  const st = synthesisState(player);
-  if (!st.decoys[fleetId]) return;
-  const next = __spreadValues({}, st.decoys);
-  delete next[fleetId];
-  st.decoys = next;
-  player.synthesis = st;
-}
-
 // src/game/seasonPass.ts
 var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
 var PASS_POINTS = {
@@ -6008,11 +6090,12 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
+    const raidLoot = describeLoot(rollLoot(player, "threat", now));
     notifications.push(
       note3(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
-        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.${raidLoot}`,
         now,
         { resources: bounty, xp: faction.bounty.xp || void 0 }
       )
@@ -6109,12 +6192,13 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
+    const lairLoot = describeLoot(rollLoot(player, "threat", now));
     player.victories = ((_g = player.victories) != null ? _g : 0) + 1;
     notifications.push(
       note3(
         "combat-attacker",
         `${faction.lair.name} est tomb\xE9 !`,
-        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.${lairLoot}`,
         now
       )
     );
@@ -8941,10 +9025,11 @@ function finishExpedition(player, fleet, now, random = Math.random) {
     const item = rollRelic("expedition", now, random);
     if (addRelic(player, item)) relic = ` Relique trouv\xE9e : ${relicLabel(item)} !`;
   }
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random));
   return {
     kind: "fleet",
     title: relic ? "Exp\xE9dition termin\xE9e : relique !" : "Exp\xE9dition termin\xE9e",
-    message: `Ta flotte est rentr\xE9e : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}`,
+    message: `Ta flotte est rentr\xE9e : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false
   };
@@ -10942,6 +11027,7 @@ function performAttack(input) {
     grantCommanderXp(attacker, "corsair", COMMANDER_XP.attackWin);
   }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now)) : "";
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
@@ -10956,7 +11042,7 @@ function performAttack(input) {
     {
       kind: "combat-attacker",
       title: (_B = outcomeTitle[combat.outcome]) != null ? _B : "Rapport de combat",
-      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
+      message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}${extraLoot}`,
       createdAtMs: now,
       read: false,
       data: { resources: (_C = combat.loot) != null ? _C : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
@@ -13554,7 +13640,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -13612,6 +13698,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
+  setLootTables((_W = content.relicSettings) == null ? void 0 : _W.loot);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -13690,7 +13777,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   const errors = [];
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
@@ -13787,7 +13874,8 @@ function validateGameContent(content) {
   errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
   errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
   errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
-  errors.push(...validateTitles((_m = content.titles) != null ? _m : []));
+  errors.push(...validateLootTables((_m = content.relicSettings) == null ? void 0 : _m.loot));
+  errors.push(...validateTitles((_n = content.titles) != null ? _n : []));
   return [...new Set(errors)];
 }
 

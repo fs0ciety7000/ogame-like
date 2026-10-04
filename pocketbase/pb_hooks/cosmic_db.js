@@ -2548,6 +2548,18 @@ function withLegacyKiller(txApp, game, state, mission) {
   return Object.assign({}, state, { archived: true, legacyChecked: true }, killer ? { killedBy: killer } : {});
 }
 
+/** v5.14 : notification du butin d'un combat (tables de butin). */
+function lootNotif(loot, now) {
+  return {
+    kind: "event",
+    title: loot.relic ? "Butin : une relique !" : "Butin : une capsule",
+    message: `Dans l'épave :${loot.relic ? ` relique ${loot.relic}` : ""}${loot.relic && loot.capsule ? " et" : ""}${loot.capsule ? ` capsule ${loot.capsule.name} niv. ${loot.capsule.level}` : ""}.`,
+    createdAtMs: now,
+    read: false,
+    link: "/game/etat-major",
+  };
+}
+
 /** v5.14 : notification d'un officier rare trouvé sur un boss. */
 function rareOfficerNotif(officer, now) {
   return {
@@ -2576,6 +2588,9 @@ function distributeLeviathan(txApp, game, state, now) {
     // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
     const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
+    // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
+    const loot = won ? game.rollLoot(flushed.player, "worldBoss", now, i) : null;
+    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -5844,12 +5859,14 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     const kept = game.addRelic(p, relic);
     if (!(p.titles || []).some((t) => t.label === title)) p.titles = (p.titles || []).concat([{ label: title, seasonId: "vendetta", rank: 1 }]);
     game.addPassPoints(p, "vendetta", now);
+    // v5.14 : table de butin « seigneur de guerre ».
+    const loot = game.rollLoot(p, "warlord", now);
     savePlayer(txApp, game, loaded, p, loaded.queues);
     notify(txApp, w, [
       {
         kind: "event",
         title: "Vendetta gagnée !",
-        message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.`,
+        message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.${game.describeLoot(loot)}`,
         createdAtMs: now,
         read: false,
         link: "/game/seigneurs",
@@ -5894,13 +5911,15 @@ function finishCoalitionWon(txApp, game, state, coal, co, now) {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const loaded = loadPlayer(txApp, game, c.uid);
     const out = game.grantCoalitionReward(co, d, loaded.player, now);
+    // v5.14 : table de butin « seigneur de guerre » (participants récompensés).
+    const loot = out.eligible ? game.rollLoot(loaded.player, "warlord", now) : null;
     savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
     notify(txApp, c.uid, [
       {
         kind: "event",
         title: `Coalition victorieuse contre ${d.name}`,
         message: out.eligible
-          ? `+${game.PASS_POINTS.coalition} points de passe, ${game.COALITION_RULES.rewardHours} h de production${out.relic ? `, relique : ${out.relic}` : ""}${out.title ? `, titre « ${out.title} »` : ""}.`
+          ? `+${game.PASS_POINTS.coalition} points de passe, ${game.COALITION_RULES.rewardHours} h de production${out.relic ? `, relique : ${out.relic}` : ""}${out.title ? `, titre « ${out.title} »` : ""}.${game.describeLoot(loot)}`
           : `Ta part (moins de ${Math.round(game.COALITION_RULES.minShare * 100)} % de l'objectif) ne suffit pas pour une récompense, mais le secteur te doit une fière chandelle.`,
         createdAtMs: now,
         read: false,
@@ -6288,6 +6307,9 @@ function distributeSeasonBoss(txApp, game, state, now) {
     // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
     const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
+    // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
+    const loot = won ? game.rollLoot(flushed.player, "seasonBoss", now, i) : null;
+    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -6497,6 +6519,9 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
     const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
+    // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
+    const loot = won ? game.rollLoot(flushed.player, "allianceBoss", now, i) : null;
+    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([

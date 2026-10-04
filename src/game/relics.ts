@@ -89,6 +89,8 @@ export interface RelicSettings {
   expeditionPerHour: number;
   expeditionMax: number;
   rarities: Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
+  /** v5.14 : tables de butin des combats (loot.ts), par source. */
+  loot?: Partial<Record<string, Record<string, unknown>>>;
 }
 
 export function defaultRelicSettings(): RelicSettings {
@@ -110,7 +112,8 @@ export function setRelics(defs: RelicTemplate[], settings: RelicSettings): void 
   const byId = new Map<string, RelicTemplate>(DEFAULT_RELICS.map((t) => [t.id, { ...t, disabled: true }]));
   for (const t of defs) byId.set(t.id, { ...t });
   RELICS.splice(0, RELICS.length, ...byId.values());
-  const { rarities, ...rules } = settings;
+  const { rarities, loot: _loot, ...rules } = settings;
+  void _loot;
   Object.assign(RELIC_RULES, rules);
   for (const r of RARITIES) {
     const v = rarities?.[r.id];
