@@ -12,7 +12,7 @@ import { GameActionError, claimPassTier } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatClock, formatDuration } from "@/lib/utils";
+import { cn, formatClock } from "@/lib/utils";
 
 /* Passe de saison (v4.1) : 30 paliers gratuits par mois. */
 
