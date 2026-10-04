@@ -143,6 +143,11 @@ export interface WorldDigest {
 
 type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
 
+/** Jour du mois à Paris (1 à 31). */
+export function parisDayOfMonth(now: number): number {
+  return parisDay(now);
+}
+
 function parisDay(now: number): number {
   return new Date(now + parisOffsetMs(now)).getUTCDate();
 }
@@ -489,6 +494,8 @@ export function generatePass(rng: () => number, d: WorldDigest, base: number): {
       else if (slot === 1) tiers.push([{ kind: "amber", amount: 20 + Math.floor(t / 10) * 10 }]);
       else tiers.push([{ kind: "capsule", capsule: CAPSULE_ROTATION[(start + capIdx++) % CAPSULE_ROTATION.length], level: t < 10 ? 3 : t < 20 ? 4 : 5 }]);
     }
+    // v5.12 : des jetons du casino aux paliers 7, 17 et 27.
+    if (t % 10 === 7) tiers[tiers.length - 1].push({ kind: "tokens", count: t > 20 ? 2 : 1 });
   }
   return { pass: { pointsPerTier: ppt, tiers }, reasons };
 }

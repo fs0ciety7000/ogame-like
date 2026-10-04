@@ -1,3 +1,4 @@
+import { alpha } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -139,7 +140,7 @@ export function AlliancePublicPage() {
                 {role === "officer" && <Shield className="h-3.5 w-3.5 text-cyan-glow" aria-label="Officier" />}
                 {role === "diplomat" && <Handshake className="h-3.5 w-3.5 text-mint-glow" aria-label="Diplomate" />}
                 {rank && (
-                  <span className="border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${rank.color}66` }}>
+                  <span className="border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
                     {rank.name}
                   </span>
                 )}

@@ -1,6 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { bossWindows, parisLocalToUtc, parisOffsetMs, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
-import { addPassPoints, grantPassReward, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
+import { addPassPoints, grantPassReward, OBJECTIVE_LABELS, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -19,17 +19,8 @@ import type { PlayerState } from "@/types/game";
 
 export type ChronicleObjective = "contract" | "bounty" | "raidRepelled" | "victory" | "bossAssault" | "mission" | "spy" | "market" | "warlordWin";
 
-export const OBJECTIVE_LABELS: Record<ChronicleObjective, string> = {
-  contract: "Contrats du jour récupérés",
-  bounty: "Primes Kesh'Vaar remplies",
-  raidRepelled: "Raids de faction repoussés",
-  victory: "Combats gagnés",
-  bossAssault: "Assauts sur un boss",
-  mission: "Missions terminées",
-  spy: "Sondes d'espionnage lancées",
-  market: "Offres achetées au marché",
-  warlordWin: "Seigneurs de guerre pillés",
-};
+/** v5.13 : libellés rangés dans seasonPass.ts (prérequis des paliers), ré-exportés ici. */
+export { OBJECTIVE_LABELS };
 
 export interface ChronicleEpisode {
   title: string;

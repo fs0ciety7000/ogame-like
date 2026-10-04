@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Couleur (hex ou var(--…)) à `pct` % d'opacité : marche aussi avec les jetons du thème. */
+export function alpha(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${Math.round(pct)}%, transparent)`;
+}
+
 export function formatNumber(value: number): string {
   const v = Math.floor(value);
   if (Math.abs(v) < 1000) return String(v);
@@ -30,6 +35,8 @@ export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
+  // Au-delà de 48 h, des jours (« 27j 11h » plutôt que « 659h »).
+  if (h >= 48) return `${Math.floor(h / 24)}j ${h % 24}h`;
   if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m ${sec}s`;
   return `${sec}s`;

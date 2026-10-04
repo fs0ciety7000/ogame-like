@@ -184,7 +184,7 @@ function PlanetOrb({ tone = "var(--color-mint-glow)", size = 64, dim = false, sp
         className={cn("absolute inset-0 rounded-full shadow-[inset_-8px_-10px_18px_rgba(0,0,0,0.65),0_0_18px_color-mix(in_srgb,var(--orb)_35%,transparent)]", spin && "motion-safe:animate-[spin_60s_linear_infinite]")}
         style={{
           background:
-            "radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--orb) 85%, white) 0%, var(--orb) 22%, color-mix(in srgb, var(--orb) 45%, #050816) 58%, #050816 100%), repeating-linear-gradient(115deg, transparent 0 7px, rgba(255,255,255,0.06) 7px 9px)",
+            "radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--orb) 85%, white) 0%, var(--orb) 22%, color-mix(in srgb, var(--orb) 45%, var(--color-space-950)) 58%, var(--color-space-950) 100%), repeating-linear-gradient(115deg, transparent 0 7px, rgba(255,255,255,0.06) 7px 9px)",
           backgroundBlendMode: "screen",
         }}
       />

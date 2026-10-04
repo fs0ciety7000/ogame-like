@@ -44,7 +44,7 @@ const MAX_ZOOM = 8;
 
 /** Couleur stable d'une alliance (teinte dérivée de son identifiant). */
 function allianceColor(id: string | undefined): string {
-  if (!id) return "#7dd3fc";
+  if (!id) return "var(--color-cyan-glow)";
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
   return `hsl(${h} 85% 65%)`;
@@ -423,7 +423,7 @@ export function GalaxyPage() {
                       {isSelected && <circle r={1.8 / k} fill="none" stroke="white" strokeOpacity={0.9} strokeWidth={0.3 / k} />}
                       <rect x={-0.7 / k} y={-0.7 / k} width={1.4 / k} height={1.4 / k} fill={color} transform="rotate(45)" />
                       {(k >= 2.4 || isSelected) && (
-                        <text y={-1.9 / k} textAnchor="middle" fontSize={1.5 / k} fill="#94a3b8">
+                        <text y={-1.9 / k} textAnchor="middle" fontSize={1.5 / k} fill="var(--color-slate-400)">
                           {c.colonyName}
                         </text>
                       )}
@@ -458,7 +458,7 @@ export function GalaxyPage() {
                       <circle r={(isSelf ? 1.3 : 1) / k} fill={color} style={{ filter: `drop-shadow(0 0 ${1.5 / k}px ${color})` }} />
                     )}
                     {showLabel && (
-                      <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "#cbd5e1"}>
+                      <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "var(--color-slate-300)"}>
                         {tag ? `[${tag}] ` : ""}
                         {b.pseudo}
                       </text>

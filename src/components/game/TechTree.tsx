@@ -272,7 +272,7 @@ export function TechTree({
             ? { stroke: color, strokeWidth: 2, opacity: 0.95 }
             : { stroke: "var(--color-space-500)", strokeWidth: 1.25, opacity: 0.35 },
           label: highlighted ? `Niv. ${reqLevel}` : undefined,
-          labelStyle: { fill: "#e7ecff", fontSize: 10, fontWeight: 600 },
+          labelStyle: { fill: "var(--color-slate-100)", fontSize: 10, fontWeight: 600 },
           labelBgStyle: { fill: "var(--color-space-900)", stroke: color, strokeWidth: 1 },
           labelBgPadding: [5, 2],
           labelBgBorderRadius: 6,

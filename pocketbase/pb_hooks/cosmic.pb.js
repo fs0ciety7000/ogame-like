@@ -435,13 +435,6 @@ cronAdd("cosmic_alliance_saga", "53 * * * *", () => {
   }
 });
 
-/** POST /api/cosmic/admin/market-maker — passe du Courtier du Comptoir tout de suite. */
-routerAdd("POST", "/api/cosmic/admin/market-maker", (e) => {
-  const db = require(`${__hooks}/cosmic_db.js`);
-  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
-  return e.json(200, { created: db.marketMakerTick(Date.now()) });
-}, $apis.requireAuth("users", "_superusers"));
-
 /** GET /api/cosmic/alliance/saga/live — progression en direct de mon alliance (v5.6). */
 routerAdd("GET", "/api/cosmic/alliance/saga/live", (e) => require(`${__hooks}/cosmic_db.js`).allianceSagaLive(e), $apis.requireAuth("users"));
 
@@ -451,16 +444,6 @@ routerAdd("POST", "/api/cosmic/admin/alliance-saga", (e) => {
   if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   return e.json(200, db.allianceSagaTick(Date.now()));
 }, $apis.requireAuth("users", "_superusers"));
-
-// v5.5 : Courtier du Comptoir (marchand PNJ) : une passe par heure.
-cronAdd("cosmic_market_maker", "47 * * * *", () => {
-  try {
-    const n = require(`${__hooks}/cosmic_db.js`).marketMakerTick(Date.now());
-    if (n > 0) console.log(`[cosmic] courtier : ${n} offre(s) publiée(s)`);
-  } catch (err) {
-    console.log(`[cosmic] courtier : ${err}`);
-  }
-});
 
 // v5.5 : photo quotidienne des indicateurs d'équilibrage (historique de 180 jours).
 cronAdd("cosmic_balance_history", "11 3 * * *", () => {
@@ -476,6 +459,16 @@ cronAdd("cosmic_balance_history", "11 3 * * *", () => {
 routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAction(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- v5.4 : générateur procédural ---------- */
+
+// v5.13 : passes de saison — brouillon, publication d'office et annonce au début du mois (toutes les heures).
+cronAdd("cosmic_pass_seasons", "13 * * * *", () => {
+  try {
+    const lines = require(`${__hooks}/cosmic_db.js`).passSeasonsRun(Date.now());
+    if (lines.length > 0) console.log(`[cosmic] passes de saison : ${lines.join(" ")}`);
+  } catch (err) {
+    console.log(`[cosmic] passes de saison : ${err}`);
+  }
+});
 
 // Chaque jour : chapitre du mois (s'il manque), chapitre suivant à partir du jour réglé, paliers de succès.
 cronAdd("cosmic_procedural", "29 4 * * *", () => {

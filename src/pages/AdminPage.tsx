@@ -57,6 +57,7 @@ import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
 import { PassPanel } from "@/pages/admin/PassPanel";
+import { PassSeasonsPanel } from "@/pages/admin/PassSeasonsPanel";
 import { ChroniclesPanel } from "@/pages/admin/ChroniclesPanel";
 import { AnnouncementsPanel } from "@/pages/admin/AnnouncementsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
@@ -307,7 +308,8 @@ export function AdminPage() {
             renderForm={(f, onChange, isNew) => <FactionForm value={f} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="seasonPass">
+        <TabsContent value="seasonPass" className="flex flex-col gap-4">
+          <PassSeasonsPanel />
           <PassPanel />
         </TabsContent>
         <TabsContent value="chronicles">

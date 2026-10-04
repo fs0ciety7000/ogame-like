@@ -1,5 +1,7 @@
+import { grantTokens, tokensLabel } from "@/game/casino";
 import { GameActionError } from "@/game/errors";
-import { addDossiers } from "@/game/commanders";
+import { addDossiers, findCommander, unlockSeasonCommander } from "@/game/commanders";
+import type { ChronicleObjective } from "@/game/chronicles";
 import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
 import { addRelic, rollRelic, relicLabel, type RelicRarity } from "@/game/relics";
@@ -20,11 +22,13 @@ export const PASS_RULES = { tiers: 30, pointsPerTier: 40 };
 export const PASS_POINTS = {
   contract: 10,
   bounty: 8,
-  raidRepelled: 6,
-  victory: 5,
+  raidRepelled: 8,
+  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
+  victory: 8,
   bossAssault: 5,
   dailyLogin: 5,
-  mission: 2,
+  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
+  mission: 0,
   /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
   vendetta: 40,
   /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
@@ -46,9 +50,31 @@ export type PassReward =
   | { kind: "dossier"; count: number }
   | { kind: "capsule"; capsule: CapsuleType; level: number }
   | { kind: "relic"; rarity: RelicRarity }
+  | { kind: "tokens"; count: number }
+  /** v5.13 : commandant de saison (dernier palier des passes générés). */
+  | { kind: "commander"; id: string }
   | { kind: "cosmetic" };
 
-/** Récompenses des 30 paliers (370 Ambre, 3 Dossiers, 8 capsules, 2 reliques). */
+/** Actions suivies dans le mois (objectifs des Chroniques, prérequis des passes). */
+export const OBJECTIVE_LABELS: Record<ChronicleObjective, string> = {
+  contract: "Contrats du jour récupérés",
+  bounty: "Primes Kesh'Vaar remplies",
+  raidRepelled: "Raids de faction repoussés",
+  victory: "Combats gagnés",
+  bossAssault: "Assauts sur un boss",
+  mission: "Missions terminées",
+  spy: "Sondes d'espionnage lancées",
+  market: "Offres achetées au marché",
+  warlordWin: "Seigneurs de guerre pillés",
+};
+
+/** v5.13 : action à accomplir dans le mois pour réclamer un palier (activité du passe). */
+export interface PassRequirement {
+  key: ChronicleObjective;
+  count: number;
+}
+
+/** Récompenses des 30 paliers (370 Ambre, 3 Dossiers, 8 capsules, 2 reliques, 4 jetons du casino). */
 export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 2 }],
   [{ kind: "amber", amount: 20 }],
@@ -56,7 +82,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 3 }],
   [{ kind: "dossier", count: 1 }],
   [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 4 }],
+  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
   [{ kind: "capsule", capsule: "armor", level: 3 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
@@ -66,7 +92,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 6 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "veil", level: 4 }],
-  [{ kind: "production", hours: 7 }],
+  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "assault", level: 5 }],
   [{ kind: "relic", rarity: "rare" }],
@@ -76,7 +102,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 9 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
   [{ kind: "production", hours: 10 }],
-  [{ kind: "amber", amount: 50 }],
+  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
   [{ kind: "capsule", capsule: "decoy", level: 5 }],
   [{ kind: "production", hours: 12 }],
   [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }],
@@ -101,12 +127,14 @@ export function setSeasonPass(cfg: Partial<SeasonPassConfig> | null | undefined)
   const d = defaultSeasonPassConfig();
   Object.assign(PASS_RULES, d.rules, cfg?.rules ?? {});
   Object.assign(PASS_POINTS, d.points, cfg?.points ?? {});
+  // v5.13 : les missions ne rapportent plus de points, même dans un passe personnalisé avant la 5.13.
+  PASS_POINTS.mission = 0;
   const tiers = Array.isArray(cfg?.tiers) && cfg!.tiers.length > 0 ? cfg!.tiers : d.tiers;
   PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers));
   PASS_RULES.tiers = PASS_TIERS.length;
 }
 
-const REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "cosmetic"];
+const REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
 
 export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): string[] {
   const errors: string[] = [];
@@ -120,6 +148,7 @@ export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): 
         if (!REWARD_KINDS.includes(r?.kind)) errors.push(`Passe, palier ${i + 1} : récompense inconnue.`);
         if (r?.kind === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
         if (r?.kind === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : rareté inconnue.`);
+        if (r?.kind === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
       }),
     );
   }
@@ -189,9 +218,18 @@ export function passTierToAnnounce(player: PlayerState, now: number): { tier: nu
 export interface MonthPass {
   pointsPerTier: number;
   tiers: PassReward[][];
+  /** v5.13 : prérequis par palier (passes de saison publiés). */
+  requirements?: Record<string, PassRequirement>;
 }
 
 const MONTH_PASSES = new Map<string, MonthPass>();
+/** v5.13 : passes de saison publiés (priment sur les passes des chapitres). */
+const SEASON_OVERRIDES = new Map<string, MonthPass>();
+
+export function setPassSeasonOverrides(map: Map<string, MonthPass>): void {
+  SEASON_OVERRIDES.clear();
+  for (const [k, v] of map) SEASON_OVERRIDES.set(k, v);
+}
 
 /** Passes mensuels déclarés par les chapitres (remplace le passe commun ce mois-là). */
 export function setMonthPasses(list: { id: string; pass?: MonthPass }[]): void {
@@ -201,7 +239,16 @@ export function setMonthPasses(list: { id: string; pass?: MonthPass }[]): void {
 
 /** Paliers et points par palier du passe d'une saison. */
 export function activePass(seasonId: string = currentSeasonId()): MonthPass {
-  return MONTH_PASSES.get(seasonId) ?? { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+  return SEASON_OVERRIDES.get(seasonId) ?? MONTH_PASSES.get(seasonId) ?? { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+}
+
+/** v5.13 : prérequis d'un palier et progression du joueur (null : aucun). */
+export function tierRequirement(player: Pick<PlayerState, "seasonPass">, tier: number, now: number): (PassRequirement & { done: number; met: boolean }) | null {
+  const st = passState(player, now);
+  const req = activePass(st.seasonId).requirements?.[String(tier)];
+  if (!req) return null;
+  const done = st.activity?.[req.key] ?? 0;
+  return { ...req, done, met: done >= req.count };
 }
 
 export function passTier(points: number, seasonId: string = currentSeasonId()): number {
@@ -261,6 +308,12 @@ export function describePassReward(r: PassReward, seasonId?: string): string {
       return `${CAPSULES[r.capsule].name} N${r.level}`;
     case "relic":
       return `Relique ${RARITY_LABELS[r.rarity]}`;
+    case "tokens":
+      return tokensLabel(r.count);
+    case "commander": {
+      const def = findCommander(r.id);
+      return def ? `Commandant de saison : ${def.title} ${def.name}` : "Commandant de saison";
+    }
     case "cosmetic":
       return seasonId ? `Bannière et titre « ${passTitle(seasonId)} »` : "Bannière et titre de la saison";
   }
@@ -296,6 +349,16 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     player.bounties = b;
     return `${CAPSULE_AMBER} Ambre (réserve de capsules pleine)`;
   }
+  if (r.kind === "tokens") {
+    grantTokens(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "commander") {
+    if (unlockSeasonCommander(player, r.id)) return describePassReward(r);
+    // Déjà dans l'état-major (ou inconnu) : de quoi le faire progresser à la place.
+    addDossiers(player, 2);
+    return "2 Dossiers d'entraînement (commandant déjà recruté)";
+  }
   if (r.kind === "relic") {
     // Premier tirage à 0 : exactement la rareté promise, puis modèle au hasard.
     let first = true;
@@ -322,6 +385,8 @@ export function claimPassTier(player: PlayerState, tierIn: unknown, now: number,
   if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
   if (st.claimed.includes(tier)) throw new GameActionError("Palier déjà réclamé.");
   if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
+  const req = tierRequirement(player, tier, now);
+  if (req && !req.met) throw new GameActionError(`Palier verrouillé : ${OBJECTIVE_LABELS[req.key].toLowerCase()} ${req.done} / ${req.count} ce mois-ci.`);
   const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
   const after = passState(player, now);
   after.claimed = [...st.claimed, tier].sort((a, b) => a - b);

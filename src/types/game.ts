@@ -368,4 +368,8 @@ export interface NotificationData {
   amber?: number;
   xp?: number;
   relic?: string;
+  /** v5.12 : jetons du casino gagnés. */
+  tokens?: number;
+  /** v5.12 : illustration (gros lot, ouverture du casino…). */
+  image?: string;
 }

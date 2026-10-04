@@ -7,7 +7,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { BOSS_PHASE_INFO, BOSS_PHASE_RULES, bossFightPhase, bossPhase, bossWeakness, type BossFightPhase, type BossPhase, type LeviathanState } from "@/game/leviathan";
 import { findUnit } from "@/game/units";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatNumber, alpha } from "@/lib/utils";
 
 /* =====================================================
    v5.10 : mise en scène commune des boss (Léviathan, boss de saison) :
@@ -54,7 +54,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
   const hpPct = state ? Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100)) : 0;
   const border = phase === "active" && art.accent ? art.accent : st.color;
   return (
-    <div className="hud-cut relative overflow-hidden border" style={{ borderColor: `${border}55` }}>
+    <div className="hud-cut relative overflow-hidden border" style={{ borderColor: `${alpha(border, 33)}` }}>
       <picture>
         {art.portrait && <source media="(max-width: 640px)" srcSet={assetUrl(art.portrait)} />}
         <img
@@ -75,7 +75,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
       {st.stamp && (
         <div
           className="absolute right-6 top-6 -rotate-6 border-4 px-4 py-1 font-display text-2xl font-black uppercase tracking-[0.25em] sm:right-10 sm:top-10 sm:text-4xl"
-          style={{ color: st.color, borderColor: st.color, textShadow: `0 0 18px ${st.color}88`, boxShadow: `0 0 24px ${st.color}44` }}
+          style={{ color: st.color, borderColor: st.color, textShadow: `0 0 18px ${alpha(st.color, 53)}`, boxShadow: `0 0 24px ${alpha(st.color, 27)}` }}
         >
           {st.stamp}
         </div>
@@ -161,7 +161,7 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
       </div>
       <div className="grid grid-cols-3 gap-1.5 text-[10px] uppercase tracking-[0.14em]">
         {([1, 2, 3] as BossFightPhase[]).map((p) => (
-          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${tone}88`, background: `${tone}18`, color: tone } : undefined}>
+          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
             {p}. {BOSS_PHASE_INFO[p].name}
           </span>
         ))}

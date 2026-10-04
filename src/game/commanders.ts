@@ -8,19 +8,30 @@ import type { PlayerState } from "@/types/game";
    donne un bonus tant qu'il est en poste. Le premier est offert.
 ===================================================== */
 
+/** Les cinq rôles (domaines de bonus). */
 export type CommanderId = "admiral" | "strategist" | "engineer" | "spy" | "steward";
+export const COMMANDER_ROLES: CommanderId[] = ["admiral", "strategist", "engineer", "spy", "steward"];
+
+/** v5.13 : un officier est un des cinq de base, ou un commandant de saison (« s-AAAA-MM »). */
+export type OfficerId = string;
 
 export interface CommanderDef {
-  id: CommanderId;
+  id: OfficerId;
   name: string;
   title: string;
   portrait: string;
   /** D'où vient son expérience. */
   domain: string;
   bonus: (level: number) => string;
+  /** Rôle principal (pour un officier de base : lui-même). */
+  role: CommanderId;
+  /** v5.13 : commandant de saison — second rôle (à moitié), passe d'origine, histoire. */
+  secondary?: CommanderId;
+  season?: { seasonId: string; label: string };
+  lore?: string;
 }
 
-export const COMMANDERS: CommanderDef[] = [
+const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
   {
     id: "admiral",
     name: "Rhys Calder",
@@ -62,6 +73,59 @@ export const COMMANDERS: CommanderDef[] = [
     bonus: (l) => `+${l} % de production, +${l * 2} % d'entrepôt`,
   },
 ];
+
+export const COMMANDERS: CommanderDef[] = BASE_COMMANDERS.map((c) => ({ ...c, role: c.id as CommanderId }));
+
+/* ---------- v5.13 : commandants de saison (dernier palier des passes générés) ---------- */
+
+/** Part du bonus du second rôle d'un commandant de saison. */
+export const SEASON_SECONDARY_SHARE = 0.5;
+
+/** Ce qu'un passe de saison décrit (données enregistrées, voir passSeasons.ts). */
+export interface SeasonCommanderDef {
+  id: string;
+  name: string;
+  title: string;
+  portrait: string;
+  primary: CommanderId;
+  secondary: CommanderId;
+  lore: string;
+  seasonId: string;
+  seasonLabel: string;
+}
+
+export const SEASON_COMMANDERS: CommanderDef[] = [];
+
+const ROLE_DEF = (role: CommanderId) => COMMANDERS.find((c) => c.id === role)!;
+const half = (l: number) => Math.round(l * SEASON_SECONDARY_SHARE * 10) / 10;
+
+export function seasonCommanderDef(s: SeasonCommanderDef): CommanderDef {
+  const a = ROLE_DEF(s.primary);
+  const b = ROLE_DEF(s.secondary);
+  return {
+    id: s.id,
+    name: s.name,
+    title: s.title,
+    portrait: s.portrait || a.portrait,
+    domain: a.domain,
+    role: s.primary,
+    secondary: s.secondary,
+    season: { seasonId: s.seasonId, label: s.seasonLabel },
+    lore: s.lore,
+    bonus: (l) => `${a.bonus(l)} ; ${b.bonus(half(l)).replace(/(\d)\.(\d)/g, "$1,$2")}`,
+  };
+}
+
+/** Catalogue des commandants de saison publiés (appliqué avec le contenu). */
+export function setSeasonCommanders(list: SeasonCommanderDef[]): void {
+  SEASON_COMMANDERS.splice(0, SEASON_COMMANDERS.length, ...list.filter((s) => s.id && COMMANDER_ROLES.includes(s.primary) && COMMANDER_ROLES.includes(s.secondary)).map(seasonCommanderDef));
+}
+
+export function allCommanders(): CommanderDef[] {
+  return [...COMMANDERS, ...SEASON_COMMANDERS];
+}
+
+export const isSeasonOfficer = (id: string) => /^s-/.test(id);
 
 export const COMMANDER_RULES = {
   maxLevel: 20,
@@ -132,25 +196,25 @@ export interface CommanderState {
 }
 
 export interface CommandersState {
-  roster: Partial<Record<CommanderId, CommanderState>>;
-  active: CommanderId[];
+  roster: Record<OfficerId, CommanderState>;
+  active: OfficerId[];
   /** Dernier changement de poste, par officier. */
-  movedAtMs: Partial<Record<CommanderId, number>>;
+  movedAtMs: Record<OfficerId, number>;
   dossiers: number;
 }
 
 export function findCommander(id: unknown): CommanderDef | undefined {
-  return COMMANDERS.find((c) => c.id === id);
+  return COMMANDERS.find((c) => c.id === id) ?? SEASON_COMMANDERS.find((c) => c.id === id);
 }
 
 export function commandersState(player: Pick<PlayerState, "commanders">): CommandersState {
   const raw = (player.commanders ?? {}) as Partial<CommandersState>;
   const roster: CommandersState["roster"] = {};
-  for (const c of COMMANDERS) {
-    const r = raw.roster?.[c.id];
-    if (r) roster[c.id] = { xp: Math.max(0, Number(r.xp) || 0) };
+  for (const [id, r] of Object.entries(raw.roster ?? {})) {
+    // Un commandant de saison est gardé même si son passe n'est plus au catalogue (il revient avec lui).
+    if (r && (findCommander(id) || isSeasonOfficer(id))) roster[id] = { xp: Math.max(0, Number(r.xp) || 0) };
   }
-  const active = (Array.isArray(raw.active) ? raw.active : []).filter((id, i, a): id is CommanderId => !!roster[id as CommanderId] && a.indexOf(id) === i);
+  const active = (Array.isArray(raw.active) ? raw.active : []).map(String).filter((id, i, a) => !!roster[id] && a.indexOf(id) === i);
   return { roster, active, movedAtMs: raw.movedAtMs && typeof raw.movedAtMs === "object" ? raw.movedAtMs : {}, dossiers: Math.max(0, Number(raw.dossiers) || 0) };
 }
 
@@ -170,21 +234,41 @@ export function commanderSlots(player: Pick<PlayerState, "xp">): number {
   return COMMANDER_RULES.slots + (family >= 0 && getRankIndex(player.xp ?? 0) >= family ? 1 : 0);
 }
 
-/** Niveaux des officiers en poste (0 si absent). */
+/** Niveaux cumulés par rôle des officiers en poste (0 si absent).
+ *  v5.13 : un commandant de saison compte pour son rôle principal, et à moitié pour le second. */
 export function activeLevels(player: Pick<PlayerState, "commanders">): Record<CommanderId, number> {
   const st = commandersState(player);
   const out = { admiral: 0, strategist: 0, engineer: 0, spy: 0, steward: 0 } as Record<CommanderId, number>;
-  for (const id of st.active) out[id] = commanderLevel(st.roster[id]?.xp ?? 0);
+  for (const id of st.active) {
+    const def = findCommander(id);
+    if (!def) continue;
+    const level = commanderLevel(st.roster[id]?.xp ?? 0);
+    out[def.role] += level;
+    if (def.secondary) out[def.secondary] += level * SEASON_SECONDARY_SHARE;
+  }
   return out;
 }
 
-/** XP gagnée par l'officier, s'il est en poste. Modifie le joueur. */
-export function grantCommanderXp(player: PlayerState, id: CommanderId, amount: number): void {
+/** XP gagnée par les officiers en poste de ce rôle (de base ou de saison). Modifie le joueur. */
+export function grantCommanderXp(player: PlayerState, role: CommanderId, amount: number): void {
   if (!(amount > 0)) return;
   const st = commandersState(player);
-  if (!st.active.includes(id) || !st.roster[id]) return;
-  st.roster[id] = { xp: (st.roster[id]?.xp ?? 0) + amount };
+  const ids = st.active.filter((id) => findCommander(id)?.role === role && st.roster[id]);
+  if (ids.length === 0) return;
+  for (const id of ids) st.roster[id] = { xp: (st.roster[id]?.xp ?? 0) + amount };
   player.commanders = st;
+}
+
+/** v5.13 : commandant de saison débloqué (dernier palier du passe). Faux s'il sert déjà. */
+export function unlockSeasonCommander(player: PlayerState, id: string): boolean {
+  const def = findCommander(id);
+  if (!def?.season) return false;
+  const st = commandersState(player);
+  if (st.roster[id]) return false;
+  st.roster[id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(id);
+  player.commanders = st;
+  return true;
 }
 
 /** Recrutement : le premier est offert, les suivants coûtent de l'Ambre ou de la production. */
@@ -195,6 +279,7 @@ export function recruitCost(player: Pick<PlayerState, "commanders">): "free" | "
 export function recruitCommander(player: PlayerState, id: unknown, pay: (method: "amber" | "production") => void, method: "amber" | "production"): CommanderDef {
   const def = findCommander(id);
   if (!def) throw new GameActionError("Officier inconnu.");
+  if (def.season) throw new GameActionError(`${def.title} ${def.name} se gagne au dernier palier du passe de ${def.season.label}.`);
   const st = commandersState(player);
   if (st.roster[def.id]) throw new GameActionError(`${def.title} ${def.name} sert déjà dans ta flotte.`);
   if (recruitCost(player) === "paid") pay(method);
@@ -208,7 +293,7 @@ export function recruitCommander(player: PlayerState, id: unknown, pay: (method:
 /** Nomination aux postes (liste complète des officiers en poste). */
 export function assignCommanders(player: PlayerState, idsIn: unknown, now: number): void {
   const st = commandersState(player);
-  const ids = (Array.isArray(idsIn) ? idsIn : []).map(String).filter((id, i, a) => a.indexOf(id) === i) as CommanderId[];
+  const ids = (Array.isArray(idsIn) ? idsIn : []).map(String).filter((id, i, a) => a.indexOf(id) === i);
   if (ids.length > commanderSlots(player)) throw new GameActionError(`${commanderSlots(player)} postes au plus.`);
   for (const id of ids) if (!st.roster[id]) throw new GameActionError("Cet officier n'est pas recruté.");
   const changed = [...ids.filter((id) => !st.active.includes(id)), ...st.active.filter((id) => !ids.includes(id))];

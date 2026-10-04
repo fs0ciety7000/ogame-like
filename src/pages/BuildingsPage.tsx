@@ -346,14 +346,14 @@ function categoryLabel(building: (typeof BUILDINGS)[number]): string {
 
 const TIER_FRAME: Record<number, string> = {
   0: "",
-  5: "!border-[#cd7f32]/70",
+  5: "!border-[var(--th-medal-bronze)]/70",
   10: "!border-slate-200/70",
   15: "!border-gold-glow/80",
   20: "!border-cyan-glow tier-neon",
 };
 
 const TIER_LABEL: Record<number, { label: string; className: string }> = {
-  5: { label: "Bronze", className: "bg-[#cd7f32]/90 text-space-950" },
+  5: { label: "Bronze", className: "bg-[var(--th-medal-bronze)]/90 text-space-950" },
   10: { label: "Argent", className: "bg-slate-200/90 text-space-950" },
   15: { label: "Or", className: "hud-holo" },
   20: { label: "Néon", className: "bg-cyan-glow text-space-950" },

@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { HudChip, type HudTone } from "@/components/ui/hud";
+import { TokenIcon } from "@/components/casino/TokenIcon";
 import { PlayerName } from "@/components/ui/player-name";
 import { bossRecap, type BossRecap as Recap, type LeviathanState } from "@/game/leviathan";
 import { RESOURCE_LIST } from "@/game/resources";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, alpha } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
 
 /* v5.9 : bilan d'un boss terminé (Léviathan, boss de saison, boss
@@ -21,7 +23,7 @@ import type { ResourceId } from "@/types/game";
    récompenses reçues par le joueur. S'ouvre une fois en grand à la
    première visite après la fin, puis reste affiché sur la page. */
 
-const MEDALS = ["#ffd86b", "#cbd5e1", "#e0a26b"];
+const MEDALS = ["var(--th-medal-gold)", "var(--th-medal-silver)", "var(--th-medal-bronze)"];
 
 function seenKey(id: string) {
   return `cosmic:boss-recap-seen:${id}`;
@@ -70,33 +72,26 @@ function RewardPills({ recap, reveal = false, rewarded, legacyNote, missingNote 
   const gain = Object.entries(r.gain ?? {})
     .filter(([, v]) => (v ?? 0) > 0)
     .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])) as [ResourceId, number][];
-  const pill = "inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-xs tabular-nums";
+  const chip = (key: string, tone: HudTone, children: React.ReactNode, className?: string, color?: string) => (
+    <HudChip key={key} size="md" tone={tone} className={cn("normal-case tracking-normal", className)} style={color ? { ["--c" as string]: color } : undefined}>
+      {children}
+    </HudChip>
+  );
   const items: React.ReactNode[] = [
-    ...gain.map(([id, v]) => (
-      <span key={id} className={cn(pill, "border-white/10 bg-white/[0.04] text-slate-100")}>
-        <ResourceIcon id={id} /> +{formatCompact(v)}
-      </span>
-    )),
-    r.points ? (
-      <span key="points" className={pill} style={{ borderColor: "#4be8ff55", color: "#4be8ff" }}>
-        <Award className="h-3.5 w-3.5" /> +{r.points} points de passe
-      </span>
-    ) : null,
-    r.title ? (
-      <span key="title" className={pill} style={{ borderColor: "#ffd86b55", color: "#ffd86b" }}>
-        <Medal className="h-3.5 w-3.5" /> Titre « {r.title} »
-      </span>
-    ) : null,
-    r.relic ? (
-      <span key="relic" className={pill} style={{ borderColor: "#a78bfa55", color: "#a78bfa" }}>
-        <Gem className="h-3.5 w-3.5" /> {r.relic}
-      </span>
-    ) : null,
-    r.mythic ? (
-      <span key="mythic" className={cn(pill, "hud-sheen")} style={{ borderColor: "#ff5df088", color: "#ff5df0" }}>
-        <Sparkles className="h-3.5 w-3.5" /> Mythique : {r.mythic}
-      </span>
-    ) : null,
+    ...gain.map(([id, v]) =>
+      chip(
+        id,
+        "neutral",
+        <>
+          <ResourceIcon id={id} /> <span className="text-slate-100">+{formatCompact(v)}</span>
+        </>,
+      ),
+    ),
+    r.points ? chip("points", "accent", <><Award /> +{r.points} points de passe</>) : null,
+    r.title ? chip("title", "gold", <><Medal /> Titre « {r.title} »</>) : null,
+    r.relic ? chip("relic", "violet", <><Gem /> {r.relic}</>) : null,
+    r.mythic ? chip("mythic", "violet", <><Sparkles /> Mythique : {r.mythic}</>, "hud-sheen", "var(--th-rarity-mythic)") : null,
+    r.tokens ? chip("tokens", "gold", <><TokenIcon size={14} /> +{r.tokens} jeton{r.tokens > 1 ? "s" : ""} du casino</>) : null,
   ].filter(Boolean);
   if (items.length === 0) return <span className="text-xs text-slate-500">Aucune récompense cette fois.</span>;
   return (
@@ -141,18 +136,18 @@ type RecapProps = {
   missingNote?: string;
 };
 
-export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false, legacyNote, totals, missingNote }: RecapProps & { reveal?: boolean }) {
+export function BossRecapBody({ state, uid, name, image, accent = "var(--color-ember-glow)", reveal = false, legacyNote, totals, missingNote }: RecapProps & { reveal?: boolean }) {
   const reduce = useReducedMotion();
   const recap = bossRecap(state, uid, 5, totals);
   const item = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.05 * i, duration: 0.3 } });
-  const tone = recap.won ? "#5cf2b0" : "#ffb347";
+  const tone = recap.won ? "var(--color-mint-glow)" : "var(--color-ember-glow)";
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative overflow-hidden border" style={{ borderColor: `${tone}55` }}>
+      <div className="relative overflow-hidden border" style={{ borderColor: `${alpha(tone, 33)}` }}>
         {image && <img src={assetUrl(image)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30 grayscale-[30%]" />}
         <div className="absolute inset-0 bg-gradient-to-r from-space-950 via-space-950/80 to-space-950/30" />
         <div className="relative flex items-center gap-3 px-4 py-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center border" style={{ color: tone, borderColor: `${tone}66`, background: `${tone}14` }}>
+          <span className="grid h-12 w-12 shrink-0 place-items-center border" style={{ color: tone, borderColor: `${alpha(tone, 40)}`, background: `${alpha(tone, 8)}` }}>
             {recap.won ? <Trophy className="h-6 w-6" /> : <Flag className="h-6 w-6" />}
           </span>
           <div className="min-w-0">
@@ -183,16 +178,16 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <motion.div {...item(0)}>
-          <Stat icon={Clock} label="Durée" value={formatDuration(recap.durationMs / 1000)} tone="#94a3b8" />
+          <Stat icon={Clock} label="Durée" value={formatDuration(recap.durationMs / 1000)} tone="var(--color-slate-400)" />
         </motion.div>
         <motion.div {...item(1)}>
           <Stat icon={Swords} label="Dégâts" value={formatCompact(recap.totalDamage)} tone={accent} />
         </motion.div>
         <motion.div {...item(2)}>
-          <Stat icon={Users} label="Participants" value={String(recap.participants)} tone="#4be8ff" />
+          <Stat icon={Users} label="Participants" value={String(recap.participants)} tone="var(--color-cyan-glow)" />
         </motion.div>
         <motion.div {...item(3)}>
-          <Stat icon={Crosshair} label="Assauts" value={String(recap.assaults)} tone="#ff5c7a" />
+          <Stat icon={Crosshair} label="Assauts" value={String(recap.assaults)} tone="var(--color-danger-glow)" />
         </motion.div>
       </div>
 
@@ -221,7 +216,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
           <ol className="flex flex-col gap-1.5">
             {recap.top.map((c, i) => (
               <motion.li key={c.uid} {...item(4 + i)} className={cn("grid grid-cols-[1.75rem_1fr_auto] items-center gap-2 text-sm", c.uid === uid && "text-cyan-glow")}>
-                <span className="font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "#64748b" }}>
+                <span className="font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "var(--color-slate-500)" }}>
                   #{c.rank}
                 </span>
                 <span className="min-w-0">

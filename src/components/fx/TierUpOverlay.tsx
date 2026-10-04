@@ -13,8 +13,8 @@ import { playTier } from "@/lib/sfx";
 ===================================================== */
 
 export const TIER_COLORS: Record<VisualTier, string> = {
-  5: "#cd7f32",
-  10: "#e2e8f0",
+  5: "var(--th-medal-bronze)",
+  10: "var(--color-slate-200)",
   15: "var(--color-gold-glow)",
   20: "var(--color-cyan-glow)",
 };

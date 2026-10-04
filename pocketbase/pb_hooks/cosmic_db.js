@@ -2448,7 +2448,14 @@ function bossRewardEntry(r) {
   if (r.title) out.title = String(r.title);
   if (r.relic) out.relic = String(r.relic);
   if (r.mythic) out.mythic = String(r.mythic);
+  if (Number(r.tokens) > 0) out.tokens = Math.floor(Number(r.tokens));
   return out;
+}
+
+/** v5.12 : ajoute les jetons du casino aux détails d'une notification. */
+function tokenNotifData(data, tokens) {
+  if (!(tokens > 0)) return data;
+  return Object.assign({}, data || {}, { tokens });
 }
 
 /** v5.9 : détails structurés d'une notification de boss (pastilles). */
@@ -2545,6 +2552,7 @@ function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
   const rewards = {};
+  const casino = readCasino(txApp, game).settings;
   ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -2552,17 +2560,18 @@ function distributeLeviathan(txApp, game, state, now) {
     const out = game.grantLeviathanReward(state, flushed.player);
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic });
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${out.amber ? ` +${out.amber} Ambre (collection de reliques pleine).` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
         createdAtMs: now,
         read: false,
         link: "/game/leviathan",
-        data: bossNotifData(out.gain, out.relic, mythic),
+        data: tokenNotifData(Object.assign({}, bossNotifData(out.gain, out.relic, mythic) || {}, out.amber ? { amber: out.amber } : {}), tokens),
       },
     ]));
   });
@@ -2866,9 +2875,10 @@ function marketAccept(e) {
     const offer = toPlain(rec);
     if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
     const buyer = loadFlushed(txApp, game, uid);
-    // v5.5 : le Courtier du Comptoir n'a pas de fiche : contrepartie virtuelle, jamais enregistrée.
-    const maker = game.isMarketMaker(offer.sellerId);
-    const seller = maker ? { player: game.marketMakerPlayer(), notifications: [] } : loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    // v5.13 : plus d'échange avec un PNJ (Courtier du Comptoir, seigneurs de guerre).
+    if (offer.sellerId === "market_maker") throw new BadRequestError("Cette offre a été retirée du marché.");
+    const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    if (seller.loaded.rec.getString("npc")) throw new BadRequestError("Cette offre a été retirée du marché.");
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
@@ -2965,54 +2975,26 @@ function marketCancel(e) {
   return e.json(200, out);
 }
 
-/** v5.5 : le Courtier du Comptoir publie là où le marché est presque vide (tâche horaire). */
-function marketMakerTick(now) {
-  const game = loadGame();
-  let created = 0;
-  $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const open = txApp.findRecordsByFilter("market_offers", 'status = "open"', "", 2000, 0).map((r) => toPlain(r));
-    const since = now - 14 * 24 * 3600 * 1000;
-    const perHour = txApp
-      .findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: since })
-      .map((r) => {
-        const p = toPlain(r);
-        const rates = game.getProductionRatesPerSecond(p.buildings || {}, p.techLevels || {});
-        return (game.COMMON_RESOURCES.reduce((a, res) => a + (rates[res] || 0), 0) / game.COMMON_RESOURCES.length) * 3600;
-      })
-      .sort((a, b) => a - b);
-    const median = perHour.length ? perHour[Math.floor(perHour.length / 2)] : 0;
-    const col = txApp.findCollectionByNameOrId("market_offers");
-    game.planMakerOffers(open, median, now).forEach((o) => {
-      const rec = new Record(col);
-      rec.load({
-        sellerId: game.MARKET_MAKER_ID,
-        sellerPseudo: game.MARKET_MAKER_PSEUDO,
-        sellerAllianceId: "",
-        giveRes: o.giveRes,
-        giveAmount: o.giveAmount,
-        wantRes: o.wantRes,
-        wantAmount: o.wantAmount,
-        status: "open",
-        createdAtMs: now,
-        expiresAtMs: o.expiresAtMs,
-        buyerId: "",
-        buyerPseudo: "",
-        filledAtMs: 0,
-        tax: 0,
-        kind: o.kind,
-        filled: 0,
-      });
-      txApp.save(rec);
-      created++;
-    });
+/** v5.13 : plus de ventes automatiques des PNJ (Courtier du Comptoir, seigneurs de guerre) : leurs offres encore ouvertes sont retirées. */
+function purgeNpcMarketOffers() {
+  const npcs = {};
+  $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).forEach((r) => (npcs[r.id] = true));
+  let count = 0;
+  $app.findRecordsByFilter("market_offers", 'status = "open"', "", 0, 0).forEach((r) => {
+    const seller = r.getString("sellerId");
+    if (seller !== "market_maker" && !npcs[seller]) return;
+    r.set("status", "expired");
+    $app.save(r);
+    count++;
   });
-  return created;
+  if (count > 0) console.log(`[cosmic] ${count} offre(s) de PNJ retirée(s) du marché`);
+  return count;
 }
 
 /** Offres expirées : marchandise rendue au vendeur (tâche planifiée). */
 function expireMarketOffers(now) {
   const game = loadGame();
+  purgeNpcMarketOffers();
   const due = $app.findRecordsByFilter("market_offers", 'status = "open" && expiresAtMs <= {:n}', "expiresAtMs", 200, 0, { n: now });
   let count = 0;
   due.forEach((r) => {
@@ -3882,13 +3864,15 @@ function recordChallengeProgress(txApp, game, before, after) {
 /** Tâche planifiée : clôture et récompenses, titre temporaire, nouveau défi. */
 /** v5.10 : verse d'office les récompenses non réclamées d'un défi terminé. */
 function payUnclaimedChallenge(txApp, game, ch, now) {
+  const casino = readCasino(txApp, game).settings;
   game.unclaimedRewardees(ch).forEach((uid) => {
     if (!findOrNull(txApp, "players", uid)) return;
     const loaded = loadPlayer(txApp, game, uid);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     const gain = game.grantChallengeReward(ch, flushed.player, { title: false });
+    const tokens = game.grantTokens(flushed.player, game.challengeTokens(casino, game.challengeTierIndex(ch)));
     savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
-    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}).`, createdAtMs: now, read: false, link: "/game", data: { resources: gain } }]));
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}).`, createdAtMs: now, read: false, link: "/game", data: tokenNotifData({ resources: gain }, tokens) }]));
   });
 }
 
@@ -3909,10 +3893,11 @@ function challengeClaim(e) {
     } catch (err) {
       throw asHttpError(game, err);
     }
+    const tokens = game.grantTokens(flushed.player, game.challengeTokens(readCasino(txApp, game).settings, game.challengeTierIndex(state.previous)));
     savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
     writeChallengeState(txApp, game, Object.assign({}, state, { previous: res.challenge }));
-    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}.`, createdAtMs: now, read: true, link: "/game", data: { resources: res.gain } }]));
-    out = { gain: res.gain };
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}.`, createdAtMs: now, read: true, link: "/game", data: tokenNotifData({ resources: res.gain }, tokens) }]));
+    out = { gain: res.gain, tokens };
   });
   return e.json(200, out);
 }
@@ -3942,6 +3927,7 @@ function challengeTick(now) {
       // v5.10 : les récompenses non réclamées du défi précédent sont versées d'office.
       payUnclaimedChallenge(txApp, game, state.previous, now);
       const top = game.challengeRanking(done)[0];
+      const chTokens = game.challengeTokens(readCasino(txApp, game).settings, game.challengeTierIndex(done));
       game.challengeRewardees(done).forEach((uid) => {
         if (!findOrNull(txApp, "players", uid)) return;
         // Le titre du meilleur est remis tout de suite ; les ressources se réclament.
@@ -3950,7 +3936,7 @@ function challengeTick(now) {
           game.grantChallengeReward(done, loaded.player, { resources: false });
           savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
         }
-        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Ta récompense t'attend sur l'accueil : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.${top && top.uid === uid ? ` Tu deviens « ${game.CHALLENGE_RULES.title} » !` : ""}`, createdAtMs: now, read: false, link: "/game" }]);
+        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Ta récompense t'attend sur l'accueil : ${tier.hours} h de production, ${tier.rare} de chaque ressource rare${chTokens ? ` et ${game.tokensLabel(chTokens)}` : ""}.${top && top.uid === uid ? ` Tu deviens « ${game.CHALLENGE_RULES.title} » !` : ""}`, createdAtMs: now, read: false, link: "/game" }]);
       });
       state = Object.assign({}, state, {
         current: null,
@@ -4804,13 +4790,81 @@ function proceduralTick(now, opts) {
         proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
       }
     }
-    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`));
+    // v5.13 : passes de saison — brouillon du mois suivant, publication d'office et annonce au début du mois.
+    out.passes = [];
+    if (settings.pass && o.achievements !== true && !o.monthId) {
+      passSeasonsTick(txApp, game, players, now, out.passes);
+    }
+    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`)).concat(out.passes);
     if (lines.length > 0) {
       settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
       writeConfig(txApp, game.PROCEDURAL_KEY, settings);
     }
   });
   return out;
+}
+
+/** v5.13 : passes de saison procéduraux (brouillon à J-leadDay, publication d'office, annonce). */
+function readPassSeasons(txApp, game) {
+  const rec = configRecord(txApp, game.PASS_SEASONS_SECTION);
+  const data = rec ? toPlain(rec).data : null;
+  return data && Array.isArray(data.seasons) ? data : { seasons: [] };
+}
+
+function passSeasonDraft(game, players, cfg, monthId, now, variant) {
+  const digest = game.worldDigest(players, now);
+  const prev = cfg.seasons.filter((s) => s.id < monthId && s.status === "published").pop();
+  return game.generatePassSeason({ monthId, digest, existing: cfg.seasons.filter((s) => s.id !== monthId), now, variant: variant || 0, basePointsPerTier: prev ? prev.pointsPerTier : undefined });
+}
+
+function passSeasonsTick(txApp, game, players, now, lines) {
+  let cfg = readPassSeasons(txApp, game);
+  let changed = false;
+  const current = game.chronicleMonthId(now);
+  const next = game.nextMonthId(current);
+  const settings = game.normalizeProcedural((configRecord(txApp, game.PROCEDURAL_KEY) && toPlain(configRecord(txApp, game.PROCEDURAL_KEY)).data) || null);
+  // Brouillon du mois en cours (s'il manque) et du suivant à partir du jour J.
+  [current].concat(game.parisDayOfMonth(now) >= settings.leadDay ? [next] : []).forEach((id) => {
+    if (game.findPassSeason(cfg, id)) return;
+    cfg = game.upsertPassSeason(cfg, passSeasonDraft(game, players, cfg, id, now, 0));
+    changed = true;
+    lines.push(`Passe ${id} : brouillon écrit, à relire et publier (Admin → Passes de saison).`);
+  });
+  // Début du mois : un brouillon oublié est publié d'office, puis le passe est annoncé une fois.
+  const cur = game.findPassSeason(cfg, current);
+  if (cur && cur.status === "draft") {
+    cfg = game.upsertPassSeason(cfg, game.publishPassSeason(cur, now));
+    changed = true;
+    lines.push(`Passe ${current} publié d'office (brouillon non relu au début du mois).`);
+  }
+  const live = game.findPassSeason(cfg, current);
+  if (live && live.status === "published" && !live.announcedAtMs) {
+    cfg = game.upsertPassSeason(cfg, Object.assign({}, live, { announcedAtMs: now }));
+    changed = true;
+    players.forEach((p) => {
+      notify(txApp, p.uid, [{ kind: "event", title: `Nouveau passe de saison : ${live.theme.name}`, message: `${live.theme.tagline} Au dernier palier : ${live.commander.title} ${live.commander.name} rejoint ton état-major, avec ${live.tiers[live.tiers.length - 1].filter((r) => r.kind === "amber").reduce((a, r) => a + r.amount, 0)} Ambre.`, createdAtMs: now, read: false, link: "/game/passe", data: live.theme.image ? { image: live.theme.image } : undefined }]);
+    });
+    lines.push(`Passe ${current} annoncé aux joueurs.`);
+  }
+  if (changed) writeConfig(txApp, game.PASS_SEASONS_SECTION, cfg);
+}
+
+/** v5.13 : passage horaire des passes de saison (publication d'office et annonce dès le début du mois). */
+function passSeasonsRun(now) {
+  const game = loadGame();
+  const lines = [];
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.PROCEDURAL_KEY);
+    const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
+    if (!settings.enabled || !settings.pass) return;
+    passSeasonsTick(txApp, game, proceduralPlayers(txApp), now, lines);
+    if (lines.length > 0) {
+      settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
+      writeConfig(txApp, game.PROCEDURAL_KEY, settings);
+    }
+  });
+  return lines;
 }
 
 /** GET/POST /api/cosmic/admin/procedural — aperçu, réglages, génération à la demande. */
@@ -4837,6 +4891,23 @@ function adminProcedural(e) {
       return e.json(200, proceduralTick(now, { force: true, monthId, variant: Math.max(0, Math.floor(Number(req.variant) || 0)) }));
     }
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
+    if (req.action === "passSeasonsRun") return e.json(200, { lines: passSeasonsRun(now) });
+    // v5.13 : (ré)écrit le brouillon du passe d'un mois. Un passe publié n'est réécrit qu'après confirmation.
+    if (req.action === "passSeason") {
+      const monthId = String(req.monthId || "");
+      if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
+      let draft = null;
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const cfg = readPassSeasons(txApp, game);
+        const existing = game.findPassSeason(cfg, monthId);
+        if (existing && existing.status === "published" && !req.confirmPublished) throw new BadRequestError("Ce passe est déjà publié : confirme pour le remplacer par un nouveau brouillon.");
+        draft = passSeasonDraft(game, proceduralPlayers(txApp), cfg, monthId, now, Math.max(0, Math.floor(Number(req.variant) || 0)));
+        writeConfig(txApp, game.PASS_SEASONS_SECTION, game.upsertPassSeason(cfg, draft));
+        bossAdminLog(txApp, e, game.PASS_SEASONS_SECTION, `Passe ${monthId} : brouillon généré (variante ${draft.auto.variant})`, {}, now);
+      });
+      return e.json(200, { season: draft });
+    }
     throw new BadRequestError("Action inconnue.");
   }
   const players = proceduralPlayers($app);
@@ -5997,46 +6068,6 @@ function warlordTick(now, opts) {
       }
     });
 
-    // Marchands : offres au marché.
-    active
-      .filter((d) => d.personality === "merchant")
-      .forEach((d) => {
-        const uid = game.warlordUid(d.id);
-        const rt = state.byId[d.id];
-        if (now < rt.nextMarketAtMs) return;
-        rt.nextMarketAtMs = now + game.nextMarketDelayMs(Math.random);
-        try {
-          const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
-          if (open >= game.MARKET_RULES.maxOpenOffers) return;
-          const npc = loadPlayer(txApp, game, uid);
-          const wanted = game.warlordOffer(npc.player, Math.random);
-          if (!wanted) return;
-          const offer = game.createOffer(npc.player, wanted, open, now);
-          savePlayer(txApp, game, npc, npc.player, npc.queues);
-          const rec = new Record(txApp.findCollectionByNameOrId("market_offers"));
-          rec.load({
-            sellerId: uid,
-            sellerPseudo: d.name,
-            sellerAllianceId: "",
-            giveRes: offer.giveRes,
-            giveAmount: offer.giveAmount,
-            wantRes: offer.wantRes,
-            wantAmount: offer.wantAmount,
-            status: "open",
-            createdAtMs: now,
-            expiresAtMs: offer.expiresAtMs,
-            buyerId: "",
-            buyerPseudo: "",
-            filledAtMs: 0,
-            tax: 0,
-          });
-          txApp.save(rec);
-          summary.offers++;
-        } catch (err) {
-          console.log(`[cosmic] offre du seigneur ${d.id} : ${err}`);
-        }
-      });
-
     // Premier contact : le seigneur le plus proche se présente aux joueurs arrivés à Bronze I.
     if (active.length > 0) {
       humans
@@ -6228,6 +6259,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
   const rewards = {};
+  const casino = readCasino(txApp, game).settings;
   game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -6235,17 +6267,18 @@ function distributeSeasonBoss(txApp, game, state, now) {
     const out = game.grantSeasonBossReward(state, flushed.player, now);
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic });
+    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}.`,
+        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}${tokens ? `, ${game.tokensLabel(tokens)}` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/boss",
-        data: bossNotifData(null, out.relic, mythic),
+        data: tokenNotifData(bossNotifData(null, out.relic, mythic), tokens),
       },
     ]));
   });
@@ -6432,23 +6465,25 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const name = game.allianceBossDef(state).name;
   const rewards = {};
-  game.leviathanRanking(state).forEach((c) => {
+  const casino = readCasino(txApp, game).settings;
+  game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantAllianceBossReward(state, flushed.player, now);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic });
     const won = state.status === "killed";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "alliance",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${Object.keys(out.gain || {}).length ? ", 2 h de production" : ""}${out.relic ? `, relique : ${out.relic}` : ""}.`,
+        message: `+${out.points} points de passe${Object.keys(out.gain || {}).length ? ", 2 h de production" : ""}${out.relic ? `, relique : ${out.relic}` : ""}${tokens ? `, ${game.tokensLabel(tokens)}` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/alliance",
-        data: bossNotifData(out.gain, out.relic, ""),
+        data: tokenNotifData(bossNotifData(out.gain, out.relic, ""), tokens),
       },
     ]));
   });
@@ -6861,25 +6896,22 @@ function casinoRequest(e) {
       gained = game.productionHours(player, settings.hours[outcome] || 0);
     }
     Object.keys(gained).forEach((k) => (player.resources[k] = (player.resources[k] || 0) + gained[k]));
-    const won = outcome !== "lose";
-    player.casino = Object.assign({}, c, {
-      tokens: c.tokens - 1 + (token ? 1 : 0),
-      spins: c.spins + 1,
-      wins: c.wins + (won ? 1 : 0),
-      jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
-    });
+    game.applySpin(player, outcome, gained, now);
+    // Trois 7 : titre définitif.
+    if (outcome === "jackpot") game.giveTitle(player, settings.rewards.jackpotTitle, "casino:jackpot", true);
     savePlayer(txApp, game, loaded, player, flushed.queues);
 
     const win = { uid, pseudo: player.pseudo, atMs: now, outcome, resources: gained };
     if (token) win.token = true;
-    casino = game.recordWin(casino, win);
+    casino = settleTournament(txApp, game, casino, now);
+    casino = game.scoreSpin(game.recordWin(casino, win), uid, player.pseudo, outcome);
     writeConfig(txApp, game.CASINO_KEY, casino);
 
     if (outcome === "jackpot") {
       const text = `${player.pseudo} décroche le gros lot du Casino orbital : ${game.describeGain(gained)}${fromPot ? " pris dans le pot commun" : ""} !`;
-      notes.push({ kind: "event", title: "777 ! Gros lot !", message: `Tu remportes ${game.describeGain(gained)}.`, createdAtMs: now, read: false, link: "/game/casino", data: { resources: gained } });
+      notes.push({ kind: "event", title: "777 ! Gros lot !", message: `Tu remportes ${game.describeGain(gained)} et le titre « ${settings.rewards.jackpotTitle} ».`, createdAtMs: now, read: false, link: "/game/casino", data: { resources: gained, image: JACKPOT_IMAGE } });
       proceduralPlayers(txApp).forEach((p) => {
-        if (p.uid !== uid) notify(txApp, p.uid, [{ kind: "event", title: "💰 Gros lot au Casino orbital", message: text, createdAtMs: now, read: false, link: "/game/casino" }]);
+        if (p.uid !== uid) notify(txApp, p.uid, [{ kind: "event", title: "💰 Gros lot au Casino orbital", message: text, createdAtMs: now, read: false, link: "/game/casino", data: { image: JACKPOT_IMAGE } }]);
       });
     }
     if (notes.length) notify(txApp, uid, notes);
@@ -6888,18 +6920,59 @@ function casinoRequest(e) {
   return e.json(200, out);
 }
 
-/** Annonce l'ouverture du casino (programme ou ouverture manuelle), une fois par période. Cron 15 min. */
+const JACKPOT_IMAGE = "/assets/blog/articles/5-12/gros-lot.webp";
+
+/** v5.12 : clôture le tournoi d'une ouverture terminée (jetons du podium, titre du vainqueur) et ouvre le suivant. */
+function settleTournament(txApp, game, casino, now) {
+  const rolled = game.rollTournament(casino, now);
+  let next = rolled.state;
+  if (!rolled.closed) return next;
+  const s = casino.settings;
+  const result = game.tournamentResult(rolled.closed, s, now);
+  const label = s.rewards.tournamentTitle;
+  // Le titre change de main : retiré au précédent vainqueur.
+  const prevHolder = casino.lastTournament ? casino.lastTournament.titleUid : "";
+  if (prevHolder && prevHolder !== result.titleUid && findOrNull(txApp, "players", prevHolder)) {
+    const old = loadPlayer(txApp, game, prevHolder);
+    game.removeTitle(old.player, label);
+    savePlayer(txApp, game, old, old.player, old.queues);
+  }
+  result.podium.forEach((p, i) => {
+    if (!findOrNull(txApp, "players", p.uid)) return;
+    const loaded = loadPlayer(txApp, game, p.uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const tokens = game.grantTokens(flushed.player, p.tokens);
+    if (p.uid === result.titleUid) game.giveTitle(flushed.player, label, `casino:${result.id}`, true);
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    notify(txApp, p.uid, flushed.notifications.concat([{
+      kind: "event",
+      title: i === 0 ? `🏆 Tu remportes le tournoi du casino !` : `Tournoi du casino : ${i + 1}e place`,
+      message: `${p.points} points${tokens ? `, ${game.tokensLabel(tokens)}` : ""}${p.uid === result.titleUid ? ` et le titre « ${label} » jusqu'au prochain tournoi` : ""}.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game/casino",
+      data: tokenNotifData(null, tokens),
+    }]));
+  });
+  return Object.assign({}, next, { lastTournament: result });
+}
+
+/** Annonce l'ouverture du casino (programme ou ouverture manuelle), une fois par période, et clôture les tournois. Cron 15 min. */
 function casinoTick(now) {
   const game = loadGame();
   $app.runInTransaction((txApp) => {
     applyContent(txApp, game);
     const casino = readCasino(txApp, game);
+    const settled = settleTournament(txApp, game, casino, now);
     const id = game.casinoOpeningId(casino.settings, now);
-    if (!id || id === casino.announcedId) return;
+    if (!id || id === casino.announcedId) {
+      if (settled !== casino) writeConfig(txApp, game.CASINO_KEY, Object.assign({}, settled, { updatedAtMs: now }));
+      return;
+    }
     proceduralPlayers(txApp).forEach((p) => {
-      notify(txApp, p.uid, [{ kind: "event", title: "🎰 Le Casino orbital est ouvert", message: "La machine à sous du pot commun tourne : récupère ton jeton du jour et tente le 7-7-7 !", createdAtMs: now, read: false, link: "/game/casino" }]);
+      notify(txApp, p.uid, [{ kind: "event", title: "🎰 Le Casino orbital est ouvert", message: "La machine à sous du pot commun tourne : récupère ton jeton du jour, grimpe au classement du tournoi et tente le 7-7-7 !", createdAtMs: now, read: false, link: "/game/casino", data: { image: "/assets/casino/salle-777.webp" } }]);
     });
-    writeConfig(txApp, game.CASINO_KEY, Object.assign({}, casino, { announcedId: id, updatedAtMs: now }));
+    writeConfig(txApp, game.CASINO_KEY, Object.assign({}, settled, { announcedId: id, updatedAtMs: now }));
   });
 }
 
@@ -6943,4 +7016,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

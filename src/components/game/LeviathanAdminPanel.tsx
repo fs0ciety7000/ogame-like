@@ -90,10 +90,10 @@ export function LeviathanAdminPanel({ state, kind = "leviathan" }: { state: Levi
       {state && pace ? (
         <>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Structure" value={`${Math.round((state.hp / state.maxHp) * 100)} %`} sub={`${formatCompact(state.hp)} / ${formatCompact(state.maxHp)}`} tone="var(--color-danger-glow)" />
-            <StatTile label="Rythme moyen" value={`${formatCompact(pace.ratePerHour)} /h`} sub={`dernière heure : ${formatCompact(pace.lastHour)}`} tone="var(--color-ember-glow)" />
-            <StatTile label="Temps" value={`${Math.round(pace.elapsedHours)} h`} sub={`${Math.round(pace.remainingHours)} h restantes`} tone="var(--color-cyan-glow)" />
-            <StatTile label="Participants" value={leviathanRanking(state).length} sub={`${assaults} assaut(s)`} tone="var(--color-mint-glow)" />
+            <StatTile label="Structure" value={`${Math.round((state.hp / state.maxHp) * 100)} %`} sub={`${formatCompact(state.hp)} / ${formatCompact(state.maxHp)}`} tone="danger" />
+            <StatTile label="Rythme moyen" value={`${formatCompact(pace.ratePerHour)} /h`} sub={`dernière heure : ${formatCompact(pace.lastHour)}`} tone="ember" />
+            <StatTile label="Temps" value={`${Math.round(pace.elapsedHours)} h`} sub={`${Math.round(pace.remainingHours)} h restantes`} tone="accent" />
+            <StatTile label="Participants" value={leviathanRanking(state).length} sub={`${assaults} assaut(s)`} tone="mint" />
           </div>
           <HpChart state={state} />
           <p className="text-sm text-slate-300">{verdict}</p>

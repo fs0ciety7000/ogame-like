@@ -8,8 +8,7 @@ import { UNITS } from "@/game/units";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { assetUrl } from "@/lib/assets";
 import type { Alliance } from "@/types/game";
-import { ALL_NAV_ITEMS } from "@/components/layout/NavBar";
-import { useCasinoVisible } from "@/services/casinoService";
+import { ALL_NAV_ITEMS, useHiddenRoutes } from "@/components/layout/NavBar";
 import { closeCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
@@ -30,7 +29,7 @@ export function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
-  const casinoVisible = useCasinoVisible();
+  const hidden = useHiddenRoutes();
 
   useEffect(() => {
     if (!open) return;
@@ -47,7 +46,7 @@ export function CommandPalette() {
   const items = useMemo<PaletteItem[]>(() => {
     const q = query.trim().toLowerCase();
 
-    const navItems: PaletteItem[] = ALL_NAV_ITEMS.filter((n) => (casinoVisible || n.to !== "/game/casino") && (!q || n.label.toLowerCase().includes(q))).map(
+    const navItems: PaletteItem[] = ALL_NAV_ITEMS.filter((n) => !hidden.has(n.to) && (!q || n.label.toLowerCase().includes(q))).map(
       (n) => ({
         key: `nav-${n.to}`,
         label: n.label,
@@ -94,7 +93,7 @@ export function CommandPalette() {
       .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-violet-glow" />, run: () => navigate("/game/labo") }));
 
     return [...navItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
-  }, [query, players, alliances, navigate, casinoVisible]);
+  }, [query, players, alliances, navigate, hidden]);
 
   useEffect(() => {
     setActiveIndex(0);

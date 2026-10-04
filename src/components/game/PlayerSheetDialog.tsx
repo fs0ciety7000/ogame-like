@@ -20,13 +20,13 @@ import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { seasonLabel } from "@/game/seasons";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, formatNumber, alpha } from "@/lib/utils";
 import { findCommander } from "@/game/commanders";
 import { describeRelic, findTemplate, rarityInfo } from "@/game/relics";
 import { ACHIEVEMENTS, TIER_LABELS as ACH_TIER_LABELS } from "@/game/achievements";
 
 const ACH_TIER_STYLE: Record<string, string> = {
-  bronze: "border-[#cd7f32]/50 bg-[#cd7f32]/[0.06] text-[#e0a36a]",
+  bronze: "border-[var(--th-medal-bronze)]/50 bg-[var(--th-medal-bronze)]/[0.06] text-[var(--th-medal-bronze)]",
   argent: "border-slate-300/40 bg-white/[0.04] text-slate-200",
   or: "border-gold-glow/50 bg-gold-glow/[0.07] text-gold-glow",
   legendaire: "border-violet-glow/60 bg-violet-glow/[0.08] text-violet-glow",
@@ -88,7 +88,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             className="-mx-6 -mt-6 mb-1 h-24 bg-cover bg-center"
             style={
               feats.showcase.banner.image
-                ? { backgroundImage: `linear-gradient(180deg, transparent 30%, var(--color-space-900, #070a14) 100%), url(${assetUrl(feats.showcase.banner.image)})` }
+                ? { backgroundImage: `linear-gradient(180deg, transparent 30%, var(--color-space-900) 100%), url(${assetUrl(feats.showcase.banner.image)})` }
                 : { background: feats.showcase.banner.gradient }
             }
           />
@@ -194,7 +194,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                     );
                   })}
                   {feats.showcase.relics.map((r, i) => (
-                    <span key={i} title={describeRelic(r)} className="flex items-center gap-1.5 border px-2 py-1 text-xs" style={{ borderColor: `${rarityInfo(r.rarity).color}55`, color: rarityInfo(r.rarity).color }}>
+                    <span key={i} title={describeRelic(r)} className="flex items-center gap-1.5 border px-2 py-1 text-xs" style={{ borderColor: `${alpha(rarityInfo(r.rarity).color, 33)}`, color: rarityInfo(r.rarity).color }}>
                       <img src={assetUrl(relicImage(r.template))} alt="" className="h-6 w-6 object-contain" />
                       {findTemplate(r.template)?.name}
                     </span>

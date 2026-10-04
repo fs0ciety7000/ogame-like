@@ -1,3 +1,4 @@
+import { useIsAdmin } from "@/services/adminService";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { useSeasonBoss } from "@/services/seasonBossService";
 import { isActive } from "@/game/leviathan";
 import { bossCountdown } from "@/components/game/BossStage";
-import { cn } from "@/lib/utils";
+import { cn, alpha } from "@/lib/utils";
 
 /* v5.10.5 : frise des 30 prochains jours sur l'accueil (boss, événements,
    Chroniques, concours, fin de saison). */
@@ -22,9 +23,11 @@ const when = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "sh
 
 export function useAgenda(now: number, days = DAYS): AgendaItem[] {
   const contests = useContests();
+  // v5.13 : les concours ne sont montrés qu'aux administrateurs.
+  const admin = useIsAdmin();
   const leviathan = useLeviathan();
   const seasonBoss = useSeasonBoss();
-  const extra: AgendaItem[] = (contests?.list ?? [])
+  const extra: AgendaItem[] = (admin ? (contests?.list ?? []) : [])
     .filter((c) => ["scheduled", "running"].includes(contestPhase(c, now)))
     .map((c) => ({ id: c.id, kind: "contest", title: `Concours : ${c.title}`, startMs: c.startMs, endMs: c.endMs, link: "/game/concours", emoji: "🎁" }));
   // Un boss déjà abattu (ou retiré) dans sa fenêtre en cours n'est plus « en cours ».
@@ -84,7 +87,7 @@ export function AgendaCard({ now }: { now: number }) {
                               <Link
                                 to={i.link}
                                 className={cn("absolute top-0.5 h-4 transition-transform hover:scale-y-125", !i.endMs && "w-2.5 -translate-x-1/2 rotate-45 scale-75")}
-                                style={{ left: `${left}%`, width: i.endMs ? `${width}%` : undefined, background: AGENDA_COLORS[k], boxShadow: i.done ? undefined : `0 0 8px ${AGENDA_COLORS[k]}88`, opacity: i.done ? 0.3 : 1 }}
+                                style={{ left: `${left}%`, width: i.endMs ? `${width}%` : undefined, background: AGENDA_COLORS[k], boxShadow: i.done ? undefined : `0 0 8px ${alpha(AGENDA_COLORS[k], 53)}`, opacity: i.done ? 0.3 : 1 }}
                               />
                             </TooltipTrigger>
                             <TooltipContent>

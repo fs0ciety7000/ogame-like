@@ -61,6 +61,25 @@ export interface CasinoSettings {
   odds: Record<Exclude<SpinOutcome, "lose">, number>;
   /** Gains en heures de production. */
   hours: Record<"star3" | "planet3" | "bar3" | "cherry3" | "seven2", number>;
+  /** v5.12 : jetons gagnés ailleurs dans le jeu, et tournoi de chaque ouverture. */
+  rewards: CasinoRewards;
+}
+
+export interface CasinoRewards {
+  /** Défi hebdo réussi : jetons par palier atteint (palier 1, palier 2…). */
+  challenge: number[];
+  /** Boss abattu (Léviathan, boss de saison, boss d'alliance) : jetons par participant. */
+  bossWin: number;
+  /** En plus pour le premier en dégâts d'un boss abattu (la moitié pour le 2e et le 3e). */
+  bossTop: number;
+  /** Boss qui s'est retiré : jetons par participant (souvent 0). */
+  bossFail: number;
+  /** Tournoi : jetons du 1er, du 2e, du 3e… */
+  tournament: number[];
+  /** Tournoi : titre du vainqueur (gardé jusqu'au tournoi suivant). */
+  tournamentTitle: string;
+  /** Titre définitif de qui aligne trois 7. */
+  jackpotTitle: string;
 }
 
 export const DEFAULT_CASINO: CasinoSettings = {
@@ -73,7 +92,11 @@ export const DEFAULT_CASINO: CasinoSettings = {
   jackpotFallbackHours: 12,
   odds: { jackpot: 0.002, star3: 0.006, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
   hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" },
 };
+
+/** Points de tournoi de chaque résultat (indépendants de la taille de l'empire). */
+export const OUTCOME_POINTS: Record<SpinOutcome, number> = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
 
 export const OUTCOME_LABELS: Record<SpinOutcome, string> = {
   jackpot: "GROS LOT 7-7-7",
@@ -93,6 +116,16 @@ export interface PlayerCasino {
   spins: number;
   wins: number;
   jackpots: number;
+  /** v5.12 : bilan de la semaine en cours (lundi → dimanche, UTC). */
+  week: CasinoWeek;
+}
+
+export interface CasinoWeek {
+  id: string;
+  spins: number;
+  wins: number;
+  points: number;
+  resources: Partial<Record<ResourceId, number>>;
 }
 
 export interface CasinoWin {
@@ -113,7 +146,25 @@ export interface CasinoState {
   totalSpins: number;
   /** Dernière ouverture annoncée aux joueurs (voir casinoOpeningId). */
   announcedId: string;
+  /** v5.12 : tournoi de l'ouverture en cours, et podium du précédent. */
+  tournament: CasinoTournament | null;
+  lastTournament: CasinoTournamentResult | null;
   updatedAtMs: number;
+}
+
+export interface CasinoTournament {
+  id: string;
+  startMs: number;
+  scores: Record<string, { pseudo: string; points: number; spins: number }>;
+}
+
+export interface CasinoTournamentResult {
+  id: string;
+  endedAtMs: number;
+  participants: number;
+  podium: { uid: string; pseudo: string; points: number; tokens: number }[];
+  /** Détenteur du titre du tournoi (retiré au tournoi suivant). */
+  titleUid: string;
 }
 
 const num = (v: unknown, def: number, min = 0, max = Number.MAX_SAFE_INTEGER) => {
@@ -145,7 +196,44 @@ export function normalizeCasinoSettings(raw: unknown): CasinoSettings {
     jackpotFallbackHours: num(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
     odds,
     hours,
+    rewards: normalizeRewards(r.rewards),
   };
+}
+
+function normalizeRewards(raw: unknown): CasinoRewards {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<CasinoRewards>;
+  const d = DEFAULT_CASINO.rewards;
+  const list = (v: unknown, def: number[]) => (Array.isArray(v) ? v.slice(0, 10).map((x) => Math.floor(num(x, 0, 0, 100))) : [...def]);
+  const label = (v: unknown, def: string) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : def);
+  return {
+    challenge: list(r.challenge, d.challenge),
+    bossWin: Math.floor(num(r.bossWin, d.bossWin, 0, 100)),
+    bossTop: Math.floor(num(r.bossTop, d.bossTop, 0, 100)),
+    bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
+    tournament: list(r.tournament, d.tournament),
+    tournamentTitle: label(r.tournamentTitle, d.tournamentTitle),
+    jackpotTitle: label(r.jackpotTitle, d.jackpotTitle),
+  };
+}
+
+function cleanTournament(raw: unknown): CasinoTournament | null {
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw as Partial<CasinoTournament>;
+  if (typeof t.id !== "string" || !t.id) return null;
+  const scores: CasinoTournament["scores"] = {};
+  for (const [uid, v] of Object.entries(t.scores ?? {})) {
+    const x = (v ?? {}) as Partial<CasinoTournament["scores"][string]>;
+    scores[uid] = { pseudo: String(x.pseudo ?? ""), points: Math.max(0, Math.floor(Number(x.points) || 0)), spins: Math.max(0, Math.floor(Number(x.spins) || 0)) };
+  }
+  return { id: t.id, startMs: Number(t.startMs) || 0, scores };
+}
+
+function cleanResult(raw: unknown): CasinoTournamentResult | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Partial<CasinoTournamentResult>;
+  if (typeof r.id !== "string") return null;
+  const podium = (Array.isArray(r.podium) ? r.podium : []).slice(0, 10).map((p) => ({ uid: String(p?.uid ?? ""), pseudo: String(p?.pseudo ?? ""), points: Math.floor(Number(p?.points) || 0), tokens: Math.floor(Number(p?.tokens) || 0) }));
+  return { id: r.id, endedAtMs: Number(r.endedAtMs) || 0, participants: Math.floor(Number(r.participants) || 0), podium, titleUid: typeof r.titleUid === "string" ? r.titleUid : "" };
 }
 
 function cleanWin(w: unknown): CasinoWin | null {
@@ -166,6 +254,8 @@ export function normalizeCasino(raw: unknown): CasinoState {
     jackpots: list(r.jackpots, 30),
     totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
     announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
+    tournament: cleanTournament(r.tournament),
+    lastTournament: cleanResult(r.lastTournament),
     updatedAtMs: Number(r.updatedAtMs) || 0,
   };
 }
@@ -177,6 +267,7 @@ export function validateCasinoSettings(s: CasinoSettings): string[] {
   if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
   if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
   if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un créneau.");
+  if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place récompensée.");
   return errors;
 }
 
@@ -229,12 +320,137 @@ export function nextCasinoOpening(s: CasinoSettings, now: number): number | null
   return list.length ? Math.min(...list) : null;
 }
 
+/** Fin de l'ouverture en cours (null : fermé, ou ouvert sans fin prévue). */
+export function casinoClosesAt(s: CasinoSettings, now: number): number | null {
+  const id = casinoOpeningId(s, now);
+  if (!id || id === "open") return null;
+  if (id.startsWith("w-")) {
+    const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
+    // Créneau qui déborde sur un week-end : on prend la fin la plus tardive.
+    if (w && !(s.weekends && parisWeekend(w.endMs))) return w.endMs;
+  }
+  // Week-end : première heure pleine qui n'est plus un samedi ou un dimanche à Paris.
+  let t = now - (now % 3600_000) + 3600_000;
+  for (let i = 0; i < 24 * 4 && parisWeekend(t); i++) t += 3600_000;
+  const w = s.windows.find((x) => x.startMs <= t && x.endMs > t);
+  return w ? w.endMs : t;
+}
+
+/* ---------- tournoi de chaque ouverture ---------- */
+
+/** Identifiant du tournoi : une ouverture, ou une semaine quand le casino est ouvert sans fin. */
+export function tournamentId(s: CasinoSettings, now: number): string | null {
+  const id = casinoOpeningId(s, now);
+  if (!id) return null;
+  return id === "open" ? `open-${casinoWeekId(now)}` : id;
+}
+
+/** Tournoi terminé à clôturer, et nouveau tournoi pour l'ouverture en cours. */
+export function rollTournament(state: CasinoState, now: number): { state: CasinoState; closed: CasinoTournament | null } {
+  const id = tournamentId(state.settings, now);
+  const cur = state.tournament;
+  if (cur && cur.id === id) return { state, closed: null };
+  const closed = cur && Object.keys(cur.scores).length > 0 ? cur : null;
+  return { state: { ...state, tournament: id ? { id, startMs: now, scores: {} } : null }, closed };
+}
+
+/** Ajoute les points d'un tirage au tournoi en cours. */
+export function scoreSpin(state: CasinoState, uid: string, pseudo: string, outcome: SpinOutcome): CasinoState {
+  const t = state.tournament;
+  if (!t) return state;
+  const prev = t.scores[uid] ?? { pseudo, points: 0, spins: 0 };
+  return { ...state, tournament: { ...t, scores: { ...t.scores, [uid]: { pseudo, points: prev.points + OUTCOME_POINTS[outcome], spins: prev.spins + 1 } } } };
+}
+
+/** Classement : points, puis moins de tirages (le plus efficace), puis pseudo. */
+export function tournamentRanking(t: CasinoTournament | null): { uid: string; pseudo: string; points: number; spins: number }[] {
+  if (!t) return [];
+  return Object.entries(t.scores)
+    .map(([uid, v]) => ({ uid, ...v }))
+    .filter((x) => x.spins > 0)
+    .sort((a, b) => b.points - a.points || a.spins - b.spins || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0));
+}
+
+/** Podium du tournoi clôturé : jetons des premières places, titre au vainqueur (s'il a marqué). */
+export function tournamentResult(t: CasinoTournament, s: CasinoSettings, now: number): CasinoTournamentResult {
+  const ranking = tournamentRanking(t);
+  const podium = ranking.slice(0, Math.max(3, s.rewards.tournament.length)).map((x, i) => ({ uid: x.uid, pseudo: x.pseudo, points: x.points, tokens: x.points > 0 ? (s.rewards.tournament[i] ?? 0) : 0 }));
+  return { id: t.id, endedAtMs: now, participants: ranking.length, podium, titleUid: podium[0] && podium[0].points > 0 ? podium[0].uid : "" };
+}
+
+/* ---------- jetons gagnés ailleurs ---------- */
+
+/** Jetons d'un participant à un boss terminé (rank : 0 pour le premier en dégâts). */
+export function bossTokens(s: CasinoSettings, won: boolean, rank: number): number {
+  if (!won) return s.rewards.bossFail;
+  const podium = rank === 0 ? s.rewards.bossTop : rank === 1 || rank === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
+  return s.rewards.bossWin + podium;
+}
+
+/** Jetons d'un défi hebdo réussi, selon le palier atteint (index 0 : premier palier). */
+export function challengeTokens(s: CasinoSettings, tierIndex: number): number {
+  if (tierIndex < 0) return 0;
+  const list = s.rewards.challenge;
+  return list[Math.min(tierIndex, list.length - 1)] ?? 0;
+}
+
+/** Donne un titre (sans doublon) ; active=true l'affiche aussitôt. */
+export function giveTitle(p: PlayerState, label: string, source: string, active = false): void {
+  if (!label) return;
+  if (!(p.titles ?? []).some((t) => t.label === label)) p.titles = [...(p.titles ?? []), { label, seasonId: source, rank: 1 }];
+  if (active) p.activeTitle = label;
+}
+
+/** Retire un titre (tournoi suivant). */
+export function removeTitle(p: PlayerState, label: string): void {
+  p.titles = (p.titles ?? []).filter((t) => t.label !== label);
+  if (p.activeTitle === label) p.activeTitle = p.titles[0]?.label;
+}
+
+export const tokensLabel = (n: number) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
+
 /* ---------- état du joueur ---------- */
 
 export function playerCasino(p: Pick<PlayerState, "casino">): PlayerCasino {
   const c = (p.casino ?? {}) as Partial<PlayerCasino>;
   const int = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots) };
+  const w = (c.week ?? {}) as Partial<CasinoWeek>;
+  const resources: CasinoWeek["resources"] = {};
+  for (const [k, v] of Object.entries(w.resources ?? {})) if (Number(v) > 0) resources[k as ResourceId] = Math.floor(Number(v));
+  const week: CasinoWeek = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
+}
+
+/** Lundi 00 h (UTC) de la semaine : identifiant du bilan hebdomadaire. */
+export function casinoWeekId(now: number): string {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY) * DAY;
+  return `wk-${new Date(midnight - ((day + 6) % 7) * DAY).toISOString().slice(0, 10)}`;
+}
+
+/** Bilan de la semaine en cours (remis à zéro le lundi). */
+export function casinoWeek(p: Pick<PlayerState, "casino">, now: number): CasinoWeek {
+  const w = playerCasino(p).week;
+  return w.id === casinoWeekId(now) ? w : { id: casinoWeekId(now), spins: 0, wins: 0, points: 0, resources: {} };
+}
+
+/** Compte un tirage : jeton dépensé (ou rendu), statistiques et bilan de la semaine. */
+export function applySpin(p: PlayerState, outcome: SpinOutcome, gained: Partial<Record<ResourceId, number>>, now: number): PlayerCasino {
+  const c = playerCasino(p);
+  const won = outcome !== "lose";
+  const w = casinoWeek(p, now);
+  const resources = { ...w.resources };
+  for (const [k, v] of Object.entries(gained)) if (Number(v) > 0) resources[k as ResourceId] = (resources[k as ResourceId] ?? 0) + Math.floor(Number(v));
+  const next: PlayerCasino = {
+    ...c,
+    tokens: c.tokens - 1 + (outcome === "cherry" ? 1 : 0),
+    spins: c.spins + 1,
+    wins: c.wins + (won ? 1 : 0),
+    jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
+    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources },
+  };
+  p.casino = next;
+  return next;
 }
 
 export function dailyTokenReady(p: Pick<PlayerState, "casino">, settings: CasinoSettings, now: number): boolean {

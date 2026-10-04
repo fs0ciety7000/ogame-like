@@ -77,8 +77,9 @@ export function BossRewardsAdmin({ state, kind }: { state: LeviathanState | null
                           ))}
                           {r.points ? <span className="text-cyan-glow">+{r.points} pts</span> : null}
                           {r.title ? <span className="text-gold-glow">« {r.title} »</span> : null}
-                          {r.relic ? <span className="text-violet-300">{r.relic}</span> : null}
-                          {r.mythic ? <span className="text-fuchsia-300">mythique : {r.mythic}</span> : null}
+                          {r.relic ? <span className="text-violet-glow">{r.relic}</span> : null}
+                          {r.mythic ? <span className="text-[var(--th-rarity-mythic)]">mythique : {r.mythic}</span> : null}
+                          {r.tokens ? <span className="text-gold-glow">+{r.tokens} jeton{r.tokens > 1 ? "s" : ""}</span> : null}
                         </span>
                       )}
                     </td>

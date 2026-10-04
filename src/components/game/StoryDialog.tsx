@@ -1,3 +1,4 @@
+import { alpha } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -128,7 +129,7 @@ export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabe
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
               className="h-56 w-full object-cover object-top sm:h-auto sm:w-48"
-              style={{ boxShadow: `inset 0 0 0 1px ${sp.color}55` }}
+              style={{ boxShadow: `inset 0 0 0 1px ${alpha(sp.color, 33)}` }}
             />
           </AnimatePresence>
           <div className="flex flex-1 flex-col gap-3 p-5">

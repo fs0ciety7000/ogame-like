@@ -14,11 +14,11 @@ import { useSeasonBoss } from "@/services/seasonBossService";
 import { useBossHistory } from "@/services/bossHistoryService";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, alpha } from "@/lib/utils";
 
 /* v5.10 : Hall of fame des boss (différent du Palmarès des saisons) — records, champions et historique des combats. */
 
-const MEDALS = ["#ffd86b", "#cbd5e1", "#e0a26b"];
+const MEDALS = ["var(--th-medal-gold)", "var(--th-medal-silver)", "var(--th-medal-bronze)"];
 type Filter = "all" | "mine" | BossKind;
 
 function dateLabel(ms: number) {
@@ -49,7 +49,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
         <ol className="flex flex-col gap-1.5">
           {list.map((p, i) => (
             <li key={p.uid} className="flex items-center gap-2 text-sm">
-              <span className="w-6 font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "#64748b" }}>
+              <span className="w-6 font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "var(--color-slate-500)" }}>
                 #{i + 1}
               </span>
               <PlayerName uid={p.uid} pseudo={p.pseudo} className="min-w-0 flex-1 truncate" />
@@ -68,7 +68,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
 function FightRow({ e, index, onOpen, uid }: { e: BossHistoryEntry; index: number; onOpen: () => void; uid: string }) {
   const mine = uid ? entryRank(e, uid) : null;
   const reduce = useReducedMotion();
-  const tone = e.won ? "#5cf2b0" : "#ffb347";
+  const tone = e.won ? "var(--color-mint-glow)" : "var(--color-ember-glow)";
   const pct = e.maxHp > 0 ? Math.min(100, Math.round((e.totalDamage / e.maxHp) * 100)) : 0;
   return (
     <motion.li
@@ -82,7 +82,7 @@ function FightRow({ e, index, onOpen, uid }: { e: BossHistoryEntry; index: numbe
       {e.image && <img src={assetUrl(e.image)} alt="" className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-15 [mask-image:linear-gradient(to_left,black,transparent)]" />}
       <div className="relative flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center border" style={{ color: tone, borderColor: `${tone}66`, background: `${tone}12` }}>
+          <span className="grid h-10 w-10 shrink-0 place-items-center border" style={{ color: tone, borderColor: `${alpha(tone, 40)}`, background: `${alpha(tone, 7)}` }}>
             {e.won ? <Trophy className="h-5 w-5" /> : <Flag className="h-5 w-5" />}
           </span>
           <div className="min-w-0">
@@ -146,7 +146,7 @@ export function BossHallPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
+      <PageHeader backdrop="/assets/blog/articles/5-10/couverture.webp"
         eyebrow="Grands ennemis"
         title="Hall of fame des boss"
         description="Chaque colosse affronté par le serveur, ses chiffres et ceux qui l'ont fait plier. Records et champions sont calculés sur le Léviathan et les boss de saison."
@@ -163,16 +163,16 @@ export function BossHallPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Record icon={Swords} label="Combats" value={String(rec.fights)} sub={`${rec.kills} victoire${rec.kills > 1 ? "s" : ""}`} color="#4be8ff" />
+            <Record icon={Swords} label="Combats" value={String(rec.fights)} sub={`${rec.kills} victoire${rec.kills > 1 ? "s" : ""}`} color="var(--color-cyan-glow)" />
             <Record
               icon={Zap}
               label="Plus gros total"
               value={rec.bestHit ? formatCompact(rec.bestHit.damage) : "—"}
               sub={rec.bestHit ? <><PlayerName uid={rec.bestHit.uid} pseudo={rec.bestHit.pseudo} /> · {rec.bestHit.boss}</> : undefined}
-              color="#ff8a4c"
+              color="var(--color-ember-glow)"
             />
-            <Record icon={Hourglass} label="Victoire la plus rapide" value={rec.fastest ? formatDuration(rec.fastest.durationMs / 1000) : "—"} sub={rec.fastest ? `${rec.fastest.name}, ${dateLabel(rec.fastest.endedAtMs)}` : undefined} color="#5cf2b0" />
-            <Record icon={Crown} label="Champion" value={rec.champions[0]?.pseudo ?? "—"} sub={rec.champions[0] ? `${rec.champions[0].count} fois n° 1 des dégâts` : undefined} color="#ffd86b" />
+            <Record icon={Hourglass} label="Victoire la plus rapide" value={rec.fastest ? formatDuration(rec.fastest.durationMs / 1000) : "—"} sub={rec.fastest ? `${rec.fastest.name}, ${dateLabel(rec.fastest.endedAtMs)}` : undefined} color="var(--color-mint-glow)" />
+            <Record icon={Crown} label="Champion" value={rec.champions[0]?.pseudo ?? "—"} sub={rec.champions[0] ? `${rec.champions[0].count} fois n° 1 des dégâts` : undefined} color="var(--color-gold-glow)" />
           </div>
 
           {mineStats.length > 0 && <MyRecords stats={mineStats} />}
@@ -219,7 +219,7 @@ function MyRecords({ stats }: { stats: ReturnType<typeof myBossStats> }) {
           <div key={s.kind} className="flex flex-col gap-0.5 border border-white/[0.06] bg-white/[0.02] p-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{BOSS_KIND_LABELS[s.kind]}</span>
             <span className="font-display text-xl text-white">
-              <span style={{ color: MEDALS[s.bestRank - 1] ?? "#4be8ff" }}>#{s.bestRank}</span>
+              <span style={{ color: MEDALS[s.bestRank - 1] ?? "var(--color-cyan-glow)" }}>#{s.bestRank}</span>
               <span className="ml-1.5 text-xs text-slate-400">meilleur rang</span>
             </span>
             <span className="text-xs text-slate-400">
@@ -240,7 +240,7 @@ function HallRecap({ e, uid, live, onClose }: { e: BossHistoryEntry; uid: string
   const current = live[e.kind];
   const full = current && current.id === archived.state.id && current.status !== "active" ? current : null;
   const state = full ?? archived.state;
-  const accent = e.kind === "leviathan" ? "#ff5c7a" : e.kind === "seasonboss" ? (bossMonthOf(state)?.theme.accent ?? undefined) : undefined;
+  const accent = e.kind === "leviathan" ? "var(--color-danger-glow)" : e.kind === "seasonboss" ? (bossMonthOf(state)?.theme.accent ?? undefined) : undefined;
   return (
     <BossRecapDialog
       open

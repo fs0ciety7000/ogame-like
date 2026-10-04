@@ -78,7 +78,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
           })}
         </div>
         {weak && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#ff5df0]">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-[var(--th-rarity-mythic)]">
             <img src={weak.image} alt="" className="h-5 w-5 object-contain" /> Faiblesse exposée : les {weak.name} frappent {Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % plus fort.
           </p>
         )}
@@ -141,7 +141,7 @@ function RulesCard() {
       <h2 className="hud-title text-sm">Règles</h2>
       <p>Structure : {LEVIATHAN_RULES.hpFactor} fois la puissance d'attaque cumulée des commandants actifs ces 7 derniers jours.</p>
       <p>
-        Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier ; moitié moins s'il survit.
+        Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier (avec 25 % de ses dégâts, tu touches déjà la moitié du bonus) ; moitié moins s'il survit. S'il tombe : +{LEVIATHAN_RULES.podiumHours.join(" / ")} h pour le podium, une relique épique pour les {LEVIATHAN_RULES.topRelics} premiers (rare pour les autres, de l'Ambre si ta collection est pleine), et une relique mythique pour le premier.
       </p>
       <p>Le premier en dégâts gagne le titre « {LEVIATHAN_RULES.title} » pendant {LEVIATHAN_RULES.titleDays} jours. Chaque participant à sa chute débloque le succès « Tueur de Léviathan ».</p>
     </Card>
@@ -202,7 +202,7 @@ export function LeviathanPage() {
           uid={player.uid}
           name={LEVIATHAN_RULES.name}
           image="/assets/leviathan/leviathan.webp"
-          accent="#ff5c7a"
+          accent="var(--color-danger-glow)"
           active={active}
           legacyNote={state.rewards ? undefined : `${String(Math.round(rewardHours(state, player.uid) * 10) / 10).replace(".", ",")} h de ta production${leviathanRanking(state)[0]?.uid === player.uid && state.status === "killed" ? ` et le titre « ${LEVIATHAN_RULES.title} »` : ""}`}
         />
@@ -223,14 +223,14 @@ export function LeviathanPage() {
           </div>
           <BossPhasePanel state={state} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
+            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="ember" />
             <StatTile
               label="Récompense prévue"
               value={`${String(Math.round(rewardHours({ ...state, status: "killed" }, player.uid) * 10) / 10).replace(".", ",")} h`}
               sub="de ta production s'il tombe"
-              tone="var(--color-mint-glow)"
+              tone="mint"
             />
-            <StatTile label="Participants" value={leviathanRanking(state).length} tone="var(--color-cyan-glow)" />
+            <StatTile label="Participants" value={leviathanRanking(state).length} tone="accent" />
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="danger" disabled={wait > 0} onClick={() => setOpen(true)}>

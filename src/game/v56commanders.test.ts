@@ -51,6 +51,6 @@ describe("v5.6 progression des officiers", () => {
   });
 
   it("chaque officier affiche ce qui le fait progresser", () => {
-    for (const c of COMMANDERS) expect(COMMANDER_SOURCES[c.id].length).toBeGreaterThan(0);
+    for (const c of COMMANDERS) expect(COMMANDER_SOURCES[c.role].length).toBeGreaterThan(0);
   });
 });

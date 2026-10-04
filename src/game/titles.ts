@@ -54,6 +54,8 @@ export const DEFAULT_TITLES: TitleDef[] = [
   // Gagnés ailleurs : le catalogue les habille.
   T("fleau_leviathan", "Fléau du Léviathan", "Premier en dégâts contre le Léviathan.", "🐋", "mythic"),
   T("pilier_semaine", "Pilier de la semaine", "Meilleur contributeur du défi de la semaine.", "🏛️", "epic"),
+  T("as_casino", "As du casino", "Vainqueur du dernier tournoi du Casino orbital.", "🎰", "epic"),
+  T("main_or", "Main d'or", "A aligné trois 7 au Casino orbital.", "🍀", "legendary"),
   // Déblocage automatique sur une mesure.
   T("mecene", "Mécène", "A offert 10 cadeaux à d'autres commandants.", "🎁", "rare", { metric: "giftsSent", threshold: 10 }),
   T("marchand_etoiles", "Marchand des étoiles", "Un million de ressources échangées au marché.", "🪙", "rare", { metric: "traded", threshold: 1_000_000 }),
@@ -63,6 +65,15 @@ export const DEFAULT_TITLES: TitleDef[] = [
 
 export const TITLES: TitleDef[] = [];
 const BY_LABEL = new Map<string, TitleDef>();
+
+/** Titres ajoutés après coup : ajoutés aussi aux catalogues déjà personnalisés (v5.12). */
+const LATE_DEFAULTS = ["as_casino", "main_or"];
+
+/** Catalogue enregistré + titres par défaut arrivés depuis. */
+export function withLateDefaults(defs: TitleDef[]): TitleDef[] {
+  const have = new Set(defs.map((t) => t.id));
+  return [...defs, ...DEFAULT_TITLES.filter((t) => LATE_DEFAULTS.includes(t.id) && !have.has(t.id)).map((t) => structuredClone(t))];
+}
 
 export function setTitles(defs: TitleDef[]): void {
   TITLES.splice(0, TITLES.length, ...defs);

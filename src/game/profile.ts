@@ -1,7 +1,7 @@
 import { bossEmblems, chroniclesConfig } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { bountyState, KESH } from "@/game/bounties";
-import { commanderLevel, commandersState, type CommanderId } from "@/game/commanders";
+import { commanderLevel, commandersState, type OfficerId } from "@/game/commanders";
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { equippedRelics, type RelicRarity } from "@/game/relics";
 import { seasonLabel } from "@/game/seasons";
@@ -158,7 +158,7 @@ export interface PublicShowcase {
   motto: string;
   /** v4.9.3 : succès épinglés (id seulement ; le client retrouve nom, emoji et rang). */
   achievements?: string[];
-  commanders: { id: CommanderId; level: number }[];
+  commanders: { id: OfficerId; level: number }[];
   relics: { template: string; rarity: RelicRarity }[];
 }
 
