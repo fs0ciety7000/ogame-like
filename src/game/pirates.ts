@@ -471,8 +471,8 @@ export function tributeFor(faction: FactionDef, player: PlayerState, aggression:
   return total(fromPlunder) >= total(floor) ? fromPlunder : floor;
 }
 
-function note(kind: NewNotification["kind"], title: string, message: string, now: number): NewNotification {
-  return { kind, title, message, createdAtMs: now, read: false };
+function note(kind: NewNotification["kind"], title: string, message: string, now: number, data?: NewNotification["data"]): NewNotification {
+  return { kind, title, message, createdAtMs: now, read: false, ...(data ? { data } : {}) };
 }
 
 export interface PirateTickOutput {
@@ -694,6 +694,8 @@ export function resolvePirateRaid(
       }
     }
     st.raidsLost += 1;
+    // v5.10 : un raid perdu compte comme une défaite (un raid repoussé compte déjà comme une victoire).
+    player.defeats = (player.defeats ?? 0) + 1;
     // v5.6 : comme une défense perdue contre un joueur, la Stratège apprend aussi de la défaite.
     grantCommanderXp(player, "strategist", COMMANDER_XP.defenseLost);
     st.notoriety = Math.max(0, st.notoriety - 1);
@@ -722,6 +724,7 @@ export function resolvePirateRaid(
         combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
         `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
         now,
+        { resources: bounty, xp: faction.bounty.xp || undefined },
       ),
     );
     if (lairNow) notifications.push(note("fleet", `${faction.lair.name} localisé`, "Sa position a fuité : lance l'assaut depuis la page Menaces !", now));

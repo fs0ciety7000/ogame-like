@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { TitleBadge } from "@/components/game/TitleBadge";
 import { relicImage } from "@/game/relics";
 import { Link } from "react-router-dom";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
@@ -14,7 +15,6 @@ import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { GameIcon } from "@/components/ui/game-icon";
 import { fetchPlayerSheet, type PlayerSheet } from "@/services/playerService";
 import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
@@ -117,9 +117,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
               </p>
             )}
             {entry?.activeTitle && (
-              <span className="mt-1 inline-block border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow">
-                <GameIcon name="trophy" /> {entry.activeTitle}
-              </span>
+              <TitleBadge label={entry.activeTitle} size="xs" className="mt-1" />
             )}
           </div>
         </div>

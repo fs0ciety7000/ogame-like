@@ -53,21 +53,37 @@ describe("performPlayerAction", () => {
 });
 
 describe("performGift", () => {
+  const OLD = { createdAtMs: NOW - 10 * 86_400_000 };
   it("moves resources from sender to recipient and notifies the recipient", () => {
-    const a = player("a", { resources: { ...player("x").resources, scrap: 5000 } });
-    const b = player("b");
+    const a = player("a", { ...OLD, resources: { ...player("x").resources, scrap: 5000 } });
+    const b = player("b", OLD);
     const out = performGift(a, defaultQueues(), b, defaultQueues(), { scrap: 1200, energy: 0 }, NOW);
     expect(out.sender.resources.scrap).toBe(5000 - 1200);
-    expect(out.recipient.resources.scrap).toBe(b.resources.scrap + 1200);
+    // v5.10 : hors alliance, 20 % se perdent en route.
+    expect(out.recipient.resources.scrap).toBe(b.resources.scrap + 960);
+    expect(out.delivered).toEqual({ scrap: 960 });
     expect(out.recipientNotifications.some((n) => n.kind === "gift")).toBe(true);
   });
 
   it("refuses gifts to oneself, empty gifts and unaffordable gifts", () => {
-    const a = player("a");
+    const a = player("a", OLD);
+    const b = player("b", OLD);
     expect(() => performGift(a, defaultQueues(), a, defaultQueues(), { scrap: 1 }, NOW)).toThrow(/toi-même/);
-    expect(() => performGift(a, defaultQueues(), player("b"), defaultQueues(), { scrap: 0 }, NOW)).toThrow(/au moins/);
-    expect(() => performGift(a, defaultQueues(), player("b"), defaultQueues(), { scrap: 1e12 }, NOW)).toThrow(/insuffisantes/);
-    expect(() => performGift(a, defaultQueues(), player("b"), defaultQueues(), { scrap: -5 }, NOW)).toThrow(/invalides/);
+    expect(() => performGift(a, defaultQueues(), b, defaultQueues(), { scrap: 0 }, NOW)).toThrow(/au moins/);
+    expect(() => performGift(a, defaultQueues(), b, defaultQueues(), { scrap: 1e12 }, NOW)).toThrow(/insuffisantes/);
+    expect(() => performGift(a, defaultQueues(), b, defaultQueues(), { scrap: -5 }, NOW)).toThrow(/invalides/);
+  });
+
+  it("v5.10 : comptes de moins de 3 jours bloqués, cadeau entier dans l'alliance", () => {
+    const rich = { ...player("x").resources, scrap: 5000 };
+    const young = player("y", { createdAtMs: NOW - 86_400_000 });
+    expect(() => performGift(young, defaultQueues(), player("b", OLD), defaultQueues(), { scrap: 1 }, NOW)).toThrow(/3 jours/);
+    expect(() => performGift(player("a", { ...OLD, resources: rich }), defaultQueues(), young, defaultQueues(), { scrap: 1 }, NOW)).toThrow(/recevoir/);
+    const a = player("a", { ...OLD, resources: rich, allianceId: "al" });
+    const b = player("b", { ...OLD, allianceId: "al" });
+    const out = performGift(a, defaultQueues(), b, defaultQueues(), { scrap: 1000 }, NOW);
+    expect(out.delivered).toEqual({ scrap: 1000 });
+    expect(out.recipientNotifications.find((n) => n.kind === "gift")?.data?.resources).toEqual({ scrap: 1000 });
   });
 });
 

@@ -120,7 +120,7 @@ export function NotificationCard({
       type={onOpen ? "button" : undefined}
       onClick={onOpen}
       className={cn(
-        "group relative flex w-full gap-3 overflow-hidden border border-white/[0.06] text-left transition-colors",
+        "group relative flex w-full shrink-0 gap-3 overflow-hidden border border-white/[0.06] text-left transition-colors",
         compact ? "px-3 py-2" : "px-3.5 py-3",
         fresh ? "bg-white/[0.045]" : "bg-white/[0.015]",
         onOpen && "hover:border-white/15 hover:bg-white/[0.06]",

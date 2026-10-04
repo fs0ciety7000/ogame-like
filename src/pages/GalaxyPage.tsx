@@ -1,4 +1,5 @@
 import { targetsPlayer } from "@/game/fleets";
+import { TitleBadge } from "@/components/game/TitleBadge";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
@@ -98,7 +99,7 @@ export function GalaxyPage() {
   const now = useSmoothNow();
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
-  const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string } | null>(null);
+  const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string; allianceId?: string | null; createdAtMs?: number } | null>(null);
   const [debrisFields, setDebrisFields] = useState<DebrisField[]>([]);
   const [recycleField, setRecycleField] = useState<DebrisField | null>(null);
   const [garrisonTarget, setGarrisonTarget] = useState<{ uid: string; pseudo: string } | null>(null);
@@ -546,7 +547,7 @@ export function GalaxyPage() {
                   )}
                   {selectedIsMine && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
                 </p>
-                {selected.activeTitle && <p className="text-xs text-gold-glow">🏆 {selected.activeTitle}</p>}
+                {selected.activeTitle && <TitleBadge label={selected.activeTitle} size="xs" className="mt-0.5" />}
                 <p className="tabular-mono text-xs text-slate-500">
                   Secteur {formatCoords(selected.coords)} · {getRankLabel(selected.xp)}
                   {selected.allianceId && allianceById.get(selected.allianceId) && ` · [${allianceById.get(selected.allianceId)!.tag}]`}
@@ -606,7 +607,7 @@ export function GalaxyPage() {
                     <Eye className="h-4 w-4" />
                   </Button>
                   {!("npc" in selected && selected.npc) && (
-                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo, allianceId: "allianceId" in selected ? (selected.allianceId ?? null) : undefined, createdAtMs: "createdAtMs" in selected ? selected.createdAtMs : undefined })}>
                       <Gift className="h-4 w-4" />
                     </Button>
                   )}

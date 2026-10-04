@@ -8,7 +8,7 @@ import { uploadVictoryCard } from "@/services/victoryCardService";
 
 /* v4.1 : aperçu, téléchargement et lien de partage d'une carte de victoire. */
 
-export function VictoryCardDialog({ card, target, onClose }: { card: VictoryCardInput | null; target: string; onClose: () => void }) {
+export function VictoryCardDialog({ card, target, onClose, title = "Carte de victoire", fileName = "cosmic-empires-victoire.jpg" }: { card: VictoryCardInput | null; target: string; onClose: () => void; title?: string; fileName?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -31,7 +31,7 @@ export function VictoryCardDialog({ card, target, onClose }: { card: VictoryCard
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cosmic-empires-victoire.jpg";
+    a.download = fileName;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
@@ -54,7 +54,7 @@ export function VictoryCardDialog({ card, target, onClose }: { card: VictoryCard
   return (
     <Dialog open={!!card} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl">
-        <DialogTitle>Carte de victoire</DialogTitle>
+        <DialogTitle>{title}</DialogTitle>
         <div className="relative border border-cyan-glow/20 bg-black">
           <canvas ref={canvas} className="block h-auto w-full" />
           {!ready && (

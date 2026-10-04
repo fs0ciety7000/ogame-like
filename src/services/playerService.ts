@@ -1,6 +1,5 @@
 import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
 import { defaultQueues } from "@/game/defaults";
-import type { NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import type { AwaySummary, GameAction } from "@/game/actions";
@@ -237,12 +236,6 @@ export async function fetchNotificationHistory(uid: string, page: number, perPag
 
 export async function markNotificationRead(_uid: string, id: string) {
   await pb.collection("notifications").update(id, { read: true });
-}
-
-async function createNotifications(uid: string, notifications: NewNotification[]) {
-  for (const n of notifications) {
-    await pb.collection("notifications").create({ ...n, player_id: uid });
-  }
 }
 
 export interface LeaderboardEntry {

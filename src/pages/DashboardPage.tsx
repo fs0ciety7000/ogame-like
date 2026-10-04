@@ -27,6 +27,7 @@ import { LeviathanBanner } from "@/components/game/LeviathanBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
+import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { useFleetStore } from "@/store/fleetStore";
@@ -98,7 +99,12 @@ export function DashboardPage() {
     colonies: <ColoniesCard />,
     fleets: <FleetsPanel hideWhenEmpty />,
     leviathan: <LeviathanBanner />,
-    challenge: <ChallengeCard />,
+    challenge: (
+      <div className="flex flex-col gap-3">
+        <WeeklyRecapCard />
+        <ChallengeCard />
+      </div>
+    ),
     event: <EventCard />,
     contracts: (
       <div id="contrats" className="scroll-mt-24">

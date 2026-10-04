@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { toast } from "sonner";
 import { Crosshair, Flame, Play, Square, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState, HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { BossRecapPanel } from "@/components/game/BossRecap";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
@@ -122,6 +124,8 @@ export function SeasonBossPage() {
         </Card>
       )}
 
+      {shown && <BossRecapPanel state={shown} uid={player.uid} name={boss?.name ?? "Le boss de saison"} image={boss?.image} accent={month?.theme.accent} active={active} />}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="hud-title flex items-center gap-2 text-sm">
@@ -148,6 +152,7 @@ export function SeasonBossPage() {
           </Button>
         </Card>
       )}
+      {admin === true && <BossRewardsAdmin state={state} kind="seasonboss" />}
 
       <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${boss?.name ?? "boss de saison"}`} send={sendSeasonBossAssault} />
     </div>

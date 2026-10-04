@@ -1,4 +1,5 @@
 import { defaultChroniclesConfig, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
+import { DEFAULT_TITLES, setTitles, validateTitles, type TitleDef } from "@/game/titles";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
@@ -70,10 +71,12 @@ export interface GameContent {
   /** v5.9 : reliques (modèles, effets, images) et leurs réglages (raretés, emplacements, fusion). */
   relics: RelicTemplate[];
   relicSettings: RelicSettings;
+  /** v5.10 : catalogue des titres (libellé, rareté, icône, déblocage). */
+  titles: TitleDef[];
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings", "titles"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -112,6 +115,7 @@ export function defaultGameContent(): GameContent {
     chronicles: defaultChroniclesConfig(),
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
+    titles: DEFAULT_TITLES,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
@@ -138,6 +142,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     seasonPass: overrides.seasonPass ?? defaults.seasonPass,
     chronicles: overrides.chronicles ?? defaults.chronicles,
     relics: overrides.relics ?? defaults.relics,
+    titles: overrides.titles ?? defaults.titles,
     relicSettings: {
       ...defaults.relicSettings,
       ...(overrides.relicSettings ?? {}),
@@ -180,6 +185,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
   setRelics(content.relics, content.relicSettings);
+  setTitles(content.titles ?? DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -305,6 +311,7 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
   errors.push(...validateRelics(content.relics ?? [], content.relicSettings ?? defaultRelicSettings()));
+  errors.push(...validateTitles(content.titles ?? []));
 
   return [...new Set(errors)];
 }

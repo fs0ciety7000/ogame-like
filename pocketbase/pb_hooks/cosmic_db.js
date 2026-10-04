@@ -79,6 +79,11 @@ function isNpcUid(txApp, uid) {
   return !!rec && rec.getString("npc") !== "";
 }
 
+/** v5.10 : lien vers le rapport pour les notifications de combat (attaque/défense). */
+function withReportLink(notifications, reportId) {
+  return (notifications || []).map((n) => (n.kind === "combat-attacker" || n.kind === "combat-defender") && !n.link ? Object.assign({}, n, { link: `/game/combats?rapport=${reportId}` }) : n);
+}
+
 function notify(txApp, uid, notifications) {
   if (!notifications || notifications.length === 0) return;
   if (isNpcUid(txApp, uid)) return;
@@ -832,10 +837,10 @@ function resolvePirateArrival(txApp, game, rec, now) {
   const patrolling = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && mission = "patrol" && status != "done"', "", 1, 0, { u: fleet.targetUid }).length > 0;
   const out = game.resolvePirateRaid(faction, loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now, { evading: patrolling });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.targetUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.targetUid, withReportLink(out.notifications, report.id));
   garrisonRecs.forEach((g, i) => {
     const losses = (out.combat.garrisonLosses || [])[i] || {};
     const units = Object.assign({}, fleetFromRecord(g).units);
@@ -881,10 +886,10 @@ function resolveLairArrival(txApp, game, rec, now) {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.ownerUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(out.notifications, report.id));
   const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
   rec.set("units", out.survivors);
   rec.set("reportId", report.id);
@@ -1025,12 +1030,12 @@ function resolveAttackArrival(txApp, game, rec, now) {
   game.clearDecoy(result.attacker, rec.id);
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
-  notify(txApp, fleet.ownerUid, result.notifications);
-  notify(txApp, defenderUid, result.defenderNotifications);
-
+  // v5.10 : le rapport d'abord, pour que les notifications de combat y mènent.
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(result.notifications, report.id));
+  notify(txApp, defenderUid, withReportLink(result.defenderNotifications, report.id));
   // v4.2 : seigneurs de guerre (vendetta, répliques).
   try {
     warlordAfterCombat(txApp, game, attacker, defender, result, now);
@@ -2400,9 +2405,91 @@ function grantMythicTo(txApp, game, player, source, now) {
   return out.name;
 }
 
+/** v5.9 : récompense d'un participant, gardée dans l'état du boss pour son bilan. */
+function bossRewardEntry(r) {
+  const out = {};
+  const gain = {};
+  Object.keys(r.gain || {}).forEach((k) => {
+    if (Number(r.gain[k]) > 0) gain[k] = Math.floor(Number(r.gain[k]));
+  });
+  if (Object.keys(gain).length) out.gain = gain;
+  if (Number(r.points) > 0) out.points = Number(r.points);
+  if (r.title) out.title = String(r.title);
+  if (r.relic) out.relic = String(r.relic);
+  if (r.mythic) out.mythic = String(r.mythic);
+  return out;
+}
+
+/** v5.9 : détails structurés d'une notification de boss (pastilles). */
+function bossNotifData(gain, relic, mythic) {
+  const resources = {};
+  Object.keys(gain || {}).forEach((k) => {
+    if (Number(gain[k]) > 0) resources[k] = Math.floor(Number(gain[k]));
+  });
+  const relicName = mythic || relic || "";
+  if (!Object.keys(resources).length && !relicName) return null;
+  const data = {};
+  if (Object.keys(resources).length) data.resources = resources;
+  if (relicName) data.relic = relicName;
+  return data;
+}
+
+/**
+ * POST /api/cosmic/admin/bossrewards { kind: "leviathan" | "seasonboss", action: "distribute" }
+ * v5.10 : relance une distribution restée bloquée (boss terminé, récompenses non versées).
+ * Refusée si la distribution a déjà eu lieu : jamais de double paiement.
+ */
+function adminBossRewards(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const kind = String(req.kind || "");
+  if (kind !== "leviathan" && kind !== "seasonboss") throw new BadRequestError("Boss inconnu.");
+  if (req.action !== "distribute") throw new BadRequestError("Action inconnue.");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    let state = kind === "leviathan" ? readLeviathan(txApp, game) : readSeasonBoss(txApp, game);
+    if (!state) throw new BadRequestError("Aucun boss enregistré.");
+    if (state.rewarded) throw new BadRequestError("Récompenses déjà versées : rien à rejouer.");
+    if (state.status === "active" && now < state.endMs && state.hp > 0) throw new BadRequestError("Le combat est encore en cours.");
+    if (state.status === "active") state = Object.assign({}, state, { status: state.hp <= 0 ? "killed" : "failed", endedAtMs: state.endedAtMs || now });
+    state = kind === "leviathan" ? distributeLeviathan(txApp, game, state, now) : distributeSeasonBoss(txApp, game, state, now);
+    if (kind === "leviathan") writeLeviathan(txApp, state);
+    else writeSeasonBoss(txApp, game, state);
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "update",
+      targetCollection: "game_config",
+      recordId: kind,
+      recordLabel: `${kind === "leviathan" ? "Léviathan" : "Boss de saison"} : distribution relancée`,
+      changes: { participants: Object.keys(state.rewards || {}).length },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+    out = state;
+  });
+  return e.json(200, out);
+}
+
+/** v5.10 : archive le combat dans le Hall of fame (game_config boss_history). */
+function archiveBoss(txApp, game, kind, state, meta) {
+  try {
+    const rec = configRecord(txApp, game.BOSS_HISTORY_KEY);
+    const list = game.normalizeBossHistory(rec ? toPlain(rec).data : null);
+    writeConfig(txApp, game.BOSS_HISTORY_KEY, { entries: game.pushBossHistory(list, game.bossHistoryEntry(kind, state, meta)) });
+  } catch (err) {
+    console.log(`[cosmic] hall of fame : ${err}`);
+  }
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
+  const rewards = {};
   ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -2411,6 +2498,7 @@ function distributeLeviathan(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
@@ -2418,12 +2506,16 @@ function distributeLeviathan(txApp, game, state, now) {
         message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
         createdAtMs: now,
         read: false,
+        link: "/game/leviathan",
+        data: bossNotifData(out.gain, out.relic, mythic),
       },
     ]));
   });
   const top = ranking[0];
+  archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
   return Object.assign({}, state, {
     rewarded: true,
+    rewards,
     titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000 } : state.titleHolder,
   });
 }
@@ -2508,7 +2600,7 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false }]);
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -2669,6 +2761,7 @@ function marketAccept(e) {
       ]));
       rec.set("filled", fill.filled);
       rec.set("tax", rec.getFloat("tax") + fill.tax);
+      if (fill.tax > 0) addServerPot(txApp, game, "market", { [offer.wantRes]: fill.tax }, now);
       rec.set("buyerId", uid);
       rec.set("buyerPseudo", buyer.player.pseudo);
       if (fill.done) {
@@ -2711,6 +2804,7 @@ function marketAccept(e) {
     rec.set("filledAtMs", now);
     rec.set("tax", res.tax);
     txApp.save(rec);
+    if (res.tax > 0) addServerPot(txApp, game, "market", { [offer.wantRes]: res.tax }, now);
     out = offerJson(rec);
   });
   return e.json(200, out);
@@ -3653,6 +3747,43 @@ function recordChallengeProgress(txApp, game, before, after) {
 }
 
 /** Tâche planifiée : clôture et récompenses, titre temporaire, nouveau défi. */
+/** v5.10 : verse d'office les récompenses non réclamées d'un défi terminé. */
+function payUnclaimedChallenge(txApp, game, ch, now) {
+  game.unclaimedRewardees(ch).forEach((uid) => {
+    if (!findOrNull(txApp, "players", uid)) return;
+    const loaded = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const gain = game.grantChallengeReward(ch, flushed.player, { title: false });
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}).`, createdAtMs: now, read: false, link: "/game", data: { resources: gain } }]));
+  });
+}
+
+/** POST /api/cosmic/challenge/claim — récupère la récompense du défi terminé. */
+function challengeClaim(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const state = readChallengeState(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    let res;
+    try {
+      res = game.claimChallengeReward(state.previous, flushed.player);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    writeChallengeState(txApp, game, Object.assign({}, state, { previous: res.challenge }));
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}.`, createdAtMs: now, read: true, link: "/game", data: { resources: res.gain } }]));
+    out = { gain: res.gain };
+  });
+  return e.json(200, out);
+}
+
 function challengeTick(now) {
   const game = loadGame();
   $app.runInTransaction((txApp) => {
@@ -3675,14 +3806,19 @@ function challengeTick(now) {
       const tier = game.challengeTier(ch);
       const done = Object.assign({}, ch, { status: "done", success: !!tier });
       const label = game.CHALLENGE_TYPES[ch.type].label;
+      // v5.10 : les récompenses non réclamées du défi précédent sont versées d'office.
+      payUnclaimedChallenge(txApp, game, state.previous, now);
+      const top = game.challengeRanking(done)[0];
       game.challengeRewardees(done).forEach((uid) => {
         if (!findOrNull(txApp, "players", uid)) return;
-        const loaded = loadPlayer(txApp, game, uid);
-        game.grantChallengeReward(done, loaded.player);
-        savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
-        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Récompense versée : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.`, createdAtMs: now, read: false }]);
+        // Le titre du meilleur est remis tout de suite ; les ressources se réclament.
+        if (top && top.uid === uid) {
+          const loaded = loadPlayer(txApp, game, uid);
+          game.grantChallengeReward(done, loaded.player, { resources: false });
+          savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+        }
+        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Ta récompense t'attend sur l'accueil : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.${top && top.uid === uid ? ` Tu deviens « ${game.CHALLENGE_RULES.title} » !` : ""}`, createdAtMs: now, read: false, link: "/game" }]);
       });
-      const top = game.challengeRanking(done)[0];
       state = Object.assign({}, state, {
         current: null,
         previous: done,
@@ -3763,10 +3899,10 @@ function bountyArrival(txApp, game, rec, now) {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.ownerUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(out.notifications, report.id));
   const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
   rec.set("units", out.survivors);
   rec.set("reportId", report.id);
@@ -4243,6 +4379,64 @@ function adminPlayerAction(e) {
 
 /* ---------- v5.4 : générateur procédural (chapitres, passe, succès) ---------- */
 
+/** v5.10 : verse des ressources au pot commun « Serveur » (taxes). */
+function addServerPot(txApp, game, source, amounts, now, note) {
+  const rec = configRecord(txApp, game.SERVER_POT_KEY);
+  const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+  const next = game.addToPot(pot, source, amounts || {}, now, note);
+  if (next !== pot) writeConfig(txApp, game.SERVER_POT_KEY, next);
+}
+
+/** GET/POST /api/cosmic/admin/serverpot — solde, mouvements, versement à un joueur. */
+function adminServerPot(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  if (e.request.method !== "POST") {
+    const rec = configRecord($app, game.SERVER_POT_KEY);
+    return e.json(200, game.normalizeServerPot(rec ? toPlain(rec).data : null));
+  }
+  const req = body(e);
+  if (req.action !== "grant") throw new BadRequestError("Action inconnue.");
+  const toUid = String(req.toUid || "");
+  const note = String(req.note || "").trim().slice(0, 200);
+  if (!note) throw new BadRequestError("Indique le motif (concours, événement…).");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    if (!findOrNull(txApp, "players", toUid)) throw new BadRequestError("Joueur introuvable.");
+    const rec = configRecord(txApp, game.SERVER_POT_KEY);
+    const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+    const owner = loadPlayer(txApp, game, toUid);
+    const next = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
+    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
+    const given = {};
+    const last = next.log[next.log.length - 1];
+    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    notify(txApp, toUid, flushed.notifications.concat([
+      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${game.describeGain(given)} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
+    ]));
+    writeConfig(txApp, game.SERVER_POT_KEY, next);
+    const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: e.auth ? e.auth.id : "superuser",
+      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+      action: "update",
+      targetCollection: "game_config",
+      recordId: game.SERVER_POT_KEY,
+      recordLabel: `Pot commun : ${note}`,
+      changes: { versé: given, joueur: owner.player.pseudo },
+      createdAtMs: now,
+    });
+    txApp.save(log);
+    out = next;
+  });
+  return e.json(200, out);
+}
+
 function writeConfig(txApp, key, data) {
   let rec = configRecord(txApp, key);
   if (!rec) {
@@ -4659,16 +4853,18 @@ function referralTick(now) {
         txApp.save(recruit.rec);
         txApp.save(sponsor.rec);
         const R = game.REFERRAL_RULES;
-        notify(txApp, cand.id, [{ kind: "achievement", title: "Parrainage récompensé", message: `Bronze I atteint : +${R.amberRecruit} Ambre de Ruche, offert par ton parrain ${sponsor.player.pseudo}.`, createdAtMs: now, read: false }]);
+        notify(txApp, cand.id, [{ kind: "event", title: "Parrainage récompensé", message: `Bronze I atteint : +${R.amberRecruit} Ambre de Ruche, offert par ton parrain ${sponsor.player.pseudo}.`, createdAtMs: now, read: false, link: "/game/profil", data: { amber: R.amberRecruit, fromUid: sponsorId, fromPseudo: sponsor.player.pseudo } }]);
         notify(txApp, sponsorId, [
           {
-            kind: "achievement",
+            kind: "event",
             title: res.capped ? "Filleul arrivé à Bronze I" : "Parrainage récompensé",
             message: res.capped
               ? `${recruit.player.pseudo} a atteint Bronze I. Plafond de ${R.perMonth} récompenses ce mois-ci atteint : la prochaine viendra le mois prochain.`
               : `${recruit.player.pseudo} a atteint Bronze I : +${R.amberSponsor} Ambre de Ruche et la bannière « Recruteur ».`,
             createdAtMs: now,
             read: false,
+            link: "/game/profil",
+            data: res.capped ? null : { amber: R.amberSponsor },
           },
         ]);
         rewarded += 1;
@@ -5245,7 +5441,7 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     savePlayer(txApp, game, loaded, p, loaded.queues);
     notify(txApp, w, [
       {
-        kind: "achievement",
+        kind: "event",
         title: "Vendetta gagnée !",
         message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.`,
         createdAtMs: now,
@@ -5295,7 +5491,7 @@ function finishCoalitionWon(txApp, game, state, coal, co, now) {
     savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
     notify(txApp, c.uid, [
       {
-        kind: "achievement",
+        kind: "event",
         title: `Coalition victorieuse contre ${d.name}`,
         message: out.eligible
           ? `+${game.PASS_POINTS.coalition} points de passe, ${game.COALITION_RULES.rewardHours} h de production${out.relic ? `, relique : ${out.relic}` : ""}${out.title ? `, titre « ${out.title} »` : ""}.`
@@ -5713,6 +5909,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
+  const rewards = {};
   game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -5721,6 +5918,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
@@ -5729,10 +5927,12 @@ function distributeSeasonBoss(txApp, game, state, now) {
         createdAtMs: now,
         read: false,
         link: "/game/boss",
+        data: bossNotifData(null, out.relic, mythic),
       },
     ]));
   });
-  return Object.assign({}, state, { rewarded: true });
+  archiveBoss(txApp, game, "seasonboss", state, { name, image: month ? month.boss.image : undefined });
+  return Object.assign({}, state, { rewarded: true, rewards });
 }
 
 function seasonBossArrival(txApp, game, rec, now) {
@@ -5888,12 +6088,14 @@ function allianceBossLog(txApp, allianceId, uid, pseudo, text, resources) {
 function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const name = game.allianceBossDef(state).name;
+  const rewards = {};
   game.leviathanRanking(state).forEach((c) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantAllianceBossReward(state, flushed.player, now);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic });
     const won = state.status === "killed";
     notify(txApp, c.uid, flushed.notifications.concat([
       {
@@ -5903,6 +6105,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
         createdAtMs: now,
         read: false,
         link: "/game/alliance",
+        data: bossNotifData(out.gain, out.relic, ""),
       },
     ]));
   });
@@ -5913,7 +6116,8 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     allianceRec.set("treasury", treasury);
   }
   allianceBossLog(txApp, allianceRec.id, "", name, state.status === "killed" ? `${name} abattu : la moitié du coût revient au trésor.` : `${name} a survécu.`, Object.keys(refund).length ? refund : null);
-  return Object.assign({}, state, { rewarded: true });
+  archiveBoss(txApp, game, "allianceboss", state, { name, image: game.allianceBossDef(state).image, allianceId: allianceRec.id, allianceName: allianceRec.getString("name") });
+  return Object.assign({}, state, { rewarded: true, rewards });
 }
 
 /** POST /api/cosmic/allianceboss { action: "call" } */
@@ -6252,4 +6456,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

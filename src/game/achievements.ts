@@ -32,8 +32,10 @@ export interface AchievementDef {
   rewardXp: number;
   /** Heures de production des ressources communes. */
   rewardHours: number;
-  /** Titre décerné (vide = aucun). */
+  /** Titre décerné (vide = aucun). Libellé libre, gardé pour les anciens succès. */
   title: string;
+  /** v5.10 : titre du catalogue décerné (prioritaire sur « title »). */
+  titleId?: string;
   /** v5.4 : palier ajouté par le générateur. */
   auto?: boolean;
 }
@@ -104,6 +106,7 @@ export const METRICS = {
   expeditions: { label: "Expéditions terminées", value: (p: PlayerState) => playerStats(p).expeditions ?? 0 },
   leviathanKills: { label: "Léviathans abattus (participation)", value: (p: PlayerState) => playerStats(p).leviathanKills ?? 0 },
   traded: { label: "Ressources échangées au marché (cumul)", value: (p: PlayerState) => playerStats(p).traded ?? 0 },
+  giftsSent: { label: "Cadeaux envoyés (v5.10)", value: (p: PlayerState) => playerStats(p).giftsSent ?? 0 },
   inAlliance: { label: "Membre d'une alliance (0/1)", value: (p: PlayerState) => (p.allianceId ? 1 : 0) },
   allianceFounded: { label: "Alliance fondée (0/1)", value: (p: PlayerState) => playerStats(p).allianceFounded ?? 0 },
   garrisons: { label: "Garnisons envoyées", value: (p: PlayerState) => playerStats(p).garrisons ?? 0 },
@@ -126,7 +129,8 @@ export const METRICS = {
     },
   },
   xp: { label: "XP totale", value: (p: PlayerState) => p.xp ?? 0 },
-  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length },
+  // v5.9 : seulement les titres de fin de saison (seasonId « AAAA-MM ») — pas ceux du passe, des défis, des boss…
+  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => /^\d{4}-\d{2}$/.test(String(t.seasonId))).length },
   // v5.4 : Chroniques et passe.
   chaptersCompleted: { label: "Chapitres des Chroniques terminés", value: (p: PlayerState) => ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).length },
   bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },
@@ -159,7 +163,7 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("veteran", "combat", "bronze", "victories", 10, "Vétéran", "Remporte 10 combats.", "🎖️"),
   def("warlord", "combat", "argent", "victories", 50, "Seigneur de guerre", "Remporte 50 combats.", "🗡️"),
   def("star_scourge", "combat", "or", "victories", 200, "Fléau des étoiles", "Remporte 200 combats.", "☄️"),
-  def("eternal_conqueror", "combat", "legendaire", "victories", 1000, "Conquérant éternel", "Remporte 1 000 combats.", "👑", { title: "Conquérant" }),
+  def("eternal_conqueror", "combat", "legendaire", "victories", 1000, "Conquérant éternel", "Remporte 1 000 combats.", "👑", { title: "Conquérant", titleId: "conquerant" }),
   def("raider", "combat", "bronze", "loot", 100_000, "Pillard", "Pille 100 000 ressources.", "💰"),
   def("corsair", "combat", "argent", "loot", 1_000_000, "Corsaire", "Pille 1 million de ressources.", "🏴‍☠️"),
   def("galactic_razzia", "combat", "or", "loot", 20_000_000, "Razzia galactique", "Pille 20 millions de ressources.", "💎"),
@@ -174,20 +178,20 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("master_builder", "construction", "argent", "maxBuildingLevel", 15, "Maître d'œuvre", "Amène un bâtiment au niveau 15.", "📐"),
   def("masterpiece", "construction", "or", "maxBuildingLevel", 20, "Chef-d'œuvre", "Amène un bâtiment au niveau 20.", "🗼"),
   def("expansion", "construction", "argent", "buildingsUnlockedPct", 100, "Empire en expansion", "Débloque tous les bâtiments.", "🗺️"),
-  def("world_city", "construction", "legendaire", "minBuildingLevel", 20, "Cité-monde", "Amène tous les bâtiments au niveau 20.", "🌍", { title: "Bâtisseur de mondes" }),
+  def("world_city", "construction", "legendaire", "minBuildingLevel", 20, "Cité-monde", "Amène tous les bâtiments au niveau 20.", "🌍", { title: "Bâtisseur de mondes", titleId: "batisseur_mondes" }),
   // Recherche
   def("curious", "recherche", "bronze", "techCount", 1, "Curieux", "Termine ta première recherche.", "🔎"),
   def("researcher", "recherche", "bronze", "techCount", 5, "Chercheur", "Recherche 5 technologies différentes.", "🔬"),
   def("scholar", "recherche", "argent", "techLevels", 25, "Érudit", "Cumule 25 niveaux de technologies.", "📚"),
   def("savant", "recherche", "or", "techLevels", 75, "Savant", "Cumule 75 niveaux de technologies.", "🧠"),
-  def("omniscience", "recherche", "legendaire", "techsMaxedPct", 100, "Omniscience", "Amène toutes les technologies au maximum.", "🌌", { title: "Omniscient" }),
+  def("omniscience", "recherche", "legendaire", "techsMaxedPct", 100, "Omniscience", "Amène toutes les technologies au maximum.", "🌌", { title: "Omniscient", titleId: "omniscient" }),
   def("specialist", "recherche", "argent", "maxTechLevel", 10, "Spécialiste", "Amène une technologie au niveau 10.", "🧪"),
   def("night_owl", "recherche", "bronze", "nightResearch", 1, "Nuit blanche", "Lance une recherche entre 3 h et 5 h du matin.", "🦉", { secret: true }),
   // Flotte
   def("fleet", "flotte", "bronze", "unitsTotal", 50, "Flotte redoutable", "Possède 50 unités au total.", "🚀"),
   def("squadron", "flotte", "argent", "unitsTotal", 500, "Escadre", "Possède 500 unités.", "🛸"),
   def("armada", "flotte", "or", "unitsTotal", 5000, "Armada", "Possède 5 000 unités.", "🌠"),
-  def("steel_tide", "flotte", "legendaire", "unitsTotal", 50_000, "Marée d'acier", "Possède 50 000 unités.", "🌊", { title: "Amiral de la Marée" }),
+  def("steel_tide", "flotte", "legendaire", "unitsTotal", 50_000, "Marée d'acier", "Possède 50 000 unités.", "🌊", { title: "Amiral de la Marée", titleId: "amiral_maree" }),
   def("collector", "flotte", "argent", "unitTypesPct", 100, "Collectionneur", "Débloque tous les types d'unités.", "🗂️"),
   def("tireless_yard", "flotte", "or", "unitsBuilt", 10_000, "Chantier infatigable", "Construis 10 000 unités.", "🛠️"),
   def("naval_engineer", "flotte", "argent", "maxUnitLevel", 10, "Ingénieur naval", "Amène une unité au niveau 10.", "⚙️"),
@@ -225,7 +229,7 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("defiant", "menaces", "bronze", "raidsRepelled", 1, "Insoumis", "Repousse un raid de faction.", "✊"),
   def("rampart", "menaces", "argent", "raidsRepelled", 10, "Rempart", "Repousse 10 raids de faction.", "🧱"),
   def("bounty_hunter", "menaces", "or", "lairsTaken", 1, "Chasseur de primes", "Prends un repaire de faction.", "🎯"),
-  def("factions_bane", "menaces", "legendaire", "lairFactions", 3, "Fléau des factions", "Fais tomber les repaires de 3 factions différentes.", "💀", { title: "Fléau des factions" }),
+  def("factions_bane", "menaces", "legendaire", "lairFactions", 3, "Fléau des factions", "Fais tomber les repaires de 3 factions différentes.", "💀", { title: "Fléau des factions", titleId: "fleau_factions" }),
   def("wanted", "menaces", "or", "maxNotoriety", 1, "Tête mise à prix", "Atteins la Notoriété maximale auprès d'une faction.", "📸"),
   def("diplomat", "menaces", "argent", "diplomat", 20, "Diplomate", "Paie 20 tributs sans jamais refuser.", "🕊️", { secret: true }),
   def("all_against_me", "menaces", "argent", "factionsThreatened", 4, "Tous contre moi", "Reçois les ultimatums de 4 factions différentes.", "🎭", { secret: true }),

@@ -1,6 +1,7 @@
 import { nextLeviathanStart } from "@/game/leviathan";
 import { productionHours } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
+import { GameActionError } from "@/game/errors";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -46,6 +47,8 @@ export interface Challenge {
   contributions: Record<string, { pseudo: string; amount: number }>;
   status: "active" | "done";
   success: boolean;
+  /** v5.10 : participants qui ont réclamé leur récompense. */
+  claimed?: string[];
 }
 
 export interface ChallengeState {
@@ -139,17 +142,42 @@ export function challengeRewardees(ch: Challenge): string[] {
 }
 
 /** Récompense d'un participant (appliquée à `player`), et titre pour le meilleur. */
-export function grantChallengeReward(ch: Challenge, player: PlayerState): Partial<Record<ResourceId, number>> {
+export function grantChallengeReward(ch: Challenge, player: PlayerState, opts: { title?: boolean; resources?: boolean } = {}): Partial<Record<ResourceId, number>> {
   const tier = challengeTier(ch);
   if (!tier || !challengeRewardees(ch).includes(player.uid)) return {};
-  const gain: Partial<Record<ResourceId, number>> = { ...productionHours(player, tier.hours) };
-  for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = (gain[r.id] ?? 0) + tier.rare;
-  for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
-  if (challengeRanking(ch)[0]?.uid === player.uid) {
+  const gain: Partial<Record<ResourceId, number>> = {};
+  if (opts.resources !== false) {
+    Object.assign(gain, productionHours(player, tier.hours));
+    for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = (gain[r.id] ?? 0) + tier.rare;
+    for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
+  }
+  if (opts.title !== false && challengeRanking(ch)[0]?.uid === player.uid) {
     player.titles = [...(player.titles ?? []).filter((t) => t.label !== CHALLENGE_RULES.title), { label: CHALLENGE_RULES.title, seasonId: `challenge:${ch.id}`, rank: 1 }];
     player.activeTitle = CHALLENGE_RULES.title;
   }
   return gain;
+}
+
+/* ---------- v5.10 : récompense à réclamer ---------- */
+
+/** Le joueur a-t-il une récompense en attente sur ce défi terminé ? */
+export function challengeClaimable(ch: Challenge | null | undefined, uid: string): boolean {
+  return !!ch && ch.status === "done" && !!challengeTier(ch) && challengeRewardees(ch).includes(uid) && !(ch.claimed ?? []).includes(uid);
+}
+
+/** Réclamation : crédite les ressources (pas le titre, remis à la clôture) et note le joueur. */
+export function claimChallengeReward(ch: Challenge | null, player: PlayerState): { challenge: Challenge; gain: Partial<Record<ResourceId, number>> } {
+  if (!ch || ch.status !== "done") throw new GameActionError("Aucun défi terminé à récupérer.");
+  if ((ch.claimed ?? []).includes(player.uid)) throw new GameActionError("Récompense déjà récupérée.");
+  if (!challengeClaimable(ch, player.uid)) throw new GameActionError("Pas de récompense pour toi sur ce défi.");
+  const gain = grantChallengeReward(ch, player, { title: false });
+  return { challenge: { ...ch, claimed: [...(ch.claimed ?? []), player.uid] }, gain };
+}
+
+/** Joueurs qui n'ont pas réclamé (versement automatique à la clôture du défi suivant). */
+export function unclaimedRewardees(ch: Challenge | null): string[] {
+  if (!ch || ch.status !== "done") return [];
+  return challengeRewardees(ch).filter((uid) => !(ch.claimed ?? []).includes(uid));
 }
 
 export function removeChallengeTitle(player: PlayerState): void {

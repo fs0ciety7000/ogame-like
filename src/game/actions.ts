@@ -113,8 +113,11 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
     player.resources[res as ResourceId] -= val ?? 0;
     total += val ?? 0;
   }
+  // v5.9 : un cadeau n'est pas une dépense (sinon deux joueurs se renvoient
+  // les mêmes ressources pour remplir le contrat « dépenser »).
+  if (!spending) return;
   recordContract(player, "spend", total, now);
-  if (spending) bumpStat(player, "spent", total);
+  bumpStat(player, "spent", total);
 }
 
 /** Places de hangar occupées : vaisseaux à quai + vaisseaux en mission. */
@@ -442,6 +445,27 @@ export interface GiftOutput {
   recipientQueues: QueuesState;
   recipientNotifications: NewNotification[];
   resources: Partial<Record<ResourceId, number>>;
+  /** v5.10 : ce que reçoit le destinataire (après la taxe hors alliance). */
+  delivered: Partial<Record<ResourceId, number>>;
+}
+
+/** v5.10 : règles des cadeaux — âge de compte minimum (anti multi-comptes)
+ *  et taxe de transport hors alliance (cadeau libre entre membres). */
+export const GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
+
+/** Part qui arrive à destination (1 entre membres d'une même alliance). */
+export function giftDeliveryRate(sender: Pick<PlayerState, "allianceId">, recipient: Pick<PlayerState, "allianceId">): number {
+  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax;
+}
+
+/** Raison qui empêche ce compte d'envoyer ou de recevoir un cadeau (null si rien). */
+export function giftAgeBlock(p: Pick<PlayerState, "createdAtMs">, now: number): string | null {
+  const created = p.createdAtMs ?? 0;
+  if (!created) return null;
+  const left = created + GIFT_RULES.minAccountDays * 86_400_000 - now;
+  if (left <= 0) return null;
+  const hours = Math.ceil(left / 3_600_000);
+  return hours > 24 ? `encore ${Math.ceil(hours / 24)} jour(s)` : `encore ${hours} h`;
 }
 
 /** Débite l'expéditeur et crédite le destinataire (les deux rattrapés à
@@ -457,6 +481,10 @@ export function performGift(
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
   if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau à un seigneur de guerre.");
   if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
+  const senderWait = giftAgeBlock(sender, now);
+  if (senderWait) throw new GameActionError(`Les cadeaux s'ouvrent après ${GIFT_RULES.minAccountDays} jours de jeu (${senderWait}).`);
+  const recipientWait = giftAgeBlock(recipient, now);
+  if (recipientWait) throw new GameActionError(`${recipient.pseudo} est arrivé il y a moins de ${GIFT_RULES.minAccountDays} jours : il ne peut pas encore recevoir de cadeau (${recipientWait}).`);
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const [res, raw] of Object.entries(rawResources ?? {})) {
     const n = Math.floor(Number(raw));
@@ -469,23 +497,31 @@ export function performGift(
   const r = flushState({ ...recipient, buildings: withMissingBuildings(recipient.buildings, recipient.resources) }, recipientQueues, now);
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
-  for (const [res, amt] of Object.entries(resources)) {
-    r.player.resources[res as ResourceId] = (r.player.resources[res as ResourceId] ?? 0) + (amt ?? 0);
+  bumpStat(s.player, "giftsSent");
+  // v5.10 : hors alliance, une part se perd en route (taxe de transport).
+  const rate = giftDeliveryRate(sender, recipient);
+  const delivered: Partial<Record<ResourceId, number>> = {};
+  for (const [res, amt] of Object.entries(resources) as [ResourceId, number][]) {
+    const got = Math.floor(amt * rate);
+    if (got <= 0) continue;
+    delivered[res] = got;
+    r.player.resources[res] = (r.player.resources[res] ?? 0) + got;
   }
+  const taxNote = rate < 1 ? ` (${Math.round((1 - rate) * 100)} % perdus en route hors alliance)` : "";
   // v5.9 : le détail du cadeau (quantités, expéditeur) pour le destinataire, et une trace pour l'expéditeur.
   r.notifications.push({
     kind: "gift",
     title: `Cadeau de ${sender.pseudo}`,
-    message: `${sender.pseudo} t'a envoyé ${describeGain(resources)}.`,
+    message: `${sender.pseudo} t'a envoyé ${describeGain(delivered)}${taxNote}.`,
     createdAtMs: now,
     read: false,
     link: `/game/joueurs?fiche=${sender.uid}`,
-    data: { resources, fromUid: sender.uid, fromPseudo: sender.pseudo },
+    data: { resources: delivered, fromUid: sender.uid, fromPseudo: sender.pseudo },
   });
   s.notifications.push({
     kind: "gift",
     title: `Cadeau livré à ${recipient.pseudo}`,
-    message: `Tu as envoyé ${describeGain(resources)} à ${recipient.pseudo}.`,
+    message: `Tu as envoyé ${describeGain(resources)} à ${recipient.pseudo}${rate < 1 ? ` : ${describeGain(delivered)} arrivent${taxNote}` : ""}.`,
     createdAtMs: now,
     read: true,
     link: `/game/joueurs?fiche=${recipient.uid}`,
@@ -500,6 +536,7 @@ export function performGift(
     recipientQueues: r.queues,
     recipientNotifications: r.notifications,
     resources,
+    delivered,
   };
 }
 

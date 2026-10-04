@@ -16,7 +16,9 @@ import { UNITS } from "@/game/units";
 import { ACHIEVEMENTS } from "@/game/achievements";
 import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
-import { formatNumber, cn } from "@/lib/utils";
+import { formatCompact, formatNumber, cn } from "@/lib/utils";
+import { TitleBadge } from "@/components/game/TitleBadge";
+import { TITLES, titleProgress, titleRarity } from "@/game/titles";
 import { GameIcon } from "@/components/ui/game-icon";
 import { SeasonHistoryCard } from "@/components/game/SeasonHistoryCard";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
@@ -212,14 +214,11 @@ function RankLadder({ xp }: { xp: number }) {
 }
 
 function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string }) {
+  const player = usePlayerStore((s) => s.player);
   const [pending, setPending] = useState(false);
-  if (titles.length === 0) {
-    return (
-      <Card className="p-4 text-sm text-slate-500">
-        <GameIcon name="trophy" /> Aucun titre pour l'instant : finis une saison dans le top 10 pour en gagner un (voir le Palmarès).
-      </Card>
-    );
-  }
+  const owned = new Set(titles.map((t) => t.label));
+  // v5.10 : titres du catalogue à débloquer sur une mesure, avec la progression.
+  const toUnlock = player ? TITLES.filter((t) => t.enabled && t.unlock && !owned.has(t.label)) : [];
   const choose = async (label: string) => {
     setPending(true);
     try {
@@ -236,22 +235,52 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
       <CardHeader>
         <CardTitle>Titres</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        {[...titles].reverse().map((t) => (
-          <button
-            key={t.seasonId}
-            type="button"
-            disabled={pending}
-            onClick={() => void choose(t.label === active ? "" : t.label)}
-            className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs transition-colors",
-              t.label === active ? "border-gold-glow/70 bg-gold-glow/15 text-gold-glow" : "border-white/10 text-slate-300 hover:border-gold-glow/40",
-            )}
-          >
-            <GameIcon name="trophy" /> {t.label}
-          </button>
-        ))}
-        <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>
+      <CardContent className="flex flex-col gap-3">
+        {titles.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            <GameIcon name="trophy" /> Aucun titre pour l'instant : succès, boss, défis, saisons… ou les titres ci-dessous.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {[...titles].reverse().map((t) => (
+              <button
+                key={t.seasonId}
+                type="button"
+                disabled={pending}
+                onClick={() => void choose(t.label === active ? "" : t.label)}
+                className={cn("transition-opacity", t.label === active ? "ring-1 ring-white/60" : "opacity-80 hover:opacity-100")}
+                title={t.label === active ? "Affiché : clique pour le masquer" : "Clique pour l'afficher"}
+              >
+                <TitleBadge label={t.label} />
+              </button>
+            ))}
+            <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>
+          </div>
+        )}
+        {player && toUnlock.length > 0 && (
+          <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">À débloquer</p>
+            {toUnlock.map((t) => {
+              const v = titleProgress(t, player);
+              const pct = Math.min(100, Math.round((v / t.unlock!.threshold) * 100));
+              const color = titleRarity(t.rarity).color;
+              return (
+                <div key={t.id} className="flex items-center gap-2 text-xs">
+                  <span className="w-40 shrink-0 truncate opacity-70" style={{ color }}>
+                    {t.icon} {t.label}
+                  </span>
+                  <span className="hidden min-w-0 flex-1 truncate text-slate-500 sm:block">{t.description}</span>
+                  <span className="relative h-1.5 w-24 shrink-0 bg-white/5">
+                    <i className="absolute inset-y-0 left-0" style={{ width: `${pct}%`, background: color }} />
+                  </span>
+                  <span className="w-20 shrink-0 text-right font-mono tabular-nums text-slate-400">
+                    {formatCompact(Math.min(v, t.unlock!.threshold))}/{formatCompact(t.unlock!.threshold)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

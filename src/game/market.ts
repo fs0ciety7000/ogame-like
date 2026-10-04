@@ -10,13 +10,13 @@ import type { PlayerState, ResourceId } from "@/types/game";
    Marché entre joueurs (v3.0) : un joueur publie une offre (« je donne X
    contre Y ») ; ce qu'il vend est bloqué dès la publication. Un autre
    joueur l'accepte : l'échange est immédiat. Une taxe est prélevée sur ce
-   que reçoit le vendeur et retirée du jeu (moins entre membres d'une même
+   que reçoit le vendeur et versée au pot commun du serveur (v5.10) (moins entre membres d'une même
    alliance). Le prix doit rester proche du taux du comptoir pour empêcher
    les transferts déguisés vers un double compte.
 ===================================================== */
 
 export const MARKET_RULES = {
-  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), retirée du jeu. */
+  /** Taxe sur ce que reçoit le vendeur (0,05 = 5 %), versée au pot commun du serveur (v5.10). */
   taxPct: 0.05,
   /** Taxe entre membres d'une même alliance. */
   allianceTaxPct: 0.02,

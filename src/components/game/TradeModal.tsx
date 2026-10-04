@@ -5,17 +5,38 @@ import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { RESOURCE_LIST } from "@/game/resources";
+import { GIFT_RULES, giftAgeBlock, giftDeliveryRate } from "@/game/actions";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendResourceGift } from "@/services/playerService";
 import type { ResourceId, Resources } from "@/types/game";
 import { ResourceIcon } from "@/components/ui/game-icon";
 
+/** v5.10 : règles affichées avant l'envoi (âge des comptes, taxe hors alliance). */
+function GiftRules({ player, target }: { player: { createdAtMs?: number; allianceId?: string | null }; target: { pseudo: string; allianceId?: string | null; createdAtMs?: number } }) {
+  const now = Date.now();
+  const mine = giftAgeBlock(player, now);
+  const theirs = giftAgeBlock(target, now);
+  const rate = target.allianceId === undefined ? null : giftDeliveryRate(player, target);
+  return (
+    <div className="mt-2 flex flex-col gap-1 text-xs">
+      {mine && <p className="text-danger-glow">Les cadeaux s'ouvrent après {GIFT_RULES.minAccountDays} jours de jeu ({mine}).</p>}
+      {theirs && <p className="text-danger-glow">{target.pseudo} est arrivé il y a moins de {GIFT_RULES.minAccountDays} jours ({theirs}).</p>}
+      {rate === 1 && <p className="text-mint-glow">Même alliance : tout arrive à destination.</p>}
+      {rate !== null && rate < 1 && (
+        <p className="text-gold-glow">Hors alliance : {Math.round((1 - rate) * 100)} % se perdent en route (taxe de transport).</p>
+      )}
+      {rate === null && <p className="text-slate-500">Hors alliance, {Math.round(GIFT_RULES.outsideAllianceTax * 100)} % se perdent en route.</p>}
+    </div>
+  );
+}
+
 export function TradeModal({
   target,
   onClose,
 }: {
-  target: { uid: string; pseudo: string } | null;
+  /** allianceId / createdAtMs (si connus) : aperçu de la taxe et du délai (v5.10). */
+  target: { uid: string; pseudo: string; allianceId?: string | null; createdAtMs?: number } | null;
   onClose: () => void;
 }) {
   const player = usePlayerStore((s) => s.player);
@@ -57,6 +78,7 @@ export function TradeModal({
           <p className="text-sm text-slate-400">
             Destinataire : <strong className="text-slate-200">{target.pseudo}</strong>
           </p>
+          {player && <GiftRules player={player} target={target} />}
 
           {!player || submitting ? (
             <RadarScan label={submitting ? "Envoi en cours…" : "Chargement…"} />

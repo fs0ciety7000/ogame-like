@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { splitBadge, type ChangelogBadge } from "@/lib/changelogBadges";
 
 /* Rendu Markdown minimal et sûr (aucun HTML injecté) pour le changelog :
- * titres ## / ###, listes « - », paragraphes, **gras**, `code`, [lien](url). */
+ * titres ## / ###, listes « - », paragraphes, **gras**, `code`, [lien](url),
+ * pastilles « [Fix] », « [Nouveau] »… en début d'élément de liste. */
 
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -29,6 +31,24 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
   return out;
 }
 
+/** Pastille de type (changelog v5.9) : « [Fix] … » en début d'élément de liste. */
+export function ChangelogBadgePill({ badge, className = "" }: { badge: ChangelogBadge; className?: string }) {
+  return (
+    <span
+      className={`mr-1.5 inline-flex items-center border px-1.5 py-px align-[1px] font-mono text-[10px] font-semibold uppercase tracking-wider ${className}`}
+      style={{ color: badge.color, borderColor: `${badge.color}66`, background: `${badge.color}14` }}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
+function listItem(text: string, key: string): ReactNode[] {
+  const found = splitBadge(text);
+  if (!found) return inline(text, key);
+  return [<ChangelogBadgePill key={`${key}-badge`} badge={found.badge} />, ...inline(found.rest, key)];
+}
+
 export function Markdown({ source }: { source: string }) {
   const blocks: ReactNode[] = [];
   let list: string[] = [];
@@ -40,7 +60,7 @@ export function Markdown({ source }: { source: string }) {
       blocks.push(
         <ul key={`ul-${blocks.length}`} className="ml-4 list-disc space-y-1 marker:text-cyan-glow/60">
           {items.map((it, i) => (
-            <li key={i}>{inline(it, `li-${blocks.length}-${i}`)}</li>
+            <li key={i}>{listItem(it, `li-${blocks.length}-${i}`)}</li>
           ))}
         </ul>,
       );

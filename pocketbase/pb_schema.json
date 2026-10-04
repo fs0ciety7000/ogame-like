@@ -421,7 +421,7 @@
     "type": "base",
     "listRule": "player_id = @request.auth.id",
     "viewRule": "player_id = @request.auth.id",
-    "createRule": "@request.auth.id != \"\" && @request.body.player_id = @request.auth.id",
+    "createRule": null,
     "updateRule": "player_id = @request.auth.id && @request.body.player_id:isset = false",
     "deleteRule": "player_id = @request.auth.id",
     "fields": [
