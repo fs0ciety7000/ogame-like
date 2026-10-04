@@ -213,6 +213,15 @@ export function PassSeasonsPanel() {
           {/* Paliers */}
           <section className="flex flex-col gap-2">
             <p className="hud-eyebrow text-[10px] text-slate-400">Paliers et prérequis</p>
+            {/* v5.14.1 : les prérequis ne portent que sur quelques paliers (10, 20, 30 au tirage) ; résumé pour ne pas les chercher. */}
+            <p className="text-xs text-slate-400">
+              {Object.keys(draft.requirements).length === 0
+                ? "Aucun palier n'a de prérequis."
+                : `Prérequis : ${Object.entries(draft.requirements)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([tier, r]) => `palier ${tier}, ${OBJECTIVE_LABELS[r.key].toLowerCase()} × ${r.count}`)
+                    .join(" · ")}. Les autres paliers n'en ont pas.`}
+            </p>
             <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
               {draft.tiers.map((rewards, i) => (
                 <TierRow key={i} tier={i + 1} rewards={rewards} season={draft} onChange={(next) => set(next)} />
