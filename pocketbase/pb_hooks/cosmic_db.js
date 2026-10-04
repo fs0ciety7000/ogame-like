@@ -4473,11 +4473,14 @@ function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
   }
 }
 
-const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources" };
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte" };
+/** v5.14 : actions qui donnent quelque chose (motif obligatoire). */
+const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule"];
 
 /**
  * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
  * testMode (on) · finishAll · officers · grant (resources, motif obligatoire).
+ * v5.14 : officer (officerId) · relic (template, rarity) · capsule (capsule, level) — motif obligatoire.
  */
 function adminPlayerAction(e) {
   if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
@@ -4487,7 +4490,7 @@ function adminPlayerAction(e) {
   const action = String(req.action || "");
   const reason = String(req.reason || "").trim();
   if (!PLAYER_ACTION_LABELS[action]) throw new BadRequestError("Action inconnue.");
-  if (action === "grant" && reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+  if (PLAYER_GIFT_ACTIONS.indexOf(action) >= 0 && reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
   let summary = null;
   $app.runInTransaction((txApp) => {
     applyContent(txApp, game);
@@ -4515,6 +4518,24 @@ function adminPlayerAction(e) {
       summary = Object.assign(report, { officers });
     } else if (action === "officers") {
       summary = { officers: game.clearOfficerCooldowns(player) };
+    } else if (action === "officer") {
+      // v5.14 : officier offert (rare ou de saison compris).
+      const def = game.adminGrantOfficer(player, String(req.officerId || ""));
+      notes.push({ kind: "event", title: `${def.title} ${def.name} rejoint ton état-major`, message: `Offert par l'équipe : ${reason}.`, createdAtMs: now, read: false, link: "/game/etat-major" });
+      summary = { officier: `${def.title} ${def.name}` };
+    } else if (action === "relic") {
+      const item = game.makeRelic(String(req.template || ""), String(req.rarity || "rare"), now);
+      if (!game.addRelic(player, item)) throw new BadRequestError("Collection de reliques pleine.");
+      const label = game.relicLabel(item);
+      notes.push({ kind: "event", title: "Une relique t'est offerte", message: `${label} — ${reason}.`, createdAtMs: now, read: false, link: "/game/etat-major" });
+      summary = { relique: label };
+    } else if (action === "capsule") {
+      const type = String(req.capsule || "");
+      const level = Math.max(1, Math.min(10, Math.floor(Number(req.level) || 1)));
+      if (!game.addCapsule(player, type, level)) throw new BadRequestError("Réserve de ce type de capsule pleine.");
+      const name = (game.CAPSULES[type] || {}).name || type;
+      notes.push({ kind: "event", title: "Une capsule t'est offerte", message: `${name} niv. ${level} — ${reason}.`, createdAtMs: now, read: false, link: "/game/etat-major" });
+      summary = { capsule: `${name} niv. ${level}` };
     } else {
       flush();
       const given = game.grantResources(player, req.resources);

@@ -46,7 +46,7 @@ export function MythicRelicsCard() {
       </h3>
       <p className="text-xs text-slate-400">
         Ce mois-ci ({seasonId}) : <span style={{ color: "var(--th-rarity-mythic)" }}>{current.template.name}</span>, portée par{" "}
-        {current.source === "leviathan" ? "le Léviathan" : "le boss de saison"}.
+        {current.source === "leviathan" ? "un boss mondial" : "le boss de saison"}.
       </p>
       {rows === null ? (
         <p className="text-xs text-slate-500">Chargement…</p>

@@ -53,7 +53,7 @@ export function RelicForm({ value: t, onChange, isNew }: { value: RelicTemplate;
             { value: "mythic", label: "Mythique (une par saison)" },
           ]}
           onChange={setReserved}
-          hint="Mythique : remise au n° 1 du Léviathan ou du boss de saison, en rotation avec les autres mythiques."
+          hint="Mythique : remise au n° 1 d'un boss mondial ou du boss de saison, en rotation avec les autres mythiques."
         />
         <div className="sm:col-span-2">
           <TextAreaField label="Texte d'ambiance" value={t.lore} rows={2} onChange={(lore) => set({ lore })} />
@@ -181,7 +181,7 @@ export function RelicSettingsCard() {
           </tbody>
         </table>
         <p className="mt-1 text-[11px] text-slate-500">
-          Le poids donne la chance de chaque rareté lors d'un tirage. Une source « rare au moins » (Léviathan, proie d'élite…) ne tire que parmi les raretés égales ou supérieures.
+          Le poids donne la chance de chaque rareté lors d'un tirage. Une source « rare au moins » (boss mondiaux, proie d'élite…) ne tire que parmi les raretés égales ou supérieures.
         </p>
       </div>
 

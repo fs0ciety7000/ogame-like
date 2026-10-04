@@ -6,7 +6,7 @@ import { useSeasonAccent } from "@/lib/seasonSkin";
 import { useSeasonBoss } from "@/services/seasonBossService";
 import { useLeviathan } from "@/services/leviathanService";
 import { bossMonthOf } from "@/game/chronicles";
-import { isActive, LEVIATHAN_RULES } from "@/game/leviathan";
+import { isActive, worldBossName, worldBossOf } from "@/game/leviathan";
 import { assetUrl } from "@/lib/assets";
 
 /** Minute courante (le thème suit le début et la fin du combat). */
@@ -49,7 +49,7 @@ export function BossLiveStrip() {
   const { pathname } = useLocation();
   const now = useMinute();
   const live = [
-    leviathan && isActive(leviathan, now) ? { to: "/game/leviathan", name: LEVIATHAN_RULES.name, state: leviathan, accent: "var(--color-danger-glow)" } : null,
+    leviathan && isActive(leviathan, now) ? { to: "/game/leviathan", name: worldBossName(leviathan), state: leviathan, accent: worldBossOf(leviathan).accent } : null,
     seasonBoss && isActive(seasonBoss, now) ? { to: "/game/boss", name: bossMonthOf(seasonBoss)?.boss.name ?? "Le boss de saison", state: seasonBoss, accent: bossMonthOf(seasonBoss)?.theme.accent ?? "var(--color-ember-glow)" } : null,
   ].filter((b): b is NonNullable<typeof b> => !!b && !pathname.startsWith(b.to));
   if (live.length === 0) return null;

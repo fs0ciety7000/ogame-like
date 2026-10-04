@@ -19,6 +19,8 @@ export interface WorldBossPhase {
 
 export interface WorldBossDef {
   id: string;
+  /** v5.14 : retiré de la rotation (ses combats passés gardent son identité). Absent : actif. */
+  enabled?: boolean;
   name: string;
   /** « Le dévoreur des abysses ». */
   epithet: string;
@@ -42,7 +44,7 @@ export interface WorldBossDef {
   rewardMult: number;
 }
 
-export const WORLD_BOSSES: WorldBossDef[] = [
+export const DEFAULT_WORLD_BOSSES: WorldBossDef[] = [
   {
     id: "leviathan",
     accent: "#4be8ff",
@@ -168,8 +170,51 @@ export const WORLD_BOSS_RULES = {
 
 const DAY = 86_400_000;
 
+/** Catalogue en vigueur (remplacé par applyGameContent, section « worldBosses »). */
+export const WORLD_BOSSES: WorldBossDef[] = DEFAULT_WORLD_BOSSES.map((b) => ({ ...b, phases: [...b.phases] as WorldBossDef["phases"], weakness: [...b.weakness] }));
+
+/** Applique le catalogue de l'administration : les boss du code restent connus
+ *  (combats passés), retouchés champ par champ ; un boss ajouté s'ajoute. */
+export function setWorldBosses(defs: Partial<WorldBossDef>[] | undefined): void {
+  const byId = new Map<string, WorldBossDef>(DEFAULT_WORLD_BOSSES.map((b) => [b.id, { ...b }]));
+  for (const d of defs ?? []) {
+    if (!d?.id) continue;
+    const base = byId.get(d.id) ?? DEFAULT_WORLD_BOSSES[0];
+    byId.set(d.id, { ...base, ...d, id: d.id } as WorldBossDef);
+  }
+  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
+}
+
+/** Boss de la rotation (activés), Léviathan à défaut. */
+export function activeWorldBosses(): WorldBossDef[] {
+  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
+  return on.length ? on : [WORLD_BOSSES[0] ?? DEFAULT_WORLD_BOSSES[0]];
+}
+
+export function validateWorldBosses(defs: Partial<WorldBossDef>[] | undefined): string[] {
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const b of defs ?? []) {
+    const at = `Boss mondial ${b?.name || b?.id || "?"}`;
+    if (!b?.id || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
+    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
+    if (b?.id) ids.add(b.id);
+    if (b.name !== undefined && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
+    if (b.title !== undefined && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
+    for (const k of ["hpMult", "lossMult", "rewardMult"] as const) {
+      const v = b[k];
+      if (v !== undefined && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "récompenses"} entre 0,1 et 5.`);
+    }
+    if (b.phases !== undefined && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p) => !p?.name?.trim()))) errors.push(`${at} : trois phases nommées.`);
+  }
+  const merged = new Map<string, boolean>(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
+  for (const b of defs ?? []) if (b?.id) merged.set(b.id, b.enabled !== false);
+  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
+  return errors;
+}
+
 export function findWorldBoss(id: string | undefined): WorldBossDef {
-  return WORLD_BOSSES.find((b) => b.id === id) ?? WORLD_BOSSES[0];
+  return WORLD_BOSSES.find((b) => b.id === id) ?? WORLD_BOSSES[0] ?? DEFAULT_WORLD_BOSSES[0];
 }
 
 /** Petit générateur déterministe (pas de dépendance, code serveur). */
@@ -208,7 +253,8 @@ export function worldBossDay(week: number, minGap = WORLD_BOSS_RULES.minGapDays)
 
 /** Boss de la semaine n : rotation des six. */
 export function worldBossOfWeek(week: number): WorldBossDef {
-  return WORLD_BOSSES[((week % WORLD_BOSSES.length) + WORLD_BOSSES.length) % WORLD_BOSSES.length];
+  const list = activeWorldBosses();
+  return list[((week % list.length) + list.length) % list.length];
 }
 
 /** Semaine (depuis la référence) d'un instant exprimé en heure locale de Paris. */

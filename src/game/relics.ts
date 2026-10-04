@@ -365,6 +365,13 @@ export function rollRelic(source: string, now: number, random: () => number = Ma
 }
 
 /** Ajoute une relique (refusée si l'inventaire est plein). */
+/** v5.14 : relique précise (administration : compensation, test). */
+export function makeRelic(templateId: string, rarity: RelicRarity, now: number, source = "admin", random: () => number = Math.random): RelicItem {
+  if (!findTemplate(templateId)) throw new GameActionError("Relique inconnue.");
+  if (!RARITIES.some((r) => r.id === rarity)) throw new GameActionError("Rareté inconnue.");
+  return { id: newId(now, random), template: templateId, rarity, foundAtMs: now, source };
+}
+
 export function addRelic(player: PlayerState, item: RelicItem): boolean {
   const st = relicsState(player);
   if (st.items.length >= RELIC_RULES.maxItems) return false;

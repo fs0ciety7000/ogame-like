@@ -75,6 +75,7 @@ __export(hooksEntry_exports, {
   BLOG_WELCOME: () => BLOG_WELCOME,
   BOSS_HISTORY_KEY: () => BOSS_HISTORY_KEY,
   BOSS_REMINDERS: () => BOSS_REMINDERS,
+  CAPSULES: () => CAPSULES,
   CASINO_KEY: () => CASINO_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
@@ -135,6 +136,7 @@ __export(hooksEntry_exports, {
   activeUltimatum: () => activeUltimatum,
   activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
+  addCapsule: () => addCapsule,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
   addPassPoints: () => addPassPoints,
@@ -142,6 +144,7 @@ __export(hooksEntry_exports, {
   addReportComment: () => addReportComment,
   addSeasonPower: () => addSeasonPower,
   addToPot: () => addToPot,
+  adminGrantOfficer: () => adminGrantOfficer,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceChallengeReward: () => allianceChallengeReward,
@@ -316,6 +319,7 @@ __export(hooksEntry_exports, {
   linkReferrer: () => linkReferrer,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
+  makeRelic: () => makeRelic,
   mergeDebris: () => mergeDebris,
   monthsToGenerate: () => monthsToGenerate,
   mythicFor: () => mythicFor,
@@ -392,6 +396,7 @@ __export(hooksEntry_exports, {
   refreshContest: () => refreshContest,
   refundOffer: () => refundOffer,
   releaseBounty: () => releaseBounty,
+  relicLabel: () => relicLabel,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
   removeTitle: () => removeTitle,
@@ -557,6 +562,68 @@ function validateRanks(defs) {
   return errors;
 }
 
+// src/game/effects.ts
+var TECH_REDUCTION_CAP = 0.75;
+var EMPIRE_TIME_CAP = 0.5;
+var EFFECT_STATS = {
+  attack: { label: "Attaque", unit: "pct", group: "combat" },
+  defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
+  bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
+  repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
+  loot: { label: "Butin pill\xE9", unit: "pct", group: "combat" },
+  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
+  production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
+  storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
+  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
+  buildingDiscount: { label: "Co\xFBt des b\xE2timents", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  tradeTax: { label: "Taxe du march\xE9 et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
+  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
+  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
+  spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
+  detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
+  counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
+};
+var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
+function inScope(g, scope) {
+  var _a;
+  const s = (_a = g.scope) != null ? _a : "all";
+  return s === "all" || s === scope;
+}
+function rawEffectTotal(grants, layer, stat, opts = {}) {
+  let total2 = 0;
+  for (const g of grants) {
+    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
+    if (opts.target !== void 0 && g.target !== opts.target) continue;
+    total2 += g.value;
+  }
+  return total2;
+}
+function clampEffect(stat, layer, total2) {
+  var _a;
+  const info = EFFECT_STATS[stat];
+  let v = total2;
+  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
+  if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
+  return v;
+}
+function effectTotal(grants, layer, stat, opts = {}) {
+  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
+}
+function formatEffectValue(stat, value2) {
+  const info = EFFECT_STATS[stat];
+  const sign = info.reduction ? "\u2212" : value2 < 0 ? "\u2212" : "+";
+  const abs2 = Math.abs(value2);
+  const dec = (x) => String(Math.round(x * 10) / 10).replace(".", ",");
+  if (info.unit === "pct") return `${sign}${dec(abs2 * 100)} %`;
+  if (info.unit === "level") return `${sign}${dec(abs2)} niveau${abs2 >= 2 ? "x" : ""}`;
+  return `${sign}${Math.floor(abs2)} point${abs2 >= 2 ? "s" : ""}`;
+}
+
 // src/game/commanders.ts
 var RECRUITABLE_ROLES = ["admiral", "strategist", "engineer", "spy", "steward"];
 var RARE_ROLES = ["logistician", "mechanic", "governor", "corsair", "warden", "diplomat", "hunter"];
@@ -567,40 +634,35 @@ var BASE_COMMANDERS = [
     name: "Rhys Calder",
     title: "Amiral",
     portrait: "/assets/commanders/admiral.webp",
-    domain: "Combats gagn\xE9s en attaque, repaires, primes, assauts sur les boss.",
-    bonus: (l) => `+${l} % d'attaque de la flotte`
+    domain: "Combats gagn\xE9s en attaque, repaires, primes, assauts sur les boss."
   },
   {
     id: "strategist",
     name: "Ilsa Varga",
     title: "Strat\xE8ge",
     portrait: "/assets/commanders/strategist.webp",
-    domain: "Attaques et raids repouss\xE9s (un peu aussi apr\xE8s une d\xE9fense perdue).",
-    bonus: (l) => `+${l} % de d\xE9fense de la base`
+    domain: "Attaques et raids repouss\xE9s (un peu aussi apr\xE8s une d\xE9fense perdue)."
   },
   {
     id: "engineer",
     name: "Noor Halim",
     title: "Ing\xE9nieure",
     portrait: "/assets/commanders/engineer.webp",
-    domain: "Constructions (plan\xE8te m\xE8re et colonies) et recherches termin\xE9es.",
-    bonus: (l) => `\u2212${l} % de temps de construction et de recherche`
+    domain: "Constructions (plan\xE8te m\xE8re et colonies) et recherches termin\xE9es."
   },
   {
     id: "spy",
     name: "Sable",
     title: "Espionne",
     portrait: "/assets/commanders/spy.webp",
-    domain: "Espionnages lanc\xE9s, sondes ennemies rep\xE9r\xE9es.",
-    bonus: (l) => `+${(l * 0.2).toFixed(1).replace(".", ",")} niveau d'espionnage, +${l} % de d\xE9tection, ${l * 3} % de flairer une anomalie chimique`
+    domain: "Espionnages lanc\xE9s, sondes ennemies rep\xE9r\xE9es."
   },
   {
     id: "steward",
     name: "Oswin Tarr",
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
-    domain: "Missions, contrats du jour, \xE9changes au Comptoir et au march\xE9.",
-    bonus: (l) => `+${l} % de production, +${l * 2} % d'entrep\xF4t`
+    domain: "Missions, contrats du jour, \xE9changes au Comptoir et au march\xE9."
   },
   // v5.14 : rôles rares.
   {
@@ -609,7 +671,6 @@ var BASE_COMMANDERS = [
     title: "Logisticienne",
     portrait: "/assets/commanders/logistician.webp",
     domain: "Flottes envoy\xE9es : transports, livraisons, colonies, champs de d\xE9bris.",
-    bonus: (l) => `\u2212${l} % de temps de vol, +${l} % de soute`,
     rare: true
   },
   {
@@ -618,7 +679,6 @@ var BASE_COMMANDERS = [
     title: "M\xE9canicien",
     portrait: "/assets/commanders/mechanic.webp",
     domain: "Unit\xE9s sorties des chantiers (plan\xE8te m\xE8re et colonies).",
-    bonus: (l) => `+${l} % de vaisseaux r\xE9par\xE9s, \u2212${l} % de temps de production des unit\xE9s`,
     rare: true
   },
   {
@@ -627,7 +687,6 @@ var BASE_COMMANDERS = [
     title: "Gouverneure",
     portrait: "/assets/commanders/governor.webp",
     domain: "B\xE2timents termin\xE9s dans les colonies.",
-    bonus: (l) => `+${l * 2} % de production et +${l * 2} % d'entrep\xF4t dans les colonies`,
     rare: true
   },
   {
@@ -636,7 +695,6 @@ var BASE_COMMANDERS = [
     title: "Corsaire",
     portrait: "/assets/commanders/corsair.webp",
     domain: "Attaques gagn\xE9es, repaires pris, primes remplies.",
-    bonus: (l) => `+${l} % de butin pill\xE9`,
     rare: true
   },
   {
@@ -645,7 +703,6 @@ var BASE_COMMANDERS = [
     title: "Gardienne",
     portrait: "/assets/commanders/warden.webp",
     domain: "Attaques et raids repouss\xE9s.",
-    bonus: (l) => `+${l} % d'entrep\xF4t \xE0 l'abri du pillage, +${Math.floor(l * 0.2)} point${l >= 10 ? "s" : ""} de contre-espionnage`,
     rare: true
   },
   {
@@ -654,7 +711,6 @@ var BASE_COMMANDERS = [
     title: "Diplomate",
     portrait: "/assets/commanders/diplomat.webp",
     domain: "\xC9changes au march\xE9, contrats entre joueurs, cadeaux envoy\xE9s.",
-    bonus: (l) => `\u2212${l * 2} % de taxe sur le march\xE9 et les cadeaux`,
     rare: true
   },
   {
@@ -663,11 +719,16 @@ var BASE_COMMANDERS = [
     title: "Chasseur de colosses",
     portrait: "/assets/commanders/hunter.webp",
     domain: "Assauts sur les boss (mondiaux, de saison, d'alliance).",
-    bonus: (l) => `+${(l * 1.5).toFixed(1).replace(".", ",").replace(",0", "")} % de d\xE9g\xE2ts contre les boss`,
     rare: true
   }
 ];
-var COMMANDERS = BASE_COMMANDERS.map((c) => __spreadProps(__spreadValues({}, c), { role: c.id }));
+var COMMANDERS = BASE_COMMANDERS.map((c) => __spreadProps(__spreadValues({}, c), { role: c.id, bonus: (l) => roleBonusText(c.id, l) }));
+function roleBonusText(role, l) {
+  var _a;
+  const parts = ((_a = ROLE_EFFECTS[role]) != null ? _a : []).map((e3) => `${EFFECT_STATS[e3.stat].label}${e3.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e3.stat, e3.perLevel * l)}`);
+  if (role === "spy") parts.push(`${Math.round(l * COMMANDER_RULES.anomalyPerLevel * 100)} % de flairer une anomalie chimique`);
+  return parts.join(", ");
+}
 var SEASON_SECONDARY_SHARE = 0.5;
 var SEASON_COMMANDERS = [];
 var ROLE_DEF = (role) => COMMANDERS.find((c) => c.id === role);
@@ -958,6 +1019,70 @@ function addDossiers(player, n) {
 function anomalyChance(player) {
   return Math.min(1, activeLevels(player).spy * COMMANDER_RULES.anomalyPerLevel);
 }
+var OFFICER_RULE_KEYS = ["slots", "recruitAmber", "recruitProductionHours", "swapCooldownHours", "dossierXp", "anomalyPerLevel"];
+var DEFAULT_ROLE_EFFECTS = JSON.parse(JSON.stringify(ROLE_EFFECTS));
+var DEFAULT_COMMANDER_RULES = __spreadValues({}, COMMANDER_RULES);
+var DEFAULT_RARE_OFFICER_RULES = __spreadValues({}, RARE_OFFICER_RULES);
+var DEFAULT_NAMES = Object.fromEntries(COMMANDERS.map((c) => [c.id, { name: c.name, title: c.title }]));
+function defaultOfficersConfig() {
+  return {};
+}
+function setOfficers(cfg) {
+  var _a, _b, _c, _d, _e, _f;
+  for (const role of COMMANDER_ROLES) {
+    const o = (_a = cfg == null ? void 0 : cfg.roles) == null ? void 0 : _a[role];
+    ROLE_EFFECTS[role] = DEFAULT_ROLE_EFFECTS[role].map((e3, i) => {
+      var _a2;
+      const v = Number((_a2 = o == null ? void 0 : o.perLevel) == null ? void 0 : _a2[i]);
+      return __spreadProps(__spreadValues({}, e3), { perLevel: Number.isFinite(v) && v >= 0 ? v : e3.perLevel });
+    });
+    const def3 = COMMANDERS.find((c) => c.id === role);
+    if (def3) {
+      def3.name = ((_b = o == null ? void 0 : o.name) == null ? void 0 : _b.trim()) || DEFAULT_NAMES[role].name;
+      def3.title = ((_c = o == null ? void 0 : o.title) == null ? void 0 : _c.trim()) || DEFAULT_NAMES[role].title;
+    }
+  }
+  Object.assign(COMMANDER_RULES, DEFAULT_COMMANDER_RULES);
+  for (const k of OFFICER_RULE_KEYS) {
+    const v = Number((_d = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _d[k]);
+    if (((_e = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _e[k]) !== void 0 && Number.isFinite(v)) COMMANDER_RULES[k] = v;
+  }
+  Object.assign(RARE_OFFICER_RULES, DEFAULT_RARE_OFFICER_RULES, (_f = cfg == null ? void 0 : cfg.rareDrop) != null ? _f : {});
+}
+function validateOfficers(cfg) {
+  var _a, _b, _c, _d;
+  const errors = [];
+  if (!cfg) return errors;
+  for (const [role, o] of Object.entries((_a = cfg.roles) != null ? _a : {})) {
+    if (!COMMANDER_ROLES.includes(role)) {
+      errors.push(`Officiers : r\xF4le \xAB ${role} \xBB inconnu.`);
+      continue;
+    }
+    for (const v of (_b = o == null ? void 0 : o.perLevel) != null ? _b : []) if (!(typeof v === "number" && v >= 0 && v <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : valeur par niveau entre 0 et 1 (0,01 = 1 %).`);
+  }
+  const r = (_c = cfg.rules) != null ? _c : {};
+  const int = (v, min) => v === void 0 || Number.isInteger(v) && v >= min;
+  if (!int(r.slots, 1)) errors.push("Officiers : postes \u2265 1.");
+  if (!int(r.recruitAmber, 0)) errors.push("Officiers : co\xFBt en Ambre entier \u2265 0.");
+  if (r.recruitProductionHours !== void 0 && !(r.recruitProductionHours >= 0)) errors.push("Officiers : heures de production \u2265 0.");
+  if (r.swapCooldownHours !== void 0 && !(r.swapCooldownHours >= 0)) errors.push("Officiers : d\xE9lai de changement de poste \u2265 0.");
+  if (!int(r.dossierXp, 1)) errors.push("Officiers : XP d'un dossier enti\xE8re \u2265 1.");
+  for (const k of ["participant", "podium"]) {
+    const v = (_d = cfg.rareDrop) == null ? void 0 : _d[k];
+    if (v !== void 0 && !(v >= 0 && v <= 0.2)) errors.push("Officiers rares : chance sur un boss entre 0 et 0,2 (20 %).");
+  }
+  return errors;
+}
+function adminGrantOfficer(player, id) {
+  const def3 = findCommander(id);
+  if (!def3) throw new GameActionError("Officier inconnu.");
+  const st = commandersState(player);
+  if (st.roster[def3.id]) throw new GameActionError(`${def3.title} ${def3.name} sert d\xE9j\xE0 dans cet \xE9tat-major.`);
+  st.roster[def3.id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(def3.id);
+  player.commanders = st;
+  return def3;
+}
 
 // src/game/relics.ts
 var RARITIES = [
@@ -1154,6 +1279,11 @@ function rollRelic(source, now, random = Math.random, minRarity = "common") {
   const templates = RELICS.filter((t) => !t.disabled && !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
   const template = templates[Math.floor(random() * templates.length) % templates.length];
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
+}
+function makeRelic(templateId, rarity, now, source = "admin", random = Math.random) {
+  if (!findTemplate(templateId)) throw new GameActionError("Relique inconnue.");
+  if (!RARITIES.some((r) => r.id === rarity)) throw new GameActionError("Raret\xE9 inconnue.");
+  return { id: newId(now, random), template: templateId, rarity, foundAtMs: now, source };
 }
 function addRelic(player, item) {
   const st = relicsState(player);
@@ -1365,59 +1495,6 @@ function canAffordAll(resources, costs) {
     var _a;
     return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
   });
-}
-
-// src/game/effects.ts
-var TECH_REDUCTION_CAP = 0.75;
-var EMPIRE_TIME_CAP = 0.5;
-var EFFECT_STATS = {
-  attack: { label: "Attaque", unit: "pct", group: "combat" },
-  defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
-  bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
-  repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
-  loot: { label: "Butin pill\xE9", unit: "pct", group: "combat" },
-  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
-  production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
-  storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
-  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
-  buildingDiscount: { label: "Co\xFBt des b\xE2timents", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  tradeTax: { label: "Taxe du march\xE9 et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
-  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
-  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
-  spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
-  detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
-  counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
-};
-var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
-function inScope(g, scope) {
-  var _a;
-  const s = (_a = g.scope) != null ? _a : "all";
-  return s === "all" || s === scope;
-}
-function rawEffectTotal(grants, layer, stat, opts = {}) {
-  let total2 = 0;
-  for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
-    if (opts.target !== void 0 && g.target !== opts.target) continue;
-    total2 += g.value;
-  }
-  return total2;
-}
-function clampEffect(stat, layer, total2) {
-  var _a;
-  const info = EFFECT_STATS[stat];
-  let v = total2;
-  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
-  if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
-  return v;
-}
-function effectTotal(grants, layer, stat, opts = {}) {
-  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
 }
 
 // src/game/technologies.ts
@@ -2836,7 +2913,7 @@ function ascend(player, queues, now) {
 }
 
 // src/game/worldBosses.ts
-var WORLD_BOSSES = [
+var DEFAULT_WORLD_BOSSES = [
   {
     id: "leviathan",
     accent: "#4be8ff",
@@ -2959,9 +3036,49 @@ var WORLD_BOSS_RULES = {
   anchorMondayUtc: Date.UTC(2026, 0, 5)
 };
 var DAY2 = 864e5;
-function findWorldBoss(id) {
+var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
+function setWorldBosses(defs) {
   var _a;
-  return (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0];
+  const byId = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, __spreadValues({}, b)]));
+  for (const d of defs != null ? defs : []) {
+    if (!(d == null ? void 0 : d.id)) continue;
+    const base = (_a = byId.get(d.id)) != null ? _a : DEFAULT_WORLD_BOSSES[0];
+    byId.set(d.id, __spreadProps(__spreadValues(__spreadValues({}, base), d), { id: d.id }));
+  }
+  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
+}
+function activeWorldBosses() {
+  var _a;
+  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
+  return on.length ? on : [(_a = WORLD_BOSSES[0]) != null ? _a : DEFAULT_WORLD_BOSSES[0]];
+}
+function validateWorldBosses(defs) {
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const b of defs != null ? defs : []) {
+    const at = `Boss mondial ${(b == null ? void 0 : b.name) || (b == null ? void 0 : b.id) || "?"}`;
+    if (!(b == null ? void 0 : b.id) || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
+    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
+    if (b == null ? void 0 : b.id) ids.add(b.id);
+    if (b.name !== void 0 && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
+    if (b.title !== void 0 && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
+    for (const k of ["hpMult", "lossMult", "rewardMult"]) {
+      const v = b[k];
+      if (v !== void 0 && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "r\xE9compenses"} entre 0,1 et 5.`);
+    }
+    if (b.phases !== void 0 && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p) => {
+      var _a;
+      return !((_a = p == null ? void 0 : p.name) == null ? void 0 : _a.trim());
+    }))) errors.push(`${at} : trois phases nomm\xE9es.`);
+  }
+  const merged = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
+  for (const b of defs != null ? defs : []) if (b == null ? void 0 : b.id) merged.set(b.id, b.enabled !== false);
+  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
+  return errors;
+}
+function findWorldBoss(id) {
+  var _a, _b;
+  return (_b = (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0]) != null ? _b : DEFAULT_WORLD_BOSSES[0];
 }
 function hash01(seed) {
   let h = 2166136261;
@@ -2990,7 +3107,8 @@ function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
   return days[week];
 }
 function worldBossOfWeek(week) {
-  return WORLD_BOSSES[(week % WORLD_BOSSES.length + WORLD_BOSSES.length) % WORLD_BOSSES.length];
+  const list = activeWorldBosses();
+  return list[(week % list.length + list.length) % list.length];
 }
 function weekOfLocal(localMs) {
   return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY2));
@@ -4103,6 +4221,14 @@ var SYNTH_RULES = {
   baseMinutes: 30,
   minutesPerLevel: 77
 };
+function addCapsule(player, type, level3) {
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const st = synthesisState(player);
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) return false;
+  st.stock[type] = [...st.stock[type], Math.max(1, Math.min(10, Math.floor(level3) || 1))];
+  player.synthesis = st;
+  return true;
+}
 function capsulePct(level3) {
   return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
 }
@@ -4305,9 +4431,7 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random) {
       const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
       const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
       const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-      st.stock[type] = [...st.stock[type], level3];
-      player.synthesis = st;
-      drop.capsule = { type, level: level3, name: CAPSULES[type].name };
+      if (addCapsule(player, type, level3)) drop.capsule = { type, level: level3, name: CAPSULES[type].name };
     }
   }
   return drop;
@@ -10339,11 +10463,11 @@ function performLaunch(req) {
     const e3 = launchExpedition(owner, req.fleet, req.expeditionHours, (_h = req.expeditionsActive) != null ? _h : 0, (_i = req.expeditionsToday) != null ? _i : 0, now, req.formation);
     out = { attacker: e3.attacker, fleet: e3.fleet, defenderNotifications: [] };
   } else if (mission === "leviathan") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le L\xE9viathan.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer un boss mondial.");
     if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "leviathan", pseudo: LEVIATHAN_RULES.name }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
+      fleet: newFleet(owner, { uid: "leviathan", pseudo: "Boss mondial" }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 6e4),
       defenderNotifications: []
     };
   } else if (mission === "seasonboss") {
@@ -12344,292 +12468,184 @@ function defaultPassSeasonsConfig() {
 var PASS_THEMES = [
   {
     id: "maree",
-    names: ["Mar\xE9e d'Acier", "Ressac de guerre", "La Grande Houle"],
-    taglines: ["Une flotte se l\xE8ve, une autre sombre.", "Tenir la ligne, briser la vague."],
     accent: "#4be8ff",
     image: "/assets/blog/articles/5-9/poste-commandement.webp",
     mentor: "vashka",
     rival: "varan",
     focus: ["victory", "raidRepelled", "bounty"],
-    roles: [["admiral", "strategist"], ["strategist", "admiral"]],
-    commanderTitles: ["Amirale des Mar\xE9es", "Brise-Ligne", "Capitaine de la Houle"],
-    firstNames: ["Ysolde", "Maren", "Corvin", "Thessa", "Joran"],
-    lastNames: ["Vael", "Drakmor", "Solenne", "Kestrel", "Haldane"],
-    synopsis: ["{rival} rassemble ses escadres au bord du secteur. {mentor} sonne le rassemblement : ce mois-ci, chaque bataille compte."],
     beats: [
       ["Les sondes ont rep\xE9r\xE9 leurs escadres, commandant. Pr\xE9pare ta flotte : on ne les laissera pas passer."],
       ["Premi\xE8re ligne tenue. Ils reculent, mais ils reviendront plus nombreux."],
       ["Leur vaisseau amiral s'est montr\xE9. Un officier hors pair a rejoint nos rangs pour la derni\xE8re bataille."],
       ["La houle est retomb\xE9e. {commander} a choisi ta banni\xE8re : sers-toi bien de cet officier."]
     ],
-    rivalLines: [["Vos flottes sont des coquilles vides. La mar\xE9e vous emportera."], ["Une vaguelette. Rien de plus."], ["Assez jou\xE9. Toute ma flotte converge sur vous."], ["Cette fois... vous avez gagn\xE9."]],
-    lore: ["{commander} a command\xE9 trois flottes de ligne avant ses trente ans. On dit qu'elle n'a jamais perdu une bataille qu'elle avait choisie."],
-    look: "a fierce naval fleet admiral, weathered face, long coat with cyan trim, holographic tactical map behind"
+    rivalLines: [["Vos flottes sont des coquilles vides. La mar\xE9e vous emportera."], ["Une vaguelette. Rien de plus."], ["Assez jou\xE9. Toute ma flotte converge sur vous."], ["Cette fois... vous avez gagn\xE9."]]
   },
   {
     id: "forge",
-    names: ["Forge Stellaire", "Le Grand Chantier", "C\u0153ur de l'Enclume"],
-    taglines: ["B\xE2tir plus vite que l'ennemi ne d\xE9truit.", "Chaque rivet est une victoire."],
     accent: "#ffb347",
     image: "/assets/blog/articles/5-10/pot-commun.webp",
     mentor: "lysa",
     rival: "kragmor",
     focus: ["contract", "victory", "bounty"],
-    roles: [["engineer", "steward"], ["engineer", "admiral"]],
-    commanderTitles: ["Ma\xEEtre de Forge", "Architecte des \xC9toiles", "Ing\xE9nieure en chef"],
-    firstNames: ["Aldric", "Nyra", "Bastien", "Oriane", "Tamsin"],
-    lastNames: ["Ferrand", "Okonkwo", "Rivet", "Castellan", "Brandt"],
-    synopsis: ["{rival} a mis la main sur les forges du secteur. {mentor} veut les reprendre, chantier par chantier."],
     beats: [
       ["Les forges tournent pour l'ennemi. Il nous faut des contrats et des bras : on commence ce mois-ci."],
       ["Premi\xE8re forge reprise ! Les ouvriers reviennent."],
       ["Un architecte de l\xE9gende accepte de nous rejoindre si nous tenons jusqu'au bout."],
       ["Les forges sont \xE0 nous. {commander} prend la t\xEAte de tes chantiers."]
     ],
-    rivalLines: [["Mes forges, mes r\xE8gles. Payez ou partez."], ["Une forge ? J'en ai cent."], ["Vous m'agacez. Mes foreuses vont raser vos chantiers."], ["Gardez vos forges. Pour l'instant."]],
-    lore: ["{commander} a b\xE2ti une station orbitale enti\xE8re en quarante jours. Ses plans circulent encore sous le manteau."],
-    look: "a brilliant starship engineer, welding goggles on forehead, orange-lit forge sparks, mechanical arm"
+    rivalLines: [["Mes forges, mes r\xE8gles. Payez ou partez."], ["Une forge ? J'en ai cent."], ["Vous m'agacez. Mes foreuses vont raser vos chantiers."], ["Gardez vos forges. Pour l'instant."]]
   },
   {
     id: "archives",
-    names: ["L'Ombre des Archives", "Les Fichiers noirs", "Silence radio"],
-    taglines: ["Savoir avant d'agir.", "Ce que l'ennemi cache, nous le trouverons."],
     accent: "#a78bfa",
     image: "/assets/blog/articles/reliques/couverture.webp",
     mentor: "nerea",
     rival: "vesper",
     focus: ["spy", "victory", "raidRepelled"],
-    roles: [["spy", "strategist"], ["spy", "admiral"]],
-    commanderTitles: ["Ma\xEEtresse des Ombres", "Archiviste noire", "Chiffreuse"],
-    firstNames: ["Iris", "Calix", "S\xE9l\xE8ne", "Wren", "Ambroise"],
-    lastNames: ["Noct", "Vashenko", "Lisi\xE8re", "Moreau", "Quill"],
-    synopsis: ["Des archives vol\xE9es circulent dans le secteur. {rival} veut les effacer ; {mentor} veut les lire avant lui."],
     beats: [
       ["Nos sondes doivent percer leurs secrets avant qu'ils ne disparaissent. Espionne, commandant."],
       ["Un premier fichier d\xE9chiffr\xE9. Il cite un nom que je croyais mort."],
       ["Une agente double propose ses services. Elle demande une seule chose : que tu ailles jusqu'au bout."],
       ["Les archives sont \xE0 l'abri. {commander} rejoint ton \xE9tat-major, avec tous ses secrets."]
     ],
-    rivalLines: [["Ce que vous cherchez n'existe pas."], ["Curieux. Trop curieux."], ["J'efface tout. Vous aussi, s'il le faut."], ["Gardez vos archives. Je garde mes ombres."]],
-    lore: ["{commander} a lu les dossiers de chaque amiral du secteur. Personne ne sait pour qui elle travaillait avant."],
-    look: "a mysterious spymaster in a dark hooded coat, violet holographic data streams, half of face in shadow"
+    rivalLines: [["Ce que vous cherchez n'existe pas."], ["Curieux. Trop curieux."], ["J'efface tout. Vous aussi, s'il le faut."], ["Gardez vos archives. Je garde mes ombres."]]
   },
   {
     id: "hiver",
-    names: ["Hiver galactique", "La Longue Nuit", "Givre \xE9ternel"],
-    taglines: ["Tenir jusqu'au d\xE9gel.", "Le froid ne pardonne qu'aux pr\xE9par\xE9s."],
     accent: "#9fd8ff",
     image: "/assets/chronicles/2026-12-boss.webp",
     mentor: "ilyon",
     rival: "vesper",
     focus: ["raidRepelled", "contract", "victory"],
-    roles: [["strategist", "steward"], ["steward", "strategist"]],
-    commanderTitles: ["Gardienne du Givre", "Intendant des Glaces", "Veilleur polaire"],
-    firstNames: ["Elin", "Torvald", "Aube", "Sigrun", "Ka\xEBl"],
-    lastNames: ["Frost", "Nordahl", "Blanchard", "Ivarsen", "Hiems"],
-    synopsis: ["Une nu\xE9e de glace d\xE9rive vers le secteur. {mentor} organise la d\xE9fense ; {rival} compte bien en profiter."],
     beats: [
       ["Le froid arrive. Remplis tes entrep\xF4ts, renforce tes d\xE9fenses : la nuit sera longue."],
       ["Les premiers raids sont repouss\xE9s. Le givre recule d'un cran."],
       ["Une gardienne des glaces a surv\xE9cu \xE0 trois hivers comme celui-ci. Elle veut nous aider."],
       ["Le d\xE9gel commence. {commander} veille d\xE9sormais sur tes r\xE9serves."]
     ],
-    rivalLines: [["L'hiver est mon alli\xE9. Vous g\xE8lerez."], ["Un feu de camp contre une temp\xEAte."], ["Mes raids frapperont au plus froid de la nuit."], ["Le printemps... d\xE9j\xE0 ?"]],
-    lore: ["{commander} a tenu une colonie enti\xE8re pendant un hiver de quatre cents jours, sans perdre un colon."],
-    look: "a stoic winter guardian in white armored furs, frost on shoulders, pale blue aurora behind"
+    rivalLines: [["L'hiver est mon alli\xE9. Vous g\xE8lerez."], ["Un feu de camp contre une temp\xEAte."], ["Mes raids frapperont au plus froid de la nuit."], ["Le printemps... d\xE9j\xE0 ?"]]
   },
   {
     id: "comete",
-    names: ["Com\xE8te \xE9carlate", "La Pluie de feu", "Sillage rouge"],
-    taglines: ["Elle passe une fois par si\xE8cle. Pas deux.", "Tout ce qui tombe se ramasse."],
     accent: "#ff5c7a",
     image: "/assets/blog/articles/5-10/coup-de-grace.webp",
     mentor: "brannoc",
     rival: "kor",
     focus: ["bossAssault", "victory", "bounty"],
-    roles: [["admiral", "engineer"], ["admiral", "spy"]],
-    commanderTitles: ["Chasseuse de com\xE8tes", "Pilote du sillage", "Briseur d'astres"],
-    firstNames: ["Rook", "Liora", "Dante", "Kira", "Saul"],
-    lastNames: ["Ember", "Castaway", "Vortan", "Ashby", "Ruiz"],
-    synopsis: ["Une com\xE8te \xE9carlate traverse le secteur, charg\xE9e de minerais rares. {rival} veut tout rafler ; {mentor} a d'autres plans."],
     beats: [
       ["Elle arrive, commandant ! Tout ce qui s'en d\xE9tache est \xE0 prendre. Fais chauffer les moteurs."],
       ["Premiers fragments r\xE9cup\xE9r\xE9s. Le Cartel commence \xE0 s'\xE9nerver."],
       ["Une pilote a suivi la com\xE8te depuis trois syst\xE8mes. Elle conna\xEEt son c\u0153ur."],
       ["La com\xE8te s'\xE9loigne, ses tr\xE9sors dans nos soutes. {commander} reste avec nous."]
     ],
-    rivalLines: [["Cette com\xE8te m'appartient. Comme tout le reste."], ["Des miettes. Laissez-les-moi."], ["Mes chasseurs vont vous balayer de son sillage."], ["Vous me devez une com\xE8te."]],
-    lore: ["{commander} a pos\xE9 son vaisseau sur une com\xE8te en pleine course. Deux fois."],
-    look: "a daring comet-chasing pilot, scarred flight jacket, red glowing comet tail reflected in visor"
+    rivalLines: [["Cette com\xE8te m'appartient. Comme tout le reste."], ["Des miettes. Laissez-les-moi."], ["Mes chasseurs vont vous balayer de son sillage."], ["Vous me devez une com\xE8te."]]
   },
   {
     id: "primes",
-    names: ["Saison des chasseurs", "Tableau de chasse", "La Grande Traque"],
-    taglines: ["Chaque t\xEAte a un prix.", "La proie d'aujourd'hui, le troph\xE9e de demain."],
     accent: "#ffd86b",
     image: "/assets/blog/articles/5-9/podium-or.webp",
     mentor: "vashka",
     rival: "maru",
     focus: ["bounty", "victory", "warlordWin"],
-    roles: [["admiral", "spy"], ["spy", "admiral"]],
-    commanderTitles: ["Grande Traqueuse", "Ma\xEEtre de la chasse", "Lame de l'Essaim"],
-    firstNames: ["Vex", "Morgane", "Talon", "Isha", "Bram"],
-    lastNames: ["Kesh", "Hollow", "Vargas", "Thorne", "Silvane"],
-    synopsis: ["L'Essaim Kesh'Vaar ouvre sa grande traque. {rival} met sa propre t\xEAte \xE0 prix, par d\xE9fi. {mentor} veut le meilleur chasseur du secteur."],
     beats: [
       ["La traque est ouverte. Remplis les primes, et que l'Essaim retienne ton nom."],
       ["Ton tableau de chasse s'allonge. Les autres chasseurs commencent \xE0 te craindre."],
       ["Une traqueuse l\xE9gendaire te suit \xE0 la trace. Elle veut voir qui chasse aussi bien qu'elle."],
       ["La traque est finie, et tu es en t\xEAte. {commander} chassera d\xE9sormais pour toi."]
     ],
-    rivalLines: [["Ma t\xEAte vaut une fortune. Venez la prendre."], ["Pas mal, pour un d\xE9butant."], ["Je vais vous traquer \xE0 mon tour."], ["Bien chass\xE9. Je reviendrai."]],
-    lore: ["{commander} porte un collier fait des balises de ses proies. Il en manque une : la sienne."],
-    look: "a lethal bounty hunter, golden trophy medallions, insect-like armor plates, predatory eyes"
+    rivalLines: [["Ma t\xEAte vaut une fortune. Venez la prendre."], ["Pas mal, pour un d\xE9butant."], ["Je vais vous traquer \xE0 mon tour."], ["Bien chass\xE9. Je reviendrai."]]
   },
   {
     id: "bazar",
-    names: ["Le Grand Bazar", "Route de la soie stellaire", "Foire des mondes"],
-    taglines: ["Tout s'ach\xE8te. M\xEAme la loyaut\xE9.", "Le commerce est une guerre sans canons."],
     accent: "#5ef2b0",
     image: "/assets/blog/articles/5-12/salle-de-jeu.webp",
     mentor: "kor",
     rival: "kragmor",
     focus: ["contract", "bounty", "raidRepelled"],
-    roles: [["steward", "engineer"], ["steward", "spy"]],
-    commanderTitles: ["Intendante des Routes", "Ma\xEEtre des Comptoirs", "N\xE9gociatrice"],
-    firstNames: ["Esm\xE9", "Rafael", "Odile", "Hakim", "Lune"],
-    lastNames: ["Marchetti", "Delacroix", "Sarafian", "Okoro", "Vend\xF4me"],
-    synopsis: ["Les routes commerciales rouvrent apr\xE8s des mois de blocus. {mentor} veut en tirer profit ; {rival} veut en tirer un p\xE9age."],
     beats: [
       ["Les routes rouvrent, commandant. Honore tes contrats : la r\xE9putation vaut plus que l'or."],
       ["Les convois passent. Tes contrats font parler d'eux jusqu'aux franges."],
       ["Une n\xE9gociatrice redoutable propose de g\xE9rer tes affaires. Prouve-lui que tu en vaux la peine."],
       ["Le bazar ferme ses portes, tes coffres pleins. {commander} tient d\xE9sormais tes comptes."]
     ],
-    rivalLines: [["Chaque route passe par mes p\xE9ages."], ["Un convoi de plus, un p\xE9age de plus."], ["Je ferme les routes. Toutes."], ["Bon. Vous pouvez passer. Cette fois."]],
-    lore: ["{commander} a vendu une lune \xE0 son propri\xE9taire l\xE9gitime. Et il l'a remerci\xE9e."],
-    look: "a sharp interstellar merchant, emerald silk coat, holographic ledgers, confident smile"
+    rivalLines: [["Chaque route passe par mes p\xE9ages."], ["Un convoi de plus, un p\xE9age de plus."], ["Je ferme les routes. Toutes."], ["Bon. Vous pouvez passer. Cette fois."]]
   },
   {
     id: "vide",
-    names: ["L'Appel du Vide", "Au-del\xE0 des franges", "Terra incognita"],
-    taglines: ["L\xE0 o\xF9 les cartes s'arr\xEAtent, tout commence.", "Le vide r\xE9pond \xE0 ceux qui l'appellent."],
     accent: "#ff5fd2",
     image: "/assets/chronicles/2026-11-boss.webp",
     mentor: "maru",
     rival: "varan",
     focus: ["victory", "raidRepelled", "contract"],
-    roles: [["strategist", "spy"], ["engineer", "strategist"]],
-    commanderTitles: ["\xC9claireuse du Vide", "Cartographe des franges", "P\xE8lerin des \xE9toiles"],
-    firstNames: ["Nox", "Ariane", "Eliott", "Z\xE9phyr", "Mira"],
-    lastNames: ["Farlight", "Ombreval", "Quasar", "Delune", "Strand"],
-    synopsis: ["Un signal venu d'au-del\xE0 des franges appelle le secteur. {mentor} y voit une proph\xE9tie ; {rival}, un butin."],
     beats: [
       ["Le Vide appelle, commandant. Ceux qui r\xE9pondront en reviendront chang\xE9s."],
       ["Le signal se pr\xE9cise. Il parle de nous."],
       ["Une \xE9claireuse revenue des franges veut guider celui qui ira jusqu'au bout."],
       ["Le signal s'est tu. {commander} a choisi de rester \xE0 tes c\xF4t\xE9s."]
     ],
-    rivalLines: [["Le Vide n'aime pas les curieux."], ["Vous entendez des voix ? Moi, j'entends des ressources."], ["Le premier arriv\xE9 prend tout."], ["Gardez votre proph\xE9tie."]],
-    lore: ["{commander} a cartographi\xE9 les franges \xE0 bord d'un vaisseau sans nom. Elle n'en parle jamais."],
-    look: "an enigmatic deep-space scout, star map tattoos glowing magenta, worn explorer gear, nebula behind"
+    rivalLines: [["Le Vide n'aime pas les curieux."], ["Vous entendez des voix ? Moi, j'entends des ressources."], ["Le premier arriv\xE9 prend tout."], ["Gardez votre proph\xE9tie."]]
   },
   // v5.14 : quatre thèmes de plus (douze, un par rôle d'officier).
   {
     id: "rempart",
-    names: ["Le Rempart", "Les Murs de Vashka", "Ligne de fer"],
-    taglines: ["Ils frappent. Nous tenons.", "Pas un pas en arri\xE8re."],
     accent: "#7fb2ff",
     image: "/assets/chronicles/2027-01-boss.webp",
     mentor: "ilyon",
     rival: "varan",
     focus: ["raidRepelled", "victory", "contract"],
-    roles: [["strategist", "warden"], ["strategist", "mechanic"]],
-    commanderTitles: ["Ma\xEEtresse des Remparts", "Gardien de la Ligne", "Strat\xE8ge de si\xE8ge"],
-    firstNames: ["Hadrien", "Irsa", "Malo", "Veyra", "Osric"],
-    lastNames: ["Valcourt", "Stenn", "Morvan", "Ashgrove", "Keld"],
-    synopsis: ["{rival} assi\xE8ge les mondes de la frange, vague apr\xE8s vague. {mentor} confie la d\xE9fense du secteur aux commandants qui tiendront."],
     beats: [
       ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup."],
       ["Les premi\xE8res vagues se sont bris\xE9es sur nos d\xE9fenses. Ils cherchent la faille."],
       ["Un strat\xE8ge de si\xE8ge l\xE9gendaire a vu ta r\xE9sistance. Il veut se battre \xE0 tes c\xF4t\xE9s."],
       ["Le si\xE8ge est lev\xE9. {commander} rejoint ton \xE9tat-major : aucun mur ne tombera plus."]
     ],
-    rivalLines: [["Vos murs sont en papier. Mes b\xE9liers ont faim."], ["Une vague de plus, et vous c\xE9derez."], ["Toutes mes escadres sur le m\xEAme point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]],
-    lore: ["{commander} a tenu quarante jours un avant-poste que l'\xE9tat-major avait d\xE9j\xE0 ray\xE9 des cartes."],
-    look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind"
+    rivalLines: [["Vos murs sont en papier. Mes b\xE9liers ont faim."], ["Une vague de plus, et vous c\xE9derez."], ["Toutes mes escadres sur le m\xEAme point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]]
   },
   {
     id: "colonies",
-    names: ["Nouveaux Mondes", "La Ru\xE9e vers les franges", "Terres d'aube"],
-    taglines: ["Chaque plan\xE8te est une promesse.", "Planter un drapeau, b\xE2tir un monde."],
     accent: "#5ef2b0",
     image: "/assets/chronicles/2027-02-boss.webp",
     mentor: "lysa",
     rival: "kragmor",
     focus: ["contract", "raidRepelled", "victory"],
-    roles: [["governor", "steward"], ["governor", "logistician"]],
-    commanderTitles: ["Gouverneure des Franges", "B\xE2tisseur de mondes", "Intendante coloniale"],
-    firstNames: ["C\xE9lia", "Anouk", "Ravi", "Soline", "Edric"],
-    lastNames: ["Marchal", "Ibarra", "Vey", "Lindqvist", "Okafor"],
-    synopsis: ["Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies."],
     beats: [
       ["Les sondes ont trouv\xE9 des mondes habitables. \xC0 toi de les faire fleurir avant que d'autres ne s'en emparent."],
       ["Tes premi\xE8res colonies prosp\xE8rent. Les colons affluent."],
       ["Une gouverneure de l\xE9gende cherche un empire digne de ses talents. Le tien l'int\xE9resse."],
       ["Les franges sont \xE0 nous. {commander} gouvernera tes colonies."]
     ],
-    rivalLines: [["Ces mondes sont \xE0 moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus \xE0 raser."], ["J'envoie mes \xE9quipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]],
-    lore: ["{commander} a transform\xE9 une lune st\xE9rile en grenier du secteur en moins de dix ans."],
-    look: "a visionary colonial governor in a white and mint long coat, terraformed green planet glowing behind, holographic city plans"
+    rivalLines: [["Ces mondes sont \xE0 moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus \xE0 raser."], ["J'envoie mes \xE9quipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]]
   },
   {
     id: "chantiers",
-    names: ["L'Arsenal", "Cale s\xE8che", "Rivets et canons"],
-    taglines: ["Une flotte se construit, un rivet \xE0 la fois.", "Les chantiers ne dorment jamais."],
     accent: "#ff8a3d",
     image: "/assets/blog/articles/5-10/couverture.webp",
     mentor: "brannoc",
     rival: "kor",
     focus: ["victory", "contract", "warlordWin"],
-    roles: [["mechanic", "engineer"], ["mechanic", "admiral"]],
-    commanderTitles: ["Chef de cale", "Ma\xEEtre armurier", "M\xE9canicienne en chef"],
-    firstNames: ["Gunnar", "Petra", "Silas", "Mira", "Dorian"],
-    lastNames: ["Holt", "Varga", "Crane", "Ostrova", "Blackwell"],
-    synopsis: ["Une guerre se pr\xE9pare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite."],
     beats: [
       ["Les chantiers sont rouill\xE9s, mais les plans sont bons. Remets-les en marche, commandant."],
       ["Les premi\xE8res coques sortent des cales. L'\xE9quipage applaudit."],
       ["Une m\xE9canicienne de g\xE9nie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent."],
       ["L'arsenal tourne \xE0 plein. {commander} veille sur tes cales s\xE8ches."]
     ],
-    rivalLines: [["Mes chantiers produisent dix coques pour une des v\xF4tres."], ["Jolies coques. Elles br\xFBleront bien."], ["Ma nouvelle flotte est pr\xEAte. Et la v\xF4tre ?"], ["Hum. Vos chantiers sont meilleurs que pr\xE9vu."]],
-    lore: ["{commander} peut remonter un r\xE9acteur les yeux ferm\xE9s, et l'a d\xE9j\xE0 fait, en plein combat."],
-    look: "a gruff shipyard master mechanic, welding goggles, ember sparks, colossal hull under construction behind"
+    rivalLines: [["Mes chantiers produisent dix coques pour une des v\xF4tres."], ["Jolies coques. Elles br\xFBleront bien."], ["Ma nouvelle flotte est pr\xEAte. Et la v\xF4tre ?"], ["Hum. Vos chantiers sont meilleurs que pr\xE9vu."]]
   },
   {
     id: "moisson",
-    names: ["La Grande Moisson", "Saison d'abondance", "Les Greniers d'or"],
-    taglines: ["R\xE9colter avant l'hiver.", "Un empire se nourrit de ses r\xE9coltes."],
     accent: "#ffd86b",
     image: "/assets/chronicles/2027-03-boss.webp",
     mentor: "kor",
     rival: "maru",
     focus: ["contract", "bounty", "raidRepelled"],
-    roles: [["steward", "governor"], ["steward", "warden"]],
-    commanderTitles: ["Intendant des Greniers", "Ma\xEEtresse des r\xE9coltes", "Tr\xE9sorier d'empire"],
-    firstNames: ["Basile", "El\xE9a", "Tomas", "Ines", "Leopold"],
-    lastNames: ["Granger", "Delacroix", "Moreau", "Sato", "Hallberg"],
-    synopsis: ["Les gisements du secteur d\xE9bordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider."],
     beats: [
       ["Les gisements n'ont jamais \xE9t\xE9 aussi riches. R\xE9colte, stocke, et prot\xE8ge tes r\xE9serves."],
       ["Les greniers se remplissent. Les pillards r\xF4dent d\xE9j\xE0."],
       ["Un intendant l\xE9gendaire propose ses services \xE0 l'empire le mieux tenu du secteur."],
       ["Les greniers d\xE9bordent. {commander} tiendra tes comptes."]
     ],
-    rivalLines: [["Tant de r\xE9serves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos r\xE9serves la nourriront."], ["Vos greniers sont bien gard\xE9s. Pour cette saison."]],
-    lore: ["{commander} n'a jamais laiss\xE9 une r\xE9colte se perdre ni un compte tomber faux."],
-    look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields on a planet behind"
+    rivalLines: [["Tant de r\xE9serves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos r\xE9serves la nourriront."], ["Vos greniers sont bien gard\xE9s. Pour cette saison."]]
   }
 ];
 var pick3 = (rng, xs) => xs[Math.min(xs.length - 1, Math.floor(rng() * xs.length))];
@@ -13843,7 +13859,7 @@ var GAME_FIELDS = [
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 function withFixedUnits(units) {
   return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
 }
@@ -13878,6 +13894,8 @@ function defaultGameContent() {
     passSeasons: defaultPassSeasonsConfig(),
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
+    worldBosses: DEFAULT_WORLD_BOSSES,
+    officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES }
   });
@@ -13903,6 +13921,8 @@ function applyGameContent(overrides) {
     passSeasons: overrides.passSeasons && Array.isArray(overrides.passSeasons.seasons) ? overrides.passSeasons : defaults.passSeasons,
     relics: (_k = overrides.relics) != null ? _k : defaults.relics,
     titles: (_l = overrides.titles) != null ? _l : defaults.titles,
+    worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
+    officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
     relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_m = overrides.relicSettings) != null ? _m : {}), {
       rarities: Object.fromEntries(
         Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
@@ -13939,6 +13959,8 @@ function applyGameContent(overrides) {
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
+  setOfficers(content.officers);
+  setWorldBosses(content.worldBosses);
   setAchievements(content.achievements);
   setWarlords(content.warlords);
   setSeasonPass(content.seasonPass);
@@ -14123,6 +14145,8 @@ function validateGameContent(content) {
   errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
   errors.push(...validateLootTables((_m = content.relicSettings) == null ? void 0 : _m.loot));
   errors.push(...validateTitles((_n = content.titles) != null ? _n : []));
+  errors.push(...validateWorldBosses(content.worldBosses));
+  errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
 }
 

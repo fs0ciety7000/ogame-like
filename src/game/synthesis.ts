@@ -74,6 +74,16 @@ export function synthesisEffects(player: Pick<PlayerState, "synthesis">, now: nu
   return [{ stat: "defense", value: st.armor.pct / 100, layer: "empire", scope: "pvp", source: { kind: "capsule", id: "armor", label: CAPSULES.armor.name } }];
 }
 
+/** v5.14 : capsule ajoutée à la réserve (administration, butin). Faux si la réserve de ce type est pleine. */
+export function addCapsule(player: Pick<PlayerState, "synthesis">, type: CapsuleType, level: number): boolean {
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const st = synthesisState(player);
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) return false;
+  st.stock[type] = [...st.stock[type], Math.max(1, Math.min(10, Math.floor(level) || 1))];
+  player.synthesis = st as PlayerState["synthesis"];
+  return true;
+}
+
 export function capsulePct(level: number): number {
   return Math.max(0, Math.min(10, Math.floor(level))) * SYNTH_RULES.pctPerLevel;
 }

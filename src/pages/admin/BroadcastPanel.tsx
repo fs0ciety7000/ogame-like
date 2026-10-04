@@ -13,7 +13,8 @@ import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
 const LINKS = [
   { value: "", label: "Aucun lien" },
   { value: "/game", label: "Accueil" },
-  { value: "/game/leviathan", label: "Léviathan" },
+  { value: "/game/leviathan", label: "Boss mondial" },
+  { value: "/game/etat-major", label: "État-major (officiers, reliques, capsules)" },
   { value: "/game/boss", label: "Boss de saison" },
   { value: "/game/concours", label: "Concours" },
   { value: "/game/marche", label: "Marché" },
@@ -92,7 +93,7 @@ export function BroadcastPanel() {
           </Field>
         )}
         <Field label="Titre">
-          <Input value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. : Le Léviathan revient vendredi !" />
+          <Input value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. : Le Titan de rouille arrive demain !" />
         </Field>
         <SelectField label="Lien (page ouverte au clic)" value={link} options={LINKS} onChange={setLink} />
         <TextAreaField label={`Message (${message.length}/500)`} value={message} onChange={(v) => setMessage(v.slice(0, 500))} rows={3} />

@@ -74,9 +74,10 @@ export {
   consumeJammer,
 } from "@/game/bounties";
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
-export { anomalyChance, COMMANDER_XP, grantCommanderXp, RARE_OFFICER_RULES, rollRareOfficer } from "@/game/commanders";
+export { anomalyChance, COMMANDER_XP, grantCommanderXp, RARE_OFFICER_RULES, rollRareOfficer, adminGrantOfficer } from "@/game/commanders";
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
-export { addRelic, expeditionRelicChance, grantMythicRelic, mythicFor, rollRelic } from "@/game/relics";
+export { addRelic, expeditionRelicChance, grantMythicRelic, makeRelic, mythicFor, relicLabel, rollRelic } from "@/game/relics";
+export { addCapsule, CAPSULES } from "@/game/synthesis";
 export { describeLoot, LOOT_TABLES, rollLoot } from "@/game/loot";
 export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";

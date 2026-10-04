@@ -33,6 +33,8 @@ import {
   BookOpen,
   ExternalLink,
   PenSquare,
+  Fish,
+  UserCog,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -42,6 +44,8 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ImpactReportPanel } from "@/pages/admin/ImpactReportPanel";
+import { WorldBossesPanel } from "@/pages/admin/WorldBossesPanel";
+import { OfficersPanel } from "@/pages/admin/OfficersPanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
@@ -105,7 +109,9 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
-      { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion et recyclage." },
+      { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion, recyclage et tables de butin des combats." },
+      { id: "worldBosses", label: "Boss mondiaux", icon: Fish, hint: "Les six colosses de la rotation hebdomadaire : identité, histoire, statistiques, phases, faiblesses, titre." },
+      { id: "officers", label: "Officiers", icon: UserCog, hint: "Douze rôles : noms, effets par niveau, recrutement, chances de trouver un officier rare." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "titles", label: "Titres", icon: Crown, hint: "Catalogue des titres : libellé, rareté, icône, déblocage automatique ; décernés aussi par les succès." },
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
@@ -366,6 +372,12 @@ export function AdminPage() {
             createItem={newAchievement}
             renderForm={(a, onChange, isNew) => <AchievementForm value={a} onChange={onChange} isNew={isNew} />}
           />
+        </TabsContent>
+        <TabsContent value="worldBosses">
+          <WorldBossesPanel />
+        </TabsContent>
+        <TabsContent value="officers">
+          <OfficersPanel />
         </TabsContent>
         <TabsContent value="titles">
           <ContentEditor

@@ -1,5 +1,5 @@
 import { addRelic, relicLabel, rollRelic, type RelicRarity, RARITIES } from "@/game/relics";
-import { CAPSULE_TYPES, CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
+import { addCapsule, CAPSULE_TYPES, CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -103,9 +103,7 @@ export function rollLoot(player: PlayerState, source: LootSource, now: number, r
       const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
       const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
       const level = lo + (Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1));
-      st.stock[type] = [...st.stock[type], level];
-      player.synthesis = st as PlayerState["synthesis"];
-      drop.capsule = { type, level, name: CAPSULES[type].name };
+      if (addCapsule(player, type, level)) drop.capsule = { type, level, name: CAPSULES[type].name };
     }
   }
   return drop;

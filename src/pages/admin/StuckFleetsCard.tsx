@@ -20,7 +20,7 @@ const MISSIONS: Record<string, string> = {
   elite: "Proie d'élite",
   lair: "Repaire",
   expedition: "Expédition",
-  leviathan: "Léviathan",
+  leviathan: "Boss mondial",
   patrol: "Patrouille",
 };
 

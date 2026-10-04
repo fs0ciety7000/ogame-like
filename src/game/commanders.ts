@@ -1,6 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { familyIndex, getRankIndex } from "@/game/ranks";
-import type { EffectGrant, EffectScope, EffectStat } from "@/game/effects";
+import { EFFECT_STATS, formatEffectValue, type EffectGrant, type EffectScope, type EffectStat } from "@/game/effects";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -50,14 +50,13 @@ export interface CommanderDef {
   lore?: string;
 }
 
-const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
+const BASE_COMMANDERS: Omit<CommanderDef, "role" | "bonus">[] = [
   {
     id: "admiral",
     name: "Rhys Calder",
     title: "Amiral",
     portrait: "/assets/commanders/admiral.webp",
     domain: "Combats gagnés en attaque, repaires, primes, assauts sur les boss.",
-    bonus: (l) => `+${l} % d'attaque de la flotte`,
   },
   {
     id: "strategist",
@@ -65,7 +64,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Stratège",
     portrait: "/assets/commanders/strategist.webp",
     domain: "Attaques et raids repoussés (un peu aussi après une défense perdue).",
-    bonus: (l) => `+${l} % de défense de la base`,
   },
   {
     id: "engineer",
@@ -73,7 +71,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Ingénieure",
     portrait: "/assets/commanders/engineer.webp",
     domain: "Constructions (planète mère et colonies) et recherches terminées.",
-    bonus: (l) => `−${l} % de temps de construction et de recherche`,
   },
   {
     id: "spy",
@@ -81,7 +78,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Espionne",
     portrait: "/assets/commanders/spy.webp",
     domain: "Espionnages lancés, sondes ennemies repérées.",
-    bonus: (l) => `+${(l * 0.2).toFixed(1).replace(".", ",")} niveau d'espionnage, +${l} % de détection, ${l * 3} % de flairer une anomalie chimique`,
   },
   {
     id: "steward",
@@ -89,7 +85,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
     domain: "Missions, contrats du jour, échanges au Comptoir et au marché.",
-    bonus: (l) => `+${l} % de production, +${l * 2} % d'entrepôt`,
   },
   // v5.14 : rôles rares.
   {
@@ -98,7 +93,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Logisticienne",
     portrait: "/assets/commanders/logistician.webp",
     domain: "Flottes envoyées : transports, livraisons, colonies, champs de débris.",
-    bonus: (l) => `−${l} % de temps de vol, +${l} % de soute`,
     rare: true,
   },
   {
@@ -107,7 +101,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Mécanicien",
     portrait: "/assets/commanders/mechanic.webp",
     domain: "Unités sorties des chantiers (planète mère et colonies).",
-    bonus: (l) => `+${l} % de vaisseaux réparés, −${l} % de temps de production des unités`,
     rare: true,
   },
   {
@@ -116,7 +109,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Gouverneure",
     portrait: "/assets/commanders/governor.webp",
     domain: "Bâtiments terminés dans les colonies.",
-    bonus: (l) => `+${l * 2} % de production et +${l * 2} % d'entrepôt dans les colonies`,
     rare: true,
   },
   {
@@ -125,7 +117,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Corsaire",
     portrait: "/assets/commanders/corsair.webp",
     domain: "Attaques gagnées, repaires pris, primes remplies.",
-    bonus: (l) => `+${l} % de butin pillé`,
     rare: true,
   },
   {
@@ -134,7 +125,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Gardienne",
     portrait: "/assets/commanders/warden.webp",
     domain: "Attaques et raids repoussés.",
-    bonus: (l) => `+${l} % d'entrepôt à l'abri du pillage, +${Math.floor(l * 0.2)} point${l >= 10 ? "s" : ""} de contre-espionnage`,
     rare: true,
   },
   {
@@ -143,7 +133,6 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Diplomate",
     portrait: "/assets/commanders/diplomat.webp",
     domain: "Échanges au marché, contrats entre joueurs, cadeaux envoyés.",
-    bonus: (l) => `−${l * 2} % de taxe sur le marché et les cadeaux`,
     rare: true,
   },
   {
@@ -152,12 +141,19 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     title: "Chasseur de colosses",
     portrait: "/assets/commanders/hunter.webp",
     domain: "Assauts sur les boss (mondiaux, de saison, d'alliance).",
-    bonus: (l) => `+${(l * 1.5).toFixed(1).replace(".", ",").replace(",0", "")} % de dégâts contre les boss`,
     rare: true,
   },
 ];
 
-export const COMMANDERS: CommanderDef[] = BASE_COMMANDERS.map((c) => ({ ...c, role: c.id as CommanderId }));
+// v5.14 : le texte du bonus est lu dans ROLE_EFFECTS (un réglage de l'administration s'y reflète).
+export const COMMANDERS: CommanderDef[] = BASE_COMMANDERS.map((c) => ({ ...c, role: c.id as CommanderId, bonus: (l: number) => roleBonusText(c.id as CommanderId, l) }));
+
+/** « Attaque +5 %, Production de toutes les ressources (colonies) +4 % » au niveau l. */
+export function roleBonusText(role: CommanderId, l: number): string {
+  const parts = (ROLE_EFFECTS[role] ?? []).map((e) => `${EFFECT_STATS[e.stat].label}${e.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e.stat, e.perLevel * l)}`);
+  if (role === "spy") parts.push(`${Math.round(l * COMMANDER_RULES.anomalyPerLevel * 100)} % de flairer une anomalie chimique`);
+  return parts.join(", ");
+}
 
 /* ---------- v5.13 : commandants de saison (dernier palier des passes générés) ---------- */
 
@@ -529,4 +525,96 @@ export function addDossiers(player: PlayerState, n: number): void {
 /** Chance qu'une Espionne en poste flaire une anomalie chimique. */
 export function anomalyChance(player: Pick<PlayerState, "commanders">): number {
   return Math.min(1, activeLevels(player).spy * COMMANDER_RULES.anomalyPerLevel);
+}
+
+/* =====================================================
+   v5.14 : réglages des officiers (section de contenu « officers ») :
+   noms et titres, effets par niveau de chaque rôle, règles de recrutement
+   et chances de trouver un officier rare sur un boss.
+===================================================== */
+
+export interface OfficerRoleOverride {
+  name?: string;
+  title?: string;
+  /** Valeur par niveau de chaque effet du rôle, dans l'ordre de ROLE_EFFECTS. */
+  perLevel?: number[];
+}
+
+export interface OfficersConfig {
+  roles?: Partial<Record<CommanderId, OfficerRoleOverride>>;
+  rules?: Partial<Pick<typeof COMMANDER_RULES, "slots" | "recruitAmber" | "recruitProductionHours" | "swapCooldownHours" | "dossierXp" | "anomalyPerLevel">>;
+  rareDrop?: Partial<typeof RARE_OFFICER_RULES>;
+}
+
+export const OFFICER_RULE_KEYS = ["slots", "recruitAmber", "recruitProductionHours", "swapCooldownHours", "dossierXp", "anomalyPerLevel"] as const;
+
+const DEFAULT_ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = JSON.parse(JSON.stringify(ROLE_EFFECTS));
+const DEFAULT_COMMANDER_RULES = { ...COMMANDER_RULES };
+const DEFAULT_RARE_OFFICER_RULES = { ...RARE_OFFICER_RULES };
+const DEFAULT_NAMES = Object.fromEntries(COMMANDERS.map((c) => [c.id, { name: c.name, title: c.title }])) as Record<string, { name: string; title: string }>;
+
+export function defaultOfficersConfig(): OfficersConfig {
+  return {};
+}
+
+/** Effets par défaut d'un rôle (affichage de l'administration). */
+export function defaultRoleEffects(role: CommanderId): RoleEffect[] {
+  return DEFAULT_ROLE_EFFECTS[role] ?? [];
+}
+
+export function setOfficers(cfg: OfficersConfig | undefined): void {
+  for (const role of COMMANDER_ROLES) {
+    const o = cfg?.roles?.[role];
+    ROLE_EFFECTS[role] = DEFAULT_ROLE_EFFECTS[role].map((e, i) => {
+      const v = Number(o?.perLevel?.[i]);
+      return { ...e, perLevel: Number.isFinite(v) && v >= 0 ? v : e.perLevel };
+    });
+    const def = COMMANDERS.find((c) => c.id === role);
+    if (def) {
+      def.name = o?.name?.trim() || DEFAULT_NAMES[role].name;
+      def.title = o?.title?.trim() || DEFAULT_NAMES[role].title;
+    }
+  }
+  Object.assign(COMMANDER_RULES, DEFAULT_COMMANDER_RULES);
+  for (const k of OFFICER_RULE_KEYS) {
+    const v = Number(cfg?.rules?.[k]);
+    if (cfg?.rules?.[k] !== undefined && Number.isFinite(v)) (COMMANDER_RULES as Record<string, unknown>)[k] = v;
+  }
+  Object.assign(RARE_OFFICER_RULES, DEFAULT_RARE_OFFICER_RULES, cfg?.rareDrop ?? {});
+}
+
+export function validateOfficers(cfg: OfficersConfig | undefined): string[] {
+  const errors: string[] = [];
+  if (!cfg) return errors;
+  for (const [role, o] of Object.entries(cfg.roles ?? {})) {
+    if (!COMMANDER_ROLES.includes(role as CommanderId)) {
+      errors.push(`Officiers : rôle « ${role} » inconnu.`);
+      continue;
+    }
+    for (const v of o?.perLevel ?? []) if (!(typeof v === "number" && v >= 0 && v <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : valeur par niveau entre 0 et 1 (0,01 = 1 %).`);
+  }
+  const r = cfg.rules ?? {};
+  const int = (v: unknown, min: number) => v === undefined || (Number.isInteger(v) && (v as number) >= min);
+  if (!int(r.slots, 1)) errors.push("Officiers : postes ≥ 1.");
+  if (!int(r.recruitAmber, 0)) errors.push("Officiers : coût en Ambre entier ≥ 0.");
+  if (r.recruitProductionHours !== undefined && !(r.recruitProductionHours >= 0)) errors.push("Officiers : heures de production ≥ 0.");
+  if (r.swapCooldownHours !== undefined && !(r.swapCooldownHours >= 0)) errors.push("Officiers : délai de changement de poste ≥ 0.");
+  if (!int(r.dossierXp, 1)) errors.push("Officiers : XP d'un dossier entière ≥ 1.");
+  for (const k of ["participant", "podium"] as const) {
+    const v = cfg.rareDrop?.[k];
+    if (v !== undefined && !(v >= 0 && v <= 0.2)) errors.push("Officiers rares : chance sur un boss entre 0 et 0,2 (20 %).");
+  }
+  return errors;
+}
+
+/** v5.14 : officier offert par l'équipe (rare ou de saison compris). Faux s'il sert déjà. */
+export function adminGrantOfficer(player: PlayerState, id: string): CommanderDef {
+  const def = findCommander(id);
+  if (!def) throw new GameActionError("Officier inconnu.");
+  const st = commandersState(player);
+  if (st.roster[def.id]) throw new GameActionError(`${def.title} ${def.name} sert déjà dans cet état-major.`);
+  st.roster[def.id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(def.id);
+  player.commanders = st;
+  return def;
 }

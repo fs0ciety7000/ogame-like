@@ -63,19 +63,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
           label="Rotation automatique chaque week-end"
           checked={events.rotationEnabled}
           onChange={(v) => setEvents({ rotationEnabled: v })}
-          hint="Du vendredi (heure ci-contre) au dimanche 23 h 59, heure de Paris."
-        />
-        <CheckboxField
-          label="Boss mondiaux en rotation hebdomadaire"
-          checked={events.bossWeekly !== false}
-          onChange={(v) => setEvents({ bossWeekly: v })}
-          hint="Six boss se relaient, un par semaine, jamais le même jour que le précédent (au moins 4 jours d'écart). Les événements du week-end continuent. Heure et durée : section Boss mondiaux."
-        />
-        <CheckboxField
-          label="Léviathan mensuel (si la rotation hebdomadaire est coupée)"
-          checked={events.bossMonthly !== false}
-          onChange={(v) => setEvents({ bossMonthly: v })}
-          hint="Ancien rendez-vous : le Léviathan seul, un week-end par mois, à la place de l'événement."
+          hint="Du vendredi (heure ci-contre) au dimanche 23 h 59, heure de Paris. Les boss mondiaux se règlent dans leur section, plus bas."
         />
         <NumberField label="Début le vendredi à (heure de Paris)" value={events.startHour} min={0} step={1} onChange={(v) => setEvents({ startHour: Math.min(23, Math.max(0, v ?? 18)) })} />
         <Field label="Ordre de rotation" hint="Identifiants séparés par des virgules." className="sm:col-span-2">

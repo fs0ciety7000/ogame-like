@@ -424,11 +424,11 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     const e = launchExpedition(owner, req.fleet, req.expeditionHours, req.expeditionsActive ?? 0, req.expeditionsToday ?? 0, now, req.formation);
     out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
   } else if (mission === "leviathan") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le Léviathan.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer un boss mondial.");
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "leviathan", pseudo: LEVIATHAN_RULES.name }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
+      fleet: newFleet(owner, { uid: "leviathan", pseudo: "Boss mondial" }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
       defenderNotifications: [],
     };
   }
