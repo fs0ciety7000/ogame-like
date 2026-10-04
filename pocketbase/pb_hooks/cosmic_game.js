@@ -12457,11 +12457,20 @@ function proposeAchievementTiers(defs, players, now) {
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
-var PASS_GATES = [
+var GATE_ANCHORS = [
+  { tier: 0, share: 0, mult: 0 },
   { tier: 10, share: 0.25, mult: 1 },
   { tier: 20, share: 0.45, mult: 2 },
   { tier: 30, share: 0.7, mult: 3 }
 ];
+var PASS_GATES = Array.from({ length: 30 }, (_, i) => {
+  const tier = i + 1;
+  const hi = GATE_ANCHORS.findIndex((a2) => a2.tier >= tier);
+  const a = GATE_ANCHORS[hi - 1];
+  const b = GATE_ANCHORS[hi];
+  const f = (tier - a.tier) / (b.tier - a.tier);
+  return { tier, share: a.share + (b.share - a.share) * f, mult: a.mult + (b.mult - a.mult) * f };
+});
 function defaultPassSeasonsConfig() {
   return { seasons: [] };
 }
@@ -12666,7 +12675,7 @@ function requirementCount(key, d, gate) {
   const base = ((_a = BASE_COUNTS[key]) != null ? _a : 3) * gate.mult;
   const monthly = ((_b = d.weeklyMedian[key]) != null ? _b : 0) * 4;
   const wanted = Math.round(monthly * gate.share);
-  return Math.max(base, Math.min(base * 4, wanted));
+  return Math.max(1, Math.round(Math.max(base, Math.min(base * 4, wanted))));
 }
 function generatePassSeason(o) {
   var _a, _b, _c;

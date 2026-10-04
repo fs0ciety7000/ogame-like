@@ -14,7 +14,7 @@ Une passe de correctifs après un parcours complet du jeu sur téléphone : plus
 
 ## Administration
 - [Correctif] **Récompenses versées d'un boss** : un combat dont le détail n'a pas été conservé n'affiche plus « compte supprimé ? » sur chaque ligne ni « distribuées à 0 joueur(s) » ; le tableau tient dans un écran de téléphone sans couper les pseudos.
-- [Amélioration] **Passes générés** : un résumé en tête des paliers liste les prérequis du mois (paliers 10, 20 et 30 au tirage) ; les autres paliers n'en ont pas, c'est voulu.
+- [Amélioration] **Passes générés : un prérequis à chacun des 30 paliers**, de plus en plus exigeant (une action au palier 1, les mêmes valeurs qu'avant aux paliers 10, 20 et 30). Les trois actions du thème se relaient d'un palier à l'autre. L'administration signale les paliers laissés sans prérequis.
 
 ## État-major
 - [Amélioration] **Officiers sous le brouillard** : les officiers rares et les commandants de saison pas encore débloqués gardent leur rôle et la façon de les obtenir, mais leur portrait, leur nom et leurs effets restent masqués jusqu'au déblocage.

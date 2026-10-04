@@ -78,13 +78,30 @@ describe("v5.13 passes de saison procéduraux", () => {
 
     const p = player();
     addPassPoints(p, "seasonBoss", NOV_10, 100);
-    for (let t = 1; t <= 9; t++) claimPassTier(p, t, NOV_10);
-    const gate = s.requirements["10"];
+    // v5.14.1 : un prérequis à chaque palier, de plus en plus exigeant pour une même action.
+    expect(Object.keys(s.requirements)).toHaveLength(30);
+    const meet = (t: number) => {
+      const r = s.requirements[String(t)];
+      const done = passState(p, NOV_10).activity?.[r.key] ?? 0;
+      if (done < r.count) trackActivity(p, r.key, NOV_10, r.count - done);
+    };
+    expect(() => claimPassTier(p, 1, NOV_10)).toThrow(/verrouillé/);
+    for (let t = 1; t <= 9; t++) {
+      meet(t);
+      claimPassTier(p, t, NOV_10);
+    }
+    for (let t = 4; t <= 30; t++) {
+      const r = s.requirements[String(t)];
+      const prev = s.requirements[String(t - 3)];
+      expect(r.key).toBe(prev.key);
+      expect(r.count).toBeGreaterThanOrEqual(prev.count);
+    }
     expect(() => claimPassTier(p, 10, NOV_10)).toThrow(/verrouillé/);
-    trackActivity(p, gate.key, NOV_10, gate.count);
-    claimPassTier(p, 10, NOV_10);
-    for (const g of ["20", "30"]) trackActivity(p, s.requirements[g].key, NOV_10, s.requirements[g].count);
-    for (let t = 11; t <= 29; t++) claimPassTier(p, t, NOV_10);
+    for (let t = 10; t <= 29; t++) {
+      meet(t);
+      claimPassTier(p, t, NOV_10);
+    }
+    meet(30);
     const amber = bountyState(p).amber;
     const gained = claimPassTier(p, 30, NOV_10);
     expect(gained[0]).toContain(def.name);

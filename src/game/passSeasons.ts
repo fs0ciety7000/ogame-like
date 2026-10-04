@@ -14,8 +14,8 @@ import { catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEM
    - un scénario en quatre temps (prologue, paliers 10, 20 et 30) porté par
      un mentor et un rival ;
    - 30 paliers de récompenses (points par palier ajustés sur le mois écoulé) ;
-   - des prérequis aux paliers 10, 20 et 30 (actions du mois, calibrées sur
-     l'activité médiane des joueurs) ;
+   - un prérequis à chaque palier (v5.14.1 ; actions du mois, calibrées sur
+     l'activité médiane des joueurs, de plus en plus exigeant) ;
    - au dernier palier : un commandant de saison inédit (rôle principal +
      moitié d'un second rôle) et une forte somme d'Ambre.
    Seuls les passes publiés s'appliquent ; un brouillon oublié est publié
@@ -26,12 +26,24 @@ export const PASS_SEASONS_SECTION = "passSeasons";
 
 /** Ambre du dernier palier, en plus du commandant (un recrutement coûte 150). */
 export const PASS_FINAL_AMBER = 300;
-/** Paliers à prérequis et part du mois de l'activité médiane demandée. */
-export const PASS_GATES: { tier: number; share: number; mult: number }[] = [
+/** Repères de difficulté : part du mois de l'activité médiane demandée et multiple du plancher. */
+const GATE_ANCHORS: { tier: number; share: number; mult: number }[] = [
+  { tier: 0, share: 0, mult: 0 },
   { tier: 10, share: 0.25, mult: 1 },
   { tier: 20, share: 0.45, mult: 2 },
   { tier: 30, share: 0.7, mult: 3 },
 ];
+
+/** v5.14.1 : un prérequis à chacun des 30 paliers, interpolé entre les repères
+ *  (les paliers 10, 20 et 30 gardent exactement leurs valeurs d'avant). */
+export const PASS_GATES: { tier: number; share: number; mult: number }[] = Array.from({ length: 30 }, (_, i) => {
+  const tier = i + 1;
+  const hi = GATE_ANCHORS.findIndex((a) => a.tier >= tier);
+  const a = GATE_ANCHORS[hi - 1];
+  const b = GATE_ANCHORS[hi];
+  const f = (tier - a.tier) / (b.tier - a.tier);
+  return { tier, share: a.share + (b.share - a.share) * f, mult: a.mult + (b.mult - a.mult) * f };
+});
 
 export type PassSeasonStatus = "draft" | "published";
 
@@ -285,7 +297,7 @@ export function requirementCount(key: ChronicleObjective, d: Pick<WorldDigest, "
   const base = (BASE_COUNTS[key] ?? 3) * gate.mult;
   const monthly = (d.weeklyMedian[key] ?? 0) * 4;
   const wanted = Math.round(monthly * gate.share);
-  return Math.max(base, Math.min(base * 4, wanted));
+  return Math.max(1, Math.round(Math.max(base, Math.min(base * 4, wanted))));
 }
 
 export interface GeneratePassSeasonOptions {
