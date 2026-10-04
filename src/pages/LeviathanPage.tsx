@@ -14,10 +14,10 @@ import { FormationPicker } from "@/components/game/FormationPicker";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { BossRecapPanel } from "@/components/game/BossRecap";
-import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
-import { computeFleetPower } from "@/game/combat";
-import { formationEffects, type FormationId } from "@/game/formations";
-import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
+import { BossDeathOverlay, BossFeed, BossHero, BossNextCard, BossPhasePanel, bossPhase, type BossArt } from "@/components/game/BossStage";
+import { FORMATIONS, type FormationId } from "@/game/formations";
+import { describeBossSchedule, hasBossSchedule } from "@/game/events";
+import { BOSS_PHASE_RULES, bossAssaultEstimate, bossFightPhase, bossWeakness, isActive, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { sendLeviathanAssault, useLeviathan } from "@/services/leviathanService";
 import { useAdminStatus } from "@/services/maintenanceService";
@@ -27,7 +27,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 
-export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault, flightMinutes = LEVIATHAN_RULES.flightMinutes }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown>; flightMinutes?: number }) {
+export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault, flightMinutes = LEVIATHAN_RULES.flightMinutes, state = null }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown>; flightMinutes?: number; state?: LeviathanState | null }) {
   const player = usePlayerStore((s) => s.player);
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [formation, setFormation] = useState<FormationId>("balanced");
@@ -35,7 +35,12 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
   if (!player) return null;
   const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, selected, ["attack"]) * formationEffects(formation).attackFactor);
+  // v5.10.5 : estimation selon la phase du boss (riposte, bouclier, faiblesse), pour chaque formation.
+  const target = state ?? { id: "estimate", hp: 1, maxHp: 1 };
+  const estimates = FORMATIONS.map((f) => ({ f, ...bossAssaultEstimate(target, player, selected, f.id) }));
+  const best = estimates.reduce((a, b) => (b.power > a.power ? b : a), estimates[0]);
+  const power = estimates.find((e) => e.f.id === formation)?.power ?? 0;
+  const weak = state && bossFightPhase(state) === 3 ? findUnit(bossWeakness(state)) : undefined;
 
   const send = async () => {
     setBusy(true);
@@ -72,7 +77,29 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
             );
           })}
         </div>
+        {weak && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-[#ff5df0]">
+            <img src={weak.image} alt="" className="h-5 w-5 object-contain" /> Faiblesse exposée : les {weak.name} frappent {Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % plus fort.
+          </p>
+        )}
         <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
+        {power > 0 && (
+          <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0.5 border border-white/[0.06] bg-white/[0.02] p-2 text-xs" aria-label="Comparateur de formations">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Formation</span>
+            <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Dégâts</span>
+            <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Pertes</span>
+            {estimates.map((e) => (
+              <button key={e.f.id} type="button" onClick={() => setFormation(e.f.id)} className={cn("contents text-left", e.f.id === formation ? "text-cyan-glow" : "text-slate-300")}>
+                <span>
+                  {e.f.name}
+                  {e.f.id === best.f.id && <span className="ml-1 text-[10px] text-gold-glow">★ max</span>}
+                </span>
+                <span className="text-right font-mono tabular-nums">{formatCompact(e.power)}</span>
+                <span className="text-right font-mono tabular-nums">{Math.round(e.lossPct * 1000) / 10} %</span>
+              </button>
+            ))}
+          </div>
+        )}
         <p className="mt-2 text-xs text-slate-400">
           Dégâts estimés : <strong className="text-ember-glow">{formatNumber(power)}</strong>
         </p>
@@ -149,7 +176,6 @@ export function LeviathanPage() {
   const wait = mine ? mine.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * 3600_000 - now : 0;
   // Combat terminé : la fenêtre en cours est passée, on annonce la suivante.
   const next = phase === "active" ? nextLeviathanStart(now) : upcomingLeviathanStart(now);
-  const hpPct = state ? (state.hp / state.maxHp) * 100 : 0;
   const ended = phase === "killed" || phase === "failed";
 
   return (
@@ -162,7 +188,9 @@ export function LeviathanPage() {
             ? "Le colosse est tombé : voici le bilan du combat et ce que chacun a gagné."
             : phase === "failed"
               ? "Le colosse s'est retiré avant de tomber. Les participants sont récompensés à moitié."
-              : "Un monstre colossal surgit le premier week-end de chaque mois. Tout le serveur s'unit pour l'abattre ; chacun est récompensé selon ses dégâts."
+              : hasBossSchedule(leviathanSchedule())
+                ? `Un monstre colossal surgit ${describeBossSchedule(leviathanSchedule())}. Tout le serveur s'unit pour l'abattre ; chacun est récompensé selon ses dégâts.`
+                : "Le colosse dort : aucune apparition n'est programmée pour l'instant."
         }
       />
 
@@ -193,17 +221,7 @@ export function LeviathanPage() {
             <HudTag tone="danger">En approche</HudTag>
             <span className="ml-auto font-mono text-xs text-slate-400">repart dans {formatDuration(Math.max(0, Math.floor((state.endMs - now) / 1000)))}</span>
           </div>
-          <div>
-            <div className="flex justify-between font-mono text-xs text-slate-400">
-              <span>Structure</span>
-              <span>
-                {formatNumber(state.hp)} / {formatNumber(state.maxHp)}
-              </span>
-            </div>
-            <div className="mt-1 h-4 overflow-hidden border border-danger-glow/40 bg-danger-glow/10">
-              <i className="hud-sheen block h-full bg-gradient-to-r from-danger-glow to-ember-glow transition-[width] duration-700" style={{ width: `${hpPct}%` }} />
-            </div>
-          </div>
+          <BossPhasePanel state={state} />
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
             <StatTile
@@ -223,6 +241,8 @@ export function LeviathanPage() {
         </Card>
       )}
 
+      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} />}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {state && phase !== "dormant" && (
           <Card className="flex flex-col gap-3 p-4">
@@ -238,7 +258,8 @@ export function LeviathanPage() {
       {admin === true && <LeviathanAdminPanel state={state} />}
       {admin === true && <BossRewardsAdmin state={state} kind="leviathan" />}
 
-      <AssaultDialog open={open} onClose={() => setOpen(false)} />
+      <AssaultDialog open={open} onClose={() => setOpen(false)} state={state} />
+      <BossDeathOverlay phase={phase} name={LEVIATHAN_RULES.name} killer={state?.killedBy} />
     </div>
   );
 }

@@ -28,6 +28,8 @@ import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
 import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
+import { RunningContestCard } from "@/components/game/RunningContestCard";
+import { AgendaCard } from "@/components/game/AgendaCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { useFleetStore } from "@/store/fleetStore";
@@ -36,6 +38,9 @@ import { activeVeil, synthesisState, synthLevel } from "@/game/synthesis";
 import { commandersState } from "@/game/commanders";
 import { equippedRelics } from "@/game/relics";
 import { parisHour } from "@/game/stats";
+import { useCockpitView } from "@/lib/cockpitView";
+import { CockpitHub } from "@/components/cockpit/CockpitHub";
+import { CommanderGuideCard } from "@/components/game/CommanderGuideCard";
 
 export function DashboardPage() {
   useNowTicker();
@@ -44,8 +49,23 @@ export function DashboardPage() {
   const fleets = useFleetStore((s) => s.fleets);
   const layout = useDashboardLayout();
   const [customizing, setCustomizing] = useState(false);
+  const cockpit = useCockpitView((s) => s.enabled);
 
   if (!player) return null;
+
+  // Vue cockpit : poste de commande à la place des cartes de l'accueil.
+  if (cockpit) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="sr-only">Poste de commande</h1>
+        <OnboardingChecklist player={player} />
+        <StoryDialog player={player} />
+        <CockpitHub />
+        <CommanderGuideCard player={player} />
+        <NextActionsCard max={3} />
+      </div>
+    );
+  }
 
   const attackPower = OFFENSIVE_UNITS.reduce(
     (sum, id) => sum + unitStat(player.units, player.techLevels, id, "attack") * (player.units[id]?.count ?? 0),
@@ -102,6 +122,8 @@ export function DashboardPage() {
     challenge: (
       <div className="flex flex-col gap-3">
         <WeeklyRecapCard />
+        <RunningContestCard />
+        <AgendaCard now={now} />
         <ChallengeCard />
       </div>
     ),
@@ -164,6 +186,7 @@ export function DashboardPage() {
       <QueueStrip queues={queues} now={now} />
 
       <OnboardingChecklist player={player} />
+      <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
 
       {layout.order

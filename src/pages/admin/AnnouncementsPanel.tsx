@@ -78,7 +78,7 @@ export function AnnouncementsPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Annonces plein écran</h2>
         <span className="text-xs text-slate-500">Une fois par joueur et par appareil, la plus récente d'abord.</span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="secondary"
@@ -119,7 +119,7 @@ export function AnnouncementsPanel() {
 
             {open && (
               <div className="flex flex-col gap-3 border-t border-white/5 pt-3">
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <label className="flex flex-col gap-1 text-xs text-slate-400">
                     Début
                     <Input type="datetime-local" value={toLocalInput(sched.startsAtMs)} onChange={(e) => setSchedule(a.id, { startsAtMs: fromLocalInput(e.target.value) })} />
@@ -135,7 +135,7 @@ export function AnnouncementsPanel() {
                 </div>
 
                 {custom && (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TextField label="Surtitre" value={custom.eyebrow} onChange={(v) => setCustom(a.id, { eyebrow: v })} />
                     <TextField label="Titre" value={custom.title} onChange={(v) => setCustom(a.id, { title: v })} />
                     <TextAreaField label="Texte" rows={3} value={custom.text} onChange={(v) => setCustom(a.id, { text: v })} />
@@ -155,7 +155,7 @@ export function AnnouncementsPanel() {
                     <div className="flex flex-col gap-2 sm:col-span-2">
                       <p className="text-xs text-slate-400">Cartes de nouveautés (4 au plus)</p>
                       {(custom.features ?? []).map((f, i) => (
-                        <div key={i} className="grid gap-2 border border-white/5 p-2 sm:grid-cols-[1fr_2fr_1fr_auto]">
+                        <div key={i} className="grid grid-cols-1 gap-2 border border-white/5 p-2 sm:grid-cols-[1fr_2fr_1fr_auto]">
                           <Input placeholder="Titre" value={f.title} onChange={(e) => setCustom(a.id, { features: custom.features!.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} />
                           <Input placeholder="Texte" value={f.text} onChange={(e) => setCustom(a.id, { features: custom.features!.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} />
                           <Input placeholder="/game/…" value={f.to} onChange={(e) => setCustom(a.id, { features: custom.features!.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)) })} />

@@ -110,7 +110,7 @@ const TechNode = memo(function TechNode({ data }: NodeProps<TechFlowNode>) {
   return (
     <div
       className={cn(
-        "flex cursor-pointer items-center gap-2.5 rounded-xl border bg-space-800/90 px-2.5 backdrop-blur transition-all duration-200",
+        "hud-cut-sm flex cursor-pointer items-center gap-2.5 border bg-space-800/90 px-2.5 backdrop-blur transition-all duration-200",
         status === "locked" ? "border-white/5" : "border-white/10",
         selected && "ring-2 ring-cyan-glow/70",
         emphasis === "dimmed" && "opacity-35",
@@ -321,7 +321,7 @@ export function TechTree({
               <button
                 type="button"
                 onClick={onToggleFullscreen}
-                className="flex items-center gap-1.5 rounded-lg border border-cyan-glow/20 bg-space-700/90 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:border-cyan-glow/50 hover:text-cyan-glow"
+                className="hud-cut-sm flex items-center gap-1.5 border border-cyan-glow/20 bg-space-700/90 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:border-cyan-glow/50 hover:text-cyan-glow"
               >
                 {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 {fullscreen ? "Quitter le plein écran" : "Plein écran"}

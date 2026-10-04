@@ -37,7 +37,7 @@ export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHisto
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
-export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanWindow, inferKilledBy, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
@@ -151,20 +151,22 @@ export {
   grantSeasonBossReward,
   SEASON_BOSS_KEY,
   SEASON_BOSS_RULES,
+  seasonBossSchedule,
   seasonBossWindow,
   spawnSeasonBoss,
 } from "@/game/chronicles";
 export { CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
 export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, previousSummary, proposeDaily, readDaily, startDaily, updateDailyProgress, voteDaily } from "@/game/allianceDaily";
 export { parisDay } from "@/game/retention";
-export { allianceRole, canDiplomacy } from "@/game/alliances";
+export { allianceRole, canDiplomacy, canDiplomacyIn } from "@/game/alliances";
 export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/game/territories";
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
 export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
-export { currentGameContent, validateGameContent } from "@/game/content";
+export { currentGameContent, validateGameContent, validateRules } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
+export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
 export { chapterDifficulty, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";
@@ -181,3 +183,9 @@ export { GAME_EMOJIS, normalizeCustomEmojis, EMOJIS_KEY } from "@/game/emojis";
 export { KESH_EMOJIS } from "@/game/bounties";
 export { BLOG_WELCOME } from "@/game/blogWelcome";
 export { challengeFromBytes, cleanPasskeyName, clientChallenge, PASSKEY_RULES, PasskeyError, utf8Encode as passkeyUtf8, verifyAssertion, verifyRegistration } from "@/game/webauthn";
+export { CONTESTS_KEY, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
+export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
+export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
+export { allianceWeekId } from "@/game/allianceBoss";
+export { closeLeagues, LEAGUES_KEY, leagueInfo, normalizeLeagues } from "@/game/leagues";
+export { CASINO_KEY, casinoOpen, casinoOpeningId, claimDailyTokens, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";

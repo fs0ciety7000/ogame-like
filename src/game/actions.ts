@@ -4,8 +4,10 @@ import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
-import { buildColonyDefense, renameColony, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { buildColonyDefense, renameColony, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
+import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
+import { pendingClaims } from "@/game/claimAll";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -66,6 +68,9 @@ export type GameAction =
   | { type: "rerollContract"; contractId: string }
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
+  | { type: "claimGuide"; stepId: string }
+  | { type: "claimAll" }
+  | { type: "hideGuide"; hidden: boolean }
   | { type: "hideOnboarding"; hidden: boolean }
   | { type: "setPosture"; posture: string }
   | { type: "ascend" }
@@ -73,6 +78,7 @@ export type GameAction =
   | { type: "colonyUpgrade"; colonyId: string; buildingId: string }
   | { type: "colonyDefense"; colonyId: string; unitId: string; qty: number }
   | { type: "colonyRename"; colonyId: string; name: string }
+  | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
   | { type: "commanderAssign"; ids: string[] }
   | { type: "commanderTrain"; commanderId: string }
@@ -145,7 +151,7 @@ interface ActionState {
 }
 
 /** v4.2 : seules ces actions restent possibles pendant les vacances. */
-const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
+const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 
 function applyAction(s: ActionState, action: GameAction): unknown {
   const { player, queues, now } = s;
@@ -302,6 +308,27 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "claimOnboarding":
       return claimOnboarding(player, String(action.stepId ?? ""));
 
+    case "claimGuide":
+      return claimGuideStep(player, String(action.stepId ?? ""));
+
+    case "claimAll": {
+      // v5.11 : chaque réclamation passe par son action habituelle ; un échec n'arrête pas les autres.
+      const counts: Partial<Record<string, number>> = {};
+      for (const sub of pendingClaims(player, now)) {
+        try {
+          applyAction(s, sub);
+          counts[sub.type] = (counts[sub.type] ?? 0) + 1;
+        } catch {
+          /* déjà réclamé ou plus disponible */
+        }
+      }
+      return counts;
+    }
+
+    case "hideGuide":
+      setGuideHidden(player, action.hidden === true);
+      return undefined;
+
     case "setPosture":
       return setPosture(player, action.posture, now);
 
@@ -335,6 +362,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "colonyRename":
       renameColony(player, String(action.colonyId ?? ""), action.name);
+      return undefined;
+
+    case "colonySpec":
+      setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);
       return undefined;
 
     case "commanderRecruit": {

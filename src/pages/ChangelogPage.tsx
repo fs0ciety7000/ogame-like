@@ -37,7 +37,7 @@ export function ChangelogPage() {
             <Card className="p-4">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 {entry.version && (
-                  <span className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-1.5 py-0.5 font-mono text-[11px] text-cyan-glow">
+                  <span className="hud-chip hud-chip-sm hud-tone-accent">
                     v{entry.version}
                   </span>
                 )}

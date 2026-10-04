@@ -72,7 +72,7 @@ export function ChroniclesPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Chroniques</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -105,7 +105,7 @@ export function ChroniclesPanel() {
 
       {month && (
         <>
-          <Card className="grid gap-3 p-4 sm:grid-cols-2">
+          <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
             <TextField label="Mois (AAAA-MM)" value={month.id} onChange={(v) => setMonth({ id: v.trim() })} />
             <TextField label="Titre de l'arc" value={month.title} onChange={(v) => setMonth({ title: v })} />
             <TextField label="Teinte (couleur)" value={month.theme.accent} onChange={(v) => setMonth({ theme: { ...month.theme, accent: v } })} />

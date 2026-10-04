@@ -19,6 +19,9 @@ export interface OnboardingState {
   hidden?: boolean;
   /** v4.1 : raid scripté de Varan (« due » : à lancer par le serveur, « sent » : lancé). */
   tutorialRaid?: "due" | "sent";
+  /** v5.11 : Carnet du commandant (tutoriel avancé), objectifs réclamés et carte masquée. */
+  advanced?: string[];
+  advancedHidden?: boolean;
 }
 
 export interface OnboardingStep {
@@ -130,7 +133,14 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
 export function onboardingState(p: Pick<PlayerState, "onboarding">): OnboardingState {
   const raw = p.onboarding;
   const tutorialRaid = raw?.tutorialRaid === "due" || raw?.tutorialRaid === "sent" ? raw.tutorialRaid : undefined;
-  return { claimed: Array.isArray(raw?.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [], hidden: raw?.hidden === true, ...(tutorialRaid ? { tutorialRaid } : {}) };
+  const advanced = Array.isArray(raw?.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
+  return {
+    claimed: Array.isArray(raw?.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
+    hidden: raw?.hidden === true,
+    ...(tutorialRaid ? { tutorialRaid } : {}),
+    ...(advanced.length > 0 ? { advanced } : {}),
+    ...(raw?.advancedHidden === true ? { advancedHidden: true } : {}),
+  };
 }
 
 /** Le joueur suit-il la prise en main ? (débutant, ou déjà commencée et pas finie) */

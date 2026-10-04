@@ -161,7 +161,7 @@ export function BalanceHistory({ history, onSnapshot }: { history: BalanceSnapsh
         <p className="text-sm text-slate-400">Aucune photo pour l'instant : la première sera prise cette nuit (ou maintenant avec le bouton).</p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {series.map((s) => {
               const last = [...s.points].reverse().find((v) => v !== null) ?? null;
               return (

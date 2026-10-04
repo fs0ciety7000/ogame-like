@@ -24,6 +24,8 @@ import {
   Wrench,
   type LucideIcon,
   Megaphone,
+  CalendarRange,
+  Bell,
   Smile,
   Mail,
   Crown,
@@ -41,6 +43,10 @@ import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
+import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
+import { CasinoAdmin } from "@/pages/admin/CasinoAdmin";
+import { PlannerPanel } from "@/pages/admin/PlannerPanel";
+import { BroadcastPanel } from "@/pages/admin/BroadcastPanel";
 import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
@@ -78,6 +84,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
       { id: "balance", label: "Équilibrage", icon: Scale, hint: "Diagnostic du contenu et des joueurs réels, propositions chiffrées et bac à sable d'unité." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
+      { id: "planner", label: "Planificateur", icon: CalendarRange, hint: "Calendrier des boss, week-ends, Chroniques, concours et fin de saison ; dates précises déplaçables." },
       { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site et annonces plein écran : création et programmation." },
       { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
       { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
@@ -106,7 +113,8 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
-      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : solde, mouvements, versements (concours)." },
+      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : Casino orbital (ouverture, gains, jetons), concours, solde et mouvements." },
+      { id: "broadcast", label: "Messages ciblés", icon: Bell, hint: "Notification dans le jeu pour un groupe de joueurs : inactifs, nouveaux, une alliance…" },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
@@ -156,7 +164,7 @@ export function AdminPage() {
         description="Contenu du jeu, règles, joueurs et maintenance. Chaque enregistrement s'applique immédiatement à tous les joueurs."
       />
       <AdminStatusStrip onOpen={(id) => setParams({ onglet: id }, { replace: true })} />
-      <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid gap-4 lg:grid-cols-[13.5rem_1fr]">
+      <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[13.5rem_minmax(0,1fr)]">
         <TabsPrimitive.List aria-label="Sections de l'administration" className="hud-cut-sm -mx-1 flex gap-1 overflow-x-auto border border-cyan-glow/10 bg-space-950/60 p-1.5 lg:sticky lg:top-0 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:p-2">
           {NAV.map((group) => (
             <div key={group.label} className="contents lg:block">
@@ -213,6 +221,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="admins">
           <AdminsPanel />
+        </TabsContent>
+        <TabsContent value="broadcast">
+          <BroadcastPanel />
         </TabsContent>
         <TabsContent value="mail">
           <MailPanel />
@@ -305,7 +316,12 @@ export function AdminPage() {
         <TabsContent value="procedural">
           <ProceduralPanel />
         </TabsContent>
-        <TabsContent value="serverpot">
+        <TabsContent value="planner">
+          <PlannerPanel />
+        </TabsContent>
+        <TabsContent value="serverpot" className="flex flex-col gap-4">
+          <CasinoAdmin />
+          <ContestsAdmin />
           <ServerPotPanel />
         </TabsContent>
         <TabsContent value="warlords">

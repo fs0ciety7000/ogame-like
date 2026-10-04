@@ -10,6 +10,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { showBrowserNotification } from "@/store/browserNotifyStore";
 import { formatDuration } from "@/lib/utils";
 import { EmojiIcon } from "@/components/ui/game-icon";
+import { HudChip } from "@/components/ui/hud";
 
 const SEEN_KEY = "cosmic-empires:last-event";
 
@@ -41,13 +42,12 @@ export function EventBadge() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Link
-          to="/game"
-          className="flex items-center gap-1.5 rounded-lg border border-gold-glow/50 bg-gold-glow/10 px-2 py-1 text-[11px] font-semibold text-gold-glow"
-        >
-          <EmojiIcon emoji={event.type.emoji} className="h-4 w-4" />
-          {event.type.name} · {remaining(event.endMs)}
-        </Link>
+        <HudChip asChild tone="violet">
+          <Link to="/game">
+            <EmojiIcon emoji={event.type.emoji} className="h-4 w-4" />
+            {event.type.name} · {remaining(event.endMs)}
+          </Link>
+        </HudChip>
       </TooltipTrigger>
       <TooltipContent>{event.type.description}</TooltipContent>
     </Tooltip>
@@ -67,7 +67,7 @@ export function EventCard() {
         <h3 className="font-display text-sm text-white">Événements et saison</h3>
       </div>
       {event ? (
-        <div className={active ? "rounded-lg border border-gold-glow/40 bg-gold-glow/10 p-3" : "rounded-lg bg-black/20 p-3"}>
+        <div className={active ? "hud-callout hud-tone-gold p-3" : "hud-cut-sm bg-black/20 p-3"}>
           <p className="text-sm font-semibold text-slate-100">
             <EmojiIcon emoji={event.type.emoji} /> {event.type.name}
             <span className={active ? "ml-2 text-xs text-gold-glow" : "ml-2 text-xs text-slate-400"}>

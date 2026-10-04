@@ -130,7 +130,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
             <select
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="mb-2 h-9 w-full rounded-lg border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
+              className="hud-cut-sm mb-2 h-9 w-full border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
             >
               {alliance.members.map((m) => (
                 <option key={m} value={m}>

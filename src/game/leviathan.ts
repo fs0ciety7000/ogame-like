@@ -4,7 +4,7 @@ import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
-import { EVENT_RULES, weekendWindow } from "@/game/events";
+import { BOSS_REMINDERS, bossWindows, EVENT_RULES, type BossSchedule } from "@/game/events";
 import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
 import { bumpStat } from "@/game/stats";
@@ -22,12 +22,18 @@ import type { PlayerState, ResourceId } from "@/types/game";
 
 export const LEVIATHAN_KEY = "leviathan";
 
+/** v5.10.5 : entrées gardées dans le fil du combat. */
+export const FEED_MAX = 40;
+
 export const LEVIATHAN_RULES = {
   name: "Le Léviathan",
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
   hpFactor: 4,
   minHp: 100_000,
   durationHours: 72,
+  /** v5.10.4 : heure d'apparition le vendredi (heure de Paris). Le week-end du mois et
+   *  l'activation sont dans les règles des événements (bossWeekend, bossMonthly). */
+  startHour: 18,
   /** Un assaut toutes les N heures par joueur. */
   cooldownHours: 4,
   /** Trajet aller (et retour), en minutes. */
@@ -72,6 +78,10 @@ export interface LeviathanState {
   archived?: boolean;
   /** v5.10.2 : coup de grâce recherché pour un combat d'avant la 5.10 (une seule fois). */
   legacyChecked?: boolean;
+  /** v5.10.5 : rappel « plus que N heures » déjà envoyé. */
+  endingNotified?: boolean;
+  /** v5.10.5 : fil des derniers assauts. */
+  feed?: BossFeedEntry[];
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -96,9 +106,10 @@ export interface BossRecap {
   reward: BossReward | null;
 }
 
-export function bossRecap(state: LeviathanState, uid: string, topCount = 5): BossRecap {
+/** totals : chiffres du combat entier quand l'état ne garde qu'une partie des participants (archive du Hall of fame). */
+export function bossRecap(state: LeviathanState, uid: string, topCount = 5, totals?: { totalDamage: number; participants: number; assaults: number }): BossRecap {
   const ranking = leviathanRanking(state);
-  const totalDamage = ranking.reduce((a, c) => a + c.damage, 0);
+  const totalDamage = totals?.totalDamage ?? ranking.reduce((a, c) => a + c.damage, 0);
   const share = (d: number) => (totalDamage > 0 ? d / totalDamage : 0);
   const myIndex = ranking.findIndex((c) => c.uid === uid);
   const me = myIndex >= 0 ? ranking[myIndex] : null;
@@ -107,8 +118,8 @@ export function bossRecap(state: LeviathanState, uid: string, topCount = 5): Bos
     won: state.status === "killed",
     durationMs: Math.max(0, end - state.startMs),
     totalDamage,
-    participants: ranking.length,
-    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
+    participants: totals?.participants ?? ranking.length,
+    assaults: totals?.assaults ?? ranking.reduce((a, c) => a + c.assaults, 0),
     hpDealtPct: state.maxHp > 0 ? Math.min(1, (state.maxHp - state.hp) / state.maxHp) : 0,
     top: ranking.slice(0, topCount).map((c, i) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults, share: share(c.damage), rank: i + 1 })),
     mine: me ? { rank: myIndex + 1, damage: me.damage, assaults: me.assaults, share: share(me.damage) } : null,
@@ -138,6 +149,8 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
     ...(r.archived === true ? { archived: true } : {}),
     ...(r.legacyChecked === true ? { legacyChecked: true } : {}),
+    ...(r.endingNotified === true ? { endingNotified: true } : {}),
+    ...(Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {}),
   };
 }
 
@@ -161,24 +174,21 @@ export function inferKilledBy(state: LeviathanState, flightMinutes = LEVIATHAN_R
   return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 
-/** Fenêtre mensuelle en cours (ou null) : premier week-end du mois. */
-export function leviathanWindow(now: number): { id: string; startMs: number; endMs: number } | null {
-  if (!EVENT_RULES.bossMonthly) return null;
-  const w = weekendWindow(now);
-  if (!w.firstOfMonth) return null;
-  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR;
-  if (now < w.startMs || now >= endMs) return null;
-  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
+/** v5.10.4 : occurrence du Léviathan (réglable dans l'administration). */
+export function leviathanSchedule(): BossSchedule {
+  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: EVENT_RULES.bossWeekend ?? "first", startHour: LEVIATHAN_RULES.startHour ?? 18, durationHours: LEVIATHAN_RULES.durationHours, dates: EVENT_RULES.bossDates ?? [] };
 }
 
-/** Prochain départ du Léviathan (affichage). */
+/** Fenêtre mensuelle en cours (ou null). */
+export function leviathanWindow(now: number): { id: string; startMs: number; endMs: number } | null {
+  const [w] = bossWindows(now, leviathanSchedule(), 1);
+  if (!w || now < w.startMs) return null;
+  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs: w.endMs };
+}
+
+/** Prochain départ du Léviathan (affichage) : la fenêtre en cours si elle n'est pas finie. */
 export function nextLeviathanStart(now: number): number | null {
-  if (!EVENT_RULES.bossMonthly) return null;
-  for (let i = 0; i < 6; i++) {
-    const w = weekendWindow(now, i);
-    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR > now) return w.startMs;
-  }
-  return null;
+  return bossWindows(now, leviathanSchedule(), 1)[0]?.startMs ?? null;
 }
 
 /** v5.10 : prochaine apparition strictement à venir (pas la fenêtre en cours, déjà ouverte). */
@@ -222,6 +232,82 @@ export function checkLeviathanLaunch(state: LeviathanState | null, uid: string, 
   return { ...state, contributions: { ...state.contributions, [uid]: { pseudo, damage: c?.damage ?? 0, assaults: c?.assaults ?? 0, lastLaunchMs: now } } };
 }
 
+/* =====================================================
+   v5.10.5 : phases de combat. Sous 50 % de structure, le boss riposte
+   (pertes accrues) ; sous 25 %, il se replie derrière un bouclier
+   (dégâts réduits) mais révèle une faiblesse à un type de vaisseau.
+===================================================== */
+
+export const BOSS_PHASE_RULES = {
+  /** Phase 2 sous cette part de structure : riposte. */
+  ripostePct: 0.5,
+  riposteLossFactor: 1.5,
+  /** Phase 3 sous cette part : bouclier et faiblesse. */
+  shieldPct: 0.25,
+  shieldDamageFactor: 0.85,
+  weaknessFactor: 1.5,
+};
+
+/** Vaisseaux qui peuvent être la faiblesse d'un boss (s'ils existent dans le contenu). */
+const WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
+
+export type BossFightPhase = 1 | 2 | 3;
+
+export function bossFightPhase(state: Pick<LeviathanState, "hp" | "maxHp">): BossFightPhase {
+  const pct = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct <= BOSS_PHASE_RULES.shieldPct ? 3 : pct <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+}
+
+/** Faiblesse de phase 3 : un type de vaisseau tiré de l'identifiant du combat (stable). */
+export function bossWeakness(state: Pick<LeviathanState, "id">): string {
+  const pool = WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
+  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
+  let h = 0;
+  for (const ch of state.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return list.length ? list[h % list.length] : "";
+}
+
+export const BOSS_PHASE_INFO: Record<BossFightPhase, { name: string; desc: string }> = {
+  1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
+  2: { name: "Riposte", desc: `Blessé, il riposte : pertes ×${BOSS_PHASE_RULES.riposteLossFactor} à chaque assaut.` },
+  3: { name: "Carapace fissurée", desc: `Il se replie derrière un bouclier (−${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de dégâts), mais sa faiblesse est exposée : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de dégâts pour ce type de vaisseau.` },
+};
+
+/** Dégâts et pertes d'un assaut selon la flotte, la formation et la phase du boss (sert aussi à l'estimation). */
+export function bossAssaultEstimate(
+  state: Pick<LeviathanState, "id" | "hp" | "maxHp">,
+  player: Pick<PlayerState, "units" | "techLevels" | "allianceResearch"> & Partial<PlayerState>,
+  fleet: Record<string, number>,
+  formation: string | undefined,
+): { power: number; lossPct: number; phase: BossFightPhase } {
+  const fx = formationEffects(formation);
+  const base = computeFleetPower(player.units, player.techLevels, fleet, ["attack"]);
+  const phase = bossFightPhase(state);
+  let phaseFactor = 1;
+  if (phase === 3 && base > 0) {
+    const weak = bossWeakness(state);
+    const weakPower = fleet[weak] ? computeFleetPower(player.units, player.techLevels, { [weak]: fleet[weak] }, ["attack"]) : 0;
+    const share = Math.min(1, weakPower / base);
+    phaseFactor = share * BOSS_PHASE_RULES.weaknessFactor + (1 - share) * BOSS_PHASE_RULES.shieldDamageFactor;
+  }
+  const mods = playerModifiers(player as PlayerState);
+  const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
+  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
+  return { power, lossPct, phase };
+}
+
+/** v5.10.5 : fil du combat (derniers assauts et changements de phase). */
+export interface BossFeedEntry {
+  t: number;
+  uid?: string;
+  pseudo?: string;
+  damage?: number;
+  killed?: boolean;
+  /** Entrée de changement de phase. */
+  phase?: BossFightPhase;
+}
+
+
 /** Assaut à l'arrivée : dégâts, pertes de la flotte (réparées en partie). */
 export function resolveLeviathanAssault(
   state: LeviathanState,
@@ -230,12 +316,10 @@ export function resolveLeviathanAssault(
   formation: string | undefined,
   now: number,
 ): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
-  const fx = formationEffects(formation);
-  const power = Math.round(computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage));
+  const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * fx.attackerLossFactor);
   const survivors: Record<string, number> = {};
   const lost: Record<string, number> = {};
   for (const [id, qty] of Object.entries(fleet)) {
@@ -247,9 +331,19 @@ export function resolveLeviathanAssault(
   const c = state.contributions[player.uid] ?? { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
+  // Fil du combat : l'assaut, puis le passage de phase s'il y en a un.
+  let feed = state.feed ?? [];
+  if (active && damage > 0) {
+    const before = bossFightPhase(state);
+    const after = bossFightPhase({ hp: Math.max(0, hp), maxHp: state.maxHp });
+    feed = [...feed, { t: now, uid: player.uid, pseudo: player.pseudo, damage, ...(killed ? { killed: true } : {}) }];
+    if (!killed && after > before) feed = [...feed, { t: now, phase: after }];
+    feed = feed.slice(-FEED_MAX);
+  }
   return {
     state: {
       ...state,
+      ...(feed.length ? { feed } : {}),
       hp: Math.max(0, hp),
       status: killed ? "killed" : state.status,
       endedAtMs: killed ? now : state.endedAtMs,
@@ -362,4 +456,21 @@ export function resizeLeviathan(state: LeviathanState, maxHp: number, now: numbe
   const done = state.maxHp - state.hp;
   if (!(next > done)) throw new GameActionError(`La structure doit dépasser les dégâts déjà infligés (${done}).`);
   return { ...state, maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) };
+}
+
+/** v5.10.4 : ajustement à chaud (admin) de la fin d'un combat en cours (prolonger ou écourter). */
+export function rescheduleBoss(state: LeviathanState | null, endMs: number, now: number): LeviathanState {
+  if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
+  const end = Math.round(endMs);
+  if (!(end > now + 5 * 60_000)) throw new GameActionError("La nouvelle fin doit être dans plus de 5 minutes.");
+  if (end - state.startMs > 14 * 24 * HOUR) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
+  // Fin repoussée au-delà du rappel : il pourra repartir.
+  const next: LeviathanState = { ...state, endMs: end };
+  if (end - now > BOSS_REMINDERS.endingHours * HOUR) delete next.endingNotified;
+  return next;
+}
+
+/** v5.10.5 : faut-il envoyer le rappel « plus que N heures » ? */
+export function endingReminderDue(state: LeviathanState | null, now: number): boolean {
+  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR;
 }

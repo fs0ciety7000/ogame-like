@@ -91,7 +91,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
       </p>
       {/* v4.7.1 : avancement du filleul vers la récompense. */}
       {st.by && !st.rewarded && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs">
+        <div className="hud-cut-sm border border-white/10 bg-white/[0.02] p-3 text-xs">
           <p className="mb-2 text-slate-300">Pour la récompense de parrainage :</p>
           <ul className="flex flex-col gap-1">
             <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`Bronze I : ${Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp).toLocaleString("fr-FR")} / ${REFERRAL_RULES.rewardXp.toLocaleString("fr-FR")} XP`} />
@@ -109,7 +109,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
         <div className="flex flex-col gap-1.5 text-xs">
           <p className="text-slate-400">Tes filleuls :</p>
           {info.recruits.map((r) => (
-            <div key={r.pseudo} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1.5">
+            <div key={r.pseudo} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 hud-cut-sm border border-white/10 bg-white/[0.02] px-2 py-1.5">
               <strong className="text-white">{r.pseudo}</strong>
               {r.rewarded ? (
                 <span className="text-mint-glow">Récompense versée</span>

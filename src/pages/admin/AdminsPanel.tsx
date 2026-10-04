@@ -66,7 +66,7 @@ export function AdminsPanel() {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
       <Card className="flex flex-col gap-3 p-5">
         <h3 className="hud-title flex items-center gap-2 text-sm text-white">
           <ShieldCheck className="h-4 w-4 text-cyan-glow" /> Administrateurs ({admins?.length ?? "…"})

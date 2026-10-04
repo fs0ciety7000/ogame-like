@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Badge } from "@/components/ui/badge";
-import { currentGameContent, validateGameContent, type GameContent, type GameRules } from "@/game/content";
+import { currentGameContent, validateGameContent, validateRules, type GameContent, type GameRules } from "@/game/content";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
@@ -21,7 +21,8 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
+import { BossScheduleFields } from "@/pages/admin/bossFields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -41,8 +42,18 @@ export function RulesPanel() {
   const [busy, setBusy] = useState(false);
   const pvp = rules.pvp;
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
+  // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
+  const bossClash =
+    rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
+      ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
+      : undefined;
 
+  const ruleErrors = useMemo(() => validateRules(rules), [rules]);
   const save = async () => {
+    if (ruleErrors.length > 0) {
+      toast.error(`Enregistrement refusé : ${ruleErrors.slice(0, 3).join(" · ")}`);
+      return;
+    }
     setBusy(true);
     try {
       await saveContentSection("rules", rules);
@@ -59,7 +70,7 @@ export function RulesPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Règles de combat</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -72,11 +83,21 @@ export function RulesPanel() {
           >
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Valeurs par défaut
           </Button>
-          <Button size="sm" disabled={busy} onClick={() => void save()}>
+          <Button size="sm" disabled={busy || ruleErrors.length > 0} onClick={() => void save()}>
             <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer
           </Button>
         </div>
       </div>
+      {ruleErrors.length > 0 && (
+        <div role="alert" className="border border-danger-glow/40 bg-danger-glow/10 p-3 text-sm text-danger-glow">
+          <p className="font-semibold">À corriger avant d'enregistrer :</p>
+          <ul className="mt-1 list-inside list-disc text-xs">
+            {ruleErrors.slice(0, 8).map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Protections">
           <NumberField label="Délai entre 2 attaques sur une même cible (h)" value={pvp.attackCooldownMs / HOUR} min={0} step={0.25} onChange={(v) => setPvp({ attackCooldownMs: (v ?? 0) * HOUR })} />
@@ -448,6 +469,20 @@ export function RulesPanel() {
           />
         </Section>
         <Section title="Léviathan">
+          <BossScheduleFields
+            label="Léviathan"
+            value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours, dates: rules.events.bossDates ?? [] }}
+            onChange={(p) =>
+              setRules((r) => ({
+                ...r,
+                events: { ...r.events, ...(p.enabled !== undefined ? { bossMonthly: p.enabled } : {}), ...(p.weekend ? { bossWeekend: p.weekend } : {}), ...(p.dates ? { bossDates: p.dates } : {}) },
+                leviathan: { ...r.leviathan, ...(p.startHour !== undefined ? { startHour: p.startHour } : {}), ...(p.durationHours !== undefined ? { durationHours: p.durationHours } : {}) },
+              }))
+            }
+            clash={bossClash}
+          />
+          <TextField label="Nom" value={rules.leviathan.name} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, name: v } }))} />
+          <TextField label="Titre du n° 1 des dégâts" value={rules.leviathan.title} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, title: v } }))} />
           <NumberField
             label="Structure : facteur × puissance d'attaque des actifs"
             value={rules.leviathan.hpFactor}
@@ -455,10 +490,10 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, hpFactor: v ?? 0 } }))}
           />
           <NumberField
-            label="Durée de présence (h)"
-            value={rules.leviathan.durationHours}
-            step={1}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, durationHours: v ?? 0 } }))}
+            label="Structure minimale"
+            value={rules.leviathan.minHp}
+            step={100000}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, minHp: v ?? 0 } }))}
           />
           <NumberField
             label="Délai entre deux assauts d'un joueur (h)"
@@ -501,6 +536,29 @@ export function RulesPanel() {
             value={rules.leviathan.titleDays}
             step={1}
             onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, titleDays: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Boss de saison">
+          <BossScheduleFields label="Boss de saison" value={rules.seasonBoss} onChange={(p) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, ...p } }))} clash={bossClash} />
+          <NumberField
+            label="Structure : facteur × puissance d'attaque des actifs"
+            value={rules.seasonBoss.hpFactor}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, hpFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Structure minimale"
+            value={rules.seasonBoss.minHp}
+            step={100000}
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, minHp: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Reliques épiques pour les N premiers"
+            value={rules.seasonBoss.topRelics}
+            min={0}
+            step={1}
+            hint="Le boss (nom, image, titre) change chaque mois : il se règle dans l'onglet Chroniques."
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, topRelics: Math.max(0, Math.round(v ?? 0)) } }))}
           />
         </Section>
         <Section title="Flottes en vol">
@@ -738,7 +796,7 @@ export function PlayersPanel() {
   };
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_1fr]">
       <Card className="flex max-h-[75vh] flex-col gap-2 p-2">
         <div className="flex gap-2">
           <Input placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-8" />
@@ -771,7 +829,7 @@ export function PlayersPanel() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-base text-white">{draft.pseudo}</h2>
               <span className="font-mono text-[11px] text-slate-500">{draft.id}</span>
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -938,7 +996,7 @@ export function ToolsPanel() {
   };
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <Card className="flex flex-col gap-2 p-4">
         <h3 className="hud-title text-sm text-white">Sauvegarde du contenu</h3>
         <p className="text-xs text-slate-400">

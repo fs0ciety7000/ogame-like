@@ -66,10 +66,10 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
           hint="Du vendredi (heure ci-contre) au dimanche 23 h 59, heure de Paris."
         />
         <CheckboxField
-          label="Léviathan le premier week-end du mois"
+          label="Léviathan mensuel"
           checked={events.bossMonthly !== false}
           onChange={(v) => setEvents({ bossMonthly: v })}
-          hint="Il remplace alors l'événement de la rotation, du vendredi au lundi même heure."
+          hint="Il remplace l'événement de la rotation son week-end-là. Week-end, heure et durée : section Léviathan."
         />
         <NumberField label="Début le vendredi à (heure de Paris)" value={events.startHour} min={0} step={1} onChange={(v) => setEvents({ startHour: Math.min(23, Math.max(0, v ?? 18)) })} />
         <Field label="Ordre de rotation" hint="Identifiants séparés par des virgules." className="sm:col-span-2">
@@ -115,7 +115,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       <Section title="Événements programmés (prioritaires sur la rotation)">
         {events.scheduled.length === 0 && <p className="text-xs text-slate-500 sm:col-span-2">Aucun événement programmé.</p>}
         {events.scheduled.map((s, i) => (
-          <div key={s.id} className="grid gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <div key={s.id} className="grid grid-cols-1 gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
             <SelectField
               label="Événement"
               value={s.type}
@@ -186,7 +186,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       </Section>
       <Section title="Récompenses de fin de saison">
         {seasons.tiers.map((t, i) => (
-          <div key={i} className="grid gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
+          <div key={i} className="grid grid-cols-1 gap-2 border border-white/5 p-2 sm:col-span-2 sm:grid-cols-4">
             <NumberField label="Jusqu'au rang" value={t.maxRank} min={1} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, maxRank: v ?? 1 } : x)) })} />
             <NumberField label="Heures de production" value={t.hours} min={0} step={1} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, hours: v ?? 0 } : x)) })} />
             <NumberField label="Bonus de chaque rare" value={t.rare} min={0} step={50} onChange={(v) => setSeasons({ tiers: seasons.tiers.map((x, j) => (j === i ? { ...x, rare: v ?? 0 } : x)) })} />
@@ -196,7 +196,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <NumberField label="Participation : XP de saison minimale" value={seasons.participationXp} min={0} step={10} onChange={(v) => setSeasons({ participationXp: v ?? 0 })} />
         <NumberField label="Participation : heures de production" value={seasons.participationHours} min={0} step={1} onChange={(v) => setSeasons({ participationHours: v ?? 0 })} />
         <div className="sm:col-span-2">
-          <Button variant="outline" size="sm" disabled={closing} onClick={() => void closeSeason()}>
+          <Button variant="outline" size="sm" className="h-auto min-h-8 whitespace-normal py-1.5 text-left" disabled={closing} onClick={() => void closeSeason()}>
             <Trophy className="mr-1 h-3.5 w-3.5" /> Clôturer la saison {seasonLabel(previousSeasonId())} maintenant
           </Button>
           <p className="mt-1 text-[11px] text-slate-500">Automatique chaque heure après le changement de mois : ce bouton ne sert qu'en cas de besoin. Une saison n'est jamais close deux fois.</p>

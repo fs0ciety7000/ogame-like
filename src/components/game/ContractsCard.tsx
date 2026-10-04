@@ -71,7 +71,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
         <ScrollText className="h-4 w-4 text-gold-glow" />
         <h3 className="font-display text-sm text-white">Contrats du jour</h3>
         <span
-          className="flex items-center gap-1 rounded-md bg-ember-glow/15 px-1.5 py-0.5 text-[11px] font-semibold text-ember-glow"
+          className={`hud-chip hud-chip-sm ${streak > 0 ? "hud-tone-gold" : "hud-tone-neutral"}`}
           title="Jours consécutifs où les 3 contrats ont été terminés"
         >
           <Flame className="h-3 w-3" /> Série {streak}
@@ -93,8 +93,8 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
               <motion.div
                 key={c.id}
                 layout
-                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${
-                  c.claimed ? "border-mint-glow/30 bg-mint-glow/5" : done ? "border-gold-glow/50 bg-gold-glow/5" : "border-white/5 bg-black/20"
+                className={`flex flex-col gap-1.5 p-2.5 ${
+                  c.claimed ? "hud-callout hud-tone-mint" : done ? "hud-callout hud-tone-gold" : "hud-cut-sm border border-white/5 bg-black/20"
                 }`}
               >
                 <div className="flex items-start gap-2">

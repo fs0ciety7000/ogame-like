@@ -1,8 +1,8 @@
 import { DiplomacyTab } from "@/components/game/DiplomacyTab";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
-const ALLIANCE_TABS = ["saga", "objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
+const ALLIANCE_TABS = ["fiche", "defi", "saga", "objectif", "calendrier", "membres", "boss", "tresor", "recherches", "projets", "renseignement", "guerre", "diplomatie", "classement"];
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useRef, useState } from "react";
 import { AllianceBossTab } from "@/components/game/AllianceBossTab";
@@ -37,6 +37,10 @@ import {
 import { splitMentions } from "@/game/mentions";
 import { allianceRole, ALLIANCE_RULES, canDiplomacy } from "@/game/alliances";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AllianceProfileTab } from "@/components/game/AllianceProfileTab";
+import { ApplyDialog } from "@/components/game/ApplyDialog";
+import { AllianceChallengeTab } from "@/components/game/AllianceChallengeTab";
+import { hasAlliancePerm, memberRankLabel, normalizeAllianceProfile } from "@/game/allianceProfile";
 import { WarTab } from "@/components/game/WarTab";
 import { AllianceDailyTab } from "@/components/game/AllianceDailyTab";
 import { AllianceSagaTab } from "@/components/game/AllianceSagaTab";
@@ -58,6 +62,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [applyTo, setApplyTo] = useState<Alliance | null>(null);
 
   useEffect(() => subscribeAlliances(setAlliances), []);
 
@@ -141,20 +146,41 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
                 </span>
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={a.members.length >= ALLIANCE_RULES.maxMembers}
-              onClick={() => void handleJoin(a.id)}
-            >
-              {a.members.length >= ALLIANCE_RULES.maxMembers
-                ? "Complète"
-                : "Rejoindre"}
-            </Button>
+            {(() => {
+              // v5.10.5 : mode de recrutement (ouvert, sur candidature, fermé) et fiche publique.
+              const profile = normalizeAllianceProfile(a.profile);
+              const full = a.members.length >= ALLIANCE_RULES.maxMembers;
+              const applied = profile.applications.some((x) => x.uid === uid);
+              return (
+                <span className="flex flex-wrap items-center justify-end gap-1.5">
+                  <Link to={`/game/alliance/fiche/${a.id}`} className="text-xs text-cyan-glow hover:underline">
+                    Fiche
+                  </Link>
+                  {full ? (
+                    <Button size="sm" variant="outline" disabled>
+                      Complète
+                    </Button>
+                  ) : profile.recruiting === "open" ? (
+                    <Button size="sm" variant="outline" onClick={() => void handleJoin(a.id)}>
+                      Rejoindre
+                    </Button>
+                  ) : profile.recruiting === "apply" ? (
+                    <Button size="sm" variant="outline" disabled={applied} onClick={() => setApplyTo(a)}>
+                      {applied ? "Candidature envoyée" : "Postuler"}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>
+                      Fermée
+                    </Button>
+                  )}
+                </span>
+              );
+            })()}
           </div>
         ))}
         </div>
       </Card>
+      <ApplyDialog alliance={applyTo} onClose={() => setApplyTo(null)} />
     </div>
   );
 }
@@ -248,6 +274,10 @@ function AllianceRoom({
   if (!alliance) return null;
 
   const isFounder = uid === alliance.createdBy;
+  // v5.10.5 : droits fins (rangs personnalisés).
+  const canKick = hasAlliancePerm(alliance, uid, "kick");
+  const canRecruit = hasAlliancePerm(alliance, uid, "recruit");
+  const applications = normalizeAllianceProfile(alliance.profile).applications.length;
   const bossState = normalizeAllianceBoss(alliance.boss);
   const bossActive = !!bossState && bossState.status === "active" && Date.now() < bossState.endMs && bossState.hp > 0;
   const online = (m: string) => m === uid || isOnline(lastActiveOf[m], Date.now());
@@ -273,6 +303,11 @@ function AllianceRoom({
           {pactUnread > 0 && <span className="min-w-4 rounded-full bg-ember-glow px-1 text-[10px] font-bold leading-4 text-space-950">{pactUnread}</span>}
         </TabsTrigger>
         <TabsTrigger value="classement">Classement</TabsTrigger>
+        <TabsTrigger value="defi">Défi de la semaine</TabsTrigger>
+        <TabsTrigger value="fiche" className="inline-flex items-center gap-1.5">
+          Fiche et rangs
+          {applications > 0 && canRecruit && <span className="grid h-4 min-w-4 place-items-center bg-danger-glow px-1 font-mono text-[9px] font-bold text-space-950">{applications}</span>}
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="saga">
         <AllianceSagaTab allianceId={alliance.id} />
@@ -284,6 +319,12 @@ function AllianceRoom({
         <AllianceCalendarTab alliance={alliance} />
       </TabsContent>
       <TabsContent value="boss">{player && <AllianceBossTab alliance={alliance} player={player} />}</TabsContent>
+      <TabsContent value="defi">
+        <AllianceChallengeTab allianceId={alliance.id} />
+      </TabsContent>
+      <TabsContent value="fiche">
+        <AllianceProfileTab alliance={alliance} uid={uid} />
+      </TabsContent>
       <TabsContent value="classement">
         <AllianceRanking currentId={alliance.id} />
       </TabsContent>
@@ -345,6 +386,14 @@ function AllianceRoom({
                       {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}
                       {role === "officer" && <Shield className="h-3.5 w-3.5 shrink-0 text-cyan-glow" aria-label="Officier" />}
                       {role === "diplomat" && <Handshake className="h-3.5 w-3.5 shrink-0 text-mint-glow" aria-label="Diplomate" />}
+                      {(() => {
+                        const rank = memberRankLabel(alliance, m);
+                        return rank ? (
+                          <span className="shrink-0 border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${rank.color}66` }}>
+                            {rank.name}
+                          </span>
+                        ) : null;
+                      })()}
                     </span>
                     {/* Actions sur une seconde ligne : le pseudo reste toujours lisible. */}
                     {m !== uid && (
@@ -370,7 +419,7 @@ function AllianceRoom({
                             <option value="diplomat">Diplomate</option>
                           </select>
                         )}
-                        {isFounder && (
+                        {canKick && role !== "founder" && (
                           <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px] text-danger-glow" onClick={() => void handleKick(m)}>
                             <UserX className="h-3 w-3" /> Exclure
                           </Button>

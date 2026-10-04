@@ -103,7 +103,7 @@ export function ReportsPanel() {
         </span>
       </p>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
         <Card className="flex max-h-[70vh] flex-col overflow-y-auto">
           {reports === null && <p className="p-4 text-sm text-slate-500">Chargement…</p>}
           {reports !== null && shown.length === 0 && <EmptyState icon="🔧" title="Rien ici">Aucun signalement dans cette catégorie.</EmptyState>}

@@ -53,7 +53,11 @@ export interface RetentionStats {
   /** Actifs selon la dernière synchro (disponible sans historique). */
   active: { d1: number; d7: number; d30: number; total: number };
   /** Cohortes hebdomadaires d'inscrits (6 dernières semaines). */
-  cohorts: { week: string; signups: number; d1Pct: number | null; d7Pct: number | null; activeNowPct: number }[];
+  cohorts: { week: string; signups: number; d1Pct: number | null; d7Pct: number | null; d30Pct: number | null; activeNowPct: number }[];
+  /** v5.10.5 : survie — part des inscrits encore actifs N jours après leur inscription (parmi ceux assez anciens). */
+  survival: { day: number; pct: number | null; eligible: number }[];
+  /** v5.10.5 : décrochage — joueurs partis (sans activité depuis 7 j) selon leur ancienneté au départ. */
+  churn: { label: string; count: number }[];
   /** Prise en main : part des joueurs récents (60 j) ayant atteint chaque objectif. */
   funnel: { id: string; label: string; reached: number; pct: number }[];
   /** Joueurs récents sans activité depuis 3 jours : objectif où ils se sont arrêtés. */
@@ -88,7 +92,7 @@ export function computeRetention(players: PlayerState[], now: number): Retention
     total: players.length,
   };
 
-  const cohorts = Array.from({ length: 6 }, (_, i) => {
+  const cohorts = Array.from({ length: 8 }, (_, i) => {
     const end = now - i * 7 * DAY;
     const start = end - 7 * DAY;
     const members = players.filter((p) => (p.createdAtMs ?? 0) >= start && (p.createdAtMs ?? 0) < end);
@@ -98,11 +102,14 @@ export function computeRetention(players: PlayerState[], now: number): Retention
     const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p)!, today) >= 7);
     const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p)!, d) === 1)).length;
     const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p)!, d) >= 7)).length;
+    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p)!, today) >= 30);
+    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p)!, d) >= 30)).length;
     return {
       week: parisDay(start),
       signups: members.length,
       d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
       d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
+      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
       activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY).length, members.length),
     };
   }).reverse();
@@ -136,5 +143,24 @@ export function computeRetention(players: PlayerState[], now: number): Retention
     .map(([id, count]) => ({ id, label: id === "done" ? "Prise en main terminée" : ONBOARDING_STEPS.find((s) => s.id === id)?.label ?? id, count }))
     .sort((a, b) => b.count - a.count);
 
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length };
+  // Survie : actif au moins une fois N jours ou plus après l'inscription (sinon, dernière activité assez tardive).
+  const ageDays = (p: PlayerState) => Math.floor((now - (p.createdAtMs ?? now)) / DAY);
+  const lastDayAfterSignup = (p: PlayerState) => Math.floor((lastSeen(p) - (p.createdAtMs ?? 0)) / DAY);
+  const survival = [1, 3, 7, 14, 30].map((day) => {
+    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
+    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
+    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
+  });
+  // Décrochage : ancienneté au moment de la dernière activité, pour les joueurs absents depuis 7 jours.
+  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY);
+  const buckets: [string, (d: number) => boolean][] = [
+    ["Le jour même", (d) => d < 1],
+    ["Jours 1 à 2", (d) => d >= 1 && d < 3],
+    ["Jours 3 à 6", (d) => d >= 3 && d < 7],
+    ["Semaines 2 à 4", (d) => d >= 7 && d < 30],
+    ["Après un mois", (d) => d >= 30],
+  ];
+  const churn = buckets.map(([label, test]) => ({ label, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
+
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
 }

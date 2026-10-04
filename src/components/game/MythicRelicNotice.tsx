@@ -8,7 +8,7 @@ export function MythicRelicNotice({ source }: { source: "leviathan" | "seasonbos
   const here = def.source === source;
   return (
     <div
-      className="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm"
+      className="hud-cut-sm flex items-start gap-3 border px-4 py-3 text-sm"
       style={{ borderColor: here ? "#ff5df088" : "rgba(148,163,184,0.2)", background: here ? "radial-gradient(circle at left, #ff5df022, transparent 70%)" : undefined }}
     >
       <Gem className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "#ff5df0" }} />

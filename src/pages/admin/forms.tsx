@@ -425,7 +425,7 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
         />
       </Section>
 
-      <div className="grid gap-2 border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
         <p>
           Puissance {u.category === "attack" ? "d'attaque" : "de défense"} : <strong className="text-slate-100">{formatNumber(power)}</strong>
         </p>

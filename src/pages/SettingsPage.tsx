@@ -2,20 +2,23 @@ import { useEffect, useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake, Gauge } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
+import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { HudSwitch } from "@/components/ui/hud";
+import { GUIDE_STEPS, guideClaimed, guideHidden } from "@/game/advancedGuide";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
-import { GameActionError, hideOnboarding, syncPlayer } from "@/services/playerService";
+import { GameActionError, hideOnboarding, syncPlayer, hideGuide } from "@/services/playerService";
 import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
@@ -432,7 +435,7 @@ function AllianceNotifsCard() {
               <span className="block text-slate-200">{n.label}</span>
               <span className="text-xs text-slate-500">{n.hint}</span>
             </span>
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={prefs[n.key] !== false} disabled={busy} onChange={() => void toggle(n.key)} />
+            <HudSwitch checked={prefs[n.key] !== false} disabled={busy} onCheckedChange={() => void toggle(n.key)} label={n.label} />
           </label>
         ))}
       </CardContent>
@@ -536,6 +539,7 @@ function HelpCard() {
   const [tips, setTips] = useState(tipsEnabled);
   const hidden = player ? onboardingState(player).hidden === true : false;
   const eligible = player ? onboardingEligible(player) : false;
+  const guideHiddenNow = player ? guideHidden(player) && guideClaimed(player).length < GUIDE_STEPS.length : false;
   return (
     <Card>
       <CardHeader>
@@ -544,13 +548,13 @@ function HelpCard() {
       <CardContent className="space-y-3 text-sm">
         <label className="flex items-center justify-between gap-3">
           <span className="text-slate-300">Bulles d'aide sur les pages (débutants)</span>
-          <input
-            type="checkbox"
+          <HudSwitch
             checked={tips}
-            onChange={(e) => {
-              setTipsEnabled(e.target.checked, e.target.checked);
-              setTips(e.target.checked);
-              toast.success(e.target.checked ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
+            label="Bulles d'aide"
+            onCheckedChange={(v) => {
+              setTipsEnabled(v, v);
+              setTips(v);
+              toast.success(v ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
             }}
           />
         </label>
@@ -567,6 +571,19 @@ function HelpCard() {
             Réafficher les objectifs de prise en main
           </Button>
         )}
+        {guideHiddenNow && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void hideGuide(false)
+                .then(() => toast.success("Le Carnet du commandant est de retour sur l'accueil."))
+                .catch((err) => toast.error(err instanceof GameActionError ? err.message : "Action impossible."))
+            }
+          >
+            Rouvrir le Carnet du commandant
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -576,6 +593,7 @@ function ThemeCard() {
   const theme = useThemeStore((s) => s.theme);
   const skin = useSeasonSkinStore((s) => s.enabled);
   const winter = useWinterStore((s) => s.enabled);
+  const cockpit = useCockpitView((s) => s.enabled);
   const month = chronicleOf(Date.now());
   return (
     <Card>
@@ -583,7 +601,7 @@ function ThemeCard() {
         <CardTitle>Apparence</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {THEMES.map((t) => (
             <button
               key={t.id}
@@ -613,6 +631,15 @@ function ThemeCard() {
         <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
           <span>
             <span className="flex items-center gap-2 text-slate-200">
+              <Gauge className="h-3.5 w-3.5 text-cyan-glow" /> Vue cockpit
+            </span>
+            <span className="text-xs text-slate-500">L'accueil devient un poste de commande : verrière avec ta planète et les flottes en approche, écran multifonction (flottes, chantiers, alertes) et console d'actions rapides (touches 1 à 6). Aussi disponible en bas de la barre latérale.</span>
+          </span>
+          <HudSwitch checked={cockpit} onCheckedChange={setCockpitView} label="Vue cockpit" />
+        </label>
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
               <Snowflake className="h-3.5 w-3.5 text-cyan-glow" /> Neige d'hiver
             </span>
             <span className="text-xs text-slate-500">Neige légère sur le fond, du 1er décembre au 28 février{isWinter(Date.now()) ? "" : " (pas encore de saison)"}.</span>
@@ -623,7 +650,7 @@ function ThemeCard() {
                 Aperçu
               </button>
             )}
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={winter} onChange={(e) => setWinter(e.target.checked)} />
+            <HudSwitch checked={winter} onCheckedChange={setWinter} label="Neige d'hiver" />
           </span>
         </label>
         {month && (
@@ -634,7 +661,7 @@ function ThemeCard() {
               </span>
               <span className="text-xs text-slate-500">Halo et nébuleuses aux couleurs de la chronique du mois.</span>
             </span>
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={skin} onChange={(e) => setSeasonSkin(e.target.checked)} />
+            <HudSwitch checked={skin} onCheckedChange={setSeasonSkin} label="Habillage de saison" />
           </label>
         )}
       </CardContent>
@@ -658,7 +685,7 @@ function SoundCard() {
             <span className="text-slate-200">Effets sonores</span>
             <span className="block text-xs text-slate-500">Coupés par défaut sur mobile. Le bouton haut-parleur de l'en-tête fait la même chose.</span>
           </span>
-          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={enabled} onChange={(e) => setSfxEnabled(e.target.checked)} />
+          <HudSwitch checked={enabled} onCheckedChange={setSfxEnabled} label="Effets sonores" />
         </label>
         <div className={cn("grid gap-3 border-t border-white/5 pt-3 sm:grid-cols-2", !enabled && "pointer-events-none opacity-40")}>
           {SFX_CATEGORIES.map((c) => (

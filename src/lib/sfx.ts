@@ -67,6 +67,36 @@ export function playConfirm() {
   play("ui", [{ freq: 880, duration: 0.08 }]);
 }
 
+/* ---------- v5.12 : Casino orbital ---------- */
+
+/** Levier tiré : cliquetis montant. */
+export function playSlotPull() {
+  play("ui", Array.from({ length: 6 }, (_, i) => ({ freq: 300 + i * 90, duration: 0.04, type: "square" as OscillatorType, volume: 0.03, at: i * 0.05 })));
+}
+
+/** Arrêt d'un rouleau. */
+export function playSlotStop(index: number) {
+  play("ui", [{ freq: 180 + index * 40, to: 120, duration: 0.09, type: "triangle", volume: 0.08 }]);
+}
+
+/** Petit gain. */
+export function playSlotWin() {
+  play("events", [
+    { freq: 784, duration: 0.09, type: "triangle", volume: 0.07 },
+    { freq: 988, duration: 0.09, type: "triangle", volume: 0.07, at: 0.08 },
+    { freq: 1319, duration: 0.2, type: "triangle", volume: 0.07, at: 0.16 },
+  ]);
+}
+
+/** Gros lot : fanfare et pluie de pièces. */
+export function playJackpot() {
+  const notes = [523, 659, 784, 1047, 784, 1047, 1319];
+  play("events", [
+    ...notes.map((f, i) => ({ freq: f, duration: 0.16, type: "triangle" as OscillatorType, volume: 0.09, at: i * 0.11 })),
+    ...Array.from({ length: 14 }, (_, i) => ({ freq: 1800 + (i % 4) * 220, duration: 0.05, type: "sine" as OscillatorType, volume: 0.03, at: 0.8 + i * 0.07 })),
+  ]);
+}
+
 /* ---------- évènements ---------- */
 
 export function playBuildDone() {
@@ -171,6 +201,8 @@ const AMBIENCE: Record<ThemeId, { notes: number[]; type: OscillatorType; cutoff:
   holo: { notes: [110, 164.8, 220, 329.6], type: "sine", cutoff: 1400, lfo: 0.11 },
   cockpit: { notes: [41.2, 61.7, 82.4], type: "square", cutoff: 220, lfo: 0.05 },
   netrunner: { notes: [73.4, 110, 146.8, 174.6], type: "triangle", cutoff: 900, lfo: 0.16 },
+  // Aurora : accord majeur 7e, doux et chaud (Ré, Fa#, La, Do#).
+  aurora: { notes: [73.4, 92.5, 110, 138.6], type: "sine", cutoff: 1100, lfo: 0.09 },
 };
 
 function buildAmbience(audio: AudioContext, theme: ThemeId): AmbienceGraph {

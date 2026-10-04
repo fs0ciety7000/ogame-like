@@ -132,7 +132,7 @@ export function WarlordsPanel() {
               <ChevronDown className={isOpen ? "h-4 w-4 rotate-180 text-slate-400" : "h-4 w-4 text-slate-400"} />
             </button>
             {isOpen && (
-              <div className="grid gap-3 border-t border-white/5 p-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 border-t border-white/5 p-3 sm:grid-cols-2">
                 <TextField label="Nom" value={d.name} onChange={(v) => setDef(d.id, { name: v })} />
                 <CheckboxField label="Actif" checked={d.enabled} onChange={(v) => setDef(d.id, { enabled: v })} />
                 <SelectField<WarlordPersonality>

@@ -365,6 +365,13 @@
         "name": "testMode",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "casino",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -897,6 +904,13 @@
         "type": "json",
         "required": false,
         "maxSize": 20000,
+        "presentable": false
+      },
+      {
+        "name": "profile",
+        "type": "json",
+        "required": false,
+        "maxSize": 60000,
         "presentable": false
       }
     ],

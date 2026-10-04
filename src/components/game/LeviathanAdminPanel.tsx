@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { StatTile } from "@/components/ui/hud";
-import { isActive, LEVIATHAN_RULES, leviathanPace, leviathanRanking, type LeviathanState } from "@/game/leviathan";
+import { Link } from "react-router-dom";
+import { bossWindows, describeBossSchedule } from "@/game/events";
+import { isActive, LEVIATHAN_RULES, leviathanPace, leviathanRanking, leviathanSchedule, type LeviathanState } from "@/game/leviathan";
+import { seasonBossSchedule } from "@/game/chronicles";
 import { adminLeviathan } from "@/services/leviathanService";
+import { adminSeasonBoss } from "@/services/seasonBossService";
 import { formatCompact, formatNumber } from "@/lib/utils";
 
 /** Courbe des points de structure relevés chaque heure. */
@@ -23,22 +27,43 @@ function HpChart({ state }: { state: LeviathanState }) {
   );
 }
 
-/** Suivi en direct du Léviathan pour l'équipe (v3.3) : rythme, projection,
- *  ajustement de la structure à chaud, apparition et retrait manuels. */
-export function LeviathanAdminPanel({ state }: { state: LeviathanState | null }) {
+type BossKindAdmin = "leviathan" | "seasonboss";
+
+const ADMIN_TEXT: Record<BossKindAdmin, { started: string; stopped: string; start: string; stop: string; none: string }> = {
+  leviathan: { started: "Le Léviathan est lâché !", stopped: "Le Léviathan s'est retiré : récompenses versées.", start: "Lâcher le Léviathan maintenant", stop: "Le faire repartir", none: "Aucun Léviathan enregistré." },
+  seasonboss: { started: "Boss de saison lancé.", stopped: "Boss de saison arrêté : récompenses versées.", start: "Lancer le boss maintenant", stop: "L'arrêter et récompenser", none: "Aucun boss de saison enregistré." },
+};
+
+/** « 2026-10-30T18:00 » (heure locale du navigateur) pour un champ datetime-local. */
+function toLocalInput(ms: number): string {
+  const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60_000);
+  return d.toISOString().slice(0, 16);
+}
+
+/** Suivi en direct d'un boss mondial pour l'équipe (v3.3 ; v5.10.4 : boss de saison,
+ *  fin du combat réglable, prochaines occurrences) : rythme, projection, ajustement de
+ *  la structure à chaud, apparition et retrait manuels. */
+export function LeviathanAdminPanel({ state, kind = "leviathan" }: { state: LeviathanState | null; kind?: BossKindAdmin }) {
   const now = Date.now();
   const active = !!state && isActive(state, now);
   const pace = state ? leviathanPace(state, now) : null;
   const [maxHp, setMaxHp] = useState("");
+  const [endAt, setEndAt] = useState("");
   const [busy, setBusy] = useState(false);
+  const text = ADMIN_TEXT[kind];
+  const schedule = kind === "leviathan" ? leviathanSchedule() : seasonBossSchedule();
+  const upcoming = bossWindows(now, schedule, 4).filter((w) => w.startMs > now).slice(0, 3);
 
-  const run = async (action: "start" | "stop" | "resize", value?: number) => {
+  const run = async (action: "start" | "stop" | "resize" | "reschedule", value?: number) => {
     if (action === "resize" && !window.confirm(`Passer la structure maximale à ${formatNumber(value ?? 0)} ?`)) return;
+    if (action === "reschedule" && !window.confirm(`Déplacer la fin du combat au ${new Date(value ?? 0).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })} ?`)) return;
     setBusy(true);
     try {
-      await adminLeviathan(action, value);
-      toast.success(action === "start" ? "Le Léviathan est lâché !" : action === "stop" ? "Le Léviathan s'est retiré : récompenses versées." : "Structure ajustée.");
+      if (kind === "leviathan") await adminLeviathan(action, action === "resize" ? value : undefined, action === "reschedule" ? value : undefined);
+      else await adminSeasonBoss(action, action === "resize" ? value : undefined, action === "reschedule" ? value : undefined);
+      toast.success(action === "start" ? text.started : action === "stop" ? text.stopped : action === "resize" ? "Structure ajustée." : "Fin du combat déplacée.");
       setMaxHp("");
+      setEndAt("");
     } catch (err) {
       toast.error((err as { response?: { message?: string } }).response?.message ?? "Action impossible.");
     } finally {
@@ -87,16 +112,54 @@ export function LeviathanAdminPanel({ state }: { state: LeviathanState | null })
               <p className="w-full text-[11px] text-slate-500">Les dégâts déjà infligés sont conservés ; l'ajustement est consigné dans le journal admin.</p>
             </div>
           )}
+          {active && (
+            <div className="flex flex-wrap items-end gap-2 border-t border-white/5 pt-3">
+              <label className="flex flex-col gap-1 text-xs text-slate-400">
+                Fin du combat
+                <input
+                  type="datetime-local"
+                  value={endAt || toLocalInput(state.endMs)}
+                  onChange={(e) => setEndAt(e.target.value)}
+                  className="h-8 border border-white/10 bg-space-900 px-2 font-mono text-xs text-slate-100"
+                  aria-label="Fin du combat"
+                />
+              </label>
+              <Button size="sm" variant="outline" disabled={busy || !endAt || !(new Date(endAt).getTime() > now)} onClick={() => void run("reschedule", new Date(endAt).getTime())}>
+                Déplacer la fin
+              </Button>
+              {[6, 24].map((h) => (
+                <Button key={h} size="sm" variant="ghost" disabled={busy} onClick={() => setEndAt(toLocalInput(state.endMs + h * 3600_000))}>
+                  +{h} h
+                </Button>
+              ))}
+              <p className="w-full text-[11px] text-slate-500">Prolonger ou écourter le combat en cours (heure de ton navigateur). Consigné dans le journal admin.</p>
+            </div>
+          )}
         </>
       ) : (
-        <p className="text-xs text-slate-500">Aucun Léviathan enregistré.</p>
+        <p className="text-xs text-slate-500">{text.none}</p>
       )}
+      <div className="flex flex-col gap-1 border-t border-white/5 pt-3 text-xs text-slate-400">
+        <p>
+          <span className="text-slate-300">Occurrence :</span> {describeBossSchedule(schedule)}.{" "}
+          <Link to="/game/admin?onglet=rules" className="text-cyan-glow hover:underline">
+            Modifier dans les règles
+          </Link>
+        </p>
+        {upcoming.length > 0 && (
+          <p>
+            <span className="text-slate-300">Prochaines apparitions :</span>{" "}
+            {upcoming.map((w) => new Date(w.startMs).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })).join(" · ")}
+          </p>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2 border-t border-white/5 pt-3">
         <Button size="sm" variant="outline" disabled={busy || active} onClick={() => void run("start")}>
-          Lâcher le Léviathan maintenant
+          {text.start}
         </Button>
         <Button size="sm" variant="outline" disabled={busy || !active} onClick={() => void run("stop")}>
-          Le faire repartir (récompenses ×{LEVIATHAN_RULES.failedRewardFactor})
+          {text.stop}
+          {kind === "leviathan" ? ` (récompenses ×${LEVIATHAN_RULES.failedRewardFactor})` : ""}
         </Button>
       </div>
     </Card>

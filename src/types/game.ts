@@ -114,7 +114,7 @@ export interface PlayerState {
   /** Statistiques cumulées (v2.3), écrites par le serveur. */
   stats?: import("@/game/stats").PlayerStats;
   /** v2.9 : objectifs de prise en main réclamés. */
-  onboarding?: { claimed: string[]; hidden?: boolean; tutorialRaid?: "due" | "sent" };
+  onboarding?: { claimed: string[]; hidden?: boolean; tutorialRaid?: "due" | "sent"; advanced?: string[]; advancedHidden?: boolean };
   /** v3.0 : posture de la base face aux attaques. */
   posture?: { id: "standard" | "bunker" | "riposte"; changedAtMs: number };
   /** v3.4 : nombre d'ascensions et date de la dernière. */
@@ -143,6 +143,8 @@ export interface PlayerState {
   renamed?: import("@/game/rename").RenameState | null;
   /** v5.3 : série de connexion quotidienne. */
   streak?: import("@/game/streak").StreakState | null;
+  /** v5.12 : Casino orbital (jetons, tours joués, gains). */
+  casino?: import("@/game/casino").PlayerCasino | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;
@@ -298,6 +300,8 @@ export interface Alliance {
   daily?: unknown;
   /** v5.1 : coffre de guerre (dépôts des objectifs du jour). */
   warChest?: import("@/game/seasonWars").WarChest | null;
+  /** v5.10.5 : fiche publique, recrutement, rangs personnalisés, candidatures. */
+  profile?: unknown;
 }
 
 export interface AllianceLog {

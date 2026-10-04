@@ -499,7 +499,7 @@ export function GalaxyPage() {
           {blips.length === 0 && (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
-          <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-space-950/70 px-2 py-1 text-[10px] text-slate-400">
+          <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-gold-glow" /> Toi
             </span>
@@ -524,7 +524,7 @@ export function GalaxyPage() {
               <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
             </span>
           </div>
-          <p className="pointer-events-none absolute right-2 top-2 rounded-md bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
+          <p className="pointer-events-none absolute right-2 top-2 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
         </div>
@@ -569,7 +569,7 @@ export function GalaxyPage() {
                 </div>
               )}
               {selectedDebris && (
-                <div className="flex items-center gap-2 rounded-lg border border-mint-glow/30 bg-mint-glow/5 px-3 py-2 text-xs text-slate-300">
+                <div className="hud-callout hud-tone-mint flex items-center gap-2 px-3 py-2 text-xs text-slate-300">
                   <span className="flex-1">
                     <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> {formatCompact(selectedDebris.scrap)} · <ResourceIcon id="energy" /> {formatCompact(selectedDebris.energy)}
                   </span>

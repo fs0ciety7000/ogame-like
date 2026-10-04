@@ -14,6 +14,8 @@ import { StreakBadge } from "@/components/game/StreakBadge";
 import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
+import { HudChip } from "@/components/ui/hud";
+import { ClaimAllChip } from "@/components/game/ClaimAllChip";
 
 /** v5.2 : bonus de production actifs (infobulle). Ils se multiplient entre eux. */
 function BonusList({ bonuses }: { bonuses: { label: string; pct: number }[] }) {
@@ -115,15 +117,16 @@ export function ResourceHud() {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
       <HostileFleetAlert />
+      <ClaimAllChip />
       <StreakBadge />
       <EventBadge />
       <UltimatumBadge />
       {economy.outage && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="animate-pulse-alert border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-danger-glow">
+            <HudChip tone="danger" alert tabIndex={0}>
               <GameIcon name="energy" /> Panne d'énergie
-            </span>
+            </HudChip>
           </TooltipTrigger>
           <TooltipContent>
             L'entretien de ta flotte consomme plus d'énergie que tu n'en produis : les autres productions tournent à 50 %. Améliore le

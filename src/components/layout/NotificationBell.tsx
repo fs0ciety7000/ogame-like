@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigg
 import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
-import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
+import { groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
 import { NotificationCard } from "@/components/game/NotificationCard";
 
@@ -18,6 +18,7 @@ export function NotificationBell() {
   // Non-lues au moment de l'ouverture : elles restent en évidence pendant la
   // consultation, même si elles sont marquées lues aussitôt.
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
   const hasUrgentUnread = useMemo(
     () => items.some((n) => !n.read && (n.kind === "combat-defender" || n.kind === "spy-detected")),
@@ -75,35 +76,52 @@ export function NotificationBell() {
                 aria-selected={tab === c.id}
                 onClick={() => setTab(c.id)}
                 className={cn(
-                  "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
-                  tab === c.id ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-400 hover:text-slate-200",
+                  "hud-cut-sm flex items-center gap-1.5 border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors",
+                  tab === c.id ? "border-cyan-glow/50 bg-cyan-glow/15 text-cyan-glow" : "border-transparent text-slate-400 hover:text-slate-200",
                 )}
               >
                 {c.label}
-                {count > 0 && <span className="rounded-full bg-danger-glow/80 px-1.5 text-[10px] font-bold text-space-950">{count}</span>}
+                {count > 0 && <span className="bg-danger-glow px-1 font-bold text-white">{count}</span>}
               </button>
             );
           })}
         </div>
         <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
           {shown.length === 0 && <p className="px-3 py-4 text-sm text-slate-500">Rien dans cette catégorie pour l'instant.</p>}
-          {shown.map((n) => {
-            const link = notificationLink(n);
+          {groupNotifications(shown).map((g) => {
+            const open = expanded.has(g.key);
+            const list = open ? [g.head, ...g.rest] : [g.head];
             return (
-              <NotificationCard
-                key={n.id}
-                n={n}
-                compact
-                fresh={freshIds.has(n.id)}
-                onOpen={
-                  link
-                    ? () => {
-                        setBellOpen(false);
-                        navigate(link);
+              <div key={g.key} className="flex flex-col gap-1">
+                {list.map((n) => {
+                  const link = notificationLink(n);
+                  return (
+                    <NotificationCard
+                      key={n.id}
+                      n={n}
+                      compact
+                      fresh={freshIds.has(n.id)}
+                      onOpen={
+                        link
+                          ? () => {
+                              setBellOpen(false);
+                              navigate(link);
+                            }
+                          : undefined
                       }
-                    : undefined
-                }
-              />
+                    />
+                  );
+                })}
+                {g.rest.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((s) => (s.has(g.key) ? new Set([...s].filter((k) => k !== g.key)) : new Set([...s, g.key])))}
+                    className="hud-cut-sm self-start border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
+                  >
+                    {open ? "Replier" : `+ ${g.rest.length} similaire${g.rest.length > 1 ? "s" : ""}`}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>

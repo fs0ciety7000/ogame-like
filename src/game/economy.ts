@@ -58,6 +58,8 @@ export interface EconomyInput {
   talents?: PlayerState["talents"];
   /** v5.10 : multiplicateur propre à la planète (colonies : terres neuves). */
   productionFactor?: number;
+  /** Colonies : multiplicateur d'entrepôt (spécialisation « Dépôt logistique »). */
+  storageFactor?: number;
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -76,7 +78,8 @@ function boostAt(input: EconomyInput, at: number): number {
 export function storageCapacityOf(input: EconomyInput): number {
   const base = getStorageCapacity(input.buildings, input.techLevels);
   const bonus = input.commanders ? playerModifiers(input).storage : 0;
-  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
+  const factor = (1 + Math.max(0, bonus)) * (input.storageFactor ?? 1);
+  return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
 
 /** Énergie consommée par seconde par les unités construites. */
