@@ -44,8 +44,9 @@ import type { Alliance } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
+import { LeaguePanel } from "@/components/game/LeaguePanel";
 
-type LeaderboardMode = "total" | "season" | "alliances";
+type LeaderboardMode = "total" | "season" | "alliances" | "ligues";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -88,12 +89,13 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total") setMode(wanted);
+    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "ligues") setMode(wanted);
+    if (params.get("onglet") === "ligues") setMode("ligues");
     if (fiche) {
       const p = players.find((x) => x.uid === fiche);
       setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
     }
-    if (fiche || wanted) setParams({}, { replace: true });
+    if (fiche || wanted || params.get("onglet")) setParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- lecture unique des paramètres
   }, [params]);
   // Mes attaques des 2 dernières heures (délai avant de réattaquer une cible),
@@ -175,6 +177,7 @@ export function PlayersPage() {
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
+            <TabsTrigger value="ligues">Ligues</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
@@ -183,7 +186,7 @@ export function PlayersPage() {
               {seasonLabel(season)}
             </span>
           )}
-          {mode !== "alliances" && myRank && (
+          {mode !== "alliances" && mode !== "ligues" && myRank && (
             <Button variant="secondary" size="sm" onClick={jumpToMe}>
               <Crosshair className="h-3.5 w-3.5" /> Ma position · #{myRank}
             </Button>
@@ -205,7 +208,9 @@ export function PlayersPage() {
         />
       </div>
 
-      {mode === "alliances" ? (
+      {mode === "ligues" ? (
+        <LeaguePanel players={players} uid={uid ?? ""} />
+      ) : mode === "alliances" ? (
         <Card className="divide-y divide-white/5">
           {allianceRanking.length === 0 && (
             <p className="p-4 text-sm text-slate-500">

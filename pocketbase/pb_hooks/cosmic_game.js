@@ -96,6 +96,7 @@ __export(hooksEntry_exports, {
   GAZETTE_KEY: () => GAZETTE_KEY,
   GameActionError: () => GameActionError,
   KESH_EMOJIS: () => KESH_EMOJIS,
+  LEAGUES_KEY: () => LEAGUES_KEY,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
@@ -200,6 +201,7 @@ __export(hooksEntry_exports, {
   clearOfficerCooldowns: () => clearOfficerCooldowns,
   clientChallenge: () => clientChallenge,
   closeElite: () => closeElite,
+  closeLeagues: () => closeLeagues,
   closeLeviathan: () => closeLeviathan,
   coalitionRanking: () => coalitionRanking,
   codexEntries: () => codexEntries,
@@ -293,6 +295,7 @@ __export(hooksEntry_exports, {
   isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
+  leagueInfo: () => leagueInfo,
   leviathanRanking: () => leviathanRanking,
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
@@ -315,6 +318,7 @@ __export(hooksEntry_exports, {
   normalizeContests: () => normalizeContests,
   normalizeCustomEmojis: () => normalizeCustomEmojis,
   normalizeElite: () => normalizeElite,
+  normalizeLeagues: () => normalizeLeagues,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeProcedural: () => normalizeProcedural,
@@ -1746,11 +1750,11 @@ function setRanks(defs) {
 }
 setRanks(structuredClone(DEFAULT_RANKS));
 function getRankIndex(xp) {
-  let index = 0;
+  let index2 = 0;
   for (let i = 0; i < RANKS.length; i++) {
-    if ((xp != null ? xp : 0) >= RANKS[i].xp) index = i;
+    if ((xp != null ? xp : 0) >= RANKS[i].xp) index2 = i;
   }
-  return index;
+  return index2;
 }
 function getRank(xp) {
   var _a;
@@ -2736,9 +2740,9 @@ function mythicTemplates() {
 }
 function mythicFor(seasonId) {
   const [y, m] = seasonId.split("-").map(Number);
-  const index = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
+  const index2 = (Number.isFinite(y) ? y : 0) * 12 + (Number.isFinite(m) ? m - 1 : 0);
   const pool = mythicTemplates();
-  return { template: pool[index % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
+  return { template: pool[index2 % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
 var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
 function validateRelics(defs, settings) {
@@ -3742,8 +3746,8 @@ function targetFor(type, player) {
       return 1;
   }
 }
-function makeContract(type, player, day, index) {
-  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+function makeContract(type, player, day, index2) {
+  return { id: `${day}-${index2}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
 }
 function ensureContracts(player, now) {
   var _a, _b;
@@ -3784,8 +3788,8 @@ function contractReward(player, contract) {
   var _a, _b, _c;
   const state = player.contracts;
   const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
-  const index = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
-  const rare = RARES[(index + contract.type.length) % RARES.length];
+  const index2 = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index2 + contract.type.length) % RARES.length];
   return {
     [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
     xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
@@ -3828,16 +3832,16 @@ function claimContract(player, contractId, now) {
 function rerollContract(player, contractId, now) {
   const state = ensureContracts(player, now);
   if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
-  const index = state.items.findIndex((c) => c.id === contractId);
-  if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (state.items[index].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const index2 = state.items.findIndex((c) => c.id === contractId);
+  if (index2 < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index2].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
   const used = new Set(state.items.map((c) => c.type));
   const pool = ALL_TYPES.filter((t) => !used.has(t));
   const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
   const type = pool[Math.floor(rand() * pool.length)];
-  const next = makeContract(type, player, state.day, index);
-  next.id = `${state.day}-${index}-${type}-r`;
-  state.items[index] = next;
+  const next = makeContract(type, player, state.day, index2);
+  next.id = `${state.day}-${index2}-${type}-r`;
+  state.items[index2] = next;
   state.rerolled = true;
   return next;
 }
@@ -5373,9 +5377,9 @@ function addPlanned(player, queues, buildingId, now) {
   queues.buildPlan = [...plan, entry];
   return entry;
 }
-function removePlanned(queues, index) {
+function removePlanned(queues, index2) {
   const plan = buildPlan(queues);
-  const i = Math.floor(Number(index));
+  const i = Math.floor(Number(index2));
   if (!(i >= 0 && i < plan.length)) throw new GameActionError("Cette am\xE9lioration n'est plus programm\xE9e.");
   const removed = plan[i];
   queues.buildPlan = plan.filter((p, j) => j !== i && !(j > i && p.buildingId === removed.buildingId));
@@ -7369,10 +7373,10 @@ function unlockedEpisodes(now) {
   const { d } = parisDate(now);
   return d >= 22 ? 4 : d >= 15 ? 3 : d >= 8 ? 2 : 1;
 }
-function episodeUnlockMs(monthId, index) {
+function episodeUnlockMs(monthId, index2) {
   var _a;
   const [y, m] = monthId.split("-").map(Number);
-  return parisLocalToUtc(Date.UTC(y, m - 1, (_a = [1, 8, 15, 22][index]) != null ? _a : 1));
+  return parisLocalToUtc(Date.UTC(y, m - 1, (_a = [1, 8, 15, 22][index2]) != null ? _a : 1));
 }
 function chronicleState(player, now) {
   var _a, _b;
@@ -7832,8 +7836,8 @@ function allianceWeekId(now) {
 }
 function allianceBossOfWeek(now) {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
-  const index = Math.floor(monday / (7 * DAY7));
-  return ALLIANCE_BOSSES[(index % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
+  const index2 = Math.floor(monday / (7 * DAY7));
+  return ALLIANCE_BOSSES[(index2 % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
 }
 function allianceBossDef(state) {
   var _a;
@@ -10343,12 +10347,12 @@ function credit(target, refund) {
   var _a;
   for (const [res, n] of Object.entries(refund)) target[res] = ((_a = target[res]) != null ? _a : 0) + (n != null ? n : 0);
 }
-function unitGroupAt(queue, index) {
-  if (index < 0 || index >= queue.length) return null;
-  const unitId = queue[index].unitId;
-  let start = index;
+function unitGroupAt(queue, index2) {
+  if (index2 < 0 || index2 >= queue.length) return null;
+  const unitId = queue[index2].unitId;
+  let start = index2;
   while (start > 0 && queue[start - 1].unitId === unitId) start--;
-  let end = index;
+  let end = index2;
   while (end + 1 < queue.length && queue[end + 1].unitId === unitId) end++;
   return { start, count: end - start + 1 };
 }
@@ -12827,10 +12831,10 @@ function proposeDaily(allianceId, day, members, now) {
   const proposals = DAILY_KINDS.filter((_, i) => i !== skip).map((kind) => ({ kind, target: targets[kind] }));
   return { day, proposals, votes: {}, status: "voting", chosen: null, baseline: {}, progress: 0, contributions: {}, resourceBase, updatedAtMs: now };
 }
-function voteDaily(daily, uid, role, index, now) {
+function voteDaily(daily, uid, role, index2, now) {
   if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers votent l'objectif du jour.");
   if (daily.status !== "voting" || dailyPhase(now) !== "voting" || daily.day !== parisDay(now)) throw new GameActionError(`Le vote est ouvert de ${ALLIANCE_DAILY_RULES.proposeHour} h \xE0 ${ALLIANCE_DAILY_RULES.voteEndHour} h.`);
-  const i = Math.floor(Number(index));
+  const i = Math.floor(Number(index2));
   if (!(i >= 0 && i < daily.proposals.length)) throw new GameActionError("Objectif inconnu.");
   daily.votes = __spreadProps(__spreadValues({}, daily.votes), { [uid]: i });
 }
@@ -17823,8 +17827,8 @@ var ALLIANCE_CHALLENGES = [
 ];
 var ALLIANCE_CHALLENGE_REWARDS = [6, 4, 2];
 function challengeOfWeek(weekId2) {
-  const index = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
-  return ALLIANCE_CHALLENGES[(index % ALLIANCE_CHALLENGES.length + ALLIANCE_CHALLENGES.length) % ALLIANCE_CHALLENGES.length];
+  const index2 = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
+  return ALLIANCE_CHALLENGES[(index2 % ALLIANCE_CHALLENGES.length + ALLIANCE_CHALLENGES.length) % ALLIANCE_CHALLENGES.length];
 }
 function findAllianceChallenge(id) {
   var _a;
@@ -17878,6 +17882,62 @@ function startAllianceChallengeWeek(players, now, previous) {
   const baselines = {};
   for (const p of players) baselines[p.uid] = value(challenge.metric, p);
   return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
+}
+
+// src/game/leagues.ts
+var LEAGUES_KEY = "leagues";
+var LEAGUE_TIERS = [
+  { id: "bronze", label: "Bronze", emoji: "\u{1F949}", color: "#e0a26b", rewardHours: 1 },
+  { id: "argent", label: "Argent", emoji: "\u{1F948}", color: "#cbd5e1", rewardHours: 2 },
+  { id: "or", label: "Or", emoji: "\u{1F947}", color: "#ffd86b", rewardHours: 3 },
+  { id: "platine", label: "Platine", emoji: "\u{1F4A0}", color: "#4be8ff", rewardHours: 4 },
+  { id: "diamant", label: "Diamant", emoji: "\u{1F48E}", color: "#a78bfa", rewardHours: 6 }
+];
+var LEAGUE_RULES = {
+  /** Part de chaque ligue qui monte / descend à la fin de la saison. */
+  promotePct: 0.2,
+  relegatePct: 0.2
+};
+function normalizeLeagues(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const ids = new Set(LEAGUE_TIERS.map((t) => t.id));
+  const tiers2 = {};
+  for (const [uid, t] of Object.entries(r.tiers && typeof r.tiers === "object" ? r.tiers : {})) if (ids.has(t)) tiers2[uid] = t;
+  return { seasonId: typeof r.seasonId === "string" ? r.seasonId : "", tiers: tiers2, last: r.last && typeof r.last === "object" ? r.last : null };
+}
+function leagueTier(state, uid) {
+  var _a;
+  return (_a = state == null ? void 0 : state.tiers[uid]) != null ? _a : "bronze";
+}
+function leagueInfo(tier) {
+  var _a;
+  return (_a = LEAGUE_TIERS.find((t) => t.id === tier)) != null ? _a : LEAGUE_TIERS[0];
+}
+var index = (tier) => LEAGUE_TIERS.findIndex((t) => t.id === tier);
+function leagueStandings(entries, state, seasonId, tier) {
+  const members = entries.filter((e3) => leagueTier(state, e3.uid) === tier).map((e3) => ({ uid: e3.uid, pseudo: e3.pseudo, seasonXp: seasonXpFor(e3, seasonId) })).sort((a, b) => b.seasonXp - a.seasonXp || (a.pseudo < b.pseudo ? -1 : 1));
+  const n = members.length;
+  const up = index(tier) < LEAGUE_TIERS.length - 1 ? Math.ceil(n * LEAGUE_RULES.promotePct) : 0;
+  const down = index(tier) > 0 ? Math.floor(n * LEAGUE_RULES.relegatePct) : 0;
+  return members.map((m, i) => __spreadProps(__spreadValues({}, m), {
+    rank: i + 1,
+    // Les inactifs (0 XP) ne montent jamais et descendent toujours (hors bronze).
+    zone: m.seasonXp > 0 && i < up ? "up" : index(tier) > 0 && (m.seasonXp <= 0 || i >= n - down) ? "down" : "stay"
+  }));
+}
+function closeLeagues(state, entries, seasonId, nextSeasonId) {
+  const tiers2 = __spreadValues({}, state.tiers);
+  const moves = {};
+  const rewards = [];
+  for (const t of LEAGUE_TIERS) {
+    for (const row of leagueStandings(entries, state, seasonId, t.id)) {
+      const to = row.zone === "up" ? LEAGUE_TIERS[index(t.id) + 1].id : row.zone === "down" ? LEAGUE_TIERS[index(t.id) - 1].id : t.id;
+      tiers2[row.uid] = to;
+      moves[row.uid] = { from: t.id, to, rank: row.rank };
+      if (row.seasonXp > 0) rewards.push({ uid: row.uid, tier: t.id, hours: t.rewardHours, move: row.zone, to, rank: row.rank });
+    }
+  }
+  return { state: { seasonId: nextSeasonId, tiers: tiers2, last: { seasonId, moves } }, rewards };
 }
 
 // src/server/hooksEntry.ts

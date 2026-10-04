@@ -1483,6 +1483,26 @@ function closeSeason(game, now, seasonIdIn) {
       a.set("treasury", treasury);
       txApp.save(a);
     });
+    // v5.10.5 : ligues — montées, descentes et récompense selon la ligue.
+    try {
+      const lrec = configRecord(txApp, game.LEAGUES_KEY);
+      const leagues = game.normalizeLeagues(lrec ? toPlain(lrec).data : null);
+      const everyone = proceduralPlayers(txApp);
+      const closed = game.closeLeagues(leagues, everyone, seasonId, game.currentSeasonId(now));
+      closed.rewards.forEach((r) => {
+        if (!findOrNull(txApp, "players", r.uid)) return;
+        const info = game.leagueInfo(r.tier);
+        const next = game.leagueInfo(r.to);
+        const loaded = loadPlayer(txApp, game, r.uid);
+        const headline = r.move === "up" ? `Ligue : promotion en ${next.label} ${next.emoji} !` : r.move === "down" ? `Ligue : retour en ${next.label}` : `Ligue ${info.label} : ${r.rank}${r.rank === 1 ? "er" : "e"}`;
+        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: r.rank, seasonXp: 0 }, { hours: r.hours, rare: 0, title: "" }, now, headline);
+        savePlayer(txApp, game, loaded, out.player, out.queues);
+        notify(txApp, r.uid, out.notifications.map((n) => (n.kind === "season" && n.title === headline ? Object.assign({}, n, { message: `${info.emoji} Ligue ${info.label}, ${r.rank}${r.rank === 1 ? "er" : "e"} : ${r.hours} h de production versées.`, link: "/game/joueurs?onglet=ligues" }) : n)));
+      });
+      writeConfig(txApp, game.LEAGUES_KEY, closed.state);
+    } catch (err) {
+      console.log(`[cosmic] ligues : ${err}`);
+    }
     summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length, seasonWar: war.length };
   });
   return summary;
