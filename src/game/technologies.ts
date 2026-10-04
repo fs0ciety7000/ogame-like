@@ -49,6 +49,8 @@ export interface TechDef {
   /** Ancien format : un seul effet. */
   effect?: TechEffect;
   costGrowth?: number;
+  /** v5.9 : ambre (monnaie des Kesh'Vaar) demandé à chaque niveau, en plus des ressources. */
+  amberCost?: number;
   prereq: Record<string, number>;
   /** Valeur de l'effet historique par niveau ; défaut dans TECH_EFFECT_DEFAULTS. */
   effectValue?: number;
@@ -209,6 +211,12 @@ export function getTechCost(tech: TechDef, level: number): Record<string, number
     cost[res] = Math.floor(amount * factor);
   }
   return cost;
+}
+
+/** v5.9 : ambre payé pour un niveau (montant fixe, identique à chaque niveau). */
+export function getTechAmberCost(tech: Pick<TechDef, "amberCost">): number {
+  const n = Number(tech.amberCost);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
 export function getTechTime(tech: TechDef, level: number): number {

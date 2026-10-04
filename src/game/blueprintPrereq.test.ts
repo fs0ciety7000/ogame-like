@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { performPlayerAction } from "@/game/actions";
 import { DEFAULT_TECHNOLOGIES, setTechnologies } from "@/game/technologies";
@@ -19,12 +19,16 @@ function rich(owned: string[] = []): PlayerState {
   return p;
 }
 
-describe("v5.9 recherche d'une techno à plan", () => {
+beforeAll(() =>
   setTechnologies([
     ...DEFAULT_TECHNOLOGIES,
     { id: "tech_kesh", nom: "Traqueur Kesh", desc: "", maxLevel: 20, baseCost: { scrap: 1 }, baseTime: 1, effects: [{ type: "unlock_next_level", target: "traqueur_kesh" }], prereq: { tech1: 18 } },
-  ]);
-  afterAll(() => setTechnologies(DEFAULT_TECHNOLOGIES));
+    { id: "tech_ambre", nom: "Techno à l'ambre", desc: "", maxLevel: 5, baseCost: { scrap: 1 }, baseTime: 600, amberCost: 10, effects: [{ type: "unit_attack" }], prereq: {} },
+  ]),
+);
+afterAll(() => setTechnologies(DEFAULT_TECHNOLOGIES));
+
+describe("v5.9 recherche d'une techno à plan", () => {
 
   it("est refusée sans le plan du Traqueur Kesh", () => {
     expect(() => performPlayerAction(rich(), defaultQueues(), { type: "research", techId: "tech_kesh" }, NOW)).toThrow(/Prérequis/);
@@ -33,5 +37,34 @@ describe("v5.9 recherche d'une techno à plan", () => {
   it("est acceptée une fois le plan acheté", () => {
     const out = performPlayerAction(rich(["blueprint"]), defaultQueues(), { type: "research", techId: "tech_kesh" }, NOW);
     expect(out.queues.activeResearches.map((r) => r.id)).toContain("tech_kesh");
+  });
+});
+
+describe("v5.9 ambre dans le coût d'une techno", () => {
+
+  const withAmber = (amber: number) => {
+    const p = rich();
+    p.bounties = { ...p.bounties!, amber } as NonNullable<PlayerState["bounties"]>;
+    return p;
+  };
+
+  it("prélève l'ambre en plus des ressources", () => {
+    const out = performPlayerAction(withAmber(25), defaultQueues(), { type: "research", techId: "tech_ambre" }, NOW);
+    expect(out.player.bounties?.amber).toBe(15);
+    expect(out.queues.activeResearches.find((r) => r.id === "tech_ambre")?.paidAmber).toBe(10);
+  });
+
+  it("refuse la recherche sans assez d'ambre, sans rien prélever", () => {
+    const p = withAmber(9);
+    const scrap = p.resources.scrap;
+    expect(() => performPlayerAction(p, defaultQueues(), { type: "research", techId: "tech_ambre" }, NOW)).toThrow(/ambre/);
+    expect(p.resources.scrap).toBe(scrap);
+  });
+
+  it("rend l'ambre si la recherche est annulée dans la première minute", () => {
+    const started = performPlayerAction(withAmber(10), defaultQueues(), { type: "research", techId: "tech_ambre" }, NOW);
+    expect(started.player.bounties?.amber).toBe(0);
+    const out = performPlayerAction(started.player, started.queues, { type: "cancel", target: { kind: "research", id: "tech_ambre" } }, NOW + 10_000);
+    expect(out.player.bounties?.amber).toBe(10);
   });
 });

@@ -1,4 +1,5 @@
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
+import { bountyState } from "@/game/bounties";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds } from "@/game/colonies";
 import { GameActionError } from "@/game/errors";
@@ -62,6 +63,8 @@ export interface CancelQuote {
   /** Part remboursée (0 → 1) de la partie annulée. */
   fraction: number;
   label: string;
+  /** v5.9 : ambre rendu (recherche qui en coûtait). */
+  amber?: number;
 }
 
 /** Lot d'unités : entrées consécutives du même type à partir de `index`. */
@@ -108,7 +111,8 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
       const paid = entry.paid ?? getTechCost(tech, level);
       const start = entry.startedAtMs ?? entry.endTime - Math.round(getTechTime(tech, level) * playerResearchTimeFactor(player, now)) * 1000;
       const fraction = refundFraction(start, entry.endTime, now);
-      return { refund: scaleCost(paid, fraction), fraction, label: `${tech.nom} niveau ${level}` };
+      const amber = Math.floor((entry.paidAmber ?? 0) * fraction);
+      return { refund: scaleCost(paid, fraction), fraction, label: `${tech.nom} niveau ${level}`, ...(amber > 0 ? { amber } : {}) };
     }
     case "units": {
       const queue = queues.unitQueues[target.category];
@@ -162,6 +166,11 @@ export function performCancel(player: PlayerState, queues: QueuesState, target: 
     case "research":
       queues.activeResearches = queues.activeResearches.filter((r) => r.id !== target.id);
       credit(player.resources, quote.refund);
+      if (quote.amber) {
+        const bounty = bountyState(player);
+        bounty.amber += quote.amber;
+        player.bounties = bounty;
+      }
       break;
     case "units": {
       const queue = queues.unitQueues[target.category];

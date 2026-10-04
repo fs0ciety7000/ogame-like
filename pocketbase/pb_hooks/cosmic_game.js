@@ -532,6 +532,10 @@ function getTechCost(tech, level3) {
   }
   return cost;
 }
+function getTechAmberCost(tech) {
+  const n = Number(tech.amberCost);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
 function getTechTime(tech, level3) {
   return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level3 - 1));
 }
@@ -9589,7 +9593,7 @@ function unitGroupAt(queue, index) {
   return { start, count: end - start + 1 };
 }
 function quoteCancel(player, queues, target, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   switch (target.kind) {
     case "building": {
       const entry = queues.buildingUpgrades[target.id];
@@ -9609,7 +9613,8 @@ function quoteCancel(player, queues, target, now) {
       const paid = (_h = entry.paid) != null ? _h : getTechCost(tech, level3);
       const start = (_i = entry.startedAtMs) != null ? _i : entry.endTime - Math.round(getTechTime(tech, level3) * playerResearchTimeFactor(player, now)) * 1e3;
       const fraction = refundFraction(start, entry.endTime, now);
-      return { refund: scaleCost(paid, fraction), fraction, label: `${tech.nom} niveau ${level3}` };
+      const amber = Math.floor(((_j = entry.paidAmber) != null ? _j : 0) * fraction);
+      return __spreadValues({ refund: scaleCost(paid, fraction), fraction, label: `${tech.nom} niveau ${level3}` }, amber > 0 ? { amber } : {});
     }
     case "units": {
       const queue = queues.unitQueues[target.category];
@@ -9633,8 +9638,8 @@ function quoteCancel(player, queues, target, now) {
       const colony = colonyOf(player, target.colonyId);
       const job = colony == null ? void 0 : colony.building;
       if (!colony || !job) throw new GameActionError("Aucune construction en cours sur cette colonie.");
-      const paid = (_j = job.paid) != null ? _j : colonyUpgradeCost(player, job.id, job.level);
-      const start = (_k = job.startedAtMs) != null ? _k : job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1e3;
+      const paid = (_k = job.paid) != null ? _k : colonyUpgradeCost(player, job.id, job.level);
+      const start = (_l = job.startedAtMs) != null ? _l : job.endTime - colonyUpgradeSeconds(player, job.id, job.level, now) * 1e3;
       const fraction = refundFraction(start, job.endTime, now);
       return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}` };
     }
@@ -9643,8 +9648,8 @@ function quoteCancel(player, queues, target, now) {
       const job = colony == null ? void 0 : colony.defenseJob;
       const unit = job ? findUnit(job.unitId) : void 0;
       if (!colony || !job || !unit) throw new GameActionError("Aucune d\xE9fense en construction sur cette colonie.");
-      const paid = (_l = job.paid) != null ? _l : { scrap: unit.cost.scrap * job.qty, energy: unit.cost.energy * job.qty };
-      const start = (_m = job.startedAtMs) != null ? _m : job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty) * 1e3;
+      const paid = (_m = job.paid) != null ? _m : { scrap: unit.cost.scrap * job.qty, energy: unit.cost.energy * job.qty };
+      const start = (_n = job.startedAtMs) != null ? _n : job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty) * 1e3;
       const fraction = refundFraction(start, job.endTime, now);
       return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${job.qty} \xD7 ${unit.name}` };
     }
@@ -9661,6 +9666,11 @@ function performCancel(player, queues, target, now) {
     case "research":
       queues.activeResearches = queues.activeResearches.filter((r) => r.id !== target.id);
       credit(player.resources, quote.refund);
+      if (quote.amber) {
+        const bounty = bountyState(player);
+        bounty.amber += quote.amber;
+        player.bounties = bounty;
+      }
       break;
     case "units": {
       const queue = queues.unitQueues[target.category];
@@ -9966,8 +9976,15 @@ function applyAction(s, action) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       const paid = getTechCost(tech, nextLevel);
+      const amber = getTechAmberCost(tech);
+      const bounty = amber > 0 ? bountyState(player) : null;
+      if (bounty && bounty.amber < amber) throw new GameActionError(`Pas assez d'ambre (${amber} requis).`);
       pay(player, paid, now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3, startedAtMs: now, paid });
+      if (bounty) {
+        bounty.amber -= amber;
+        player.bounties = bounty;
+      }
+      queues.activeResearches.push(__spreadValues({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1e3, startedAtMs: now, paid }, amber > 0 ? { paidAmber: amber } : {}));
       bumpStat(player, "researchStarted");
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);
@@ -10859,6 +10876,7 @@ function validateGameContent(content) {
       for (const e3 of t.effects) errors.push(...validateTechEffect(label3, e3, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
+    if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
     for (const req of Object.keys((_e = t.prereq) != null ? _e : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);

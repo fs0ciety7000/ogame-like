@@ -9,12 +9,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
-import { cn, formatDuration } from "@/lib/utils";
+import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
+import { cn, formatDuration, formatNumber } from "@/lib/utils";
+import { assetUrl } from "@/lib/assets";
+import { bountyState, KESH } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
 import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
-import { LevelTicks } from "@/components/ui/hud";
+import { CostPill, LevelTicks } from "@/components/ui/hud";
 import { useProductionRates } from "@/hooks/useLiveResources";
 import type { ResourceId } from "@/types/game";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
@@ -51,6 +53,9 @@ export function LabPage() {
   const levels = player.techLevels;
   const plans = ownedBlueprints(player);
   const selected = findTech(selectedId)!;
+  // v5.9 : ambre demandé par niveau (en plus des ressources).
+  const amberCost = selected ? getTechAmberCost(selected) : 0;
+  const amberLack = amberCost - bountyState(player).amber;
   const activeEntry = queues.activeResearches.find((r) => r.id === selectedId);
   const currentLevel = levels[selectedId] ?? 0;
 
@@ -145,6 +150,13 @@ export function LabPage() {
                   stock={player.resources}
                   seconds={Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now()))}
                 />
+                {amberCost > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <CostPill ok={amberLack <= 0} missing={amberLack > 0 ? `manque ${formatNumber(amberLack)}` : undefined}>
+                      <img src={assetUrl(KESH.amberIcon)} alt="Ambre" className="h-3.5 w-3.5 object-contain" /> {formatNumber(amberCost)} ambre
+                    </CostPill>
+                  </div>
+                )}
               </div>
 
               {(() => {
@@ -171,7 +183,7 @@ export function LabPage() {
                 const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
                 return (
                   <>
-                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0} onClick={() => void handleLaunch()}>
+                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0 || amberLack > 0} onClick={() => void handleLaunch()}>
                       {queueFull ? "File de recherche pleine" : "Lancer la recherche"}
                     </Button>
                     {!prereqOk ? (
@@ -180,6 +192,8 @@ export function LabPage() {
                       <BlockedReason tone="block">
                         {MAX_CONCURRENT_RESEARCH} recherches en cours au plus : attends la fin de l'une d'elles.
                       </BlockedReason>
+                    ) : amberLack > 0 ? (
+                      <BlockedReason tone="block">Il te manque {formatNumber(amberLack)} ambre : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>
                     ) : wait > 0 ? (
                       <BlockedReason>{affordText(wait)}</BlockedReason>
                     ) : null}

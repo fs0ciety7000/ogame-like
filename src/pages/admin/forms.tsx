@@ -477,6 +477,15 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
 
       <Section title="Coût et durée">
         <ResourceMapField label="Coût au niveau 1" value={t.baseCost} onChange={(baseCost) => set({ baseCost })} />
+        <NumberField
+          label="Ambre par niveau"
+          value={t.amberCost}
+          optional
+          min={0}
+          step={1}
+          hint="Ambre des Kesh'Vaar payé à chaque niveau, en plus des ressources (montant fixe, vide = aucun). Rendu au prorata si la recherche est annulée."
+          onChange={(v) => set({ amberCost: v === undefined || v <= 0 ? undefined : Math.round(v) })}
+        />
         <NumberField label="Durée au niveau 1 (s)" value={t.baseTime} min={0} onChange={(v) => set({ baseTime: v ?? 0 })} />
         <NumberField
           label="Croissance du coût par niveau"
