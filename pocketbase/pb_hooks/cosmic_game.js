@@ -12985,6 +12985,95 @@ function proposeAchievementTiers(defs, players, now) {
   return out;
 }
 
+// src/game/seasonCatalog.ts
+var CATALOG_START = "2026-11";
+var THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"];
+var THEME_PRIMARY = {
+  vide: "logistician",
+  hiver: "warden",
+  forge: "engineer",
+  bazar: "diplomat",
+  maree: "admiral",
+  colonies: "governor",
+  primes: "corsair",
+  comete: "hunter",
+  moisson: "steward",
+  archives: "spy",
+  chantiers: "mechanic",
+  rempart: "strategist"
+};
+var E = (theme, year, name, tagline, synopsis, commander, scene) => ({ theme, year, name, tagline, synopsis, commander, scene });
+var SEASON_CATALOG = [
+  // ---------- L'Appel du Vide (Logisticienne) ----------
+  E("vide", 1, "L'Appel du Vide", "Au-del\xE0 des cartes, des routes \xE0 ouvrir.", "Un signal venu d'au-del\xE0 des franges appelle les flottes. {mentor} veut ouvrir une route avant que {rival} ne la ferme.", { name: "Ilka Morrow", title: "\xC9claireuse des franges", secondary: "spy", lore: "{commander} a cartographi\xE9 trois n\xE9buleuses que tout le monde disait infranchissables.", look: "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind" }, "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind"),
+  E("vide", 2, "Au-del\xE0 des franges", "Chaque route ouverte est une colonie promise.", "Les routes ouvertes l'an dernier m\xE8nent \xE0 des mondes inconnus. {mentor} veut y installer des colons ; {rival} y voit des proies.", { name: "Corentin Vash", title: "Ma\xEEtre des routes", secondary: "governor", lore: "{commander} a men\xE9 le premier convoi de colons au-del\xE0 du Voile, sans perdre un seul vaisseau.", look: "a calm convoy master in a long travel coat, route holograms around his hands, colony ships glowing behind" }, "a long convoy of colony ships threading a glowing corridor between two magenta nebulae, a green world on the horizon"),
+  E("vide", 3, "Terra incognita", "L\xE0 o\xF9 m\xEAme les colosses se perdent.", "Aux confins du Vide, des formes gigantesques d\xE9rivent entre les \xE9toiles. {mentor} veut les pister ; {rival} veut leurs carcasses.", { name: "Sefa Arkwright", title: "Pisteuse du Vide", secondary: "hunter", lore: "{commander} a suivi la piste d'un colosse pendant deux ans, d'un bout \xE0 l'autre du Vide.", look: "a scarred void tracker with a long-range targeting monocle, harpoon rig on her back, enormous shadow drifting behind" }, "an immense dark creature silhouette drifting through a magenta void, a small tracker ship following its luminous trail"),
+  // ---------- Hiver galactique (Gardienne) ----------
+  E("hiver", 1, "Hiver galactique", "Garder le feu, garder les r\xE9serves.", "Une nuit glaciale tombe sur le secteur et les r\xE9serves deviennent vitales. {mentor} confie les entrep\xF4ts aux plus vigilants ; {rival} attend la faille.", { name: "Brynja Solvei", title: "Gardienne du Givre", secondary: "strategist", lore: "{commander} a tenu les entrep\xF4ts de Vashka tout un hiver, sans perdre une caisse.", look: "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind" }, "a fortified ice-covered depot planet under a pale blue aurora, armored doors glowing, distant raider lights in the dark"),
+  E("hiver", 2, "La Longue Nuit", "Quand le soleil ne revient pas, on compte chaque ressource.", "La nuit dure plus longtemps cette ann\xE9e. {mentor} rationne, {rival} pille : chaque r\xE9serve prot\xE9g\xE9e est une victoire.", { name: "Aldo Frostmere", title: "Intendant de la Longue Nuit", secondary: "steward", lore: "{commander} tient les comptes de l'hiver au gramme pr\xE8s, et n'a jamais laiss\xE9 un colon sans chauffage.", look: "a meticulous quartermaster in thick grey furs, frost-rimmed spectacles, glowing inventory hologram, snow falling" }, "endless night over a frozen colony, warm golden lights in armored granaries, a pale aurora overhead"),
+  E("hiver", 3, "Givre \xE9ternel", "Le froid ronge les coques ; on les r\xE9pare.", "Un givre \xE9trange ronge les blindages. {mentor} r\xE9unit m\xE9caniciens et gardiens pour tenir jusqu'au d\xE9gel ; {rival} parie sur l'usure.", { name: "Halvard Rime", title: "Gardien des Cales gel\xE9es", secondary: "mechanic", lore: "{commander} a r\xE9par\xE9 une station enti\xE8re \xE0 mains nues, par moins quatre-vingts degr\xE9s.", look: "a towering armored warden with a frost-covered mechanical arm, blue ice crystals on armor, frozen hangar behind" }, "a frozen orbital hangar with ice crystals on the hulls, welders' blue sparks and a pale aurora through the hangar windows"),
+  // ---------- Forge Stellaire (Ingénieure) ----------
+  E("forge", 1, "Forge Stellaire", "B\xE2tir plus vite que l'ennemi ne d\xE9truit.", "{rival} a mis la main sur les forges du secteur. {mentor} veut les reprendre, chantier par chantier.", { name: "Oriane Ferrand", title: "Ma\xEEtresse de Forge", secondary: "steward", lore: "{commander} a rallum\xE9 une forge \xE9teinte depuis un si\xE8cle, et tenu ses comptes \xE0 l'\xE9quilibre.", look: "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm" }, "a colossal star forge built around a red dwarf, molten rivers of metal and orange sparks, cyan scaffolding lights"),
+  E("forge", 2, "Le Grand Chantier", "Chaque rivet est une victoire.", "Les forges reprises tournent \xE0 plein, mais il manque des bras et des pi\xE8ces. {mentor} lance le plus grand chantier de l'histoire du secteur ; {rival} veut le saboter.", { name: "Bastien Rivet", title: "Architecte des \xC9toiles", secondary: "mechanic", lore: "{commander} a dessin\xE9 les plans de la moiti\xE9 des stations du secteur, et en a mont\xE9 l'autre moiti\xE9.", look: "a bearded master architect with holographic blueprints floating around him, orange forge light, steel scaffolds" }, "a gigantic space station under construction with thousands of welding sparks, cranes and drones, orange and cyan light"),
+  E("forge", 3, "C\u0153ur de l'Enclume", "Forger l'arme qui finira la guerre.", "Au c\u0153ur de l'Enclume, une arme de l\xE9gende attend d'\xEAtre forg\xE9e. {mentor} r\xE9unit ing\xE9nieurs et amiraux ; {rival} veut la voler avant qu'elle ne soit finie.", { name: "Nyra Okonkwo", title: "Ing\xE9nieure en chef", secondary: "admiral", lore: "{commander} con\xE7oit des vaisseaux de ligne, puis les m\xE8ne elle-m\xEAme au combat.", look: "a confident chief engineer in an officer's coat with forge-scorched sleeves, warship blueprint hologram, orange glow" }, "a massive anvil-shaped forge station cradling an unfinished capital warship, orange molten light and cyan tactical holograms"),
+  // ---------- Le Grand Bazar (Diplomate) ----------
+  E("bazar", 1, "Le Grand Bazar", "Tout s'ach\xE8te, sauf la parole donn\xE9e.", "Le Grand Bazar ouvre ses portes \xE0 tous les empires. {mentor} veut y nouer des alliances ; {rival} veut y faire la loi.", { name: "Isidore Vantal", title: "Ambassadeur du Bazar", secondary: "steward", lore: "{commander} a n\xE9goci\xE9 la paix entre deux clans marchands qui se battaient depuis trois g\xE9n\xE9rations.", look: "a silver-tongued diplomat in emerald silk robes, holographic contracts, warm market lights behind" }, "a huge orbital bazaar ring full of colorful stalls and docked merchant ships, emerald and gold lanterns, crowds of aliens"),
+  E("bazar", 2, "Route de la soie stellaire", "Un convoi bien prot\xE9g\xE9 vaut une flotte.", "Une route commerciale relie d\xE9sormais tout le secteur, et les pirates l'ont vue aussi. {mentor} veut la s\xE9curiser ; {rival} veut la taxer.", { name: "Saskia Brel", title: "\xC9missaire corsaire", secondary: "corsair", lore: "{commander} a \xE9t\xE9 pirate avant de devenir diplomate. Elle conna\xEEt toutes les ruses, et en invente encore.", look: "a charismatic former pirate turned envoy, red sash over a diplomatic coat, golden earrings, convoy lights behind" }, "a long trade route of glowing gates across space, merchant convoys escorted by corsair frigates, emerald and red lights"),
+  E("bazar", 3, "Foire des mondes", "On y \xE9change des marchandises\u2026 et des secrets.", "La Foire des mondes attire tous les empires, et tous leurs espions. {mentor} veut des trait\xE9s ; {rival} veut des informations.", { name: "Auriel Kesh", title: "Diplomate de l'ombre", secondary: "spy", lore: "{commander} sait toujours ce que l'autre camp va proposer, avant m\xEAme qu'il le sache lui-m\xEAme.", look: "an elegant masked diplomat in violet and emerald silks, whisper-thin holographic veil, festive fair lights behind" }, "a grand festival of worlds inside a domed station, floating lanterns, envoys of many species, a hidden figure watching from a balcony"),
+  // ---------- Marée d'Acier (Amiral) ----------
+  E("maree", 1, "Mar\xE9e d'Acier", "Une flotte se l\xE8ve, une autre sombre.", "{rival} rassemble ses escadres au bord du secteur. {mentor} sonne le rassemblement : ce mois-ci, chaque bataille compte.", { name: "Maren Kestrel", title: "Amirale des Mar\xE9es", secondary: "strategist", lore: "{commander} a command\xE9 trois flottes de ligne avant ses trente ans. On dit qu'elle n'a jamais perdu une bataille qu'elle avait choisie.", look: "a fierce naval fleet admiral woman, weathered face, long coat with cyan trim, holographic tactical map behind" }, "two enormous battle fleets clashing like waves, cyan and red beams, a capital ship breaking through the line"),
+  E("maree", 2, "Ressac de guerre", "Tenir la ligne, briser la vague.", "Les colosses ont \xE9t\xE9 vus dans le sillage des escadres ennemies. {mentor} veut une flotte capable d'abattre les deux ; {rival} veut les l\xE2cher sur nous.", { name: "Corvin Drakmor", title: "Brise-Ligne", secondary: "hunter", lore: "{commander} a \xE9peronn\xE9 un colosse avec son croiseur, et v\xE9cu pour le raconter.", look: "a grim battle-scarred admiral with a cybernetic jaw, heavy navy coat, colossal beast silhouette behind the fleet" }, "a battle fleet charging through the wake of a colossal space beast, cyan beams, debris and a stormy nebula"),
+  E("maree", 3, "La Grande Houle", "Frapper loin, frapper vite.", "La guerre s'\xE9tend sur tout le secteur. {mentor} veut une flotte qui frappe partout \xE0 la fois ; {rival} compte sur nos lignes trop longues.", { name: "Thessa Haldane", title: "Capitaine de la Houle", secondary: "logistician", lore: "{commander} d\xE9place une flotte enti\xE8re en une nuit, et l'ennemi la cherche encore le lendemain.", look: "a swift fleet captain with windswept hair, flight jacket with cyan route lines, multiple fleet holograms around her" }, "a swarm of fast warships jumping in formation across a star map, cyan hyperspace trails like a rising swell"),
+  // ---------- Nouveaux Mondes (Gouverneure) ----------
+  E("colonies", 1, "Nouveaux Mondes", "Chaque plan\xE8te est une promesse.", "Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies.", { name: "C\xE9lia Marchal", title: "Gouverneure des Franges", secondary: "steward", lore: "{commander} a transform\xE9 une lune st\xE9rile en grenier du secteur en moins de dix ans.", look: "a visionary colonial governor woman in a white and mint long coat, terraformed green planet glowing behind" }, "a freshly terraformed green planet at dawn, colony domes and landing ships, a mint-colored sunrise over new cities"),
+  E("colonies", 2, "La Ru\xE9e vers les franges", "Plus loin, plus vite, plus nombreux.", "Les colonies se multiplient plus vite que les routes pour les ravitailler. {mentor} cherche quelqu'un pour relier les mondes ; {rival} coupe les lignes.", { name: "Ravi Lindqvist", title: "B\xE2tisseur de mondes", secondary: "logistician", lore: "{commander} a reli\xE9 vingt colonies par un r\xE9seau de convois qui ne s'est jamais arr\xEAt\xE9.", look: "an energetic colonial planner with rolled-up sleeves, holographic supply routes connecting planets around him" }, "a chain of young colony worlds linked by glowing supply lanes, cargo ships streaming between them, mint and cyan light"),
+  E("colonies", 3, "Terres d'aube", "Des colonies qui ne tombent pas.", "Les colonies sont devenues riches, donc des cibles. {mentor} veut les fortifier ; {rival} veut les d\xE9pouiller une \xE0 une.", { name: "Anouk Ibarra", title: "Intendante coloniale", secondary: "warden", lore: "{commander} n'a jamais laiss\xE9 un pillard repartir d'une de ses colonies avec une seule caisse.", look: "a determined colonial administrator in mint and steel armor, shield emblem, fortified colony domes behind" }, "fortified colony domes on a dawn-lit world, shield generators humming, raider ships turning away in the sky"),
+  // ---------- Saison des chasseurs (Corsaire) ----------
+  E("primes", 1, "Saison des chasseurs", "Chaque prime a un prix, chaque prix une t\xEAte.", "Les Kesh'Vaar ont affich\xE9 leurs primes les plus folles. {mentor} veut le tableau de chasse le plus long du secteur ; {rival} chasse les chasseurs.", { name: "Jax Varro", title: "Corsaire de la Ruche", secondary: "admiral", lore: "{commander} a rempli plus de primes que n'importe quel capitaine, souvent avec la flotte de quelqu'un d'autre.", look: "a lethal bounty hunter with golden trophy medallions, insect-like armor plates, predatory eyes" }, "a bounty board of glowing holographic wanted posters in a hive-like station, corsair ships docking under golden light"),
+  E("primes", 2, "Tableau de chasse", "Ce qu'on ne voit pas, on ne le rate pas.", "Les cibles se cachent mieux que jamais. {mentor} veut des \xE9claireurs et des corsaires ; {rival} brouille toutes les pistes.", { name: "Nell Sorrow", title: "Traqueuse de primes", secondary: "spy", lore: "{commander} retrouve n'importe qui. On dit qu'elle a retrouv\xE9 un fant\xF4me, et qu'il a pay\xE9.", look: "a shadowy bounty tracker woman with a hood and violet scanning visor, golden bounty tokens on her belt" }, "a dark asteroid hideout lit by a single violet scanner beam, a corsair ship lurking in the shadows, golden bounty markers"),
+  E("primes", 3, "La Grande Traque", "Le plus gros gibier du secteur.", "Une prime colossale est tomb\xE9e : la t\xEAte d'un colosse. {mentor} r\xE9unit les meilleurs chasseurs ; {rival} veut le troph\xE9e pour lui.", { name: "Garrick Fen", title: "Corsaire des Colosses", secondary: "hunter", lore: "{commander} porte au cou la dent du premier colosse qu'il a abattu. Il en cherche une deuxi\xE8me.", look: "a grizzled corsair with a giant beast tooth necklace, crimson coat, harpoon cannons on his ship behind" }, "a pack of corsair ships with harpoon cannons circling an enormous space beast, golden bounty hologram above"),
+  // ---------- Comète écarlate (Chasseur de colosses) ----------
+  E("comete", 1, "Com\xE8te \xE9carlate", "Elle ne passe qu'une fois. Ce qu'elle porte aussi.", "Une com\xE8te \xE9carlate traverse le secteur, et quelque chose d'\xE9norme voyage dans son sillage. {mentor} sonne la chasse ; {rival} veut la prise.", { name: "Kira Valdane", title: "Chasseuse de com\xE8tes", secondary: "admiral", lore: "{commander} a suivi trois com\xE8tes jusqu'au bout. La troisi\xE8me portait un colosse ; elle l'a ramen\xE9.", look: "a daring comet-chasing pilot woman, scarred flight jacket, red glowing comet tail reflected in her visor" }, "a blazing scarlet comet crossing the sector, a colossal creature silhouette in its tail, hunter ships in pursuit"),
+  E("comete", 2, "La Pluie de feu", "Des fragments partout, des monstres dedans.", "La com\xE8te s'est bris\xE9e en mille fragments, et chacun abrite une b\xEAte. {mentor} veut des armes taill\xE9es pour les colosses ; {rival} veut les fragments.", { name: "Orrin Blackthorn", title: "Armurier des chasses", secondary: "engineer", lore: "{commander} forge des harpons capables de percer la carapace d'un colosse, et les teste lui-m\xEAme.", look: "a burly weaponsmith with glowing red harpoon prototypes, soot-covered apron, comet fire in the sky behind" }, "a rain of fiery comet fragments falling across space, giant beasts hatching from them, hunter ships firing harpoons"),
+  E("comete", 3, "Sillage rouge", "Suivre la trace, partager la prise.", "Le sillage de la com\xE8te m\xE8ne aux nids des colosses, gard\xE9s par des pirates. {mentor} veut nettoyer la route ; {rival} veut tout garder.", { name: "Vex Haldor", title: "Grand Veneur", secondary: "corsair", lore: "{commander} partage toujours la prise. C'est pour \xE7a que tout le monde veut chasser avec lui.", look: "a charismatic master hunter with a red cloak, trophy-adorned armor, a colossal skull mounted behind" }, "a red glowing trail through space leading to a nest of colossal beasts, corsair and hunter ships side by side"),
+  // ---------- La Grande Moisson (Intendant) ----------
+  E("moisson", 1, "La Grande Moisson", "R\xE9colter avant l'hiver.", "Les gisements du secteur d\xE9bordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider.", { name: "Basile Granger", title: "Intendant des Greniers", secondary: "governor", lore: "{commander} n'a jamais laiss\xE9 une r\xE9colte se perdre ni un compte tomber faux.", look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields behind" }, "golden harvest fields on a planet seen from orbit, huge harvester ships and granary stations glowing gold"),
+  E("moisson", 2, "Saison d'abondance", "Des r\xE9serves pleines attirent les rapaces.", "L'abondance attire les pillards. {mentor} veut des greniers imprenables ; {rival} a promis \xE0 sa Ruche un festin.", { name: "Ines Hallberg", title: "Tr\xE9sori\xE8re d'empire", secondary: "warden", lore: "{commander} garde les cl\xE9s de tous les coffres de l'empire, et ne les a jamais perdues.", look: "a stern imperial treasurer with golden keys at her belt, armored robes, sealed golden vaults behind" }, "armored golden granary vaults on a fertile world, shield domes shimmering, a hive swarm gathering on the horizon"),
+  E("moisson", 3, "Les Greniers d'or", "Partager la r\xE9colte, gagner des alli\xE9s.", "Les greniers d\xE9bordent, et les empires voisins ont faim. {mentor} veut \xE9changer ; {rival} veut prendre.", { name: "L\xE9opold Sato", title: "Ma\xEEtre des r\xE9coltes", secondary: "diplomat", lore: "{commander} a nourri trois empires pendant la famine, et en a fait trois alli\xE9s.", look: "a wise harvest master in gold and emerald robes, trade agreement holograms, ships loading grain behind" }, "a golden granary station trading with merchant ships of many empires, grain containers glowing gold and emerald"),
+  // ---------- L'Ombre des Archives (Espionne) ----------
+  E("archives", 1, "L'Ombre des Archives", "Ce qui est \xE9crit peut \xEAtre vol\xE9.", "Les archives du secteur ont \xE9t\xE9 pill\xE9es, et les secrets circulent. {mentor} veut les r\xE9cup\xE9rer ; {rival} veut les vendre.", { name: "Selene Marrow", title: "Archiviste de l'ombre", secondary: "strategist", lore: "{commander} a lu tous les rapports d'\xE9tat-major depuis cinquante ans. Elle sait comment chaque guerre finit.", look: "a mysterious spymaster woman in a dark hooded coat, violet holographic data streams, half of face in shadow" }, "a vast dark archive station with endless violet data shelves, a hooded figure stealing a glowing data core"),
+  E("archives", 2, "Les Fichiers noirs", "Un secret bien plac\xE9 vaut une flotte.", "Les Fichiers noirs contiennent des secrets sur tous les empires. {mentor} veut les utiliser pour la paix ; {rival}, pour le chantage.", { name: "Lucien Grave", title: "N\xE9gociateur des secrets", secondary: "diplomat", lore: "{commander} n'a jamais menac\xE9 personne. Il lui suffit de sourire en tenant un dossier.", look: "an elegant spy in a dark violet suit, a black data folder glowing in his hand, quiet smile, shadowy embassy behind" }, "a shadowy embassy room with a single glowing black data file on a table, violet light, silhouettes listening behind glass"),
+  E("archives", 3, "Silence radio", "On ne voit rien venir. Eux non plus.", "Le secteur est plong\xE9 dans un silence radio total. {mentor} veut frapper dans l'ombre ; {rival} fait pareil.", { name: "Nyx Varell", title: "Spectre", secondary: "corsair", lore: "{commander} entre, prend, et ressort. Personne ne l'a jamais vu ; tout le monde a vu ce qui manquait.", look: "a stealthy infiltrator with a dark visor reflecting violet static, sleek black armor, cloaked ship behind" }, "a cloaked raider ship slipping past a sleeping fleet in total radio silence, faint violet static in the dark"),
+  // ---------- L'Arsenal (Mécanicien) ----------
+  E("chantiers", 1, "L'Arsenal", "Une flotte se construit, un rivet \xE0 la fois.", "Une guerre se pr\xE9pare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite.", { name: "Petra Varga", title: "M\xE9canicienne en chef", secondary: "engineer", lore: "{commander} peut remonter un r\xE9acteur les yeux ferm\xE9s, et l'a d\xE9j\xE0 fait, en plein combat.", look: "a gruff shipyard master mechanic woman, welding goggles, ember sparks, colossal hull under construction behind" }, "an enormous orbital shipyard with rows of warships under construction, ember sparks and scaffolding lights"),
+  E("chantiers", 2, "Cale s\xE8che", "Ce qui revient du front repart r\xE9par\xE9.", "Les flottes rentrent du front en lambeaux. {mentor} veut les remettre en ligne avant la prochaine offensive ; {rival} frappe avant.", { name: "Gunnar Holt", title: "Chef de cale", secondary: "admiral", lore: "{commander} a remis en \xE9tat une flotte enti\xE8re en une semaine, et l'a men\xE9e lui-m\xEAme \xE0 la victoire.", look: "a veteran dockmaster with a cybernetic hand, battle-scarred coat over work overalls, damaged warships in dry dock behind" }, "a dry dock full of battle-damaged warships under repair, ember welding sparks, a fleet launching in the background"),
+  E("chantiers", 3, "Rivets et canons", "Des pi\xE8ces partout, \xE0 temps.", "Les chantiers tournent, mais les pi\xE8ces n'arrivent plus. {mentor} veut des convois s\xFBrs ; {rival} vise les cargos.", { name: "Silas Crane", title: "Ma\xEEtre armurier", secondary: "logistician", lore: "{commander} sait o\xF9 se trouve chaque pi\xE8ce de l'empire, et comment l'amener l\xE0 o\xF9 il faut.", look: "a methodical armorer with a tool harness, holographic parts inventory, cargo ships unloading behind" }, "cargo convoys delivering glowing parts to a busy shipyard, cranes moving cannon barrels, ember and cyan lights"),
+  // ---------- Le Rempart (Stratège) ----------
+  E("rempart", 1, "Le Rempart", "Ils frappent. Nous tenons.", "{rival} assi\xE8ge les mondes de la frange, vague apr\xE8s vague. {mentor} confie la d\xE9fense du secteur aux commandants qui tiendront.", { name: "Hadrien Valcourt", title: "Strat\xE8ge de si\xE8ge", secondary: "warden", lore: "{commander} a tenu quarante jours un avant-poste que l'\xE9tat-major avait d\xE9j\xE0 ray\xE9 des cartes.", look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind" }, "a fortress planet ringed with shield walls under siege, waves of raider ships breaking against blue energy barriers"),
+  E("rempart", 2, "Les Murs de Vashka", "Un mur r\xE9par\xE9 est un mur qui tient.", "Les murs ont tenu, mais ils sont fissur\xE9s. {mentor} veut les relever avant la prochaine vague ; {rival} masse ses b\xE9liers.", { name: "Irsa Stenn", title: "Gardienne de la Ligne", secondary: "mechanic", lore: "{commander} r\xE9pare un bouclier sous le feu ennemi comme d'autres reprisent une chaussette.", look: "a tough defensive commander with a repair tool and shield emitter, scorched blue armor, cracked fortress wall behind" }, "repair crews welding a cracked fortress wall in orbit while defensive batteries fire at incoming rams, blue and ember light"),
+  E("rempart", 3, "Ligne de fer", "Tenir le front, puis abattre le colosse.", "Derri\xE8re les vagues ennemies avance un colosse de si\xE8ge. {mentor} veut une ligne qui tienne et des chasseurs qui frappent ; {rival} veut tout raser.", { name: "Osric Keld", title: "Ma\xEEtre des Remparts", secondary: "hunter", lore: "{commander} a attendu qu'un colosse de si\xE8ge soit au pied de ses murs pour l'abattre d'une seule salve.", look: "an imposing iron-clad strategist with a long war cloak, siege cannon behind, colossal siege beast on the horizon" }, "an iron defensive line of battleships facing a colossal siege beast, blue shields and heavy cannon fire")
+];
+function monthIndex(monthId) {
+  const [y, m] = monthId.split("-").map(Number);
+  return y * 12 + (m - 1);
+}
+function catalogIndex(monthId) {
+  const n = monthIndex(monthId) - monthIndex(CATALOG_START);
+  return (n % 36 + 36) % 36;
+}
+function catalogEntryFor(monthId) {
+  const i = catalogIndex(monthId);
+  const theme = THEME_ROTATION[i % 12];
+  const year = Math.floor(i / 12) + 1;
+  return SEASON_CATALOG.find((e3) => e3.theme === theme && e3.year === year);
+}
+function illustrationPrompt(e3, accent) {
+  return `/imagine prompt: sci-fi strategy game key art, ${e3.scene}, cinematic wide shot, dark deep-space palette with ${accent} accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250`;
+}
+function portraitPrompt(e3, accent) {
+  return `/imagine prompt: sci-fi strategy game character portrait, head and shoulders, ${e3.commander.look}, a character named ${e3.commander.name}, centered, facing the viewer, dramatic rim light in ${accent}, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250`;
+}
+
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
@@ -13188,6 +13277,103 @@ var PASS_THEMES = [
     rivalLines: [["Le Vide n'aime pas les curieux."], ["Vous entendez des voix ? Moi, j'entends des ressources."], ["Le premier arriv\xE9 prend tout."], ["Gardez votre proph\xE9tie."]],
     lore: ["{commander} a cartographi\xE9 les franges \xE0 bord d'un vaisseau sans nom. Elle n'en parle jamais."],
     look: "an enigmatic deep-space scout, star map tattoos glowing magenta, worn explorer gear, nebula behind"
+  },
+  // v5.14 : quatre thèmes de plus (douze, un par rôle d'officier).
+  {
+    id: "rempart",
+    names: ["Le Rempart", "Les Murs de Vashka", "Ligne de fer"],
+    taglines: ["Ils frappent. Nous tenons.", "Pas un pas en arri\xE8re."],
+    accent: "#7fb2ff",
+    image: "/assets/chronicles/2027-01-boss.webp",
+    mentor: "ilyon",
+    rival: "varan",
+    focus: ["raidRepelled", "victory", "contract"],
+    roles: [["strategist", "warden"], ["strategist", "mechanic"]],
+    commanderTitles: ["Ma\xEEtresse des Remparts", "Gardien de la Ligne", "Strat\xE8ge de si\xE8ge"],
+    firstNames: ["Hadrien", "Irsa", "Malo", "Veyra", "Osric"],
+    lastNames: ["Valcourt", "Stenn", "Morvan", "Ashgrove", "Keld"],
+    synopsis: ["{rival} assi\xE8ge les mondes de la frange, vague apr\xE8s vague. {mentor} confie la d\xE9fense du secteur aux commandants qui tiendront."],
+    beats: [
+      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup."],
+      ["Les premi\xE8res vagues se sont bris\xE9es sur nos d\xE9fenses. Ils cherchent la faille."],
+      ["Un strat\xE8ge de si\xE8ge l\xE9gendaire a vu ta r\xE9sistance. Il veut se battre \xE0 tes c\xF4t\xE9s."],
+      ["Le si\xE8ge est lev\xE9. {commander} rejoint ton \xE9tat-major : aucun mur ne tombera plus."]
+    ],
+    rivalLines: [["Vos murs sont en papier. Mes b\xE9liers ont faim."], ["Une vague de plus, et vous c\xE9derez."], ["Toutes mes escadres sur le m\xEAme point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]],
+    lore: ["{commander} a tenu quarante jours un avant-poste que l'\xE9tat-major avait d\xE9j\xE0 ray\xE9 des cartes."],
+    look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind"
+  },
+  {
+    id: "colonies",
+    names: ["Nouveaux Mondes", "La Ru\xE9e vers les franges", "Terres d'aube"],
+    taglines: ["Chaque plan\xE8te est une promesse.", "Planter un drapeau, b\xE2tir un monde."],
+    accent: "#5ef2b0",
+    image: "/assets/chronicles/2027-02-boss.webp",
+    mentor: "lysa",
+    rival: "kragmor",
+    focus: ["contract", "raidRepelled", "victory"],
+    roles: [["governor", "steward"], ["governor", "logistician"]],
+    commanderTitles: ["Gouverneure des Franges", "B\xE2tisseur de mondes", "Intendante coloniale"],
+    firstNames: ["C\xE9lia", "Anouk", "Ravi", "Soline", "Edric"],
+    lastNames: ["Marchal", "Ibarra", "Vey", "Lindqvist", "Okafor"],
+    synopsis: ["Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies."],
+    beats: [
+      ["Les sondes ont trouv\xE9 des mondes habitables. \xC0 toi de les faire fleurir avant que d'autres ne s'en emparent."],
+      ["Tes premi\xE8res colonies prosp\xE8rent. Les colons affluent."],
+      ["Une gouverneure de l\xE9gende cherche un empire digne de ses talents. Le tien l'int\xE9resse."],
+      ["Les franges sont \xE0 nous. {commander} gouvernera tes colonies."]
+    ],
+    rivalLines: [["Ces mondes sont \xE0 moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus \xE0 raser."], ["J'envoie mes \xE9quipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]],
+    lore: ["{commander} a transform\xE9 une lune st\xE9rile en grenier du secteur en moins de dix ans."],
+    look: "a visionary colonial governor in a white and mint long coat, terraformed green planet glowing behind, holographic city plans"
+  },
+  {
+    id: "chantiers",
+    names: ["L'Arsenal", "Cale s\xE8che", "Rivets et canons"],
+    taglines: ["Une flotte se construit, un rivet \xE0 la fois.", "Les chantiers ne dorment jamais."],
+    accent: "#ff8a3d",
+    image: "/assets/blog/articles/5-10/couverture.webp",
+    mentor: "brannoc",
+    rival: "kor",
+    focus: ["victory", "contract", "warlordWin"],
+    roles: [["mechanic", "engineer"], ["mechanic", "admiral"]],
+    commanderTitles: ["Chef de cale", "Ma\xEEtre armurier", "M\xE9canicienne en chef"],
+    firstNames: ["Gunnar", "Petra", "Silas", "Mira", "Dorian"],
+    lastNames: ["Holt", "Varga", "Crane", "Ostrova", "Blackwell"],
+    synopsis: ["Une guerre se pr\xE9pare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite."],
+    beats: [
+      ["Les chantiers sont rouill\xE9s, mais les plans sont bons. Remets-les en marche, commandant."],
+      ["Les premi\xE8res coques sortent des cales. L'\xE9quipage applaudit."],
+      ["Une m\xE9canicienne de g\xE9nie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent."],
+      ["L'arsenal tourne \xE0 plein. {commander} veille sur tes cales s\xE8ches."]
+    ],
+    rivalLines: [["Mes chantiers produisent dix coques pour une des v\xF4tres."], ["Jolies coques. Elles br\xFBleront bien."], ["Ma nouvelle flotte est pr\xEAte. Et la v\xF4tre ?"], ["Hum. Vos chantiers sont meilleurs que pr\xE9vu."]],
+    lore: ["{commander} peut remonter un r\xE9acteur les yeux ferm\xE9s, et l'a d\xE9j\xE0 fait, en plein combat."],
+    look: "a gruff shipyard master mechanic, welding goggles, ember sparks, colossal hull under construction behind"
+  },
+  {
+    id: "moisson",
+    names: ["La Grande Moisson", "Saison d'abondance", "Les Greniers d'or"],
+    taglines: ["R\xE9colter avant l'hiver.", "Un empire se nourrit de ses r\xE9coltes."],
+    accent: "#ffd86b",
+    image: "/assets/chronicles/2027-03-boss.webp",
+    mentor: "kor",
+    rival: "maru",
+    focus: ["contract", "bounty", "raidRepelled"],
+    roles: [["steward", "governor"], ["steward", "warden"]],
+    commanderTitles: ["Intendant des Greniers", "Ma\xEEtresse des r\xE9coltes", "Tr\xE9sorier d'empire"],
+    firstNames: ["Basile", "El\xE9a", "Tomas", "Ines", "Leopold"],
+    lastNames: ["Granger", "Delacroix", "Moreau", "Sato", "Hallberg"],
+    synopsis: ["Les gisements du secteur d\xE9bordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider."],
+    beats: [
+      ["Les gisements n'ont jamais \xE9t\xE9 aussi riches. R\xE9colte, stocke, et prot\xE8ge tes r\xE9serves."],
+      ["Les greniers se remplissent. Les pillards r\xF4dent d\xE9j\xE0."],
+      ["Un intendant l\xE9gendaire propose ses services \xE0 l'empire le mieux tenu du secteur."],
+      ["Les greniers d\xE9bordent. {commander} tiendra tes comptes."]
+    ],
+    rivalLines: [["Tant de r\xE9serves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos r\xE9serves la nourriront."], ["Vos greniers sont bien gard\xE9s. Pour cette saison."]],
+    lore: ["{commander} n'a jamais laiss\xE9 une r\xE9colte se perdre ni un compte tomber faux."],
+    look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields on a planet behind"
   }
 ];
 var pick3 = (rng, xs) => xs[Math.min(xs.length - 1, Math.floor(rng() * xs.length))];
@@ -13211,42 +13397,34 @@ function requirementCount(key, d, gate) {
   return Math.max(base, Math.min(base * 4, wanted));
 }
 function generatePassSeason(o) {
-  var _a, _b;
+  var _a, _b, _c;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));
   const rng = seededRandom2(`pass:${o.monthId}:${variant}`);
-  const before = [...o.existing].filter((s) => s.id < o.monthId).sort((a, b) => a.id < b.id ? -1 : 1);
-  const recent = before.slice(-3).map((s) => s.theme.id);
-  const theme = pick3(rng, PASS_THEMES.filter((t) => !recent.includes(t.id)));
-  const usedNames = new Set(o.existing.flatMap((s) => [s.theme.name, s.commander.name]));
-  const fresh = (xs) => {
-    const left = xs.filter((x) => !usedNames.has(x));
-    return pick3(rng, left.length ? left : xs);
-  };
-  const name = fresh(theme.names);
+  const entry = catalogEntryFor(o.monthId);
+  const theme = (_b = PASS_THEMES.find((t) => t.id === entry.theme)) != null ? _b : PASS_THEMES[0];
+  const name = entry.name;
   const label3 = seasonLabel(o.monthId);
-  const [primary, secondary] = pick3(rng, theme.roles);
-  let cmdName = `${pick3(rng, theme.firstNames)} ${pick3(rng, theme.lastNames)}`;
-  for (let i = 0; i < 6 && usedNames.has(cmdName); i++) cmdName = `${pick3(rng, theme.firstNames)} ${pick3(rng, theme.lastNames)}`;
-  const cmdTitle = pick3(rng, theme.commanderTitles);
+  const cmdName = entry.commander.name;
+  const cmdTitle = entry.commander.title;
   const vars = { mentor: STORY_SPEAKERS[theme.mentor].name, rival: STORY_SPEAKERS[theme.rival].name, commander: cmdName, theme: name };
   const commander = {
     id: `s-${o.monthId}`,
     name: cmdName,
     title: cmdTitle,
     portrait: "",
-    primary,
-    secondary,
-    lore: fill2(pick3(rng, theme.lore), vars),
+    primary: THEME_PRIMARY[entry.theme],
+    secondary: entry.commander.secondary,
+    lore: fill2(entry.commander.lore, vars),
     seasonId: o.monthId,
     seasonLabel: label3,
-    prompt: `/imagine prompt: sci-fi character portrait, ${theme.look}, named ${cmdName}, ${cmdTitle.toLowerCase()}, bust shot facing camera, dramatic rim light in ${theme.accent}, dark navy background, painterly concept art, highly detailed, no text, no letters --ar 4:5 --v 7 --s 250`
+    prompt: portraitPrompt(entry, theme.accent)
   };
-  const g = generatePass(rng, o.digest, (_b = o.basePointsPerTier) != null ? _b : PASS_RULES.pointsPerTier);
+  const g = generatePass(rng, o.digest, (_c = o.basePointsPerTier) != null ? _c : PASS_RULES.pointsPerTier);
   const tiers2 = g.pass.tiers.map((t) => t.map((r) => __spreadValues({}, r)));
   tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
   const requirements = {};
-  const reasons = [...g.reasons, `Th\xE8me : ${name} (${theme.id}), sans r\xE9p\xE9ter ${recent.join(", ") || "aucun th\xE8me r\xE9cent"}.`];
+  const reasons = [...g.reasons, `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
   PASS_GATES.forEach((gate, i) => {
     var _a2;
     if (gate.tier > tiers2.length) return;
@@ -13265,8 +13443,8 @@ function generatePassSeason(o) {
   return {
     id: o.monthId,
     status: "draft",
-    theme: { id: theme.id, name, tagline: pick3(rng, theme.taglines), accent: theme.accent, image: theme.image },
-    scenario: { synopsis: fill2(pick3(rng, theme.synopsis), vars), milestones },
+    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: theme.image, prompt: illustrationPrompt(entry, theme.accent) },
+    scenario: { synopsis: fill2(entry.synopsis, vars), milestones },
     pointsPerTier: g.pass.pointsPerTier,
     tiers: tiers2,
     requirements,
@@ -16898,16 +17076,16 @@ var SHA256 = class extends HashMD {
     this.H = SHA256_IV[7] | 0;
   }
   get() {
-    const { A, B, C, D, E, F, G, H } = this;
-    return [A, B, C, D, E, F, G, H];
+    const { A, B, C, D, E: E2, F, G, H } = this;
+    return [A, B, C, D, E2, F, G, H];
   }
   // prettier-ignore
-  set(A, B, C, D, E, F, G, H) {
+  set(A, B, C, D, E2, F, G, H) {
     this.A = A | 0;
     this.B = B | 0;
     this.C = C | 0;
     this.D = D | 0;
-    this.E = E | 0;
+    this.E = E2 | 0;
     this.F = F | 0;
     this.G = G | 0;
     this.H = H | 0;
@@ -16922,16 +17100,16 @@ var SHA256 = class extends HashMD {
       const s1 = rotr(W2, 17) ^ rotr(W2, 19) ^ W2 >>> 10;
       SHA256_W[i] = s1 + SHA256_W[i - 7] + s0 + SHA256_W[i - 16] | 0;
     }
-    let { A, B, C, D, E, F, G, H } = this;
+    let { A, B, C, D, E: E2, F, G, H } = this;
     for (let i = 0; i < 64; i++) {
-      const sigma1 = rotr(E, 6) ^ rotr(E, 11) ^ rotr(E, 25);
-      const T1 = H + sigma1 + Chi(E, F, G) + SHA256_K[i] + SHA256_W[i] | 0;
+      const sigma1 = rotr(E2, 6) ^ rotr(E2, 11) ^ rotr(E2, 25);
+      const T1 = H + sigma1 + Chi(E2, F, G) + SHA256_K[i] + SHA256_W[i] | 0;
       const sigma0 = rotr(A, 2) ^ rotr(A, 13) ^ rotr(A, 22);
       const T2 = sigma0 + Maj(A, B, C) | 0;
       H = G;
       G = F;
-      F = E;
-      E = D + T1 | 0;
+      F = E2;
+      E2 = D + T1 | 0;
       D = C;
       C = B;
       B = A;
@@ -16941,11 +17119,11 @@ var SHA256 = class extends HashMD {
     B = B + this.B | 0;
     C = C + this.C | 0;
     D = D + this.D | 0;
-    E = E + this.E | 0;
+    E2 = E2 + this.E | 0;
     F = F + this.F | 0;
     G = G + this.G | 0;
     H = H + this.H | 0;
-    this.set(A, B, C, D, E, F, G, H);
+    this.set(A, B, C, D, E2, F, G, H);
   }
   roundClean() {
     clean2(SHA256_W);
@@ -17570,27 +17748,27 @@ var DER = {
   // Basic building block is TLV (Tag-Length-Value)
   _tlv: {
     encode: (tag, data) => {
-      const { Err: E } = DER;
+      const { Err: E2 } = DER;
       if (tag < 0 || tag > 256)
-        throw new E("tlv.encode: wrong tag");
+        throw new E2("tlv.encode: wrong tag");
       if (data.length & 1)
-        throw new E("tlv.encode: unpadded data");
+        throw new E2("tlv.encode: unpadded data");
       const dataLen = data.length / 2;
       const len = numberToHexUnpadded(dataLen);
       if (len.length / 2 & 128)
-        throw new E("tlv.encode: long form length too big");
+        throw new E2("tlv.encode: long form length too big");
       const lenLen = dataLen > 127 ? numberToHexUnpadded(len.length / 2 | 128) : "";
       const t = numberToHexUnpadded(tag);
       return t + lenLen + len + data;
     },
     // v - value, l - left bytes (unparsed)
     decode(tag, data) {
-      const { Err: E } = DER;
+      const { Err: E2 } = DER;
       let pos = 0;
       if (tag < 0 || tag > 256)
-        throw new E("tlv.encode: wrong tag");
+        throw new E2("tlv.encode: wrong tag");
       if (data.length < 2 || data[pos++] !== tag)
-        throw new E("tlv.decode: wrong tlv");
+        throw new E2("tlv.decode: wrong tlv");
       const first = data[pos++];
       const isLong = !!(first & 128);
       let length = 0;
@@ -17599,23 +17777,23 @@ var DER = {
       else {
         const lenLen = first & 127;
         if (!lenLen)
-          throw new E("tlv.decode(long): indefinite length not supported");
+          throw new E2("tlv.decode(long): indefinite length not supported");
         if (lenLen > 4)
-          throw new E("tlv.decode(long): byte length is too big");
+          throw new E2("tlv.decode(long): byte length is too big");
         const lengthBytes = data.subarray(pos, pos + lenLen);
         if (lengthBytes.length !== lenLen)
-          throw new E("tlv.decode: length bytes not complete");
+          throw new E2("tlv.decode: length bytes not complete");
         if (lengthBytes[0] === 0)
-          throw new E("tlv.decode(long): zero leftmost byte");
+          throw new E2("tlv.decode(long): zero leftmost byte");
         for (const b of lengthBytes)
           length = length << 8 | b;
         pos += lenLen;
         if (length < 128)
-          throw new E("tlv.decode(long): not minimal encoding");
+          throw new E2("tlv.decode(long): not minimal encoding");
       }
       const v = data.subarray(pos, pos + length);
       if (v.length !== length)
-        throw new E("tlv.decode: wrong value length");
+        throw new E2("tlv.decode: wrong value length");
       return { v, l: data.subarray(pos + length) };
     }
   },
@@ -17625,35 +17803,35 @@ var DER = {
   // - if next byte doesn't have a flag, leading zero is not allowed (minimal encoding)
   _int: {
     encode(num4) {
-      const { Err: E } = DER;
+      const { Err: E2 } = DER;
       if (num4 < _0n4)
-        throw new E("integer: negative integers are not allowed");
+        throw new E2("integer: negative integers are not allowed");
       let hex = numberToHexUnpadded(num4);
       if (Number.parseInt(hex[0], 16) & 8)
         hex = "00" + hex;
       if (hex.length & 1)
-        throw new E("unexpected DER parsing assertion: unpadded hex");
+        throw new E2("unexpected DER parsing assertion: unpadded hex");
       return hex;
     },
     decode(data) {
-      const { Err: E } = DER;
+      const { Err: E2 } = DER;
       if (data[0] & 128)
-        throw new E("invalid signature integer: negative");
+        throw new E2("invalid signature integer: negative");
       if (data[0] === 0 && !(data[1] & 128))
-        throw new E("invalid signature integer: unnecessary leading zero");
+        throw new E2("invalid signature integer: unnecessary leading zero");
       return bytesToNumberBE(data);
     }
   },
   toSig(hex) {
-    const { Err: E, _int: int, _tlv: tlv } = DER;
+    const { Err: E2, _int: int, _tlv: tlv } = DER;
     const data = ensureBytes("signature", hex);
     const { v: seqBytes, l: seqLeftBytes } = tlv.decode(48, data);
     if (seqLeftBytes.length)
-      throw new E("invalid signature: left bytes after parsing");
+      throw new E2("invalid signature: left bytes after parsing");
     const { v: rBytes, l: rLeftBytes } = tlv.decode(2, seqBytes);
     const { v: sBytes, l: sLeftBytes } = tlv.decode(2, rLeftBytes);
     if (sLeftBytes.length)
-      throw new E("invalid signature: left bytes after parsing");
+      throw new E2("invalid signature: left bytes after parsing");
     return { r: int.decode(rBytes), s: int.decode(sBytes) };
   },
   hexFromSig(sig) {

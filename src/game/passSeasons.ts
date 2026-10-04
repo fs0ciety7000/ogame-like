@@ -4,12 +4,13 @@ import { BASE_COUNTS, generatePass, seededRandom, type WorldDigest } from "@/gam
 import { PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
+import { catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
 
 /* =====================================================
    v5.13 : passes de saison procéduraux. Chaque mois, le moteur écrit un
    brouillon complet que l'équipe relit, retouche puis publie :
-   - un thème (nom, accroche, couleur, illustration) tiré parmi huit, sans
-     répéter les trois derniers ;
+   - un thème (nom, accroche, couleur, illustration) : v5.14, celui du
+     catalogue (seasonCatalog.ts, douze thèmes en rotation sur trois ans) ;
    - un scénario en quatre temps (prologue, paliers 10, 20 et 30) porté par
      un mentor et un rival ;
    - 30 paliers de récompenses (points par palier ajustés sur le mois écoulé) ;
@@ -45,7 +46,7 @@ export interface PassSeason {
   /** Mois (AAAA-MM). */
   id: string;
   status: PassSeasonStatus;
-  theme: { id: string; name: string; tagline: string; accent: string; image: string };
+  theme: { id: string; name: string; tagline: string; accent: string; image: string; /** v5.14 : prompt Midjourney de l'illustration. */ prompt?: string };
   scenario: { synopsis: string; milestones: PassMilestone[] };
   pointsPerTier: number;
   tiers: PassReward[][];
@@ -285,6 +286,103 @@ export const PASS_THEMES: PassTheme[] = [
     lore: ["{commander} a cartographié les franges à bord d'un vaisseau sans nom. Elle n'en parle jamais."],
     look: "an enigmatic deep-space scout, star map tattoos glowing magenta, worn explorer gear, nebula behind",
   },
+  // v5.14 : quatre thèmes de plus (douze, un par rôle d'officier).
+  {
+    id: "rempart",
+    names: ["Le Rempart", "Les Murs de Vashka", "Ligne de fer"],
+    taglines: ["Ils frappent. Nous tenons.", "Pas un pas en arrière."],
+    accent: "#7fb2ff",
+    image: "/assets/chronicles/2027-01-boss.webp",
+    mentor: "ilyon",
+    rival: "varan",
+    focus: ["raidRepelled", "victory", "contract"],
+    roles: [["strategist", "warden"], ["strategist", "mechanic"]],
+    commanderTitles: ["Maîtresse des Remparts", "Gardien de la Ligne", "Stratège de siège"],
+    firstNames: ["Hadrien", "Irsa", "Malo", "Veyra", "Osric"],
+    lastNames: ["Valcourt", "Stenn", "Morvan", "Ashgrove", "Keld"],
+    synopsis: ["{rival} assiège les mondes de la frange, vague après vague. {mentor} confie la défense du secteur aux commandants qui tiendront."],
+    beats: [
+      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup."],
+      ["Les premières vagues se sont brisées sur nos défenses. Ils cherchent la faille."],
+      ["Un stratège de siège légendaire a vu ta résistance. Il veut se battre à tes côtés."],
+      ["Le siège est levé. {commander} rejoint ton état-major : aucun mur ne tombera plus."],
+    ],
+    rivalLines: [["Vos murs sont en papier. Mes béliers ont faim."], ["Une vague de plus, et vous céderez."], ["Toutes mes escadres sur le même point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]],
+    lore: ["{commander} a tenu quarante jours un avant-poste que l'état-major avait déjà rayé des cartes."],
+    look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind",
+  },
+  {
+    id: "colonies",
+    names: ["Nouveaux Mondes", "La Ruée vers les franges", "Terres d'aube"],
+    taglines: ["Chaque planète est une promesse.", "Planter un drapeau, bâtir un monde."],
+    accent: "#5ef2b0",
+    image: "/assets/chronicles/2027-02-boss.webp",
+    mentor: "lysa",
+    rival: "kragmor",
+    focus: ["contract", "raidRepelled", "victory"],
+    roles: [["governor", "steward"], ["governor", "logistician"]],
+    commanderTitles: ["Gouverneure des Franges", "Bâtisseur de mondes", "Intendante coloniale"],
+    firstNames: ["Célia", "Anouk", "Ravi", "Soline", "Edric"],
+    lastNames: ["Marchal", "Ibarra", "Vey", "Lindqvist", "Okafor"],
+    synopsis: ["Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies."],
+    beats: [
+      ["Les sondes ont trouvé des mondes habitables. À toi de les faire fleurir avant que d'autres ne s'en emparent."],
+      ["Tes premières colonies prospèrent. Les colons affluent."],
+      ["Une gouverneure de légende cherche un empire digne de ses talents. Le tien l'intéresse."],
+      ["Les franges sont à nous. {commander} gouvernera tes colonies."],
+    ],
+    rivalLines: [["Ces mondes sont à moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus à raser."], ["J'envoie mes équipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]],
+    lore: ["{commander} a transformé une lune stérile en grenier du secteur en moins de dix ans."],
+    look: "a visionary colonial governor in a white and mint long coat, terraformed green planet glowing behind, holographic city plans",
+  },
+  {
+    id: "chantiers",
+    names: ["L'Arsenal", "Cale sèche", "Rivets et canons"],
+    taglines: ["Une flotte se construit, un rivet à la fois.", "Les chantiers ne dorment jamais."],
+    accent: "#ff8a3d",
+    image: "/assets/blog/articles/5-10/couverture.webp",
+    mentor: "brannoc",
+    rival: "kor",
+    focus: ["victory", "contract", "warlordWin"],
+    roles: [["mechanic", "engineer"], ["mechanic", "admiral"]],
+    commanderTitles: ["Chef de cale", "Maître armurier", "Mécanicienne en chef"],
+    firstNames: ["Gunnar", "Petra", "Silas", "Mira", "Dorian"],
+    lastNames: ["Holt", "Varga", "Crane", "Ostrova", "Blackwell"],
+    synopsis: ["Une guerre se prépare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite."],
+    beats: [
+      ["Les chantiers sont rouillés, mais les plans sont bons. Remets-les en marche, commandant."],
+      ["Les premières coques sortent des cales. L'équipage applaudit."],
+      ["Une mécanicienne de génie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent."],
+      ["L'arsenal tourne à plein. {commander} veille sur tes cales sèches."],
+    ],
+    rivalLines: [["Mes chantiers produisent dix coques pour une des vôtres."], ["Jolies coques. Elles brûleront bien."], ["Ma nouvelle flotte est prête. Et la vôtre ?"], ["Hum. Vos chantiers sont meilleurs que prévu."]],
+    lore: ["{commander} peut remonter un réacteur les yeux fermés, et l'a déjà fait, en plein combat."],
+    look: "a gruff shipyard master mechanic, welding goggles, ember sparks, colossal hull under construction behind",
+  },
+  {
+    id: "moisson",
+    names: ["La Grande Moisson", "Saison d'abondance", "Les Greniers d'or"],
+    taglines: ["Récolter avant l'hiver.", "Un empire se nourrit de ses récoltes."],
+    accent: "#ffd86b",
+    image: "/assets/chronicles/2027-03-boss.webp",
+    mentor: "kor",
+    rival: "maru",
+    focus: ["contract", "bounty", "raidRepelled"],
+    roles: [["steward", "governor"], ["steward", "warden"]],
+    commanderTitles: ["Intendant des Greniers", "Maîtresse des récoltes", "Trésorier d'empire"],
+    firstNames: ["Basile", "Eléa", "Tomas", "Ines", "Leopold"],
+    lastNames: ["Granger", "Delacroix", "Moreau", "Sato", "Hallberg"],
+    synopsis: ["Les gisements du secteur débordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider."],
+    beats: [
+      ["Les gisements n'ont jamais été aussi riches. Récolte, stocke, et protège tes réserves."],
+      ["Les greniers se remplissent. Les pillards rôdent déjà."],
+      ["Un intendant légendaire propose ses services à l'empire le mieux tenu du secteur."],
+      ["Les greniers débordent. {commander} tiendra tes comptes."],
+    ],
+    rivalLines: [["Tant de réserves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos réserves la nourriront."], ["Vos greniers sont bien gardés. Pour cette saison."]],
+    lore: ["{commander} n'a jamais laissé une récolte se perdre ni un compte tomber faux."],
+    look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields on a planet behind",
+  },
 ];
 
 /* ---------- génération ---------- */
@@ -321,34 +419,28 @@ export interface GeneratePassSeasonOptions {
 export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   const variant = Math.max(0, Math.floor(o.variant ?? 0));
   const rng = seededRandom(`pass:${o.monthId}:${variant}`);
-  const before = [...o.existing].filter((s) => s.id < o.monthId).sort((a, b) => (a.id < b.id ? -1 : 1));
-  const recent = before.slice(-3).map((s) => s.theme.id);
-  const theme = pick(rng, PASS_THEMES.filter((t) => !recent.includes(t.id)));
-  const usedNames = new Set(o.existing.flatMap((s) => [s.theme.name, s.commander.name]));
-  const fresh = (xs: string[]) => {
-    const left = xs.filter((x) => !usedNames.has(x));
-    return pick(rng, left.length ? left : xs);
-  };
-  const name = fresh(theme.names);
+  // v5.14 : le catalogue fixe le thème du mois (douze en rotation, trois ans), son nom,
+  // son scénario et son commandant ; le tirage ne règle plus que paliers et répliques.
+  const entry = catalogEntryFor(o.monthId);
+  const theme = PASS_THEMES.find((t) => t.id === entry.theme) ?? PASS_THEMES[0];
+  const name = entry.name;
   const label = seasonLabel(o.monthId);
 
-  // Commandant de saison.
-  const [primary, secondary] = pick(rng, theme.roles);
-  let cmdName = `${pick(rng, theme.firstNames)} ${pick(rng, theme.lastNames)}`;
-  for (let i = 0; i < 6 && usedNames.has(cmdName); i++) cmdName = `${pick(rng, theme.firstNames)} ${pick(rng, theme.lastNames)}`;
-  const cmdTitle = pick(rng, theme.commanderTitles);
+  // Commandant de saison : rôle du thème, second rôle propre à l'année.
+  const cmdName = entry.commander.name;
+  const cmdTitle = entry.commander.title;
   const vars = { mentor: STORY_SPEAKERS[theme.mentor].name, rival: STORY_SPEAKERS[theme.rival].name, commander: cmdName, theme: name };
   const commander: PassSeason["commander"] = {
     id: `s-${o.monthId}`,
     name: cmdName,
     title: cmdTitle,
     portrait: "",
-    primary,
-    secondary,
-    lore: fill(pick(rng, theme.lore), vars),
+    primary: THEME_PRIMARY[entry.theme],
+    secondary: entry.commander.secondary,
+    lore: fill(entry.commander.lore, vars),
     seasonId: o.monthId,
     seasonLabel: label,
-    prompt: `/imagine prompt: sci-fi character portrait, ${theme.look}, named ${cmdName}, ${cmdTitle.toLowerCase()}, bust shot facing camera, dramatic rim light in ${theme.accent}, dark navy background, painterly concept art, highly detailed, no text, no letters --ar 4:5 --v 7 --s 250`,
+    prompt: portraitPrompt(entry, theme.accent),
   };
 
   // Paliers : rythme et récompenses du générateur de chapitres, puis prérequis et final.
@@ -357,7 +449,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   tiers[tiers.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
   const requirements: PassSeason["requirements"] = {};
-  const reasons = [...g.reasons, `Thème : ${name} (${theme.id}), sans répéter ${recent.join(", ") || "aucun thème récent"}.`];
+  const reasons = [...g.reasons, `Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
   PASS_GATES.forEach((gate, i) => {
     if (gate.tier > tiers.length) return;
     const key = focus[i % focus.length];
@@ -377,8 +469,8 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   return {
     id: o.monthId,
     status: "draft",
-    theme: { id: theme.id, name, tagline: pick(rng, theme.taglines), accent: theme.accent, image: theme.image },
-    scenario: { synopsis: fill(pick(rng, theme.synopsis), vars), milestones },
+    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: theme.image, prompt: illustrationPrompt(entry, theme.accent) },
+    scenario: { synopsis: fill(entry.synopsis, vars), milestones },
     pointsPerTier: g.pass.pointsPerTier,
     tiers,
     requirements,

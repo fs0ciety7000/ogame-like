@@ -77,7 +77,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(() => recruitCommander(player(), def.id, () => {}, "amber")).toThrow(/dernier palier/);
 
     const p = player();
-    addPassPoints(p, "victory", NOV_10, 1000);
+    addPassPoints(p, "seasonBoss", NOV_10, 100);
     for (let t = 1; t <= 9; t++) claimPassTier(p, t, NOV_10);
     const gate = s.requirements["10"];
     expect(() => claimPassTier(p, 10, NOV_10)).toThrow(/verrouillé/);
