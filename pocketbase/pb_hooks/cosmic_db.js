@@ -2922,9 +2922,9 @@ function marketAccept(e) {
         throw asHttpError(game, err);
       }
       savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-      if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
       notify(txApp, uid, buyer.notifications);
-      if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
+      notify(txApp, offer.sellerId, seller.notifications.concat([
         {
           kind: "gift",
           title: fill.done ? "Ordre d'achat complété" : "Ordre d'achat en partie rempli",
@@ -2953,9 +2953,9 @@ function marketAccept(e) {
       throw asHttpError(game, err);
     }
     savePlayer(txApp, game, buyer.loaded, buyer.player, buyer.queues);
-    if (!maker) savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+    savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
     notify(txApp, uid, buyer.notifications);
-    if (!maker) notify(txApp, offer.sellerId, seller.notifications.concat([
+    notify(txApp, offer.sellerId, seller.notifications.concat([
       {
         kind: "gift",
         title: "Offre acceptée au marché",
@@ -2964,14 +2964,6 @@ function marketAccept(e) {
         read: false,
       },
     ]));
-    // v4.2 : un marchand seigneur de guerre remercie (une fois par jour).
-    if (!maker && seller.player.npc) {
-      const lord = game.findWarlord(seller.player.npc);
-      if (lord) {
-        const st = readWarlordsState(txApp, game);
-        if (warlordSay(txApp, game, st, lord, Object.assign({}, buyer.player, { uid }), "market", now, false)) writeWarlordsState(txApp, st);
-      }
-    }
     rec.set("status", "filled");
     rec.set("buyerId", uid);
     rec.set("buyerPseudo", buyer.player.pseudo);

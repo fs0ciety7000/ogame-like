@@ -233,13 +233,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("gifts are transferred immediately by the server", async () => {
-    await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 } });
+    // v5.10 : comptes de plus de 3 jours ; hors alliance, 20 % de taxe de transport.
+    await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 }, createdAtMs: MONTH_AGO() });
+    await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO() });
     const before = (await snap(aId))!.resources.scrap;
     await ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 1000 } });
     const b = (await snap(bId))!;
     expect(b.resources.scrap).toBeLessThan(5000 - 999 + 100); // débité (hors production des dernières secondes)
     const after = (await snap(aId))!.resources.scrap;
-    expect(after - before).toBeGreaterThanOrEqual(1000);
+    expect(after - before).toBeGreaterThanOrEqual(800);
     await expect(
       ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 10_000_000 } }),
     ).rejects.toThrow(/insuffisantes/);
@@ -521,7 +523,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
       // A reçoit sa récompense individuelle et celle de son alliance championne.
       const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
-      expect(notif.length).toBe(2);
+      // Individuelle, alliance championne et, v5.10.5, ligue.
+      expect(notif.length).toBe(3);
       expect(aAfter.titles.map((t: { label: string }) => t.label)).toContain("Allié champion de Décembre 1999");
       expect((await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="alliance"` }))[0]?.allianceId).toBe(allianceId);
 
@@ -576,7 +579,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { resources: RICH });
       await al.depositToTreasury({ scrap: 1000 });
       expect(((await pb.collection("alliances").getOne(allianceId)).treasury as Record<string, number>).scrap).toBe(1000);
-      await expect(al.distributeTreasury(bId, { scrap: 10 })).rejects.toThrow(/officiers/);
+      // v5.10.5 : droits par rôle (« Trésor »).
+      await expect(al.distributeTreasury(bId, { scrap: 10 })).rejects.toThrow(/Trésor/);
       await expect(asA({ type: "distribute", targetUid: bId, resources: { scrap: 201 } })).rejects.toMatchObject({ status: 400 });
       const before = (await snap(bId)).resources.scrap;
       await asA({ type: "distribute", targetUid: bId, resources: { scrap: 200 } });
@@ -936,7 +940,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(filled.buyerId).toBe(bId);
       expect((await snap(bId))!.resources.scrap).toBeGreaterThanOrEqual(bScrap + 100_000);
       const aAfter = (await snap(aId))!.resources.energy;
-      expect(aAfter - aEnergy).toBeGreaterThanOrEqual(100_000 - filled.tax);
+      // Marge : l'entretien de la flotte consomme un peu d'énergie entre les deux relevés.
+      expect(aAfter - aEnergy).toBeGreaterThanOrEqual(100_000 - filled.tax - 50);
       expect(aAfter - aEnergy).toBeLessThan(100_000);
       await expect(pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } })).rejects.toMatchObject({ status: 400 });
       // Annulation : marchandise rendue.
@@ -1429,6 +1434,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("game_config").update(rec.id, { data: { ...state, current: { ...state.current, endMs: Date.now() - 1 } } });
       state = await admin.send("/api/cosmic/admin/challenge", { method: "POST", body: {} });
       expect(state.previous).toMatchObject({ id: "wk-test", status: "done", success: true });
+      // v5.10 : la récompense se réclame (connecté en B).
+      await pb.send("/api/cosmic/challenge/claim", { method: "POST" });
       expect((await snap(bId)).resources.aiFragment).toBe(aiBefore + 600);
       expect(state.titleHolder.uid).toBe(bId);
       expect((await snap(bId)).activeTitle).toBe("Pilier de la semaine");
