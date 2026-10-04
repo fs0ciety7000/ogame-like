@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ArrowRight, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { NumberInput } from "@/components/ui/number-input";
+import { NumberInput, resourceStep } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -162,12 +162,12 @@ export function TradeContractsPanel() {
         <p className="hud-eyebrow text-[10px] text-slate-500">Livre-moi</p>
         <div className="flex gap-2">
           <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource à livrer" className="min-w-0 flex-1" size="sm" />
-          <NumberInput size="sm" stepper={false} quick={false} value={wantAmount} onChange={setWantAmount} className="w-40" aria-label="Quantité à livrer" />
+          <NumberInput size="sm" quick={false} step={resourceStep(Math.max(100, wantAmount * 10))} value={wantAmount} onChange={setWantAmount} className="w-40" aria-label="Quantité à livrer" />
         </div>
         <p className="hud-eyebrow text-[10px] text-slate-500">Contre (bloqué dès la publication)</p>
         <div className="flex gap-2">
           <ResourceSelect value={payRes} onChange={setPayRes} ariaLabel="Ressource payée" className="min-w-0 flex-1" size="sm" />
-          <NumberInput size="sm" stepper={false} quick={false} value={payAmount} onChange={setPayAmount} className="w-40" aria-label="Paiement" />
+          <NumberInput size="sm" quick={false} step={resourceStep(Math.max(100, payAmount * 10))} value={payAmount} onChange={setPayAmount} className="w-40" aria-label="Paiement" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="hud-eyebrow text-[10px] text-slate-500">Délai de livraison</span>

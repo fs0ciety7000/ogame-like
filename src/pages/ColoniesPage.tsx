@@ -6,7 +6,7 @@ import { Check, Clock, Globe2, Hammer, Lock, Package, Pencil, Rocket, Shield, Sp
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
+import { NumberInput, resourceStep } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudChip, HudTag } from "@/components/ui/hud";
@@ -153,10 +153,10 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
               </span>
               <NumberInput
                 size="sm"
-                stepper={false}
                 nullable={direction !== "deliver"}
                 value={cargo[r.id]}
                 max={Math.max(0, Math.floor(source[r.id] ?? 0))}
+                step={resourceStep(source[r.id] ?? 0)}
                 placeholder={direction === "deliver" ? "0" : "max"}
                 onChange={(v: number | undefined) => setCargo((c) => ({ ...c, [r.id]: v }))}
                 aria-label={r.name}

@@ -412,12 +412,15 @@ function CommanderCard() {
       <div className="flex items-center gap-3">
         <img src={getRankIcon(player.xp)} alt="" className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_30%,transparent)] transition-transform group-hover:scale-105" />
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-[0.04em] text-white">
-            <PlayerName uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="truncate" />
+          {/* 5.15.4 : le pseudo a toute la largeur (retour à la ligne plutôt que « Nico… ») ; badge d'équipe avec le rang. */}
+          <p className="flex flex-wrap items-center gap-x-1.5 font-display text-[15px] font-bold leading-tight tracking-[0.02em] text-white">
+            <PlayerName uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="min-w-0 [overflow-wrap:anywhere]" />
             <AscensionStars count={player.ascensions} />
+          </p>
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
+            <span className="truncate">{getRankLabel(player.xp)}</span>
             <StaffBadge uid={player.uid} compact />
           </p>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">{getRankLabel(player.xp)}</p>
         </div>
       </div>
       <div className="mt-2.5 flex items-baseline justify-between font-mono text-[10px] text-slate-500">

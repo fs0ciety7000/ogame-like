@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, OBJECTIVE_LABELS, PASS_POINTS, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, isCumulativePass, OBJECTIVE_LABELS, PASS_POINTS, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -129,7 +129,11 @@ export function SeasonPassPage() {
               </HudChip>
             ))}
           </div>
-          <p className="text-xs text-slate-500">Un défi à la fois : tes actions ne comptent que pour ce palier, puis le compteur repart de zéro au palier suivant. Il faut le défi ET les points pour réclamer un palier.</p>
+          <p className="text-xs text-slate-500">
+            {isCumulativePass(st.seasonId)
+              ? "Totaux du mois : chaque action compte pour tous les paliers, rien n'est perdu. Les défis se relèvent dans l'ordre ; il faut le défi ET les points pour réclamer un palier."
+              : "Un défi à la fois : tes actions ne comptent que pour ce palier, puis le compteur repart de zéro au palier suivant. Il faut le défi ET les points pour réclamer un palier."}
+          </p>
         </Card>
       )}
 
@@ -177,7 +181,7 @@ export function SeasonPassPage() {
                 {claimed ? <Check className="h-4 w-4 text-mint-glow" /> : !reached ? <Lock className="h-3.5 w-3.5 text-slate-600" /> : null}
               </div>
               {req && (
-                <div className={cn("flex flex-col gap-1", req.status === "waiting" && "opacity-70")} title="Défi du palier : un palier à la fois">
+                <div className={cn("flex flex-col gap-1", req.status === "waiting" && "opacity-70")} title={isCumulativePass(st.seasonId) ? "Défi du palier : totaux du mois" : "Défi du palier : un palier à la fois"}>
                   {req.reqs.map((r) => (
                     <HudChip key={r.key} size="sm" tone={r.met ? "mint" : current ? "accent" : "neutral"} className="max-w-full whitespace-normal normal-case tracking-normal">
                       {r.met ? <Check /> : <Lock />} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}

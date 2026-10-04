@@ -4785,7 +4785,7 @@ function allianceChallengeTick(now) {
         });
         results.push(Object.assign({}, st, { rank: i + 1, reward }));
       });
-      state = game.startAllianceChallengeWeek(players, now, { weekId: state.weekId, challengeId: state.challengeId, results });
+      state = game.startAllianceChallengeWeek(players, now, { weekId: state.weekId, challengeId: state.challengeId, results }, state.next);
     }
     writeConfig(txApp, game.ALLIANCE_CHALLENGE_KEY, state);
   });

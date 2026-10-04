@@ -3,7 +3,9 @@ import { toast } from "sonner";
 import { Building2, Eye, FlaskConical, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { NumberInput } from "@/components/ui/number-input";
+import { NumberInput, resourceStep } from "@/components/ui/number-input";
+import { HudChip } from "@/components/ui/hud";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -27,20 +29,26 @@ import { EmojiIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 type Amounts = Partial<Record<ResourceId, number>>;
 
-function AmountsForm({ value, onChange, max }: { value: Amounts; onChange: (v: Amounts) => void; max?: (res: ResourceId) => number }) {
+/** 5.15.4 : une tuile par ressource (nom, disponible) avec le sélecteur des unités (− / +, MIN / MAX, jauge). */
+function AmountsForm({ value, onChange, max, maxLabel = "dispo" }: { value: Amounts; onChange: (v: Amounts) => void; max: (res: ResourceId) => number; maxLabel?: string }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {RESOURCE_LIST.map((r) => (
-        <label key={r.id} className="flex min-w-0 flex-col gap-1 text-[11px] text-slate-400">
-          {/* 5.15.4 : une seule ligne (nom tronqué, max à droite) : les champs restent alignés. */}
-          <span className="flex min-w-0 items-center gap-1.5" title={max ? `${r.name} : max ${formatNumber(max(r.id))}` : r.name}>
-            <ResourceIcon id={r.id} className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{r.name}</span>
-            {max && <span className="ml-auto shrink-0 font-mono tabular-nums text-slate-500">max {formatCompact(max(r.id))}</span>}
-          </span>
-          <NumberInput size="sm" stepper={false} value={value[r.id] ?? 0} max={max ? Math.max(0, max(r.id)) : undefined} onChange={(v) => onChange({ ...value, [r.id]: v })} aria-label={r.name} className="w-full" />
-        </label>
-      ))}
+    <div className="grid gap-2 sm:grid-cols-2">
+      {RESOURCE_LIST.map((r) => {
+        const top = Math.max(0, Math.floor(max(r.id)));
+        const v = value[r.id] ?? 0;
+        return (
+          <div key={r.id} className={cn("hud-cut-sm flex min-w-0 flex-col gap-1.5 border p-2.5 transition-colors", v > 0 ? "border-cyan-glow/40 bg-cyan-glow/[0.04]" : "border-white/5 bg-white/[0.02]")}>
+            <p className="flex min-w-0 items-center gap-1.5 text-xs" title={`${r.name} : ${maxLabel} ${formatNumber(top)}`}>
+              <ResourceIcon id={r.id} className="h-4 w-4 shrink-0" />
+              <span className="truncate text-slate-200">{r.name}</span>
+              <span className="ml-auto shrink-0 font-mono text-[10px] tabular-nums text-slate-500">
+                {maxLabel} {formatCompact(top)}
+              </span>
+            </p>
+            <NumberInput value={v} max={top} step={resourceStep(top)} disabled={top <= 0} onChange={(n) => onChange({ ...value, [r.id]: n })} aria-label={r.name} className="w-full" />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -82,6 +90,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
   const [dep, setDep] = useState<Amounts>({});
   const [dist, setDist] = useState<Amounts>({});
   const [target, setTarget] = useState(uid);
+  const [mode, setMode] = useState<"deposit" | "distribute">("deposit");
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<AllianceLog[]>([]);
   useEffect(() => subscribeAllianceLogs(alliance.id, setLogs), [alliance.id]);
@@ -102,9 +111,19 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
     }
   };
 
+  const amounts = clean(mode === "deposit" ? dep : dist);
+  const total = Object.values(amounts).reduce((x, y) => x + (y ?? 0), 0);
+  const targetName = alliance.memberPseudos[target] ?? target;
+  const limitReached = usedToday >= ALLIANCE_RULES.distributionsPerDay;
+  const submit = async () => {
+    if (mode === "deposit") return run(() => depositToTreasury(amounts), "Dépôt effectué.", () => setDep({}));
+    if (!(await askConfirm({ title: `Verser à ${targetName} ?`, message: `${formatCompact(total)} ressources sortent du trésor.`, details: <AmountsText res={amounts} />, confirmLabel: "Verser", tone: "gold" }))) return;
+    return run(() => distributeTreasury(target, amounts), "Versement effectué.", () => setDist({}));
+  };
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="flex flex-col gap-3 p-4">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <Card className="flex flex-col gap-4 p-4">
         <h3 className="hud-title flex items-center gap-2 text-sm text-white">
           <Landmark className="h-4 w-4 text-gold-glow" /> Trésor de l'alliance
         </h3>
@@ -116,43 +135,77 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
             </p>
           ))}
         </div>
-        <div className="border-t border-white/5 pt-3">
-          <p className="hud-eyebrow mb-2 text-slate-400">Déposer depuis tes stocks</p>
-          <AmountsForm value={dep} onChange={setDep} max={(res) => Math.floor(player?.resources[res] ?? 0)} />
-          <Button className="mt-2" size="sm" disabled={busy || Object.keys(clean(dep)).length === 0} onClick={() => void run(() => depositToTreasury(clean(dep)), "Dépôt effectué.", () => setDep({}))}>
-            Déposer
-          </Button>
-        </div>
-        {canDistribute && (
-          <div className="border-t border-white/5 pt-3">
-            <p className="hud-eyebrow mb-1 text-slate-400">Verser à un membre</p>
-            <p className="mb-2 text-xs text-slate-500">
-              Au plus {Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock par ressource, {ALLIANCE_RULES.distributionsPerDay} versements par jour
-              ({usedToday} aujourd'hui).
-            </p>
-            <select
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              className="hud-cut-sm mb-2 h-9 w-full border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
-            >
-              {alliance.members.map((m) => (
-                <option key={m} value={m}>
-                  {alliance.memberPseudos[m] ?? m}
-                </option>
-              ))}
-            </select>
-            <AmountsForm value={dist} onChange={setDist} max={(res) => Math.floor((treasury[res] ?? 0) * ALLIANCE_RULES.distributionMaxPct)} />
-            <Button
-              className="mt-2"
-              size="sm"
-              variant="outline"
-              disabled={busy || Object.keys(clean(dist)).length === 0 || usedToday >= ALLIANCE_RULES.distributionsPerDay}
-              onClick={() => void run(() => distributeTreasury(target, clean(dist)), "Versement effectué.", () => setDist({}))}
-            >
-              Verser
+
+        {/* 5.15.4 : une opération à la fois (dépôt ou versement), récapitulée avant d'agir. */}
+        <div className="flex flex-col gap-3 border-t border-white/5 pt-3">
+          <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Opération">
+            <HudChip asChild size="md" tone={mode === "deposit" ? "accent" : "neutral"}>
+              <button type="button" role="tab" aria-selected={mode === "deposit"} onClick={() => setMode("deposit")}>
+                Déposer
+              </button>
+            </HudChip>
+            {canDistribute && (
+              <HudChip asChild size="md" tone={mode === "distribute" ? "accent" : "neutral"}>
+                <button type="button" role="tab" aria-selected={mode === "distribute"} onClick={() => setMode("distribute")}>
+                  Verser à un membre
+                </button>
+              </HudChip>
+            )}
+          </div>
+          {mode === "deposit" ? (
+            <p className="text-xs text-slate-400">Depuis tes stocks, vers le trésor : il finance les recherches et les projets de l'alliance.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  aria-label="Membre"
+                  className="hud-cut-sm h-9 min-w-0 flex-1 border border-white/10 bg-space-800/70 px-2 text-sm text-slate-100"
+                >
+                  {alliance.members.map((m) => (
+                    <option key={m} value={m}>
+                      {alliance.memberPseudos[m] ?? m}
+                    </option>
+                  ))}
+                </select>
+                <HudChip size="sm" tone={limitReached ? "ember" : "neutral"}>
+                  {usedToday}/{ALLIANCE_RULES.distributionsPerDay} aujourd'hui
+                </HudChip>
+              </div>
+              <p className="text-xs text-slate-500">Au plus {Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock par ressource et par versement.</p>
+            </div>
+          )}
+          {mode === "deposit" ? (
+            <AmountsForm value={dep} onChange={setDep} max={(res) => player?.resources[res] ?? 0} />
+          ) : (
+            <AmountsForm value={dist} onChange={setDist} max={(res) => (treasury[res] ?? 0) * ALLIANCE_RULES.distributionMaxPct} maxLabel="max" />
+          )}
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/5 pt-3">
+            <div className="min-w-0 flex-1 text-xs">
+              {total > 0 ? (
+                <>
+                  <p className="font-mono tabular-nums text-slate-200">
+                    {formatCompact(total)} {mode === "deposit" ? "à déposer" : `à verser à ${targetName}`}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                    <AmountsText res={amounts} />
+                  </p>
+                </>
+              ) : (
+                <p className="text-slate-500">Choisis des montants (− / +, MAX ou saisie : 10k, 2,5M…).</p>
+              )}
+            </div>
+            {total > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => (mode === "deposit" ? setDep({}) : setDist({}))}>
+                Effacer
+              </Button>
+            )}
+            <Button size="sm" disabled={busy || total === 0 || (mode === "distribute" && limitReached)} onClick={() => void submit()}>
+              {mode === "deposit" ? "Déposer" : "Verser"}
             </Button>
           </div>
-        )}
+        </div>
       </Card>
 
       <Card className="flex flex-col gap-2 p-4">
