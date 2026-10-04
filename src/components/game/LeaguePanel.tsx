@@ -6,7 +6,7 @@ import { LEAGUE_RULES, LEAGUE_TIERS, LEAGUES_KEY, leagueInfo, leagueStandings, l
 import { currentSeasonId, seasonEndMs, seasonLabel } from "@/game/seasons";
 import { bossCountdown } from "@/components/game/BossStage";
 import { pb } from "@/lib/pocketbase";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, formatNumber, alpha } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/services/playerService";
 
 /* v5.10.5 : ligues de classement (bronze → diamant), montées et descentes à la fin de la saison. */
@@ -41,8 +41,8 @@ export function LeaguePanel({ players, uid }: { players: LeaderboardEntry[]; uid
   const last = state.last?.moves[uid];
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-wrap items-center gap-4 p-4" style={{ borderColor: `${myInfo.color}55` }}>
-        <span className="grid h-14 w-14 place-items-center border-2 text-3xl" style={{ borderColor: myInfo.color, background: `${myInfo.color}18` }}>
+      <Card className="flex flex-wrap items-center gap-4 p-4" style={{ borderColor: `${alpha(myInfo.color, 33)}` }}>
+        <span className="grid h-14 w-14 place-items-center border-2 text-3xl" style={{ borderColor: myInfo.color, background: `${alpha(myInfo.color, 9)}` }}>
           {myInfo.emoji}
         </span>
         <div className="min-w-0 flex-1">
@@ -75,7 +75,7 @@ export function LeaguePanel({ players, uid }: { players: LeaderboardEntry[]; uid
             aria-selected={shown === t.id}
             onClick={() => setTier(t.id)}
             className={cn("border px-3 py-1.5 text-xs font-semibold", shown === t.id ? "text-space-950" : "text-slate-300")}
-            style={shown === t.id ? { background: t.color, borderColor: t.color } : { borderColor: `${t.color}55` }}
+            style={shown === t.id ? { background: t.color, borderColor: t.color } : { borderColor: `${alpha(t.color, 33)}` }}
           >
             {t.emoji} {t.label}
             {t.id === mine ? " (toi)" : ""}

@@ -121,7 +121,7 @@ export function HallOfFamePage() {
                   p.uid === uid ? "border-cyan-glow bg-cyan-glow/[0.08]" : i < 3 ? "border-gold-glow/60 bg-white/[0.025]" : "border-white/10",
                 )}
               >
-                <span className={cn("hud-title w-8 text-lg tabular-nums", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[#e19b6d]" : "text-slate-600")}>
+                <span className={cn("hud-title w-8 text-lg tabular-nums", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[var(--th-medal-bronze)]" : "text-slate-600")}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")} />

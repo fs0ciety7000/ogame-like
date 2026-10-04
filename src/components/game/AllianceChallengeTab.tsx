@@ -12,7 +12,7 @@ import type { ResourceId } from "@/types/game";
 
 /* v5.10.5 : défi d'alliance de la semaine — classement entre alliances, prix au trésor. */
 
-const MEDALS = ["#ffd86b", "#cbd5e1", "#e0a26b"];
+const MEDALS = ["var(--th-medal-gold)", "var(--th-medal-silver)", "var(--th-medal-bronze)"];
 
 export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
   const [state, setState] = useState<AllianceChallengeState | null | undefined>(undefined);
@@ -53,7 +53,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
           {state.standings.length === 0 && <li className="text-xs text-slate-500">Aucune alliance n'a encore marqué de point cette semaine.</li>}
           {state.standings.map((s, i) => (
             <li key={s.allianceId} className={cn("grid grid-cols-[2rem_1fr_auto] items-center gap-2 text-sm", s.allianceId === allianceId && "text-cyan-glow")}>
-              <span className="font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "#64748b" }}>
+              <span className="font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "var(--color-slate-500)" }}>
                 #{i + 1}
               </span>
               <span className="min-w-0 truncate">

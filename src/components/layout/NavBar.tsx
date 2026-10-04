@@ -211,7 +211,7 @@ const BOSS_NAV: Record<BossPhase, { label: string; chip: string; color: string }
   active: { label: "En cours", chip: "En cours", color: "var(--color-danger-glow)" },
   killed: { label: "Abattu", chip: "Abattu", color: "var(--color-mint-glow)" },
   failed: { label: "Retiré", chip: "Retiré", color: "var(--color-ember-glow)" },
-  dormant: { label: "En sommeil", chip: "Zzz", color: "#64748b" },
+  dormant: { label: "En sommeil", chip: "Zzz", color: "var(--color-slate-500)" },
 };
 
 /** Minute courante (les fins de combat sont gérées sans attendre le serveur). */

@@ -8,12 +8,12 @@ import { contestPhase, contestPurse, contestScore, type Contest } from "@/game/c
 import { RESOURCE_LIST } from "@/game/resources";
 import type { ServerPot } from "@/game/serverPot";
 import { bossCountdown } from "@/components/game/BossStage";
-import { cn, formatCompact } from "@/lib/utils";
+import { cn, formatCompact, alpha } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* v5.10.5 : un concours du pot commun — critère, temps restant, prix, classement. */
 
-const MEDALS = ["#ffd86b", "#cbd5e1", "#e0a26b"];
+const MEDALS = ["var(--th-medal-gold)", "var(--th-medal-silver)", "var(--th-medal-bronze)"];
 
 function Purse({ amounts, share = 1 }: { amounts: Partial<Record<ResourceId, number>>; share?: number }) {
   const list = RESOURCE_LIST.map((r) => [r.id, Math.floor((amounts[r.id] ?? 0) * share)] as [ResourceId, number]).filter(([, v]) => v > 0);
@@ -36,7 +36,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
   const myRank = c.standings.findIndex((s) => s.uid === player.uid);
   const myScore = phase === "running" || phase === "ending" ? contestScore(c, player) : (c.standings.find((s) => s.uid === player.uid)?.score ?? 0);
   const label = phase === "scheduled" ? `Commence dans ${bossCountdown(c.startMs - now)}` : phase === "running" ? `Se termine dans ${bossCountdown(c.endMs - now)}` : phase === "ending" ? "Résultats imminents" : "Terminé";
-  const tone = phase === "running" ? "#5cf2b0" : phase === "scheduled" ? "#4be8ff" : "#94a3b8";
+  const tone = phase === "running" ? "var(--color-mint-glow)" : phase === "scheduled" ? "var(--color-cyan-glow)" : "var(--color-slate-400)";
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-start gap-2">
@@ -47,7 +47,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
             Critère : <span className="text-slate-200">{metric}</span> (progression pendant le concours)
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: tone, borderColor: `${tone}66` }}>
+        <span className="inline-flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: tone, borderColor: `${alpha(tone, 40)}` }}>
           <Clock className="h-3 w-3" /> {label}
         </span>
       </div>
@@ -57,7 +57,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
         <ol className="flex flex-col gap-1.5">
           {c.results.map((r) => (
             <li key={r.uid} className={cn("flex flex-wrap items-center gap-2 text-sm", r.uid === player.uid && "text-cyan-glow")}>
-              <span className="w-7 font-mono text-xs font-bold" style={{ color: MEDALS[r.rank - 1] ?? "#64748b" }}>
+              <span className="w-7 font-mono text-xs font-bold" style={{ color: MEDALS[r.rank - 1] ?? "var(--color-slate-500)" }}>
                 #{r.rank}
               </span>
               <PlayerName uid={r.uid} pseudo={r.pseudo} className="min-w-0 flex-1 truncate" />
@@ -78,7 +78,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
               <div className="grid gap-1">
                 {c.places.map((share, i) => (
                   <span key={i} className="flex flex-wrap items-center gap-2">
-                    <span className="w-16 shrink-0 font-mono" style={{ color: MEDALS[i] ?? "#94a3b8" }}>
+                    <span className="w-16 shrink-0 font-mono" style={{ color: MEDALS[i] ?? "var(--color-slate-400)" }}>
                       {i === 0 ? "1re" : `${i + 1}e`} place
                     </span>
                     <Purse amounts={purse} share={share} />
@@ -98,7 +98,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
                   {c.standings.length === 0 && <li className="text-xs text-slate-500">Pas encore de classement : il est relevé tous les quarts d'heure.</li>}
                   {c.standings.slice(0, 10).map((s, i) => (
                     <li key={s.uid} className={cn("flex items-center gap-2 text-sm", s.uid === player.uid && "text-cyan-glow")}>
-                      <span className="w-7 font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "#64748b" }}>
+                      <span className="w-7 font-mono text-xs font-bold" style={{ color: MEDALS[i] ?? "var(--color-slate-500)" }}>
                         #{i + 1}
                       </span>
                       <PlayerName uid={s.uid} pseudo={s.pseudo} className="min-w-0 flex-1 truncate" />

@@ -161,7 +161,8 @@ export function EmptyState({ icon, title, children, className }: { icon: ReactNo
 }
 
 /** Tuile de chiffre clé : libellé, grande valeur, liseré coloré. */
-export function StatTile({ label, value, sub, tone = "var(--color-cyan-glow)", icon }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string; icon?: ReactNode }) {
+export function StatTile({ label, value, sub, tone: toneIn = "accent", icon }: { label: string; value: ReactNode; sub?: ReactNode; tone?: HudTone; icon?: ReactNode }) {
+  const tone = HUD_TONE[toneIn];
   return (
     <div className="glass-panel relative overflow-hidden p-4">
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 12px ${tone}` }} />

@@ -10,7 +10,7 @@ import { BlogPreview } from "@/components/blog/BlogPreview";
 import { BLOG_CATEGORIES, BLOG_RULES, isPublic, normalizeTags, slugify, type BlogPost } from "@/game/blog";
 import { BLOG_URL, createBlogPost, deleteBlogPost, removeBlogImage, slugTaken, updateBlogPost, uploadBlogImage, type BlogDraft } from "@/services/blogService";
 import { pb } from "@/lib/pocketbase";
-import { cn } from "@/lib/utils";
+import { cn, alpha } from "@/lib/utils";
 
 /* v5.8 : écriture d'un article du devblog (création ou modification). */
 
@@ -276,7 +276,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                   type="button"
                   onClick={() => set({ category: c.id })}
                   className={cn("border px-2.5 py-1.5 text-xs transition-colors", d.category === c.id ? "text-white" : "border-white/10 text-slate-400 hover:text-white")}
-                  style={d.category === c.id ? { borderColor: c.color, background: `${c.color}1a`, color: c.color } : undefined}
+                  style={d.category === c.id ? { borderColor: c.color, background: `${alpha(c.color, 10)}`, color: c.color } : undefined}
                   title={c.description}
                 >
                   <BlogCategoryIcon category={c.id} /> {c.label}

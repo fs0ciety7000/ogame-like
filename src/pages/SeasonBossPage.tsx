@@ -107,9 +107,9 @@ export function SeasonBossPage() {
           </div>
           <BossPhasePanel state={state} accent={month?.theme.accent} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
-            <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank >= 0 && rank < SEASON_BOSS_RULES.topRelics ? "Relique épique si le boss tombe" : `Top ${SEASON_BOSS_RULES.topRelics} : relique épique`} tone="var(--color-gold-glow)" />
-            <StatTile label="Participants" value={leviathanRanking(state).length} tone="var(--color-cyan-glow)" />
+            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="ember" />
+            <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank >= 0 && rank < SEASON_BOSS_RULES.topRelics ? "Relique épique si le boss tombe" : `Top ${SEASON_BOSS_RULES.topRelics} : relique épique`} tone="gold" />
+            <StatTile label="Participants" value={leviathanRanking(state).length} tone="accent" />
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="danger" disabled={wait > 0} onClick={() => setOpen(true)}>

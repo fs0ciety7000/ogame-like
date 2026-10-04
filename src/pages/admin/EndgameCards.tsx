@@ -42,10 +42,10 @@ export function MythicRelicsCard() {
   return (
     <Card className="flex flex-col gap-2 p-4">
       <h3 className="hud-title flex items-center gap-2 text-sm">
-        <Gem className="h-4 w-4" style={{ color: "#ff5df0" }} /> Reliques mythiques
+        <Gem className="h-4 w-4" style={{ color: "var(--th-rarity-mythic)" }} /> Reliques mythiques
       </h3>
       <p className="text-xs text-slate-400">
-        Ce mois-ci ({seasonId}) : <span style={{ color: "#ff5df0" }}>{current.template.name}</span>, portée par{" "}
+        Ce mois-ci ({seasonId}) : <span style={{ color: "var(--th-rarity-mythic)" }}>{current.template.name}</span>, portée par{" "}
         {current.source === "leviathan" ? "le Léviathan" : "le boss de saison"}.
       </p>
       {rows === null ? (

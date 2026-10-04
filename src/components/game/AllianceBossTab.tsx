@@ -45,7 +45,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
   const phase = bossPhase(shown, now);
   const ended = phase === "killed" || phase === "failed";
   const nextWeek = allianceNextWeekMs(now);
-  const art: BossArt = { name: def.name, image: def.image, emblem: "", lore: def.lore, accent: "#ff8a4c" };
+  const art: BossArt = { name: def.name, image: def.image, emblem: "", lore: def.lore, accent: "var(--color-ember-glow)" };
   const canCall = canCallAllianceBoss(alliance, player.uid);
   // Estimation du coût : production des membres connus localement (la mienne × membres, à titre indicatif).
   const estimate = allianceBossCost([player]);
@@ -92,9 +92,9 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
           </div>
           <BossPhasePanel state={state} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${Math.round(share * 100)} % du total · ${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
-            <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank === 0 ? "Relique rare s'il tombe" : "Le premier gagne une relique rare"} tone="var(--color-gold-glow)" />
-            <StatTile label="Participants" value={ranking.length} sub={`sur ${alliance.members.length} membres`} tone="var(--color-cyan-glow)" />
+            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${Math.round(share * 100)} % du total · ${mine?.assaults ?? 0} assaut(s)`} tone="ember" />
+            <StatTile label="Ton rang" value={rank >= 0 ? `#${rank + 1}` : "—"} sub={rank === 0 ? "Relique rare s'il tombe" : "Le premier gagne une relique rare"} tone="gold" />
+            <StatTile label="Participants" value={ranking.length} sub={`sur ${alliance.members.length} membres`} tone="accent" />
           </div>
           {active && (
             <div className="flex flex-wrap items-center gap-3">

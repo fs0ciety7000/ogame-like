@@ -105,8 +105,8 @@ export function SeasonPassPage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
-        <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="var(--color-gold-glow)" />
-        <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="var(--color-ember-glow)" />
+        <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
+        <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="ember" />
       </div>
 
       <Card className="p-4">

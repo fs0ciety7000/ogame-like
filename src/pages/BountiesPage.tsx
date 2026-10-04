@@ -296,9 +296,9 @@ function BoardTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
   return (
     <div className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Primes du jour" value={`${st.doneToday} / ${BOUNTY_RULES.dailyLimit}`} sub="remises à zéro à minuit (UTC)" tone="var(--color-gold-glow)" icon={<Crosshair className="h-4 w-4" />} />
-        <StatTile label="Nouveau tableau" value={formatDuration(Math.max(0, Math.floor((nextRefreshMs(now) - now) / 1000)))} sub={`toutes les ${BOUNTY_RULES.refreshHours} h`} tone="var(--color-cyan-glow)" icon={<Timer className="h-4 w-4" />} />
-        <StatTile label="Tableau de chasse" value={st.completed} sub={`${st.failed} échec${st.failed > 1 ? "s" : ""}`} tone="var(--color-mint-glow)" icon={<Trophy className="h-4 w-4" />} />
+        <StatTile label="Primes du jour" value={`${st.doneToday} / ${BOUNTY_RULES.dailyLimit}`} sub="remises à zéro à minuit (UTC)" tone="gold" icon={<Crosshair className="h-4 w-4" />} />
+        <StatTile label="Nouveau tableau" value={formatDuration(Math.max(0, Math.floor((nextRefreshMs(now) - now) / 1000)))} sub={`toutes les ${BOUNTY_RULES.refreshHours} h`} tone="accent" icon={<Timer className="h-4 w-4" />} />
+        <StatTile label="Tableau de chasse" value={st.completed} sub={`${st.failed} échec${st.failed > 1 ? "s" : ""}`} tone="mint" icon={<Trophy className="h-4 w-4" />} />
       </div>
       <div className={cn("grid gap-3 md:grid-cols-2", st.board.length >= 3 && "xl:grid-cols-3", st.board.length >= 4 && "2xl:grid-cols-4")}>
         {st.board.map((c) => (
@@ -373,7 +373,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
+            <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="ember" />
             <StatTile
               label="Si elle tombe"
               value={
@@ -382,9 +382,9 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
                 </span>
               }
               sub={`+${ELITE_RULES.killed.xp} XP · ${ELITE_RULES.failed.amber} si elle fuit`}
-              tone="var(--color-gold-glow)"
+              tone="gold"
             />
-            <StatTile label="Chasseurs" value={ranking.length} tone="var(--color-cyan-glow)" />
+            <StatTile label="Chasseurs" value={ranking.length} tone="accent" />
           </div>
           {active &&
             (rankOk ? (

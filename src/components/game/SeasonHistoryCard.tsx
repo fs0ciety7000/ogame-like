@@ -8,7 +8,7 @@ import type { SeasonResult } from "@/types/game";
 
 /* v4.9.3 : historique des saisons du joueur sur sa page de profil (classement, XP, récompense). */
 
-const PODIUM = ["text-gold-glow", "text-slate-200", "text-[#e0a36a]"];
+const PODIUM = ["text-gold-glow", "text-slate-200", "text-[var(--th-medal-bronze)]"];
 
 export function SeasonHistoryCard({ uid, currentXp }: { uid: string; currentXp: number }) {
   const [list, setList] = useState<SeasonResult[] | null>(null);

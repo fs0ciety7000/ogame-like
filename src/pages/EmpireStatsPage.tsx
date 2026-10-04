@@ -44,9 +44,9 @@ function Num({ value, className }: { value: number; className?: string }) {
 function Bar({ value, tone = CYAN, className }: { value: number; tone?: string; className?: string }) {
   const w = Math.min(100, Math.max(0, value * 100));
   return (
-    <div className={cn("relative h-1.5 overflow-hidden rounded-full bg-white/[0.06]", className)}>
+    <div className={cn("relative h-1.5 overflow-hidden bg-white/[0.06]", className)}>
       <motion.i
-        className="absolute inset-y-0 left-0 block rounded-full"
+        className="absolute inset-y-0 left-0 block"
         style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${tone} 55%, transparent), ${tone})`, boxShadow: `0 0 10px color-mix(in srgb, ${tone} 60%, transparent)` }}
         initial={{ width: 0 }}
         whileInView={{ width: `${w}%` }}
@@ -66,7 +66,6 @@ function Section({ title, icon: Icon, tone = CYAN, aside, className, children }:
       viewport={{ once: true, margin: "-40px" }}
       className={cn("glass-panel relative flex min-w-0 flex-col gap-4 overflow-hidden p-4 sm:p-5", className)}
     >
-      <span aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-[0.12] blur-3xl" style={{ background: tone }} />
       <div className="relative flex flex-wrap items-center gap-3">
         <span className="hud-cut grid h-9 w-9 place-items-center border" style={{ color: tone, borderColor: `color-mix(in srgb, ${tone} 40%, transparent)`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
           <Icon className="h-4 w-4" />
@@ -92,7 +91,6 @@ function HeroTile({ label, value, display, sub, icon: Icon, tone }: { label: str
   return (
     <motion.div variants={rise} whileHover={{ y: -3 }} className="glass-panel group relative min-w-0 overflow-hidden p-4">
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 14px ${tone}` }} />
-      <span aria-hidden className="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full opacity-20 blur-2xl transition-opacity duration-300 group-hover:opacity-40" style={{ background: tone }} />
       <Icon aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-20 w-20 opacity-[0.06] transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110" style={{ color: tone }} />
       <p className="relative font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">{label}</p>
       <p className="hud-title relative mt-1.5 text-3xl normal-case" style={{ color: tone, textShadow: `0 0 18px color-mix(in srgb, ${tone} 45%, transparent)` }}>
@@ -255,7 +253,7 @@ export function EmpireStatsPage() {
                     <Num value={total} />
                     <span className="ml-1 text-xs text-slate-500">/ h</span>
                   </p>
-                  <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/[0.06]" title="Planète mère / colonies">
+                  <div className="mt-2 flex h-1.5 overflow-hidden bg-white/[0.06]" title="Planète mère / colonies">
                     <motion.i className="block h-full bg-cyan-glow" initial={{ width: 0 }} whileInView={{ width: `${homeShare * 100}%` }} viewport={{ once: true }} transition={{ duration: 0.9, ease: "easeOut" }} />
                     <motion.i className="block h-full bg-violet-glow" initial={{ width: 0 }} whileInView={{ width: `${(1 - homeShare) * 100}%` }} viewport={{ once: true }} transition={{ duration: 0.9, delay: 0.2, ease: "easeOut" }} />
                   </div>
@@ -440,9 +438,9 @@ export function EmpireStatsPage() {
           <Section title="Flottes en vol" icon={Gauge} tone={GOLD} aside={<SectionLink to="/game/galaxie">Galaxie</SectionLink>}>
             {st.fleets.inFlight === 0 ? (
               <div className="flex items-center gap-3 text-sm text-slate-400">
-                <motion.span animate={{ rotate: 360 }} transition={{ duration: 18, repeat: Infinity, ease: "linear" }} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-dashed border-white/15">
+                <span className="hud-cut-sm grid h-10 w-10 shrink-0 place-items-center border border-dashed border-white/15">
                   <Rocket className="h-4 w-4 text-slate-500" />
-                </motion.span>
+                </span>
                 Aucune flotte en mission : toute ton armée est à quai.
               </div>
             ) : (
@@ -496,7 +494,7 @@ export function EmpireStatsPage() {
               </p>
               <div className="flex gap-1">
                 {Array.from({ length: st.command.slots }, (_, i) => (
-                  <span key={i} className={cn("h-1.5 flex-1 rounded-full", i < st.command.active.length ? "bg-gold-glow shadow-[0_0_8px_var(--color-gold-glow)]" : "bg-white/[0.08]")} />
+                  <span key={i} className={cn("h-1.5 flex-1", i < st.command.active.length ? "bg-gold-glow shadow-[0_0_8px_var(--color-gold-glow)]" : "bg-white/[0.08]")} />
                 ))}
               </div>
               {st.command.active.length === 0 ? (

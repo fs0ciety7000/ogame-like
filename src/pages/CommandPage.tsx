@@ -62,7 +62,7 @@ import {
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, alpha } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { useNavigate } from "react-router-dom";
 
@@ -88,11 +88,11 @@ async function run<T>(task: () => Promise<T>, success?: (out: T) => string | nul
 }
 
 const COMMANDER_TONES: Record<CommanderId, string> = {
-  admiral: "#ff7a45",
-  strategist: "#4be8ff",
-  engineer: "#ffd86b",
-  spy: "#a78bfa",
-  steward: "#5ef2b0",
+  admiral: "var(--color-ember-glow)",
+  strategist: "var(--color-cyan-glow)",
+  engineer: "var(--color-gold-glow)",
+  spy: "var(--color-violet-glow)",
+  steward: "var(--color-mint-glow)",
 };
 
 const COMMANDER_ICONS: Record<CommanderId, typeof Swords> = {
@@ -111,7 +111,7 @@ function Portrait({ def, className }: { def: CommanderDef; className?: string })
   return (
     <div
       className={cn("hud-cut relative grid place-items-center overflow-hidden border", className)}
-      style={{ borderColor: `${tone}66`, background: `radial-gradient(circle at 50% 30%, ${tone}33, transparent 70%), #070a14` }}
+      style={{ borderColor: `${alpha(tone, 40)}`, background: `radial-gradient(circle at 50% 30%, ${alpha(tone, 20)}, transparent 70%), var(--color-space-900)` }}
     >
       {!broken ? (
         <img src={assetUrl(def.portrait)} alt={def.name} className="h-full w-full object-cover" onError={() => setBroken(true)} />
@@ -180,7 +180,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
   };
 
   return (
-    <Card className={cn("flex flex-col gap-3 p-4", active && "ring-1")} style={active ? { boxShadow: `0 0 24px -12px ${tone}`, borderColor: `${tone}88` } : undefined}>
+    <Card className={cn("flex flex-col gap-3 p-4", active && "ring-1")} style={active ? { boxShadow: `0 0 24px -12px ${tone}`, borderColor: `${alpha(tone, 53)}` } : undefined}>
       <div className="flex gap-3">
         <Portrait def={def} className={cn("h-24 w-20 shrink-0", !entry && "opacity-60 grayscale")} />
         <div className="min-w-0 flex-1">
@@ -263,8 +263,8 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Postes" value={`${st.active.length} / ${slots}`} sub={slots < 3 ? "Un 3e poste au rang Platine" : "Rang Platine atteint"} icon={<Medal className="h-4 w-4" />} />
-        <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="var(--color-gold-glow)" icon={<UserPlus className="h-4 w-4" />} />
-        <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="var(--color-mint-glow)" icon={<BookOpen className="h-4 w-4" />} />
+        <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
+        <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {COMMANDERS.map((def) => (
@@ -303,7 +303,7 @@ function RelicBadge({ item, className }: { item: Pick<RelicItem, "template" | "r
   return (
     <div
       className={cn("hud-cut-sm relative grid shrink-0 place-items-center overflow-hidden border", className)}
-      style={{ borderColor: `${r.color}88`, background: `radial-gradient(circle, ${r.color}2a, transparent 75%), #070a14`, boxShadow: item.rarity === "legendary" || item.rarity === "mythic" ? `0 0 16px -4px ${r.color}` : undefined }}
+      style={{ borderColor: `${alpha(r.color, 53)}`, background: `radial-gradient(circle, ${alpha(r.color, 16)}, transparent 75%), var(--color-space-900)`, boxShadow: item.rarity === "legendary" || item.rarity === "mythic" ? `0 0 16px -4px ${r.color}` : undefined }}
     >
       {!broken ? (
         <img src={assetUrl(relicImage(item.template))} alt="" className="h-full w-full object-contain p-1" onError={() => setBroken(true)} />
@@ -465,17 +465,17 @@ function RelicsTab({ player }: { player: PlayerState }) {
 /* ---------- Labo de synthèse ---------- */
 
 const CAPSULE_TONES: Record<CapsuleType, string> = {
-  assault: "#ff7a45",
-  armor: "#4be8ff",
-  decoy: "#a78bfa",
-  veil: "#5ef2b0",
+  assault: "var(--color-ember-glow)",
+  armor: "var(--color-cyan-glow)",
+  decoy: "var(--color-violet-glow)",
+  veil: "var(--color-mint-glow)",
 };
 
 function CapsuleIcon({ type, className }: { type: CapsuleType; className?: string }) {
   const [broken, setBroken] = useState(false);
   const tone = CAPSULE_TONES[type];
   return (
-    <div className={cn("hud-cut-sm grid shrink-0 place-items-center overflow-hidden border", className)} style={{ borderColor: `${tone}88`, background: `radial-gradient(circle, ${tone}33, transparent 75%), #070a14` }}>
+    <div className={cn("hud-cut-sm grid shrink-0 place-items-center overflow-hidden border", className)} style={{ borderColor: `${alpha(tone, 53)}`, background: `radial-gradient(circle, ${alpha(tone, 20)}, transparent 75%), var(--color-space-900)` }}>
       {!broken ? <img src={assetUrl(`/assets/capsules/${type}.webp`)} alt="" className="h-full w-full object-contain p-1" onError={() => setBroken(true)} /> : <FlaskConical className="h-1/2 w-1/2" style={{ color: tone }} />}
     </div>
   );
@@ -520,9 +520,9 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Labo de synthèse" value={`Niveau ${level}`} sub={`Capsules jusqu'à ${capsulePct(level)} %`} tone="#a78bfa" icon={<FlaskConical className="h-4 w-4" />} />
+        <StatTile label="Labo de synthèse" value={`Niveau ${level}`} sub={`Capsules jusqu'à ${capsulePct(level)} %`} tone="violet" icon={<FlaskConical className="h-4 w-4" />} />
         <StatTile label="Carapace réactive" value={armorLeft ? `+${st.armor!.pct} %` : "Inactive"} sub={armorLeft ? `Encore ${formatDuration(Math.ceil(armorLeft / 1000))}` : "Contre la prochaine attaque de joueur"} icon={<Shield className="h-4 w-4" />} />
-        <StatTile label="Brouilleur de défense" value={veilLeft ? `±${st.veil!.pct} %` : "Inactif"} sub={veilLeft ? `Encore ${formatDuration(Math.ceil(veilLeft / 1000))}` : "Fausse les rapports d'espionnage"} tone="var(--color-mint-glow)" icon={<Eye className="h-4 w-4" />} />
+        <StatTile label="Brouilleur de défense" value={veilLeft ? `±${st.veil!.pct} %` : "Inactif"} sub={veilLeft ? `Encore ${formatDuration(Math.ceil(veilLeft / 1000))}` : "Fausse les rapports d'espionnage"} tone="mint" icon={<Eye className="h-4 w-4" />} />
       </div>
 
       <Card className="flex flex-col gap-3 p-4">

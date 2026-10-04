@@ -230,7 +230,7 @@ export function PlayersPage() {
               transition={{ duration: 0.25, delay: reduced ? 0 : Math.min(i, 15) * 0.035 }}
               className="flex items-center gap-3 p-3"
             >
-              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[#e19b6d]" : "text-slate-600")}>
+              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600")}>
                 {String(a.rank).padStart(2, "0")}
               </span>
               <Flag className="h-4 w-4 shrink-0 text-gold-glow" />
@@ -321,7 +321,7 @@ export function PlayersPage() {
                 <span
                   className={cn(
                     "hud-title text-center text-2xl tabular-nums max-sm:text-xl",
-                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[#e19b6d]" : "text-slate-600",
+                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600",
                   )}
                 >
                   {String(p.rank).padStart(2, "0")}

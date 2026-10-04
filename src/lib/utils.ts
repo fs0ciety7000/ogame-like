@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Couleur (hex ou var(--…)) à `pct` % d'opacité : marche aussi avec les jetons du thème. */
+export function alpha(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${Math.round(pct)}%, transparent)`;
+}
+
 export function formatNumber(value: number): string {
   const v = Math.floor(value);
   if (Math.abs(v) < 1000) return String(v);

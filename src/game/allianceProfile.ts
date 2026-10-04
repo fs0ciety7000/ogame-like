@@ -12,6 +12,9 @@ import type { Alliance } from "@/types/game";
    Tout est rangé dans le champ « profile » de l'alliance.
 ===================================================== */
 
+
+/** Couleurs proposées pour les rangs (enregistrées telles quelles : hex). */
+export const RANK_COLORS = ["#ffd86b", "#4be8ff", "#5cf2b0", "#a78bfa", "#ff8a4c", "#ff5c7a", "#94a3b8"];
 export type AlliancePerm = "treasury" | "research" | "projects" | "diplomacy" | "boss" | "recruit" | "kick";
 
 export const ALLIANCE_PERMS: { id: AlliancePerm; label: string; hint: string }[] = [
