@@ -37,3 +37,6 @@ Le passe d'octobre reçoit ses défis, le boss de saison suit le rythme du boss 
 - [Nouveau] **Nouvelles sources de jetons** : 2 jetons par chasseur quand la proie d'élite des primes tombe, 1 jeton par seigneur de guerre pillé.
 - [Nouveau] **Succès mythique « Main d'or »** pour qui aligne trois 7 : nouveau palier Mythique, titre, bannière et sceau de profil, et une entrée « La Main d'or » dans le codex (nouvelle catégorie Légendes).
 - [Nouveau] Administration : **alimenter le pot commun** (ressources créées par l'équipe, avec motif, inscrites au journal), et réglage des nouvelles sources de jetons.
+
+## Illustrations
+- [Correctif] **Les illustrations actuelles des bâtiments et des unités sont de retour** (extracteur de ferraille, réacteur, entrepôt, hangars, chasseur, frégate…) : le jeu affichait encore leurs toutes premières versions.
