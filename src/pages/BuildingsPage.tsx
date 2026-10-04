@@ -1,4 +1,5 @@
 import { playerBuildTimeFactor } from "@/game/bonuses";
+import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -139,7 +140,7 @@ export function BuildingsPage() {
                   <div className={cn("hud-cut relative aspect-square overflow-hidden border border-gold-glow/25 bg-space-900", TIER_FRAME[visualTier(level)])}>
                     <LevelUpBurst level={level} />
                     <img
-                      src={buildingImage(building, level)}
+                      src={assetUrl(buildingImage(building, level))}
                       alt={building.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {

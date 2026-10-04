@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
 import { ChevronDown, Handshake, Play, RotateCcw, Save, Sword, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -118,7 +119,7 @@ export function WarlordsPanel() {
         return (
           <Card key={d.id} className="p-0">
             <button type="button" className="flex w-full items-center gap-3 p-3 text-left" onClick={() => setOpen(isOpen ? null : d.id)}>
-              <img src={d.portrait} alt="" className="h-10 w-10 object-cover object-top" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
+              <img src={assetUrl(d.portrait)} alt="" className="h-10 w-10 object-cover object-top" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-white">
                   {d.name} {!d.enabled && <span className="text-xs text-slate-500">(désactivé)</span>}
