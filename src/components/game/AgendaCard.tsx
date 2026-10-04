@@ -108,12 +108,13 @@ export function AgendaCard({ now }: { now: number }) {
               const live = i.startMs <= now;
               return (
                 <li key={i.id}>
-                  <Link to={i.link} className="flex items-center gap-2 text-sm hover:text-white">
+                  {/* v5.14 : sur téléphone, la date passe sous le titre (il était coupé à 5 lettres). */}
+                  <Link to={i.link} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm hover:text-white sm:flex-nowrap">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: AGENDA_COLORS[i.kind] }} />
                     <span className="min-w-0 flex-1 truncate text-slate-200">
                       {i.emoji} {i.title}
                     </span>
-                    <span className="shrink-0 font-mono text-[11px] text-slate-400">{live ? `en cours · fin dans ${bossCountdown((i.endMs ?? now) - now)}` : `${when(i.startMs)} · dans ${bossCountdown(i.startMs - now)}`}</span>
+                    <span className="w-full pl-4 font-mono text-[11px] text-slate-400 sm:w-auto sm:shrink-0 sm:pl-0">{live ? `en cours · fin dans ${bossCountdown((i.endMs ?? now) - now)}` : `${when(i.startMs)} · dans ${bossCountdown(i.startMs - now)}`}</span>
                   </Link>
                 </li>
               );

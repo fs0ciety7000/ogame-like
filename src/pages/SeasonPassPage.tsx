@@ -232,17 +232,20 @@ function SeasonStory({ season, tier }: { season: PassSeason; tier: number }) {
 function FinalReward({ season, def, reached, claimed }: { season: PassSeason; def: CommanderDef; reached: boolean; claimed: boolean }) {
   const amber = season.tiers[season.tiers.length - 1].reduce((a, r) => a + (r.kind === "amber" ? r.amount : 0), 0);
   return (
-    <Card className="flex flex-wrap items-center gap-4 p-4">
-      <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
-      <div className="min-w-0 flex-1">
-        <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
-        <h3 className="hud-title mt-1 text-lg text-white">
-          {def.title} {def.name}
-        </h3>
-        <p className="mt-1 text-sm text-slate-300">{def.bonus(1)} (au niveau 1, jusqu'au niveau 20).</p>
-        {def.lore && <p className="mt-1 text-xs italic text-slate-400">{def.lore}</p>}
+    <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
+        <div className="min-w-0 flex-1">
+          <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
+          <h3 className="hud-title mt-1 text-lg text-white">
+            {def.title} {def.name}
+          </h3>
+          <p className="mt-1 text-sm text-slate-300">{def.bonus(1)} (au niveau 1, jusqu'au niveau 20).</p>
+          {def.lore && <p className="mt-1 text-xs italic text-slate-400">{def.lore}</p>}
+        </div>
       </div>
-      <div className="flex flex-col items-end gap-2">
+      {/* v5.14 : sur téléphone, les pastilles passent sous le texte (il n'avait plus que quelques pixels). */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
         {amber > 0 && (
           <HudChip size="md" tone="gold">
             + {amber} Ambre
