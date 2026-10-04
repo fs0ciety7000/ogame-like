@@ -18,7 +18,7 @@ import type { PlayerState } from "@/types/game";
 
 export const CODEX_TITLE = "Archiviste";
 
-export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "chronicles";
+export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "chronicles" | "legends";
 
 export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string }[] = [
   { id: "factions", label: "Factions", hint: "Débloquée au premier ultimatum reçu." },
@@ -26,6 +26,8 @@ export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string 
   { id: "bosses", label: "Boss", hint: "Abattu avec toi, ou archivé à la fin de son mois." },
   { id: "units", label: "Unités", hint: "Débloquée une fois construite." },
   { id: "chronicles", label: "Chroniques", hint: "Débloqué à sa parution." },
+  // v5.14.2 : exploits rarissimes.
+  { id: "legends", label: "Légendes", hint: "Débloquée par un exploit rarissime." },
 ];
 
 export interface CodexEntry {
@@ -40,7 +42,7 @@ export interface CodexEntry {
   color?: string;
 }
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle">;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number): CodexEntry[] {
@@ -73,6 +75,16 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     // v5.4 : fiches propres au chapitre (dossiers, archives du secteur).
     for (const c of m.codex ?? []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
+  // v5.14.2 : la Main d'or (gros lot du casino).
+  out.push({
+    id: "legend:main_or",
+    category: "legends",
+    name: "La Main d'or",
+    subtitle: "Casino orbital · gros lot 7-7-7",
+    image: "/assets/casino/salle-777.webp",
+    text: "Au fond de la salle des machines, une colonne de sept dorés s'illumine une fois tous les mille tirages, à peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est gravé sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent « la Main d'or ». Ils disent qu'elle ne revient jamais deux fois au même pilote. Ils mentent.",
+    unlocked: Math.floor(Number((player.casino as { jackpots?: number } | undefined)?.jackpots) || 0) > 0,
+  });
   for (const u of UNITS) {
     out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "Défense" : "Flotte", image: u.image, text: u.description, unlocked: !!player.units?.[u.id] });
   }

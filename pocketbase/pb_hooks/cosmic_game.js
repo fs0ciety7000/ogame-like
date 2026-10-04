@@ -117,6 +117,7 @@ __export(hooksEntry_exports, {
   RARE_OFFICER_RULES: () => RARE_OFFICER_RULES,
   REFERRAL_RULES: () => REFERRAL_RULES,
   RENAME_RULES: () => RENAME_RULES,
+  RESOURCE_LIST: () => RESOURCE_LIST,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_RULES: () => SEASON_RULES,
@@ -4788,11 +4789,13 @@ var DEFAULT_CASINO = {
   windows: [],
   dailyTokens: 1,
   maxTokens: 20,
-  jackpotShare: 0.5,
+  // v5.14.2 : 90 % du pot au gros lot (contre 50 %).
+  jackpotShare: 0.9,
   jackpotFallbackHours: 12,
-  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  // v5.14.2 : 777 à 0,5 % (contre 0,2 %) : environ 170 jetons en moyenne au lieu de 425.
+  odds: { jackpot: 5e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
   hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
-  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" }
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or", elite: 2, warlord: 1 }
 };
 var OUTCOME_POINTS = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
 var OUTCOME_LABELS = {
@@ -4845,7 +4848,9 @@ function normalizeRewards(raw) {
     bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
     tournament: list(r.tournament, d.tournament),
     tournamentTitle: label3(r.tournamentTitle, d.tournamentTitle),
-    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle)
+    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle),
+    elite: Math.floor(num(r.elite, d.elite, 0, 100)),
+    warlord: Math.floor(num(r.warlord, d.warlord, 0, 100))
   };
 }
 function cleanTournament(raw) {
@@ -6701,12 +6706,14 @@ function validateFactions(defs) {
 }
 
 // src/game/achievements.ts
-var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire" };
+var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
 var TIER_REWARDS = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
   or: { xp: 60, hours: 2 },
-  legendaire: { xp: 150, hours: 6 }
+  legendaire: { xp: 150, hours: 6 },
+  // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
+  mythique: { xp: 400, hours: 12 }
 };
 var CATEGORY_LABELS = {
   combat: { label: "Combat", emoji: "\u2694\uFE0F" },
@@ -6912,6 +6919,11 @@ var METRICS = {
   worldBossTypes: { label: "Boss mondiaux diff\xE9rents abattus", value: (p) => {
     var _a;
     return ((_a = playerStats(p).worldBossKilled) != null ? _a : []).length;
+  } },
+  // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
+  casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p) => {
+    var _a;
+    return Math.max(0, Math.floor(Number((_a = p.casino) == null ? void 0 : _a.jackpots) || 0));
   } }
 };
 function def(id, category, tier, metric, threshold, name, description, emoji, extra = {}) {
@@ -7017,7 +7029,9 @@ function derivedAchievements() {
     def("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une ann\xE9e de passes", "Gagner douze commandants de saison.", "\u{1F4C5}", { auto: true }),
     def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "\u{1F5D3}\uFE0F", { auto: true, secret: true }),
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux diff\xE9rents.", "\u{1F409}", { auto: true }),
-    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true })
+    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true }),
+    // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "\u{1F3B0}", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" })
   ];
 }
 function setAchievements(defs) {
@@ -12476,7 +12490,7 @@ function monthsToGenerate(existing, now, leadDay) {
   return out;
 }
 var NO_EXTENSION = /* @__PURE__ */ new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel"]);
-var NEXT_TIER = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire" };
+var NEXT_TIER = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 function niceNumber(x) {
   const p = 10 ** Math.max(0, Math.floor(Math.log10(x)) - 1);
@@ -12953,6 +12967,10 @@ function leviathanKills(p) {
   var _a;
   return Number((_a = p.stats) == null ? void 0 : _a.leviathanKills) || 0;
 }
+function jackpots(p) {
+  var _a;
+  return Math.max(0, Math.floor(Number((_a = p.casino) == null ? void 0 : _a.jackpots) || 0));
+}
 function bannerOptions(p) {
   var _a, _b, _c, _d;
   const kesh = bountyState(p);
@@ -12967,6 +12985,8 @@ function bannerOptions(p) {
     })),
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v5.14 : une bannière par boss mondial, tirée du catalogue.
     ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => {
       var _a2, _b2;
@@ -13024,6 +13044,8 @@ function emblemOptions(p) {
     })),
     { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => __spreadProps(__spreadValues({}, b), { hint: "Participer \xE0 la chute du boss de saison" }))
   ];
@@ -15251,7 +15273,7 @@ function publishGazette(state, issue, players) {
 // src/game/codex.ts
 var CODEX_TITLE = "Archiviste";
 function codexEntries(player, fought, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const out = [];
   const threatened = new Set((_b = (_a = player.stats) == null ? void 0 : _a.threatenedBy) != null ? _b : []);
   for (const f of FACTIONS.filter((x) => x.enabled)) {
@@ -15280,8 +15302,17 @@ function codexEntries(player, fought, now) {
     });
     for (const c of (_h = m.codex) != null ? _h : []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
+  out.push({
+    id: "legend:main_or",
+    category: "legends",
+    name: "La Main d'or",
+    subtitle: "Casino orbital \xB7 gros lot 7-7-7",
+    image: "/assets/casino/salle-777.webp",
+    text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
+    unlocked: Math.floor(Number((_i = player.casino) == null ? void 0 : _i.jackpots) || 0) > 0
+  });
   for (const u of UNITS) {
-    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_i = player.units) == null ? void 0 : _i[u.id]) });
+    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_j = player.units) == null ? void 0 : _j[u.id]) });
   }
   return out;
 }

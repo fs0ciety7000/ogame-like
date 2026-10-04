@@ -80,6 +80,10 @@ export interface CasinoRewards {
   tournamentTitle: string;
   /** Titre définitif de qui aligne trois 7. */
   jackpotTitle: string;
+  /** v5.14.2 : proie d'élite des primes Kesh'Vaar abattue (jetons par chasseur récompensé). */
+  elite: number;
+  /** v5.14.2 : seigneur de guerre pillé (attaque gagnée contre un PNJ). */
+  warlord: number;
 }
 
 export const DEFAULT_CASINO: CasinoSettings = {
@@ -88,11 +92,13 @@ export const DEFAULT_CASINO: CasinoSettings = {
   windows: [],
   dailyTokens: 1,
   maxTokens: 20,
-  jackpotShare: 0.5,
+  // v5.14.2 : 90 % du pot au gros lot (contre 50 %).
+  jackpotShare: 0.9,
   jackpotFallbackHours: 12,
-  odds: { jackpot: 0.002, star3: 0.006, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  // v5.14.2 : 777 à 0,5 % (contre 0,2 %) : environ 170 jetons en moyenne au lieu de 425.
+  odds: { jackpot: 0.005, star3: 0.006, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
   hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
-  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" },
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or", elite: 2, warlord: 1 },
 };
 
 /** Points de tournoi de chaque résultat (indépendants de la taille de l'empire). */
@@ -213,6 +219,8 @@ function normalizeRewards(raw: unknown): CasinoRewards {
     tournament: list(r.tournament, d.tournament),
     tournamentTitle: label(r.tournamentTitle, d.tournamentTitle),
     jackpotTitle: label(r.jackpotTitle, d.jackpotTitle),
+    elite: Math.floor(num(r.elite, d.elite, 0, 100)),
+    warlord: Math.floor(num(r.warlord, d.warlord, 0, 100)),
   };
 }
 
@@ -385,6 +393,23 @@ export function bossTokens(s: CasinoSettings, won: boolean, rank: number): numbe
   if (!won) return s.rewards.bossFail;
   const podium = rank === 0 ? s.rewards.bossTop : rank === 1 || rank === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
   return s.rewards.bossWin + podium;
+}
+
+/** v5.14.2 : chances exactes du 7-7-7, par jeton (une cerise rend le jeton : on rejoue).
+ *  `perToken` : chance qu'un jeton finisse sur le gros lot ; `meanTokens` : jetons en moyenne ;
+ *  `medianTokens` : la moitié des joueurs l'ont avant ; `within(n)` : chance de l'avoir en n jetons. */
+export function jackpotOdds(s: Pick<CasinoSettings, "odds">): { perToken: number; meanTokens: number; medianTokens: number; within: (tokens: number) => number } {
+  const p = Math.max(0, s.odds.jackpot);
+  const c = Math.min(0.99, Math.max(0, s.odds.cherry));
+  // Un jeton ne donne rien quand la suite de tirages finit sur autre chose qu'une cerise ou un 7-7-7.
+  const miss = c >= 1 ? 1 : Math.max(0, (1 - p - c) / (1 - c));
+  const perToken = 1 - miss;
+  return {
+    perToken,
+    meanTokens: perToken > 0 ? 1 / perToken : Infinity,
+    medianTokens: perToken > 0 && miss > 0 ? Math.ceil(Math.log(0.5) / Math.log(miss)) : perToken > 0 ? 1 : Infinity,
+    within: (tokens: number) => (perToken > 0 ? 1 - Math.pow(miss, Math.max(0, tokens)) : 0),
+  };
 }
 
 /** Jetons d'un défi hebdo réussi, selon le palier atteint (index 0 : premier palier). */

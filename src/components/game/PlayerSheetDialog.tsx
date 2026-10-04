@@ -30,6 +30,7 @@ const ACH_TIER_STYLE: Record<string, string> = {
   argent: "border-slate-300/40 bg-white/[0.04] text-slate-200",
   or: "border-gold-glow/50 bg-gold-glow/[0.07] text-gold-glow",
   legendaire: "border-violet-glow/60 bg-violet-glow/[0.08] text-violet-glow",
+  mythique: "border-[var(--th-rarity-mythic)]/60 bg-[var(--th-rarity-mythic)]/[0.08] text-[var(--th-rarity-mythic)]",
 };
 
 /* Fiche publique détaillée d'un joueur (v3.7) : rang, colonies, faits

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { casinoOpen, casinoOpeningId, claimDailyTokens, DEFAULT_CASINO, nextCasinoOpening, evaluateReels, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings, type SpinOutcome } from "@/game/casino";
+import { casinoOpen, casinoOpeningId, jackpotOdds, claimDailyTokens, DEFAULT_CASINO, nextCasinoOpening, evaluateReels, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings, type SpinOutcome } from "@/game/casino";
 import type { PlayerState } from "@/types/game";
 
 function seeded(seed: number) {
@@ -79,5 +79,41 @@ describe("ouverture du casino", () => {
     expect(casinoOpen(normalizeCasinoSettings({ mode: "closed" }), sat)).toBe(false);
     expect(normalizeCasinoSettings({ enabled: false }).mode).toBe("closed");
     expect(validateCasinoSettings(normalizeCasinoSettings({ mode: "scheduled", weekends: false }))).toContainEqual(expect.stringMatching(/Programme vide/));
+  });
+});
+
+describe("v5.14.2 : chances du 7-7-7", () => {
+  it("formule exacte : 425 jetons en moyenne à 0,2 % (cerise 15 %), 170 à 0,5 %, et la simulation tombe d'accord", () => {
+    const old = jackpotOdds({ odds: { ...DEFAULT_CASINO.odds, jackpot: 0.002 } });
+    expect(old.meanTokens).toBeCloseTo(425, 0);
+    expect(old.medianTokens).toBe(295);
+    const now = jackpotOdds(DEFAULT_CASINO);
+    expect(DEFAULT_CASINO.odds.jackpot).toBe(0.005);
+    expect(DEFAULT_CASINO.jackpotShare).toBe(0.9);
+    expect(now.meanTokens).toBeCloseTo(170, 0);
+    expect(now.within(100)).toBeGreaterThan(0.44);
+    expect(now.within(100)).toBeLessThan(0.45);
+    // Monte-Carlo avec le vrai tirage.
+    let seed = 1;
+    const rnd = () => {
+      seed = (seed * 48271) % 2147483647;
+      return seed / 2147483647;
+    };
+    let tokens = 0;
+    let hits = 0;
+    while (hits < 2000) {
+      tokens += 1;
+      for (;;) {
+        const o = rollOutcome(DEFAULT_CASINO, rnd);
+        if (o === "jackpot") hits += 1;
+        if (o !== "cherry") break;
+      }
+    }
+    expect(tokens / hits).toBeGreaterThan(160);
+    expect(tokens / hits).toBeLessThan(180);
+  });
+
+  it("le gros lot verse 90 % de chaque ressource du pot", () => {
+    expect(jackpotAmounts({ resources: { scrap: 1_000_000, energy: 333 } }, DEFAULT_CASINO.jackpotShare)).toEqual({ scrap: 900_000, energy: 299 });
   });
 });

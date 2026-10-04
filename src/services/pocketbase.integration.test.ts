@@ -93,6 +93,17 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+  /** v5.14.2 : sans passe de saison publié (ses défis par palier verrouilleraient les paliers testés). */
+  const withoutPassSeasons = async (fn: () => Promise<void>) => {
+    const rec = await admin.collection("game_config").getFirstListItem('key="passSeasons"').catch(() => null);
+    if (rec) await admin.collection("game_config").update(rec.id, { data: { seasons: [] } });
+    try {
+      await fn();
+    } finally {
+      if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+    }
+  };
+
   /** Fiche complète d'un joueur, lue par le superuser (les joueurs ne
    *  voient plus que leur propre fiche depuis la v1.7). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- enregistrement brut pour les assertions
@@ -408,6 +419,16 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
     expect(stats).toBeTruthy();
     await expect(pb.send("/api/cosmic/admin/stats", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("v5.14.2 : l'administration alimente le pot commun (motif obligatoire, réservé aux admins)", async () => {
+    const before = await admin.send("/api/cosmic/admin/serverpot", { method: "GET" });
+    await expect(admin.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000 }, note: "" } })).rejects.toMatchObject({ status: 400 });
+    await expect(pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000 }, note: "triche" } })).rejects.toMatchObject({ status: 403 });
+    const after = await admin.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000, inconnu: 5 }, note: "Test d'intégration" } });
+    expect((after.resources.scrap ?? 0) - (before.resources.scrap ?? 0)).toBe(1000);
+    expect(after.resources.inconnu).toBeUndefined();
+    expect(after.log[after.log.length - 1]).toMatchObject({ source: "admin", note: "Test d'intégration", resources: { scrap: 1000 } });
   });
 
   it("leaderboard lists players without private fields", async () => {
@@ -1661,6 +1682,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.1 season pass, referral, scripted Varan raid and shareable victory card", async () => {
+    await withoutPassSeasons(async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
     try {
@@ -1729,6 +1751,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { units: bBefore.units, bounties: bBefore.bounties, seasonPass: null, referral: null, onboarding: bBefore.onboarding ?? null, xp: bBefore.xp, createdAtMs: bBefore.createdAtMs });
       await admin.collection("players").update(aId, { bounties: aBefore.bounties, referral: null });
     }
+    });
   });
 
   it("v4.2 warlords: hourly tick, raid on a lord, vendetta, lord attack, replies and vacation", async () => {
@@ -1831,6 +1854,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.3 chronicles: episode claimed, season boss assault, rewards on stop, admin pass", async () => {
+    await withoutPassSeasons(async () => {
     const bBefore = await snap(bId);
     const bossRec = async () => admin.collection("game_config").getFirstListItem('key="season_boss"').catch(() => null);
     try {
@@ -1876,6 +1900,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
       await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, chronicle: null, bounties: bBefore.bounties, relics: null, titles: bBefore.titles ?? null });
     }
+    });
   });
 
   it("v4.6 social: presence, alliance boss called and killed, typing signal, gazette", async () => {

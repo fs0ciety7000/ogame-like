@@ -1036,6 +1036,11 @@ function resolveAttackArrival(txApp, game, rec, now) {
     return;
   }
   game.clearDecoy(result.attacker, rec.id);
+  // v5.14.2 : seigneur de guerre pillé → jetons du casino.
+  if (defender.player.npc && result.combat.outcome === "attacker_win") {
+    const won = game.grantTokens(result.attacker, readCasino(txApp, game).settings.rewards.warlord);
+    if (won > 0) result.notifications = (result.notifications || []).concat([{ kind: "event", title: `+${game.tokensLabel(won)}`, message: `Seigneur de guerre pillé : ${game.tokensLabel(won)} pour le Casino orbital.`, createdAtMs: now, read: false, link: "/game/casino", data: tokenNotifData(null, won) }]);
+  }
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   // v5.10 : le rapport d'abord, pour que les notifications de combat y mènent.
@@ -4110,8 +4115,15 @@ function distributeElite(txApp, game, state, now) {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const loaded = loadPlayer(txApp, game, c.uid);
     const reward = game.grantEliteReward(state, loaded.player, now);
+    // v5.14.2 : proie abattue → jetons du casino pour chaque chasseur récompensé.
+    const tokens = state.status === "killed" && reward.amber > 0 ? game.grantTokens(loaded.player, readCasino(txApp, game).settings.rewards.elite) : 0;
     savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
-    notify(txApp, c.uid, [game.eliteNotice(state, reward, now)]);
+    const notice = game.eliteNotice(state, reward, now);
+    if (tokens > 0) {
+      notice.message += ` +${game.tokensLabel(tokens)}.`;
+      notice.data = tokenNotifData(notice.data || null, tokens);
+    }
+    notify(txApp, c.uid, [notice]);
   });
   return Object.assign({}, state, { rewarded: true });
 }
@@ -4260,6 +4272,29 @@ const CONTENT_MIGRATIONS = [
     // v5.14.2 : neutralisée (le passe d'octobre reste en place, il reçoit ses défis ci-dessous).
     run() {
       return false;
+    },
+  },
+  // v5.14.2 : casino — 777 à 0,5 % et 90 % du pot au gros lot, si les réglages
+  // enregistrés sont encore les anciennes valeurs par défaut (0,2 % et 50 %).
+  {
+    id: "casino-777-5.14.2",
+    key: "casino",
+    patches: [],
+    run(data, changes) {
+      const s = data && data.settings;
+      if (!s || typeof s !== "object") return false;
+      let touched = false;
+      if (s.odds && s.odds.jackpot === 0.002) {
+        s.odds.jackpot = 0.005;
+        touched = true;
+        changes.push("casino : 777 à 0,5 %");
+      }
+      if (s.jackpotShare === 0.5) {
+        s.jackpotShare = 0.9;
+        touched = true;
+        changes.push("casino : 90 % du pot au gros lot");
+      }
+      return touched;
     },
   },
   // v5.14.2 : les passes d'avant les défis par palier (prérequis aux paliers 10, 20, 30
@@ -4596,6 +4631,28 @@ function adminServerPot(e) {
     return e.json(200, game.normalizeServerPot(rec ? toPlain(rec).data : null));
   }
   const req = body(e);
+  // v5.14.2 : dépôt de l'administration (ressources créées et ajoutées au pot).
+  if (req.action === "deposit") {
+    const note = String(req.note || "").trim().slice(0, 200);
+    if (!note) throw new BadRequestError("Indique le motif (événement, gros lot à animer…).");
+    const amounts = {};
+    const known = game.RESOURCE_LIST.map((r) => r.id);
+    Object.keys(req.resources || {}).filter((k) => known.indexOf(k) >= 0).forEach((k) => {
+      const n = Math.floor(Number(req.resources[k]));
+      if (Number.isFinite(n) && n > 0 && n <= 1e12) amounts[k] = n;
+    });
+    if (Object.keys(amounts).length === 0) throw new BadRequestError("Rien à déposer (montants vides).");
+    let out = null;
+    $app.runInTransaction((txApp) => {
+      const now = Date.now();
+      const rec = configRecord(txApp, game.SERVER_POT_KEY);
+      const next = game.addToPot(game.normalizeServerPot(rec ? toPlain(rec).data : null), "admin", amounts, now, note);
+      writeConfig(txApp, game.SERVER_POT_KEY, next);
+      bossAdminLog(txApp, e, game.SERVER_POT_KEY, `Pot commun : dépôt (${note})`, { déposé: { avant: "", après: game.describeGain(amounts) } }, now);
+      out = next;
+    });
+    return e.json(200, out);
+  }
   if (req.action !== "grant") throw new BadRequestError("Action inconnue.");
   const toUid = String(req.toUid || "");
   const note = String(req.note || "").trim().slice(0, 200);
