@@ -18,7 +18,7 @@ import { LevelTicks } from "@/components/ui/hud";
 import { useProductionRates } from "@/hooks/useLiveResources";
 import type { ResourceId } from "@/types/game";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
-import { findUnit } from "@/game/units";
+import { findUnit, ownedBlueprints } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 
 export function LabPage() {
@@ -49,6 +49,7 @@ export function LabPage() {
 
   const now = Date.now();
   const levels = player.techLevels;
+  const plans = ownedBlueprints(player);
   const selected = findTech(selectedId)!;
   const activeEntry = queues.activeResearches.find((r) => r.id === selectedId);
   const currentLevel = levels[selectedId] ?? 0;
@@ -87,6 +88,7 @@ export function LabPage() {
           // Remonté à chaque bascule pour recadrer l'arbre (fitView) sur la nouvelle taille.
           key={fullscreen ? "full" : "inline"}
           levels={levels}
+          ownedPlans={plans}
           selectedId={selectedId}
           activeIds={new Set(queues.activeResearches.map((r) => r.id))}
           onSelect={setSelectedId}
@@ -146,14 +148,15 @@ export function LabPage() {
               </div>
 
               {(() => {
-                const check = checkPrereqs(selected, levels);
+                const check = checkPrereqs(selected, levels, plans);
                 if (check.list.length > 0) {
                   return (
                     <div className="mt-3 rounded-lg border-l-2 border-cyan-glow/40 bg-black/20 p-3 text-xs">
                       <p className="mb-1 font-semibold uppercase tracking-wide text-cyan-glow">Prérequis</p>
                       {check.list.map((r) => (
                         <p key={r.id} className={r.valide ? "text-mint-glow" : "text-danger-glow"}>
-                          {r.valide ? "✅" : "❌"} {r.nom} (Niv. {r.actuel} / {r.requis})
+                          {r.valide ? "✅" : "❌"} {r.nom}{" "}
+                          {r.kind === "plan" ? (r.valide ? "(acquis)" : "(à acheter au Comptoir Kesh'Vaar)") : `(Niv. ${r.actuel} / ${r.requis})`}
                         </p>
                       ))}
                     </div>
@@ -163,7 +166,7 @@ export function LabPage() {
               })()}
 
               {(() => {
-                const prereqOk = checkPrereqs(selected, levels).valid;
+                const prereqOk = checkPrereqs(selected, levels, plans).valid;
                 const queueFull = queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH && !activeEntry;
                 const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
                 return (

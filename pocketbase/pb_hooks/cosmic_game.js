@@ -535,19 +535,21 @@ function getTechCost(tech, level3) {
 function getTechTime(tech, level3) {
   return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level3 - 1));
 }
-function checkPrereqs(tech, levels) {
-  const entries = Object.entries(tech.prereq);
-  if (entries.length === 0) return { valid: true, list: [] };
-  let allValid = true;
-  const list = entries.map(([reqId, reqLevel]) => {
-    var _a, _b;
+var BLUEPRINT_UNITS = /* @__PURE__ */ new Map();
+function blueprintsRequiredBy(tech) {
+  return techEffects(tech).filter((e3) => e3.type === "unlock_next_level" && e3.target && BLUEPRINT_UNITS.has(e3.target)).map((e3) => e3.target);
+}
+function checkPrereqs(tech, levels, ownedPlans = []) {
+  const list = Object.entries(tech.prereq).map(([reqId, reqLevel]) => {
+    var _a, _b, _c;
     const current2 = (_a = levels[reqId]) != null ? _a : 0;
-    const valide = current2 >= reqLevel;
-    if (!valide) allValid = false;
-    const reqTech = findTech(reqId);
-    return { id: reqId, nom: (_b = reqTech == null ? void 0 : reqTech.nom) != null ? _b : reqId, requis: reqLevel, actuel: current2, valide };
+    return { id: reqId, nom: (_c = (_b = findTech(reqId)) == null ? void 0 : _b.nom) != null ? _c : reqId, requis: reqLevel, actuel: current2, valide: current2 >= reqLevel, kind: "tech" };
   });
-  return { valid: allValid, list };
+  for (const unitId of blueprintsRequiredBy(tech)) {
+    const owned = ownedPlans.includes(unitId);
+    list.push({ id: `plan:${unitId}`, nom: `Plan : ${BLUEPRINT_UNITS.get(unitId)}`, requis: 1, actuel: owned ? 1 : 0, valide: owned, kind: "plan" });
+  }
+  return { valid: list.every((r) => r.valide), list };
 }
 var EFFECT_MAX_PER_LEVEL = {
   building_discount: 0.5,
@@ -589,6 +591,10 @@ var KESH_HUNTER_UNIT = {
   hangarSpace: 25,
   blueprint: true
 };
+function ownedBlueprints(player) {
+  var _a, _b;
+  return ((_b = (_a = player.bounties) == null ? void 0 : _a.owned) == null ? void 0 : _b.includes("blueprint")) ? [KESH_HUNTER_UNIT.id] : [];
+}
 var KESH_PVE_BONUS = 0.5;
 var UNIT_LEVEL_BONUS_DEFAULT = 5;
 var DEFAULT_UNITS = [
@@ -783,7 +789,9 @@ function setUnits(defs) {
   UNITS.splice(0, UNITS.length, ...defs);
   for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
   for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
+  BLUEPRINT_UNITS.clear();
   for (const u of defs) {
+    if (u.blueprint) BLUEPRINT_UNITS.set(u.id, u.name);
     UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
     if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
   }
@@ -9952,7 +9960,7 @@ function applyAction(s, action) {
       if (!tech) throw new GameActionError("Technologie inconnue.");
       const nextLevel = ((_j = player.techLevels[tech.id]) != null ? _j : 0) + 1;
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Pr\xE9requis non remplis.");
+      if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Pr\xE9requis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);

@@ -20,7 +20,7 @@ import {
 import { flushState, type NewNotification } from "@/game/flush";
 import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
 import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechCost, getTechTime } from "@/game/technologies";
-import { findUnit, getUnitBuildTime } from "@/game/units";
+import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
 import { claimContract, recordContract, rerollContract } from "@/game/contracts";
@@ -235,7 +235,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!tech) throw new GameActionError("Technologie inconnue.");
       const nextLevel = (player.techLevels[tech.id] ?? 0) + 1;
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Prérequis non remplis.");
+      if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Prérequis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est déjà en cours de recherche.");
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);

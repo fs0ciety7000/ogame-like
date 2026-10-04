@@ -496,6 +496,9 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
           valueLabel="Niveau"
           onChange={(prereq) => set({ prereq })}
         />
+        <p className="text-[11px] text-slate-500">
+          Une techno qui débloque une unité à plan (Traqueur Kesh) exige en plus, automatiquement, que le joueur ait acheté le plan.
+        </p>
       </Section>
 
       <Section title="Position dans l'arbre du Labo (facultatif)">

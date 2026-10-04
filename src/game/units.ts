@@ -1,5 +1,5 @@
 import type { UnitCategory } from "@/types/game";
-import { techReductionFactor } from "@/game/technologies";
+import { BLUEPRINT_UNITS, techReductionFactor } from "@/game/technologies";
 
 export interface UnitStats {
   attaque: number;
@@ -44,6 +44,11 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   hangarSpace: 25,
   blueprint: true,
 };
+
+/** v5.9 : unités dont le joueur possède le plan (prérequis des technos qui les améliorent). */
+export function ownedBlueprints(player: { bounties?: { owned?: string[] } }): string[] {
+  return player.bounties?.owned?.includes("blueprint") ? [KESH_HUNTER_UNIT.id] : [];
+}
 
 /** Bonus d'attaque du Traqueur contre les PNJ (factions, primes, Léviathan). */
 export const KESH_PVE_BONUS = 0.5;
@@ -249,7 +254,9 @@ export function setUnits(defs: UnitDef[]) {
   UNITS.splice(0, UNITS.length, ...defs);
   for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
   for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
+  BLUEPRINT_UNITS.clear();
   for (const u of defs) {
+    if (u.blueprint) BLUEPRINT_UNITS.set(u.id, u.name);
     UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
     if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
   }
