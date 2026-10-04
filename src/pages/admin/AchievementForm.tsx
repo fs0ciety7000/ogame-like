@@ -1,4 +1,6 @@
 import { CATEGORY_LABELS, METRICS, TIER_LABELS, TIER_REWARDS, type AchievementCategory, type AchievementDef, type AchievementMetric, type AchievementTier } from "@/game/achievements";
+import { currentGameContent } from "@/game/content";
+import { titleRarity } from "@/game/titles";
 import { CheckboxField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
 const ID_HINT_NEW = "Minuscules, chiffres, _ — non modifiable une fois enregistré.";
@@ -59,7 +61,18 @@ export function AchievementForm({ value: a, onChange, isNew }: { value: Achievem
         />
         <NumberField label="XP" value={a.rewardXp} min={0} step={5} onChange={(v) => set({ rewardXp: v ?? 0 })} />
         <NumberField label="Heures de production" value={a.rewardHours} min={0} step={1} onChange={(v) => set({ rewardHours: v ?? 0 })} />
-        <TextField label="Titre décerné (optionnel)" value={a.title} onChange={(v) => set({ title: v })} />
+        <SelectField
+          label="Titre décerné"
+          value={a.titleId ? a.titleId : a.title ? "__free" : ""}
+          options={[
+            { value: "", label: "Aucun" },
+            ...currentGameContent().titles.map((t) => ({ value: t.id, label: `${t.icon} ${t.label} (${titleRarity(t.rarity).label.toLowerCase()})` })),
+            { value: "__free", label: "Texte libre…" },
+          ]}
+          onChange={(v) => set(v === "__free" ? { titleId: undefined, title: a.title || "Nouveau titre" } : v ? { titleId: v, title: "" } : { titleId: undefined, title: "" })}
+          hint="Les titres se créent dans l'onglet Titres (couleur, icône, description)."
+        />
+        {!a.titleId && a.title && <TextField label="Titre (texte libre)" value={a.title} onChange={(v) => set({ title: v })} />}
       </Section>
     </div>
   );

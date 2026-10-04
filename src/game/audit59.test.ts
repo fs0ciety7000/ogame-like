@@ -24,10 +24,10 @@ describe("v5.9 audit des workflows", () => {
   });
 
   it("un cadeau ne fait pas avancer le contrat « dépenser »", () => {
-    const a = player("a", { resources: { ...player("x").resources, scrap: 50_000 } });
+    const a = player("a", { createdAtMs: NOW - 10 * 86_400_000, resources: { ...player("x").resources, scrap: 50_000 } });
     const state = ensureContracts(a, NOW);
     state.items = state.items.map((c, i) => (i === 0 ? { ...c, type: "spend", progress: 0, target: 10_000, claimed: false } : c));
-    const out = performGift(a, defaultQueues(), player("b"), defaultQueues(), { scrap: 20_000 }, NOW);
+    const out = performGift(a, defaultQueues(), player("b", { createdAtMs: NOW - 10 * 86_400_000 }), defaultQueues(), { scrap: 20_000 }, NOW);
     const spend = out.sender.contracts!.items.find((c) => c.type === "spend")!;
     expect(spend.progress).toBe(0);
   });

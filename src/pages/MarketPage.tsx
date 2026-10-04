@@ -12,6 +12,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ServerPotCard } from "@/components/game/ServerPotCard";
 import { buyOrderPaid, MARKET_RULES, marketTax, priceBounds, type MarketOffer } from "@/game/market";
 import { RESOURCE_LIST } from "@/game/resources";
 import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, fetchMarketTrades, subscribeOffers } from "@/services/marketService";
@@ -106,8 +107,9 @@ export function MarketPage() {
       <PageHeader
         eyebrow="Cosmic Empires / Opérations"
         title="Marché"
-        description={`Échange tes surplus avec les autres commandants. Taxe de ${Math.round(MARKET_RULES.taxPct * 100)} % sur la vente (${Math.round(MARKET_RULES.allianceTaxPct * 100)} % entre membres d'une alliance), retirée du jeu.`}
+        description={`Échange tes surplus avec les autres commandants. Taxe de ${Math.round(MARKET_RULES.taxPct * 100)} % sur la vente (${Math.round(MARKET_RULES.allianceTaxPct * 100)} % entre membres d'une alliance), versée au pot commun du serveur.`}
       />
+      <ServerPotCard />
 
       {/* v5.1 : offres et ordres d'achat, ou contrats de livraison entre joueurs. */}
       <div className="flex gap-1 border-b border-white/10">

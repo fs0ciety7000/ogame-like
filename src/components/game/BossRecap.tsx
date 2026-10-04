@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Award, Clock, Crosshair, Flag, Gem, Medal, Sparkles, Swords, Trophy, Users } from "lucide-react";
+import { Award, Clock, Crosshair, Flag, Gem, Medal, PackageOpen, Share2, Sparkles, Swords, Trophy, Users } from "lucide-react";
+import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
+import { bossCardInput } from "@/lib/shareCards";
+import { usePlayerStore } from "@/store/playerStore";
+import { useAllianceTag } from "@/store/directoryStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -34,7 +38,23 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof Clock; label: s
   );
 }
 
-function RewardPills({ recap }: { recap: Recap }) {
+/** v5.10 : « coffre » — les récompenses sortent une à une (fenêtre du bilan). */
+function Reveal({ children, index, on }: { children: React.ReactNode; index: number; on: boolean }) {
+  const reduce = useReducedMotion();
+  if (!on || reduce) return <>{children}</>;
+  return (
+    <motion.span
+      className="inline-flex"
+      initial={{ opacity: 0, scale: 0.4, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ delay: 0.6 + index * 0.22, type: "spring", stiffness: 380, damping: 18 }}
+    >
+      {children}
+    </motion.span>
+  );
+}
+
+function RewardPills({ recap, reveal = false }: { recap: Recap; reveal?: boolean }) {
   const r = recap.reward;
   if (!r) return <p className="text-xs text-slate-500">{recap.mine ? "Récompenses en cours de distribution…" : "Tu n'as pas participé à ce combat."}</p>;
   const order = RESOURCE_LIST.map((x) => x.id as string);
@@ -42,40 +62,64 @@ function RewardPills({ recap }: { recap: Recap }) {
     .filter(([, v]) => (v ?? 0) > 0)
     .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])) as [ResourceId, number][];
   const pill = "inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-xs tabular-nums";
+  const items: React.ReactNode[] = [
+    ...gain.map(([id, v]) => (
+      <span key={id} className={cn(pill, "border-white/10 bg-white/[0.04] text-slate-100")}>
+        <ResourceIcon id={id} /> +{formatCompact(v)}
+      </span>
+    )),
+    r.points ? (
+      <span key="points" className={pill} style={{ borderColor: "#4be8ff55", color: "#4be8ff" }}>
+        <Award className="h-3.5 w-3.5" /> +{r.points} points de passe
+      </span>
+    ) : null,
+    r.title ? (
+      <span key="title" className={pill} style={{ borderColor: "#ffd86b55", color: "#ffd86b" }}>
+        <Medal className="h-3.5 w-3.5" /> Titre « {r.title} »
+      </span>
+    ) : null,
+    r.relic ? (
+      <span key="relic" className={pill} style={{ borderColor: "#a78bfa55", color: "#a78bfa" }}>
+        <Gem className="h-3.5 w-3.5" /> {r.relic}
+      </span>
+    ) : null,
+    r.mythic ? (
+      <span key="mythic" className={cn(pill, "hud-sheen")} style={{ borderColor: "#ff5df088", color: "#ff5df0" }}>
+        <Sparkles className="h-3.5 w-3.5" /> Mythique : {r.mythic}
+      </span>
+    ) : null,
+  ].filter(Boolean);
+  if (items.length === 0) return <span className="text-xs text-slate-500">Aucune récompense cette fois.</span>;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {gain.map(([id, v]) => (
-        <span key={id} className={cn(pill, "border-white/10 bg-white/[0.04] text-slate-100")}>
-          <ResourceIcon id={id} /> +{formatCompact(v)}
-        </span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      {reveal && <Chest />}
+      {items.map((it, i) => (
+        <Reveal key={i} index={i} on={reveal}>
+          {it}
+        </Reveal>
       ))}
-      {!!r.points && (
-        <span className={pill} style={{ borderColor: "#4be8ff55", color: "#4be8ff" }}>
-          <Award className="h-3.5 w-3.5" /> +{r.points} points de passe
-        </span>
-      )}
-      {r.title && (
-        <span className={pill} style={{ borderColor: "#ffd86b55", color: "#ffd86b" }}>
-          <Medal className="h-3.5 w-3.5" /> Titre « {r.title} »
-        </span>
-      )}
-      {r.relic && (
-        <span className={pill} style={{ borderColor: "#a78bfa55", color: "#a78bfa" }}>
-          <Gem className="h-3.5 w-3.5" /> {r.relic}
-        </span>
-      )}
-      {r.mythic && (
-        <span className={cn(pill, "hud-sheen")} style={{ borderColor: "#ff5df088", color: "#ff5df0" }}>
-          <Sparkles className="h-3.5 w-3.5" /> Mythique : {r.mythic}
-        </span>
-      )}
-      {gain.length === 0 && !r.points && !r.title && !r.relic && !r.mythic && <span className="text-xs text-slate-500">Aucune récompense cette fois.</span>}
     </div>
   );
 }
 
+/** Le coffre qui s'ouvre avant les récompenses. */
+function Chest() {
+  const reduce = useReducedMotion();
+  return (
+    <motion.span
+      className="mr-1 grid h-8 w-8 place-items-center border border-gold-glow/50 bg-gold-glow/10 text-gold-glow"
+      initial={reduce ? false : { rotate: 0, scale: 0.8 }}
+      animate={reduce ? undefined : { rotate: [0, -12, 12, -8, 8, 0], scale: [0.8, 1, 1, 1, 1.1, 1] }}
+      transition={{ duration: 0.6 }}
+      aria-hidden
+    >
+      <PackageOpen className="h-4 w-4" />
+    </motion.span>
+  );
+}
+
 /** Contenu du bilan (carte sur la page ou fenêtre). */
-export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c" }: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string }) {
+export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false }: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; reveal?: boolean }) {
   const reduce = useReducedMotion();
   const recap = bossRecap(state, uid);
   const item = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.05 * i, duration: 0.3 } });
@@ -141,7 +185,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c" }: {
             </span>
           </div>
         ) : null}
-        <RewardPills recap={recap} />
+        <RewardPills recap={recap} reveal={reveal} />
       </div>
 
       {recap.top.length > 0 && (
@@ -178,6 +222,9 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c" }: {
 export function BossRecapPanel(props: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; active: boolean }) {
   const { state, uid, active } = props;
   const [open, setOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const player = usePlayerStore((s) => s.player);
+  const tag = useAllianceTag(player?.uid, player?.allianceId) ?? undefined;
   const ended = !active && state.status !== "active";
   const participated = !!state.contributions[uid];
   useEffect(() => {
@@ -198,14 +245,26 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> Bilan du combat
           </h2>
+          {participated && player && (
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSharing(true)}>
+              <Share2 className="mr-1 h-3.5 w-3.5" /> Partager ma carte
+            </Button>
+          )}
         </div>
         <BossRecapBody {...props} />
       </Card>
+      <VictoryCardDialog
+        card={sharing && player ? bossCardInput(bossRecap(state, uid), props.name, props.image, player, tag) : null}
+        target={typeof window !== "undefined" ? window.location.pathname : "/game"}
+        title="Carte du combat"
+        fileName="cosmic-empires-boss.jpg"
+        onClose={() => setSharing(false)}
+      />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogTitle>Bilan du combat</DialogTitle>
           <div className="mt-3">
-            <BossRecapBody {...props} />
+            <BossRecapBody {...props} reveal />
           </div>
           <Button className="mt-4 w-full" onClick={() => setOpen(false)}>
             Fermer

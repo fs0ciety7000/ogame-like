@@ -96,6 +96,7 @@ export function normalizeAllianceBoss(raw: unknown): AllianceBossState | null {
     launchedBy: String(r.launchedBy ?? ""),
     cost: r.cost && typeof r.cost === "object" ? r.cost : {},
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
+    ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
   };
 }
 

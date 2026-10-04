@@ -1,4 +1,5 @@
 import { PlayerName } from "@/components/ui/player-name";
+import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { useEffect, useState } from "react";
 import { markLeviathanSeen } from "@/store/leviathanSeenStore";
 import { toast } from "sonner";
@@ -217,6 +218,7 @@ export function LeviathanPage() {
       </div>
 
       {admin === true && <LeviathanAdminPanel state={state} />}
+      {admin === true && <BossRewardsAdmin state={state} kind="leviathan" />}
 
       <AssaultDialog open={open} onClose={() => setOpen(false)} />
     </div>

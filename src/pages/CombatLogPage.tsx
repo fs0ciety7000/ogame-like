@@ -3,7 +3,7 @@ import { Share2 } from "lucide-react";
 import { shareReport } from "@/services/sharedReportService";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
 import { Eye, Sword, Shield, ShieldAlert, Trophy } from "lucide-react";
@@ -14,7 +14,7 @@ import { useAllianceTag } from "@/store/directoryStore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { subscribeBattleLog, subscribeSpyLog } from "@/services/playerService";
+import { fetchBattleReport, subscribeBattleLog, subscribeSpyLog } from "@/services/playerService";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { useAuthStore } from "@/store/authStore";
@@ -80,6 +80,28 @@ export function CombatLogPage() {
     if (!uid) return;
     return subscribeSpyLog(uid, setSpyReports);
   }, [uid]);
+  // v5.10 : « ?rapport=<id> » (lien d'une notification de combat) ouvre ce rapport.
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("rapport");
+  useEffect(() => {
+    if (!uid || !wanted) return;
+    let alive = true;
+    void (async () => {
+      const report = reports.find((r) => r.id === wanted) ?? (await fetchBattleReport(wanted));
+      if (!alive) return;
+      if (report) showCombatResult(combatDisplayFromReportForViewer(report, uid));
+      else toast.error("Ce rapport n'existe plus.");
+      setParams((p) => {
+        p.delete("rapport");
+        return p;
+      }, { replace: true });
+    })();
+    return () => {
+      alive = false;
+    };
+    // Une seule ouverture par lien : on ne relance pas quand la liste se met à jour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, wanted]);
 
   return (
     <div className="flex flex-col gap-4">

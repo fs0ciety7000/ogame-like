@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { toast } from "sonner";
 import { Crosshair, Flame, Play, Square, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -151,6 +152,7 @@ export function SeasonBossPage() {
           </Button>
         </Card>
       )}
+      {admin === true && <BossRewardsAdmin state={state} kind="seasonboss" />}
 
       <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${boss?.name ?? "boss de saison"}`} send={sendSeasonBossAssault} />
     </div>

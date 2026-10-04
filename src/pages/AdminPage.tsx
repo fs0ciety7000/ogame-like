@@ -5,6 +5,7 @@ import {
   Award,
   BarChart3,
   Calculator,
+  Coins,
   Building2,
   Compass,
   Construction,
@@ -39,6 +40,8 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
+import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
+import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
@@ -95,6 +98,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
       { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion et recyclage." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
+      { id: "titles", label: "Titres", icon: Crown, hint: "Catalogue des titres : libellé, rareté, icône, déblocage automatique ; décernés aussi par les succès." },
       { id: "rules", label: "Règles", icon: Scale, hint: "Combat, protections et économie." },
     ],
   },
@@ -102,6 +106,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : solde, mouvements, versements (concours)." },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
@@ -300,6 +305,9 @@ export function AdminPage() {
         <TabsContent value="procedural">
           <ProceduralPanel />
         </TabsContent>
+        <TabsContent value="serverpot">
+          <ServerPotPanel />
+        </TabsContent>
         <TabsContent value="warlords">
           <WarlordsPanel />
         </TabsContent>
@@ -337,6 +345,17 @@ export function AdminPage() {
             setId={(a, id) => ({ ...a, id })}
             createItem={newAchievement}
             renderForm={(a, onChange, isNew) => <AchievementForm value={a} onChange={onChange} isNew={isNew} />}
+          />
+        </TabsContent>
+        <TabsContent value="titles">
+          <ContentEditor
+            section="titles"
+            title="Titres"
+            getId={(t) => t.id}
+            getLabel={titleListLabel}
+            setId={(t, id) => ({ ...t, id })}
+            createItem={newTitle}
+            renderForm={(t, onChange, isNew) => <TitleForm value={t} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
         <TabsContent value="rules">
