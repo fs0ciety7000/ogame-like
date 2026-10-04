@@ -33,6 +33,9 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   `asChild` pour un `Link` ou un `button`. `HudTag` = `HudChip` statique en petite taille.
 - **`HudCallout`** (ou classes `hud-callout hud-tone-*`) : encadré dans un panneau (menace, conseil, notice).
   Liseré gauche coloré, coin coupé ; `alert` pour une menace en cours.
+- **`HudToaster`** (`src/components/ui/hud-toast.tsx`) : toasts sonner au style du HUD (coin coupé, liseré et icône
+  de la couleur sémantique, titre en capitales, action en pastille). `toast.success/error/warning` prennent mint / danger /
+  ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind).tone`).
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
 - **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`StatTile`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.

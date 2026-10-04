@@ -16,6 +16,7 @@ Le pot commun du serveur devient un gros lot : une machine à sous « 777 » où
 ## Interface
 - [Amélioration] **« Que faire maintenant ? »** et la file des chantiers : une même situation garde la même couleur partout. Un chantier, un labo ou des missions à l'arrêt sont une action à mener (couleur d'accent), un entrepôt plein une alerte, une récompense en doré.
 - [Amélioration] Dernières pastilles harmonisées (série de contrats, rang du Hall of fame, seigneurs, biome des colonies, rangs d'alliance…).
+- [Amélioration] **Nouveaux toasts** : panneau du cockpit, liseré et icône de la couleur du type (vert pour un succès, rouge pour une attaque, doré pour un cadeau…) et bouton « Voir » en pastille. Les notifications de la cloche suivent aussi les couleurs du thème.
 - [Fix] Le compte à rebours de fin de saison du passe s'affiche en jours (« 27 j 13 h ») au lieu de « 661 h ».
 
 ## Administration

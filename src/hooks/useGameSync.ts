@@ -1,5 +1,6 @@
 import { createElement, useEffect, useRef } from "react";
-import { EmojiIcon } from "@/components/ui/game-icon";
+import { Bell } from "lucide-react";
+import { notificationStyle } from "@/components/game/NotificationCard";
 import { toast } from "sonner";
 import {
   claimResourceGift,
@@ -135,13 +136,15 @@ export function useGameSync(uid: string | null) {
       if (fresh.length === 0) return;
 
       const showOne = (item: (typeof fresh)[number]) => {
-        const emoji = NOTIFICATION_STYLE[item.kind]?.icon;
-        const icon = emoji ? createElement(EmojiIcon, { emoji, className: "h-5 w-5" }) : undefined;
+        // Toast du HUD : icône et couleur du type, comme dans la cloche.
+        const style = notificationStyle(item.kind);
+        const icon = createElement(style.icon);
+        const className = `hud-tone-${style.tone}`;
         // v3.8 : « Voir » ouvre la page concernée (conversation, rapport…).
         const link = notificationLink(item);
         const action = link ? { label: "Voir", onClick: () => navigateRef.current(link) } : undefined;
-        if (item.kind === "achievement") toast.success(item.title, { description: item.message, icon, duration: 6000, action });
-        else toast(item.title, { description: item.message, icon, action });
+        if (item.kind === "achievement") toast.success(item.title, { description: item.message, icon, duration: 6000, action, className });
+        else toast(item.title, { description: item.message, icon, action, className });
       };
       // Un seul son par rafale : celui de l'alerte la plus importante.
       const loudest = fresh.find((n) => URGENT_KINDS.includes(n.kind)) ?? fresh[fresh.length - 1];
@@ -164,7 +167,7 @@ export function useGameSync(uid: string | null) {
         const summary = summarizeKinds(others.map((n) => n.kind));
         toast(`${others.length} nouvelles notifications`, {
           description: summary.charAt(0).toUpperCase() + summary.slice(1) + ".",
-          icon: "🔔",
+          icon: createElement(Bell),
           duration: 8000,
           action: { label: "Voir", onClick: () => setBellOpen(true) },
         });

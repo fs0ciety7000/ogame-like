@@ -1165,6 +1165,68 @@ body {
   .slot-lights > i, .slot-cabinet-jackpot { animation: none; }
 }
 
+/* ---------- Toasts du HUD (sonner, voir hud-toast.tsx) ---------- */
+/* Ton par défaut (accent) seulement sans hud-tone-* : les classes de ton sont dans @layer components. */
+.hud-toast:not([class*="hud-tone-"]) { --c: var(--th-accent); }
+/* Pas de « position » ici : sonner place chaque toast en absolu (sinon l'espacement double). */
+.hud-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: var(--width, 356px);
+  padding: 11px 14px 11px 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--th-space-700) 94%, transparent), color-mix(in srgb, var(--th-space-950) 96%, transparent));
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+  border-left: 3px solid var(--c);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px color-mix(in srgb, var(--c) 14%, transparent);
+  backdrop-filter: blur(12px);
+  color: var(--th-ink);
+  font-family: var(--font-sans);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+:root[data-theme="holo"] .hud-toast { clip-path: none; }
+.hud-toast-icon { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 1px; color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); background: color-mix(in srgb, var(--c) 10%, transparent); }
+.hud-toast-icon svg { width: 15px; height: 15px; }
+.hud-toast [data-content] { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.hud-toast-title { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; letter-spacing: var(--th-title-track); text-transform: uppercase; color: var(--th-text-100); line-height: 1.25; }
+.hud-toast-description { font-size: 12.5px; line-height: 1.4; color: var(--th-text-300); }
+.hud-toast-action, .hud-toast-cancel {
+  flex: none;
+  align-self: center;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.hud-toast-action:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
+.hud-toast-cancel { color: var(--th-text-400); border-color: rgba(255, 255, 255, 0.15); background: transparent; }
+.hud-toast-close {
+  position: absolute;
+  top: 4px;
+  right: 14px;
+  left: auto !important;
+  transform: none !important;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--th-text-500);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.hud-toast-close:hover { color: var(--th-text-100); }
+.hud-toast-close svg { width: 12px; height: 12px; }
+.hud-toast:has(.hud-toast-close) [data-content] { padding-right: 14px; }
+
 /* ---------- Page de maintenance (v2.5) ---------- */
 @layer components {
   .mt-hazard {

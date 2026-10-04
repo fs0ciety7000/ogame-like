@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Toaster } from "sonner";
+import { HudToaster } from "@/components/ui/hud-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
@@ -134,20 +134,7 @@ export default function App() {
         </MaintenanceGate>
       </BrowserRouter>
 
-      <Toaster
-        theme="dark"
-        position="top-right"
-        expand
-        visibleToasts={4}
-        closeButton
-        toastOptions={{
-          style: {
-            background: "rgba(10,14,28,0.92)",
-            border: "1px solid rgba(75,232,255,0.2)",
-            color: "#e7ecff",
-          },
-        }}
-      />
+      <HudToaster />
     </TooltipProvider>
   );
 }
