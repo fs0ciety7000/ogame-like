@@ -113,7 +113,7 @@ export function RelicSettingsCard() {
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-display text-sm text-white">Réglages des reliques</h3>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"

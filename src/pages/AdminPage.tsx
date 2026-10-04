@@ -163,7 +163,7 @@ export function AdminPage() {
         description="Contenu du jeu, règles, joueurs et maintenance. Chaque enregistrement s'applique immédiatement à tous les joueurs."
       />
       <AdminStatusStrip onOpen={(id) => setParams({ onglet: id }, { replace: true })} />
-      <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid gap-4 lg:grid-cols-[13.5rem_1fr]">
+      <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[13.5rem_minmax(0,1fr)]">
         <TabsPrimitive.List aria-label="Sections de l'administration" className="hud-cut-sm -mx-1 flex gap-1 overflow-x-auto border border-cyan-glow/10 bg-space-950/60 p-1.5 lg:sticky lg:top-0 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:p-2">
           {NAV.map((group) => (
             <div key={group.label} className="contents lg:block">

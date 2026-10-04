@@ -80,7 +80,7 @@ export function BroadcastPanel() {
         <Bell className="h-4 w-4 text-cyan-glow" /> Messages ciblés
       </h3>
       <p className="text-xs text-slate-400">Une notification dans le jeu (cloche et accueil), envoyée à un groupe de joueurs. Pour un e-mail, utilise l'onglet E-mails.</p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <SelectField<BroadcastSegment> label="Destinataires" value={segment} options={BROADCAST_SEGMENTS.map((s) => ({ value: s.id, label: s.label }))} onChange={setSegment} hint={seg.hint} />
         {segment === "alliance" ? (
           <SelectField label="Alliance" value={allianceId} options={[{ value: "", label: "Choisir…" }, ...alliances.map((a) => ({ value: a.id, label: `[${a.tag}] ${a.name}` }))]} onChange={setAllianceId} />

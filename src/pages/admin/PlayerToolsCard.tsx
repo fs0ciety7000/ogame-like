@@ -58,7 +58,7 @@ export function PlayerToolsCard({ player, onDone }: { player: AdminPlayer; onDon
         <summary className="cursor-pointer text-slate-300">
           <Gift className="mr-1 inline h-3.5 w-3.5 text-gold-glow" /> Rendre des ressources (ajoutées au stock actuel)
         </summary>
-        <div className="mt-2 grid gap-2 sm:grid-cols-4">
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
           {RESOURCE_LIST.map((r) => (
             <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
               <span>

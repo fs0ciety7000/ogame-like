@@ -72,7 +72,7 @@ export function ContestsAdmin() {
       <p className="text-xs text-slate-400">
         Le score d'un joueur est la progression du critère entre le début et la fin du concours. Le classement est relevé tous les quarts d'heure ; à la fin, la part du pot est versée aux premiers et chacun reçoit une notification.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Titre">
           <Input value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} placeholder="Ex. : Les pillards d'Halloween" />
         </Field>

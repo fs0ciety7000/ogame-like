@@ -70,7 +70,7 @@ export function RulesPanel() {
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Règles de combat</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -796,7 +796,7 @@ export function PlayersPanel() {
   };
 
   return (
-    <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[280px_1fr]">
       <Card className="flex max-h-[75vh] flex-col gap-2 p-2">
         <div className="flex gap-2">
           <Input placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-8" />
@@ -829,7 +829,7 @@ export function PlayersPanel() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-base text-white">{draft.pseudo}</h2>
               <span className="font-mono text-[11px] text-slate-500">{draft.id}</span>
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -996,7 +996,7 @@ export function ToolsPanel() {
   };
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <Card className="flex flex-col gap-2 p-4">
         <h3 className="hud-title text-sm text-white">Sauvegarde du contenu</h3>
         <p className="text-xs text-slate-400">

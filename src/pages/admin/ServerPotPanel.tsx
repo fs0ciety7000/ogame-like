@@ -87,7 +87,7 @@ export function ServerPotPanel() {
           <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Solde</p>
           <Amounts values={pot.resources} />
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {sources.map((s) => (
             <div key={s} className="border border-white/[0.06] bg-white/[0.02] p-2">
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{POT_SOURCE_LABELS[s]} (total reçu)</p>
@@ -101,7 +101,7 @@ export function ServerPotPanel() {
         <h3 className="flex items-center gap-2 font-display text-sm text-white">
           <Send className="h-4 w-4 text-cyan-glow" /> Verser à un joueur
         </h3>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs text-slate-400">
             Pseudo exact
             <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} className="h-9 border border-white/10 bg-black/30 px-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/50" />
@@ -111,7 +111,7 @@ export function ServerPotPanel() {
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Concours d'Halloween" className="h-9 border border-white/10 bg-black/30 px-2 text-sm text-slate-100 outline-none focus:border-cyan-glow/50" />
           </label>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {RESOURCE_LIST.filter((r) => (pot.resources[r.id] ?? 0) > 0).map((r) => (
             <div key={r.id} className="flex items-center gap-2 text-sm">
               <span className="flex-1 text-slate-300">

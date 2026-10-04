@@ -246,6 +246,12 @@ html, body, #root {
   height: 100%;
 }
 
+/* Un fieldset garde par défaut la largeur de son contenu (min-content) :
+   sur mobile, les formulaires de l'admin débordaient de l'écran. */
+fieldset {
+  min-width: 0;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);

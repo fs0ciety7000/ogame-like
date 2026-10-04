@@ -57,7 +57,7 @@ function LogRow({ log }: { log: AdminLogEntry }) {
             ? fields.map((f) => {
                 const change = log.changes[f] as { avant?: unknown; après?: unknown };
                 return (
-                  <div key={f} className="grid gap-1 rounded-md bg-black/20 p-2 text-xs md:grid-cols-[8rem_1fr_1fr]">
+                  <div key={f} className="grid grid-cols-1 gap-1 rounded-md bg-black/20 p-2 text-xs md:grid-cols-[8rem_1fr_1fr]">
                     <span className="font-semibold text-slate-300">{f}</span>
                     <span className="text-danger-glow/90">
                       − <Value value={change?.avant} />
@@ -107,7 +107,7 @@ export function LogsPanel() {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Journal d'administration</h2>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {FILTERS.map((f) => (
             <Button
               key={f.value}

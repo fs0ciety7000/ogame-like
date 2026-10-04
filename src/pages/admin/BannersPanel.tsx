@@ -139,7 +139,7 @@ function BannerEditor({ banner, onChange, onDelete }: { banner: Banner; onChange
         </Button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Toggle label="En ligne" hint="Décoché : brouillon, invisible pour les joueurs." checked={banner.active} onChange={(v) => set({ active: v })} />
         <Toggle label="Texte défilant" hint="Le message défile de droite à gauche (pause au survol)." checked={banner.scrolling} onChange={(v) => set({ scrolling: v })} />
         <Toggle

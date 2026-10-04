@@ -27,7 +27,7 @@ export function Section({ title, children }: { title: string; children: ReactNod
   return (
     <fieldset className="hud-cut-sm border border-cyan-glow/10 bg-black/20 p-3">
       <legend className="hud-eyebrow px-1.5 text-[10px] text-cyan-glow/80">{title}</legend>
-      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
     </fieldset>
   );
 }
