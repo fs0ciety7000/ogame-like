@@ -7,6 +7,7 @@ import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
+import { pendingClaims } from "@/game/claimAll";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -68,6 +69,7 @@ export type GameAction =
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
   | { type: "claimGuide"; stepId: string }
+  | { type: "claimAll" }
   | { type: "hideGuide"; hidden: boolean }
   | { type: "hideOnboarding"; hidden: boolean }
   | { type: "setPosture"; posture: string }
@@ -308,6 +310,20 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "claimGuide":
       return claimGuideStep(player, String(action.stepId ?? ""));
+
+    case "claimAll": {
+      // v5.11 : chaque réclamation passe par son action habituelle ; un échec n'arrête pas les autres.
+      const counts: Partial<Record<string, number>> = {};
+      for (const sub of pendingClaims(player, now)) {
+        try {
+          applyAction(s, sub);
+          counts[sub.type] = (counts[sub.type] ?? 0) + 1;
+        } catch {
+          /* déjà réclamé ou plus disponible */
+        }
+      }
+      return counts;
+    }
 
     case "hideGuide":
       setGuideHidden(player, action.hidden === true);

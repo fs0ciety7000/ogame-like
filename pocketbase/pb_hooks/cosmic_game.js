@@ -7684,6 +7684,10 @@ function onboardingEligible(p) {
   if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
   return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
 }
+function onboardingProgress(p) {
+  const st = onboardingState(p);
+  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
+}
 function claimOnboarding(player, stepId) {
   var _a, _b, _c, _d, _e, _f;
   const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
@@ -10447,6 +10451,17 @@ function guideClaimed(p) {
   var _a;
   return (_a = onboardingState(p).advanced) != null ? _a : [];
 }
+function guideHidden(p) {
+  return onboardingState(p).advancedHidden === true;
+}
+function guideProgress(p) {
+  const claimed = guideClaimed(p);
+  return GUIDE_STEPS.map((step) => ({ step, done: step.done(p), claimed: claimed.includes(step.id) }));
+}
+function guideVisible(p) {
+  if (guideHidden(p) || onboardingEligible(p)) return false;
+  return guideClaimed(p).length < GUIDE_STEPS.length;
+}
 function claimGuideStep(player, stepId) {
   var _a, _b, _c, _d;
   const step = GUIDE_STEPS.find((s) => s.id === stepId);
@@ -10471,6 +10486,26 @@ function setGuideHidden(player, hidden) {
   const st = onboardingState(player);
   delete st.advancedHidden;
   player.onboarding = hidden ? __spreadProps(__spreadValues({}, st), { advancedHidden: true }) : st;
+}
+
+// src/game/claimAll.ts
+function pendingClaims(player, now) {
+  var _a;
+  const out = [];
+  const contracts = ((_a = player.contracts) == null ? void 0 : _a.day) === contractDay(now) ? player.contracts.items : [];
+  for (const c of contracts) if (!c.claimed && c.progress >= c.target) out.push({ type: "claimContract", contractId: c.id });
+  if (player.seasonPass) {
+    const st = passState(player, now);
+    const tier = passTier(st.points, st.seasonId);
+    for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) out.push({ type: "passClaim", tier: t });
+  }
+  if (onboardingEligible(player)) {
+    for (const s of onboardingProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimOnboarding", stepId: s.step.id });
+  }
+  if (guideVisible(player)) {
+    for (const s of guideProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimGuide", stepId: s.step.id });
+  }
+  return out;
 }
 
 // src/game/cancel.ts
@@ -10809,7 +10844,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -10950,6 +10985,17 @@ function applyAction(s, action) {
       return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
     case "claimGuide":
       return claimGuideStep(player, String((_q = action.stepId) != null ? _q : ""));
+    case "claimAll": {
+      const counts = {};
+      for (const sub of pendingClaims(player, now)) {
+        try {
+          applyAction(s, sub);
+          counts[sub.type] = ((_r = counts[sub.type]) != null ? _r : 0) + 1;
+        } catch (e3) {
+        }
+      }
+      return counts;
+    }
     case "hideGuide":
       setGuideHidden(player, action.hidden === true);
       return void 0;
@@ -10972,14 +11018,14 @@ function applyAction(s, action) {
     case "colonize":
       return startColonization(player, action.name, now);
     case "colonyUpgrade":
-      return upgradeColonyBuilding(player, String((_r = action.colonyId) != null ? _r : ""), String((_s = action.buildingId) != null ? _s : ""), now);
+      return upgradeColonyBuilding(player, String((_s = action.colonyId) != null ? _s : ""), String((_t = action.buildingId) != null ? _t : ""), now);
     case "colonyDefense":
-      return buildColonyDefense(player, String((_t = action.colonyId) != null ? _t : ""), String((_u = action.unitId) != null ? _u : ""), action.qty, now);
+      return buildColonyDefense(player, String((_u = action.colonyId) != null ? _u : ""), String((_v = action.unitId) != null ? _v : ""), action.qty, now);
     case "colonyRename":
-      renameColony(player, String((_v = action.colonyId) != null ? _v : ""), action.name);
+      renameColony(player, String((_w = action.colonyId) != null ? _w : ""), action.name);
       return void 0;
     case "colonySpec":
-      setColonySpec(player, String((_w = action.colonyId) != null ? _w : ""), String((_x = action.spec) != null ? _x : ""), now);
+      setColonySpec(player, String((_x = action.colonyId) != null ? _x : ""), String((_y = action.spec) != null ? _y : ""), now);
       return void 0;
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";

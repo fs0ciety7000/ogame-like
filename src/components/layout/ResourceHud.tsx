@@ -15,6 +15,7 @@ import { UltimatumBadge } from "@/components/game/PirateUltimatum";
 import { cn } from "@/lib/utils";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { HudChip } from "@/components/ui/hud";
+import { ClaimAllChip } from "@/components/game/ClaimAllChip";
 
 /** v5.2 : bonus de production actifs (infobulle). Ils se multiplient entre eux. */
 function BonusList({ bonuses }: { bonuses: { label: string; pct: number }[] }) {
@@ -116,6 +117,7 @@ export function ResourceHud() {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
       <HostileFleetAlert />
+      <ClaimAllChip />
       <StreakBadge />
       <EventBadge />
       <UltimatumBadge />
