@@ -165,6 +165,7 @@ __export(hooksEntry_exports, {
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
+  autoDraftMonths: () => autoDraftMonths,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
   balanceSnapshot: () => balanceSnapshot,
@@ -352,6 +353,7 @@ __export(hooksEntry_exports, {
   parisRelativeLabel: () => parisRelativeLabel,
   parisWhenLabel: () => parisWhenLabel,
   parseResetOptions: () => parseResetOptions,
+  passSeasonAllowed: () => passSeasonAllowed,
   passkeyUtf8: () => utf8Encode,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -12784,6 +12786,13 @@ function upsertPassSeason(cfg, season) {
 function publishPassSeason(season, now) {
   var _a;
   return __spreadProps(__spreadValues({}, season), { status: "published", publishedAtMs: (_a = season.publishedAtMs) != null ? _a : now });
+}
+function passSeasonAllowed(monthId) {
+  return monthId >= CATALOG_START;
+}
+function autoDraftMonths(currentMonthId, dayOfMonth, leadDay) {
+  const ids = [...dayOfMonth <= 1 ? [currentMonthId] : [], ...dayOfMonth >= leadDay ? [nextMonthId(currentMonthId)] : []];
+  return ids.filter(passSeasonAllowed);
 }
 function nextMonthId(id) {
   const [y, m] = id.split("-").map(Number);

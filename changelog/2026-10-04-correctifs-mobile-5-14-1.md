@@ -18,3 +18,7 @@ Une passe de correctifs après un parcours complet du jeu sur téléphone : plus
 
 ## État-major
 - [Amélioration] **Officiers sous le brouillard** : les officiers rares et les commandants de saison pas encore débloqués gardent leur rôle et la façon de les obtenir, mais leur portrait, leur nom et leurs effets restent masqués jusqu'au déblocage.
+
+## Passe de saison
+- [Correctif] **Passe d'octobre rétabli** : à la mise à jour, un passe généré avait remplacé en cours de mois celui des Chroniques (thème et progression changés). Il est retiré et le passe d'origine revient. Les passes de saison générés commencent en **novembre**, avec la première saison du catalogue.
+- [Correctif] Un passe généré n'est plus jamais écrit ni publié en cours de mois : seulement le 1er, ou à l'avance pour le mois suivant.

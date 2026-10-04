@@ -38,7 +38,8 @@ export function PassSeasonsPanel() {
 
   const current = chronicleMonthId(Date.now());
   const nextToWrite = useMemo(() => {
-    let id = current;
+    // v5.14.1 : pas de passe de saison avant le catalogue (le passe des Chroniques reste en place).
+    let id = current < CATALOG_START ? CATALOG_START : current;
     while (seasons.some((s) => s.id === id)) id = nextMonthId(id);
     return id;
   }, [seasons, current]);

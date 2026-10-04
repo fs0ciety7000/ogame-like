@@ -4,7 +4,7 @@ import { BASE_COUNTS, generatePass, seededRandom, type WorldDigest } from "@/gam
 import { PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
-import { catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
+import { CATALOG_START, catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
 
 /* =====================================================
    v5.13 : passes de saison procéduraux. Chaque mois, le moteur écrit un
@@ -440,6 +440,19 @@ export function publishPassSeason(season: PassSeason, now: number): PassSeason {
 }
 
 /** Le mois suivant (AAAA-MM). */
+/** v5.14.1 : les passes de saison commencent avec le catalogue (novembre 2026) ; avant,
+ *  le passe du mois reste celui des Chroniques (sinon le catalogue repartirait par la fin). */
+export function passSeasonAllowed(monthId: string): boolean {
+  return monthId >= CATALOG_START;
+}
+
+/** v5.14.1 : mois dont la tâche horaire peut écrire le brouillon. Le mois en cours seulement
+ *  le 1er (un passe écrit en cours de mois remplacerait celui sur lequel les joueurs avancent). */
+export function autoDraftMonths(currentMonthId: string, dayOfMonth: number, leadDay: number): string[] {
+  const ids = [...(dayOfMonth <= 1 ? [currentMonthId] : []), ...(dayOfMonth >= leadDay ? [nextMonthId(currentMonthId)] : [])];
+  return ids.filter(passSeasonAllowed);
+}
+
 export function nextMonthId(id: string): string {
   const [y, m] = id.split("-").map(Number);
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
