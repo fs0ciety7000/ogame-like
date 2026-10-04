@@ -16,6 +16,7 @@ import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
 import { addPassPoints, passTierToAnnounce } from "@/game/seasonPass";
+import { advanceWeeklyRecap } from "@/game/weeklyRecap";
 import { endVacation, VACATION_RULES } from "@/game/vacation";
 import { advanceBuildPlan } from "@/game/buildPlan";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -277,6 +278,26 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         });
       }
     }
+  }
+
+  // --- v5.10 : résumé de la semaine écoulée (premier passage du lundi) ---
+  const weekRecap = advanceWeeklyRecap(player, now);
+  if (weekRecap) {
+    const parts = [
+      weekRecap.victories ? `${weekRecap.victories} victoire${weekRecap.victories > 1 ? "s" : ""}` : "",
+      weekRecap.loot ? `${formatInt(weekRecap.loot)} pillés` : "",
+      weekRecap.missions ? `${weekRecap.missions} mission${weekRecap.missions > 1 ? "s" : ""}` : "",
+      weekRecap.achievements ? `${weekRecap.achievements} succès` : "",
+    ].filter(Boolean);
+    notifications.push({
+      kind: "system",
+      title: "Ton résumé de la semaine",
+      message: `${parts.length ? parts.join(", ") : "Une semaine calme"}${weekRecap.xp > 0 ? ` et +${formatInt(weekRecap.xp)} XP` : ""}. Partage ta carte depuis l'accueil.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game?semaine=1",
+      data: { xp: weekRecap.xp > 0 ? weekRecap.xp : undefined },
+    });
   }
 
   // --- v5.10 : palier du passe prêt à récupérer ---

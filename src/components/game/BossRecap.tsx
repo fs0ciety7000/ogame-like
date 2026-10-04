@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Award, Clock, Crosshair, Flag, Gem, Medal, PackageOpen, Sparkles, Swords, Trophy, Users } from "lucide-react";
+import { Award, Clock, Crosshair, Flag, Gem, Medal, PackageOpen, Share2, Sparkles, Swords, Trophy, Users } from "lucide-react";
+import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
+import { bossCardInput } from "@/lib/shareCards";
+import { usePlayerStore } from "@/store/playerStore";
+import { useAllianceTag } from "@/store/directoryStore";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -218,6 +222,9 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
 export function BossRecapPanel(props: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; active: boolean }) {
   const { state, uid, active } = props;
   const [open, setOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const player = usePlayerStore((s) => s.player);
+  const tag = useAllianceTag(player?.uid, player?.allianceId) ?? undefined;
   const ended = !active && state.status !== "active";
   const participated = !!state.contributions[uid];
   useEffect(() => {
@@ -238,9 +245,21 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> Bilan du combat
           </h2>
+          {participated && player && (
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSharing(true)}>
+              <Share2 className="mr-1 h-3.5 w-3.5" /> Partager ma carte
+            </Button>
+          )}
         </div>
         <BossRecapBody {...props} />
       </Card>
+      <VictoryCardDialog
+        card={sharing && player ? bossCardInput(bossRecap(state, uid), props.name, props.image, player, tag) : null}
+        target={typeof window !== "undefined" ? window.location.pathname : "/game"}
+        title="Carte du combat"
+        fileName="cosmic-empires-boss.jpg"
+        onClose={() => setSharing(false)}
+      />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogTitle>Bilan du combat</DialogTitle>

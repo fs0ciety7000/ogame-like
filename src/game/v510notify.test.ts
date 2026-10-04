@@ -49,3 +49,32 @@ describe("v5.10 défi de la semaine à réclamer", async () => {
     expect(() => claimChallengeReward(out.challenge, player({ uid: "c" }))).toThrow(/Pas de récompense/);
   });
 });
+
+describe("v5.10 résumé de la semaine", async () => {
+  const { advanceWeeklyRecap, weekIdOf, weekLabel } = await import("@/game/weeklyRecap");
+  const MON = Date.UTC(2026, 9, 5, 10); // lundi 5 octobre 2026
+  it("prend un instantané, puis résume la semaine au premier passage du lundi suivant", () => {
+    expect(weekIdOf(MON)).toBe("2026-10-05");
+    expect(weekIdOf(MON + 6 * 86_400_000)).toBe("2026-10-05");
+    expect(weekLabel("2026-10-05")).toBe("semaine du 5 octobre");
+    const p = player({ victories: 2, xp: 100, stats: { loot: 1000, missions: 3 } });
+    expect(advanceWeeklyRecap(p, MON)).toBeNull();
+    expect(p.stats?.weekStart?.weekId).toBe("2026-10-05");
+    p.victories = 5;
+    p.xp = 400;
+    p.stats = { ...p.stats, loot: 6000, missions: 10 };
+    expect(advanceWeeklyRecap(p, MON + 3 * 86_400_000)).toBeNull();
+    const recap = advanceWeeklyRecap(p, MON + 7 * 86_400_000);
+    expect(recap).toMatchObject({ weekId: "2026-10-05", victories: 3, loot: 5000, missions: 7, xp: 300 });
+    expect(p.stats?.lastWeek?.weekId).toBe("2026-10-05");
+    expect(p.stats?.weekStart?.weekId).toBe("2026-10-12");
+  });
+
+  it("notifie au rattrapage, et pas pour une semaine sans activité", () => {
+    const p = player({ stats: { weekStart: { weekId: "2026-09-28", loot: 0, victories: 0, defeats: 0, missions: 0, xp: 0, achievements: 0, titles: 0, contracts: 0, expeditions: 0 }, loot: 50 } });
+    const out = flushState(p, defaultQueues(), MON);
+    expect(out.notifications.some((n) => n.title === "Ton résumé de la semaine")).toBe(true);
+    const calm = player({ stats: { weekStart: { weekId: "2026-09-28", loot: 0, victories: 0, defeats: 0, missions: 0, xp: 0, achievements: 0, titles: 0, contracts: 0, expeditions: 0 } } });
+    expect(flushState(calm, defaultQueues(), MON).notifications.some((n) => n.title === "Ton résumé de la semaine")).toBe(false);
+  });
+});

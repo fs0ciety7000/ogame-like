@@ -60,6 +60,9 @@ export interface PlayerStats {
   researchStarted?: number;
   /** v4.5 : jours d'activité (AAAA-MM-JJ, heure de Paris), 60 derniers. */
   activeDays?: string[];
+  /** v5.10 : instantané du début de semaine et résumé de la semaine écoulée. */
+  weekStart?: import("@/game/weeklyRecap").WeeklySnapshot;
+  lastWeek?: import("@/game/weeklyRecap").WeeklyRecap;
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];
