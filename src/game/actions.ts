@@ -113,8 +113,11 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
     player.resources[res as ResourceId] -= val ?? 0;
     total += val ?? 0;
   }
+  // v5.9 : un cadeau n'est pas une dépense (sinon deux joueurs se renvoient
+  // les mêmes ressources pour remplir le contrat « dépenser »).
+  if (!spending) return;
   recordContract(player, "spend", total, now);
-  if (spending) bumpStat(player, "spent", total);
+  bumpStat(player, "spent", total);
 }
 
 /** Places de hangar occupées : vaisseaux à quai + vaisseaux en mission. */

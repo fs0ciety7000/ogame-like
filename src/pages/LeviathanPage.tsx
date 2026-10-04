@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
+import { BossRecapPanel } from "@/components/game/BossRecap";
 import { computeFleetPower } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, type LeviathanState } from "@/game/leviathan";
@@ -195,6 +196,8 @@ export function LeviathanPage() {
           </EmptyState>
         </Card>
       )}
+
+      {state && <BossRecapPanel state={state} uid={player.uid} name={LEVIATHAN_RULES.name} image="/assets/leviathan/leviathan.webp" accent="#ff5c7a" active={active} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

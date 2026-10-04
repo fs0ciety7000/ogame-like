@@ -252,6 +252,7 @@ export function performAttack(input: AttackInput): AttackOutput {
       message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
       read: false,
+      data: { resources: combat.loot ?? undefined, xp: xp.attackerXp > 0 ? xp.attackerXp : undefined, toUid: def.uid, toPseudo: def.pseudo },
     },
   ];
 
@@ -268,6 +269,7 @@ export function performAttack(input: AttackInput): AttackOutput {
       message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pillé : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}`,
       createdAtMs: now,
       read: false,
+      data: { resources: combat.loot ?? undefined, xp: defenderXpDelta > 0 ? defenderXpDelta : undefined, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo },
     },
   ];
 

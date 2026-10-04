@@ -233,9 +233,15 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   if (newAchievements.length > 0) {
     player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
     let totalXp = 0;
+    const rewards = new Map<string, Partial<Record<ResourceId, number>>>();
+    const allRewards: Partial<Record<ResourceId, number>> = {};
     for (const a of newAchievements) {
       const reward = achievementReward(a, player);
-      for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
+      rewards.set(a.id, reward);
+      for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) {
+        player.resources[res] = (player.resources[res] ?? 0) + amount;
+        allRewards[res] = (allRewards[res] ?? 0) + amount;
+      }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
       if (a.title && !(player.titles ?? []).some((t) => t.label === a.title)) {
@@ -250,6 +256,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP). Détails sur la page Succès.`,
         createdAtMs: now,
         read: false,
+        link: "/game/succes",
+        data: { xp: totalXp || undefined, resources: allRewards },
       });
     } else {
       for (const a of newAchievements) {
@@ -259,6 +267,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
           message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${a.title ? ` · titre « ${a.title} »` : ""}`,
           createdAtMs: now,
           read: false,
+          link: "/game/succes",
+          data: { xp: a.rewardXp || undefined, resources: rewards.get(a.id) },
         });
       }
     }

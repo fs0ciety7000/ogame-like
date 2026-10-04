@@ -4423,9 +4423,10 @@ var METRICS = {
     var _a;
     return (_a = p.xp) != null ? _a : 0;
   } },
+  // v5.9 : seulement les titres de fin de saison (seasonId « AAAA-MM ») — pas ceux du passe, des défis, des boss…
   seasonTitles: { label: "Titres de saison", value: (p) => {
     var _a;
-    return ((_a = p.titles) != null ? _a : []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length;
+    return ((_a = p.titles) != null ? _a : []).filter((t) => /^\d{4}-\d{2}$/.test(String(t.seasonId))).length;
   } },
   // v5.4 : Chroniques et passe.
   chaptersCompleted: { label: "Chapitres des Chroniques termin\xE9s", value: (p) => {
@@ -4950,7 +4951,7 @@ function recordResourceHistory(player, now) {
   player.resourceHistory = next.length > RESOURCE_HISTORY_MAX_POINTS ? next.slice(next.length - RESOURCE_HISTORY_MAX_POINTS) : next;
 }
 function flushState(playerIn, queuesIn, now) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g;
   const player = structuredClone(playerIn);
   const queues = structuredClone(queuesIn);
   const notifications = [];
@@ -5099,13 +5100,19 @@ function flushState(playerIn, queuesIn, now) {
   if (newAchievements.length > 0) {
     player.unlockedAchievements = [...(_c = player.unlockedAchievements) != null ? _c : [], ...newAchievements.map((a) => a.id)];
     let totalXp = 0;
+    const rewards = /* @__PURE__ */ new Map();
+    const allRewards = {};
     for (const a of newAchievements) {
       const reward = achievementReward(a, player);
-      for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
+      rewards.set(a.id, reward);
+      for (const [res, amount3] of Object.entries(reward)) {
+        player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
+        allRewards[res] = ((_e = allRewards[res]) != null ? _e : 0) + amount3;
+      }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
-      if (a.title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === a.title)) {
-        player.titles = [...(_f = player.titles) != null ? _f : [], { label: a.title, seasonId: `achievement:${a.id}`, rank: 1 }];
+      if (a.title && !((_f = player.titles) != null ? _f : []).some((t) => t.label === a.title)) {
+        player.titles = [...(_g = player.titles) != null ? _g : [], { label: a.title, seasonId: `achievement:${a.id}`, rank: 1 }];
       }
     }
     if (newAchievements.length > 3) {
@@ -5114,7 +5121,9 @@ function flushState(playerIn, queuesIn, now) {
         title: `${newAchievements.length} succ\xE8s d\xE9bloqu\xE9s !`,
         message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "\u2026" : ""} (+${formatInt(totalXp)} XP). D\xE9tails sur la page Succ\xE8s.`,
         createdAtMs: now,
-        read: false
+        read: false,
+        link: "/game/succes",
+        data: { xp: totalXp || void 0, resources: allRewards }
       });
     } else {
       for (const a of newAchievements) {
@@ -5123,7 +5132,9 @@ function flushState(playerIn, queuesIn, now) {
           title: "Succ\xE8s d\xE9bloqu\xE9 !",
           message: `${a.emoji} ${a.name} \u2014 ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${a.title ? ` \xB7 titre \xAB ${a.title} \xBB` : ""}`,
           createdAtMs: now,
-          read: false
+          read: false,
+          link: "/game/succes",
+          data: { xp: a.rewardXp || void 0, resources: rewards.get(a.id) }
         });
       }
     }
@@ -6240,7 +6251,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return {
+  return __spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6252,7 +6263,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  };
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
@@ -7183,7 +7194,7 @@ function normalizeAllianceBoss(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return {
+  return __spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -7199,7 +7210,7 @@ function normalizeAllianceBoss(raw) {
     bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
     launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
     cost: r.cost && typeof r.cost === "object" ? r.cost : {}
-  };
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
 }
 function allianceBossCost(members) {
   var _a, _b;
@@ -8411,7 +8422,7 @@ function recallFleet(fleet, uid, now) {
   return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
 }
 function completeFleetReturn(owner, fleet, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   for (const [unitId, qty] of Object.entries((_a = fleet.units) != null ? _a : {})) {
     if (!(qty > 0)) continue;
     const state = (_b = owner.units[unitId]) != null ? _b : { level: 1, count: 0 };
@@ -8426,7 +8437,7 @@ function completeFleetReturn(owner, fleet, now) {
   const lootTotal = Object.values((_h = fleet.loot) != null ? _h : {}).reduce((a, b) => a + (b != null ? b : 0), 0);
   if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
   else if (((_i = fleet.mission) != null ? _i : "attack") === "attack") bumpStat(owner, "loot", lootTotal);
-  return { owner, notifications: [__spreadProps(__spreadValues({ kind: "fleet" }, returnMessage(fleet, lootTotal)), { createdAtMs: now, read: false })] };
+  return { owner, notifications: [__spreadValues(__spreadProps(__spreadValues({ kind: "fleet" }, returnMessage(fleet, lootTotal)), { createdAtMs: now, read: false }), lootTotal > 0 ? { data: { resources: (_j = fleet.loot) != null ? _j : void 0 } } : {})] };
 }
 function returnMessage(fleet, lootTotal) {
   var _a, _b, _c, _d;
@@ -9388,7 +9399,7 @@ function warlordPublic(d, npc, rt, state, now) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -9529,7 +9540,8 @@ function performAttack(input) {
       title: (_B = outcomeTitle[combat.outcome]) != null ? _B : "Rapport de combat",
       message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
       createdAtMs: now,
-      read: false
+      read: false,
+      data: { resources: (_C = combat.loot) != null ? _C : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
     }
   ];
   const defenderTitle = {
@@ -9541,10 +9553,11 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_C = defenderTitle[combat.outcome]) != null ? _C : "Rapport de combat",
+      title: (_D = defenderTitle[combat.outcome]) != null ? _D : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
-      read: false
+      read: false,
+      data: { resources: (_E = combat.loot) != null ? _E : void 0, xp: defenderXpDelta > 0 ? defenderXpDelta : void 0, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo }
     }
   ];
   const report = {
@@ -9567,7 +9580,7 @@ function performAttack(input) {
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
     defenderApplied: true,
-    garrisons: ((_D = input.garrisons) != null ? _D : []).map((g, i) => {
+    garrisons: ((_F = input.garrisons) != null ? _F : []).map((g, i) => {
       var _a2, _b2;
       return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
     }),
@@ -9585,8 +9598,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_E = combat.loot) != null ? _E : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_F = combat.garrisonLosses) != null ? _F : []], (_G = eventDebrisPercent(now)) != null ? _G : DEBRIS_RULES.percent)
+    loot: (_G = combat.loot) != null ? _G : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_H = combat.garrisonLosses) != null ? _H : []], (_I = eventDebrisPercent(now)) != null ? _I : DEBRIS_RULES.percent)
   };
 }
 function lostPower(losses, units, techLevels2) {
@@ -9967,8 +9980,9 @@ function pay(player, cost, now, spending = true) {
     player.resources[res] -= val != null ? val : 0;
     total2 += val != null ? val : 0;
   }
+  if (!spending) return;
   recordContract(player, "spend", total2, now);
-  if (spending) bumpStat(player, "spent", total2);
+  bumpStat(player, "spent", total2);
 }
 function hangarUsed(units, away, category) {
   var _a;

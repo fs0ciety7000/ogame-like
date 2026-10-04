@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState, HudTag, StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { BossRecapPanel } from "@/components/game/BossRecap";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
@@ -121,6 +122,8 @@ export function SeasonBossPage() {
           </EmptyState>
         </Card>
       )}
+
+      {shown && <BossRecapPanel state={shown} uid={player.uid} name={boss?.name ?? "Le boss de saison"} image={boss?.image} accent={month?.theme.accent} active={active} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

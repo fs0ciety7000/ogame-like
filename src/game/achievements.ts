@@ -126,7 +126,8 @@ export const METRICS = {
     },
   },
   xp: { label: "XP totale", value: (p: PlayerState) => p.xp ?? 0 },
-  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => !/^(faction|achievement|onboarding)/.test(String(t.seasonId))).length },
+  // v5.9 : seulement les titres de fin de saison (seasonId « AAAA-MM ») — pas ceux du passe, des défis, des boss…
+  seasonTitles: { label: "Titres de saison", value: (p: PlayerState) => (p.titles ?? []).filter((t) => /^\d{4}-\d{2}$/.test(String(t.seasonId))).length },
   // v5.4 : Chroniques et passe.
   chaptersCompleted: { label: "Chapitres des Chroniques terminés", value: (p: PlayerState) => ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).length },
   bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },

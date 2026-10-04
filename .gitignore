@@ -16,3 +16,4 @@ service-account*.json
 
 # PocketBase de la CI
 .pb
+.shot.mjs
