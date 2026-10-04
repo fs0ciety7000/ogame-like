@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake, Gauge } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
+import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
@@ -576,6 +577,7 @@ function ThemeCard() {
   const theme = useThemeStore((s) => s.theme);
   const skin = useSeasonSkinStore((s) => s.enabled);
   const winter = useWinterStore((s) => s.enabled);
+  const cockpit = useCockpitView((s) => s.enabled);
   const month = chronicleOf(Date.now());
   return (
     <Card>
@@ -583,7 +585,7 @@ function ThemeCard() {
         <CardTitle>Apparence</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {THEMES.map((t) => (
             <button
               key={t.id}
@@ -610,6 +612,15 @@ function ThemeCard() {
           ))}
         </div>
         <p className="mt-3 text-xs text-slate-500">Le choix s'applique tout de suite et reste mémorisé sur cet appareil.</p>
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
+              <Gauge className="h-3.5 w-3.5 text-cyan-glow" /> Vue cockpit
+            </span>
+            <span className="text-xs text-slate-500">L'accueil devient un poste de commande : verrière avec ta planète et les flottes en approche, écran multifonction (flottes, chantiers, alertes) et console d'actions rapides (touches 1 à 6). Aussi disponible en bas de la barre latérale.</span>
+          </span>
+          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={cockpit} onChange={(e) => setCockpitView(e.target.checked)} />
+        </label>
         <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
           <span>
             <span className="flex items-center gap-2 text-slate-200">
