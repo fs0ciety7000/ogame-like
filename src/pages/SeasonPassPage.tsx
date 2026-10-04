@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, OBJECTIVE_LABELS, PASS_POINTS, passState, passTier, passTitle, tierRequirement, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, OBJECTIVE_LABELS, PASS_POINTS, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -76,7 +76,10 @@ export function SeasonPassPage() {
   const inTier = st.points - tier * pass.pointsPerTier;
   // v5.13 : passe de saison publié (thème, scénario, prérequis, commandant).
   const season = publishedPassSeason(st.seasonId);
-  const reqOf = (t: number) => tierRequirement(player, t, now);
+  const reqOf = (t: number) => tierRequirements(player, t, now);
+  // v5.14.1 : un défi à la fois, celui du premier palier pas encore relevé.
+  const challengeTier = activeChallengeTier(st);
+  const challenge = challengeTier ? reqOf(challengeTier) : null;
   const claimable = Array.from({ length: tier }, (_, i) => i + 1).filter((t) => !st.claimed.includes(t) && reqOf(t)?.met !== false);
   const commander = season ? findCommander(season.commander.id) : undefined;
 
@@ -116,6 +119,20 @@ export function SeasonPassPage() {
 
       <ChroniclesCard />
 
+      {challenge && (
+        <Card className="flex flex-col gap-2 p-4" style={season ? { borderLeft: `2px solid ${season.theme.accent}` } : undefined}>
+          <p className="hud-eyebrow text-[10px] text-slate-400">Défi en cours · palier {challengeTier}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {challenge.reqs.map((r) => (
+              <HudChip key={r.key} size="md" tone={r.met ? "mint" : "accent"} className="max-w-full whitespace-normal normal-case tracking-normal">
+                {r.met ? <Check /> : null} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}
+              </HudChip>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">Un défi à la fois : tes actions ne comptent que pour ce palier, puis le compteur repart de zéro au palier suivant. Il faut le défi ET les points pour réclamer un palier.</p>
+        </Card>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
         <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
@@ -143,6 +160,7 @@ export function SeasonPassPage() {
           const big = t % 10 === 0;
           const req = reqOf(t);
           const locked = !!req && !req.met;
+          const current = req?.status === "active";
           return (
             <Card
               key={t}
@@ -159,9 +177,13 @@ export function SeasonPassPage() {
                 {claimed ? <Check className="h-4 w-4 text-mint-glow" /> : !reached ? <Lock className="h-3.5 w-3.5 text-slate-600" /> : null}
               </div>
               {req && (
-                <HudChip size="sm" tone={req.met ? "mint" : "ember"} className="max-w-full whitespace-normal normal-case tracking-normal" title="Prérequis du palier : à accomplir ce mois-ci">
-                  {req.met ? <Check /> : <Lock />} {OBJECTIVE_LABELS[req.key]} {Math.min(req.done, req.count)}/{req.count}
-                </HudChip>
+                <div className={cn("flex flex-col gap-1", req.status === "waiting" && "opacity-70")} title="Défi du palier : un palier à la fois">
+                  {req.reqs.map((r) => (
+                    <HudChip key={r.key} size="sm" tone={r.met ? "mint" : current ? "accent" : "neutral"} className="max-w-full whitespace-normal normal-case tracking-normal">
+                      {r.met ? <Check /> : <Lock />} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}
+                    </HudChip>
+                  ))}
+                </div>
               )}
               <div className="flex flex-1 flex-col gap-1.5">
                 {rewards.map((r, k) => (
@@ -173,7 +195,7 @@ export function SeasonPassPage() {
               </div>
               {reached && !claimed && (
                 <Button size="sm" variant={locked ? "outline" : "primary"} disabled={busy !== null || locked} onClick={() => void claim(t)}>
-                  {locked ? "Prérequis" : "Réclamer"}
+                  {locked ? (current ? "Défi en cours" : "Défi à relever") : "Réclamer"}
                 </Button>
               )}
             </Card>
@@ -232,17 +254,20 @@ function SeasonStory({ season, tier }: { season: PassSeason; tier: number }) {
 function FinalReward({ season, def, reached, claimed }: { season: PassSeason; def: CommanderDef; reached: boolean; claimed: boolean }) {
   const amber = season.tiers[season.tiers.length - 1].reduce((a, r) => a + (r.kind === "amber" ? r.amount : 0), 0);
   return (
-    <Card className="flex flex-wrap items-center gap-4 p-4">
-      <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
-      <div className="min-w-0 flex-1">
-        <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
-        <h3 className="hud-title mt-1 text-lg text-white">
-          {def.title} {def.name}
-        </h3>
-        <p className="mt-1 text-sm text-slate-300">{def.bonus(1)} (au niveau 1, jusqu'au niveau 20).</p>
-        {def.lore && <p className="mt-1 text-xs italic text-slate-400">{def.lore}</p>}
+    <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
+        <div className="min-w-0 flex-1">
+          <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
+          <h3 className="hud-title mt-1 text-lg text-white">
+            {def.title} {def.name}
+          </h3>
+          <p className="mt-1 text-sm text-slate-300">{def.bonus(1)} (au niveau 1, jusqu'au niveau 20).</p>
+          {def.lore && <p className="mt-1 text-xs italic text-slate-400">{def.lore}</p>}
+        </div>
       </div>
-      <div className="flex flex-col items-end gap-2">
+      {/* v5.14 : sur téléphone, les pastilles passent sous le texte (il n'avait plus que quelques pixels). */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
         {amber > 0 && (
           <HudChip size="md" tone="gold">
             + {amber} Ambre

@@ -4251,6 +4251,21 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["tech26"],
   },
+  // v5.14.1 : le passe d'octobre 2026 écrit et publié d'office en cours de mois (il remplaçait
+  // celui des Chroniques, sur lequel les joueurs avançaient) est retiré : retour à l'ancien passe.
+  {
+    id: "pass-octobre-rollback-5.14.1",
+    key: "passSeasons",
+    patches: [],
+    run(data, changes) {
+      if (!data || !Array.isArray(data.seasons)) return false;
+      const keep = data.seasons.filter((s) => !(s && s.id < "2026-11" && s.auto));
+      if (keep.length === data.seasons.length) return false;
+      data.seasons.filter((s) => keep.indexOf(s) < 0).forEach((s) => changes.push(`passe ${s.id} retiré (retour au passe des Chroniques)`));
+      data.seasons = keep;
+      return true;
+    },
+  },
 ];
 
 function canonJson(v) {
@@ -4279,7 +4294,12 @@ function runContentMigrations(app) {
       if (applied.indexOf(m.id) >= 0) return;
       const rec = configRecord(txApp, m.key);
       const items = rec ? toPlain(rec).data : null;
-      if (Array.isArray(items)) {
+      if (m.run) {
+        if (rec && m.run(items, changes)) {
+          rec.set("data", items);
+          txApp.save(rec);
+        }
+      } else if (Array.isArray(items)) {
         let touched = false;
         (m.appendFromDefaults || []).forEach((id) => {
           if (items.some((x) => x && x.id === id)) return;
@@ -4866,10 +4886,10 @@ function passSeasonsTick(txApp, game, players, now, lines) {
   let cfg = readPassSeasons(txApp, game);
   let changed = false;
   const current = game.chronicleMonthId(now);
-  const next = game.nextMonthId(current);
   const settings = game.normalizeProcedural((configRecord(txApp, game.PROCEDURAL_KEY) && toPlain(configRecord(txApp, game.PROCEDURAL_KEY)).data) || null);
-  // Brouillon du mois en cours (s'il manque) et du suivant à partir du jour J.
-  [current].concat(game.parisDayOfMonth(now) >= settings.leadDay ? [next] : []).forEach((id) => {
+  // Brouillon du mois en cours (le 1er seulement, s'il manque) et du suivant à partir du jour J.
+  // v5.14.1 : jamais avant le catalogue (novembre 2026), jamais en cours de mois.
+  game.autoDraftMonths(current, game.parisDayOfMonth(now), settings.leadDay).forEach((id) => {
     if (game.findPassSeason(cfg, id)) return;
     cfg = game.upsertPassSeason(cfg, passSeasonDraft(game, players, cfg, id, now, 0));
     changed = true;
@@ -4941,6 +4961,7 @@ function adminProcedural(e) {
     if (req.action === "passSeason") {
       const monthId = String(req.monthId || "");
       if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
+      if (!game.passSeasonAllowed(monthId)) throw new BadRequestError("Les passes de saison commencent en novembre 2026 : avant, le passe du mois reste celui des Chroniques.");
       let draft = null;
       $app.runInTransaction((txApp) => {
         applyContent(txApp, game);

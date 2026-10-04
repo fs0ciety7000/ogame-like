@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyGameContent, validateGameContent, currentGameContent } from "@/game/content";
 import { activeLevels, assignCommanders, findCommander, recruitCommander, SEASON_SECONDARY_SHARE, commandersState, grantCommanderXp, xpForLevel } from "@/game/commanders";
-import { activePass, addPassPoints, claimPassTier, passState, trackActivity } from "@/game/seasonPass";
-import { generatePassSeason, PASS_FINAL_AMBER, PASS_GATES, PASS_THEMES, publishPassSeason, requirementCount, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { activePass, addPassPoints, claimPassTier, passState, tierRequirements, trackActivity } from "@/game/seasonPass";
+import { CHALLENGE_KEYS, challengeSize, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_FINAL_AMBER, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { bountyState } from "@/game/bounties";
 import { defaultPlayerState } from "@/game/defaults";
 import type { WorldDigest } from "@/game/procedural";
@@ -38,7 +38,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(s.status).toBe("draft");
     expect(s.tiers).toHaveLength(30);
     expect(s.tiers[29]).toEqual([{ kind: "commander", id: "s-2026-11" }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }]);
-    expect(Object.keys(s.requirements)).toEqual(PASS_GATES.map((g) => String(g.tier)));
+    expect(Object.keys(s.requirements)).toHaveLength(30);
     expect(s.scenario.milestones.map((m) => m.tier)).toEqual([0, 10, 20, 30]);
     expect(s.commander.primary).not.toBe(s.commander.secondary);
     expect(s.commander.prompt).toContain(s.commander.name);
@@ -57,10 +57,39 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(PASS_THEMES.length).toBeGreaterThanOrEqual(8);
   });
 
-  it("prérequis calibrés sur l'activité médiane, bornés", () => {
-    expect(requirementCount("victory", { weeklyMedian: { victory: 4 } }, { share: 0.7, mult: 3 })).toBe(11);
-    expect(requirementCount("victory", { weeklyMedian: {} }, { share: 0.7, mult: 3 })).toBe(9);
-    expect(requirementCount("victory", { weeklyMedian: { victory: 500 } }, { share: 0.7, mult: 3 })).toBe(36);
+  it("v5.14.1 : un défi par palier, jamais le même, de plus en plus lourd, un mois d'activité par action", () => {
+    let seed = 7;
+    const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const d = { weeklyMedian: { victory: 6, contract: 10, mission: 12 } };
+    const req = generateTierChallenges(rng, ["victory", "raidRepelled", "bounty"], d, 30);
+    const sigs = new Set<string>();
+    const last: Record<string, number> = {};
+    const totals: Record<string, number> = {};
+    for (let t = 1; t <= 30; t++) {
+      const list = req[String(t)];
+      expect(list).toHaveLength(challengeSize(t));
+      // Actions jouables à la demande, distinctes dans le palier et différentes du palier précédent.
+      for (const r of list) expect(CHALLENGE_KEYS).toContain(r.key);
+      expect(new Set(list.map((r) => r.key)).size).toBe(list.length);
+      if (t > 1) for (const r of list) expect(req[String(t - 1)].map((x) => x.key)).not.toContain(r.key);
+      // Jamais deux fois le même défi ; une action qui revient ne demande jamais moins.
+      const sig = list.map((r) => `${r.key}:${r.count}`).sort().join("|");
+      expect(sigs.has(sig)).toBe(false);
+      sigs.add(sig);
+      for (const r of list) {
+        expect(r.count).toBeGreaterThanOrEqual(last[r.key] ?? 1);
+        last[r.key] = r.count;
+        totals[r.key] = (totals[r.key] ?? 0) + r.count;
+      }
+    }
+    expect(challengeSize(1)).toBe(1);
+    expect(challengeSize(30)).toBe(3);
+    // Contenu d'un mois : chaque action demande au moins un mois d'activité médiane.
+    for (const k of CHALLENGE_KEYS) expect(totals[k]).toBeGreaterThanOrEqual(monthlyBudget(k, d) - 2);
+    expect(monthlyBudget("victory", d)).toBe(26);
+    // Les derniers paliers pèsent plus que les premiers.
+    const weight = (t: number) => req[String(t)].reduce((a, r) => a + r.count, 0);
+    expect(weight(29) + weight(30)).toBeGreaterThan(3 * (weight(1) + weight(2)));
   });
 
   it("publié : remplace le passe du mois, verrouille les paliers à prérequis et donne le commandant", () => {
@@ -78,13 +107,26 @@ describe("v5.13 passes de saison procéduraux", () => {
 
     const p = player();
     addPassPoints(p, "seasonBoss", NOV_10, 100);
-    for (let t = 1; t <= 9; t++) claimPassTier(p, t, NOV_10);
-    const gate = s.requirements["10"];
-    expect(() => claimPassTier(p, 10, NOV_10)).toThrow(/verrouillé/);
-    trackActivity(p, gate.key, NOV_10, gate.count);
-    claimPassTier(p, 10, NOV_10);
-    for (const g of ["20", "30"]) trackActivity(p, s.requirements[g].key, NOV_10, s.requirements[g].count);
-    for (let t = 11; t <= 29; t++) claimPassTier(p, t, NOV_10);
+    // v5.14.1 : un défi par palier, relevé un palier à la fois.
+    const reqs = (t: number) => s.requirements[String(t)];
+    const tierRequirementsOf = (t: number) => tierRequirements(p, t, NOV_10);
+    expect(() => claimPassTier(p, 1, NOV_10)).toThrow(/verrouillé/);
+    // Une action du palier 2 ne compte pas tant que le défi du palier 1 n'est pas relevé.
+    const other = reqs(2).find((r) => !reqs(1).some((x) => x.key === r.key))!;
+    trackActivity(p, other.key, NOV_10, 50);
+    expect(passState(p, NOV_10).cleared ?? []).toEqual([]);
+    expect(() => claimPassTier(p, 2, NOV_10)).toThrow(/paliers précédents/);
+    for (let t = 1; t <= 30; t++) {
+      // Le surplus ne passe pas au palier suivant : chaque palier repart de zéro.
+      for (const r of reqs(t)) trackActivity(p, r.key, NOV_10, r.count + 5);
+      expect(passState(p, NOV_10).cleared).toContain(t);
+      if (t < 30) {
+        const next = tierRequirementsOf(t + 1);
+        expect(next?.status).toBe("active");
+        expect(next?.reqs.every((r) => r.done === 0)).toBe(true);
+        claimPassTier(p, t, NOV_10);
+      }
+    }
     const amber = bountyState(p).amber;
     const gained = claimPassTier(p, 30, NOV_10);
     expect(gained[0]).toContain(def.name);

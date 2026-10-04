@@ -167,7 +167,7 @@ export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { currentGameContent, validateGameContent, validateRules } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
-export { findPassSeason, generatePassSeason, nextMonthId, PASS_SEASONS_SECTION, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
+export { autoDraftMonths, findPassSeason, generatePassSeason, nextMonthId, PASS_SEASONS_SECTION, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
 export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";

@@ -267,8 +267,8 @@ export function GalaxyPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        <div ref={cardRef} className="glass-panel tactical-grid relative aspect-square max-h-[75vh] w-full overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div ref={cardRef} className="glass-panel tactical-grid relative aspect-square max-h-[75vh] w-full min-w-0 overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
           <ParallaxStars pan={{ x: view.x * 6, y: view.y * 6 }} />
           <svg
             ref={svgRef}
@@ -499,7 +499,7 @@ export function GalaxyPage() {
           {blips.length === 0 && (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
-          <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400">
+          <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400 sm:right-auto">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-gold-glow" /> Toi
             </span>
@@ -524,7 +524,7 @@ export function GalaxyPage() {
               <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
             </span>
           </div>
-          <p className="pointer-events-none absolute right-2 top-2 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
+          <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500 sm:block">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
         </div>

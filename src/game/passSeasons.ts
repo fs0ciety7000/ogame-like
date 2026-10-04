@@ -1,10 +1,10 @@
 import { COMMANDER_ROLES, setSeasonCommanders, type SeasonCommanderDef } from "@/game/commanders";
 import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
 import { BASE_COUNTS, generatePass, seededRandom, type WorldDigest } from "@/game/procedural";
-import { PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
+import { normalizeTierReqs, PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
-import { catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
+import { CATALOG_START, catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
 
 /* =====================================================
    v5.13 : passes de saison procéduraux. Chaque mois, le moteur écrit un
@@ -14,8 +14,8 @@ import { catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEM
    - un scénario en quatre temps (prologue, paliers 10, 20 et 30) porté par
      un mentor et un rival ;
    - 30 paliers de récompenses (points par palier ajustés sur le mois écoulé) ;
-   - des prérequis aux paliers 10, 20 et 30 (actions du mois, calibrées sur
-     l'activité médiane des joueurs) ;
+   - un défi à chaque palier (v5.14.1) : un à trois prérequis, jamais deux fois
+     le même, de plus en plus exigeant, relevés un palier à la fois ;
    - au dernier palier : un commandant de saison inédit (rôle principal +
      moitié d'un second rôle) et une forte somme d'Ambre.
    Seuls les passes publiés s'appliquent ; un brouillon oublié est publié
@@ -26,12 +26,82 @@ export const PASS_SEASONS_SECTION = "passSeasons";
 
 /** Ambre du dernier palier, en plus du commandant (un recrutement coûte 150). */
 export const PASS_FINAL_AMBER = 300;
-/** Paliers à prérequis et part du mois de l'activité médiane demandée. */
-export const PASS_GATES: { tier: number; share: number; mult: number }[] = [
-  { tier: 10, share: 0.25, mult: 1 },
-  { tier: 20, share: 0.45, mult: 2 },
-  { tier: 30, share: 0.7, mult: 3 },
-];
+/** v5.14.1 : actions possibles dans un défi de palier. Les raids repoussés et les assauts
+ *  de boss n'en font pas partie : le joueur ne les déclenche pas quand il veut, et un
+ *  défi bloque les suivants. */
+export const CHALLENGE_KEYS: ChronicleObjective[] = ["victory", "contract", "mission", "spy", "market", "bounty", "warlordWin"];
+
+/** Nombre de prérequis d'un palier : un au début, deux à partir du 11e, trois aux paliers 20 et 30. */
+export function challengeSize(tier: number): number {
+  if (tier === 20 || tier === 30) return 3;
+  if (tier === 10) return 2;
+  if (tier < 10) return 1;
+  if (tier < 20) return tier % 2 === 0 ? 2 : 1;
+  return 2;
+}
+
+/** Difficulté d'un palier : de ×0,4 (palier 1) à ×2,5 (palier 30) des valeurs de base. */
+export function challengeRamp(tier: number, tiers = 30): number {
+  return 0.4 + (2.1 * (tier - 1)) / Math.max(1, tiers - 1);
+}
+
+/** v5.14.1 : effort d'un passe complet, en mois d'activité du joueur médian. Le passe
+ *  est le contenu d'un mois : ses défis réunis demandent, pour chaque action, un mois
+ *  entier de l'activité médiane (et un seul défi avance à la fois). */
+export const PASS_MONTH_EFFORT = 1;
+
+/** Quantité d'une action demandée sur tout le passe : 4,3 semaines d'activité médiane
+ *  (bornée comme les objectifs des Chroniques ; valeurs de base sans données). */
+export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">): number {
+  const base = BASE_COUNTS[key] ?? 3;
+  const weekly = d.weeklyMedian[key] ?? 0;
+  const eff = weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
+  return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
+}
+
+/** v5.14.1 : défis des paliers. Chaque palier a les siens (compteur propre, un palier à la
+ *  fois) et jamais deux fois les mêmes : l'action change d'un palier au suivant, une action
+ *  qui revient ne demande jamais moins, et deux paliers n'ont jamais le même défi. Le mois
+ *  d'activité de chaque action est réparti sur ses paliers, plus lourdement en fin de passe. */
+export function generateTierChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
+  const pool = [...focus.filter((k) => CHALLENGE_KEYS.includes(k)), ...CHALLENGE_KEYS.filter((k) => !focus.includes(k))];
+  // 1. Actions de chaque palier : les moins utilisées d'abord (le thème à égalité), jamais celles du palier précédent.
+  const used: Record<string, number> = {};
+  const plan: ChronicleObjective[][] = [];
+  let prev: ChronicleObjective[] = [];
+  for (let t = 1; t <= tiers; t++) {
+    const keys = pool
+      .filter((k) => !prev.includes(k))
+      .map((k, i) => ({ k, w: (used[k] ?? 0) * 10 + i + rng() * 3 }))
+      .sort((a, b) => a.w - b.w)
+      .slice(0, challengeSize(t))
+      .map((x) => x.k);
+    keys.forEach((k) => (used[k] = (used[k] ?? 0) + 1));
+    plan.push(keys);
+    prev = keys;
+  }
+  // 2. Répartition du mois de chaque action sur ses paliers, au poids de la difficulté.
+  const weight = (t: number) => challengeRamp(t, tiers) * (plan[t - 1].length > 1 ? 0.8 : 1);
+  const totalWeight: Record<string, number> = {};
+  plan.forEach((keys, i) => keys.forEach((k) => (totalWeight[k] = (totalWeight[k] ?? 0) + weight(i + 1))));
+  const last: Record<string, number> = {};
+  const seen = new Set<string>();
+  const out: Record<string, PassRequirement[]> = {};
+  plan.forEach((keys, i) => {
+    const t = i + 1;
+    const reqs = keys.map((key) => {
+      const share = (monthlyBudget(key, d) * weight(t)) / totalWeight[key];
+      return { key, count: Math.max(1, Math.round(share), last[key] ?? 0) };
+    });
+    // Jamais deux fois le même défi : on monte l'action la plus lourde jusqu'à ce qu'il soit inédit.
+    const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
+    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    seen.add(sig());
+    reqs.forEach((r) => (last[r.key] = r.count));
+    out[String(t)] = reqs;
+  });
+  return out;
+}
 
 export type PassSeasonStatus = "draft" | "published";
 
@@ -50,8 +120,8 @@ export interface PassSeason {
   scenario: { synopsis: string; milestones: PassMilestone[] };
   pointsPerTier: number;
   tiers: PassReward[][];
-  /** Prérequis par palier (clé : numéro de palier). */
-  requirements: Record<string, PassRequirement>;
+  /** Prérequis par palier (clé : numéro de palier) ; v5.14.1 : plusieurs par palier. */
+  requirements: Record<string, PassRequirement[]>;
   commander: SeasonCommanderDef & { prompt: string };
   auto?: { generatedAtMs: number; variant: number; reasons: string[] };
   publishedAtMs?: number;
@@ -280,14 +350,6 @@ const shuffle = <T>(rng: () => number, xs: T[]): T[] => {
   return a;
 };
 
-/** Nombre demandé pour un prérequis : part de l'activité médiane du mois, bornée autour des valeurs de base. */
-export function requirementCount(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">, gate: { share: number; mult: number }): number {
-  const base = (BASE_COUNTS[key] ?? 3) * gate.mult;
-  const monthly = (d.weeklyMedian[key] ?? 0) * 4;
-  const wanted = Math.round(monthly * gate.share);
-  return Math.max(base, Math.min(base * 4, wanted));
-}
-
 export interface GeneratePassSeasonOptions {
   monthId: string;
   digest: WorldDigest;
@@ -330,15 +392,17 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   const tiers = g.pass.tiers.map((t) => t.map((r) => ({ ...r }))) as PassReward[][];
   tiers[tiers.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
-  const requirements: PassSeason["requirements"] = {};
   const reasons = [...g.reasons, `Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
-  PASS_GATES.forEach((gate, i) => {
-    if (gate.tier > tiers.length) return;
-    const key = focus[i % focus.length];
-    const count = requirementCount(key, o.digest, gate);
-    requirements[String(gate.tier)] = { key, count };
-    reasons.push(`Palier ${gate.tier} : ${OBJECTIVE_LABELS[key].toLowerCase()} × ${count} (médiane ${o.digest.weeklyMedian[key] ?? 0} par semaine).`);
-  });
+  const requirements = generateTierChallenges(rng, focus, o.digest, tiers.length);
+  const totals: Record<string, number> = {};
+  Object.values(requirements).forEach((list) => list.forEach((r) => (totals[r.key] = (totals[r.key] ?? 0) + r.count)));
+  reasons.push(
+    `Défis : un mois d'activité médiane par action (×${PASS_MONTH_EFFORT}), un palier à la fois. Total : ${Object.entries(totals)
+      .map(([k, n]) => `${OBJECTIVE_LABELS[k as ChronicleObjective].toLowerCase()} ${n} (médiane ${o.digest.weeklyMedian[k as ChronicleObjective] ?? 0} par semaine)`)
+      .join(", ")}.`,
+  );
+  for (const t of [1, 10, 20, 30].filter((x) => x <= tiers.length))
+    reasons.push(`Défi du palier ${t} : ${requirements[String(t)].map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} × ${r.count}`).join(", ")}.`);
 
   const line = (speaker: Speaker, text: string): StoryLine => ({ speaker, text: fill(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxième acte", "Dénouement"];
@@ -380,10 +444,17 @@ export function validatePassSeasons(cfg: PassSeasonsConfig | undefined): string[
     if (!(s.pointsPerTier >= 1)) errors.push(`${at} : points par palier ≥ 1.`);
     if (!Array.isArray(s.tiers) || s.tiers.length < 1 || s.tiers.length > 60) errors.push(`${at} : entre 1 et 60 paliers.`);
     if (!s.theme?.name?.trim()) errors.push(`${at} : nom du thème manquant.`);
-    for (const [tier, r] of Object.entries(s.requirements ?? {})) {
+    for (const [tier, raw] of Object.entries(s.requirements ?? {})) {
       if (!(Number(tier) >= 1 && Number(tier) <= (s.tiers?.length ?? 0))) errors.push(`${at} : prérequis sur un palier inexistant (${tier}).`);
-      if (!(r?.key in OBJECTIVE_LABELS)) errors.push(`${at}, palier ${tier} : action de prérequis inconnue.`);
-      if (!(Number(r?.count) >= 1)) errors.push(`${at}, palier ${tier} : nombre ≥ 1.`);
+      const list = (Array.isArray(raw) ? raw : [raw]) as Partial<PassRequirement>[];
+      if (list.length > 4) errors.push(`${at}, palier ${tier} : quatre prérequis au plus.`);
+      const keys = new Set<string>();
+      for (const r of list) {
+        if (!(String(r?.key) in OBJECTIVE_LABELS)) errors.push(`${at}, palier ${tier} : action de prérequis inconnue.`);
+        if (!(Number(r?.count) >= 1)) errors.push(`${at}, palier ${tier} : nombre ≥ 1.`);
+        if (keys.has(String(r?.key))) errors.push(`${at}, palier ${tier} : la même action deux fois.`);
+        keys.add(String(r?.key));
+      }
     }
     const c = s.commander;
     if (!c?.name?.trim()) errors.push(`${at} : nom du commandant manquant.`);
@@ -399,7 +470,7 @@ export function validatePassSeasons(cfg: PassSeasonsConfig | undefined): string[
 export function setPassSeasons(cfg: PassSeasonsConfig | undefined): void {
   const published = (cfg?.seasons ?? []).filter((s) => s && s.status === "published" && MONTH.test(s.id) && s.pointsPerTier >= 1 && Array.isArray(s.tiers) && s.tiers.length > 0);
   const passes = new Map<string, MonthPass>();
-  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: s.requirements ?? {} });
+  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: Object.fromEntries(Object.entries(s.requirements ?? {}).map(([t, r]) => [t, normalizeTierReqs(r)])) });
   setPassSeasonOverrides(passes);
   setSeasonCommanders(published.filter((s) => s.commander).map((s) => s.commander));
   PUBLISHED.splice(0, PUBLISHED.length, ...published);
@@ -428,6 +499,19 @@ export function publishPassSeason(season: PassSeason, now: number): PassSeason {
 }
 
 /** Le mois suivant (AAAA-MM). */
+/** v5.14.1 : les passes de saison commencent avec le catalogue (novembre 2026) ; avant,
+ *  le passe du mois reste celui des Chroniques (sinon le catalogue repartirait par la fin). */
+export function passSeasonAllowed(monthId: string): boolean {
+  return monthId >= CATALOG_START;
+}
+
+/** v5.14.1 : mois dont la tâche horaire peut écrire le brouillon. Le mois en cours seulement
+ *  le 1er (un passe écrit en cours de mois remplacerait celui sur lequel les joueurs avancent). */
+export function autoDraftMonths(currentMonthId: string, dayOfMonth: number, leadDay: number): string[] {
+  const ids = [...(dayOfMonth <= 1 ? [currentMonthId] : []), ...(dayOfMonth >= leadDay ? [nextMonthId(currentMonthId)] : [])];
+  return ids.filter(passSeasonAllowed);
+}
+
 export function nextMonthId(id: string): string {
   const [y, m] = id.split("-").map(Number);
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;

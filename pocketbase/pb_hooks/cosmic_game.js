@@ -165,6 +165,7 @@ __export(hooksEntry_exports, {
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
+  autoDraftMonths: () => autoDraftMonths,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
   balanceSnapshot: () => balanceSnapshot,
@@ -352,6 +353,7 @@ __export(hooksEntry_exports, {
   parisRelativeLabel: () => parisRelativeLabel,
   parisWhenLabel: () => parisWhenLabel,
   parseResetOptions: () => parseResetOptions,
+  passSeasonAllowed: () => passSeasonAllowed,
   passkeyUtf8: () => utf8Encode,
   patrolTurnaround: () => patrolTurnaround,
   performAllianceAction: () => performAllianceAction,
@@ -5738,6 +5740,10 @@ var OBJECTIVE_LABELS = {
   market: "Offres achet\xE9es au march\xE9",
   warlordWin: "Seigneurs de guerre pill\xE9s"
 };
+function normalizeTierReqs(raw) {
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
+  return list.filter((r) => !!r && typeof r === "object" && typeof r.key === "string" && Number(r.count) >= 1).map((r) => ({ key: r.key, count: Math.floor(Number(r.count)) }));
+}
 var PASS_TIERS = [
   [{ kind: "production", hours: 2 }],
   [{ kind: "amber", amount: 20 }],
@@ -5810,24 +5816,27 @@ function passTitle(seasonId) {
   return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
 }
 function passState(player, now) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const raw = (_a = player.seasonPass) != null ? _a : {};
   const seasonId = currentSeasonId(now);
   const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
   if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
   const activity = {};
   for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
-  return __spreadValues({
+  const challenge = {};
+  for (const [k, v] of Object.entries((_c = raw.challenge) != null ? _c : {})) if (Number(v) > 0) challenge[k] = Number(v);
+  const cleared = (Array.isArray(raw.cleared) ? raw.cleared : []).map(Number).filter((n) => n >= 1);
+  return __spreadValues(__spreadValues(__spreadValues({
     seasonId,
     points: Math.max(0, Number(raw.points) || 0),
     claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
-    loginDay: String((_c = raw.loginDay) != null ? _c : ""),
+    loginDay: String((_d = raw.loginDay) != null ? _d : ""),
     completed,
     activity
-  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {});
+  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}), cleared.length ? { cleared } : {}), Object.keys(challenge).length ? { challenge } : {});
 }
 function passTierToAnnounce(player, now) {
-  var _a;
+  var _a, _b;
   if (!player.seasonPass) return { tier: 0, claimable: 0 };
   const st = passState(player, now);
   const tier = passTier(st.points, st.seasonId);
@@ -5835,7 +5844,7 @@ function passTierToAnnounce(player, now) {
   st.notifiedTier = tier;
   player.seasonPass = st;
   let claimable = 0;
-  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) claimable += 1;
+  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t) && ((_b = tierRequirements(player, t, now)) == null ? void 0 : _b.met) !== false) claimable += 1;
   return { tier, claimable };
 }
 var MONTH_PASSES = /* @__PURE__ */ new Map();
@@ -5852,13 +5861,28 @@ function activePass(seasonId = currentSeasonId()) {
   var _a, _b;
   return (_b = (_a = SEASON_OVERRIDES.get(seasonId)) != null ? _a : MONTH_PASSES.get(seasonId)) != null ? _b : { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
 }
-function tierRequirement(player, tier, now) {
-  var _a, _b, _c;
+function passTierReqs(seasonId, tier) {
+  var _a;
+  return normalizeTierReqs((_a = activePass(seasonId).requirements) == null ? void 0 : _a[String(tier)]);
+}
+function activeChallengeTier(st) {
+  var _a;
+  const n = activePass(st.seasonId).tiers.length;
+  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !((_a = st.cleared) != null ? _a : []).includes(t)) return t;
+  return 0;
+}
+function tierRequirements(player, tier, now) {
+  var _a;
   const st = passState(player, now);
-  const req = (_a = activePass(st.seasonId).requirements) == null ? void 0 : _a[String(tier)];
-  if (!req) return null;
-  const done = (_c = (_b = st.activity) == null ? void 0 : _b[req.key]) != null ? _c : 0;
-  return __spreadProps(__spreadValues({}, req), { done, met: done >= req.count });
+  const reqs = passTierReqs(st.seasonId, tier);
+  if (reqs.length === 0) return null;
+  const status = ((_a = st.cleared) != null ? _a : []).includes(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
+  const rows = reqs.map((r) => {
+    var _a2, _b;
+    const done = status === "cleared" ? r.count : status === "active" ? Math.min(r.count, (_b = (_a2 = st.challenge) == null ? void 0 : _a2[r.key]) != null ? _b : 0) : 0;
+    return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
+  });
+  return { status, met: status === "cleared", reqs: rows };
 }
 function passTier(points, seasonId = currentSeasonId()) {
   const pass = activePass(seasonId);
@@ -5869,10 +5893,23 @@ function passMax(seasonId) {
   return pass.tiers.length * pass.pointsPerTier;
 }
 function trackActivity(player, key, now, times = 1) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e, _f, _g;
   if (!(times > 0)) return;
   const st = passState(player, now);
   st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
+  const t = activeChallengeTier(st);
+  const reqs = t ? passTierReqs(st.seasonId, t) : [];
+  const req = reqs.find((r) => r.key === key);
+  if (req) {
+    const challenge = __spreadProps(__spreadValues({}, (_d = st.challenge) != null ? _d : {}), { [key]: Math.min(req.count, ((_f = (_e = st.challenge) == null ? void 0 : _e[key]) != null ? _f : 0) + times) });
+    if (reqs.every((r) => {
+      var _a2;
+      return ((_a2 = challenge[r.key]) != null ? _a2 : 0) >= r.count;
+    })) {
+      st.cleared = [...(_g = st.cleared) != null ? _g : [], t].sort((a, b) => a - b);
+      delete st.challenge;
+    } else st.challenge = challenge;
+  }
   player.seasonPass = st;
 }
 var passHook = null;
@@ -5980,8 +6017,11 @@ function claimPassTier(player, tierIn, now, random = Math.random) {
   if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
   if (st.claimed.includes(tier)) throw new GameActionError("Palier d\xE9j\xE0 r\xE9clam\xE9.");
   if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
-  const req = tierRequirement(player, tier, now);
-  if (req && !req.met) throw new GameActionError(`Palier verrouill\xE9 : ${OBJECTIVE_LABELS[req.key].toLowerCase()} ${req.done} / ${req.count} ce mois-ci.`);
+  const ch = tierRequirements(player, tier, now);
+  if (ch && !ch.met)
+    throw new GameActionError(
+      ch.status === "waiting" ? "Palier verrouill\xE9 : rel\xE8ve d'abord le d\xE9fi des paliers pr\xE9c\xE9dents." : `Palier verrouill\xE9 : ${ch.reqs.filter((r) => !r.met).map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} ${r.done} / ${r.count}`).join(", ")}.`
+    );
   const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
   const after = passState(player, now);
   after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
@@ -12457,11 +12497,66 @@ function proposeAchievementTiers(defs, players, now) {
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
-var PASS_GATES = [
-  { tier: 10, share: 0.25, mult: 1 },
-  { tier: 20, share: 0.45, mult: 2 },
-  { tier: 30, share: 0.7, mult: 3 }
-];
+var CHALLENGE_KEYS = ["victory", "contract", "mission", "spy", "market", "bounty", "warlordWin"];
+function challengeSize(tier) {
+  if (tier === 20 || tier === 30) return 3;
+  if (tier === 10) return 2;
+  if (tier < 10) return 1;
+  if (tier < 20) return tier % 2 === 0 ? 2 : 1;
+  return 2;
+}
+function challengeRamp(tier, tiers2 = 30) {
+  return 0.4 + 2.1 * (tier - 1) / Math.max(1, tiers2 - 1);
+}
+var PASS_MONTH_EFFORT = 1;
+function monthlyBudget(key, d) {
+  var _a, _b;
+  const base = (_a = BASE_COUNTS[key]) != null ? _a : 3;
+  const weekly = (_b = d.weeklyMedian[key]) != null ? _b : 0;
+  const eff = weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
+  return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
+}
+function generateTierChallenges(rng, focus, d, tiers2) {
+  const pool = [...focus.filter((k) => CHALLENGE_KEYS.includes(k)), ...CHALLENGE_KEYS.filter((k) => !focus.includes(k))];
+  const used = {};
+  const plan = [];
+  let prev = [];
+  for (let t = 1; t <= tiers2; t++) {
+    const keys = pool.filter((k) => !prev.includes(k)).map((k, i) => {
+      var _a;
+      return { k, w: ((_a = used[k]) != null ? _a : 0) * 10 + i + rng() * 3 };
+    }).sort((a, b) => a.w - b.w).slice(0, challengeSize(t)).map((x) => x.k);
+    keys.forEach((k) => {
+      var _a;
+      return used[k] = ((_a = used[k]) != null ? _a : 0) + 1;
+    });
+    plan.push(keys);
+    prev = keys;
+  }
+  const weight = (t) => challengeRamp(t, tiers2) * (plan[t - 1].length > 1 ? 0.8 : 1);
+  const totalWeight = {};
+  plan.forEach((keys, i) => keys.forEach((k) => {
+    var _a;
+    return totalWeight[k] = ((_a = totalWeight[k]) != null ? _a : 0) + weight(i + 1);
+  }));
+  const last = {};
+  const seen = /* @__PURE__ */ new Set();
+  const out = {};
+  plan.forEach((keys, i) => {
+    const t = i + 1;
+    const reqs = keys.map((key) => {
+      var _a;
+      const share = monthlyBudget(key, d) * weight(t) / totalWeight[key];
+      return { key, count: Math.max(1, Math.round(share), (_a = last[key]) != null ? _a : 0) };
+    });
+    const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
+    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    seen.add(sig());
+    reqs.forEach((r) => last[r.key] = r.count);
+    out[String(t)] = reqs;
+  });
+  return out;
+}
 function defaultPassSeasonsConfig() {
   return { seasons: [] };
 }
@@ -12661,13 +12756,6 @@ var shuffle = (rng, xs) => {
   }
   return a;
 };
-function requirementCount(key, d, gate) {
-  var _a, _b;
-  const base = ((_a = BASE_COUNTS[key]) != null ? _a : 3) * gate.mult;
-  const monthly = ((_b = d.weeklyMedian[key]) != null ? _b : 0) * 4;
-  const wanted = Math.round(monthly * gate.share);
-  return Math.max(base, Math.min(base * 4, wanted));
-}
 function generatePassSeason(o) {
   var _a, _b, _c;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));
@@ -12695,16 +12783,21 @@ function generatePassSeason(o) {
   const tiers2 = g.pass.tiers.map((t) => t.map((r) => __spreadValues({}, r)));
   tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
-  const requirements = {};
   const reasons = [...g.reasons, `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
-  PASS_GATES.forEach((gate, i) => {
+  const requirements = generateTierChallenges(rng, focus, o.digest, tiers2.length);
+  const totals = {};
+  Object.values(requirements).forEach((list) => list.forEach((r) => {
     var _a2;
-    if (gate.tier > tiers2.length) return;
-    const key = focus[i % focus.length];
-    const count2 = requirementCount(key, o.digest, gate);
-    requirements[String(gate.tier)] = { key, count: count2 };
-    reasons.push(`Palier ${gate.tier} : ${OBJECTIVE_LABELS[key].toLowerCase()} \xD7 ${count2} (m\xE9diane ${(_a2 = o.digest.weeklyMedian[key]) != null ? _a2 : 0} par semaine).`);
-  });
+    return totals[r.key] = ((_a2 = totals[r.key]) != null ? _a2 : 0) + r.count;
+  }));
+  reasons.push(
+    `D\xE9fis : un mois d'activit\xE9 m\xE9diane par action (\xD7${PASS_MONTH_EFFORT}), un palier \xE0 la fois. Total : ${Object.entries(totals).map(([k, n]) => {
+      var _a2;
+      return `${OBJECTIVE_LABELS[k].toLowerCase()} ${n} (m\xE9diane ${(_a2 = o.digest.weeklyMedian[k]) != null ? _a2 : 0} par semaine)`;
+    }).join(", ")}.`
+  );
+  for (const t of [1, 10, 20, 30].filter((x) => x <= tiers2.length))
+    reasons.push(`D\xE9fi du palier ${t} : ${requirements[String(t)].map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} \xD7 ${r.count}`).join(", ")}.`);
   const line = (speaker, text) => ({ speaker, text: fill2(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxi\xE8me acte", "D\xE9nouement"];
   const milestones = [0, 10, 20, 30].map((tier, i) => ({
@@ -12741,10 +12834,17 @@ function validatePassSeasons(cfg) {
     if (!(s.pointsPerTier >= 1)) errors.push(`${at} : points par palier \u2265 1.`);
     if (!Array.isArray(s.tiers) || s.tiers.length < 1 || s.tiers.length > 60) errors.push(`${at} : entre 1 et 60 paliers.`);
     if (!((_d = (_c = s.theme) == null ? void 0 : _c.name) == null ? void 0 : _d.trim())) errors.push(`${at} : nom du th\xE8me manquant.`);
-    for (const [tier, r] of Object.entries((_e = s.requirements) != null ? _e : {})) {
+    for (const [tier, raw] of Object.entries((_e = s.requirements) != null ? _e : {})) {
       if (!(Number(tier) >= 1 && Number(tier) <= ((_g = (_f = s.tiers) == null ? void 0 : _f.length) != null ? _g : 0))) errors.push(`${at} : pr\xE9requis sur un palier inexistant (${tier}).`);
-      if (!((r == null ? void 0 : r.key) in OBJECTIVE_LABELS)) errors.push(`${at}, palier ${tier} : action de pr\xE9requis inconnue.`);
-      if (!(Number(r == null ? void 0 : r.count) >= 1)) errors.push(`${at}, palier ${tier} : nombre \u2265 1.`);
+      const list = Array.isArray(raw) ? raw : [raw];
+      if (list.length > 4) errors.push(`${at}, palier ${tier} : quatre pr\xE9requis au plus.`);
+      const keys = /* @__PURE__ */ new Set();
+      for (const r of list) {
+        if (!(String(r == null ? void 0 : r.key) in OBJECTIVE_LABELS)) errors.push(`${at}, palier ${tier} : action de pr\xE9requis inconnue.`);
+        if (!(Number(r == null ? void 0 : r.count) >= 1)) errors.push(`${at}, palier ${tier} : nombre \u2265 1.`);
+        if (keys.has(String(r == null ? void 0 : r.key))) errors.push(`${at}, palier ${tier} : la m\xEAme action deux fois.`);
+        keys.add(String(r == null ? void 0 : r.key));
+      }
     }
     const c = s.commander;
     if (!((_h = c == null ? void 0 : c.name) == null ? void 0 : _h.trim())) errors.push(`${at} : nom du commandant manquant.`);
@@ -12759,7 +12859,7 @@ function setPassSeasons(cfg) {
   var _a, _b;
   const published = ((_a = cfg == null ? void 0 : cfg.seasons) != null ? _a : []).filter((s) => s && s.status === "published" && MONTH.test(s.id) && s.pointsPerTier >= 1 && Array.isArray(s.tiers) && s.tiers.length > 0);
   const passes = /* @__PURE__ */ new Map();
-  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: (_b = s.requirements) != null ? _b : {} });
+  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: Object.fromEntries(Object.entries((_b = s.requirements) != null ? _b : {}).map(([t, r]) => [t, normalizeTierReqs(r)])) });
   setPassSeasonOverrides(passes);
   setSeasonCommanders(published.filter((s) => s.commander).map((s) => s.commander));
   PUBLISHED.splice(0, PUBLISHED.length, ...published);
@@ -12775,6 +12875,13 @@ function upsertPassSeason(cfg, season) {
 function publishPassSeason(season, now) {
   var _a;
   return __spreadProps(__spreadValues({}, season), { status: "published", publishedAtMs: (_a = season.publishedAtMs) != null ? _a : now });
+}
+function passSeasonAllowed(monthId) {
+  return monthId >= CATALOG_START;
+}
+function autoDraftMonths(currentMonthId, dayOfMonth, leadDay) {
+  const ids = [...dayOfMonth <= 1 ? [currentMonthId] : [], ...dayOfMonth >= leadDay ? [nextMonthId(currentMonthId)] : []];
+  return ids.filter(passSeasonAllowed);
 }
 function nextMonthId(id) {
   const [y, m] = id.split("-").map(Number);
