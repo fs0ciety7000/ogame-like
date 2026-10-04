@@ -11,7 +11,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { timeAgo, formatCompact } from "@/lib/utils";
 import type { SpyReport } from "@/types/game";
 import { toast } from "sonner";
-import { Bookmark, Clock, Rocket, Snail, X } from "lucide-react";
+import { Bookmark, Clock, Rocket, Snail, Swords, X } from "lucide-react";
 import { applyPreset, deleteFleetPreset, MAX_PRESETS, saveFleetPreset, useFleetPresets } from "@/lib/fleetPresets";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
-import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
+import { COMBAT_RULES, computeFleetPower, fleetCargoCapacity, pveAttackFactor } from "@/game/combat";
+import { formationEffects } from "@/game/formations";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
@@ -201,6 +202,28 @@ export function AttackModal({
                     </span>
                   </p>
                 )}
+                {(() => {
+                  // v5.9 : puissance d'attaque réelle de la flotte choisie (bonus compris).
+                  const base = computeFleetPower(player.units, player.techLevels, selected, ["attack"]);
+                  const pve = isWarlordUid(target?.uid) ? pveAttackFactor(player.units, player.techLevels, selected) : 1;
+                  const bonus = playerModifiers(player).attack + capsulePct(assault) / 100;
+                  const total = Math.round(base * formationEffects(formation).attackFactor * (1 + bonus) * pve);
+                  const parts = [
+                    formationEffects(formation).attackFactor !== 1 && `formation ×${formationEffects(formation).attackFactor.toFixed(2)}`,
+                    bonus > 0 && `officiers, reliques et capsule +${Math.round(bonus * 100)} %`,
+                    pve > 1 && `Traqueurs Kesh contre un PNJ +${Math.round((pve - 1) * 100)} %`,
+                  ].filter(Boolean);
+                  return (
+                    <p className="flex items-start gap-1.5">
+                      <Swords className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-glow" />
+                      <span>
+                        Puissance d'attaque : <strong className="tabular-mono text-slate-200">{formatNumber(total)}</strong>
+                        {hasShips && parts.length > 0 ? <span className="text-slate-500"> (base {formatNumber(Math.round(base))} · {parts.join(" · ")})</span> : null}
+                        {!hasShips && <span className="text-slate-500"> — choisis tes vaisseaux.</span>}
+                      </span>
+                    </p>
+                  );
+                })()}
                 <p>
                   <GameIcon name="storage" /> Cargaison : <strong className="tabular-mono text-slate-200">{formatNumber(fleetCargoCapacity(player.units, fleet, player.techLevels))}</strong>{" "}
                   ressources. En cas de victoire, tu pilles {Math.round(COMBAT_RULES.lootPercentCommon * 100)} % des ressources communes et{" "}
