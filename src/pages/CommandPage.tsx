@@ -179,6 +179,8 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
   const movedAt = st.movedAtMs[def.id] ?? 0;
   const cooldown = movedAt && !player.testMode ? movedAt + COMMANDER_RULES.swapCooldownHours * 3600_000 - now : 0;
   const slots = commanderSlots(player);
+  // v5.14.1 : officier rare ou commandant de saison pas encore débloqué → sous le brouillard.
+  const fogged = !entry && !!(def.rare || def.season);
 
   const act = async (task: () => Promise<unknown>, msg: string) => {
     setBusy(true);
@@ -198,12 +200,19 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
   return (
     <Card className={cn("flex flex-col gap-3 p-4", active && "ring-1")} style={active ? { boxShadow: `0 0 24px -12px ${tone}`, borderColor: `${alpha(tone, 53)}` } : undefined}>
       <div className="flex gap-3">
-        <Portrait def={def} className={cn("h-24 w-20 shrink-0", !entry && "opacity-60 grayscale")} />
+        <div className="relative h-24 w-20 shrink-0 overflow-hidden">
+          <Portrait def={def} className={cn("h-24 w-20", !entry && "opacity-60 grayscale", fogged && "scale-110 blur-md brightness-50")} />
+          {fogged && (
+            <span className="absolute inset-0 flex items-center justify-center bg-space-950/40">
+              <Lock className="h-5 w-5 text-slate-300" />
+            </span>
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px]" style={{ color: tone }}>
             {def.title}
           </p>
-          <h3 className="font-display text-lg font-semibold text-white">{def.name}</h3>
+          <h3 className="font-display text-lg font-semibold text-white">{fogged ? "???" : def.name}</h3>
           {def.season && (
             <HudTag tone="gold" className="mt-1">
               Passe de {def.season.label}
@@ -219,8 +228,14 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
           )}
         </div>
       </div>
-      <p className="text-sm text-slate-300">{def.bonus(Math.max(1, level))}{entry ? "" : " (au niveau 1)"}</p>
-      {def.lore && <p className="text-xs italic leading-relaxed text-slate-400">{def.lore}</p>}
+      {fogged ? (
+        <p className="text-sm text-slate-400">Identité et effets inconnus tant que cet officier n'est pas débloqué.</p>
+      ) : (
+        <>
+          <p className="text-sm text-slate-300">{def.bonus(Math.max(1, level))}{entry ? "" : " (au niveau 1)"}</p>
+          {def.lore && <p className="text-xs italic leading-relaxed text-slate-400">{def.lore}</p>}
+        </>
+      )}
       <div className="flex flex-col gap-1">
         <p className="text-xs text-slate-500">Progresse avec :</p>
         <div className="flex flex-wrap gap-1">
