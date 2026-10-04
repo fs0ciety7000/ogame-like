@@ -47,6 +47,8 @@ import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
 import { LeaguePanel } from "@/components/game/LeaguePanel";
 
 type LeaderboardMode = "total" | "season" | "alliances" | "ligues";
+/** v5.14.2 : ligues en pause — onglet masqué (le code et les données restent en place). */
+const LEAGUES_PAUSED = true;
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -89,8 +91,8 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "ligues") setMode(wanted);
-    if (params.get("onglet") === "ligues") setMode("ligues");
+    if (wanted === "alliances" || wanted === "season" || wanted === "total" || (wanted === "ligues" && !LEAGUES_PAUSED)) setMode(wanted);
+    if (params.get("onglet") === "ligues" && !LEAGUES_PAUSED) setMode("ligues");
     if (fiche) {
       const p = players.find((x) => x.uid === fiche);
       setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
@@ -177,7 +179,7 @@ export function PlayersPage() {
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
-            <TabsTrigger value="ligues">Ligues</TabsTrigger>
+            {!LEAGUES_PAUSED && <TabsTrigger value="ligues">Ligues</TabsTrigger>}
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">

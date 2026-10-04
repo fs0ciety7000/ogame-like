@@ -30,6 +30,10 @@ Le boss des Chroniques ne se contente plus du dernier week-end du mois. **Il rev
 
 Le boss d'alliance, lui, reste à un appel par semaine, mais **pas pendant le passage du boss mondial**.
 
+## Messages et classement
+
+Dans les messages privés, vous voyez maintenant quand l'autre est **en train de vous écrire**, comme dans le chat d'alliance. Et les **ligues font une pause** : leur onglet quitte le classement pour le moment.
+
 ## Sur téléphone
 
 Un parcours complet du jeu sur téléphone a corrigé plusieurs débordements :

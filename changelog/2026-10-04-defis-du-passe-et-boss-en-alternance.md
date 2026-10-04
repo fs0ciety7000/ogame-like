@@ -24,3 +24,7 @@ Le passe d'octobre reçoit ses défis, le boss de saison suit le rythme du boss 
 
 ## Casino
 - [Correctif] **Le tirage ne peut plus rester bloqué** : sur certains téléphones, une erreur du son laissait la machine en « tirage » et le bouton grisé, même avec des jetons. Les sons ne peuvent plus interrompre une action, et un tirage se termine toujours.
+
+## Social
+- [Nouveau] **Messages privés : « … écrit »**, comme dans le chat d'alliance. Le signal n'est envoyé qu'à la personne à qui l'on écrit, et jamais si elle nous a bloqués.
+- [Changement] **Ligues en pause** : l'onglet Ligues du classement est retiré pour le moment.

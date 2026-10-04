@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
 import { useAuthStore } from "@/store/authStore";
-import { blockPlayer, listBlocks, markConversationRead, sendPrivateMessage, unblock, useMessagesStore, type MessageBlock } from "@/services/messageService";
+import { blockPlayer, listBlocks, markConversationRead, sendMessageTyping, sendPrivateMessage, subscribeMessageTyping, unblock, useMessagesStore, type MessageBlock } from "@/services/messageService";
 import { listAllPlayers, type LeaderboardEntry } from "@/services/playerService";
 import { groupConversations, MESSAGE_RULES } from "@/game/messages";
 import { cn, timeAgo } from "@/lib/utils";
@@ -45,6 +45,8 @@ export function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ uid: string; pseudo: string } | null>(null);
+  // v5.14.2 : « … écrit », comme dans le chat d'alliance.
+  const [typing, setTyping] = useState<Record<string, number>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +60,10 @@ export function MessagesPage() {
     () => messages.filter((m) => (m.fromUid === withUid && m.toUid === uid) || (m.fromUid === uid && m.toUid === withUid)).sort((a, b) => a.createdAtMs - b.createdAtMs),
     [messages, withUid, uid],
   );
+  useEffect(() => (uid ? subscribeMessageTyping(uid, setTyping) : undefined), [uid]);
+  // Son message est arrivé : un « écrit » d'avant ce message ne compte plus.
+  const lastFromOther = thread.length > 0 && thread[thread.length - 1].fromUid === withUid ? thread[thread.length - 1].createdAtMs : 0;
+  const otherTyping = !!withUid && (typing[withUid] ?? 0) > lastFromOther;
   const unreadInThread = thread.some((m) => m.toUid === uid && !m.readAtMs);
 
   // Fil ouvert : ses messages reçus passent en « lus ».
@@ -199,6 +205,11 @@ export function MessagesPage() {
                     </div>
                   );
                 })}
+                {otherTyping && (
+                  <p className="animate-pulse text-xs italic text-slate-400" aria-live="polite">
+                    {withPseudo} écrit…
+                  </p>
+                )}
                 <div ref={bottomRef} />
               </div>
               <form
@@ -212,7 +223,10 @@ export function MessagesPage() {
                 <div className="flex items-end gap-2">
                   <textarea
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value.slice(0, MESSAGE_RULES.maxLength))}
+                    onChange={(e) => {
+                      setDraft(e.target.value.slice(0, MESSAGE_RULES.maxLength));
+                      if (e.target.value.trim() && !block) sendMessageTyping(withUid);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
