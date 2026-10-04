@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultLootTables, describeLoot, LOOT_SOURCES, LOOT_TABLES, rollLoot, setLootTables, validateLootTables } from "@/game/loot";
+import { defaultLootTables, describeLoot, LOOT_SOURCES, LOOT_TABLES, lootDifficulty, rollLoot, setLootTables, validateLootTables } from "@/game/loot";
 import { applyGameContent, currentGameContent, validateGameContent } from "@/game/content";
 import { relicsState, RELIC_RULES, rollRelic, addRelic } from "@/game/relics";
 import { synthesisState, SYNTH_RULES } from "@/game/synthesis";
@@ -47,7 +47,25 @@ describe("v5.14 tables de butin", () => {
     const st = synthesisState(p);
     for (const k of Object.keys(st.stock) as (keyof typeof st.stock)[]) st.stock[k] = Array(SYNTH_RULES.maxStock).fill(1);
     p.synthesis = st as PlayerState["synthesis"];
-    expect(rollLoot(p, "worldBoss", 0, 0, () => 0)).toEqual({});
+    // 5.15 : les jetons du casino tombent quand même (pas de limite d'inventaire de ce côté).
+    const drop = rollLoot(p, "worldBoss", 0, 0, () => 0);
+    expect(drop.relic).toBeUndefined();
+    expect(drop.capsule).toBeUndefined();
+    expect(drop.tokens).toBe(1);
+  });
+
+  it("5.15 jetons du casino : chance × difficulté (bornée 0,5 à 2)", () => {
+    expect(lootDifficulty(300, 100)).toBe(2);
+    expect(lootDifficulty(10, 100)).toBe(0.5);
+    expect(lootDifficulty(0, 100)).toBe(1);
+    const chance = defaultLootTables().pvp.tokenChance!;
+    // Tirage juste au-dessus de la chance de base : raté à difficulté 1, gagné à difficulté 2.
+    const at = (v: number) => () => v;
+    expect(rollLoot(player(), "pvp", 0, -1, at(chance + 0.01), 1).tokens).toBeUndefined();
+    const hard = player();
+    expect(rollLoot(hard, "pvp", 0, -1, at(chance + 0.01), 2).tokens).toBe(1);
+    expect(hard.casino?.tokens).toBe(1);
+    expect(describeLoot({ tokens: 2 })).toMatch(/2 jetons du casino/);
   });
 
   it("réglable dans l'administration (réglages des reliques), et validé", () => {

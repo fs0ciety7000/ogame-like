@@ -44,6 +44,9 @@ export interface AchievementDef {
 }
 
 export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire", mythique: "Mythique" };
+/** 5.15 : jetons du casino gagnés au déblocage, selon le palier. */
+export const ACHIEVEMENT_TOKENS: Record<AchievementTier, number> = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
+
 export const TIER_REWARDS: Record<AchievementTier, { xp: number; hours: number }> = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },

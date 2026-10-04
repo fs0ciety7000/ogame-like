@@ -73,12 +73,14 @@ En moyenne, un jeton rapporte un peu plus de **20 minutes de production**, sans 
 | Seigneur de guerre pillé | 1 |
 | Tournoi du casino | 5, 3 et 2 pour le podium |
 | Divisions du classement (nouveau, 5.15) | 1 à 4 chaque lundi selon la division |
+| Succès (nouveau, 5.15) | 1 en Or, 2 en Légendaire, 5 en Mythique |
+| Butin des combats (nouveau, 5.15) | une chance après chaque victoire : boss 30 %, seigneurs 25 %, menaces 12 %, joueurs et expéditions 6 % |
 
-Un joueur assidu ramasse ainsi **de l'ordre de 40 à 60 jetons par mois**, selon les boss et sa division : le 7-7-7 arrive alors en **trois à quatre mois** en moyenne, et environ **une chance sur quatre** de l'avoir dans le mois. Le pot commun, lui, grossit pendant ce temps avec les taxes du marché et des cadeaux.
+Un joueur assidu ramassait **de l'ordre de 40 à 60 jetons par mois** avant les nouveautés de la 5.15 (butin et succès en plus), selon les boss et sa division : le 7-7-7 arrive alors en **trois à quatre mois** en moyenne, et environ **une chance sur quatre** de l'avoir dans le mois. Le pot commun, lui, grossit pendant ce temps avec les taxes du marché et des cadeaux.
 
-## Et après ?
+## Plus l'adversaire est coriace…
 
-La prochaine étape : plus de façons de gagner des jetons. Combats, factions, succès… chaque victoire aura sa petite chance d'en rapporter, plus grande quand l'adversaire est coriace. On en reparle bientôt.
+Depuis la 5.15, chaque victoire a sa petite chance de laisser des jetons dans l'épave, en plus de son butin habituel. Cette chance grimpe face à un adversaire plus fort que toi : jusqu'à deux fois plus contre un ennemi deux fois plus puissant, et moitié moins contre une cible facile. Une longue expédition compte aussi comme plus risquée qu'une courte. La liste complète, avec les chiffres en vigueur, est sur la page du casino, dans « Gagner des jetons ».
 
 > [!NOTE] Méthode
 > 200 000 joueurs simulés, chacun jouant jusqu'à son premier 7-7-7, avec les probabilités en vigueur. Le calcul exact : chance par jeton = 1 − (1 − 0,005 − 0,15) / (1 − 0,15).

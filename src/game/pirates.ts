@@ -1,4 +1,4 @@
-import { describeLoot, rollLoot } from "@/game/loot";
+import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -721,7 +721,8 @@ export function resolvePirateRaid(
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     // v5.14 : table de butin « menaces ».
-    const raidLoot = describeLoot(rollLoot(player, "threat", now));
+    // 5.15 : plus le raid était puissant face à la défense, plus les jetons sont probables.
+    const raidLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.attackerPower, combat.defenderPower)));
     notifications.push(
       note(
         "combat-defender",
@@ -838,7 +839,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
-    const lairLoot = describeLoot(rollLoot(player, "threat", now));
+    const lairLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower)));
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(
       note(

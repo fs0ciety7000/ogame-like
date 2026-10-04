@@ -2571,13 +2571,18 @@ function withLegacyKiller(txApp, game, state, mission) {
 
 /** v5.14 : notification du butin d'un combat (tables de butin). */
 function lootNotif(loot, now) {
+  // 5.15 : les jetons du casino font aussi partie du butin.
+  const parts = [];
+  if (loot.relic) parts.push(`relique ${loot.relic}`);
+  if (loot.capsule) parts.push(`capsule ${loot.capsule.name} niv. ${loot.capsule.level}`);
+  if (loot.tokens) parts.push(`${loot.tokens} jeton${loot.tokens > 1 ? "s" : ""} du casino`);
   return {
     kind: "event",
-    title: loot.relic ? "Butin : une relique !" : "Butin : une capsule",
-    message: `Dans l'épave :${loot.relic ? ` relique ${loot.relic}` : ""}${loot.relic && loot.capsule ? " et" : ""}${loot.capsule ? ` capsule ${loot.capsule.name} niv. ${loot.capsule.level}` : ""}.`,
+    title: loot.relic ? "Butin : une relique !" : loot.capsule ? "Butin : une capsule" : "Butin : des jetons du casino",
+    message: `Dans l'épave : ${parts.join(", ")}.`,
     createdAtMs: now,
     read: false,
-    link: "/game/etat-major",
+    link: loot.relic || loot.capsule ? "/game/etat-major" : "/game/casino",
   };
 }
 
@@ -2611,7 +2616,7 @@ function distributeLeviathan(txApp, game, state, now) {
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
     const loot = won ? game.rollLoot(flushed.player, "worldBoss", now, i) : null;
-    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
+    if (loot && (loot.relic || loot.capsule || loot.tokens)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.worldBossTitle(state) : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -5998,7 +6003,7 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     if (!(p.titles || []).some((t) => t.label === title)) p.titles = (p.titles || []).concat([{ label: title, seasonId: "vendetta", rank: 1 }]);
     game.addPassPoints(p, "vendetta", now);
     // v5.14 : table de butin « seigneur de guerre ».
-    const loot = game.rollLoot(p, "warlord", now);
+    const loot = game.rollLoot(p, "warlord", now, -1, Math.random, d.tier === "strong" ? 1.5 : 1);
     savePlayer(txApp, game, loaded, p, loaded.queues);
     notify(txApp, w, [
       {
@@ -6447,7 +6452,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
     const loot = won ? game.rollLoot(flushed.player, "seasonBoss", now, i) : null;
-    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
+    if (loot && (loot.relic || loot.capsule || loot.tokens)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -6659,7 +6664,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     // v5.14 : butin du boss (relique, capsule), en plus des récompenses.
     const loot = won ? game.rollLoot(flushed.player, "allianceBoss", now, i) : null;
-    if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
+    if (loot && (loot.relic || loot.capsule || loot.tokens)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([

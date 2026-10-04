@@ -152,6 +152,9 @@ export function SeasonBossPanel() {
         <NumberField label="Capsule : niveau min." value={loot.capsuleMin} step={1} min={1} onChange={(v) => setLoot({ capsuleMin: Math.round(v ?? 1) })} />
         <NumberField label="Capsule : niveau max." value={loot.capsuleMax} step={1} min={1} onChange={(v) => setLoot({ capsuleMax: Math.round(v ?? 1) })} />
         <NumberField label="Podium : chances ×" value={loot.podiumMult} step={0.1} min={1} onChange={(v) => setLoot({ podiumMult: v ?? 1 })} />
+        <NumberField label="Butin : chance de jetons du casino" value={loot.tokenChance ?? 0} step={0.01} min={0} onChange={(v) => setLoot({ tokenChance: v ?? 0 })} />
+        <NumberField label="Jetons : min." value={loot.tokenMin ?? 1} step={1} min={1} onChange={(v) => setLoot({ tokenMin: Math.round(v ?? 1) })} />
+        <NumberField label="Jetons : max." value={loot.tokenMax ?? 1} step={1} min={1} onChange={(v) => setLoot({ tokenMax: Math.round(v ?? 1) })} />
       </Section>
     </Card>
   );
