@@ -32,7 +32,7 @@ export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, M
 export { addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeFromPot } from "@/game/serverPot";
 export { isFormation } from "@/game/formations";
 export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
-export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeClaimable, challengeRewardees, challengeTier, claimChallengeReward, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
+export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeClaimable, challengeRewardees, challengeTier, challengeTierIndex, claimChallengeReward, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
 export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
@@ -188,4 +188,4 @@ export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
 export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
 export { allianceWeekId } from "@/game/allianceBoss";
 export { closeLeagues, LEAGUES_KEY, leagueInfo, normalizeLeagues } from "@/game/leagues";
-export { CASINO_KEY, casinoOpen, casinoOpeningId, claimDailyTokens, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
+export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";

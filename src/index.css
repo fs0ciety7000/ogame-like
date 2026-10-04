@@ -113,6 +113,18 @@
   --th-scan: 0.016;
 }
 /* Holo — esprit Star Citizen (mobiGlas) : hologramme bleu translucide, traits fins. */
+/* Raretés et médailles : suivent la palette du thème (rare = accent, épique = second accent, légendaire = or). */
+:root {
+  --th-rarity-common: var(--th-text-300);
+  --th-rarity-rare: var(--th-accent);
+  --th-rarity-epic: var(--th-accent2);
+  --th-rarity-legendary: var(--th-gold);
+  --th-rarity-mythic: #ff5df0;
+  --th-medal-gold: var(--th-gold);
+  --th-medal-silver: #cbd5e1;
+  --th-medal-bronze: #d9925e;
+}
+
 :root[data-theme="holo"] {
   --th-font-title: "Saira", sans-serif;
   --th-font-body: "Saira", sans-serif;
@@ -1036,6 +1048,26 @@ body {
 }
 @media (max-width: 640px) { .page-header-backdrop-img { opacity: 0.25; } }
 
+/* Bandeau d'accueil du casino : or (récompense), illustration fondue vers la gauche. */
+.casino-banner {
+  border: 1px solid color-mix(in srgb, var(--th-gold) 45%, transparent);
+  background: color-mix(in srgb, var(--th-gold) 6%, var(--th-space-950));
+  transition: border-color 0.15s;
+}
+.casino-banner:hover { border-color: var(--th-gold); }
+.casino-banner-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  opacity: 0.35;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 20%, #000 75%);
+  mask-image: linear-gradient(90deg, transparent 20%, #000 75%);
+}
+
 /* ---------- v5.12 : Casino orbital (machine à sous) ----------
    Instrument du HUD : panneau à coins coupés, jetons du thème uniquement.
    Couleurs = sens : or (récompense) pour la machine, accent pour l'action (levier, bouton),
@@ -1126,6 +1158,13 @@ body {
   pointer-events: none;
   background: linear-gradient(180deg, var(--th-space-950), transparent 30%, transparent 70%, var(--th-space-950));
 }
+/* « Presque » : les deux premiers 7 sont alignés, le dernier rouleau s'éclaire en or le temps de s'arrêter. */
+.slot-reel-tense { animation: slot-tense 0.35s ease-in-out infinite alternate; }
+@keyframes slot-tense {
+  from { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--th-gold) 30%, transparent); }
+  to { box-shadow: inset 0 0 0 2px var(--th-gold), inset 0 0 24px color-mix(in srgb, var(--th-gold) 30%, transparent); }
+}
+
 /* Ligne de paiement : accent (visée) au repos, couleur du gain ensuite. */
 .slot-payline { --p: var(--th-accent); position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: var(--p); opacity: 0.6; pointer-events: none; z-index: 1; }
 .slot-cabinet-win .slot-payline, .slot-cabinet-jackpot .slot-payline { --p: var(--c); opacity: 1; height: 2px; margin-top: -1px; box-shadow: 0 0 10px var(--p); }
@@ -1177,6 +1216,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .slot-lights > i, .slot-cabinet-spinning .slot-lights > i, .slot-cabinet-win .slot-lights > i, .slot-cabinet-jackpot .slot-lights > i, .slot-cabinet-jackpot { animation: none; }
   .slot-lever-stick, .slot-lever-ball { transition: none; }
+  .slot-reel-tense { animation: none; box-shadow: inset 0 0 0 2px var(--th-gold); }
 }
 
 /* ---------- Toasts du HUD (sonner, voir hud-toast.tsx) ---------- */

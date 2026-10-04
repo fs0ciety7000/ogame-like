@@ -1,5 +1,5 @@
 import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
-import { DEFAULT_TITLES, setTitles, validateTitles, type TitleDef } from "@/game/titles";
+import { DEFAULT_TITLES, setTitles, validateTitles, withLateDefaults, type TitleDef } from "@/game/titles";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
@@ -189,7 +189,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
   setRelics(content.relics, content.relicSettings);
-  setTitles(content.titles ?? DEFAULT_TITLES);
+  setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);

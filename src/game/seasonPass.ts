@@ -1,3 +1,4 @@
+import { grantTokens, tokensLabel } from "@/game/casino";
 import { GameActionError } from "@/game/errors";
 import { addDossiers } from "@/game/commanders";
 import { bountyState } from "@/game/bounties";
@@ -46,9 +47,10 @@ export type PassReward =
   | { kind: "dossier"; count: number }
   | { kind: "capsule"; capsule: CapsuleType; level: number }
   | { kind: "relic"; rarity: RelicRarity }
+  | { kind: "tokens"; count: number }
   | { kind: "cosmetic" };
 
-/** Récompenses des 30 paliers (370 Ambre, 3 Dossiers, 8 capsules, 2 reliques). */
+/** Récompenses des 30 paliers (370 Ambre, 3 Dossiers, 8 capsules, 2 reliques, 4 jetons du casino). */
 export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 2 }],
   [{ kind: "amber", amount: 20 }],
@@ -56,7 +58,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 3 }],
   [{ kind: "dossier", count: 1 }],
   [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 4 }],
+  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
   [{ kind: "capsule", capsule: "armor", level: 3 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
@@ -66,7 +68,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 6 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "veil", level: 4 }],
-  [{ kind: "production", hours: 7 }],
+  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "assault", level: 5 }],
   [{ kind: "relic", rarity: "rare" }],
@@ -76,7 +78,7 @@ export const PASS_TIERS: PassReward[][] = [
   [{ kind: "production", hours: 9 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
   [{ kind: "production", hours: 10 }],
-  [{ kind: "amber", amount: 50 }],
+  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
   [{ kind: "capsule", capsule: "decoy", level: 5 }],
   [{ kind: "production", hours: 12 }],
   [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }],
@@ -106,7 +108,7 @@ export function setSeasonPass(cfg: Partial<SeasonPassConfig> | null | undefined)
   PASS_RULES.tiers = PASS_TIERS.length;
 }
 
-const REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "cosmetic"];
+const REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
 
 export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): string[] {
   const errors: string[] = [];
@@ -120,6 +122,7 @@ export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): 
         if (!REWARD_KINDS.includes(r?.kind)) errors.push(`Passe, palier ${i + 1} : récompense inconnue.`);
         if (r?.kind === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
         if (r?.kind === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : rareté inconnue.`);
+        if (r?.kind === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
       }),
     );
   }
@@ -261,6 +264,8 @@ export function describePassReward(r: PassReward, seasonId?: string): string {
       return `${CAPSULES[r.capsule].name} N${r.level}`;
     case "relic":
       return `Relique ${RARITY_LABELS[r.rarity]}`;
+    case "tokens":
+      return tokensLabel(r.count);
     case "cosmetic":
       return seasonId ? `Bannière et titre « ${passTitle(seasonId)} »` : "Bannière et titre de la saison";
   }
@@ -295,6 +300,10 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     b.amber += CAPSULE_AMBER;
     player.bounties = b;
     return `${CAPSULE_AMBER} Ambre (réserve de capsules pleine)`;
+  }
+  if (r.kind === "tokens") {
+    grantTokens(player, r.count);
+    return describePassReward(r);
   }
   if (r.kind === "relic") {
     // Premier tirage à 0 : exactement la rareté promise, puis modèle au hasard.

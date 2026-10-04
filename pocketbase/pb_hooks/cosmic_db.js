@@ -2448,7 +2448,14 @@ function bossRewardEntry(r) {
   if (r.title) out.title = String(r.title);
   if (r.relic) out.relic = String(r.relic);
   if (r.mythic) out.mythic = String(r.mythic);
+  if (Number(r.tokens) > 0) out.tokens = Math.floor(Number(r.tokens));
   return out;
+}
+
+/** v5.12 : ajoute les jetons du casino aux détails d'une notification. */
+function tokenNotifData(data, tokens) {
+  if (!(tokens > 0)) return data;
+  return Object.assign({}, data || {}, { tokens });
 }
 
 /** v5.9 : détails structurés d'une notification de boss (pastilles). */
@@ -2545,6 +2552,7 @@ function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
   const rewards = {};
+  const casino = readCasino(txApp, game).settings;
   ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -2552,17 +2560,18 @@ function distributeLeviathan(txApp, game, state, now) {
     const out = game.grantLeviathanReward(state, flushed.player);
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic });
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
         createdAtMs: now,
         read: false,
         link: "/game/leviathan",
-        data: bossNotifData(out.gain, out.relic, mythic),
+        data: tokenNotifData(bossNotifData(out.gain, out.relic, mythic), tokens),
       },
     ]));
   });
@@ -3882,13 +3891,15 @@ function recordChallengeProgress(txApp, game, before, after) {
 /** Tâche planifiée : clôture et récompenses, titre temporaire, nouveau défi. */
 /** v5.10 : verse d'office les récompenses non réclamées d'un défi terminé. */
 function payUnclaimedChallenge(txApp, game, ch, now) {
+  const casino = readCasino(txApp, game).settings;
   game.unclaimedRewardees(ch).forEach((uid) => {
     if (!findOrNull(txApp, "players", uid)) return;
     const loaded = loadPlayer(txApp, game, uid);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     const gain = game.grantChallengeReward(ch, flushed.player, { title: false });
+    const tokens = game.grantTokens(flushed.player, game.challengeTokens(casino, game.challengeTierIndex(ch)));
     savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
-    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}).`, createdAtMs: now, read: false, link: "/game", data: { resources: gain } }]));
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}).`, createdAtMs: now, read: false, link: "/game", data: tokenNotifData({ resources: gain }, tokens) }]));
   });
 }
 
@@ -3909,10 +3920,11 @@ function challengeClaim(e) {
     } catch (err) {
       throw asHttpError(game, err);
     }
+    const tokens = game.grantTokens(flushed.player, game.challengeTokens(readCasino(txApp, game).settings, game.challengeTierIndex(state.previous)));
     savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
     writeChallengeState(txApp, game, Object.assign({}, state, { previous: res.challenge }));
-    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}.`, createdAtMs: now, read: true, link: "/game", data: { resources: res.gain } }]));
-    out = { gain: res.gain };
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}.`, createdAtMs: now, read: true, link: "/game", data: tokenNotifData({ resources: res.gain }, tokens) }]));
+    out = { gain: res.gain, tokens };
   });
   return e.json(200, out);
 }
@@ -3942,6 +3954,7 @@ function challengeTick(now) {
       // v5.10 : les récompenses non réclamées du défi précédent sont versées d'office.
       payUnclaimedChallenge(txApp, game, state.previous, now);
       const top = game.challengeRanking(done)[0];
+      const chTokens = game.challengeTokens(readCasino(txApp, game).settings, game.challengeTierIndex(done));
       game.challengeRewardees(done).forEach((uid) => {
         if (!findOrNull(txApp, "players", uid)) return;
         // Le titre du meilleur est remis tout de suite ; les ressources se réclament.
@@ -3950,7 +3963,7 @@ function challengeTick(now) {
           game.grantChallengeReward(done, loaded.player, { resources: false });
           savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
         }
-        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Ta récompense t'attend sur l'accueil : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare.${top && top.uid === uid ? ` Tu deviens « ${game.CHALLENGE_RULES.title} » !` : ""}`, createdAtMs: now, read: false, link: "/game" }]);
+        notify(txApp, uid, [{ kind: "event", title: "Défi de la semaine réussi !", message: `${label} : objectif atteint à ${Math.round((done.total / done.target) * 100)} %. Ta récompense t'attend sur l'accueil : ${tier.hours} h de production, ${tier.rare} de chaque ressource rare${chTokens ? ` et ${game.tokensLabel(chTokens)}` : ""}.${top && top.uid === uid ? ` Tu deviens « ${game.CHALLENGE_RULES.title} » !` : ""}`, createdAtMs: now, read: false, link: "/game" }]);
       });
       state = Object.assign({}, state, {
         current: null,
@@ -6228,6 +6241,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
   const rewards = {};
+  const casino = readCasino(txApp, game).settings;
   game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -6235,17 +6249,18 @@ function distributeSeasonBoss(txApp, game, state, now) {
     const out = game.grantSeasonBossReward(state, flushed.player, now);
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic });
+    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}.`,
+        message: `+${out.points} points de passe${out.title ? `, le titre « ${out.title} » et son sceau` : ""}${out.relic ? `, relique : ${out.relic}` : ""}${mythic ? `, relique MYTHIQUE : ${mythic} !` : ""}${tokens ? `, ${game.tokensLabel(tokens)}` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/boss",
-        data: bossNotifData(null, out.relic, mythic),
+        data: tokenNotifData(bossNotifData(null, out.relic, mythic), tokens),
       },
     ]));
   });
@@ -6432,23 +6447,25 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const name = game.allianceBossDef(state).name;
   const rewards = {};
-  game.leviathanRanking(state).forEach((c) => {
+  const casino = readCasino(txApp, game).settings;
+  game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantAllianceBossReward(state, flushed.player, now);
-    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic });
     const won = state.status === "killed";
+    const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "alliance",
         title: won ? `${name} est tombé !` : `${name} s'est retiré`,
-        message: `+${out.points} points de passe${Object.keys(out.gain || {}).length ? ", 2 h de production" : ""}${out.relic ? `, relique : ${out.relic}` : ""}.`,
+        message: `+${out.points} points de passe${Object.keys(out.gain || {}).length ? ", 2 h de production" : ""}${out.relic ? `, relique : ${out.relic}` : ""}${tokens ? `, ${game.tokensLabel(tokens)}` : ""}.`,
         createdAtMs: now,
         read: false,
         link: "/game/alliance",
-        data: bossNotifData(out.gain, out.relic, ""),
+        data: tokenNotifData(bossNotifData(out.gain, out.relic, ""), tokens),
       },
     ]));
   });
@@ -6861,25 +6878,22 @@ function casinoRequest(e) {
       gained = game.productionHours(player, settings.hours[outcome] || 0);
     }
     Object.keys(gained).forEach((k) => (player.resources[k] = (player.resources[k] || 0) + gained[k]));
-    const won = outcome !== "lose";
-    player.casino = Object.assign({}, c, {
-      tokens: c.tokens - 1 + (token ? 1 : 0),
-      spins: c.spins + 1,
-      wins: c.wins + (won ? 1 : 0),
-      jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
-    });
+    game.applySpin(player, outcome, gained, now);
+    // Trois 7 : titre définitif.
+    if (outcome === "jackpot") game.giveTitle(player, settings.rewards.jackpotTitle, "casino:jackpot", true);
     savePlayer(txApp, game, loaded, player, flushed.queues);
 
     const win = { uid, pseudo: player.pseudo, atMs: now, outcome, resources: gained };
     if (token) win.token = true;
-    casino = game.recordWin(casino, win);
+    casino = settleTournament(txApp, game, casino, now);
+    casino = game.scoreSpin(game.recordWin(casino, win), uid, player.pseudo, outcome);
     writeConfig(txApp, game.CASINO_KEY, casino);
 
     if (outcome === "jackpot") {
       const text = `${player.pseudo} décroche le gros lot du Casino orbital : ${game.describeGain(gained)}${fromPot ? " pris dans le pot commun" : ""} !`;
-      notes.push({ kind: "event", title: "777 ! Gros lot !", message: `Tu remportes ${game.describeGain(gained)}.`, createdAtMs: now, read: false, link: "/game/casino", data: { resources: gained } });
+      notes.push({ kind: "event", title: "777 ! Gros lot !", message: `Tu remportes ${game.describeGain(gained)} et le titre « ${settings.rewards.jackpotTitle} ».`, createdAtMs: now, read: false, link: "/game/casino", data: { resources: gained, image: JACKPOT_IMAGE } });
       proceduralPlayers(txApp).forEach((p) => {
-        if (p.uid !== uid) notify(txApp, p.uid, [{ kind: "event", title: "💰 Gros lot au Casino orbital", message: text, createdAtMs: now, read: false, link: "/game/casino" }]);
+        if (p.uid !== uid) notify(txApp, p.uid, [{ kind: "event", title: "💰 Gros lot au Casino orbital", message: text, createdAtMs: now, read: false, link: "/game/casino", data: { image: JACKPOT_IMAGE } }]);
       });
     }
     if (notes.length) notify(txApp, uid, notes);
@@ -6888,18 +6902,59 @@ function casinoRequest(e) {
   return e.json(200, out);
 }
 
-/** Annonce l'ouverture du casino (programme ou ouverture manuelle), une fois par période. Cron 15 min. */
+const JACKPOT_IMAGE = "/assets/blog/articles/5-12/gros-lot.webp";
+
+/** v5.12 : clôture le tournoi d'une ouverture terminée (jetons du podium, titre du vainqueur) et ouvre le suivant. */
+function settleTournament(txApp, game, casino, now) {
+  const rolled = game.rollTournament(casino, now);
+  let next = rolled.state;
+  if (!rolled.closed) return next;
+  const s = casino.settings;
+  const result = game.tournamentResult(rolled.closed, s, now);
+  const label = s.rewards.tournamentTitle;
+  // Le titre change de main : retiré au précédent vainqueur.
+  const prevHolder = casino.lastTournament ? casino.lastTournament.titleUid : "";
+  if (prevHolder && prevHolder !== result.titleUid && findOrNull(txApp, "players", prevHolder)) {
+    const old = loadPlayer(txApp, game, prevHolder);
+    game.removeTitle(old.player, label);
+    savePlayer(txApp, game, old, old.player, old.queues);
+  }
+  result.podium.forEach((p, i) => {
+    if (!findOrNull(txApp, "players", p.uid)) return;
+    const loaded = loadPlayer(txApp, game, p.uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const tokens = game.grantTokens(flushed.player, p.tokens);
+    if (p.uid === result.titleUid) game.giveTitle(flushed.player, label, `casino:${result.id}`, true);
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    notify(txApp, p.uid, flushed.notifications.concat([{
+      kind: "event",
+      title: i === 0 ? `🏆 Tu remportes le tournoi du casino !` : `Tournoi du casino : ${i + 1}e place`,
+      message: `${p.points} points${tokens ? `, ${game.tokensLabel(tokens)}` : ""}${p.uid === result.titleUid ? ` et le titre « ${label} » jusqu'au prochain tournoi` : ""}.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game/casino",
+      data: tokenNotifData(null, tokens),
+    }]));
+  });
+  return Object.assign({}, next, { lastTournament: result });
+}
+
+/** Annonce l'ouverture du casino (programme ou ouverture manuelle), une fois par période, et clôture les tournois. Cron 15 min. */
 function casinoTick(now) {
   const game = loadGame();
   $app.runInTransaction((txApp) => {
     applyContent(txApp, game);
     const casino = readCasino(txApp, game);
+    const settled = settleTournament(txApp, game, casino, now);
     const id = game.casinoOpeningId(casino.settings, now);
-    if (!id || id === casino.announcedId) return;
+    if (!id || id === casino.announcedId) {
+      if (settled !== casino) writeConfig(txApp, game.CASINO_KEY, Object.assign({}, settled, { updatedAtMs: now }));
+      return;
+    }
     proceduralPlayers(txApp).forEach((p) => {
-      notify(txApp, p.uid, [{ kind: "event", title: "🎰 Le Casino orbital est ouvert", message: "La machine à sous du pot commun tourne : récupère ton jeton du jour et tente le 7-7-7 !", createdAtMs: now, read: false, link: "/game/casino" }]);
+      notify(txApp, p.uid, [{ kind: "event", title: "🎰 Le Casino orbital est ouvert", message: "La machine à sous du pot commun tourne : récupère ton jeton du jour, grimpe au classement du tournoi et tente le 7-7-7 !", createdAtMs: now, read: false, link: "/game/casino", data: { image: "/assets/casino/salle-777.webp" } }]);
     });
-    writeConfig(txApp, game.CASINO_KEY, Object.assign({}, casino, { announcedId: id, updatedAtMs: now }));
+    writeConfig(txApp, game.CASINO_KEY, Object.assign({}, settled, { announcedId: id, updatedAtMs: now }));
   });
 }
 

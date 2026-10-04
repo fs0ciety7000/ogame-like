@@ -9,7 +9,9 @@ import { Card } from "@/components/ui/card";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { claimChallenge, useChallengeStore } from "@/services/challengeService";
 import { useAuthStore } from "@/store/authStore";
-import { CHALLENGE_RULES, CHALLENGE_TYPES, challengeClaimable, challengeRanking, challengeTier, type Challenge } from "@/game/challenges";
+import { CHALLENGE_RULES, CHALLENGE_TYPES, challengeClaimable, challengeRanking, challengeTier, challengeTierIndex, type Challenge } from "@/game/challenges";
+import { challengeTokens, tokensLabel } from "@/game/casino";
+import { useCasino } from "@/services/casinoService";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 
 /* Accueil (v3.8) : défi hebdomadaire du serveur, progression commune. */
@@ -22,12 +24,14 @@ function timeLeft(ms: number) {
 /** v5.10 : récompense du défi terminé, à récupérer d'un clic. */
 function ClaimBanner({ previous }: { previous: Challenge }) {
   const [busy, setBusy] = useState(false);
+  const [casino] = useCasino();
   const tier = challengeTier(previous);
+  const tokens = casino ? challengeTokens(casino.settings, challengeTierIndex(previous)) : 0;
   const claim = async () => {
     setBusy(true);
     try {
       const out = await claimChallenge();
-      toast.success(`Récompense du défi : +${describeGain(out.gain)}`);
+      toast.success(`Récompense du défi : +${describeGain(out.gain)}${out.tokens ? ` et ${tokensLabel(out.tokens)}` : ""}`);
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Récupération impossible.");
     } finally {
@@ -38,12 +42,12 @@ function ClaimBanner({ previous }: { previous: Challenge }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-wrap items-center gap-3 border border-gold-glow/40 bg-gold-glow/[0.07] px-4 py-3 text-sm"
+      className="hud-callout hud-tone-gold hud-callout-alert flex flex-wrap items-center gap-3 px-4 py-3 text-sm"
     >
-      <Gift className="h-5 w-5 shrink-0 animate-pulse text-gold-glow" />
+      <Gift className="h-5 w-5 shrink-0 text-gold-glow" />
       <span className="min-w-0 flex-1 text-slate-200">
         Défi « {CHALLENGE_TYPES[previous.type].label.toLowerCase()} » réussi ! Ta récompense t'attend
-        {tier ? ` : ${tier.hours} h de production et ${tier.rare} de chaque ressource rare` : ""}.
+        {tier ? ` : ${tier.hours} h de production, ${tier.rare} de chaque ressource rare${tokens ? ` et ${tokensLabel(tokens)}` : ""}` : ""}.
         <span className="block text-[11px] text-slate-500">Non récupérée, elle sera versée d'office à la fin du défi suivant.</span>
       </span>
       <Button size="sm" disabled={busy} onClick={() => void claim()}>
@@ -69,6 +73,7 @@ function ChallengeProgress({ hideResult }: { hideResult: boolean }) {
   useNowTicker();
   const uid = useAuthStore((s) => s.user?.uid) ?? "";
   const { current, previous } = useChallengeStore();
+  const [casino] = useCasino();
   const now = Date.now();
 
   if (!current) {
@@ -128,7 +133,7 @@ function ChallengeProgress({ hideResult }: { hideResult: boolean }) {
           {CHALLENGE_RULES.tiers.map((t, i) => (
             <span key={t.at} className={cn("ml-2", tier && tier.at >= t.at ? "text-mint-glow" : "")}>
               {i > 0 && "· "}
-              {t.at * 100} % : {t.hours} h + {t.rare} rares
+              {t.at * 100} % : {t.hours} h + {t.rare} rares{casino && challengeTokens(casino.settings, i) ? ` + ${challengeTokens(casino.settings, i)} jeton${challengeTokens(casino.settings, i) > 1 ? "s" : ""}` : ""}
             </span>
           ))}
         </span>

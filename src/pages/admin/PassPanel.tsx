@@ -36,6 +36,7 @@ const KINDS: { value: PassReward["kind"]; label: string }[] = [
   { value: "dossier", label: "Dossiers" },
   { value: "capsule", label: "Capsule" },
   { value: "relic", label: "Relique" },
+  { value: "tokens", label: "Jetons du casino" },
   { value: "cosmetic", label: "Bannière + titre" },
 ];
 
@@ -51,6 +52,8 @@ function blank(kind: PassReward["kind"]): PassReward {
       return { kind, capsule: "assault", level: 3 };
     case "relic":
       return { kind, rarity: "rare" };
+    case "tokens":
+      return { kind, count: 1 };
     default:
       return { kind: "cosmetic" };
   }
@@ -72,6 +75,7 @@ function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChan
       {value.kind === "production" && <NumberInput {...num} min={1} value={value.hours} suffix="h" aria-label="Heures" onChange={(v) => onChange({ ...value, hours: v })} />}
       {value.kind === "amber" && <NumberInput {...num} min={1} value={value.amount} aria-label="Ambre" onChange={(v) => onChange({ ...value, amount: v })} />}
       {value.kind === "dossier" && <NumberInput {...num} min={1} value={value.count} aria-label="Dossiers" onChange={(v) => onChange({ ...value, count: v })} />}
+      {value.kind === "tokens" && <NumberInput {...num} min={1} max={20} value={value.count} aria-label="Jetons" onChange={(v) => onChange({ ...value, count: v })} />}
       {value.kind === "capsule" && (
         <>
           <select className={sel} value={value.capsule} onChange={(e) => onChange({ ...value, capsule: e.target.value as CapsuleType })}>
@@ -119,6 +123,7 @@ export function PassPanel() {
   };
 
   const amber = cfg.tiers.flat().reduce((a, r) => a + (r.kind === "amber" ? r.amount : 0), 0);
+  const tokens = cfg.tiers.flat().reduce((a, r) => a + (r.kind === "tokens" ? r.count : 0), 0);
 
   return (
     <div className="flex flex-col gap-3">
@@ -126,7 +131,7 @@ export function PassPanel() {
         <h2 className="font-display text-base text-white">Passe de saison</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <span className="text-xs text-slate-500">
-          {cfg.tiers.length} paliers · <AmberAmount value={amber} /> au total
+          {cfg.tiers.length} paliers · <AmberAmount value={amber} /> et {tokens} jeton{tokens > 1 ? "s" : ""} du casino au total
         </span>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button

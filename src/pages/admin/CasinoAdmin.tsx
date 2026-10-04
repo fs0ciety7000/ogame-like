@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Dices, Plus, Trash2 } from "lucide-react";
+import { Dices, Plus, Trash2, Trophy } from "lucide-react";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,14 @@ export function CasinoAdmin() {
   const open = casinoOpen(settings, now);
   const next = nextCasinoOpening(settings, now);
   const set = (patch: Partial<CasinoSettings>) => setDraft({ ...settings, ...patch });
+  const rw = settings.rewards;
+  const setRw = (patch: Partial<CasinoSettings["rewards"]>) => set({ rewards: { ...rw, ...patch } });
+  const at = (list: number[], i: number, v: number) => {
+    const out = [...list];
+    while (out.length <= i) out.push(0);
+    out[i] = Math.max(0, Math.min(100, v));
+    return out;
+  };
 
   const save = async () => {
     setBusy(true);
@@ -151,6 +159,35 @@ export function CasinoAdmin() {
       <p className="text-xs text-slate-400">
         En moyenne, un jeton rapporte {expectedHours(settings).toFixed(2)} h de production (hors gros lot), le gros lot sort une fois sur {settings.odds.jackpot > 0 ? Math.round(1 / settings.odds.jackpot) : "∞"}, et {Math.round(settings.odds.cherry * 100)} % des tirages rendent le jeton.
       </p>
+      <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+        <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
+          <TokenIcon size={16} /> Jetons gagnés en jeu
+        </p>
+        <p className="text-xs text-slate-500">Le passe de saison a ses propres paliers « Jetons du casino » (onglet Passe).</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <NumberField label="Défi hebdo, palier 1" value={rw.challenge[0] ?? 0} min={0} onChange={(v) => setRw({ challenge: at(rw.challenge, 0, v ?? 0) })} />
+          <NumberField label="Défi hebdo, palier 2" value={rw.challenge[1] ?? 0} min={0} onChange={(v) => setRw({ challenge: at(rw.challenge, 1, v ?? 0) })} />
+          <NumberField label="Boss abattu (chacun)" value={rw.bossWin} min={0} onChange={(v) => setRw({ bossWin: v ?? 0 })} />
+          <NumberField label="Boss : bonus du 1er" value={rw.bossTop} min={0} onChange={(v) => setRw({ bossTop: v ?? 0 })} />
+          <NumberField label="Boss retiré (chacun)" value={rw.bossFail} min={0} onChange={(v) => setRw({ bossFail: v ?? 0 })} />
+        </div>
+        <p className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
+          <Trophy className="h-3.5 w-3.5 text-gold-glow" /> Tournoi de chaque ouverture
+        </p>
+        <p className="text-xs text-slate-500">Chaque tirage rapporte des points (7-7-7 : 100, trois étoiles : 30… perdu : 0). À la fermeture, le podium reçoit ses jetons et le premier porte le titre jusqu'au tournoi suivant.</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {[0, 1, 2].map((i) => (
+            <NumberField key={i} label={`Tournoi : ${i + 1}${i === 0 ? "er" : "e"}`} value={rw.tournament[i] ?? 0} min={0} onChange={(v) => setRw({ tournament: at(rw.tournament, i, v ?? 0) })} />
+          ))}
+          <Field label="Titre du vainqueur">
+            <Input value={rw.tournamentTitle} maxLength={40} onChange={(e) => setRw({ tournamentTitle: e.target.value })} className="h-10" />
+          </Field>
+          <Field label="Titre du 7-7-7 (définitif)">
+            <Input value={rw.jackpotTitle} maxLength={40} onChange={(e) => setRw({ jackpotTitle: e.target.value })} className="h-10" />
+          </Field>
+        </div>
+      </div>
+
       {errors.length > 0 && <p className="text-xs text-danger-glow">{errors.join(" ")}</p>}
       <div className="flex flex-wrap justify-end gap-2">
         {draft && (

@@ -24,6 +24,7 @@ import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
+import { CasinoBanner } from "@/components/casino/CasinoBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
@@ -127,7 +128,12 @@ export function DashboardPage() {
         <ChallengeCard />
       </div>
     ),
-    event: <EventCard />,
+    event: (
+      <>
+        <EventCard />
+        <CasinoBanner player={player} />
+      </>
+    ),
     contracts: (
       <div id="contrats" className="scroll-mt-24">
         <ContractsCard />

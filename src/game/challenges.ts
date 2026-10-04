@@ -133,6 +133,12 @@ export function challengeTier(ch: Pick<Challenge, "total" | "target">) {
   return [...CHALLENGE_RULES.tiers].reverse().find((t) => ratio >= t.at) ?? null;
 }
 
+/** v5.12 : rang du palier atteint (0 : premier palier ; -1 : objectif manqué). */
+export function challengeTierIndex(ch: Pick<Challenge, "total" | "target">): number {
+  const tier = challengeTier(ch);
+  return tier ? CHALLENGE_RULES.tiers.indexOf(tier) : -1;
+}
+
 /** Joueurs récompensés à la clôture. */
 export function challengeRewardees(ch: Challenge): string[] {
   if (!challengeTier(ch)) return [];

@@ -91,6 +91,8 @@ export interface BossReward {
   title?: string;
   relic?: string;
   mythic?: string;
+  /** v5.12 : jetons du casino. */
+  tokens?: number;
 }
 
 /** v5.9 : bilan d'un boss terminé (abattu ou retiré) pour un joueur. */

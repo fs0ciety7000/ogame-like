@@ -1,3 +1,5 @@
+import { TokenIcon } from "@/components/casino/TokenIcon";
+import { assetUrl } from "@/lib/assets";
 import {
   Award,
   Bell,
@@ -73,7 +75,7 @@ function Details({ n }: { n: GameNotification }) {
   const order = RESOURCE_LIST.map((r) => r.id as string);
   const res = (Object.entries(d.resources ?? {}).filter(([, v]) => (v ?? 0) > 0) as [ResourceId, number][]).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
   const who = d.fromPseudo ? { label: "De", name: d.fromPseudo } : d.toPseudo ? { label: "À", name: d.toPseudo } : null;
-  if (res.length === 0 && !who && !d.amber && !d.xp && !d.relic) return null;
+  if (res.length === 0 && !who && !d.amber && !d.xp && !d.relic && !d.tokens) return null;
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1">
       {who && (
@@ -93,6 +95,11 @@ function Details({ n }: { n: GameNotification }) {
       )}
       {!!d.xp && <Pill tone="accent">+{formatCompact(d.xp)} XP</Pill>}
       {d.relic && <Pill tone="violet">✦ {d.relic}</Pill>}
+      {!!d.tokens && (
+        <Pill tone="gold">
+          <TokenIcon size={14} /> +{d.tokens} jeton{d.tokens > 1 ? "s" : ""}
+        </Pill>
+      )}
     </div>
   );
 }
@@ -144,6 +151,7 @@ export function NotificationCard({
         </div>
         <p className={cn("mt-0.5 font-semibold leading-snug", compact ? "text-[13px]" : "text-sm", fresh ? "text-white" : "text-slate-200")}>{n.title}</p>
         <p className="mt-0.5 break-words text-xs leading-relaxed text-slate-400">{n.message}</p>
+        {n.data?.image && !compact && <img src={assetUrl(n.data.image)} alt="" aria-hidden loading="lazy" className="hud-cut-sm mt-2 aspect-[3/1] w-full border border-white/10 object-cover" />}
         <Details n={n} />
         {onOpen && !compact && <span className="mt-1.5 inline-block text-[11px] text-cyan-glow/70 group-hover:text-cyan-glow">Voir →</span>}
       </div>

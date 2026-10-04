@@ -252,7 +252,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     currency: {
       icon: "/assets/bounties/amber.webp",
       name: "Passe gratuit",
-      text: "30 paliers ce mois-ci : production, 370 Ambre, Dossiers, capsules, une relique rare puis épique, bannière et titre de saison.",
+      text: "30 paliers ce mois-ci : production, 370 Ambre, Dossiers, capsules, jetons du casino, une relique rare puis épique, bannière et titre de saison.",
     },
     features: [
       { title: "Passe de saison", text: "Contrats, primes, raids repoussés, victoires, Léviathan, connexion du jour : 40 points par palier.", to: "/game/passe", image: "/assets/relics/couronne_essaim.webp" },

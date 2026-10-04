@@ -44,6 +44,8 @@ function rewardIcon(r: PassReward): string {
       return `/assets/capsules/${r.capsule}.webp`;
     case "relic":
       return r.rarity === "epic" ? "/assets/relics/ecaille_leviathan.webp" : "/assets/relics/engrenage_varan.webp";
+    case "tokens":
+      return "/assets/casino/jeton.webp";
     case "cosmetic":
       return "/assets/icons/trophy.webp";
   }

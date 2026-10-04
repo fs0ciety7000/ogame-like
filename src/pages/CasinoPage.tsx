@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { HudCallout, HudChip, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { SlotMachine, SlotSymbolView } from "@/components/casino/SlotMachine";
+import { TournamentCard } from "@/components/casino/TournamentCard";
+import { WeekRecap } from "@/components/casino/WeekRecap";
 import { casinoOpen, dailyTokenReady, jackpotAmounts, nextCasinoOpening, OUTCOME_LABELS, playerCasino, type SlotSymbol, type SpinOutcome } from "@/game/casino";
 import { claimDailyToken, spinSlot, useCasino, type SpinResult } from "@/services/casinoService";
 import { useServerPot } from "@/services/serverPotService";
@@ -247,20 +249,9 @@ export function CasinoPage() {
             )}
           </HudCallout>
 
-          {mine && (
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                ["Tirages", mine.spins],
-                ["Gains", mine.wins],
-                ["Gros lots", mine.jackpots],
-              ].map(([k, v]) => (
-                <div key={k} className="hud-cut-sm border border-white/10 bg-white/[0.02] p-2 text-center">
-                  <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{k}</p>
-                  <p className="font-mono text-lg font-bold tabular-nums text-slate-100">{v}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <WeekRecap player={player} />
+
+          {casino && <TournamentCard casino={casino} uid={player.uid} />}
 
           <Card className="p-4">
             <p className="hud-eyebrow mb-2 text-[10px] text-slate-500">Table des gains</p>

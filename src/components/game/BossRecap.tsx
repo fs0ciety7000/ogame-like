@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { HudChip, type HudTone } from "@/components/ui/hud";
+import { TokenIcon } from "@/components/casino/TokenIcon";
 import { PlayerName } from "@/components/ui/player-name";
 import { bossRecap, type BossRecap as Recap, type LeviathanState } from "@/game/leviathan";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -70,33 +72,26 @@ function RewardPills({ recap, reveal = false, rewarded, legacyNote, missingNote 
   const gain = Object.entries(r.gain ?? {})
     .filter(([, v]) => (v ?? 0) > 0)
     .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])) as [ResourceId, number][];
-  const pill = "inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-xs tabular-nums";
+  const chip = (key: string, tone: HudTone, children: React.ReactNode, className?: string, color?: string) => (
+    <HudChip key={key} size="md" tone={tone} className={cn("normal-case tracking-normal", className)} style={color ? { ["--c" as string]: color } : undefined}>
+      {children}
+    </HudChip>
+  );
   const items: React.ReactNode[] = [
-    ...gain.map(([id, v]) => (
-      <span key={id} className={cn(pill, "border-white/10 bg-white/[0.04] text-slate-100")}>
-        <ResourceIcon id={id} /> +{formatCompact(v)}
-      </span>
-    )),
-    r.points ? (
-      <span key="points" className={pill} style={{ borderColor: "#4be8ff55", color: "#4be8ff" }}>
-        <Award className="h-3.5 w-3.5" /> +{r.points} points de passe
-      </span>
-    ) : null,
-    r.title ? (
-      <span key="title" className={pill} style={{ borderColor: "#ffd86b55", color: "#ffd86b" }}>
-        <Medal className="h-3.5 w-3.5" /> Titre « {r.title} »
-      </span>
-    ) : null,
-    r.relic ? (
-      <span key="relic" className={pill} style={{ borderColor: "#a78bfa55", color: "#a78bfa" }}>
-        <Gem className="h-3.5 w-3.5" /> {r.relic}
-      </span>
-    ) : null,
-    r.mythic ? (
-      <span key="mythic" className={cn(pill, "hud-sheen")} style={{ borderColor: "#ff5df088", color: "#ff5df0" }}>
-        <Sparkles className="h-3.5 w-3.5" /> Mythique : {r.mythic}
-      </span>
-    ) : null,
+    ...gain.map(([id, v]) =>
+      chip(
+        id,
+        "neutral",
+        <>
+          <ResourceIcon id={id} /> <span className="text-slate-100">+{formatCompact(v)}</span>
+        </>,
+      ),
+    ),
+    r.points ? chip("points", "accent", <><Award /> +{r.points} points de passe</>) : null,
+    r.title ? chip("title", "gold", <><Medal /> Titre « {r.title} »</>) : null,
+    r.relic ? chip("relic", "violet", <><Gem /> {r.relic}</>) : null,
+    r.mythic ? chip("mythic", "violet", <><Sparkles /> Mythique : {r.mythic}</>, "hud-sheen", "var(--th-rarity-mythic)") : null,
+    r.tokens ? chip("tokens", "gold", <><TokenIcon size={14} /> +{r.tokens} jeton{r.tokens > 1 ? "s" : ""} du casino</>) : null,
   ].filter(Boolean);
   if (items.length === 0) return <span className="text-xs text-slate-500">Aucune récompense cette fois.</span>;
   return (

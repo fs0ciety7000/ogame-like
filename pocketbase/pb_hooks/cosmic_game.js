@@ -154,6 +154,7 @@ __export(hooksEntry_exports, {
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
+  applySpin: () => applySpin,
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
   archiveCoalition: () => archiveCoalition,
@@ -169,6 +170,7 @@ __export(hooksEntry_exports, {
   bossEndLabel: () => bossEndLabel,
   bossHistoryEntry: () => bossHistoryEntry,
   bossMonthOf: () => bossMonthOf,
+  bossTokens: () => bossTokens,
   bossWindows: () => bossWindows,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
@@ -188,6 +190,8 @@ __export(hooksEntry_exports, {
   challengeRanking: () => challengeRanking,
   challengeRewardees: () => challengeRewardees,
   challengeTier: () => challengeTier,
+  challengeTierIndex: () => challengeTierIndex,
+  challengeTokens: () => challengeTokens,
   chapterDifficulty: () => chapterDifficulty,
   checkAllianceBossLaunch: () => checkAllianceBossLaunch,
   checkCoalitionTrigger: () => checkCoalitionTrigger,
@@ -278,6 +282,7 @@ __export(hooksEntry_exports, {
   getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   giftTax: () => giftTax,
   githubIssueBody: () => githubIssueBody,
+  giveTitle: () => giveTitle,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
   grantChestShield: () => grantChestShield,
@@ -386,6 +391,7 @@ __export(hooksEntry_exports, {
   releaseBounty: () => releaseBounty,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
+  removeTitle: () => removeTitle,
   renamePlayer: () => renamePlayer,
   renderBlogList: () => renderBlogList,
   renderBlogNotFound: () => renderBlogNotFound,
@@ -407,6 +413,7 @@ __export(hooksEntry_exports, {
   rollExpeditionEvent: () => rollExpeditionEvent,
   rollOutcome: () => rollOutcome,
   rollRelic: () => rollRelic,
+  rollTournament: () => rollTournament,
   sagaMonthId: () => sagaMonthId,
   sagaOf: () => sagaOf,
   sagaPoints: () => sagaPoints,
@@ -417,6 +424,7 @@ __export(hooksEntry_exports, {
   sanitizeNewReport: () => sanitizeNewReport,
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
+  scoreSpin: () => scoreSpin,
   seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
   seasonPowerOf: () => seasonPowerOf,
@@ -441,6 +449,8 @@ __export(hooksEntry_exports, {
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   takeFromPot: () => takeFromPot,
+  tokensLabel: () => tokensLabel,
+  tournamentResult: () => tournamentResult,
   tutorialRaidPower: () => tutorialRaidPower,
   unclaimedRewardees: () => unclaimedRewardees,
   unitsAwayOf: () => unitsAwayOf,
@@ -1795,6 +1805,653 @@ function validateRanks(defs) {
   return errors;
 }
 
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
+  return __spreadValues(__spreadValues(__spreadValues({
+    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
+    hidden: (raw == null ? void 0 : raw.hidden) === true
+  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function onboardingProgress(p) {
+  const st = onboardingState(p);
+  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c, _d, _e, _f;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
+// src/game/stats.ts
+function playerStats(player) {
+  var _a;
+  return (_a = player.stats) != null ? _a : {};
+}
+function bumpStat(player, key, n = 1) {
+  var _a, _b, _c;
+  if (!(n > 0)) return;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
+}
+function setStat(player, key, value2) {
+  var _a;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
+}
+function recordThreat(player, factionId) {
+  var _a, _b, _c;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
+  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
+  player.stats = s;
+}
+function recordMission(player, day) {
+  var _a, _b, _c, _d;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
+  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
+  s.missionDay = day;
+  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
+  player.stats = s;
+}
+function parisHour(now) {
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const lastSunday = (month2) => {
+    const last = new Date(Date.UTC(y, month2 + 1, 0));
+    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
+  };
+  const summer = now >= lastSunday(2) && now < lastSunday(9);
+  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
+}
+
+// src/game/retention.ts
+var DAY2 = 24 * 36e5;
+var ACTIVITY_DAYS_KEPT = 60;
+var PRESENCE_WRITE_MS = 2 * 6e4;
+var ONLINE_MS = 5 * 6e4;
+function lastActivity(p) {
+  var _a, _b;
+  if (p.lastActiveMs) return p.lastActiveMs;
+  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
+  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
+  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
+}
+function parisDay(now) {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
+}
+function dayDiff(a, b) {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY2);
+}
+function recordActiveDay(player, now) {
+  var _a, _b, _c;
+  const day = parisDay(now);
+  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
+  if (days[days.length - 1] === day) return;
+  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
+}
+var pct = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+function computeRetention(players, now) {
+  var _a, _b, _c;
+  const today = parisDay(now);
+  const lastSeen = (p) => Math.min(now, lastActivity(p));
+  const days = (p) => {
+    var _a2, _b2;
+    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
+  };
+  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
+  const allDays = players.flatMap((p) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
+  }).sort();
+  const trackingSince = (_a = allDays[0]) != null ? _a : null;
+  const daily = Array.from({ length: 30 }, (_, i) => {
+    const day = parisDay(now - (29 - i) * DAY2);
+    return {
+      day,
+      active: players.filter((p) => days(p).has(day)).length,
+      signups: players.filter((p) => signupDay(p) === day).length
+    };
+  });
+  const active = {
+    d1: players.filter((p) => now - lastSeen(p) < DAY2).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY2).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY2).length,
+    total: players.length
+  };
+  const cohorts = Array.from({ length: 8 }, (_, i) => {
+    const end = now - i * 7 * DAY2;
+    const start = end - 7 * DAY2;
+    const members = players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
+    });
+    const tracked = trackingSince ? members.filter((p) => {
+      var _a2;
+      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
+    }) : [];
+    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
+    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
+    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
+    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
+    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
+    return {
+      week: parisDay(start),
+      signups: members.length,
+      d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
+      d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
+      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
+      activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY2).length, members.length)
+    };
+  }).reverse();
+  const recent = players.filter((p) => {
+    var _a2;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY2;
+  });
+  const funnel = ONBOARDING_STEPS.map((step) => {
+    const reached = recent.filter((p) => {
+      try {
+        return step.done(p);
+      } catch (e3) {
+        return false;
+      }
+    }).length;
+    return { id: step.id, label: step.label, reached, pct: pct(reached, recent.length) };
+  });
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY2);
+  const stopAt = /* @__PURE__ */ new Map();
+  for (const p of stalled) {
+    const step = ONBOARDING_STEPS.find((s) => {
+      try {
+        return !s.done(p);
+      } catch (e3) {
+        return true;
+      }
+    });
+    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
+    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
+  }
+  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
+    var _a2, _b2;
+    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
+  }).sort((a, b) => b.count - a.count);
+  const ageDays = (p) => {
+    var _a2;
+    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY2);
+  };
+  const lastDayAfterSignup = (p) => {
+    var _a2;
+    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY2);
+  };
+  const survival = [1, 3, 7, 14, 30].map((day) => {
+    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
+    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
+    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
+  });
+  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY2);
+  const buckets = [
+    ["Le jour m\xEAme", (d) => d < 1],
+    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
+    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
+    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
+    ["Apr\xE8s un mois", (d) => d >= 30]
+  ];
+  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
+}
+
+// src/game/casino.ts
+var CASINO_KEY = "casino";
+var DEFAULT_CASINO = {
+  mode: "scheduled",
+  weekends: true,
+  windows: [],
+  dailyTokens: 1,
+  maxTokens: 20,
+  jackpotShare: 0.5,
+  jackpotFallbackHours: 12,
+  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" }
+};
+var OUTCOME_POINTS = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
+var OUTCOME_LABELS = {
+  jackpot: "GROS LOT 7-7-7",
+  star3: "Trois \xE9toiles",
+  planet3: "Trois plan\xE8tes",
+  bar3: "Triple BAR",
+  cherry3: "Trois cerises",
+  seven2: "Deux 7",
+  cherry: "Une cerise : jeton rendu",
+  lose: "Perdu"
+};
+var num = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
+};
+function normalizeCasinoSettings(raw) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = DEFAULT_CASINO;
+  const odds = {};
+  for (const k of Object.keys(d.odds)) odds[k] = num((_a = r.odds) == null ? void 0 : _a[k], d.odds[k], 0, 1);
+  const hours2 = {};
+  for (const k of Object.keys(d.hours)) hours2[k] = num((_b = r.hours) == null ? void 0 : _b[k], d.hours[k], 0, 168);
+  const legacy = r.enabled;
+  const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
+  const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
+  return {
+    mode,
+    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
+    windows,
+    dailyTokens: Math.floor(num(r.dailyTokens, d.dailyTokens, 0, 10)),
+    maxTokens: Math.floor(num(r.maxTokens, d.maxTokens, 1, 1e3)),
+    jackpotShare: num(r.jackpotShare, d.jackpotShare, 0, 1),
+    jackpotFallbackHours: num(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
+    odds,
+    hours: hours2,
+    rewards: normalizeRewards(r.rewards)
+  };
+}
+function normalizeRewards(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = DEFAULT_CASINO.rewards;
+  const list = (v, def3) => Array.isArray(v) ? v.slice(0, 10).map((x) => Math.floor(num(x, 0, 0, 100))) : [...def3];
+  const label3 = (v, def3) => typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : def3;
+  return {
+    challenge: list(r.challenge, d.challenge),
+    bossWin: Math.floor(num(r.bossWin, d.bossWin, 0, 100)),
+    bossTop: Math.floor(num(r.bossTop, d.bossTop, 0, 100)),
+    bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
+    tournament: list(r.tournament, d.tournament),
+    tournamentTitle: label3(r.tournamentTitle, d.tournamentTitle),
+    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle)
+  };
+}
+function cleanTournament(raw) {
+  var _a, _b;
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw;
+  if (typeof t.id !== "string" || !t.id) return null;
+  const scores = {};
+  for (const [uid, v] of Object.entries((_a = t.scores) != null ? _a : {})) {
+    const x = v != null ? v : {};
+    scores[uid] = { pseudo: String((_b = x.pseudo) != null ? _b : ""), points: Math.max(0, Math.floor(Number(x.points) || 0)), spins: Math.max(0, Math.floor(Number(x.spins) || 0)) };
+  }
+  return { id: t.id, startMs: Number(t.startMs) || 0, scores };
+}
+function cleanResult(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (typeof r.id !== "string") return null;
+  const podium = (Array.isArray(r.podium) ? r.podium : []).slice(0, 10).map((p) => {
+    var _a, _b;
+    return { uid: String((_a = p == null ? void 0 : p.uid) != null ? _a : ""), pseudo: String((_b = p == null ? void 0 : p.pseudo) != null ? _b : ""), points: Math.floor(Number(p == null ? void 0 : p.points) || 0), tokens: Math.floor(Number(p == null ? void 0 : p.tokens) || 0) };
+  });
+  return { id: r.id, endedAtMs: Number(r.endedAtMs) || 0, participants: Math.floor(Number(r.participants) || 0), podium, titleUid: typeof r.titleUid === "string" ? r.titleUid : "" };
+}
+function cleanWin(w) {
+  var _a, _b;
+  if (!w || typeof w !== "object") return null;
+  const x = w;
+  if (typeof x.uid !== "string" || !(String(x.outcome) in OUTCOME_LABELS)) return null;
+  const resources = {};
+  for (const [k, v] of Object.entries((_a = x.resources) != null ? _a : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
+  return __spreadValues({ uid: x.uid, pseudo: String((_b = x.pseudo) != null ? _b : ""), atMs: Number(x.atMs) || 0, outcome: x.outcome, resources }, x.token ? { token: true } : {});
+}
+function normalizeCasino(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const list = (v, max) => (Array.isArray(v) ? v : []).map(cleanWin).filter((w) => !!w).slice(0, max);
+  return {
+    settings: normalizeCasinoSettings(r.settings),
+    recent: list(r.recent, 40),
+    jackpots: list(r.jackpots, 30),
+    totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
+    announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
+    tournament: cleanTournament(r.tournament),
+    lastTournament: cleanResult(r.lastTournament),
+    updatedAtMs: Number(r.updatedAtMs) || 0
+  };
+}
+function validateCasinoSettings(s) {
+  const errors = [];
+  const total2 = Object.values(s.odds).reduce((a, b) => a + b, 0);
+  if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
+  if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
+  if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
+  if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un cr\xE9neau.");
+  if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place r\xE9compens\xE9e.");
+  return errors;
+}
+var DAY3 = 864e5;
+function parisWeekend(now) {
+  const d = (/* @__PURE__ */ new Date(`${parisDay(now)}T12:00:00Z`)).getUTCDay();
+  return d === 0 || d === 6;
+}
+function casinoOpeningId(s, now) {
+  if (s.mode === "open") return "open";
+  if (s.mode === "closed") return null;
+  const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
+  if (w) return `w-${w.startMs}`;
+  if (s.weekends && parisWeekend(now)) {
+    const day = parisDay(now);
+    const sat = (/* @__PURE__ */ new Date(`${day}T12:00:00Z`)).getUTCDay() === 6 ? day : parisDay(now - DAY3);
+    return `we-${sat}`;
+  }
+  return null;
+}
+function casinoOpen(s, now) {
+  return casinoOpeningId(s, now) !== null;
+}
+function tournamentId(s, now) {
+  const id = casinoOpeningId(s, now);
+  if (!id) return null;
+  return id === "open" ? `open-${casinoWeekId(now)}` : id;
+}
+function rollTournament(state, now) {
+  const id = tournamentId(state.settings, now);
+  const cur = state.tournament;
+  if (cur && cur.id === id) return { state, closed: null };
+  const closed = cur && Object.keys(cur.scores).length > 0 ? cur : null;
+  return { state: __spreadProps(__spreadValues({}, state), { tournament: id ? { id, startMs: now, scores: {} } : null }), closed };
+}
+function scoreSpin(state, uid, pseudo, outcome) {
+  var _a;
+  const t = state.tournament;
+  if (!t) return state;
+  const prev = (_a = t.scores[uid]) != null ? _a : { pseudo, points: 0, spins: 0 };
+  return __spreadProps(__spreadValues({}, state), { tournament: __spreadProps(__spreadValues({}, t), { scores: __spreadProps(__spreadValues({}, t.scores), { [uid]: { pseudo, points: prev.points + OUTCOME_POINTS[outcome], spins: prev.spins + 1 } }) }) });
+}
+function tournamentRanking(t) {
+  if (!t) return [];
+  return Object.entries(t.scores).map(([uid, v]) => __spreadValues({ uid }, v)).filter((x) => x.spins > 0).sort((a, b) => b.points - a.points || a.spins - b.spins || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0));
+}
+function tournamentResult(t, s, now) {
+  const ranking = tournamentRanking(t);
+  const podium = ranking.slice(0, Math.max(3, s.rewards.tournament.length)).map((x, i) => {
+    var _a;
+    return { uid: x.uid, pseudo: x.pseudo, points: x.points, tokens: x.points > 0 ? (_a = s.rewards.tournament[i]) != null ? _a : 0 : 0 };
+  });
+  return { id: t.id, endedAtMs: now, participants: ranking.length, podium, titleUid: podium[0] && podium[0].points > 0 ? podium[0].uid : "" };
+}
+function bossTokens(s, won, rank2) {
+  if (!won) return s.rewards.bossFail;
+  return s.rewards.bossWin + (rank2 === 0 ? s.rewards.bossTop : 0);
+}
+function challengeTokens(s, tierIndex) {
+  var _a;
+  if (tierIndex < 0) return 0;
+  const list = s.rewards.challenge;
+  return (_a = list[Math.min(tierIndex, list.length - 1)]) != null ? _a : 0;
+}
+function giveTitle(p, label3, source, active = false) {
+  var _a, _b;
+  if (!label3) return;
+  if (!((_a = p.titles) != null ? _a : []).some((t) => t.label === label3)) p.titles = [...(_b = p.titles) != null ? _b : [], { label: label3, seasonId: source, rank: 1 }];
+  if (active) p.activeTitle = label3;
+}
+function removeTitle(p, label3) {
+  var _a, _b;
+  p.titles = ((_a = p.titles) != null ? _a : []).filter((t) => t.label !== label3);
+  if (p.activeTitle === label3) p.activeTitle = (_b = p.titles[0]) == null ? void 0 : _b.label;
+}
+var tokensLabel = (n) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
+function playerCasino(p) {
+  var _a, _b, _c;
+  const c = (_a = p.casino) != null ? _a : {};
+  const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const w = (_b = c.week) != null ? _b : {};
+  const resources = {};
+  for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
+  const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
+}
+function casinoWeekId(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY3) * DAY3;
+  return `wk-${new Date(midnight - (day + 6) % 7 * DAY3).toISOString().slice(0, 10)}`;
+}
+function casinoWeek(p, now) {
+  const w = playerCasino(p).week;
+  return w.id === casinoWeekId(now) ? w : { id: casinoWeekId(now), spins: 0, wins: 0, points: 0, resources: {} };
+}
+function applySpin(p, outcome, gained, now) {
+  var _a;
+  const c = playerCasino(p);
+  const won = outcome !== "lose";
+  const w = casinoWeek(p, now);
+  const resources = __spreadValues({}, w.resources);
+  for (const [k, v] of Object.entries(gained)) if (Number(v) > 0) resources[k] = ((_a = resources[k]) != null ? _a : 0) + Math.floor(Number(v));
+  const next = __spreadProps(__spreadValues({}, c), {
+    tokens: c.tokens - 1 + (outcome === "cherry" ? 1 : 0),
+    spins: c.spins + 1,
+    wins: c.wins + (won ? 1 : 0),
+    jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
+    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources }
+  });
+  p.casino = next;
+  return next;
+}
+function dailyTokenReady(p, settings, now) {
+  const c = playerCasino(p);
+  return casinoOpen(settings, now) && settings.dailyTokens > 0 && c.dailyDay !== parisDay(now) && c.tokens < settings.maxTokens;
+}
+function claimDailyTokens(p, settings, now) {
+  if (!dailyTokenReady(p, settings, now)) return 0;
+  const c = playerCasino(p);
+  const add2 = Math.min(settings.dailyTokens, settings.maxTokens - c.tokens);
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2, dailyDay: parisDay(now) });
+  return add2;
+}
+function grantTokens(p, n) {
+  const c = playerCasino(p);
+  const add2 = Math.max(0, Math.min(1e3, Math.floor(n)));
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2 });
+  return add2;
+}
+function rollOutcome(settings, random) {
+  let r = random();
+  for (const k of ["jackpot", "star3", "planet3", "bar3", "cherry3", "seven2", "cherry"]) {
+    if (r < settings.odds[k]) return k;
+    r -= settings.odds[k];
+  }
+  return "lose";
+}
+var pick = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
+function evaluateReels(reels) {
+  const [a, b, c] = reels;
+  if (a === b && b === c) {
+    if (a === "seven") return "jackpot";
+    if (a === "star") return "star3";
+    if (a === "planet") return "planet3";
+    if (a === "bar") return "bar3";
+    if (a === "cherry") return "cherry3";
+    return "lose";
+  }
+  if (reels.filter((s) => s === "seven").length === 2) return "seven2";
+  if (reels.includes("cherry")) return "cherry";
+  return "lose";
+}
+function reelsFor(outcome, random) {
+  const triple = { jackpot: "seven", star3: "star", planet3: "planet", bar3: "bar", cherry3: "cherry" };
+  const t = triple[outcome];
+  if (t) return [t, t, t];
+  const shuffle = (r) => {
+    const a = [...r];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  if (outcome === "seven2") return shuffle(["seven", "seven", pick(["star", "planet", "bar", "skull"], random)]);
+  if (outcome === "cherry") {
+    const others = ["star", "planet", "bar", "skull", "seven"];
+    const a = pick(others, random);
+    const b = pick(others.filter((s) => s !== a), random);
+    return shuffle(random() < 0.25 ? ["cherry", "cherry", a] : ["cherry", a, b]);
+  }
+  for (let guard = 0; guard < 50; guard++) {
+    const pool = ["seven", "star", "planet", "bar", "skull"];
+    const reels = random() < 0.35 ? shuffle(["seven", pick(["star", "planet", "bar", "skull"], random), pick(["star", "planet", "bar", "skull"], random)]) : [pick(pool, random), pick(pool, random), pick(pool, random)];
+    if (evaluateReels(reels) === "lose") return reels;
+  }
+  return ["skull", "bar", "star"];
+}
+function jackpotAmounts(pot, share) {
+  const out = {};
+  for (const [k, v] of Object.entries(pot.resources)) {
+    const n = Math.floor((Number(v) || 0) * share);
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+function recordWin(state, win) {
+  return __spreadProps(__spreadValues({}, state), {
+    recent: win.outcome === "lose" ? state.recent : [win, ...state.recent].slice(0, 40),
+    jackpots: win.outcome === "jackpot" ? [win, ...state.jackpots].slice(0, 30) : state.jackpots,
+    totalSpins: state.totalSpins + 1,
+    updatedAtMs: win.atMs
+  });
+}
+
 // src/game/commanders.ts
 var COMMANDERS = [
   {
@@ -2104,47 +2761,6 @@ function assertCanJoin(alliance) {
   if (r === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
 }
 
-// src/game/stats.ts
-function playerStats(player) {
-  var _a;
-  return (_a = player.stats) != null ? _a : {};
-}
-function bumpStat(player, key, n = 1) {
-  var _a, _b, _c;
-  if (!(n > 0)) return;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
-}
-function setStat(player, key, value2) {
-  var _a;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
-}
-function recordThreat(player, factionId) {
-  var _a, _b, _c;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
-  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
-  player.stats = s;
-}
-function recordMission(player, day) {
-  var _a, _b, _c, _d;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
-  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
-  s.missionDay = day;
-  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
-  player.stats = s;
-}
-function parisHour(now) {
-  const d = new Date(now);
-  const y = d.getUTCFullYear();
-  const lastSunday = (month2) => {
-    const last = new Date(Date.UTC(y, month2 + 1, 0));
-    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
-  };
-  const summer = now >= lastSunday(2) && now < lastSunday(9);
-  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
-}
-
 // src/game/alliances.ts
 var ALLIANCE_RULES = {
   maxMembers: 6,
@@ -2205,26 +2821,26 @@ function allianceRole(alliance, uid) {
   const r = (_b = alliance.roles) == null ? void 0 : _b[uid];
   return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
 }
-function level(levels, id) {
+function level2(levels, id) {
   var _a;
   const def3 = findAllianceResearch(id);
   return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
 }
 function allianceFlightFactor(levels, techLevels2) {
   var _a, _b;
-  return Math.max(0.1, (1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed"));
+  return Math.max(0.1, (1 - level2(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed"));
 }
 function allianceProductionFactor(levels) {
   var _a, _b;
-  return 1 + level(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return 1 + level2(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 function allianceCounterSpy(levels) {
   var _a, _b;
-  return level(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return level2(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 function allianceShieldBonus(levels) {
   var _a, _b;
-  return level(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return level2(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 var projectKey = (id) => `projet_${id}`;
 function findAllianceProject(id) {
@@ -2368,7 +2984,7 @@ function startAllianceResearch(alliance, actorUid, researchId, now) {
   const def3 = findAllianceResearch(researchId);
   if (!def3) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
-  const next = level(alliance.research, def3.id) + 1;
+  const next = level2(alliance.research, def3.id) + 1;
   if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
   const cost = allianceResearchCost(next);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
@@ -3154,7 +3770,7 @@ var ASCENSION_RULES = {
   shieldHours: 72,
   upkeepFreeDays: 7
 };
-var DAY2 = 24 * 36e5;
+var DAY4 = 24 * 36e5;
 function ascensionCount(player) {
   return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
 }
@@ -3166,7 +3782,7 @@ function ascensionBuildTimeFactor(player) {
 }
 function upkeepFreeUntil(player) {
   const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY2 : 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY4 : 0;
 }
 function canAscend(player, queues, now) {
   var _a;
@@ -3184,8 +3800,8 @@ function canAscend(player, queues, now) {
   });
   if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
   if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY2 - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY2)} jour(s).`, missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY4 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY4)} jour(s).`, missing };
   if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
   return { ok: true, missing };
 }
@@ -3948,16 +4564,16 @@ function hasPrerequisites(mission, units) {
 }
 
 // src/game/formations.ts
-var pct = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
+var pct2 = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
 var FORMATIONS = [
   { id: "balanced", name: "\xC9quilibr\xE9e", description: () => "Aucun bonus ni malus." },
-  { id: "assault", name: "Assaut", description: () => `Attaque ${pct(COMBAT_RULES.assaultAttack)}, pertes subies ${pct(COMBAT_RULES.assaultLosses)}.` },
-  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct(COMBAT_RULES.cautiousAttack)}, pertes subies ${pct(COMBAT_RULES.cautiousLosses)}.` },
-  { id: "raid", name: "Raid", description: () => `Attaque ${pct(COMBAT_RULES.raidAttack)}, cargaison ${pct(COMBAT_RULES.raidCargo)}.` }
+  { id: "assault", name: "Assaut", description: () => `Attaque ${pct2(COMBAT_RULES.assaultAttack)}, pertes subies ${pct2(COMBAT_RULES.assaultLosses)}.` },
+  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct2(COMBAT_RULES.cautiousAttack)}, pertes subies ${pct2(COMBAT_RULES.cautiousLosses)}.` },
+  { id: "raid", name: "Raid", description: () => `Attaque ${pct2(COMBAT_RULES.raidAttack)}, cargaison ${pct2(COMBAT_RULES.raidCargo)}.` }
 ];
 var POSTURES = [
   { id: "standard", name: "Standard", description: () => `Les vaisseaux \xE0 quai d\xE9fendent \xE0 ${Math.round(COMBAT_RULES.homeFleetDefenseFactor * 100)} %.` },
-  { id: "bunker", name: "Bunker", description: () => `D\xE9fenses ${pct(COMBAT_RULES.bunkerDefense)}, vaisseaux \xE0 quai \xE0 l'abri (ni engag\xE9s, ni d\xE9truits).` },
+  { id: "bunker", name: "Bunker", description: () => `D\xE9fenses ${pct2(COMBAT_RULES.bunkerDefense)}, vaisseaux \xE0 quai \xE0 l'abri (ni engag\xE9s, ni d\xE9truits).` },
   { id: "riposte", name: "Riposte", description: () => `Vaisseaux \xE0 quai engag\xE9s \xE0 ${Math.round(COMBAT_RULES.riposteHomeFleet * 100)} %.` }
 ];
 function isFormation(v) {
@@ -4674,7 +5290,7 @@ var techLevels = (p) => TECHNOLOGIES.map((t) => {
   return (_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0;
 });
 var factions = (p) => Object.entries(factionStates(p));
-var pct2 = (n, d) => d > 0 ? Math.floor(n / d * 100) : 0;
+var pct3 = (n, d) => d > 0 ? Math.floor(n / d * 100) : 0;
 var METRICS = {
   victories: { label: "Victoires", value: (p) => {
     var _a;
@@ -4697,7 +5313,7 @@ var METRICS = {
   minBuildingLevel: { label: "Niveau du b\xE2timent le plus bas", value: (p) => Math.min(...buildingLevels(p)) },
   buildingsUnlockedPct: {
     label: "B\xE2timents d\xE9bloqu\xE9s (%)",
-    value: (p) => pct2(LOCKABLE_BUILDINGS.filter((id) => {
+    value: (p) => pct3(LOCKABLE_BUILDINGS.filter((id) => {
       var _a, _b;
       return (_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked;
     }).length, LOCKABLE_BUILDINGS.length)
@@ -4707,7 +5323,7 @@ var METRICS = {
   maxTechLevel: { label: "Niveau de la meilleure technologie", value: (p) => Math.max(0, ...techLevels(p)) },
   techsMaxedPct: {
     label: "Technologies au maximum (%)",
-    value: (p) => pct2(TECHNOLOGIES.filter((t) => {
+    value: (p) => pct3(TECHNOLOGIES.filter((t) => {
       var _a, _b;
       return ((_b = (_a = p.techLevels) == null ? void 0 : _a[t.id]) != null ? _b : 0) >= t.maxLevel;
     }).length, TECHNOLOGIES.length)
@@ -4727,7 +5343,7 @@ var METRICS = {
       return (_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.count) != null ? _c : 0;
     }))
   },
-  unitTypesPct: { label: "Types d'unit\xE9s d\xE9bloqu\xE9s (%)", value: (p) => pct2(UNITS.filter((u) => {
+  unitTypesPct: { label: "Types d'unit\xE9s d\xE9bloqu\xE9s (%)", value: (p) => pct3(UNITS.filter((u) => {
     var _a, _b, _c;
     return ((_c = (_b = (_a = p.units) == null ? void 0 : _a[u.id]) == null ? void 0 : _b.level) != null ? _c : 0) > 0;
   }).length, UNITS.length) },
@@ -5009,6 +5625,8 @@ var DEFAULT_TITLES = [
   // Gagnés ailleurs : le catalogue les habille.
   T("fleau_leviathan", "Fl\xE9au du L\xE9viathan", "Premier en d\xE9g\xE2ts contre le L\xE9viathan.", "\u{1F40B}", "mythic"),
   T("pilier_semaine", "Pilier de la semaine", "Meilleur contributeur du d\xE9fi de la semaine.", "\u{1F3DB}\uFE0F", "epic"),
+  T("as_casino", "As du casino", "Vainqueur du dernier tournoi du Casino orbital.", "\u{1F3B0}", "epic"),
+  T("main_or", "Main d'or", "A align\xE9 trois 7 au Casino orbital.", "\u{1F340}", "legendary"),
   // Déblocage automatique sur une mesure.
   T("mecene", "M\xE9c\xE8ne", "A offert 10 cadeaux \xE0 d'autres commandants.", "\u{1F381}", "rare", { metric: "giftsSent", threshold: 10 }),
   T("marchand_etoiles", "Marchand des \xE9toiles", "Un million de ressources \xE9chang\xE9es au march\xE9.", "\u{1FA99}", "rare", { metric: "traded", threshold: 1e6 }),
@@ -5017,6 +5635,11 @@ var DEFAULT_TITLES = [
 ];
 var TITLES = [];
 var BY_LABEL = /* @__PURE__ */ new Map();
+var LATE_DEFAULTS = ["as_casino", "main_or"];
+function withLateDefaults(defs) {
+  const have = new Set(defs.map((t) => t.id));
+  return [...defs, ...DEFAULT_TITLES.filter((t) => LATE_DEFAULTS.includes(t.id) && !have.has(t.id)).map((t) => structuredClone(t))];
+}
 function setTitles(defs) {
   TITLES.splice(0, TITLES.length, ...defs);
   BY_LABEL.clear();
@@ -5257,10 +5880,10 @@ function clearDecoy(player, fleetId) {
 }
 
 // src/game/weeklyRecap.ts
-var DAY3 = 864e5;
+var DAY5 = 864e5;
 function weekIdOf(now) {
   const d = new Date(now);
-  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY3;
+  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY5;
   return new Date(monday).toISOString().slice(0, 10);
 }
 function weeklySnapshot(player, weekId2) {
@@ -5321,7 +5944,7 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
-var DAY4 = 864e5;
+var DAY6 = 864e5;
 var HOUR3 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
@@ -5335,8 +5958,8 @@ function startVacation(player, daysIn, ctx, now) {
   }
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
-  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY4) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY4 - now) / HOUR3);
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY6) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY6 - now) / HOUR3);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
@@ -5345,7 +5968,7 @@ function startVacation(player, daysIn, ctx, now) {
   if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR3) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
-  const v = { startedAtMs: now, untilMs: now + days * DAY4 };
+  const v = { startedAtMs: now, untilMs: now + days * DAY6 };
   player.vacation = v;
   return v;
 }
@@ -6102,7 +6725,7 @@ function emptyBountyState() {
     owned: []
   };
 }
-function num(v) {
+function num2(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
@@ -6111,12 +6734,12 @@ function bountyState(player) {
   const raw = (_a = player.bounties) != null ? _a : {};
   const base = emptyBountyState();
   return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
-    amber: Math.max(0, num(raw.amber)),
-    amberEarned: num(raw.amberEarned),
-    reputation: num(raw.reputation),
+    amber: Math.max(0, num2(raw.amber)),
+    amberEarned: num2(raw.amberEarned),
+    reputation: num2(raw.reputation),
     board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
-    slot: raw.slot === void 0 ? -1 : num(raw.slot),
-    doneToday: num(raw.doneToday),
+    slot: raw.slot === void 0 ? -1 : num2(raw.slot),
+    doneToday: num2(raw.doneToday),
     owned: Array.isArray(raw.owned) ? raw.owned.map(String) : []
   });
 }
@@ -6134,7 +6757,7 @@ function amberFor(tier, rank2) {
   return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
 }
 var HOUR4 = 36e5;
-var DAY5 = 24 * HOUR4;
+var DAY7 = 24 * HOUR4;
 function boardSlot(now) {
   return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR4));
 }
@@ -6328,8 +6951,8 @@ function shopBlocker(player, item, now, queues) {
     return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
   }
   if (item.id === "shield") {
-    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY5;
-    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY5)} j.`;
+    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY7;
+    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY7)} j.`;
   }
   if (item.id === "accelerator" && queues && !Object.values((_a = queues.buildingUpgrades) != null ? _a : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
   if (st.amber < item.price) return "Pas assez d'Ambre.";
@@ -6391,8 +7014,8 @@ function buyShopItem(player, queues, itemId, now, buildingId) {
 }
 function weekId(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY5) * DAY5;
-  return new Date(midnight - (day + 6) % 7 * DAY5).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY7) * DAY7;
+  return new Date(midnight - (day + 6) % 7 * DAY7).toISOString().slice(0, 10);
 }
 function exchangeAmber(player, amountIn, now) {
   var _a;
@@ -6419,7 +7042,7 @@ function exchangeAmber(player, amountIn, now) {
 }
 function shieldUntil(player) {
   var _a;
-  return num((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
+  return num2((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
 }
 function dropShield(player, now) {
   const st = bountyState(player);
@@ -6472,21 +7095,21 @@ var ELITE_RULES = {
 function eliteWindow(now) {
   const id = weekId(now);
   const startMs = Date.parse(`${id}T00:00:00Z`);
-  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY5 };
+  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY7 };
 }
 function normalizeElite(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
-  if (!r.id || !(num(r.maxHp) > 0)) return null;
+  if (!r.id || !(num2(r.maxHp) > 0)) return null;
   return {
     id: String(r.id),
-    fugitive: num(r.fugitive),
-    startMs: num(r.startMs),
-    endMs: num(r.endMs),
-    maxHp: num(r.maxHp),
-    hp: num(r.hp),
+    fugitive: num2(r.fugitive),
+    startMs: num2(r.startMs),
+    endMs: num2(r.endMs),
+    maxHp: num2(r.maxHp),
+    hp: num2(r.hp),
     status: r.status === "killed" || r.status === "failed" ? r.status : "active",
-    endedAtMs: num(r.endedAtMs),
+    endedAtMs: num2(r.endedAtMs),
     rewarded: !!r.rewarded,
     contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
   };
@@ -6618,7 +7241,7 @@ var PASS_TIERS = [
   [{ kind: "production", hours: 3 }],
   [{ kind: "dossier", count: 1 }],
   [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 4 }],
+  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
   [{ kind: "capsule", capsule: "armor", level: 3 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
@@ -6628,7 +7251,7 @@ var PASS_TIERS = [
   [{ kind: "production", hours: 6 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "veil", level: 4 }],
-  [{ kind: "production", hours: 7 }],
+  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
   [{ kind: "amber", amount: 30 }],
   [{ kind: "capsule", capsule: "assault", level: 5 }],
   [{ kind: "relic", rarity: "rare" }],
@@ -6638,7 +7261,7 @@ var PASS_TIERS = [
   [{ kind: "production", hours: 9 }],
   [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
   [{ kind: "production", hours: 10 }],
-  [{ kind: "amber", amount: 50 }],
+  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
   [{ kind: "capsule", capsule: "decoy", level: 5 }],
   [{ kind: "production", hours: 12 }],
   [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }]
@@ -6656,7 +7279,7 @@ function setSeasonPass(cfg) {
   PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
   PASS_RULES.tiers = PASS_TIERS.length;
 }
-var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "cosmetic"];
+var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
 function validateSeasonPass(cfg) {
   var _a;
   const errors = [];
@@ -6670,6 +7293,7 @@ function validateSeasonPass(cfg) {
         if (!REWARD_KINDS.includes(r == null ? void 0 : r.kind)) errors.push(`Passe, palier ${i + 1} : r\xE9compense inconnue.`);
         if ((r == null ? void 0 : r.kind) === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
         if ((r == null ? void 0 : r.kind) === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : raret\xE9 inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
       })
     );
   }
@@ -6767,6 +7391,8 @@ function describePassReward(r, seasonId) {
       return `${CAPSULES[r.capsule].name} N${r.level}`;
     case "relic":
       return `Relique ${RARITY_LABELS[r.rarity]}`;
+    case "tokens":
+      return tokensLabel(r.count);
     case "cosmetic":
       return seasonId ? `Banni\xE8re et titre \xAB ${passTitle(seasonId)} \xBB` : "Banni\xE8re et titre de la saison";
   }
@@ -6799,6 +7425,10 @@ function grantPassReward(player, r, seasonId, now, random = Math.random) {
     b.amber += CAPSULE_AMBER;
     player.bounties = b;
     return `${CAPSULE_AMBER} Ambre (r\xE9serve de capsules pleine)`;
+  }
+  if (r.kind === "tokens") {
+    grantTokens(player, r.count);
+    return describePassReward(r);
   }
   if (r.kind === "relic") {
     let first = true;
@@ -7572,297 +8202,6 @@ function bossEmblems(player) {
   return config.months.map((m) => ({ id: `boss:${m.id}`, label: `Sceau : ${m.boss.name}`, image: m.boss.emblem, unlocked: owned.has(m.id) }));
 }
 
-// src/game/onboarding.ts
-var ONBOARDING_RANK = "fer2";
-var ONBOARDING_TITLE = "Recrue";
-var level2 = (p, id) => {
-  var _a, _b, _c;
-  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
-};
-var count = (p, id) => {
-  var _a, _b, _c;
-  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
-};
-function onboardingRankXp() {
-  var _a, _b;
-  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
-}
-var ONBOARDING_STEPS = [
-  {
-    id: "scrap3",
-    label: "Extracteur de ferraille au niveau 3",
-    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
-    to: "/game/batiments",
-    reward: { scrap: 1e3, energy: 500 },
-    done: (p) => level2(p, "extracteur_ferraille") >= 3
-  },
-  {
-    id: "reactor3",
-    label: "R\xE9acteur au niveau 3",
-    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
-    to: "/game/batiments",
-    reward: { scrap: 1500, energy: 1e3 },
-    done: (p) => level2(p, "reacteur_instable") >= 3
-  },
-  {
-    id: "research",
-    label: "Lancer une premi\xE8re recherche",
-    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
-    to: "/game/labo",
-    reward: { nano: 2e3, data: 2e3 },
-    done: (p) => {
-      var _a;
-      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
-    }
-  },
-  {
-    id: "drones5",
-    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
-    hint: "Les drones ouvrent les premi\xE8res missions.",
-    to: "/game/unites",
-    reward: { scrap: 3e3 },
-    done: (p) => count(p, "drone_recuperateur") >= 5
-  },
-  {
-    id: "mission",
-    label: "Terminer une mission",
-    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
-    to: "/game/missions",
-    reward: { scrap: 5e3, energy: 2e3 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "storage2",
-    label: "Entrep\xF4t au niveau 2",
-    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
-    to: "/game/batiments",
-    reward: { scrap: 5e3, energy: 5e3 },
-    done: (p) => level2(p, "entrepot") >= 2
-  },
-  {
-    id: "rockets10",
-    label: "Installer 10 roquettes",
-    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
-    to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
-    done: (p) => count(p, "roquette") >= 10
-  },
-  {
-    id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
-    to: "/game/galaxie",
-    reward: { cyberModule: 30 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "alliance",
-    label: "Rejoindre ou cr\xE9er une alliance",
-    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
-    to: "/game/alliance",
-    reward: { scrap: 1e4, energy: 1e4 },
-    done: (p) => !!p.allianceId
-  },
-  {
-    id: "rank",
-    label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
-    title: ONBOARDING_TITLE,
-    done: (p) => {
-      var _a;
-      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
-    }
-  }
-];
-function onboardingState(p) {
-  const raw = p.onboarding;
-  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
-  return __spreadValues(__spreadValues(__spreadValues({
-    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
-    hidden: (raw == null ? void 0 : raw.hidden) === true
-  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
-}
-function onboardingEligible(p) {
-  var _a;
-  const st = onboardingState(p);
-  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
-  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
-}
-function onboardingProgress(p) {
-  const st = onboardingState(p);
-  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
-}
-function claimOnboarding(player, stepId) {
-  var _a, _b, _c, _d, _e, _f;
-  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
-  const st = onboardingState(player);
-  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
-    if (!player.activeTitle) player.activeTitle = step.title;
-  }
-  const claimed = [...st.claimed, step.id];
-  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
-  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
-  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return step.reward;
-}
-function setOnboardingHidden(player, hidden) {
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
-}
-
-// src/game/retention.ts
-var DAY6 = 24 * 36e5;
-var ACTIVITY_DAYS_KEPT = 60;
-var PRESENCE_WRITE_MS = 2 * 6e4;
-var ONLINE_MS = 5 * 6e4;
-function lastActivity(p) {
-  var _a, _b;
-  if (p.lastActiveMs) return p.lastActiveMs;
-  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
-  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
-  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
-}
-function parisDay(now) {
-  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
-  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
-}
-function dayDiff(a, b) {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY6);
-}
-function recordActiveDay(player, now) {
-  var _a, _b, _c;
-  const day = parisDay(now);
-  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
-  if (days[days.length - 1] === day) return;
-  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
-}
-var pct3 = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
-function computeRetention(players, now) {
-  var _a, _b, _c;
-  const today = parisDay(now);
-  const lastSeen = (p) => Math.min(now, lastActivity(p));
-  const days = (p) => {
-    var _a2, _b2;
-    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
-  };
-  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
-  const allDays = players.flatMap((p) => {
-    var _a2, _b2;
-    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
-  }).sort();
-  const trackingSince = (_a = allDays[0]) != null ? _a : null;
-  const daily = Array.from({ length: 30 }, (_, i) => {
-    const day = parisDay(now - (29 - i) * DAY6);
-    return {
-      day,
-      active: players.filter((p) => days(p).has(day)).length,
-      signups: players.filter((p) => signupDay(p) === day).length
-    };
-  });
-  const active = {
-    d1: players.filter((p) => now - lastSeen(p) < DAY6).length,
-    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
-    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
-    total: players.length
-  };
-  const cohorts = Array.from({ length: 8 }, (_, i) => {
-    const end = now - i * 7 * DAY6;
-    const start = end - 7 * DAY6;
-    const members = players.filter((p) => {
-      var _a2, _b2;
-      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
-    });
-    const tracked = trackingSince ? members.filter((p) => {
-      var _a2;
-      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
-    }) : [];
-    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
-    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
-    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
-    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
-    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
-    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
-    return {
-      week: parisDay(start),
-      signups: members.length,
-      d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
-      d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
-      d30Pct: d30Eligible.length > 0 ? pct3(d30, d30Eligible.length) : null,
-      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
-    };
-  }).reverse();
-  const recent = players.filter((p) => {
-    var _a2;
-    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY6;
-  });
-  const funnel = ONBOARDING_STEPS.map((step) => {
-    const reached = recent.filter((p) => {
-      try {
-        return step.done(p);
-      } catch (e3) {
-        return false;
-      }
-    }).length;
-    return { id: step.id, label: step.label, reached, pct: pct3(reached, recent.length) };
-  });
-  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY6);
-  const stopAt = /* @__PURE__ */ new Map();
-  for (const p of stalled) {
-    const step = ONBOARDING_STEPS.find((s) => {
-      try {
-        return !s.done(p);
-      } catch (e3) {
-        return true;
-      }
-    });
-    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
-    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
-  }
-  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
-    var _a2, _b2;
-    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
-  }).sort((a, b) => b.count - a.count);
-  const ageDays = (p) => {
-    var _a2;
-    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY6);
-  };
-  const lastDayAfterSignup = (p) => {
-    var _a2;
-    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY6);
-  };
-  const survival = [1, 3, 7, 14, 30].map((day) => {
-    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
-    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
-    return { day, eligible: eligible.length, pct: eligible.length ? pct3(kept, eligible.length) : null };
-  });
-  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY6);
-  const buckets = [
-    ["Le jour m\xEAme", (d) => d < 1],
-    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
-    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
-    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
-    ["Apr\xE8s un mois", (d) => d >= 30]
-  ];
-  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
-}
-
 // src/game/allianceBoss.ts
 var ALLIANCE_BOSS_RULES = {
   /** Structure : ce facteur × puissance d'attaque des membres actifs (7 j). */
@@ -7886,17 +8225,17 @@ var ALLIANCE_BOSSES = [
   { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
   { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
 ];
-var DAY7 = 24 * 36e5;
+var DAY8 = 24 * 36e5;
 var HOUR7 = 36e5;
 function allianceWeekId(now) {
   const day = parisDay(now);
   const t = Date.parse(`${day}T00:00:00Z`);
   const dow = new Date(t).getUTCDay();
-  return new Date(t - (dow + 6) % 7 * DAY7).toISOString().slice(0, 10);
+  return new Date(t - (dow + 6) % 7 * DAY8).toISOString().slice(0, 10);
 }
 function allianceBossOfWeek(now) {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
-  const index2 = Math.floor(monday / (7 * DAY7));
+  const index2 = Math.floor(monday / (7 * DAY8));
   return ALLIANCE_BOSSES[(index2 % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
 }
 function allianceBossDef(state) {
@@ -11225,7 +11564,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 
 // src/game/analytics.ts
 var HOUR9 = 36e5;
-var DAY8 = 24 * HOUR9;
+var DAY9 = 24 * HOUR9;
 function median2(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -11316,7 +11655,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY8;
+  const since = now - windowDays * DAY9;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -11326,11 +11665,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY8;
-    const d = new Date(start + DAY8);
+    const start = now - (windowDays - i) * DAY9;
+    const d = new Date(start + DAY9);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY8).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY9).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -11341,11 +11680,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY8).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY8).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY9).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY9).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY8;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY9;
       }).length,
       medianPlaytimeHours: round1(median2(players.map((p) => {
         var _a;
@@ -11404,7 +11743,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
   return stats;
 }
 function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY8;
+  const since = now - windowDays * DAY9;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
@@ -11499,19 +11838,19 @@ var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v
 function computeBalance(players, reports, now, windowDays) {
   var _a, _b;
   const seen = (p) => Math.min(now, lastActivity(p));
-  const days = (ms) => Math.floor(ms / DAY8);
-  const since = now - windowDays * DAY8;
+  const days = (ms) => Math.floor(ms / DAY9);
+  const since = now - windowDays * DAY9;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY8 && now - seen(p) < 30 * DAY8).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY9 && now - seen(p) < 30 * DAY9).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY8]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY9]);
   });
   const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -11541,7 +11880,7 @@ function computeBalance(players, reports, now, windowDays) {
       lairWinPct: pct4(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY8);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY9);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -11563,9 +11902,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY8).length,
+      active1d: players.filter((p) => now - seen(p) < DAY9).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY8).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY9).length,
       dormant
     },
     rankAge,
@@ -11789,7 +12128,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -11845,7 +12184,7 @@ function applyGameContent(overrides) {
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
   setRelics(content.relics, content.relicSettings);
-  setTitles((_W = content.titles) != null ? _W : DEFAULT_TITLES);
+  setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -12341,12 +12680,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY9 = 864e5;
+var DAY10 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY9) * DAY9;
-  const startMs = midnight - (day + 6) % 7 * DAY9;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY9 };
+  const midnight = Math.floor(now / DAY10) * DAY10;
+  const startMs = midnight - (day + 6) % 7 * DAY10;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY10 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
@@ -12403,6 +12742,10 @@ function challengeTier(ch) {
   var _a;
   const ratio = ch.target > 0 ? ch.total / ch.target : 0;
   return (_a = [...CHALLENGE_RULES.tiers].reverse().find((t) => ratio >= t.at)) != null ? _a : null;
+}
+function challengeTierIndex(ch) {
+  const tier = challengeTier(ch);
+  return tier ? CHALLENGE_RULES.tiers.indexOf(tier) : -1;
 }
 function challengeRewardees(ch) {
   if (!challengeTier(ch)) return [];
@@ -12758,7 +13101,7 @@ var COALITION_RULES = {
   failGrowth: 0.1
 };
 var HOUR12 = 36e5;
-var DAY10 = 24 * HOUR12;
+var DAY11 = 24 * HOUR12;
 function coalitionState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -12784,14 +13127,14 @@ function checkCoalitionTrigger(c, lords, topHumanPower, now) {
     else delete c.overSince[l.id];
   }
   if (c.coalition && c.coalition.status === "active") return null;
-  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY10) return null;
+  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY11) return null;
   const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR12).sort((a, b) => b.power - a.power)[0];
   if (!ready) return null;
   const coalition = {
     id: `coal-${ready.id}-${now}`,
     warlordId: ready.id,
     startedAtMs: now,
-    endsAtMs: now + COALITION_RULES.durationDays * DAY10,
+    endsAtMs: now + COALITION_RULES.durationDays * DAY11,
     goal: Math.max(1, Math.round(ready.fleetPower * COALITION_RULES.goalFactor)),
     dealt: 0,
     contributions: {},
@@ -13319,7 +13662,7 @@ function seededRandom2(seed) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-var pick = (rng, xs) => xs[Math.floor(rng() * xs.length) % xs.length];
+var pick2 = (rng, xs) => xs[Math.floor(rng() * xs.length) % xs.length];
 var fill = (text, vars) => text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
 var ucfirst = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 var lcArticle = (name) => name.replace(/^(Le|La|Les|L')(?=[\s'])/, (a) => a.toLowerCase()).replace(/^L'/, "l'");
@@ -13590,9 +13933,9 @@ var HERO_LINES = [
 function heroLine(rng, d, vars) {
   const keys = ACTIVITY_KEYS.filter((k2) => d.heroes[k2]);
   if (keys.length === 0) return null;
-  const k = pick(rng, keys);
+  const k = pick2(rng, keys);
   const h = d.heroes[k];
-  return fill(pick(rng, HERO_LINES), __spreadProps(__spreadValues({}, vars), { hero: h.pseudo, deed: fill(ACTIVITY_DEEDS[k], { n: h.count }) }));
+  return fill(pick2(rng, HERO_LINES), __spreadProps(__spreadValues({}, vars), { hero: h.pseudo, deed: fill(ACTIVITY_DEEDS[k], { n: h.count }) }));
 }
 function chooseObjectives(rng, d, previous) {
   var _a;
@@ -13662,6 +14005,7 @@ function generatePass(rng, d, base) {
       else if (slot === 1) tiers2.push([{ kind: "amber", amount: 20 + Math.floor(t / 10) * 10 }]);
       else tiers2.push([{ kind: "capsule", capsule: CAPSULE_ROTATION[(start + capIdx++) % CAPSULE_ROTATION.length], level: t < 10 ? 3 : t < 20 ? 4 : 5 }]);
     }
+    if (t % 10 === 7) tiers2[tiers2.length - 1].push({ kind: "tokens", count: t > 20 ? 2 : 1 });
   }
   return { pass: { pointsPerTier: ppt, tiers: tiers2 }, reasons };
 }
@@ -13686,12 +14030,12 @@ function generateChapter(o) {
     var _a2, _b2, _c2;
     return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
   });
-  const arch = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
+  const arch = pick2(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
   const usedTitles = new Set(o.existing.flatMap((m) => {
     var _a2, _b2;
     return [m.title, (_b2 = (_a2 = m.completion) == null ? void 0 : _a2.title) != null ? _b2 : "", m.boss.name];
   }));
-  const fresh = (xs) => pick(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);
+  const fresh = (xs) => pick2(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);
   const title = fresh(arch.titles);
   const bossName = fresh(arch.bossNames);
   const completionTitle = fresh(arch.completionTitles);
@@ -13705,15 +14049,15 @@ function generateChapter(o) {
     const count2 = objectiveCount(type, d, difficulty);
     const lines = [];
     if (i === 0) {
-      lines.push(voiceLine(arch.villain, fill(pick(rng, VILLAIN_TAUNTS), vars)));
+      lines.push(voiceLine(arch.villain, fill(pick2(rng, VILLAIN_TAUNTS), vars)));
       const hero = heroLine(rng, d, vars);
       if (hero) lines.push({ speaker: arch.ally, text: ucfirst(hero) });
     }
-    if (i === 2) lines.push(voiceLine(arch.villain, fill(pick(rng, VILLAIN_TAUNTS.filter((t) => !lines.some((l) => l.text === fill(t, vars)))), vars)));
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, HOOKS[i]), vars)) });
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, ORDERS[type]), __spreadProps(__spreadValues({}, vars), { count: count2, s: count2 > 1 ? "s" : "" }))) });
-    let epTitle = pick(rng, ACT_TITLES[i]);
-    while (usedActs.has(epTitle)) epTitle = pick(rng, ACT_TITLES[i]);
+    if (i === 2) lines.push(voiceLine(arch.villain, fill(pick2(rng, VILLAIN_TAUNTS.filter((t) => !lines.some((l) => l.text === fill(t, vars)))), vars)));
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, HOOKS[i]), vars)) });
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, ORDERS[type]), __spreadProps(__spreadValues({}, vars), { count: count2, s: count2 > 1 ? "s" : "" }))) });
+    let epTitle = pick2(rng, ACT_TITLES[i]);
+    while (usedActs.has(epTitle)) epTitle = pick2(rng, ACT_TITLES[i]);
     usedActs.add(epTitle);
     return { title: epTitle, lines, objective: { type, count: count2 }, reward: rewards[i] };
   });
@@ -13731,17 +14075,17 @@ function generateChapter(o) {
   const month2 = {
     id: o.monthId,
     title,
-    theme: { accent: arch.accent, label: pick(rng, arch.themeLabels) },
+    theme: { accent: arch.accent, label: pick2(rng, arch.themeLabels) },
     boss: {
       name: bossName,
       title: `Pourfendeur ${ofName(bossName)}`,
       image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image,
       emblem: art ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
       fallbackImage: arch.fallbackImage,
-      lore: pick(rng, arch.lore)
+      lore: pick2(rng, arch.lore)
     },
     episodes,
-    synopsis: fill(`${pick(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_d = heroLine(rng, d, vars)) != null ? _d : "")}`.trim(), vars),
+    synopsis: fill(`${pick2(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_d = heroLine(rng, d, vars)) != null ? _d : "")}`.trim(), vars),
     completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= 1.2 ? "epic" : "rare" }, { kind: "amber", amount: 30 }] },
     codex,
     auto
@@ -17915,7 +18259,7 @@ var CONTEST_RULES = {
   /** Part du pot qu'un concours peut engager, au plus. */
   maxPotShare: 0.8
 };
-var num2 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+var num3 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeContests(raw) {
   const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
   return {
@@ -17926,14 +18270,14 @@ function normalizeContests(raw) {
         title: String((_a = c.title) != null ? _a : "").slice(0, 80),
         description: String((_b = c.description) != null ? _b : "").slice(0, 400),
         metric: c.metric,
-        startMs: num2(c.startMs),
-        endMs: num2(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num2(c.potShare))),
-        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num2(p))).slice(0, 10),
+        startMs: num3(c.startMs),
+        endMs: num3(c.endMs),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num3(c.potShare))),
+        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num3(p))).slice(0, 10),
         status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
         standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
-        updatedAtMs: num2(c.updatedAtMs)
+        updatedAtMs: num3(c.updatedAtMs)
       }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
     })
   };
@@ -18006,20 +18350,20 @@ var BROADCAST_SEGMENTS = [
   { id: "alliance", label: "Une alliance", hint: "Tous les membres de l'alliance choisie." },
   { id: "noAlliance", label: "Sans alliance", hint: "Joueurs qui n'ont pas encore rejoint d'alliance." }
 ];
-var DAY11 = 24 * 36e5;
+var DAY12 = 24 * 36e5;
 function broadcastTargets(players, segment, now, allianceId) {
   const idle = (p) => now - Math.min(now, lastActivity(p));
   switch (segment) {
     case "all":
       return players;
     case "active7":
-      return players.filter((p) => idle(p) < 7 * DAY11);
+      return players.filter((p) => idle(p) < 7 * DAY12);
     case "inactive7":
-      return players.filter((p) => idle(p) >= 7 * DAY11 && idle(p) < 30 * DAY11);
+      return players.filter((p) => idle(p) >= 7 * DAY12 && idle(p) < 30 * DAY12);
     case "inactive30":
-      return players.filter((p) => idle(p) >= 30 * DAY11);
+      return players.filter((p) => idle(p) >= 30 * DAY12);
     case "new7":
-      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY11);
+      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY12);
     case "alliance":
       return allianceId ? players.filter((p) => p.allianceId === allianceId) : [];
     case "noAlliance":
@@ -18164,195 +18508,6 @@ function closeLeagues(state, entries, seasonId, nextSeasonId) {
     }
   }
   return { state: { seasonId: nextSeasonId, tiers: tiers2, last: { seasonId, moves } }, rewards };
-}
-
-// src/game/casino.ts
-var CASINO_KEY = "casino";
-var DEFAULT_CASINO = {
-  mode: "scheduled",
-  weekends: true,
-  windows: [],
-  dailyTokens: 1,
-  maxTokens: 20,
-  jackpotShare: 0.5,
-  jackpotFallbackHours: 12,
-  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
-  hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 }
-};
-var OUTCOME_LABELS = {
-  jackpot: "GROS LOT 7-7-7",
-  star3: "Trois \xE9toiles",
-  planet3: "Trois plan\xE8tes",
-  bar3: "Triple BAR",
-  cherry3: "Trois cerises",
-  seven2: "Deux 7",
-  cherry: "Une cerise : jeton rendu",
-  lose: "Perdu"
-};
-var num3 = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
-};
-function normalizeCasinoSettings(raw) {
-  var _a, _b;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const d = DEFAULT_CASINO;
-  const odds = {};
-  for (const k of Object.keys(d.odds)) odds[k] = num3((_a = r.odds) == null ? void 0 : _a[k], d.odds[k], 0, 1);
-  const hours2 = {};
-  for (const k of Object.keys(d.hours)) hours2[k] = num3((_b = r.hours) == null ? void 0 : _b[k], d.hours[k], 0, 168);
-  const legacy = r.enabled;
-  const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
-  const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
-  return {
-    mode,
-    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
-    windows,
-    dailyTokens: Math.floor(num3(r.dailyTokens, d.dailyTokens, 0, 10)),
-    maxTokens: Math.floor(num3(r.maxTokens, d.maxTokens, 1, 1e3)),
-    jackpotShare: num3(r.jackpotShare, d.jackpotShare, 0, 1),
-    jackpotFallbackHours: num3(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
-    odds,
-    hours: hours2
-  };
-}
-function cleanWin(w) {
-  var _a, _b;
-  if (!w || typeof w !== "object") return null;
-  const x = w;
-  if (typeof x.uid !== "string" || !(String(x.outcome) in OUTCOME_LABELS)) return null;
-  const resources = {};
-  for (const [k, v] of Object.entries((_a = x.resources) != null ? _a : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
-  return __spreadValues({ uid: x.uid, pseudo: String((_b = x.pseudo) != null ? _b : ""), atMs: Number(x.atMs) || 0, outcome: x.outcome, resources }, x.token ? { token: true } : {});
-}
-function normalizeCasino(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const list = (v, max) => (Array.isArray(v) ? v : []).map(cleanWin).filter((w) => !!w).slice(0, max);
-  return {
-    settings: normalizeCasinoSettings(r.settings),
-    recent: list(r.recent, 40),
-    jackpots: list(r.jackpots, 30),
-    totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
-    announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
-    updatedAtMs: Number(r.updatedAtMs) || 0
-  };
-}
-function validateCasinoSettings(s) {
-  const errors = [];
-  const total2 = Object.values(s.odds).reduce((a, b) => a + b, 0);
-  if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
-  if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
-  if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
-  if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un cr\xE9neau.");
-  return errors;
-}
-var DAY12 = 864e5;
-function parisWeekend(now) {
-  const d = (/* @__PURE__ */ new Date(`${parisDay(now)}T12:00:00Z`)).getUTCDay();
-  return d === 0 || d === 6;
-}
-function casinoOpeningId(s, now) {
-  if (s.mode === "open") return "open";
-  if (s.mode === "closed") return null;
-  const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
-  if (w) return `w-${w.startMs}`;
-  if (s.weekends && parisWeekend(now)) {
-    const day = parisDay(now);
-    const sat = (/* @__PURE__ */ new Date(`${day}T12:00:00Z`)).getUTCDay() === 6 ? day : parisDay(now - DAY12);
-    return `we-${sat}`;
-  }
-  return null;
-}
-function casinoOpen(s, now) {
-  return casinoOpeningId(s, now) !== null;
-}
-function playerCasino(p) {
-  var _a;
-  const c = (_a = p.casino) != null ? _a : {};
-  const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots) };
-}
-function dailyTokenReady(p, settings, now) {
-  const c = playerCasino(p);
-  return casinoOpen(settings, now) && settings.dailyTokens > 0 && c.dailyDay !== parisDay(now) && c.tokens < settings.maxTokens;
-}
-function claimDailyTokens(p, settings, now) {
-  if (!dailyTokenReady(p, settings, now)) return 0;
-  const c = playerCasino(p);
-  const add2 = Math.min(settings.dailyTokens, settings.maxTokens - c.tokens);
-  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2, dailyDay: parisDay(now) });
-  return add2;
-}
-function grantTokens(p, n) {
-  const c = playerCasino(p);
-  const add2 = Math.max(0, Math.min(1e3, Math.floor(n)));
-  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2 });
-  return add2;
-}
-function rollOutcome(settings, random) {
-  let r = random();
-  for (const k of ["jackpot", "star3", "planet3", "bar3", "cherry3", "seven2", "cherry"]) {
-    if (r < settings.odds[k]) return k;
-    r -= settings.odds[k];
-  }
-  return "lose";
-}
-var pick2 = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
-function evaluateReels(reels) {
-  const [a, b, c] = reels;
-  if (a === b && b === c) {
-    if (a === "seven") return "jackpot";
-    if (a === "star") return "star3";
-    if (a === "planet") return "planet3";
-    if (a === "bar") return "bar3";
-    if (a === "cherry") return "cherry3";
-    return "lose";
-  }
-  if (reels.filter((s) => s === "seven").length === 2) return "seven2";
-  if (reels.includes("cherry")) return "cherry";
-  return "lose";
-}
-function reelsFor(outcome, random) {
-  const triple = { jackpot: "seven", star3: "star", planet3: "planet", bar3: "bar", cherry3: "cherry" };
-  const t = triple[outcome];
-  if (t) return [t, t, t];
-  const shuffle = (r) => {
-    const a = [...r];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  };
-  if (outcome === "seven2") return shuffle(["seven", "seven", pick2(["star", "planet", "bar", "skull"], random)]);
-  if (outcome === "cherry") {
-    const others = ["star", "planet", "bar", "skull", "seven"];
-    const a = pick2(others, random);
-    const b = pick2(others.filter((s) => s !== a), random);
-    return shuffle(random() < 0.25 ? ["cherry", "cherry", a] : ["cherry", a, b]);
-  }
-  for (let guard = 0; guard < 50; guard++) {
-    const pool = ["seven", "star", "planet", "bar", "skull"];
-    const reels = random() < 0.35 ? shuffle(["seven", pick2(["star", "planet", "bar", "skull"], random), pick2(["star", "planet", "bar", "skull"], random)]) : [pick2(pool, random), pick2(pool, random), pick2(pool, random)];
-    if (evaluateReels(reels) === "lose") return reels;
-  }
-  return ["skull", "bar", "star"];
-}
-function jackpotAmounts(pot, share) {
-  const out = {};
-  for (const [k, v] of Object.entries(pot.resources)) {
-    const n = Math.floor((Number(v) || 0) * share);
-    if (n > 0) out[k] = n;
-  }
-  return out;
-}
-function recordWin(state, win) {
-  return __spreadProps(__spreadValues({}, state), {
-    recent: win.outcome === "lose" ? state.recent : [win, ...state.recent].slice(0, 40),
-    jackpots: win.outcome === "jackpot" ? [win, ...state.jackpots].slice(0, 30) : state.jackpots,
-    totalSpins: state.totalSpins + 1,
-    updatedAtMs: win.atMs
-  });
 }
 
 // src/server/hooksEntry.ts

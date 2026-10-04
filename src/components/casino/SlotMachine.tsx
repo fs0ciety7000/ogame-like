@@ -54,27 +54,32 @@ export function SlotSymbolView({ symbol, size = 64 }: { symbol: SlotSymbol; size
 const ALL = SLOT_SYMBOLS.map((s) => s.id);
 const randomSymbol = () => ALL[Math.floor(Math.random() * ALL.length)];
 
-function Reel({ target, spinKey, index, cell, onStop }: { target: SlotSymbol[]; spinKey: number; index: number; cell: number; onStop: (i: number) => void }) {
+function Reel({ target, spinKey, index, cell, onStop, tense }: { target: SlotSymbol[]; spinKey: number; index: number; cell: number; onStop: (i: number) => void; tense?: boolean }) {
   const reduce = useReducedMotion();
   // Bande : les symboles visibles avant, un long défilé, puis la cible (dessus, centre, dessous).
   const strip = useMemo(() => {
     if (spinKey === 0) return target;
-    const filler = Array.from({ length: reduce ? 3 : 18 + index * 7 }, randomSymbol);
+    const filler = Array.from({ length: reduce ? 3 : 18 + index * 7 + (tense ? 14 : 0) }, randomSymbol);
     return [...filler, ...target];
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une nouvelle bande seulement à chaque tirage
   }, [spinKey]);
   const end = -(strip.length - 3) * cell;
-  const duration = reduce ? 0.2 : 1.25 + index * 0.45;
+  // « Presque » : deux 7 déjà alignés, le dernier rouleau prend son temps.
+  const duration = reduce ? 0.2 : 1.25 + index * 0.45 + (tense ? 1.4 : 0);
   // Arrêt annoncé à la fin prévue du défilé (plus fiable que la fin d'animation).
   const stopRef = useRef(onStop);
   stopRef.current = onStop;
+  const [stoppedKey, setStoppedKey] = useState(0);
   useEffect(() => {
     if (spinKey === 0) return;
-    const id = window.setTimeout(() => stopRef.current(index), duration * 1000);
+    const id = window.setTimeout(() => {
+      setStoppedKey(spinKey);
+      stopRef.current(index);
+    }, duration * 1000);
     return () => window.clearTimeout(id);
   }, [spinKey, index, duration]);
   return (
-    <div className="slot-reel" style={{ height: cell * 3, width: cell * 1.18 }}>
+    <div className={cn("slot-reel", tense && spinKey > 0 && stoppedKey !== spinKey && "slot-reel-tense")} style={{ height: cell * 3, width: cell * 1.18 }}>
       <motion.div
         key={spinKey}
         initial={{ y: 0, filter: "blur(0px)" }}
@@ -135,7 +140,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
       <div className="slot-body">
         <div className="slot-window">
           {columns.map((col, i) => (
-            <Reel key={i} target={col} spinKey={spinKey} index={i} cell={cell} onStop={onReelStop} />
+            <Reel key={i} target={col} spinKey={spinKey} index={i} cell={cell} onStop={onReelStop} tense={i === 2 && reels[0] === "seven" && reels[1] === "seven"} />
           ))}
           <span className="slot-payline" aria-hidden />
           <span className="slot-arrow slot-arrow-left" aria-hidden />
