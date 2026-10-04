@@ -2592,12 +2592,12 @@ function distributeLeviathan(txApp, game, state, now) {
     const loot = won ? game.rollLoot(flushed.player, "worldBoss", now, i) : null;
     if (loot && (loot.relic || loot.capsule)) flushed.notifications.push(lootNotif(loot, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
-    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic, tokens });
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.worldBossTitle(state) : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
-        title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${out.amber ? ` +${out.amber} Ambre (collection de reliques pleine).` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
+        title: won ? `${game.worldBossName(state)} est tombé !` : `${game.worldBossName(state)} s'est retiré`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.worldBossTitle(state)} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${out.amber ? ` +${out.amber} Ambre (collection de reliques pleine).` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
         createdAtMs: now,
         read: false,
         link: "/game/leviathan",
@@ -2606,12 +2606,12 @@ function distributeLeviathan(txApp, game, state, now) {
     ]));
   });
   const top = ranking[0];
-  archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
+  archiveBoss(txApp, game, "leviathan", state, { name: game.worldBossName(state), image: game.worldBossOf(state).image });
   return Object.assign({}, state, {
     rewarded: true,
     archived: true,
     rewards,
-    titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000 } : state.titleHolder,
+    titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000, title: game.worldBossTitle(state) } : state.titleHolder,
   });
 }
 
@@ -2652,8 +2652,8 @@ function leviathanArrival(txApp, game, rec, now) {
   notify(txApp, fleet.ownerUid, [
     {
       kind: "combat-attacker",
-      title: res.killed ? "Coup de grâce sur le Léviathan !" : "Assaut sur le Léviathan",
-      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "Le Léviathan n'était plus là : la flotte rentre.",
+      title: res.killed ? `Coup de grâce sur ${game.worldBossName(state)} !` : `Assaut sur ${game.worldBossName(state)}`,
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : `${game.worldBossName(state)} n'était plus là : la flotte rentre.`,
       createdAtMs: now,
       read: false,
     },
@@ -2685,13 +2685,13 @@ function bossReminders(txApp, game, kind, state, next, now) {
   const sent = rec ? toPlain(rec).data || {} : {};
   if (game.eveReminderDue(next, sent[kind], now)) {
     const nextMonth = !isLev ? game.bossMonthOf({ id: next.id || "" }) : null;
-    const name = isLev ? game.LEVIATHAN_RULES.name : nextMonth ? nextMonth.boss.name : "Le boss de saison";
+    const name = isLev ? game.worldBossForStart(next.startMs).name : nextMonth ? nextMonth.boss.name : "Le boss de saison";
     send(`${name} arrive ${game.parisRelativeLabel(next.startMs, now)}`, `Préparez vos flottes d'attaque : ${isLev ? "tout le serveur" : "tout le secteur"} devra frapper ensemble. Un assaut toutes les ${game.LEVIATHAN_RULES.cooldownHours} h.`);
     writeConfig(txApp, "boss_reminders", Object.assign({}, sent, { [kind]: next.startMs }));
   }
   // Avant la fin, s'il tient encore.
   if (game.endingReminderDue(state, now)) {
-    const name = isLev ? game.LEVIATHAN_RULES.name : month ? month.boss.name : "Le boss de saison";
+    const name = isLev ? game.worldBossName(state) : month ? month.boss.name : "Le boss de saison";
     const pct = Math.max(1, Math.round((state.hp / state.maxHp) * 100));
     const hours = Math.max(1, Math.round((state.endMs - now) / 3600000));
     send(`Plus que ${hours} h contre ${name} !`, `Il lui reste ${pct} % de sa structure. Un dernier effort avant ${game.parisWhenLabel(state.endMs)}, sinon il repart et les récompenses sont réduites.`);
@@ -2710,7 +2710,7 @@ function leviathanTick(now) {
     if (state && state.titleHolder && now >= state.titleHolder.untilMs) {
       if (findOrNull(txApp, "players", state.titleHolder.uid)) {
         const holder = loadPlayer(txApp, game, state.titleHolder.uid);
-        game.removeLeviathanTitle(holder.player);
+        game.removeLeviathanTitle(holder.player, state.titleHolder.title || undefined);
         savePlayer(txApp, game, holder, holder.player, holder.queues);
       }
       state = Object.assign({}, state, { titleHolder: null });
@@ -2730,7 +2730,7 @@ function leviathanTick(now) {
       // v5.10.2 : un boss abattu avant la 5.10 retrouve son coup de grâce (archive mise à jour).
       if (state.status !== "active" && state.rewarded && (!state.archived || (state.status === "killed" && !state.killedBy && !state.legacyChecked))) {
         state = withLegacyKiller(txApp, game, state, "leviathan");
-        archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
+        archiveBoss(txApp, game, "leviathan", state, { name: game.worldBossName(state), image: game.worldBossOf(state).image });
         changed = true;
       }
     }
@@ -2741,7 +2741,7 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: `Un monstre colossal menace la galaxie : unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Léviathan).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${game.worldBossName(state)} approche !`, message: `${game.worldBossOf(state).story.split(". ")[0]}. Unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Boss mondial).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -2793,11 +2793,11 @@ function adminLeviathan(e) {
     const now = Date.now();
     let state = readLeviathan(txApp, game);
     if (action === "start") {
-      if (state && state.status === "active" && now < state.endMs) throw new BadRequestError("Le Léviathan est déjà là.");
+      if (state && state.status === "active" && now < state.endMs) throw new BadRequestError(`${game.worldBossName(state)} est déjà là.`);
       const actives = txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 }).map((r) => toPlain(r));
-      state = game.spawnLeviathan({ id: `lev-manual-${now}`, startMs: now, endMs: now + game.LEVIATHAN_RULES.durationHours * 3600000 }, actives, state);
+      state = game.spawnLeviathan({ id: `lev-manual-${now}`, startMs: now, endMs: now + game.LEVIATHAN_RULES.durationHours * 3600000 }, actives, state, String(body(e).bossId || "") || undefined);
     } else if (action === "stop") {
-      if (!state || state.status !== "active") throw new BadRequestError("Aucun Léviathan en cours.");
+      if (!state || state.status !== "active") throw new BadRequestError("Aucun boss mondial en cours.");
       state = distributeLeviathan(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
     } else if (action === "resize") {
       const before = state ? state.maxHp : 0;
@@ -6819,7 +6819,7 @@ function publishGazetteNow(txApp, game, now) {
   const players = txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => ({ uid: r.id, pseudo: r.getString("pseudo"), xp: r.getInt("xp"), seasonXp: r.getInt("seasonXp"), createdAtMs: r.getInt("createdAtMs") }));
   const bosses = [];
   const lev = readLeviathan(txApp, game);
-  const levSum = bossSummary(game, lev, game.LEVIATHAN_RULES.name);
+  const levSum = bossSummary(game, lev, game.worldBossName(lev));
   if (levSum) bosses.push(levSum);
   const sb = readSeasonBoss(txApp, game);
   const sbMonth = sb ? game.bossMonthOf(sb) : null;

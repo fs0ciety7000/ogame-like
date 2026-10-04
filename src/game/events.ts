@@ -1,3 +1,4 @@
+import { WORLD_BOSS_RULES, weekOfLocal, worldBossDay } from "@/game/worldBosses";
 /* =====================================================
    Événements du week-end (v1.8) : chaque semaine, du vendredi 18 h au
    dimanche 23 h 59 (heure de Paris), un événement donne un bonus à tout le
@@ -55,6 +56,8 @@ export const EVENT_RULES: {
   bossWeekend: BossWeekend;
   /** v5.10.5 : apparitions du Léviathan à date précise (en plus du rendez-vous mensuel). */
   bossDates: BossDate[];
+  /** v5.14 : boss mondiaux en rotation hebdomadaire (remplace le rendez-vous mensuel). */
+  bossWeekly?: boolean;
   /** Heure de début le vendredi (heure de Paris). */
   startHour: number;
   rotation: string[];
@@ -65,6 +68,7 @@ export const EVENT_RULES: {
   bossMonthly: true,
   bossWeekend: "first",
   bossDates: [],
+  bossWeekly: true,
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -185,6 +189,8 @@ export interface BossSchedule {
   durationHours: number;
   /** v5.10.5 : apparitions supplémentaires à date précise. */
   dates?: BossDate[];
+  /** v5.14 : rendez-vous hebdomadaire (boss mondiaux) au lieu du week-end du mois. */
+  weekly?: { minGapDays: number };
 }
 
 export const MAX_BOSS_DATES = 24;
@@ -197,7 +203,17 @@ export function onWeekend(w: { nth: number; lastOfMonth: boolean }, which: BossW
 /** Prochaines fenêtres (en cours comprise) d'un boss mensuel, dans l'ordre. */
 export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs: number; endMs: number; fixed?: boolean }[] {
   const out: { startMs: number; endMs: number; fixed?: boolean }[] = [];
-  for (let i = -1; s.enabled && i < 60 && out.length < count; i++) {
+  // v5.14 : boss mondiaux, un par semaine, un jour différent à chaque fois.
+  if (s.enabled && s.weekly) {
+    const w0 = weekOfLocal(now + parisOffsetMs(now));
+    for (let w = w0 - 1; w <= w0 + count + 1; w++) {
+      const d = worldBossDay(w, s.weekly.minGapDays);
+      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY + d * DAY + s.startHour * HOUR);
+      const endMs = startMs + s.durationHours * HOUR;
+      if (endMs > now) out.push({ startMs, endMs });
+    }
+  }
+  for (let i = -1; s.enabled && !s.weekly && i < 60 && out.length < count; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
@@ -266,6 +282,7 @@ export function eveReminderDue(next: { startMs: number } | null | undefined, las
 export function describeBossSchedule(s: BossSchedule, now = Date.now()): string {
   const extra = (s.dates ?? []).some((d) => d.startMs + d.durationHours * HOUR > now);
   if (!s.enabled) return extra ? "à des dates fixées par l'équipe" : "pas d'apparition programmée pour l'instant";
+  if (s.weekly) return `chaque semaine, un jour différent à ${hourLabel(s.startHour)}, pour ${s.durationHours} h${extra ? ", et à des dates fixées par l'équipe" : ""}`;
   return `le ${WEEKEND_WORDS[s.weekend] ?? "premier"} week-end de chaque mois, du vendredi ${hourLabel(s.startHour)} au ${bossEndLabel(s)}${extra ? ", et à des dates fixées par l'équipe" : ""}`;
 }
 
@@ -293,8 +310,9 @@ export function validateBossSchedule(label: string, s: Partial<BossSchedule>): s
 function rotationEvent(window: { startMs: number; endMs: number; week: number; nth: number; lastOfMonth: boolean }): GameEvent | null {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
-  // Week-end du Léviathan : pas d'événement de la rotation.
-  if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
+  // Week-end du Léviathan : pas d'événement de la rotation (v5.14 : sauf en rotation hebdomadaire,
+  // où les boss mondiaux et les événements se côtoient).
+  if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
   // v5.10.5 : un Léviathan à date précise pendant ce week-end remplace aussi l'événement.
   if ((EVENT_RULES.bossDates ?? []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
   const type = findEventType(list[((window.week % list.length) + list.length) % list.length])!;

@@ -44,7 +44,7 @@ export function RulesPanel() {
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
   // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
   const bossClash =
-    rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
+    rules.events.bossWeekly === false && rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
       ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
       : undefined;
 
@@ -464,9 +464,9 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, titleDays: v ?? 0 } }))}
           />
         </Section>
-        <Section title="Léviathan">
+        <Section title="Boss mondiaux (Léviathan et ses cinq rivaux)">
           <BossScheduleFields
-            label="Léviathan"
+            label="Boss mondiaux"
             value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours, dates: rules.events.bossDates ?? [] }}
             onChange={(p) =>
               setRules((r) => ({

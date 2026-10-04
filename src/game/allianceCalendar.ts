@@ -3,7 +3,7 @@ import { allianceBossDef, allianceBossOfWeek, allianceWeekId, type AllianceBossS
 import { seasonBossWindow } from "@/game/chronicles";
 import { parisLocalToUtc } from "@/game/events";
 import { gazettePublishAt } from "@/game/gazette";
-import { nextLeviathanStart, type LeviathanState } from "@/game/leviathan";
+import { nextLeviathanStart, worldBossForStart, worldBossName, type LeviathanState } from "@/game/leviathan";
 import { parisDay } from "@/game/retention";
 import type { AllianceWar } from "@/game/wars";
 
@@ -58,10 +58,10 @@ export function allianceCalendar(input: CalendarInput, now: number, horizonDays 
   }
 
   if (input.leviathan && input.leviathan.status === "active" && input.leviathan.endMs > now) {
-    out.push({ kind: "leviathan", title: "Le Léviathan", detail: "Boss mondial", startMs: input.leviathan.startMs, endMs: input.leviathan.endMs, to: "/game/leviathan" });
+    out.push({ kind: "leviathan", title: worldBossName(input.leviathan), detail: "Boss mondial", startMs: input.leviathan.startMs, endMs: input.leviathan.endMs, to: "/game/leviathan" });
   } else {
     const next = nextLeviathanStart(now);
-    if (next && next <= horizon) out.push({ kind: "leviathan", title: "Le Léviathan", detail: "Boss mondial", startMs: next, to: "/game/leviathan" });
+    if (next && next <= horizon) out.push({ kind: "leviathan", title: worldBossForStart(next).name, detail: "Boss mondial", startMs: next, to: "/game/leviathan" });
   }
 
   const sb = seasonBossWindow(now, true);

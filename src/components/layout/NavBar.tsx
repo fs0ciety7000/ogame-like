@@ -104,7 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Flame,
     accent: "var(--color-danger-glow)",
     items: [
-      { to: "/game/leviathan", label: "Léviathan", icon: Fish },
+      { to: "/game/leviathan", label: "Boss mondial", icon: Fish },
       { to: "/game/boss", label: "Boss de saison", icon: Flame },
       { to: "/game/seigneurs", label: "Seigneurs", icon: Crown },
       { to: "/game/hall-of-fame", label: "Hall of fame des boss", icon: Trophy },

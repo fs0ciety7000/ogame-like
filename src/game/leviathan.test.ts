@@ -1,5 +1,5 @@
 import { addRelic, RELIC_RULES, rollRelic } from "@/game/relics";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { EVENT_RULES } from "@/game/events";
 import {
@@ -36,6 +36,14 @@ function player(uid: string, chasseurs = 100): PlayerState {
 }
 
 describe("leviathan", () => {
+  // Rendez-vous mensuel et Léviathan seul (la rotation hebdomadaire a ses propres tests).
+  beforeEach(() => {
+    EVENT_RULES.bossWeekly = false;
+  });
+  afterEach(() => {
+    EVENT_RULES.bossWeekly = true;
+  });
+
   it("appears on the first weekend of the month for 72 h", () => {
     EVENT_RULES.bossMonthly = true;
     expect(leviathanWindow(START - 1)).toBeNull();

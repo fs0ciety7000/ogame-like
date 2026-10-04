@@ -53,6 +53,71 @@ sur un boss (0,2 % par participant, 0,5 % sur le podium).
 /imagine prompt: sci-fi strategy game character portrait, head and shoulders, a weathered man in his forties with a cybernetic targeting eye glowing red, colossus hunter wearing a trophy tooth of a giant space beast on a cord, dark armored coat with harpoon cannon straps, the silhouette of an enormous creature in the dark behind him, centered, facing the viewer, dramatic rim light, painterly digital illustration, highly detailed face, clean silhouette, no text --ar 4:5 --v 7 --style raw --s 200
 ```
 
+## Les six boss mondiaux
+
+Un par semaine, en rotation, jamais le même jour que le précédent. Illustration 16:9, 1600 × 900, WebP qualité 85,
+au chemin indiqué (tant qu'elle manque, la page affiche le Léviathan). Le Léviathan garde ses images actuelles.
+
+### Le Léviathan, le dévoreur des abysses (`/assets/leviathan/leviathan.webp`)
+
+Né dans les profondeurs d'une géante gazeuse morte, le Léviathan remonte à la surface du secteur quand la faim le prend. Sa carapace a avalé des flottes entières ; ses écailles en gardent les épaves.
+
+Phases : Assaut, Riposte, Carapace fissurée. Titre du premier : « Fléau du Léviathan ».
+
+```
+/imagine prompt: sci-fi strategy game key art, a colossal armored space leviathan rising from the clouds of a dead gas giant, wrecked warships embedded in its scales, tiny battle fleets swarming around it, cyan #4be8ff and gold #ffd86b light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
+### La Matriarche, mère de l'Essaim (`/assets/bosses/matriarche.webp`)
+
+Quand la Reine des Kesh'Vaar a disparu, sa sœur a pris le trône de chitine. La Matriarche ne combat pas seule : chaque blessure libère une nuée de rejetons qui harcèlent les flottes.
+
+Phases : Nuée, Frénésie, Couvée exposée. Titre du premier : « Fléau de la Matriarche ».
+
+```
+/imagine prompt: sci-fi strategy game key art, a gigantic insectoid hive queen floating in space, translucent amber carapace, swarms of smaller bio-ships pouring from her abdomen, hive structures glowing gold #ffd86b, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
+### Le Titan de rouille, la forge qui marche (`/assets/bosses/titan.webp`)
+
+Une station-forge de l'ancien empire, devenue folle après trois siècles seule. Elle dévore les épaves pour grandir, et refait ses blindages à mesure qu'on les arrache.
+
+Phases : Blindage, Refonte, Fournaise à nu. Titre du premier : « Briseur du Titan ».
+
+```
+/imagine prompt: sci-fi strategy game key art, a colossal rusted war machine made from fused station modules and wrecked hulls, glowing ember #ff8a3d forge furnaces in its chest, mechanical arms tearing a cruiser apart, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
+### Le Spectre du Chœur, la voix dans le silence (`/assets/bosses/spectre.webp`)
+
+Le Chœur Silencieux a laissé derrière lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'à ce que les équipages perdent la raison.
+
+Phases : Brouillage, Chant, Silence. Titre du premier : « Exorciste du Chœur ».
+
+```
+/imagine prompt: sci-fi strategy game key art, an enormous ghostly entity made of violet #a78bfa light and static, a faceless choir of luminous figures forming its body, warships with flickering shields drifting in confusion, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
+### Le Cométophage, le mangeur d'étoiles filantes (`/assets/bosses/cometophage.webp`)
+
+Il suit les comètes depuis des millénaires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de traînées de feu : chacune est un fragment qu'il a recraché.
+
+Phases : Pluie de feu, Constriction, Gorge ouverte. Titre du premier : « Chasseur du Cométophage ».
+
+```
+/imagine prompt: sci-fi strategy game key art, a gigantic serpentine space creature wrapped around a blazing scarlet comet, its body shedding burning ice fragments like a meteor shower, hunter fleets diving between the fragments, red #ff5c7a and cyan light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
+### L'Abyssal, ce qui dort sous le Vide (`/assets/bosses/abyssal.webp`)
+
+Personne ne l'a jamais vu en entier. Les éclaireurs parlent d'un œil grand comme une lune et d'une ombre qui éteint les étoiles. Quand l'Abyssal se réveille, même les seigneurs de guerre rentrent au port.
+
+Phases : Éveil, Marée noire, L'Œil. Titre du premier : « Veilleur de l'Abîme ».
+
+```
+/imagine prompt: sci-fi strategy game key art, an unfathomably huge shadowy creature emerging from a black void, a single glowing magenta #ff5fd2 eye the size of a moon, stars going dark around its silhouette, a tiny fleet in the foreground for scale, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250
+```
+
 ## Les 36 saisons du passe
 
 Douze thèmes en rotation (un par mois, à partir de novembre 2026), trois ans : chaque saison a son illustration
