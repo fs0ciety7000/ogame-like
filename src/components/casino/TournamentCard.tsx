@@ -1,5 +1,5 @@
 import { Trophy } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { CasinoPanel } from "@/components/casino/CasinoPanel";
 import { HudChip } from "@/components/ui/hud";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { casinoClosesAt, tournamentRanking, type CasinoState } from "@/game/casino";
@@ -29,18 +29,19 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
   const prizes = s.rewards.tournament;
 
   return (
-    <Card className="p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <p className="hud-eyebrow flex items-center gap-2 text-[10px] text-gold-glow">
-          <Trophy className="h-3.5 w-3.5" /> Tournoi
-        </p>
-        {casino.tournament && (
-          <HudChip size="sm" tone="mint" alert className="ml-auto">
+    <CasinoPanel
+      icon={<Trophy />}
+      title="Tournoi"
+      tone="gold"
+      aside={
+        casino.tournament && (
+          <HudChip size="sm" tone="mint" alert>
             {closes ? `Fin dans ${formatDuration(Math.max(0, closes - now) / 1000)}` : "En cours"}
           </HudChip>
-        )}
-      </div>
-      <p className="mb-2 text-xs text-slate-400">
+        )
+      }
+    >
+      <p className="text-xs text-slate-400">
         Chaque tirage rapporte des points (7-7-7 : 100, trois étoiles : 30…). À la fermeture, le podium gagne{" "}
         {prizes.slice(0, 3).map((n, i) => (
           <span key={i}>
@@ -74,7 +75,7 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
       )}
 
       {last && last.podium.length > 0 && (
-        <div className="mt-3 border-t border-white/5 pt-2">
+        <div className="border-t border-white/5 pt-2">
           <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">Tournoi précédent · {last.participants} joueur{last.participants > 1 ? "s" : ""}</p>
           <ol className="grid gap-1">
             {last.podium.slice(0, 3).map((p, i) => (
@@ -95,6 +96,6 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
           </ol>
         </div>
       )}
-    </Card>
+    </CasinoPanel>
   );
 }
