@@ -465,6 +465,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
               <th className="py-1 text-right font-normal">Inscrits</th>
               <th className="py-1 text-right font-normal" title="Revenus le lendemain de l'inscription">J+1</th>
               <th className="py-1 text-right font-normal" title="Revenus au moins une fois 7 jours ou plus après l'inscription">J+7</th>
+              <th className="py-1 text-right font-normal" title="Revenus au moins une fois 30 jours ou plus après l'inscription">J+30</th>
               <th className="py-1 text-right font-normal" title="Vus ces 3 derniers jours">Encore là</th>
             </tr>
           </thead>
@@ -475,6 +476,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
                 <td className="py-1 text-right tabular-nums">{c.signups}</td>
                 <td className="py-1 text-right tabular-nums">{c.d1Pct === null ? "—" : `${c.d1Pct} %`}</td>
                 <td className="py-1 text-right tabular-nums">{c.d7Pct === null ? "—" : `${c.d7Pct} %`}</td>
+                <td className="py-1 text-right tabular-nums">{c.d30Pct === null || c.d30Pct === undefined ? "—" : `${c.d30Pct} %`}</td>
                 <td className="py-1 text-right tabular-nums">{c.signups ? `${c.activeNowPct} %` : "—"}</td>
               </tr>
             ))}
@@ -482,6 +484,28 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
         </table>
         <p className="text-[11px] text-slate-500">« — » : pas encore mesurable (suivi trop récent ou cohorte trop jeune).</p>
       </Panel>
+
+      {retention.survival && (
+        <Panel title="Rétention · survie après l'inscription">
+          <div className="flex flex-col gap-1.5">
+            {retention.survival.map((s) => (
+              <Bar key={s.day} label={`Encore actif à J+${s.day}`} value={s.pct ?? 0} max={100} display={s.pct === null ? "—" : `${s.pct} %`} title={`${s.eligible} inscrit(s) assez anciens`} />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">Part des joueurs revenus au moins une fois N jours après leur inscription, parmi ceux inscrits depuis au moins N jours.</p>
+        </Panel>
+      )}
+
+      {retention.churn && (
+        <Panel title="Décrochage · quand les joueurs partent">
+          <div className="flex flex-col gap-1.5">
+            {retention.churn.map((c) => (
+              <Bar key={c.label} label={c.label} value={c.count} max={Math.max(1, ...retention.churn.map((x) => x.count))} display={String(c.count)} color="var(--color-ember-glow)" />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">Joueurs sans activité depuis 7 jours, selon leur ancienneté lors de leur dernière visite. Le détail par objectif de prise en main est juste à côté.</p>
+        </Panel>
+      )}
 
       <Panel title={`Prise en main · ${recentPlayers} inscrit${recentPlayers > 1 ? "s" : ""} sur 60 jours`}>
         <div className="flex flex-col gap-1.5">

@@ -25,6 +25,7 @@ import {
   type LucideIcon,
   Megaphone,
   CalendarRange,
+  Bell,
   Smile,
   Mail,
   Crown,
@@ -44,6 +45,7 @@ import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
 import { PlannerPanel } from "@/pages/admin/PlannerPanel";
+import { BroadcastPanel } from "@/pages/admin/BroadcastPanel";
 import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
@@ -111,6 +113,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
       { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : solde, mouvements, versements (concours)." },
+      { id: "broadcast", label: "Messages ciblés", icon: Bell, hint: "Notification dans le jeu pour un groupe de joueurs : inactifs, nouveaux, une alliance…" },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
@@ -217,6 +220,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="admins">
           <AdminsPanel />
+        </TabsContent>
+        <TabsContent value="broadcast">
+          <BroadcastPanel />
         </TabsContent>
         <TabsContent value="mail">
           <MailPanel />

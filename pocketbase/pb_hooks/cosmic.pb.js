@@ -549,6 +549,9 @@ routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic
 
 // Offres expirées rendues à leur vendeur.
 /* ---------- Défis hebdomadaires (v3.8) ---------- */
+/** v5.10.5 : messages ciblés (notification à un groupe de joueurs). */
+routerAdd("POST", "/api/cosmic/admin/broadcast", (e) => require(`${__hooks}/cosmic_db.js`).adminBroadcast(e), $apis.requireAuth("users", "_superusers"));
+
 /** v5.10.5 : concours du pot commun (lancement, classement, prix). */
 routerAdd("POST", "/api/cosmic/admin/contests", (e) => require(`${__hooks}/cosmic_db.js`).adminContests(e), $apis.requireAuth("users", "_superusers"));
 cronAdd("cosmic_contests", "*/15 * * * *", () => {

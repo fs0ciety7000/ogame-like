@@ -166,6 +166,7 @@ __export(hooksEntry_exports, {
   bossWindows: () => bossWindows,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
+  broadcastTargets: () => broadcastTargets,
   buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
@@ -420,6 +421,7 @@ __export(hooksEntry_exports, {
   unitsAwayOf: () => unitsAwayOf,
   updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
+  validateBroadcast: () => validateBroadcast,
   validateContest: () => validateContest,
   validateGameContent: () => validateGameContent,
   validateRules: () => validateRules,
@@ -2727,10 +2729,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY11 = 864e5;
+  const DAY12 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY11) * DAY11;
-  return new Date(midnight - (day + 6) % 7 * DAY11).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY12) * DAY12;
+  return new Date(midnight - (day + 6) % 7 * DAY12).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -7530,7 +7532,7 @@ function computeRetention(players, now) {
     d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
     total: players.length
   };
-  const cohorts = Array.from({ length: 6 }, (_, i) => {
+  const cohorts = Array.from({ length: 8 }, (_, i) => {
     const end = now - i * 7 * DAY6;
     const start = end - 7 * DAY6;
     const members = players.filter((p) => {
@@ -7545,11 +7547,14 @@ function computeRetention(players, now) {
     const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
     const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
     const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
+    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
     return {
       week: parisDay(start),
       signups: members.length,
       d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
       d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
+      d30Pct: d30Eligible.length > 0 ? pct3(d30, d30Eligible.length) : null,
       activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
     };
   }).reverse();
@@ -7584,7 +7589,29 @@ function computeRetention(players, now) {
     var _a2, _b2;
     return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
   }).sort((a, b) => b.count - a.count);
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length };
+  const ageDays = (p) => {
+    var _a2;
+    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY6);
+  };
+  const lastDayAfterSignup = (p) => {
+    var _a2;
+    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY6);
+  };
+  const survival = [1, 3, 7, 14, 30].map((day) => {
+    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
+    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
+    return { day, eligible: eligible.length, pct: eligible.length ? pct3(kept, eligible.length) : null };
+  });
+  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY6);
+  const buckets = [
+    ["Le jour m\xEAme", (d) => d < 1],
+    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
+    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
+    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
+    ["Apr\xE8s un mois", (d) => d >= 30]
+  ];
+  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
 }
 
 // src/game/allianceBoss.ts
@@ -17555,6 +17582,51 @@ function pruneContests(list) {
   const open = list.filter((c) => c.status === "scheduled" || c.status === "running");
   const closed = list.filter((c) => !(c.status === "scheduled" || c.status === "running")).sort((a, b) => b.endMs - a.endMs);
   return [...open, ...closed].slice(0, CONTEST_RULES.maxKept);
+}
+
+// src/game/broadcast.ts
+var BROADCAST_SEGMENTS = [
+  { id: "all", label: "Tous les joueurs", hint: "Tous les comptes (hors PNJ)." },
+  { id: "active7", label: "Actifs cette semaine", hint: "Vus ces 7 derniers jours." },
+  { id: "inactive7", label: "Inactifs depuis 7 jours", hint: "Absents depuis 7 \xE0 30 jours : id\xE9al pour un \xAB reviens, il se passe des choses \xBB." },
+  { id: "inactive30", label: "Inactifs depuis 30 jours", hint: "Absents depuis plus d'un mois." },
+  { id: "new7", label: "Nouveaux (7 jours)", hint: "Inscrits ces 7 derniers jours." },
+  { id: "alliance", label: "Une alliance", hint: "Tous les membres de l'alliance choisie." },
+  { id: "noAlliance", label: "Sans alliance", hint: "Joueurs qui n'ont pas encore rejoint d'alliance." }
+];
+var DAY11 = 24 * 36e5;
+function broadcastTargets(players, segment, now, allianceId) {
+  const idle = (p) => now - Math.min(now, lastActivity(p));
+  switch (segment) {
+    case "all":
+      return players;
+    case "active7":
+      return players.filter((p) => idle(p) < 7 * DAY11);
+    case "inactive7":
+      return players.filter((p) => idle(p) >= 7 * DAY11 && idle(p) < 30 * DAY11);
+    case "inactive30":
+      return players.filter((p) => idle(p) >= 30 * DAY11);
+    case "new7":
+      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY11);
+    case "alliance":
+      return allianceId ? players.filter((p) => p.allianceId === allianceId) : [];
+    case "noAlliance":
+      return players.filter((p) => !p.allianceId);
+    default:
+      return [];
+  }
+}
+function validateBroadcast(b) {
+  var _a, _b, _c, _d;
+  const errors = [];
+  if (!BROADCAST_SEGMENTS.some((s) => s.id === b.segment)) errors.push("Groupe inconnu.");
+  if (b.segment === "alliance" && !b.allianceId) errors.push("Choisis l'alliance.");
+  if (!((_a = b.title) == null ? void 0 : _a.trim())) errors.push("Le titre est vide.");
+  if (((_b = b.title) != null ? _b : "").length > 80) errors.push("Titre : 80 caract\xE8res au plus.");
+  if (!((_c = b.message) == null ? void 0 : _c.trim())) errors.push("Le message est vide.");
+  if (((_d = b.message) != null ? _d : "").length > 500) errors.push("Message : 500 caract\xE8res au plus.");
+  if (b.link && !/^\/game(\/|$)/.test(b.link)) errors.push("Le lien doit \xEAtre une page du jeu (/game/\u2026).");
+  return errors;
 }
 
 // src/server/hooksEntry.ts

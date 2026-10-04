@@ -184,3 +184,4 @@ export { KESH_EMOJIS } from "@/game/bounties";
 export { BLOG_WELCOME } from "@/game/blogWelcome";
 export { challengeFromBytes, cleanPasskeyName, clientChallenge, PASSKEY_RULES, PasskeyError, utf8Encode as passkeyUtf8, verifyAssertion, verifyRegistration } from "@/game/webauthn";
 export { CONTESTS_KEY, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
+export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
