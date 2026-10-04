@@ -476,7 +476,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <PlanetOrb size={72} tone={colony.slot === 2 ? "var(--color-violet-glow)" : "var(--color-mint-glow)"} />
         <div className="relative min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px] text-mint-glow">Colonie {colony.slot} · fondée {new Date(colony.foundedAtMs).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</p>
-          <p className="mt-0.5 inline-flex items-center gap-1.5 border px-1.5 py-px text-[11px]" style={{ borderColor: `${biome.tone}66`, color: biome.tone }} title={biome.lore}>
+          <p className="hud-chip hud-chip-sm mt-0.5" style={{ ["--c" as string]: biome.tone }} title={biome.lore}>
             <img src={iconUrl(colonyBiome(colony) as GameIconName)} alt="" className="h-3.5 w-3.5" /> Biome : {biome.name}
           </p>
           {rename === null ? (

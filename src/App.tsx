@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Toaster } from "sonner";
+import { HudToaster } from "@/components/ui/hud-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
@@ -50,6 +50,7 @@ const GazettePage = lazy(() => import("@/pages/GazettePage").then((m) => ({ defa
 const SeasonBossPage = lazy(() => import("@/pages/SeasonBossPage").then((m) => ({ default: m.SeasonBossPage })));
 const BossHallPage = lazy(() => import("@/pages/BossHallPage").then((m) => ({ default: m.BossHallPage })));
 const AlliancePublicPage = lazy(() => import("@/pages/AlliancePublicPage").then((m) => ({ default: m.AlliancePublicPage })));
+const CasinoPage = lazy(() => import("@/pages/CasinoPage").then((m) => ({ default: m.CasinoPage })));
 const ContestsPage = lazy(() => import("@/pages/ContestsPage").then((m) => ({ default: m.ContestsPage })));
 const WarlordsPage = lazy(() => import("@/pages/WarlordsPage").then((m) => ({ default: m.WarlordsPage })));
 const SeasonPassPage = lazy(() => import("@/pages/SeasonPassPage").then((m) => ({ default: m.SeasonPassPage })));
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="boss" element={<SeasonBossPage />} />
                 <Route path="hall-of-fame" element={<BossHallPage />} />
                 <Route path="concours" element={<ContestsPage />} />
+                <Route path="casino" element={<CasinoPage />} />
                 <Route path="gazette" element={<GazettePage />} />
                 <Route path="succes" element={<AchievementsPage />} />
                 <Route path="alliance" element={<AlliancePage />} />
@@ -132,20 +134,7 @@ export default function App() {
         </MaintenanceGate>
       </BrowserRouter>
 
-      <Toaster
-        theme="dark"
-        position="top-right"
-        expand
-        visibleToasts={4}
-        closeButton
-        toastOptions={{
-          style: {
-            background: "rgba(10,14,28,0.92)",
-            border: "1px solid rgba(75,232,255,0.2)",
-            color: "#e7ecff",
-          },
-        }}
-      />
+      <HudToaster />
     </TooltipProvider>
   );
 }

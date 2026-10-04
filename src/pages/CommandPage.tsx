@@ -203,7 +203,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
         <p className="text-xs text-slate-500">Progresse avec :</p>
         <div className="flex flex-wrap gap-1">
           {COMMANDER_SOURCES[def.id].map((src) => (
-            <span key={src.label} className="border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[11px] text-slate-300">
+            <span key={src.label} className="hud-chip hud-chip-sm hud-tone-neutral">
               {src.label} <span className="font-mono" style={{ color: tone }}>+{src.xp}</span>
             </span>
           ))}

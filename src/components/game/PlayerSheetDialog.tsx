@@ -221,7 +221,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                 {feats.kesh && (feats.kesh.rank > 0 || feats.kesh.shieldUntilMs > Date.now()) && (
                   <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gold-glow">
                     {feats.kesh.rank > 0 && <span>Essaim Kesh'Vaar : {rankName(feats.kesh.rank)}</span>}
-                    {feats.kesh.shieldUntilMs > Date.now() && <span className="border border-gold-glow/40 px-1.5 py-px">Voile de chitine actif</span>}
+                    {feats.kesh.shieldUntilMs > Date.now() && <span className="hud-chip hud-chip-sm hud-tone-gold">Voile de chitine actif</span>}
                   </p>
                 )}
               </section>

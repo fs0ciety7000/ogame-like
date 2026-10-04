@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { HUD_TONE, HudChip, type HudTone } from "@/components/ui/hud";
 import { AmberIcon } from "@/components/ui/amber";
 import { RESOURCE_LIST } from "@/game/resources";
 import { cn, formatCompact, timeAgo } from "@/lib/utils";
@@ -29,40 +30,39 @@ import type { GameNotification, NotificationKind, ResourceId } from "@/types/gam
    une couleur par type, les détails (ressources, ambre, XP, relique,
    joueur) en pastilles lisibles. */
 
-const KIND_STYLE: Record<NotificationKind, { icon: LucideIcon; color: string; label: string }> = {
-  building: { icon: Building2, color: "#4be8ff", label: "Chantier" },
-  research: { icon: FlaskConical, color: "#a78bfa", label: "Recherche" },
-  unit: { icon: Rocket, color: "#4be8ff", label: "Chantier spatial" },
-  mission: { icon: Compass, color: "#5cf2b0", label: "Mission" },
-  "combat-attacker": { icon: Swords, color: "#ff8a4c", label: "Combat" },
-  "combat-defender": { icon: Shield, color: "#ff5c7a", label: "Défense" },
-  achievement: { icon: Trophy, color: "#ffd86b", label: "Succès" },
-  "spy-detected": { icon: Radar, color: "#ff5c7a", label: "Sonde détectée" },
-  spy: { icon: Eye, color: "#4be8ff", label: "Espionnage" },
-  debris: { icon: Recycle, color: "#5cf2b0", label: "Recyclage" },
-  season: { icon: Award, color: "#ffd86b", label: "Saison" },
-  alliance: { icon: Users, color: "#a78bfa", label: "Alliance" },
-  event: { icon: Sparkles, color: "#ffd86b", label: "Évènement" },
-  gift: { icon: Gift, color: "#ff5df0", label: "Cadeau" },
-  fleet: { icon: Crosshair, color: "#ff5c7a", label: "Flotte" },
-  report: { icon: Megaphone, color: "#94a3b8", label: "Signalement" },
-  message: { icon: Mail, color: "#4be8ff", label: "Message" },
-  bounty: { icon: Crosshair, color: "#ffb347", label: "Prime" },
-  system: { icon: Bell, color: "#94a3b8", label: "Système" },
+const KIND_STYLE: Record<NotificationKind, { icon: LucideIcon; tone: HudTone; label: string }> = {
+  building: { icon: Building2, tone: "accent", label: "Chantier" },
+  research: { icon: FlaskConical, tone: "violet", label: "Recherche" },
+  unit: { icon: Rocket, tone: "accent", label: "Chantier spatial" },
+  mission: { icon: Compass, tone: "mint", label: "Mission" },
+  "combat-attacker": { icon: Swords, tone: "ember", label: "Combat" },
+  "combat-defender": { icon: Shield, tone: "danger", label: "Défense" },
+  achievement: { icon: Trophy, tone: "gold", label: "Succès" },
+  "spy-detected": { icon: Radar, tone: "danger", label: "Sonde détectée" },
+  spy: { icon: Eye, tone: "accent", label: "Espionnage" },
+  debris: { icon: Recycle, tone: "mint", label: "Recyclage" },
+  season: { icon: Award, tone: "gold", label: "Saison" },
+  alliance: { icon: Users, tone: "violet", label: "Alliance" },
+  event: { icon: Sparkles, tone: "violet", label: "Évènement" },
+  gift: { icon: Gift, tone: "gold", label: "Cadeau" },
+  fleet: { icon: Crosshair, tone: "danger", label: "Flotte" },
+  report: { icon: Megaphone, tone: "neutral", label: "Signalement" },
+  message: { icon: Mail, tone: "accent", label: "Message" },
+  bounty: { icon: Crosshair, tone: "gold", label: "Prime" },
+  system: { icon: Bell, tone: "neutral", label: "Système" },
 };
 
+/** Style d'un type de notification : icône, ton du HUD (couleur du thème) et libellé. */
 export function notificationStyle(kind: NotificationKind) {
-  return KIND_STYLE[kind] ?? KIND_STYLE.system;
+  const s = KIND_STYLE[kind] ?? KIND_STYLE.system;
+  return { ...s, color: HUD_TONE[s.tone] };
 }
 
-function Pill({ children, color }: { children: React.ReactNode; color?: string }) {
+function Pill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: HudTone }) {
   return (
-    <span
-      className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-slate-200"
-      style={color ? { borderColor: `${color}55`, color } : undefined}
-    >
+    <HudChip size="sm" tone={tone} className="normal-case tracking-normal">
       {children}
-    </span>
+    </HudChip>
   );
 }
 
@@ -87,12 +87,12 @@ function Details({ n }: { n: GameNotification }) {
         </Pill>
       ))}
       {!!d.amber && (
-        <Pill color="#ffb347">
+        <Pill tone="gold">
           <AmberIcon className="h-3.5 w-3.5" /> {formatCompact(d.amber)}
         </Pill>
       )}
-      {!!d.xp && <Pill color="#4be8ff">+{formatCompact(d.xp)} XP</Pill>}
-      {d.relic && <Pill color="#a78bfa">✦ {d.relic}</Pill>}
+      {!!d.xp && <Pill tone="accent">+{formatCompact(d.xp)} XP</Pill>}
+      {d.relic && <Pill tone="violet">✦ {d.relic}</Pill>}
     </div>
   );
 }
@@ -130,7 +130,7 @@ export function NotificationCard({
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: s.color, opacity: fresh ? 1 : 0.45 }} />
       <span
         className={cn("grid shrink-0 place-items-center border", compact ? "h-8 w-8" : "h-9 w-9")}
-        style={{ color: s.color, borderColor: `${s.color}55`, background: `${s.color}14` }}
+        style={{ color: s.color, borderColor: `color-mix(in srgb, ${s.color} 33%, transparent)`, background: `color-mix(in srgb, ${s.color} 8%, transparent)` }}
       >
         <Icon className={compact ? "h-4 w-4" : "h-[18px] w-[18px]"} />
       </span>

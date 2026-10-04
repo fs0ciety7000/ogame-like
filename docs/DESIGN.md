@@ -22,7 +22,9 @@ Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait p
 | `violet` | second accent (événements) | événement du week-end, agenda |
 | `neutral` | information sans enjeu | puissance, compteurs |
 
-Ne pas décorer avec une couleur sémantique. Une info ne passe jamais par la couleur seule (texte ou icône en plus).
+Ne pas décorer avec une couleur sémantique. Un même cas garde la même couleur partout :
+un chantier à l'arrêt (bâtiment, labo, chantier naval, missions) est une **action à mener**, donc `accent`,
+sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **attention** (`ember`). Une info ne passe jamais par la couleur seule (texte ou icône en plus).
 
 ## Composants (`src/components/ui/hud.tsx`)
 
@@ -31,6 +33,9 @@ Ne pas décorer avec une couleur sémantique. Une info ne passe jamais par la co
   `asChild` pour un `Link` ou un `button`. `HudTag` = `HudChip` statique en petite taille.
 - **`HudCallout`** (ou classes `hud-callout hud-tone-*`) : encadré dans un panneau (menace, conseil, notice).
   Liseré gauche coloré, coin coupé ; `alert` pour une menace en cours.
+- **`HudToaster`** (`src/components/ui/hud-toast.tsx`) : toasts sonner au style du HUD (coin coupé, liseré et icône
+  de la couleur sémantique, titre en capitales, action en pastille). `toast.success/error/warning` prennent mint / danger /
+  ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind).tone`).
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
 - **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`StatTile`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.

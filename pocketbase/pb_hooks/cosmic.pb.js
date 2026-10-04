@@ -553,6 +553,8 @@ routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic
 routerAdd("POST", "/api/cosmic/admin/broadcast", (e) => require(`${__hooks}/cosmic_db.js`).adminBroadcast(e), $apis.requireAuth("users", "_superusers"));
 
 /** v5.10.5 : concours du pot commun (lancement, classement, prix). */
+routerAdd("POST", "/api/cosmic/casino", (e) => require(`${__hooks}/cosmic_db.js`).casinoRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/admin/casino", (e) => require(`${__hooks}/cosmic_db.js`).adminCasino(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/contests", (e) => require(`${__hooks}/cosmic_db.js`).adminContests(e), $apis.requireAuth("users", "_superusers"));
 cronAdd("cosmic_contests", "*/15 * * * *", () => {
   try {
@@ -564,6 +566,11 @@ cronAdd("cosmic_contests", "*/15 * * * *", () => {
     require(`${__hooks}/cosmic_db.js`).allianceChallengeTick(Date.now());
   } catch (err) {
     console.log(`[cosmic] défi d'alliance : ${err}`);
+  }
+  try {
+    require(`${__hooks}/cosmic_db.js`).casinoTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] casino : ${err}`);
   }
 });
 

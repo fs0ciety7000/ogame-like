@@ -365,6 +365,13 @@
         "name": "testMode",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "casino",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "presentable": false
       }
     ],
     "indexes": [

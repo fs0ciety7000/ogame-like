@@ -143,6 +143,8 @@ export interface PlayerState {
   renamed?: import("@/game/rename").RenameState | null;
   /** v5.3 : série de connexion quotidienne. */
   streak?: import("@/game/streak").StreakState | null;
+  /** v5.12 : Casino orbital (jetons, tours joués, gains). */
+  casino?: import("@/game/casino").PlayerCasino | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;
