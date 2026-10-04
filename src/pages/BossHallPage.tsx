@@ -111,7 +111,7 @@ function FightRow({ e, index, onOpen, uid }: { e: BossHistoryEntry; index: numbe
             </span>
           )}
           {mine && (
-            <span className="border border-cyan-glow/40 bg-cyan-glow/10 px-1.5 py-0.5 font-mono text-[11px] text-cyan-glow" title="Ton rang dans ce combat">
+            <span className="hud-chip hud-chip-sm hud-tone-accent" title="Ton rang dans ce combat">
               Toi : #{mine.rank}
             </span>
           )}

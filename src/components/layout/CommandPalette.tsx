@@ -133,7 +133,7 @@ export function CommandPalette() {
                 }
               }}
             />
-            <kbd className="hud-eyebrow shrink-0 rounded border border-white/10 px-1.5 py-0.5 text-slate-500">
+            <kbd className="hud-eyebrow hud-cut-sm shrink-0 border border-white/10 px-1.5 py-0.5 text-slate-500">
               Esc
             </kbd>
           </div>

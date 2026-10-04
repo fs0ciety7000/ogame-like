@@ -145,8 +145,8 @@ export function WarlordsPage() {
                     <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{w.originLabel}</p>
                     <div className="flex flex-wrap gap-1.5 text-[11px]">
                       <span className={cn("border px-1.5 py-px", PERSONALITY_TONE[w.personality])}>{PERSONALITY_LABELS[w.personality]}</span>
-                      <span className="border border-white/15 px-1.5 py-px text-slate-300">{TIER_LABELS[w.tier]}</span>
-                      <span className="border border-white/15 px-1.5 py-px font-mono text-slate-300">
+                      <span className="hud-chip hud-chip-sm hud-tone-neutral">{TIER_LABELS[w.tier]}</span>
+                      <span className="hud-chip hud-chip-sm hud-tone-neutral">
                         Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />
                       </span>
                     </div>

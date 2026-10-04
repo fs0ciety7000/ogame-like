@@ -59,7 +59,7 @@ export function AnnouncementsPage() {
                     {a.features && a.features.length > 0 && (
                       <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
                         {a.features.map((f) => (
-                          <span key={f.title} className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-slate-300">
+                          <span key={f.title} className="hud-chip hud-chip-sm hud-tone-neutral">
                             {f.title}
                           </span>
                         ))}

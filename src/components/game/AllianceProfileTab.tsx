@@ -176,7 +176,7 @@ export function AllianceProfileTab({ alliance, uid }: { alliance: Alliance; uid:
         {profile.ranks.length === 0 && editing === undefined && <p className="text-xs text-slate-500">Aucun rang pour l'instant.</p>}
         {profile.ranks.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2 border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-            <span className="border px-1.5 py-0.5 font-mono text-[11px] font-bold" style={{ color: r.color, borderColor: `${r.color}66` }}>
+            <span className="hud-chip hud-chip-sm font-bold" style={{ ["--c" as string]: r.color }}>
               {r.name}
             </span>
             <span className="min-w-0 flex-1 text-xs text-slate-400">{r.perms.length ? r.perms.map((p) => ALLIANCE_PERMS.find((x) => x.id === p)?.label).join(" · ") : "Aucun droit (rang honorifique)"}</span>

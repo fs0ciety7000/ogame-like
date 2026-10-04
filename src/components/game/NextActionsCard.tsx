@@ -6,19 +6,22 @@ import { nextActions, type NextActionKind } from "@/game/nextActions";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
 import { cn } from "@/lib/utils";
+import type { HudTone } from "@/components/ui/hud";
 
 /* Accueil (v3.8) : ce qui attend le joueur, en cartes cliquables. */
 
-const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: string }> = {
-  outage: { icon: Zap, tone: "text-danger-glow border-danger-glow/40 bg-danger-glow/[0.07]" },
-  contracts: { icon: Gift, tone: "text-gold-glow border-gold-glow/40 bg-gold-glow/[0.07]" },
-  storage: { icon: Warehouse, tone: "text-ember-glow border-ember-glow/40 bg-ember-glow/[0.07]" },
-  build: { icon: Building2, tone: "text-cyan-glow border-cyan-glow/30 bg-cyan-glow/[0.05]" },
-  research: { icon: FlaskConical, tone: "text-violet-glow border-violet-glow/30 bg-violet-glow/[0.05]" },
-  mission: { icon: MapPin, tone: "text-mint-glow border-mint-glow/30 bg-mint-glow/[0.05]" },
-  units: { icon: Rocket, tone: "text-cyan-glow border-cyan-glow/25 bg-cyan-glow/[0.04]" },
-  fleet: { icon: AlertTriangle, tone: "text-slate-300 border-white/15 bg-white/[0.03]" },
-  bounty: { icon: Crosshair, tone: "text-gold-glow border-gold-glow/35 bg-gold-glow/[0.06]" },
+/* Couleur = sens (docs/DESIGN.md) : danger (panne), attention (entrepôt),
+   récompense (contrats, primes), action à mener (chantier à l'arrêt), neutre. */
+const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: HudTone }> = {
+  outage: { icon: Zap, tone: "danger" },
+  contracts: { icon: Gift, tone: "gold" },
+  storage: { icon: Warehouse, tone: "ember" },
+  build: { icon: Building2, tone: "accent" },
+  research: { icon: FlaskConical, tone: "accent" },
+  mission: { icon: MapPin, tone: "accent" },
+  units: { icon: Rocket, tone: "accent" },
+  fleet: { icon: AlertTriangle, tone: "neutral" },
+  bounty: { icon: Crosshair, tone: "gold" },
 };
 
 export function NextActionsCard({ max = 4 }: { max?: number }) {
@@ -38,14 +41,14 @@ export function NextActionsCard({ max = 4 }: { max?: number }) {
           const body = (
             <>
               <span className="flex items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-4 w-4 shrink-0 text-[var(--c)]" />
                 <span className="font-semibold text-white">{a.title}</span>
                 <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
               </span>
               <span className="mt-1 block text-xs text-slate-400">{a.text}</span>
             </>
           );
-          const cls = cn("group block h-full border p-3 text-sm transition-colors hover:brightness-125", tone);
+          const cls = cn("hud-callout group block h-full p-3 text-sm transition-colors hover:brightness-125", `hud-tone-${tone}`);
           return (
             <motion.div key={a.kind} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.05 }}>
               {a.to.startsWith("#") ? (

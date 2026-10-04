@@ -22,7 +22,9 @@ Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait p
 | `violet` | second accent (événements) | événement du week-end, agenda |
 | `neutral` | information sans enjeu | puissance, compteurs |
 
-Ne pas décorer avec une couleur sémantique. Une info ne passe jamais par la couleur seule (texte ou icône en plus).
+Ne pas décorer avec une couleur sémantique. Un même cas garde la même couleur partout :
+un chantier à l'arrêt (bâtiment, labo, chantier naval, missions) est une **action à mener**, donc `accent`,
+sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **attention** (`ember`). Une info ne passe jamais par la couleur seule (texte ou icône en plus).
 
 ## Composants (`src/components/ui/hud.tsx`)
 

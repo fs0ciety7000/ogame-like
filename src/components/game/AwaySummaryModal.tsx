@@ -43,7 +43,7 @@ export function AwaySummaryModal() {
               <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Production accumulée</h4>
               <div className="flex flex-wrap gap-2">
                 {RESOURCE_LIST.filter((r) => (current.resourceGains[r.id as ResourceId] ?? 0) > 0).map((r) => (
-                  <span key={r.id} className="rounded bg-space-800 px-2 py-1 text-sm text-mint-glow">
+                  <span key={r.id} className="hud-chip hud-chip-sm hud-tone-mint">
                     <ResourceIcon id={r.id} /> +{formatNumber(current.resourceGains[r.id as ResourceId] ?? 0)}
                   </span>
                 ))}
