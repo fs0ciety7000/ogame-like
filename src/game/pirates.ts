@@ -7,7 +7,7 @@ import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent, getStorageCapacity } from "@/game/buildings";
 import { bumpStat, recordThreat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, homeDefensePower, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { computeFullPower, getShieldPercent, homeDefensePower, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
@@ -670,7 +670,8 @@ export function resolvePirateRaid(
     homeFleetFactor: posture.homeFleetFactor,
     defenseFactor: posture.defenseFactor,
     // v4.0 : Stratège et reliques (les capsules ne jouent pas contre les PNJ).
-    defenderPowerFactor: 1 + playerModifiers(player).defense,
+    // v5.9 : Traqueurs Kesh à quai, +50 % d'attaque contre les PNJ.
+    defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, player.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor),
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);

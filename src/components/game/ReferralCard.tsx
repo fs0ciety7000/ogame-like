@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { Check, Copy, Gift, Mail, UserPlus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -64,8 +65,8 @@ export function ReferralCard({ player }: { player: PlayerState }) {
       </h3>
       <p className="text-sm text-slate-400">
         Invite un ami avec ton lien. Quand il atteint <strong className="text-slate-200">Bronze I</strong>, tu reçois{" "}
-        <strong className="text-gold-glow">{REFERRAL_RULES.amberSponsor} Ambre</strong> et la bannière « Recruteur », lui{" "}
-        <strong className="text-gold-glow">{REFERRAL_RULES.amberRecruit} Ambre</strong>. {REFERRAL_RULES.perMonth} filleuls récompensés par mois au plus.
+        <strong className="text-gold-glow"><AmberAmount value={REFERRAL_RULES.amberSponsor} /></strong> et la bannière « Recruteur », lui{" "}
+        <strong className="text-gold-glow"><AmberAmount value={REFERRAL_RULES.amberRecruit} /></strong>. {REFERRAL_RULES.perMonth} filleuls récompensés par mois au plus.
       </p>
       <div className="flex gap-2">
         <Input readOnly value={link} className="font-mono text-xs" onFocus={(e) => e.target.select()} />

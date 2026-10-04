@@ -19,8 +19,8 @@ import {
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
 import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
-import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechCost, getTechTime } from "@/game/technologies";
-import { findUnit, getUnitBuildTime } from "@/game/units";
+import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
+import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
 import { claimContract, recordContract, rerollContract } from "@/game/contracts";
@@ -235,14 +235,22 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!tech) throw new GameActionError("Technologie inconnue.");
       const nextLevel = (player.techLevels[tech.id] ?? 0) + 1;
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-      if (!checkPrereqs(tech, player.techLevels).valid) throw new GameActionError("Prérequis non remplis.");
+      if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Prérequis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est déjà en cours de recherche.");
       if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
         throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
       }
       const paid = getTechCost(tech, nextLevel);
+      // v5.9 : certaines technos coûtent aussi de l'ambre (vérifié avant de payer les ressources).
+      const amber = getTechAmberCost(tech);
+      const bounty = amber > 0 ? bountyState(player) : null;
+      if (bounty && bounty.amber < amber) throw new GameActionError(`Pas assez d'ambre (${amber} requis).`);
       pay(player, paid, now);
-      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid });
+      if (bounty) {
+        bounty.amber -= amber;
+        player.bounties = bounty;
+      }
+      queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid, ...(amber > 0 ? { paidAmber: amber } : {}) });
       bumpStat(player, "researchStarted");
       recordContract(player, "research", 1, now);
       const hour = parisHour(now);

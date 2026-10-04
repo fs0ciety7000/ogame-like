@@ -457,7 +457,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ramène aussitôt une flotte en vol à la base, avec sa cargaison. 3 en réserve au plus." },
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le lève." },
   { id: "dossier", name: "Dossier d'entraînement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, même hors poste (page Commandants)." },
-  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre les PNJ." },
+  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)." },
   { id: "title", name: "Titre « Chasseur de l'Essaim »", price: 120, group: "cosmetic", description: "Un titre à afficher à côté de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambré autour de ta fiche publique." },
   { id: "emblem", name: "Emblème de l'Essaim", price: 150, group: "cosmetic", description: "L'emblème kesh'vaar sur ta fiche publique." },

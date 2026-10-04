@@ -174,15 +174,16 @@ const LaneNode = memo(function LaneNode({ data, width, height }: NodeProps<LaneF
 
 const NODE_TYPES = { tech: TechNode, lane: LaneNode };
 
-function techStatus(tech: TechDef, levels: Record<string, number>, activeIds: Set<string>): TechStatus {
+function techStatus(tech: TechDef, levels: Record<string, number>, activeIds: Set<string>, ownedPlans: readonly string[]): TechStatus {
   const level = levels[tech.id] ?? 0;
   if (level >= tech.maxLevel) return "maxed";
   if (activeIds.has(tech.id)) return "active";
-  return checkPrereqs(tech, levels).valid ? "available" : "locked";
+  return checkPrereqs(tech, levels, ownedPlans).valid ? "available" : "locked";
 }
 
 export function TechTree({
   levels,
+  ownedPlans = [],
   selectedId,
   activeIds,
   onSelect,
@@ -190,6 +191,8 @@ export function TechTree({
   onToggleFullscreen,
 }: {
   levels: Record<string, number>;
+  /** v5.9 : unités dont le joueur possède le plan (prérequis de certaines technos). */
+  ownedPlans?: readonly string[];
   selectedId: string;
   activeIds: Set<string>;
   onSelect: (id: string) => void;
@@ -199,6 +202,7 @@ export function TechTree({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const focusId = hoveredId ?? selectedId;
   const activeKey = [...activeIds].sort().join(",");
+  const plansKey = [...ownedPlans].sort().join(",");
 
   const { nodes, edges } = useMemo(() => {
     const ancestors = techAncestors(focusId);
@@ -236,7 +240,7 @@ export function TechTree({
         data: {
           tech,
           level: levels[tech.id] ?? 0,
-          status: techStatus(tech, levels, activeIds),
+          status: techStatus(tech, levels, activeIds, ownedPlans),
           selected: tech.id === selectedId,
           emphasis,
         },
@@ -277,9 +281,9 @@ export function TechTree({
     }
 
     return { nodes: [...laneNodes, ...techNodes] as Node[], edges: flowEdges };
-    // activeKey remplace activeIds (nouvel objet Set à chaque rendu du parent).
+    // activeKey et plansKey remplacent activeIds et ownedPlans (nouveaux objets à chaque rendu du parent).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId, selectedId, levels, activeKey]);
+  }, [focusId, selectedId, levels, activeKey, plansKey]);
 
   return (
     <div className={cn("flex flex-col gap-2", fullscreen && "min-h-0 flex-1")}>

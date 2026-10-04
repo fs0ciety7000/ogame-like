@@ -49,6 +49,8 @@ export interface ActiveResearch {
   /** v4.7 : départ et coût payé (annulation au prorata). */
   startedAtMs?: number;
   paid?: Partial<Record<ResourceId, number>>;
+  /** v5.9 : ambre payé (remboursé au prorata à l'annulation). */
+  paidAmber?: number;
 }
 
 export interface ActiveMission {

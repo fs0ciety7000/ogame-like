@@ -1,4 +1,5 @@
 import { playerResearchTimeFactor } from "@/game/bonuses";
+import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,16 +10,17 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
-import { cn, formatDuration } from "@/lib/utils";
+import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
+import { cn, formatDuration, formatNumber } from "@/lib/utils";
+import { bountyState } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
 import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
-import { LevelTicks } from "@/components/ui/hud";
+import { CostPill, LevelTicks } from "@/components/ui/hud";
 import { useProductionRates } from "@/hooks/useLiveResources";
 import type { ResourceId } from "@/types/game";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
-import { findUnit } from "@/game/units";
+import { findUnit, ownedBlueprints } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 
 export function LabPage() {
@@ -49,7 +51,11 @@ export function LabPage() {
 
   const now = Date.now();
   const levels = player.techLevels;
+  const plans = ownedBlueprints(player);
   const selected = findTech(selectedId)!;
+  // v5.9 : ambre demandé par niveau (en plus des ressources).
+  const amberCost = selected ? getTechAmberCost(selected) : 0;
+  const amberLack = amberCost - bountyState(player).amber;
   const activeEntry = queues.activeResearches.find((r) => r.id === selectedId);
   const currentLevel = levels[selectedId] ?? 0;
 
@@ -87,6 +93,7 @@ export function LabPage() {
           // Remonté à chaque bascule pour recadrer l'arbre (fitView) sur la nouvelle taille.
           key={fullscreen ? "full" : "inline"}
           levels={levels}
+          ownedPlans={plans}
           selectedId={selectedId}
           activeIds={new Set(queues.activeResearches.map((r) => r.id))}
           onSelect={setSelectedId}
@@ -143,17 +150,25 @@ export function LabPage() {
                   stock={player.resources}
                   seconds={Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now()))}
                 />
+                {amberCost > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <CostPill ok={amberLack <= 0} missing={amberLack > 0 ? `manque ${formatNumber(amberLack)}` : undefined}>
+                      <AmberAmount value={amberCost} />
+                    </CostPill>
+                  </div>
+                )}
               </div>
 
               {(() => {
-                const check = checkPrereqs(selected, levels);
+                const check = checkPrereqs(selected, levels, plans);
                 if (check.list.length > 0) {
                   return (
                     <div className="mt-3 rounded-lg border-l-2 border-cyan-glow/40 bg-black/20 p-3 text-xs">
                       <p className="mb-1 font-semibold uppercase tracking-wide text-cyan-glow">Prérequis</p>
                       {check.list.map((r) => (
                         <p key={r.id} className={r.valide ? "text-mint-glow" : "text-danger-glow"}>
-                          {r.valide ? "✅" : "❌"} {r.nom} (Niv. {r.actuel} / {r.requis})
+                          {r.valide ? "✅" : "❌"} {r.nom}{" "}
+                          {r.kind === "plan" ? (r.valide ? "(acquis)" : "(à acheter au Comptoir Kesh'Vaar)") : `(Niv. ${r.actuel} / ${r.requis})`}
                         </p>
                       ))}
                     </div>
@@ -163,12 +178,12 @@ export function LabPage() {
               })()}
 
               {(() => {
-                const prereqOk = checkPrereqs(selected, levels).valid;
+                const prereqOk = checkPrereqs(selected, levels, plans).valid;
                 const queueFull = queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH && !activeEntry;
                 const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
                 return (
                   <>
-                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0} onClick={() => void handleLaunch()}>
+                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0 || amberLack > 0} onClick={() => void handleLaunch()}>
                       {queueFull ? "File de recherche pleine" : "Lancer la recherche"}
                     </Button>
                     {!prereqOk ? (
@@ -177,6 +192,8 @@ export function LabPage() {
                       <BlockedReason tone="block">
                         {MAX_CONCURRENT_RESEARCH} recherches en cours au plus : attends la fin de l'une d'elles.
                       </BlockedReason>
+                    ) : amberLack > 0 ? (
+                      <BlockedReason tone="block">Il te manque <AmberAmount value={amberLack} /> : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>
                     ) : wait > 0 ? (
                       <BlockedReason>{affordText(wait)}</BlockedReason>
                     ) : null}

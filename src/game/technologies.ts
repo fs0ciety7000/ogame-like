@@ -49,6 +49,8 @@ export interface TechDef {
   /** Ancien format : un seul effet. */
   effect?: TechEffect;
   costGrowth?: number;
+  /** v5.9 : ambre (monnaie des Kesh'Vaar) demandé à chaque niveau, en plus des ressources. */
+  amberCost?: number;
   prereq: Record<string, number>;
   /** Valeur de l'effet historique par niveau ; défaut dans TECH_EFFECT_DEFAULTS. */
   effectValue?: number;
@@ -211,29 +213,45 @@ export function getTechCost(tech: TechDef, level: number): Record<string, number
   return cost;
 }
 
+/** v5.9 : ambre payé pour un niveau (montant fixe, identique à chaque niveau). */
+export function getTechAmberCost(tech: Pick<TechDef, "amberCost">): number {
+  const n = Number(tech.amberCost);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 export function getTechTime(tech: TechDef, level: number): number {
   return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
 }
 
 export interface PrereqCheck {
   valid: boolean;
-  list: { id: string; nom: string; requis: number; actuel: number; valide: boolean }[];
+  /** `kind: "plan"` : plan d'unité à posséder (pas de niveau). */
+  list: { id: string; nom: string; requis: number; actuel: number; valide: boolean; kind?: "tech" | "plan" }[];
 }
 
-export function checkPrereqs(tech: TechDef, levels: Record<string, number>): PrereqCheck {
-  const entries = Object.entries(tech.prereq);
-  if (entries.length === 0) return { valid: true, list: [] };
+/** v5.9 : unités débloquées par un plan (Comptoir Kesh'Vaar), id → nom.
+ *  Rempli par setUnits (units.ts importe déjà ce module). */
+export const BLUEPRINT_UNITS = new Map<string, string>();
 
-  let allValid = true;
-  const list = entries.map(([reqId, reqLevel]) => {
+/** Unités à plan qu'une techno débloque : il faut posséder le plan pour la rechercher. */
+export function blueprintsRequiredBy(tech: TechDef): string[] {
+  return techEffects(tech)
+    .filter((e) => e.type === "unlock_next_level" && e.target && BLUEPRINT_UNITS.has(e.target))
+    .map((e) => e.target!);
+}
+
+/** Prérequis d'une techno : niveaux d'autres technos et, v5.9, plans d'unités
+ *  possédés (`ownedPlans` : ids des unités dont le joueur a le plan). */
+export function checkPrereqs(tech: TechDef, levels: Record<string, number>, ownedPlans: readonly string[] = []): PrereqCheck {
+  const list: PrereqCheck["list"] = Object.entries(tech.prereq).map(([reqId, reqLevel]) => {
     const current = levels[reqId] ?? 0;
-    const valide = current >= reqLevel;
-    if (!valide) allValid = false;
-    const reqTech = findTech(reqId);
-    return { id: reqId, nom: reqTech?.nom ?? reqId, requis: reqLevel, actuel: current, valide };
+    return { id: reqId, nom: findTech(reqId)?.nom ?? reqId, requis: reqLevel, actuel: current, valide: current >= reqLevel, kind: "tech" };
   });
-
-  return { valid: allValid, list };
+  for (const unitId of blueprintsRequiredBy(tech)) {
+    const owned = ownedPlans.includes(unitId);
+    list.push({ id: `plan:${unitId}`, nom: `Plan : ${BLUEPRINT_UNITS.get(unitId)}`, requis: 1, actuel: owned ? 1 : 0, valide: owned, kind: "plan" });
+  }
+  return { valid: list.every((r) => r.valide), list };
 }
 
 /** Bornes de la valeur par niveau, par type d'effet chiffré. */
