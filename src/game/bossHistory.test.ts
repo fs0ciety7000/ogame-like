@@ -75,4 +75,26 @@ describe("inferKilledBy (v5.10.2)", () => {
     expect(inferKilledBy(st({ killedBy: { uid: "a", pseudo: "Alpha" } }))).toEqual({ uid: "a", pseudo: "Alpha" });
     expect(inferKilledBy(st({ status: "failed", hp: 10 }))).toBeNull();
   });
+
+  it("Léviathan d'octobre 2026 (abattu avant la 5.10) : Nicotine porte le coup de grâce", () => {
+    const c = (pseudo: string, damage: number, lastLaunchMs: number) => ({ pseudo, damage, assaults: 1, lastLaunchMs });
+    const real = base({
+      id: "lev-1790956800000",
+      startMs: 1790956800000,
+      endMs: 1791216000000,
+      endedAtMs: 1791074988649,
+      killedBy: undefined,
+      contributions: {
+        "20psztaknee31um": c("Vince", 11750363, 1791060848437),
+        "5gfztcdlokpzshg": c("GPTIPU-1", 3879221, 1791074451743),
+        dkn2paqrn1mou9u: c("Nicotine", 18074374, 1791073186263),
+        oc4ubj4gnbpbls8: c("Tartiflex", 10894210, 1791054048471),
+        pde70zka50fijsi: c("Vito", 7361343, 1791065913919),
+        q7cfp2o82wclp8l: c("ChupaChups", 5076670, 1791059215598),
+        son23jjxe0co5pj: c("Tomdindon", 24733205, 1791060643799),
+      },
+    });
+    // GPTIPU-1 a lancé 9 min avant la chute : arrivé trop tard, ce n'est pas lui.
+    expect(inferKilledBy(real)).toEqual({ uid: "dkn2paqrn1mou9u", pseudo: "Nicotine" });
+  });
 });
