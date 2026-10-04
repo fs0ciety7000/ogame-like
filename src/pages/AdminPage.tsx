@@ -24,6 +24,7 @@ import {
   Wrench,
   type LucideIcon,
   Megaphone,
+  CalendarRange,
   Smile,
   Mail,
   Crown,
@@ -42,6 +43,7 @@ import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
+import { PlannerPanel } from "@/pages/admin/PlannerPanel";
 import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
@@ -79,6 +81,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "stats", label: "Statistiques", icon: BarChart3, hint: "Activité, progression et pistes d'équilibrage." },
       { id: "balance", label: "Équilibrage", icon: Scale, hint: "Diagnostic du contenu et des joueurs réels, propositions chiffrées et bac à sable d'unité." },
       { id: "maintenance", label: "Maintenance", icon: Construction, hint: "Fermer le jeu aux joueurs le temps d'une mise à jour." },
+      { id: "planner", label: "Planificateur", icon: CalendarRange, hint: "Calendrier des boss, week-ends, Chroniques, concours et fin de saison ; dates précises déplaçables." },
       { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site et annonces plein écran : création et programmation." },
       { id: "simulator", label: "Simulateur", icon: Calculator, hint: "Bac à sable de combat pour vérifier l'équilibrage." },
       { id: "logs", label: "Journal", icon: ScrollText, hint: "Toutes les modifications faites par les administrateurs." },
@@ -305,6 +308,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="procedural">
           <ProceduralPanel />
+        </TabsContent>
+        <TabsContent value="planner">
+          <PlannerPanel />
         </TabsContent>
         <TabsContent value="serverpot" className="flex flex-col gap-4">
           <ContestsAdmin />

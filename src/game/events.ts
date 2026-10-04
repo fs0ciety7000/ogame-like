@@ -333,6 +333,18 @@ export function currentOrNextEvent(now: number): GameEvent | null {
   return candidates.sort((a, b) => a.startMs - b.startMs)[0] ?? null;
 }
 
+/** v5.10.5 : événements du week-end (rotation et programmés) qui commencent ou durent dans l'intervalle. */
+export function weekendEventsBetween(from: number, to: number): GameEvent[] {
+  const out = scheduledEvents().filter((e) => e.endMs > from && e.startMs < to);
+  for (let w = -1; w < 60; w++) {
+    const win = weekendWindow(from, w);
+    if (win.startMs >= to) break;
+    const r = rotationEvent(win);
+    if (r && r.endMs > from && !out.some((e) => e.startMs < r.endMs && e.endMs > r.startMs)) out.push(r);
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
+}
+
 /** Instants de (fin, début) d'événements entre from et to, triés. */
 export function eventBoundaries(from: number, to: number): number[] {
   const points = new Set<number>();
