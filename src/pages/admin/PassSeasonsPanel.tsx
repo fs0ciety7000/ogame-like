@@ -17,6 +17,7 @@ import { saveContentSection, useContentStore } from "@/services/contentService";
 import { RewardEditor } from "@/pages/admin/PassPanel";
 import { Field, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
+import { MonthCheckCard, PassDurationCard } from "@/pages/admin/PassToolsCards";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* =====================================================
@@ -155,6 +156,8 @@ export function PassSeasonsPanel() {
 
       <CatalogOverview current={current} />
 
+      <MonthCheckCard />
+
       {([
         ["À venir", upcoming, "Brouillons et passes publiés des mois suivants."],
         ["Terminés", past, "Mois passés : en lecture, pour mémoire."],
@@ -177,6 +180,8 @@ export function PassSeasonsPanel() {
         ),
       )}
       {seasons.length === 0 && <p className="text-sm text-slate-500">Aucun passe de saison pour l'instant.</p>}
+
+      <PassDurationCard season={draft} />
 
       {draft && (
         <div className="flex flex-col gap-4">

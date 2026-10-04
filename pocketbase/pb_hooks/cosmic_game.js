@@ -5917,10 +5917,28 @@ function passTierReqs(seasonId, tier) {
   var _a;
   return normalizeTierReqs((_a = activePass(seasonId).requirements) == null ? void 0 : _a[String(tier)]);
 }
+function isCumulativePass(seasonId) {
+  return activePass(seasonId).challengeMode === "cumulative";
+}
+function cumulativeCleared(st) {
+  const out = /* @__PURE__ */ new Set();
+  const n = activePass(st.seasonId).tiers.length;
+  for (let t = 1; t <= n; t++) {
+    const reqs = passTierReqs(st.seasonId, t);
+    if (reqs.length === 0) continue;
+    if (!reqs.every((r) => {
+      var _a, _b;
+      return ((_b = (_a = st.activity) == null ? void 0 : _a[r.key]) != null ? _b : 0) >= r.count;
+    })) break;
+    out.add(t);
+  }
+  return out;
+}
 function activeChallengeTier(st) {
   var _a;
   const n = activePass(st.seasonId).tiers.length;
-  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !((_a = st.cleared) != null ? _a : []).includes(t)) return t;
+  const cleared = isCumulativePass(st.seasonId) ? cumulativeCleared(st) : new Set((_a = st.cleared) != null ? _a : []);
+  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !cleared.has(t)) return t;
   return 0;
 }
 function tierRequirements(player, tier, now) {
@@ -5928,6 +5946,15 @@ function tierRequirements(player, tier, now) {
   const st = passState(player, now);
   const reqs = passTierReqs(st.seasonId, tier);
   if (reqs.length === 0) return null;
+  if (isCumulativePass(st.seasonId)) {
+    const status2 = cumulativeCleared(st).has(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
+    const rows2 = reqs.map((r) => {
+      var _a2, _b;
+      const done = Math.min(r.count, (_b = (_a2 = st.activity) == null ? void 0 : _a2[r.key]) != null ? _b : 0);
+      return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
+    });
+    return { status: status2, met: status2 === "cleared", reqs: rows2 };
+  }
   const status = ((_a = st.cleared) != null ? _a : []).includes(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
   const rows = reqs.map((r) => {
     var _a2, _b;
@@ -5949,6 +5976,10 @@ function trackActivity(player, key, now, times = 1) {
   if (!(times > 0)) return;
   const st = passState(player, now);
   st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
+  if (isCumulativePass(st.seasonId)) {
+    player.seasonPass = st;
+    return;
+  }
   const t = activeChallengeTier(st);
   const reqs = t ? passTierReqs(st.seasonId, t) : [];
   const req = reqs.find((r) => r.key === key);
@@ -12702,6 +12733,58 @@ function generateTierChallenges(rng, focus, d, tiers2) {
   });
   return out;
 }
+var PASS_TARGET_DAY = 26;
+function weeklyRate(key, d) {
+  var _a, _b;
+  const base = (_a = BASE_COUNTS[key]) != null ? _a : 3;
+  const weekly = (_b = d.weeklyMedian[key]) != null ? _b : 0;
+  return weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
+}
+function tierTargetDays(tiers2) {
+  const w = Array.from({ length: tiers2 }, (_, i) => challengeRamp(i + 1, tiers2));
+  const total2 = w.reduce((a, b) => a + b, 0);
+  let acc = 0;
+  return w.map((x) => (acc += x, PASS_TARGET_DAY * acc / total2));
+}
+function generateCumulativeChallenges(rng, focus, d, tiers2) {
+  const playable = CHALLENGE_KEYS.filter((k) => {
+    var _a;
+    return k !== "warlordWin" || ((_a = d.weeklyMedian.warlordWin) != null ? _a : 0) > 0;
+  });
+  const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
+  const day = tierTargetDays(tiers2);
+  const by = (k, t) => weeklyRate(k, d) / 7 * day[t - 1];
+  const used = {};
+  const last = {};
+  const seen = /* @__PURE__ */ new Set();
+  const out = {};
+  let prev = [];
+  for (let t = 1; t <= tiers2; t++) {
+    const free = pool.filter((k) => !prev.includes(k));
+    const feasible = free.filter((k) => by(k, t) >= 1);
+    const extra = free.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
+    const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
+    const keys = candidates.map((k) => {
+      var _a;
+      return { k, w: ((_a = used[k]) != null ? _a : 0) * 10 + pool.indexOf(k) + rng() * 3 };
+    }).sort((a, b) => a.w - b.w).slice(0, challengeSize(t)).map((x) => x.k);
+    keys.forEach((k) => {
+      var _a;
+      return used[k] = ((_a = used[k]) != null ? _a : 0) + 1;
+    });
+    const reqs = keys.map((key) => {
+      var _a;
+      return { key, count: Math.max(1, Math.round(by(key, t)), (_a = last[key]) != null ? _a : 0) };
+    });
+    const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
+    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    seen.add(sig());
+    reqs.forEach((r) => last[r.key] = r.count);
+    out[String(t)] = reqs;
+    prev = keys;
+  }
+  return out;
+}
 function defaultPassSeasonsConfig() {
   return { seasons: [] };
 }
@@ -12913,7 +12996,8 @@ function regenerateChallenges(season, digest, variant = 0) {
   const theme = (_b = (_a = PASS_THEMES.find((t) => t.id === season.theme.id)) != null ? _a : PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme)) != null ? _b : PASS_THEMES[0];
   const rng = seededRandom2(`challenges:${season.id}:${variant}`);
   const focus = shuffle(rng, theme.focus);
-  return __spreadProps(__spreadValues({}, season), { requirements: generateTierChallenges(rng, focus, digest, season.tiers.length) });
+  const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
+  return __spreadProps(__spreadValues({}, season), { requirements: gen(rng, focus, digest, season.tiers.length) });
 }
 function generatePassSeason(o) {
   var _a, _b, _c;
@@ -12943,14 +13027,14 @@ function generatePassSeason(o) {
   tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
   const reasons = [...g.reasons, `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
-  const requirements = generateTierChallenges(rng, focus, o.digest, tiers2.length);
+  const requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers2.length);
   const totals = {};
   Object.values(requirements).forEach((list) => list.forEach((r) => {
     var _a2;
     return totals[r.key] = ((_a2 = totals[r.key]) != null ? _a2 : 0) + r.count;
   }));
   reasons.push(
-    `D\xE9fis : un mois d'activit\xE9 m\xE9diane par action (\xD7${PASS_MONTH_EFFORT}), un palier \xE0 la fois. Total : ${Object.entries(totals).map(([k, n]) => {
+    `D\xE9fis cumul\xE9s (totaux du mois, paliers dans l'ordre) : le joueur m\xE9dian rel\xE8ve le dernier vers le jour ${PASS_TARGET_DAY}. Sommes des seuils : ${Object.entries(totals).map(([k, n]) => {
       var _a2;
       return `${OBJECTIVE_LABELS[k].toLowerCase()} ${n} (m\xE9diane ${(_a2 = o.digest.weeklyMedian[k]) != null ? _a2 : 0} par semaine)`;
     }).join(", ")}.`
@@ -12972,6 +13056,7 @@ function generatePassSeason(o) {
     pointsPerTier: g.pass.pointsPerTier,
     tiers: tiers2,
     requirements,
+    challengeMode: "cumulative",
     commander,
     auto: { generatedAtMs: o.now, variant, reasons }
   };
@@ -13018,7 +13103,12 @@ function setPassSeasons(cfg) {
   var _a, _b;
   const published = ((_a = cfg == null ? void 0 : cfg.seasons) != null ? _a : []).filter((s) => s && s.status === "published" && MONTH.test(s.id) && s.pointsPerTier >= 1 && Array.isArray(s.tiers) && s.tiers.length > 0);
   const passes = /* @__PURE__ */ new Map();
-  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: Object.fromEntries(Object.entries((_b = s.requirements) != null ? _b : {}).map(([t, r]) => [t, normalizeTierReqs(r)])) });
+  for (const s of published)
+    passes.set(s.id, __spreadValues({
+      pointsPerTier: s.pointsPerTier,
+      tiers: s.tiers,
+      requirements: Object.fromEntries(Object.entries((_b = s.requirements) != null ? _b : {}).map(([t, r]) => [t, normalizeTierReqs(r)]))
+    }, s.challengeMode === "cumulative" ? { challengeMode: "cumulative" } : {}));
   setPassSeasonOverrides(passes);
   setSeasonCommanders(published.filter((s) => s.commander).map((s) => s.commander));
   PUBLISHED.splice(0, PUBLISHED.length, ...published);

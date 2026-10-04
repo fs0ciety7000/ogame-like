@@ -107,6 +107,63 @@ export function generateTierChallenges(rng: () => number, focus: ChronicleObject
   return out;
 }
 
+/** 5.15.4 : jour du mois où le joueur médian doit avoir relevé le dernier défi (mode cumulé). */
+export const PASS_TARGET_DAY = 26;
+
+/** Rythme de référence d'une action, par semaine : médiane du serveur (bornée), base sinon. */
+export function weeklyRate(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">): number {
+  const base = BASE_COUNTS[key] ?? 3;
+  const weekly = d.weeklyMedian[key] ?? 0;
+  return weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
+}
+
+/** Jour cible de chaque palier (cumul de la difficulté, dernier palier : PASS_TARGET_DAY). */
+export function tierTargetDays(tiers: number): number[] {
+  const w = Array.from({ length: tiers }, (_, i) => challengeRamp(i + 1, tiers));
+  const total = w.reduce((a, b) => a + b, 0);
+  let acc = 0;
+  return w.map((x) => ((acc += x), (PASS_TARGET_DAY * acc) / total));
+}
+
+/** 5.15.4 : défis CUMULÉS. Un palier demande un total d'actions depuis le début du mois
+ *  (« 12 victoires ce mois-ci ») : une action compte pour tous les paliers, rien n'est
+ *  perdu, et les paliers se débloquent toujours dans l'ordre. Quantités : ce que le
+ *  joueur médian a fait au jour cible du palier ; une action trop rare n'apparaît que
+ *  lorsqu'elle est atteignable. Toujours une ou plusieurs actions par palier, jamais
+ *  celles du palier précédent, jamais deux fois le même défi. */
+export function generateCumulativeChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
+  const playable = CHALLENGE_KEYS.filter((k) => k !== "warlordWin" || (d.weeklyMedian.warlordWin ?? 0) > 0);
+  const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
+  const day = tierTargetDays(tiers);
+  const by = (k: ChronicleObjective, t: number) => (weeklyRate(k, d) / 7) * day[t - 1];
+  const used: Record<string, number> = {};
+  const last: Record<string, number> = {};
+  const seen = new Set<string>();
+  const out: Record<string, PassRequirement[]> = {};
+  let prev: ChronicleObjective[] = [];
+  for (let t = 1; t <= tiers; t++) {
+    const free = pool.filter((k) => !prev.includes(k));
+    const feasible = free.filter((k) => by(k, t) >= 1);
+    const extra = free.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
+    const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
+    const keys = candidates
+      .map((k) => ({ k, w: (used[k] ?? 0) * 10 + pool.indexOf(k) + rng() * 3 }))
+      .sort((a, b) => a.w - b.w)
+      .slice(0, challengeSize(t))
+      .map((x) => x.k);
+    keys.forEach((k) => (used[k] = (used[k] ?? 0) + 1));
+    // Total du mois : jamais moins qu'au précédent passage de l'action.
+    const reqs = keys.map((key) => ({ key, count: Math.max(1, Math.round(by(key, t)), last[key] ?? 0) }));
+    const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
+    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    seen.add(sig());
+    reqs.forEach((r) => (last[r.key] = r.count));
+    out[String(t)] = reqs;
+    prev = keys;
+  }
+  return out;
+}
+
 export type PassSeasonStatus = "draft" | "published";
 
 export interface PassMilestone {
@@ -126,6 +183,9 @@ export interface PassSeason {
   tiers: PassReward[][];
   /** Prérequis par palier (clé : numéro de palier) ; v5.14.1 : plusieurs par palier. */
   requirements: Record<string, PassRequirement[]>;
+  /** 5.15.4 : « cumulative » : totaux du mois (passes générés à partir de la 5.15.4) ;
+   *  absent : un palier à la fois, compteur remis à zéro (passes plus anciens). */
+  challengeMode?: "cumulative";
   commander: SeasonCommanderDef & { prompt: string };
   auto?: { generatedAtMs: number; variant: number; reasons: string[] };
   publishedAtMs?: number;
@@ -365,7 +425,8 @@ export function regenerateChallenges(season: PassSeason, digest: Pick<WorldDiges
   const theme = PASS_THEMES.find((t) => t.id === season.theme.id) ?? PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme) ?? PASS_THEMES[0];
   const rng = seededRandom(`challenges:${season.id}:${variant}`);
   const focus = shuffle(rng, theme.focus);
-  return { ...season, requirements: generateTierChallenges(rng, focus, digest, season.tiers.length) };
+  const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
+  return { ...season, requirements: gen(rng, focus, digest, season.tiers.length) };
 }
 
 export interface GeneratePassSeasonOptions {
@@ -411,11 +472,11 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   tiers[tiers.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
   const focus = shuffle(rng, theme.focus);
   const reasons = [...g.reasons, `Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
-  const requirements = generateTierChallenges(rng, focus, o.digest, tiers.length);
+  const requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length);
   const totals: Record<string, number> = {};
   Object.values(requirements).forEach((list) => list.forEach((r) => (totals[r.key] = (totals[r.key] ?? 0) + r.count)));
   reasons.push(
-    `Défis : un mois d'activité médiane par action (×${PASS_MONTH_EFFORT}), un palier à la fois. Total : ${Object.entries(totals)
+    `Défis cumulés (totaux du mois, paliers dans l'ordre) : le joueur médian relève le dernier vers le jour ${PASS_TARGET_DAY}. Sommes des seuils : ${Object.entries(totals)
       .map(([k, n]) => `${OBJECTIVE_LABELS[k as ChronicleObjective].toLowerCase()} ${n} (médiane ${o.digest.weeklyMedian[k as ChronicleObjective] ?? 0} par semaine)`)
       .join(", ")}.`,
   );
@@ -438,6 +499,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
     pointsPerTier: g.pass.pointsPerTier,
     tiers,
     requirements,
+    challengeMode: "cumulative",
     commander,
     auto: { generatedAtMs: o.now, variant, reasons },
   };
@@ -488,7 +550,13 @@ export function validatePassSeasons(cfg: PassSeasonsConfig | undefined): string[
 export function setPassSeasons(cfg: PassSeasonsConfig | undefined): void {
   const published = (cfg?.seasons ?? []).filter((s) => s && s.status === "published" && MONTH.test(s.id) && s.pointsPerTier >= 1 && Array.isArray(s.tiers) && s.tiers.length > 0);
   const passes = new Map<string, MonthPass>();
-  for (const s of published) passes.set(s.id, { pointsPerTier: s.pointsPerTier, tiers: s.tiers, requirements: Object.fromEntries(Object.entries(s.requirements ?? {}).map(([t, r]) => [t, normalizeTierReqs(r)])) });
+  for (const s of published)
+    passes.set(s.id, {
+      pointsPerTier: s.pointsPerTier,
+      tiers: s.tiers,
+      requirements: Object.fromEntries(Object.entries(s.requirements ?? {}).map(([t, r]) => [t, normalizeTierReqs(r)])),
+      ...(s.challengeMode === "cumulative" ? { challengeMode: "cumulative" as const } : {}),
+    });
   setPassSeasonOverrides(passes);
   setSeasonCommanders(published.filter((s) => s.commander).map((s) => s.commander));
   PUBLISHED.splice(0, PUBLISHED.length, ...published);

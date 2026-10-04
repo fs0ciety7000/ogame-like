@@ -107,8 +107,34 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(Object.values(next.requirements).flat().some((r) => r.key === "mission")).toBe(false);
   });
 
-  it("publié : remplace le passe du mois, verrouille les paliers à prérequis et donne le commandant", () => {
+  it("5.15.4 : défis cumulés (totaux du mois) : une action compte pour tous les paliers, toujours dans l'ordre", () => {
     const s = publishPassSeason(generatePassSeason({ monthId: "2026-11", digest: digest(), existing: [], now: NOV_10 }), NOV_10);
+    expect(s.challengeMode).toBe("cumulative");
+    applyGameContent({ passSeasons: { seasons: [s] } });
+    const p = player();
+    addPassPoints(p, "seasonBoss", NOV_10, 100);
+    // Seuils d'une même action jamais en baisse.
+    const last: Record<string, number> = {};
+    for (let t = 1; t <= 30; t++)
+      for (const r of s.requirements[String(t)]) {
+        expect(r.count).toBeGreaterThanOrEqual(last[r.key] ?? 1);
+        last[r.key] = r.count;
+      }
+    // Toutes les actions du mois d'un coup : tous les paliers relevés, rien n'est perdu.
+    const max: Record<string, number> = {};
+    Object.values(s.requirements).flat().forEach((r) => (max[r.key] = Math.max(max[r.key] ?? 0, r.count)));
+    // Rien que l'action du palier 1 : le palier 1 tombe, pas plus loin que là où une autre action manque.
+    trackActivity(p, s.requirements["1"][0].key, NOV_10, s.requirements["1"][0].count);
+    expect(tierRequirements(p, 1, NOV_10)?.status).toBe("cleared");
+    for (const [k, n] of Object.entries(max)) trackActivity(p, k, NOV_10, n);
+    for (let t = 1; t <= 30; t++) expect(tierRequirements(p, t, NOV_10)?.status).toBe("cleared");
+    for (let t = 1; t <= 30; t++) claimPassTier(p, t, NOV_10);
+    expect(passState(p, NOV_10).claimed).toHaveLength(30);
+  });
+
+  it("publié : remplace le passe du mois, verrouille les paliers à prérequis et donne le commandant", () => {
+    // Passe à l'ancien format (un palier à la fois, compteur remis à zéro) : celui d'octobre 2026.
+    const s = { ...publishPassSeason(generatePassSeason({ monthId: "2026-11", digest: digest(), existing: [], now: NOV_10 }), NOV_10), challengeMode: undefined };
     // Un brouillon ne s'applique pas.
     applyGameContent({ passSeasons: { seasons: [{ ...s, status: "draft" }] } });
     expect(activePass("2026-11").requirements).toBeUndefined();

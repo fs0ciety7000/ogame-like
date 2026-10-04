@@ -237,6 +237,8 @@ export interface MonthPass {
   tiers: PassReward[][];
   /** v5.13 : prérequis par palier (passes de saison publiés) ; v5.14.1 : plusieurs par palier. */
   requirements?: Record<string, PassRequirement[] | PassRequirement>;
+  /** 5.15.4 : défis en totaux du mois (voir passSeasons.ts). */
+  challengeMode?: "cumulative";
 }
 
 const MONTH_PASSES = new Map<string, MonthPass>();
@@ -264,10 +266,29 @@ export function passTierReqs(seasonId: string, tier: number): PassRequirement[] 
   return normalizeTierReqs(activePass(seasonId).requirements?.[String(tier)]);
 }
 
+/** 5.15.4 : défis en totaux du mois (passe généré récent) plutôt qu'un compteur par palier. */
+export function isCumulativePass(seasonId: string): boolean {
+  return activePass(seasonId).challengeMode === "cumulative";
+}
+
+/** Mode cumulé : paliers relevés dans l'ordre (totaux du mois atteints, précédents relevés). */
+function cumulativeCleared(st: PassState): Set<number> {
+  const out = new Set<number>();
+  const n = activePass(st.seasonId).tiers.length;
+  for (let t = 1; t <= n; t++) {
+    const reqs = passTierReqs(st.seasonId, t);
+    if (reqs.length === 0) continue;
+    if (!reqs.every((r) => (st.activity?.[r.key] ?? 0) >= r.count)) break;
+    out.add(t);
+  }
+  return out;
+}
+
 /** v5.14.1 : palier dont le défi est en cours (le premier pas encore relevé ; 0 : aucun). */
 export function activeChallengeTier(st: PassState): number {
   const n = activePass(st.seasonId).tiers.length;
-  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !(st.cleared ?? []).includes(t)) return t;
+  const cleared = isCumulativePass(st.seasonId) ? cumulativeCleared(st) : new Set(st.cleared ?? []);
+  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !cleared.has(t)) return t;
   return 0;
 }
 
@@ -275,11 +296,20 @@ export type TierChallengeStatus = "cleared" | "active" | "waiting";
 
 /** v5.14.1 : défi d'un palier et avancée du joueur (null : pas de prérequis).
  *  Un palier à la fois : les actions ne comptent que pour le défi en cours, puis
- *  le compteur repart de zéro pour le palier suivant. */
+ *  le compteur repart de zéro pour le palier suivant. 5.15.4 : en mode cumulé,
+ *  l'avancée est le total du mois (une action compte pour tous les paliers). */
 export function tierRequirements(player: Pick<PlayerState, "seasonPass">, tier: number, now: number): { status: TierChallengeStatus; met: boolean; reqs: (PassRequirement & { done: number; met: boolean })[] } | null {
   const st = passState(player, now);
   const reqs = passTierReqs(st.seasonId, tier);
   if (reqs.length === 0) return null;
+  if (isCumulativePass(st.seasonId)) {
+    const status: TierChallengeStatus = cumulativeCleared(st).has(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
+    const rows = reqs.map((r) => {
+      const done = Math.min(r.count, st.activity?.[r.key] ?? 0);
+      return { ...r, done, met: done >= r.count };
+    });
+    return { status, met: status === "cleared", reqs: rows };
+  }
   const status: TierChallengeStatus = (st.cleared ?? []).includes(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
   const rows = reqs.map((r) => {
     const done = status === "cleared" ? r.count : status === "active" ? Math.min(r.count, st.challenge?.[r.key] ?? 0) : 0;
@@ -304,6 +334,11 @@ export function trackActivity(player: PlayerState, key: string, now: number, tim
   const st = passState(player, now);
   st.activity = { ...(st.activity ?? {}), [key]: (st.activity?.[key] ?? 0) + times };
   // v5.14.1 : défi du palier en cours (le surplus ne passe pas au palier suivant).
+  // 5.15.4 : en mode cumulé, le total du mois (activity) suffit.
+  if (isCumulativePass(st.seasonId)) {
+    player.seasonPass = st;
+    return;
+  }
   const t = activeChallengeTier(st);
   const reqs = t ? passTierReqs(st.seasonId, t) : [];
   const req = reqs.find((r) => r.key === key);
