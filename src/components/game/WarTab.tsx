@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Flag, ShieldHalf, Swords, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -277,7 +278,7 @@ function SeasonWarCard({ allianceId }: { allianceId: string }) {
         Points des guerres de la saison + 1 point par {formatCompact(SEASON_WAR_RULES.powerPerPoint)} de puissance ennemie détruite + {SEASON_WAR_RULES.sectorPoints} points par secteur tenu à la clôture. Podium : {SEASON_WAR_RULES.rewardHours.join(" / ")} h de production des membres versées au trésor, et un titre d'alliance.
       </p>
       {rows === null ? (
-        <p className="text-xs text-slate-500">Chargement…</p>
+        <SkeletonList rows={4} />
       ) : rows.length === 0 ? (
         <p className="text-sm text-slate-500">Aucune alliance classée pour l'instant cette saison.</p>
       ) : (

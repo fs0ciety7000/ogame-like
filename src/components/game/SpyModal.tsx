@@ -1,4 +1,5 @@
 import { allianceFlightFactor } from "@/game/alliances";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Clock, Radar, ShieldAlert } from "lucide-react";
@@ -265,7 +266,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
           <div className="mt-4 border-t border-white/5 pt-3">
             <h3 className="mb-2 font-display text-sm text-white">Dernier rapport</h3>
             {loadingReport && !report ? (
-              <p className="text-xs text-slate-500">Chargement…</p>
+              <SkeletonList rows={2} />
             ) : report ? (
               <SpyReportView report={report} />
             ) : (

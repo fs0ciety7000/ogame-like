@@ -162,7 +162,7 @@ export function AppShell() {
   )?.label;
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col pb-20 md:h-screen md:flex-row md:overflow-hidden md:pb-0">
+    <div className="relative flex min-h-screen w-full flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:h-screen md:flex-row md:overflow-hidden md:pb-0">
       <SchematicGrid />
       <Nebula />
       <SeasonGlow />

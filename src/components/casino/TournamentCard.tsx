@@ -1,5 +1,5 @@
 import { Trophy } from "lucide-react";
-import { CasinoPanel } from "@/components/casino/CasinoPanel";
+import { HudPanel } from "@/components/ui/panel";
 import { HudChip } from "@/components/ui/hud";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { casinoClosesAt, tournamentRanking, type CasinoState } from "@/game/casino";
@@ -29,7 +29,7 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
   const prizes = s.rewards.tournament;
 
   return (
-    <CasinoPanel
+    <HudPanel
       icon={<Trophy />}
       title="Tournoi"
       tone="gold"
@@ -96,6 +96,6 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
           </ol>
         </div>
       )}
-    </CasinoPanel>
+    </HudPanel>
   );
 }

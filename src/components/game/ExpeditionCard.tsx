@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
 import { Compass, Swords, Coins } from "lucide-react";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { HudTag } from "@/components/ui/hud";
+import { HudTag, EmptyState } from "@/components/ui/hud";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import { EXPEDITION_RULES, describeGain, fleetShips } from "@/game/expeditions";
 import { FACTIONS } from "@/game/pirates";
@@ -65,7 +66,9 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
           Au moins {EXPEDITION_RULES.minShips} vaisseaux (hors sondes). Deux événements t'attendent : à mi-parcours puis au retour.
         </p>
         <div className="mt-3 flex flex-col gap-1.5">
-          {ids.length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau disponible à la base.</p>}
+          {ids.length === 0 && (
+            <EmptyState size="sm" icon="🛰️" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />
+          )}
           {ids.map((id) => {
             const owned = player.units[id]?.count ?? 0;
             return (

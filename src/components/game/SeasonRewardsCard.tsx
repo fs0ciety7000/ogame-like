@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AmberAmount } from "@/components/ui/amber";
 import { HUD_TONE, type HudTone } from "@/components/ui/hud";
 import { SEASON_RULES, seasonEndMs, seasonMonthPhrase, type SeasonPrize } from "@/game/seasons";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 /* 5.15.4 : récompenses de fin de saison (onglet Saison en cours du classement
@@ -31,13 +31,13 @@ function Row({ tone, label, children }: { tone: HudTone; label: string; children
 }
 
 export function SeasonRewardsCard({ seasonId, className }: { seasonId: string; className?: string }) {
-  const days = Math.max(0, Math.ceil((seasonEndMs() - Date.now()) / 86_400_000));
+  const left = Math.max(0, (seasonEndMs() - Date.now()) / 1000);
   return (
     <div className={cn("glass-panel hud-cut flex flex-col gap-2 p-4", className)}>
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h3 className="hud-title text-sm text-white">Récompenses de fin de saison</h3>
         <span className="font-mono text-[11px] text-slate-500">
-          versées le 1er du mois · encore {days} jour{days > 1 ? "s" : ""}
+          versées le 1er du mois · fin dans {formatDuration(left)}
         </span>
       </div>
       <div className="grid gap-2 lg:grid-cols-3">

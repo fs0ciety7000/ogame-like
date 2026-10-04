@@ -1,6 +1,7 @@
 import { AscensionStars } from "@/components/game/AscensionCard";
+import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
-import { LevelTicks, StatTile } from "@/components/ui/hud";
+import { LevelTicks, StatTile, EmptyState } from "@/components/ui/hud";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { GameActionError, setActiveTitle } from "@/services/playerService";
@@ -157,7 +158,9 @@ export function ProfilePage() {
               .slice(-8)
               .reverse();
             return recent.length === 0 ? (
-              <p className="text-sm text-slate-500">Aucun succès pour l'instant. Ta première victoire t'en rapportera un !</p>
+              <EmptyState size="sm" icon="🏅" title="Aucun succès" action={<EmptyAction to="/game/succes">Voir les succès</EmptyAction>}>
+                Ta première victoire t'en rapportera un !
+              </EmptyState>
             ) : (
               <div className="flex flex-wrap gap-3">
                 {recent.map((a) => (

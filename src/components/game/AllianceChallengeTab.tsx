@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SkeletonCards } from "@/components/ui/skeleton";
 import { Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -27,7 +28,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
     };
   }, []);
   const now = Date.now();
-  if (state === undefined) return <p className="text-sm text-slate-500">Chargement…</p>;
+  if (state === undefined) return <SkeletonCards count={2} />;
   if (state === null) return <p className="text-sm text-slate-500">Le premier défi commencera au prochain relevé (tous les quarts d'heure).</p>;
   const challenge = findAllianceChallenge(state.challengeId);
   const mine = state.standings.findIndex((s) => s.allianceId === allianceId);

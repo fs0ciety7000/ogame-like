@@ -1,4 +1,5 @@
 import { subscribePacts, usePactStore } from "@/services/diplomacyService";
+import { EmptyState } from "@/components/ui/hud";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
@@ -286,7 +287,7 @@ export function PlayersPage() {
         <>
         <Card key={`list-${mode}-${division}`} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
-            <p className="p-4 text-sm text-slate-500">Aucun joueur trouvé.</p>
+            <EmptyState icon="🔭" title="Aucun joueur trouvé">Essaie un autre nom ou un autre filtre.</EmptyState>
           )}
           {players.length > 0 && filtered.length === 0 && (
             <p className="p-4 text-sm text-slate-500">

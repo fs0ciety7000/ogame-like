@@ -1,8 +1,7 @@
+import { Bone } from "@/components/ui/skeleton";
+
 /** Squelette de page pendant le chargement d'un écran : en-tête, rangée de
  *  cartes et bloc de contenu qui scintillent, à la place d'un simple spinner. */
-function Bone({ className = "" }: { className?: string }) {
-  return <div className={`skeleton-bone rounded-lg ${className}`} />;
-}
 
 export function PageLoader() {
   return (

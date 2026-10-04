@@ -1,8 +1,10 @@
 import { PlayerName } from "@/components/ui/player-name";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { HudPanel } from "@/components/ui/panel";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
-import { Crown, Medal, Timer, Trophy, Users } from "lucide-react";
+import { CalendarDays, Crown, Medal, Timer, Trophy, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchSeasonResults, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
@@ -103,14 +105,17 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
     <div className="flex flex-col gap-4">
       {!embedded && <PageHeader backdrop="/assets/blog/articles/5-9/podium-or.webp" eyebrow="Cosmic Empires / Archives" title="Palmarès" description="Les meilleurs empires de chaque saison, et les récompenses de fin de mois." />}
 
-      <Card className="flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Trophy className="h-4 w-4 text-gold-glow" />
-          <h2 className="font-display text-base text-white">Saison en cours : {seasonLabel(season)}</h2>
-          <span className="ml-auto flex items-center gap-1 text-xs text-slate-400">
+      <HudPanel
+        icon={<Trophy />}
+        title={`Saison en cours · ${seasonLabel(season)}`}
+        tone="gold"
+        accent
+        aside={
+          <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-slate-400">
             <Timer className="h-3.5 w-3.5" /> fin dans {formatDuration(left)}
           </span>
-        </div>
+        }
+      >
         {live.length === 0 ? (
           <p className="text-sm text-slate-500">Personne n'a encore gagné d'XP ce mois-ci.</p>
         ) : (
@@ -155,23 +160,28 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
           </div>
         )}
         <SeasonRewardsCard seasonId={currentSeasonId()} />
-      </Card>
+      </HudPanel>
 
       {results === null ? (
-        <p className="text-sm text-slate-500">Chargement…</p>
+        <SkeletonList rows={5} />
       ) : bySeason.length === 0 ? (
         <Card><EmptyState icon="🏆" title="Aucune saison terminée">Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
       ) : (
         bySeason.map(([seasonId, list]) => (
-          <Card key={seasonId} className="flex flex-col gap-4 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-base text-white">{seasonLabel(seasonId)}</h2>
-              {allianceWinners.get(seasonId) && (
-                <span className="ml-auto flex items-center gap-1 text-xs text-cyan-glow">
+          <HudPanel
+            key={seasonId}
+            icon={<CalendarDays />}
+            title={seasonLabel(seasonId)}
+            tone="accent"
+            className="gap-4"
+            aside={
+              allianceWinners.get(seasonId) && (
+                <span className="flex items-center gap-1 text-xs text-cyan-glow">
                   <Users className="h-3.5 w-3.5" /> Alliance championne : {allianceWinners.get(seasonId)!.pseudo} ({formatNumber(allianceWinners.get(seasonId)!.seasonXp)} XP)
                 </span>
-              )}
-            </div>
+              )
+            }
+          >
             <Podium results={list.slice(0, 3)} uid={uid} />
             {list.length > 3 && (
               <ol className="space-y-1 border-t border-white/5 pt-3 text-sm">
@@ -184,7 +194,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
                 ))}
               </ol>
             )}
-          </Card>
+          </HudPanel>
         ))
       )}
     </div>

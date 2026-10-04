@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { toast } from "sonner";
@@ -128,7 +129,11 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
         </DialogDescription>
         <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">Vaisseaux (planète mère)</p>
         <div className="flex flex-col gap-1.5">
-          {ids.length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau avec une soute à la base.</p>}
+          {ids.length === 0 && (
+            <EmptyState size="sm" icon="📦" title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
+              Il faut un vaisseau avec une soute pour transporter.
+            </EmptyState>
+          )}
           {ids.map((id) => {
             const owned = player.units[id]?.count ?? 0;
             return (

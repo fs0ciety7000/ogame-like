@@ -1,8 +1,9 @@
 import { CalendarDays } from "lucide-react";
-import { CasinoPanel } from "@/components/casino/CasinoPanel";
+import { HudPanel } from "@/components/ui/panel";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { casinoWeek, playerCasino } from "@/game/casino";
-import { formatCompact } from "@/lib/utils";
+import { StatTile, type HudTone } from "@/components/ui/hud";
+import { formatCompact, formatNumber } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* v5.12 : bilan personnel de la semaine au casino (remis à zéro le lundi). */
@@ -10,19 +11,16 @@ export function WeekRecap({ player }: { player: Pick<PlayerState, "casino"> }) {
   const all = playerCasino(player);
   const w = casinoWeek(player, Date.now());
   const res = (Object.entries(w.resources) as [ResourceId, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
-  const tiles: [string, number][] = [
-    ["Jetons joués", w.spins],
-    ["Gains", w.wins],
-    ["Points", w.points],
+  const tiles: [string, number, HudTone][] = [
+    ["Tirages", w.spins, "accent"],
+    ["Gains", w.wins, "mint"],
+    ["Points", w.points, "gold"],
   ];
   return (
-    <CasinoPanel icon={<CalendarDays />} title="Ma semaine au casino">
-      <div className="grid grid-cols-3 gap-2 text-center">
-        {tiles.map(([k, v]) => (
-          <div key={k}>
-            <p className="font-mono text-lg font-bold tabular-nums text-slate-100">{v}</p>
-            <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">{k}</p>
-          </div>
+    <HudPanel icon={<CalendarDays />} title="Ma semaine au casino">
+      <div className="grid grid-cols-3 gap-1.5">
+        {tiles.map(([k, v, tone]) => (
+          <StatTile key={k} size="sm" label={k} value={formatNumber(v)} tone={tone} />
         ))}
       </div>
       {res.length > 0 && (
@@ -37,6 +35,6 @@ export function WeekRecap({ player }: { player: Pick<PlayerState, "casino"> }) {
       <p className="text-[11px] text-slate-500">
         Depuis le début : {all.spins} tirage{all.spins > 1 ? "s" : ""}, {all.wins} gain{all.wins > 1 ? "s" : ""}, {all.jackpots} gros lot{all.jackpots > 1 ? "s" : ""}.
       </p>
-    </CasinoPanel>
+    </HudPanel>
   );
 }

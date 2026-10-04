@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { SkeletonCards } from "@/components/ui/skeleton";
+import { HudPanel } from "@/components/ui/panel";
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronRight, Crown, Flag, Hourglass, Medal, Skull, Swords, Trophy, Zap } from "lucide-react";
+import { ChevronRight, Crown, Flag, History, Hourglass, Medal, Skull, Swords, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/hud";
+import { EmptyState, HudChip } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PlayerName } from "@/components/ui/player-name";
 import { BossRecapDialog } from "@/components/game/BossRecap";
@@ -14,7 +16,7 @@ import { useSeasonBoss } from "@/services/seasonBossService";
 import { useBossHistory } from "@/services/bossHistoryService";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatDuration, alpha } from "@/lib/utils";
+import { formatCompact, formatDuration, alpha } from "@/lib/utils";
 
 /* v5.10 : Hall of fame des boss (différent du Palmarès des saisons) — records, champions et historique des combats. */
 
@@ -39,10 +41,7 @@ function Record({ icon: Icon, label, value, sub, color }: { icon: typeof Trophy;
 
 function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeof Trophy; list: { uid: string; pseudo: string; count: number }[]; unit: string }) {
   return (
-    <Card className="flex flex-col gap-2 p-4">
-      <h2 className="hud-title flex items-center gap-2 text-sm">
-        <Icon className="h-4 w-4 text-gold-glow" /> {title}
-      </h2>
+    <HudPanel icon={<Icon />} title={title} tone="gold">
       {list.length === 0 ? (
         <p className="text-xs text-slate-500">Personne pour l'instant.</p>
       ) : (
@@ -61,7 +60,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
           ))}
         </ol>
       )}
-    </Card>
+    </HudPanel>
   );
 }
 
@@ -153,7 +152,7 @@ export function BossHallPage() {
       />
 
       {all === null ? (
-        <p className="text-sm text-slate-500">Chargement…</p>
+        <SkeletonCards count={3} />
       ) : visible.length === 0 ? (
         <Card>
           <EmptyState icon={<Crown className="h-10 w-10 text-gold-glow" />} title="Le Hall attend ses légendes">
@@ -182,24 +181,19 @@ export function BossHallPage() {
             <Leaders title="Coups de grâce" icon={Skull} list={rec.finishers} unit="coup" />
           </div>
 
-          <Card className="flex flex-col gap-3 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="hud-title text-sm">Historique des combats</h2>
-              <div className="ml-auto flex flex-wrap gap-1">
-                {filters.map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setFilter(id)}
-                    className={cn("border px-2 py-1 text-xs transition-colors", filter === id ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-400 hover:text-white")}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <HudPanel
+            icon={<History />}
+            title="Historique des combats"
+            aside={filters.map(([id, label]) => (
+              <HudChip key={id} asChild size="sm" tone={filter === id ? "accent" : "neutral"}>
+                <button type="button" aria-pressed={filter === id} onClick={() => setFilter(id)}>
+                  {label}
+                </button>
+              </HudChip>
+            ))}
+          >
             {shown.length === 0 ? <p className="text-xs text-slate-500">Rien dans cette catégorie.</p> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />)}</ul>}
-          </Card>
+          </HudPanel>
         </>
       )}
       {opened && <HallRecap e={opened} uid={uid} live={{ leviathan, seasonboss: seasonBoss }} onClose={() => setOpened(null)} />}
@@ -210,10 +204,7 @@ export function BossHallPage() {
 /** v5.10.5 : mes meilleurs rangs, par type de boss. */
 function MyRecords({ stats }: { stats: ReturnType<typeof myBossStats> }) {
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <h2 className="hud-title flex items-center gap-2 text-sm">
-        <Medal className="h-4 w-4 text-cyan-glow" /> Mes records
-      </h2>
+    <HudPanel icon={<Medal />} title="Mes records" tone="accent">
       <div className="grid gap-2 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.kind} className="flex flex-col gap-0.5 border border-white/[0.06] bg-white/[0.02] p-3">
@@ -230,7 +221,7 @@ function MyRecords({ stats }: { stats: ReturnType<typeof myBossStats> }) {
           </div>
         ))}
       </div>
-    </Card>
+    </HudPanel>
   );
 }
 

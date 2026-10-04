@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { OBJECTIVE_LABELS, activePass, passState, passTier } from "@/game/seasonPass";
 import { currentSeasonId, seasonEndMs, seasonLabel } from "@/game/seasons";
 import { streakStatus } from "@/game/streak";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import type { ChronicleObjective } from "@/game/chronicles";
 
@@ -31,7 +31,7 @@ export function MonthRecapCard({ now }: { now: number }) {
   const tiers = activePass(st.seasonId).tiers.length;
   const seasonXp = player.seasonId === season ? player.seasonXp ?? 0 : 0;
   const streak = streakStatus(player, now);
-  const days = Math.max(0, Math.ceil((seasonEndMs(now) - now) / 86_400_000));
+  const left = Math.max(0, (seasonEndMs(now) - now) / 1000);
   const actions = KEYS.map((k) => ({ k, n: st.activity?.[k] ?? 0 })).filter((a) => a.n > 0);
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -39,7 +39,7 @@ export function MonthRecapCard({ now }: { now: number }) {
         <h2 className="hud-title flex items-center gap-2 text-sm text-white">
           <CalendarRange className="h-4 w-4 self-center text-cyan-glow" /> Ton mois · {seasonLabel(season)}
         </h2>
-        <span className="font-mono text-[11px] text-slate-500">encore {days} jour{days > 1 ? "s" : ""}</span>
+        <span className="font-mono text-[11px] text-slate-500">fin dans {formatDuration(left)}</span>
         <Link to="/game/joueurs?mode=season" className="ml-auto text-xs text-slate-400 hover:text-cyan-glow">
           Classement de saison
         </Link>

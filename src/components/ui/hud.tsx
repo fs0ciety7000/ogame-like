@@ -146,34 +146,38 @@ export function HudMeter({ percent, className, tone }: { percent: number; classN
 }
 
 /** État vide : icône encadrée + message. */
-export function EmptyState({ icon, title, children, className }: { icon: ReactNode; title?: string; children?: ReactNode; className?: string }) {
+/** État vide : pictogramme, phrase, et (5.15.9) une action pour en sortir. `size="sm"` pour les petites cartes. */
+export function EmptyState({ icon, title, children, action, size = "md", className }: { icon: ReactNode; title?: string; children?: ReactNode; action?: ReactNode; size?: "sm" | "md"; className?: string }) {
+  const sm = size === "sm";
   return (
-    <div className={cn("flex items-center gap-4 p-5", className)}>
-      <div className="hud-cut grid h-12 w-12 shrink-0 place-items-center border border-cyan-glow/25 bg-cyan-glow/[0.06] text-xl text-cyan-glow">
-        {typeof icon === "string" ? <EmojiIcon emoji={icon} className="h-9 w-9" /> : icon}
+    <div className={cn("flex items-center", sm ? "gap-3 p-0" : "gap-4 p-5", className)}>
+      <div className={cn("hud-cut grid shrink-0 place-items-center border border-cyan-glow/25 bg-cyan-glow/[0.06] text-cyan-glow", sm ? "h-9 w-9 text-base [&_svg]:h-4 [&_svg]:w-4" : "h-12 w-12 text-xl")}>
+        {typeof icon === "string" ? <EmojiIcon emoji={icon} className={sm ? "h-6 w-6" : "h-9 w-9"} /> : icon}
       </div>
-      <div>
-        {title && <p className="hud-title text-sm text-slate-200">{title}</p>}
-        {children && <p className="mt-0.5 text-sm text-slate-500">{children}</p>}
+      <div className="min-w-0 flex-1">
+        {title && <p className={cn("hud-title text-slate-200", sm ? "text-xs" : "text-sm")}>{title}</p>}
+        {children && <p className={cn("text-slate-500", sm ? "text-xs" : "mt-0.5 text-sm")}>{children}</p>}
+        {action && <div className="mt-2 flex flex-wrap gap-2">{action}</div>}
       </div>
     </div>
   );
 }
 
 /** Tuile de chiffre clé : libellé, grande valeur, liseré coloré. */
-export function StatTile({ label, value, sub, tone: toneIn = "accent", icon }: { label: string; value: ReactNode; sub?: ReactNode; tone?: HudTone; icon?: ReactNode }) {
+export function StatTile({ label, value, sub, tone: toneIn = "accent", icon, size = "md" }: { label: string; value: ReactNode; sub?: ReactNode; tone?: HudTone; icon?: ReactNode; size?: "sm" | "md" }) {
   const tone = HUD_TONE[toneIn];
+  const sm = size === "sm";
   return (
-    <div className="glass-panel relative overflow-hidden p-4">
+    <div className={cn("glass-panel relative overflow-hidden", sm ? "px-2.5 py-2" : "p-4")}>
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 12px ${tone}` }} />
       <div className="relative flex items-start justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">{label}</p>
+        <p className={cn("font-mono uppercase text-slate-500", sm ? "text-[9px] tracking-[0.14em]" : "text-[10px] tracking-[0.2em]")}>{label}</p>
         {icon && <span className="text-slate-500">{icon}</span>}
       </div>
-      <p className="hud-title relative mt-1.5 text-3xl normal-case tabular-nums" style={{ color: tone }}>
+      <p className={cn("hud-title relative normal-case tabular-nums", sm ? "mt-0.5 text-xl" : "mt-1.5 text-3xl")} style={{ color: tone }}>
         {value}
       </p>
-      {sub && <p className="relative mt-1 text-xs text-slate-500">{sub}</p>}
+      {sub && <p className={cn("relative text-slate-500", sm ? "text-[10px]" : "mt-1 text-xs")}>{sub}</p>}
     </div>
   );
 }

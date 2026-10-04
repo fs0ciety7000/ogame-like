@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { EmptyAction } from "@/components/ui/panel";
+import { EmptyState } from "@/components/ui/hud";
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { pb } from "@/lib/pocketbase";
@@ -34,7 +36,9 @@ export function SeasonHistoryCard({ uid, currentXp }: { uid: string; currentXp: 
       </div>
       <p className="mb-2 text-xs text-slate-500">Saison en cours : {formatNumber(currentXp)} XP.</p>
       {list.length === 0 ? (
-        <p className="text-sm text-slate-500">Aucune saison terminée pour l'instant : ton premier classement apparaîtra ici à la clôture.</p>
+        <EmptyState size="sm" icon="🏆" title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs?mode=season">Classement en cours</EmptyAction>}>
+          Ton premier classement apparaîtra ici à la clôture.
+        </EmptyState>
       ) : (
         <div className="flex flex-col divide-y divide-white/5 border border-white/5">
           {list.map((s) => (
