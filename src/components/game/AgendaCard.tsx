@@ -2,7 +2,9 @@ import { useIsAdmin } from "@/services/adminService";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useState } from "react";
+import { HudChip } from "@/components/ui/hud";
+import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AGENDA_COLORS, AGENDA_LABELS, upcomingAgenda, type AgendaItem, type AgendaKind } from "@/game/agenda";
 import { contestPhase } from "@/game/contests";
 import { useContests } from "@/services/contestService";
@@ -41,8 +43,95 @@ export function useAgenda(now: number, days = DAYS): AgendaItem[] {
   );
 }
 
+/** 5.15.7 : vue « Mois » : grille du mois (lundi en premier), un repère coloré par événement du jour. */
+function MonthGrid({ now, items }: { now: number; items: AgendaItem[] }) {
+  const d = new Date(now);
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const first = new Date(y, m, 1);
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const lead = (first.getDay() + 6) % 7;
+  const today = d.getDate();
+  const cells = Array.from({ length: lead + daysInMonth }, (_, i) => (i < lead ? null : i - lead + 1));
+  const dayItems = (day: number) => {
+    const start = new Date(y, m, day).getTime();
+    const end = start + DAY;
+    return items.filter((i) => i.startMs < end && (i.endMs ?? i.startMs + 1) > start);
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-7 gap-1 font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">
+        {["lun", "mar", "mer", "jeu", "ven", "sam", "dim"].map((w) => (
+          <span key={w} className="text-center">
+            {w}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((day, i) => {
+          if (day === null) return <span key={`e${i}`} />;
+          const list = dayItems(day);
+          const past = day < today;
+          const cell = (
+            <span
+              className={cn(
+                "flex h-12 flex-col justify-between border px-1 py-0.5",
+                day === today ? "border-cyan-glow/70 bg-cyan-glow/[0.08]" : "border-white/5 bg-white/[0.02]",
+                past && "opacity-40",
+              )}
+            >
+              <span className={cn("font-mono text-[10px] tabular-nums", day === today ? "text-cyan-glow" : "text-slate-400")}>{day}</span>
+              <span className="flex flex-wrap gap-0.5">
+                {[...new Set(list.map((it) => it.kind))].map((k) => (
+                  <i key={k} className="h-1.5 w-3" style={{ background: AGENDA_COLORS[k] }} />
+                ))}
+              </span>
+            </span>
+          );
+          return list.length === 0 ? (
+            <span key={day}>{cell}</span>
+          ) : (
+            <Tooltip key={day}>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-left" aria-label={`${day} : ${list.map((it) => it.title).join(", ")}`}>
+                  {cell}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <TooltipCard title={new Date(y, m, day).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} rows={list.map((it) => ({ label: `${it.emoji ?? ""} ${it.title}`, value: AGENDA_LABELS[it.kind] }))} />
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+      <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-slate-500">
+        {ROWS.filter((k) => items.some((i) => i.kind === k)).map((k) => (
+          <span key={k} className="inline-flex items-center gap-1">
+            <i className="h-1.5 w-3" style={{ background: AGENDA_COLORS[k] }} /> {AGENDA_LABELS[k]}
+          </span>
+        ))}
+      </p>
+    </div>
+  );
+}
+
 export function AgendaCard({ now }: { now: number }) {
   const items = useAgenda(now);
+  const [view, setView] = useState<"frise" | "mois">(() => {
+    try {
+      return localStorage.getItem("cosmic:agenda-view") === "mois" ? "mois" : "frise";
+    } catch {
+      return "frise";
+    }
+  });
+  const pick = (v: "frise" | "mois") => {
+    setView(v);
+    try {
+      localStorage.setItem("cosmic:agenda-view", v);
+    } catch {
+      /* préférence d'affichage seulement */
+    }
+  };
   const start = now;
   const span = DAYS * DAY;
   const x = (ms: number) => Math.max(0, Math.min(100, ((ms - start) / span) * 100));
@@ -51,10 +140,23 @@ export function AgendaCard({ now }: { now: number }) {
   const weeks = Array.from({ length: Math.floor(DAYS / 7) + 1 }, (_, i) => i * 7);
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h2 className="hud-title flex items-center gap-2 text-sm">
-        <CalendarDays className="h-4 w-4 text-cyan-glow" /> Les {DAYS} prochains jours
-      </h2>
-      {items.length === 0 ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="hud-title flex items-center gap-2 text-sm">
+          <CalendarDays className="h-4 w-4 text-cyan-glow" /> {view === "mois" ? "Ce mois-ci" : `Les ${DAYS} prochains jours`}
+        </h2>
+        <div className="ml-auto flex gap-1" role="tablist" aria-label="Vue de l'agenda">
+          {(["frise", "mois"] as const).map((v) => (
+            <HudChip key={v} asChild size="sm" tone={view === v ? "accent" : "neutral"}>
+              <button type="button" role="tab" aria-selected={view === v} onClick={() => pick(v)}>
+                {v === "frise" ? "30 jours" : "Mois"}
+              </button>
+            </HudChip>
+          ))}
+        </div>
+      </div>
+      {view === "mois" ? (
+        <MonthGrid now={now} items={items} />
+      ) : items.length === 0 ? (
         <p className="text-xs text-slate-500">Rien de programmé pour l'instant.</p>
       ) : (
         <>
