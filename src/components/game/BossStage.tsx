@@ -46,7 +46,7 @@ export interface BossArt {
 }
 
 /** Bandeau du boss, différent selon l'état du combat. */
-export function BossHero({ art, phase, state, now, next }: { art: BossArt; phase: BossPhase; state: LeviathanState | null; now: number; next: number | null }) {
+export function BossHero({ art, phase, state, now, next, nextLabel }: { art: BossArt; phase: BossPhase; state: LeviathanState | null; now: number; next: number | null; nextLabel?: string }) {
   const st = PHASE_STYLE[phase];
   const ended = phase === "killed" || phase === "failed";
   const hpPct = state ? Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100)) : 0;
@@ -80,7 +80,7 @@ export function BossHero({ art, phase, state, now, next }: { art: BossArt; phase
       )}
 
       <div className="absolute inset-x-4 bottom-3 flex flex-wrap items-end gap-3">
-        <img src={assetUrl(art.emblem)} alt="" className={cn("h-14 w-14 object-contain drop-shadow-[0_0_14px_rgba(255,60,60,0.45)]", ended && "grayscale")} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+        {art.emblem && <img src={assetUrl(art.emblem)} alt="" className={cn("h-14 w-14 object-contain drop-shadow-[0_0_14px_rgba(255,60,60,0.45)]", ended && "grayscale")} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
         <div className="min-w-0 flex-1">
           <p className="hud-title text-lg text-white">{art.name}</p>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: st.color }}>
@@ -97,8 +97,8 @@ export function BossHero({ art, phase, state, now, next }: { art: BossArt; phase
           )}
         </div>
         <div className="text-right">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : ""}</p>
-          <p className="font-display text-xl tabular-nums text-white">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : "—"}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : nextLabel ?? (next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : "")}</p>
+          <p className="font-display text-xl tabular-nums text-white">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export function BossHero({ art, phase, state, now, next }: { art: BossArt; phase
 export function BossNextCard({ art, next, now, phase, tip }: { art: BossArt; next: number | null; now: number; phase: BossPhase; tip?: ReactNode }) {
   return (
     <Card className="flex flex-wrap items-center gap-4 p-4">
-      <img src={assetUrl(art.emblem)} alt="" className="h-10 w-10 object-contain opacity-80" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
+      {art.emblem && <img src={assetUrl(art.emblem)} alt="" className="h-10 w-10 object-contain opacity-80" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
       <div className="min-w-0 flex-1">
         <p className="font-display text-sm text-white">{phase === "dormant" ? `${art.name} n'est pas encore là` : `${art.name} reviendra`}</p>
         <p className="text-xs text-slate-400">

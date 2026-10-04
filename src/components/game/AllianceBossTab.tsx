@@ -7,11 +7,13 @@ import { HudTag, StatTile } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { BossRecapPanel } from "@/components/game/BossRecap";
+import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
 import {
   ALLIANCE_BOSS_RULES,
   allianceBossCost,
   allianceBossDef,
   allianceBossOfWeek,
+  allianceNextWeekMs,
   allianceWeekId,
   canCallAllianceBoss,
   normalizeAllianceBoss,
@@ -20,7 +22,6 @@ import { leviathanRanking } from "@/game/leviathan";
 import { AllianceError, callAllianceBoss } from "@/services/allianceService";
 import { callGame } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
 
@@ -39,6 +40,12 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
   const thisWeek = !!state && state.weekId === allianceWeekId(now);
   const active = !!state && state.status === "active" && now < state.endMs && state.hp > 0;
   const def = state && (thisWeek || active) ? allianceBossDef(state) : allianceBossOfWeek(now);
+  // Combat de la semaine (ou encore en cours), sinon rien : le boss attend d'être appelé.
+  const shown = state && (thisWeek || active) ? state : null;
+  const phase = bossPhase(shown, now);
+  const ended = phase === "killed" || phase === "failed";
+  const nextWeek = allianceNextWeekMs(now);
+  const art: BossArt = { name: def.name, image: def.image, emblem: "", lore: def.lore, accent: "#ff8a4c" };
   const canCall = canCallAllianceBoss(alliance, player.uid);
   // Estimation du coût : production des membres connus localement (la mienne × membres, à titre indicatif).
   const estimate = allianceBossCost([player]);
@@ -64,17 +71,16 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="hud-cut relative overflow-hidden border border-ember-glow/30">
-        <img src={assetUrl(def.image)} alt={def.name} className={cn("h-48 w-full object-cover sm:h-64", !active && "opacity-60 grayscale-[30%]")} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/30 to-transparent" />
-        <div className="absolute bottom-3 left-4 right-4">
-          <p className="hud-eyebrow text-[10px] text-ember-glow">Boss d'alliance · semaine du {new Date(`${allianceWeekId(now)}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</p>
-          <p className="hud-title text-lg text-white">{def.name}</p>
-          <p className="max-w-2xl text-xs text-slate-300">{def.lore}</p>
-        </div>
-      </div>
+      <p className="hud-eyebrow text-[10px] text-ember-glow">Boss d'alliance · semaine du {new Date(`${allianceWeekId(now)}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</p>
+      {/* v5.10.5 : même mise en scène que le Léviathan et le boss de saison, selon l'état du combat. */}
+      <BossHero art={art} phase={phase} state={shown} now={now} next={ended ? nextWeek : null} nextLabel={phase === "dormant" ? (canCall ? "Prêt à être appelé" : "En attente d'un officier") : ended ? "Nouvel appel dans" : undefined} />
 
-      {state && thisWeek ? (
+      {ended && shown && <BossRecapPanel state={shown} uid={player.uid} name={def.name} image={def.image} active={false} />}
+      {ended && (
+        <BossNextCard art={art} next={nextWeek} now={now} phase={phase} tip={`Le fondateur ou un officier pourra appeler le prochain boss dès lundi : ${allianceBossOfWeek(nextWeek).name}.`} />
+      )}
+
+      {active && state ? (
         <Card className="flex flex-col gap-4 p-5">
           <div className="flex flex-wrap items-center gap-3">
             <Flame className={cn("h-6 w-6", active ? "text-danger-glow" : "text-slate-500")} />
@@ -111,7 +117,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
             </div>
           )}
         </Card>
-      ) : (
+      ) : ended ? null : (
         <Card className="flex flex-col gap-3 p-5">
           <p className="text-sm text-slate-300">
             Une fois par semaine, le fondateur ou un officier peut appeler le boss. Il reste <b>24 h</b>, et chaque membre peut lancer un assaut toutes les{" "}
@@ -135,14 +141,12 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
         </Card>
       )}
 
-      {state && thisWeek && <BossRecapPanel state={state} uid={player.uid} name={def.name} image={def.image} active={active} />}
-
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="hud-title flex items-center gap-2 text-sm">
-            <Trophy className="h-4 w-4 text-gold-glow" /> Dégâts de l'alliance
+            <Trophy className="h-4 w-4 text-gold-glow" /> {ended ? "Classement final de l'alliance" : "Dégâts de l'alliance"}
           </h2>
-          {state && thisWeek ? <Ranking state={state} uid={player.uid} /> : <p className="text-xs text-slate-500">—</p>}
+          {shown ? <Ranking state={shown} uid={player.uid} /> : <p className="text-xs text-slate-500">Pas encore de combat cette semaine.</p>}
         </Card>
         <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
           <h2 className="hud-title text-sm">Récompenses</h2>

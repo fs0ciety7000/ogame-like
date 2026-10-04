@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import { parisLocalToUtc } from "@/game/events";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { leviathanRanking, type LeviathanState } from "@/game/leviathan";
@@ -62,6 +63,11 @@ export function allianceWeekId(now: number): string {
   const t = Date.parse(`${day}T00:00:00Z`);
   const dow = new Date(t).getUTCDay();
   return new Date(t - ((dow + 6) % 7) * DAY).toISOString().slice(0, 10);
+}
+
+/** v5.10.5 : début de la semaine suivante (lundi 0 h, heure de Paris) : nouvel appel possible. */
+export function allianceNextWeekMs(now: number): number {
+  return parisLocalToUtc(Date.parse(`${allianceWeekId(now)}T00:00:00Z`) + 7 * DAY);
 }
 
 /** Boss de la semaine (rotation de trois). */
