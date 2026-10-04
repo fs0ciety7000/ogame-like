@@ -75,6 +75,7 @@ __export(hooksEntry_exports, {
   BLOG_WELCOME: () => BLOG_WELCOME,
   BOSS_HISTORY_KEY: () => BOSS_HISTORY_KEY,
   BOSS_REMINDERS: () => BOSS_REMINDERS,
+  CASINO_KEY: () => CASINO_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
@@ -179,6 +180,8 @@ __export(hooksEntry_exports, {
   canDiplomacyIn: () => canDiplomacyIn,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
+  casinoOpen: () => casinoOpen,
+  casinoOpeningId: () => casinoOpeningId,
   challengeClaimable: () => challengeClaimable,
   challengeFromBytes: () => challengeFromBytes,
   challengeMetrics: () => challengeMetrics,
@@ -195,6 +198,7 @@ __export(hooksEntry_exports, {
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   claimChallengeReward: () => claimChallengeReward,
+  claimDailyTokens: () => claimDailyTokens,
   cleanNewPseudo: () => cleanNewPseudo,
   cleanPasskeyName: () => cleanPasskeyName,
   clearDecoy: () => clearDecoy,
@@ -286,6 +290,7 @@ __export(hooksEntry_exports, {
   grantReferral: () => grantReferral,
   grantResources: () => grantResources,
   grantSeasonBossReward: () => grantSeasonBossReward,
+  grantTokens: () => grantTokens,
   growWarlord: () => growWarlord,
   inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
@@ -295,6 +300,7 @@ __export(hooksEntry_exports, {
   isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
+  jackpotAmounts: () => jackpotAmounts,
   leagueInfo: () => leagueInfo,
   leviathanRanking: () => leviathanRanking,
   leviathanSchedule: () => leviathanSchedule,
@@ -314,6 +320,8 @@ __export(hooksEntry_exports, {
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeAllianceChallenge: () => normalizeAllianceChallenge,
   normalizeBossHistory: () => normalizeBossHistory,
+  normalizeCasino: () => normalizeCasino,
+  normalizeCasinoSettings: () => normalizeCasinoSettings,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeContests: () => normalizeContests,
   normalizeCustomEmojis: () => normalizeCustomEmojis,
@@ -345,6 +353,7 @@ __export(hooksEntry_exports, {
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
   planMakerOffers: () => planMakerOffers,
+  playerCasino: () => playerCasino,
   previousSeasonId: () => previousSeasonId,
   previousSummary: () => previousSummary,
   productionHours: () => productionHours,
@@ -367,7 +376,9 @@ __export(hooksEntry_exports, {
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recordVendettaDamage: () => recordVendettaDamage,
+  recordWin: () => recordWin,
   recyclerCapacity: () => recyclerCapacity,
+  reelsFor: () => reelsFor,
   referralDue: () => referralDue,
   refreshAllianceChallenge: () => refreshAllianceChallenge,
   refreshContest: () => refreshContest,
@@ -394,6 +405,7 @@ __export(hooksEntry_exports, {
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
+  rollOutcome: () => rollOutcome,
   rollRelic: () => rollRelic,
   sagaMonthId: () => sagaMonthId,
   sagaOf: () => sagaOf,
@@ -435,6 +447,7 @@ __export(hooksEntry_exports, {
   updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
   validateBroadcast: () => validateBroadcast,
+  validateCasinoSettings: () => validateCasinoSettings,
   validateContest: () => validateContest,
   validateGameContent: () => validateGameContent,
   validateRules: () => validateRules,
@@ -2837,11 +2850,11 @@ function rollRelic(source, now, random = Math.random, minRarity = "common") {
   const order = RARITIES.map((r) => r.id);
   const pool = RARITIES.filter((r) => r.id !== "mythic" && order.indexOf(r.id) >= order.indexOf(minRarity));
   const total2 = pool.reduce((a, r) => a + r.weight, 0);
-  let pick2 = random() * total2;
+  let pick3 = random() * total2;
   let rarity = pool[pool.length - 1].id;
   for (const r of pool) {
-    pick2 -= r.weight;
-    if (pick2 < 0) {
+    pick3 -= r.weight;
+    if (pick3 < 0) {
       rarity = r.id;
       break;
     }
@@ -2918,10 +2931,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY12 = 864e5;
+  const DAY13 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY12) * DAY12;
-  return new Date(midnight - (day + 6) % 7 * DAY12).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY13) * DAY13;
+  return new Date(midnight - (day + 6) % 7 * DAY13).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -11727,7 +11740,8 @@ var GAME_FIELDS = [
   "vacation",
   "chronicle",
   "announcementsSeen",
-  "talents"
+  "talents",
+  "casino"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
@@ -15123,8 +15137,8 @@ function _abytes2(value2, length, title = "") {
   }
   return value2;
 }
-function numberToHexUnpadded(num3) {
-  const hex = num3.toString(16);
+function numberToHexUnpadded(num4) {
+  const hex = num4.toString(16);
   return hex.length & 1 ? "0" + hex : hex;
 }
 function hexToNumber(hex) {
@@ -15422,15 +15436,15 @@ function validateField(field) {
   _validateObject(field, opts);
   return field;
 }
-function FpPow(Fp, num3, power) {
+function FpPow(Fp, num4, power) {
   if (power < _0n2)
     throw new Error("invalid exponent, negatives unsupported");
   if (power === _0n2)
     return Fp.ONE;
   if (power === _1n2)
-    return num3;
+    return num4;
   let p = Fp.ONE;
-  let d = num3;
+  let d = num4;
   while (power > _0n2) {
     if (power & _1n2)
       p = Fp.mul(p, d);
@@ -15441,18 +15455,18 @@ function FpPow(Fp, num3, power) {
 }
 function FpInvertBatch(Fp, nums, passZero = false) {
   const inverted = new Array(nums.length).fill(passZero ? Fp.ZERO : void 0);
-  const multipliedAcc = nums.reduce((acc, num3, i) => {
-    if (Fp.is0(num3))
+  const multipliedAcc = nums.reduce((acc, num4, i) => {
+    if (Fp.is0(num4))
       return acc;
     inverted[i] = acc;
-    return Fp.mul(acc, num3);
+    return Fp.mul(acc, num4);
   }, Fp.ONE);
   const invertedAcc = Fp.inv(multipliedAcc);
-  nums.reduceRight((acc, num3, i) => {
-    if (Fp.is0(num3))
+  nums.reduceRight((acc, num4, i) => {
+    if (Fp.is0(num4))
       return acc;
     inverted[i] = Fp.mul(acc, inverted[i]);
-    return Fp.mul(acc, num3);
+    return Fp.mul(acc, num4);
   }, invertedAcc);
   return inverted;
 }
@@ -15512,36 +15526,36 @@ function Field(ORDER, bitLenOrOpts, isLE = false, opts = {}) {
     ZERO: _0n2,
     ONE: _1n2,
     allowedLengths,
-    create: (num3) => mod(num3, ORDER),
-    isValid: (num3) => {
-      if (typeof num3 !== "bigint")
-        throw new Error("invalid field element: expected bigint, got " + typeof num3);
-      return _0n2 <= num3 && num3 < ORDER;
+    create: (num4) => mod(num4, ORDER),
+    isValid: (num4) => {
+      if (typeof num4 !== "bigint")
+        throw new Error("invalid field element: expected bigint, got " + typeof num4);
+      return _0n2 <= num4 && num4 < ORDER;
     },
-    is0: (num3) => num3 === _0n2,
+    is0: (num4) => num4 === _0n2,
     // is valid and invertible
-    isValidNot0: (num3) => !f.is0(num3) && f.isValid(num3),
-    isOdd: (num3) => (num3 & _1n2) === _1n2,
-    neg: (num3) => mod(-num3, ORDER),
+    isValidNot0: (num4) => !f.is0(num4) && f.isValid(num4),
+    isOdd: (num4) => (num4 & _1n2) === _1n2,
+    neg: (num4) => mod(-num4, ORDER),
     eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num3) => mod(num3 * num3, ORDER),
+    sqr: (num4) => mod(num4 * num4, ORDER),
     add: (lhs, rhs) => mod(lhs + rhs, ORDER),
     sub: (lhs, rhs) => mod(lhs - rhs, ORDER),
     mul: (lhs, rhs) => mod(lhs * rhs, ORDER),
-    pow: (num3, power) => FpPow(f, num3, power),
+    pow: (num4, power) => FpPow(f, num4, power),
     div: (lhs, rhs) => mod(lhs * invert(rhs, ORDER), ORDER),
     // Same as above, but doesn't normalize
-    sqrN: (num3) => num3 * num3,
+    sqrN: (num4) => num4 * num4,
     addN: (lhs, rhs) => lhs + rhs,
     subN: (lhs, rhs) => lhs - rhs,
     mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num3) => invert(num3, ORDER),
+    inv: (num4) => invert(num4, ORDER),
     sqrt: _sqrt || ((n) => {
       if (!sqrtP)
         sqrtP = FpSqrt(ORDER);
       return sqrtP(f, n);
     }),
-    toBytes: (num3) => isLE ? numberToBytesLE(num3, BYTES) : numberToBytesBE(num3, BYTES),
+    toBytes: (num4) => isLE ? numberToBytesLE(num4, BYTES) : numberToBytesBE(num4, BYTES),
     fromBytes: (bytes, skipValidation = true) => {
       if (allowedLengths) {
         if (!allowedLengths.includes(bytes.length) || bytes.length > BYTES) {
@@ -15586,8 +15600,8 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   const minLen = getMinHashLength(fieldOrder);
   if (len < 16 || len < minLen || len > 1024)
     throw new Error("expected " + minLen + "-1024 bytes of input, got " + len);
-  const num3 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
-  const reduced = mod(num3, fieldOrder - _1n2) + _1n2;
+  const num4 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
+  const reduced = mod(num4, fieldOrder - _1n2) + _1n2;
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
@@ -16489,7 +16503,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
 }
 
 // node_modules/@noble/curves/esm/abstract/weierstrass.js
-var divNearest = (num3, den) => (num3 + (num3 >= 0 ? den : -den) / _2n2) / den;
+var divNearest = (num4, den) => (num4 + (num4 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
   const c1 = divNearest(b2 * k, n);
@@ -16589,11 +16603,11 @@ var DER = {
   // - add zero byte if exists
   // - if next byte doesn't have a flag, leading zero is not allowed (minimal encoding)
   _int: {
-    encode(num3) {
+    encode(num4) {
       const { Err: E } = DER;
-      if (num3 < _0n4)
+      if (num4 < _0n4)
         throw new E("integer: negative integers are not allowed");
-      let hex = numberToHexUnpadded(num3);
+      let hex = numberToHexUnpadded(num4);
       if (Number.parseInt(hex[0], 16) & 8)
         hex = "00" + hex;
       if (hex.length & 1)
@@ -16636,20 +16650,20 @@ var _3n2 = BigInt(3);
 var _4n2 = BigInt(4);
 function _normFnElement(Fn, key) {
   const { BYTES: expected } = Fn;
-  let num3;
+  let num4;
   if (typeof key === "bigint") {
-    num3 = key;
+    num4 = key;
   } else {
     let bytes = ensureBytes("private key", key);
     try {
-      num3 = Fn.fromBytes(bytes);
+      num4 = Fn.fromBytes(bytes);
     } catch (error) {
       throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
     }
   }
-  if (!Fn.isValidNot0(num3))
+  if (!Fn.isValidNot0(num4))
     throw new Error("invalid private key: out of range [1..N-1]");
-  return num3;
+  return num4;
 }
 function weierstrassN(params, extraOpts = {}) {
   const validated = _createCurveFields("weierstrass", params, extraOpts);
@@ -17203,10 +17217,10 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
     const HALF = CURVE_ORDER >> _1n4;
     return number > HALF;
   }
-  function validateRS(title, num3) {
-    if (!Fn.isValidNot0(num3))
+  function validateRS(title, num4) {
+    if (!Fn.isValidNot0(num4))
       throw new Error(`invalid signature ${title}: out of range 1..Point.Fn.ORDER`);
-    return num3;
+    return num4;
   }
   function validateSigLength(bytes, format) {
     validateSigFormat(format);
@@ -17316,17 +17330,17 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
   const bits2int = ecdsaOpts.bits2int || function bits2int_def(bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
-    const num3 = bytesToNumberBE(bytes);
+    const num4 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - fnBits;
-    return delta > 0 ? num3 >> BigInt(delta) : num3;
+    return delta > 0 ? num4 >> BigInt(delta) : num4;
   };
   const bits2int_modN = ecdsaOpts.bits2int_modN || function bits2int_modN_def(bytes) {
     return Fn.create(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(fnBits);
-  function int2octets(num3) {
-    aInRange("num < 2^" + fnBits, num3, _0n4, ORDER_MASK);
-    return Fn.toBytes(num3);
+  function int2octets(num4) {
+    aInRange("num < 2^" + fnBits, num4, _0n4, ORDER_MASK);
+    return Fn.toBytes(num4);
   }
   function validateMsgAndHash(message, prehash) {
     _abytes2(message, void 0, "message");
@@ -18150,6 +18164,195 @@ function closeLeagues(state, entries, seasonId, nextSeasonId) {
     }
   }
   return { state: { seasonId: nextSeasonId, tiers: tiers2, last: { seasonId, moves } }, rewards };
+}
+
+// src/game/casino.ts
+var CASINO_KEY = "casino";
+var DEFAULT_CASINO = {
+  mode: "scheduled",
+  weekends: true,
+  windows: [],
+  dailyTokens: 1,
+  maxTokens: 20,
+  jackpotShare: 0.5,
+  jackpotFallbackHours: 12,
+  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 }
+};
+var OUTCOME_LABELS = {
+  jackpot: "GROS LOT 7-7-7",
+  star3: "Trois \xE9toiles",
+  planet3: "Trois plan\xE8tes",
+  bar3: "Triple BAR",
+  cherry3: "Trois cerises",
+  seven2: "Deux 7",
+  cherry: "Une cerise : jeton rendu",
+  lose: "Perdu"
+};
+var num3 = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
+};
+function normalizeCasinoSettings(raw) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = DEFAULT_CASINO;
+  const odds = {};
+  for (const k of Object.keys(d.odds)) odds[k] = num3((_a = r.odds) == null ? void 0 : _a[k], d.odds[k], 0, 1);
+  const hours2 = {};
+  for (const k of Object.keys(d.hours)) hours2[k] = num3((_b = r.hours) == null ? void 0 : _b[k], d.hours[k], 0, 168);
+  const legacy = r.enabled;
+  const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
+  const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
+  return {
+    mode,
+    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
+    windows,
+    dailyTokens: Math.floor(num3(r.dailyTokens, d.dailyTokens, 0, 10)),
+    maxTokens: Math.floor(num3(r.maxTokens, d.maxTokens, 1, 1e3)),
+    jackpotShare: num3(r.jackpotShare, d.jackpotShare, 0, 1),
+    jackpotFallbackHours: num3(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
+    odds,
+    hours: hours2
+  };
+}
+function cleanWin(w) {
+  var _a, _b;
+  if (!w || typeof w !== "object") return null;
+  const x = w;
+  if (typeof x.uid !== "string" || !(String(x.outcome) in OUTCOME_LABELS)) return null;
+  const resources = {};
+  for (const [k, v] of Object.entries((_a = x.resources) != null ? _a : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
+  return __spreadValues({ uid: x.uid, pseudo: String((_b = x.pseudo) != null ? _b : ""), atMs: Number(x.atMs) || 0, outcome: x.outcome, resources }, x.token ? { token: true } : {});
+}
+function normalizeCasino(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const list = (v, max) => (Array.isArray(v) ? v : []).map(cleanWin).filter((w) => !!w).slice(0, max);
+  return {
+    settings: normalizeCasinoSettings(r.settings),
+    recent: list(r.recent, 40),
+    jackpots: list(r.jackpots, 30),
+    totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
+    announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
+    updatedAtMs: Number(r.updatedAtMs) || 0
+  };
+}
+function validateCasinoSettings(s) {
+  const errors = [];
+  const total2 = Object.values(s.odds).reduce((a, b) => a + b, 0);
+  if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
+  if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
+  if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
+  if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un cr\xE9neau.");
+  return errors;
+}
+var DAY12 = 864e5;
+function parisWeekend(now) {
+  const d = (/* @__PURE__ */ new Date(`${parisDay(now)}T12:00:00Z`)).getUTCDay();
+  return d === 0 || d === 6;
+}
+function casinoOpeningId(s, now) {
+  if (s.mode === "open") return "open";
+  if (s.mode === "closed") return null;
+  const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
+  if (w) return `w-${w.startMs}`;
+  if (s.weekends && parisWeekend(now)) {
+    const day = parisDay(now);
+    const sat = (/* @__PURE__ */ new Date(`${day}T12:00:00Z`)).getUTCDay() === 6 ? day : parisDay(now - DAY12);
+    return `we-${sat}`;
+  }
+  return null;
+}
+function casinoOpen(s, now) {
+  return casinoOpeningId(s, now) !== null;
+}
+function playerCasino(p) {
+  var _a;
+  const c = (_a = p.casino) != null ? _a : {};
+  const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots) };
+}
+function dailyTokenReady(p, settings, now) {
+  const c = playerCasino(p);
+  return casinoOpen(settings, now) && settings.dailyTokens > 0 && c.dailyDay !== parisDay(now) && c.tokens < settings.maxTokens;
+}
+function claimDailyTokens(p, settings, now) {
+  if (!dailyTokenReady(p, settings, now)) return 0;
+  const c = playerCasino(p);
+  const add2 = Math.min(settings.dailyTokens, settings.maxTokens - c.tokens);
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2, dailyDay: parisDay(now) });
+  return add2;
+}
+function grantTokens(p, n) {
+  const c = playerCasino(p);
+  const add2 = Math.max(0, Math.min(1e3, Math.floor(n)));
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2 });
+  return add2;
+}
+function rollOutcome(settings, random) {
+  let r = random();
+  for (const k of ["jackpot", "star3", "planet3", "bar3", "cherry3", "seven2", "cherry"]) {
+    if (r < settings.odds[k]) return k;
+    r -= settings.odds[k];
+  }
+  return "lose";
+}
+var pick2 = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
+function evaluateReels(reels) {
+  const [a, b, c] = reels;
+  if (a === b && b === c) {
+    if (a === "seven") return "jackpot";
+    if (a === "star") return "star3";
+    if (a === "planet") return "planet3";
+    if (a === "bar") return "bar3";
+    if (a === "cherry") return "cherry3";
+    return "lose";
+  }
+  if (reels.filter((s) => s === "seven").length === 2) return "seven2";
+  if (reels.includes("cherry")) return "cherry";
+  return "lose";
+}
+function reelsFor(outcome, random) {
+  const triple = { jackpot: "seven", star3: "star", planet3: "planet", bar3: "bar", cherry3: "cherry" };
+  const t = triple[outcome];
+  if (t) return [t, t, t];
+  const shuffle = (r) => {
+    const a = [...r];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  if (outcome === "seven2") return shuffle(["seven", "seven", pick2(["star", "planet", "bar", "skull"], random)]);
+  if (outcome === "cherry") {
+    const others = ["star", "planet", "bar", "skull", "seven"];
+    const a = pick2(others, random);
+    const b = pick2(others.filter((s) => s !== a), random);
+    return shuffle(random() < 0.25 ? ["cherry", "cherry", a] : ["cherry", a, b]);
+  }
+  for (let guard = 0; guard < 50; guard++) {
+    const pool = ["seven", "star", "planet", "bar", "skull"];
+    const reels = random() < 0.35 ? shuffle(["seven", pick2(["star", "planet", "bar", "skull"], random), pick2(["star", "planet", "bar", "skull"], random)]) : [pick2(pool, random), pick2(pool, random), pick2(pool, random)];
+    if (evaluateReels(reels) === "lose") return reels;
+  }
+  return ["skull", "bar", "star"];
+}
+function jackpotAmounts(pot, share) {
+  const out = {};
+  for (const [k, v] of Object.entries(pot.resources)) {
+    const n = Math.floor((Number(v) || 0) * share);
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+function recordWin(state, win) {
+  return __spreadProps(__spreadValues({}, state), {
+    recent: win.outcome === "lose" ? state.recent : [win, ...state.recent].slice(0, 40),
+    jackpots: win.outcome === "jackpot" ? [win, ...state.jackpots].slice(0, 30) : state.jackpots,
+    totalSpins: state.totalSpins + 1,
+    updatedAtMs: win.atMs
+  });
 }
 
 // src/server/hooksEntry.ts

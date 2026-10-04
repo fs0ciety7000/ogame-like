@@ -7,8 +7,9 @@ import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { useCasinoVisible } from "@/services/casinoService";
 import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -118,6 +119,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/messages", label: "Messages", icon: Mail },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/marche", label: "Marché", icon: Store },
+      { to: "/game/casino", label: "Casino", icon: Dices },
       { to: "/game/concours", label: "Concours", icon: Gift },
       { to: "/game/gazette", label: "Gazette", icon: Newspaper },
     ],
@@ -153,6 +155,12 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 /** Groupes listés dans la barre latérale ; le dernier (Compte) est en pied de barre. */
+/** v5.12 : pages visibles seulement quand elles sont ouvertes (le casino), sauf pour l'administration. */
+function useNavGroups(): NavGroup[] {
+  const casino = useCasinoVisible();
+  return casino ? NAV_GROUPS : NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => i.to !== "/game/casino") }));
+}
+
 const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
 const FOOTER_GROUP = NAV_GROUPS[NAV_GROUPS.length - 1];
 
@@ -451,6 +459,7 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
 }
 
 function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number; onExpand: () => void }) {
+  const navGroups = useNavGroups();
   const player = usePlayerStore((s) => s.player);
   return (
     <aside className="relative z-30 hidden h-screen w-[4.25rem] shrink-0 flex-col items-stretch border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
@@ -464,7 +473,7 @@ function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number
         </Link>
       )}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pb-3">
-        {SIDE_GROUPS.map((group) => (
+        {navGroups.slice(0, -1).map((group) => (
           <div key={group.id} className="flex flex-col gap-0.5" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
             <span aria-hidden title={group.label} className="mx-auto my-1.5 h-px w-7 bg-[color-mix(in_srgb,var(--nav-accent)_45%,transparent)]" />
             {group.items.map((item) => (
@@ -512,6 +521,7 @@ function CockpitSwitch({ className, compact }: { className?: string; compact?: b
 
 /** Barre latérale (bureau). */
 function Sidebar() {
+  const navGroups = useNavGroups();
   const badgeOf = useBadges();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [mode, setModeState] = useState(readMode);
@@ -539,7 +549,7 @@ function Sidebar() {
       </Link>
       <CommanderCard />
       <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-3">
-        {SIDE_GROUPS.map((group) => (
+        {navGroups.slice(0, -1).map((group) => (
           <SideGroup
             key={group.id}
             group={group}
@@ -632,6 +642,7 @@ function TabLink({ item }: { item: NavItem }) {
 }
 
 function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onClose: () => void; tabs: string[]; onTabsChange: (tabs: string[]) => void }) {
+  const navGroups = useNavGroups();
   const [editing, setEditing] = useState(false);
   const toggle = (to: string) => {
     if (tabs.includes(to)) {
@@ -662,7 +673,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
         </div>
         {editing && <p className="mt-2 text-xs text-slate-400">Touche une page pour l'épingler dans la barre du bas ({tabs.length} / {MAX_TABS}).</p>}
         <div className="mt-3 flex flex-col gap-4">
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.id} style={{ "--nav-accent": group.accent } as React.CSSProperties}>
               <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-slate-500">
                 <group.icon className="h-3 w-3 text-[var(--nav-accent)]" />
@@ -734,7 +745,8 @@ function MobileTabBar() {
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
-  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter(Boolean);
+  const casinoVisible = useCasinoVisible();
+  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && (casinoVisible || i.to !== "/game/casino"));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
     <>

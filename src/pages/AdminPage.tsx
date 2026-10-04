@@ -44,6 +44,7 @@ import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
 import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
+import { CasinoAdmin } from "@/pages/admin/CasinoAdmin";
 import { PlannerPanel } from "@/pages/admin/PlannerPanel";
 import { BroadcastPanel } from "@/pages/admin/BroadcastPanel";
 import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
@@ -112,7 +113,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
-      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : solde, mouvements, versements (concours)." },
+      { id: "serverpot", label: "Pot commun", icon: Coins, hint: "Taxes du marché et des cadeaux mises en commun : Casino orbital (ouverture, gains, jetons), concours, solde et mouvements." },
       { id: "broadcast", label: "Messages ciblés", icon: Bell, hint: "Notification dans le jeu pour un groupe de joueurs : inactifs, nouveaux, une alliance…" },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "emojis", label: "Emojis", icon: Smile, hint: "Emojis personnalisés des discussions : image et :code:." },
@@ -319,6 +320,7 @@ export function AdminPage() {
           <PlannerPanel />
         </TabsContent>
         <TabsContent value="serverpot" className="flex flex-col gap-4">
+          <CasinoAdmin />
           <ContestsAdmin />
           <ServerPotPanel />
         </TabsContent>

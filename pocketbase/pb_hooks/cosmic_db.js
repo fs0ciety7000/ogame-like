@@ -6799,4 +6799,148 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- v5.12 : Casino orbital (machine à sous du pot commun) ---------- */
+
+function readCasino(txApp, game) {
+  const rec = configRecord(txApp, game.CASINO_KEY);
+  return game.normalizeCasino(rec ? toPlain(rec).data : null);
+}
+
+/** POST /api/cosmic/casino { action: "daily" | "spin" } */
+function casinoRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const action = String(body(e).action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    let casino = readCasino(txApp, game);
+    const settings = casino.settings;
+    // Fermé : seuls les administrateurs peuvent encore tester la machine.
+    if (!game.casinoOpen(settings, now) && !isGameAdmin(e)) throw new BadRequestError("Le casino est fermé pour le moment.");
+    const loaded = loadPlayer(txApp, game, uid);
+    if (loaded.player.npc) throw new ForbiddenError("Réservé aux joueurs.");
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const player = flushed.player;
+    const notes = flushed.notifications.slice();
+
+    if (action === "daily") {
+      const added = game.claimDailyTokens(player, settings, now);
+      if (added <= 0) throw new BadRequestError("Le jeton du jour est déjà récupéré.");
+      savePlayer(txApp, game, loaded, player, flushed.queues);
+      if (notes.length) notify(txApp, uid, notes);
+      out = { added, tokens: game.playerCasino(player).tokens };
+      return;
+    }
+    if (action !== "spin") throw new BadRequestError("Action inconnue.");
+
+    const c = game.playerCasino(player);
+    if (c.tokens < 1) throw new BadRequestError("Plus de jeton : reviens demain pour le jeton du jour.");
+    const outcome = game.rollOutcome(settings, Math.random);
+    const reels = game.reelsFor(outcome, Math.random);
+    let gained = {};
+    let token = false;
+    let fromPot = false;
+    if (outcome === "jackpot") {
+      const rec = configRecord(txApp, game.SERVER_POT_KEY);
+      const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+      const want = game.jackpotAmounts(pot, settings.jackpotShare);
+      const after = game.takeFromPot(pot, want, now, `Casino : gros lot 7-7-7 → ${player.pseudo}`);
+      if (after !== pot) {
+        const last = after.log[after.log.length - 1];
+        Object.keys(last.resources).forEach((k) => (gained[k] = -last.resources[k]));
+        writeConfig(txApp, game.SERVER_POT_KEY, after);
+        fromPot = true;
+      } else {
+        gained = game.productionHours(player, settings.jackpotFallbackHours);
+      }
+    } else if (outcome === "cherry") {
+      token = true;
+    } else if (outcome !== "lose") {
+      gained = game.productionHours(player, settings.hours[outcome] || 0);
+    }
+    Object.keys(gained).forEach((k) => (player.resources[k] = (player.resources[k] || 0) + gained[k]));
+    const won = outcome !== "lose";
+    player.casino = Object.assign({}, c, {
+      tokens: c.tokens - 1 + (token ? 1 : 0),
+      spins: c.spins + 1,
+      wins: c.wins + (won ? 1 : 0),
+      jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
+    });
+    savePlayer(txApp, game, loaded, player, flushed.queues);
+
+    const win = { uid, pseudo: player.pseudo, atMs: now, outcome, resources: gained };
+    if (token) win.token = true;
+    casino = game.recordWin(casino, win);
+    writeConfig(txApp, game.CASINO_KEY, casino);
+
+    if (outcome === "jackpot") {
+      const text = `${player.pseudo} décroche le gros lot du Casino orbital : ${game.describeGain(gained)}${fromPot ? " pris dans le pot commun" : ""} !`;
+      notes.push({ kind: "event", title: "777 ! Gros lot !", message: `Tu remportes ${game.describeGain(gained)}.`, createdAtMs: now, read: false, link: "/game/casino", data: { resources: gained } });
+      proceduralPlayers(txApp).forEach((p) => {
+        if (p.uid !== uid) notify(txApp, p.uid, [{ kind: "event", title: "💰 Gros lot au Casino orbital", message: text, createdAtMs: now, read: false, link: "/game/casino" }]);
+      });
+    }
+    if (notes.length) notify(txApp, uid, notes);
+    out = { outcome, reels, resources: gained, token, tokens: game.playerCasino(player).tokens, fromPot };
+  });
+  return e.json(200, out);
+}
+
+/** Annonce l'ouverture du casino (programme ou ouverture manuelle), une fois par période. Cron 15 min. */
+function casinoTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const casino = readCasino(txApp, game);
+    const id = game.casinoOpeningId(casino.settings, now);
+    if (!id || id === casino.announcedId) return;
+    proceduralPlayers(txApp).forEach((p) => {
+      notify(txApp, p.uid, [{ kind: "event", title: "🎰 Le Casino orbital est ouvert", message: "La machine à sous du pot commun tourne : récupère ton jeton du jour et tente le 7-7-7 !", createdAtMs: now, read: false, link: "/game/casino" }]);
+    });
+    writeConfig(txApp, game.CASINO_KEY, Object.assign({}, casino, { announcedId: id, updatedAtMs: now }));
+  });
+}
+
+/** POST /api/cosmic/admin/casino { action: "settings", settings } | { action: "grant", target: "all" | "active" | pseudo, tokens } */
+function adminCasino(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const casino = readCasino(txApp, game);
+    if (req.action === "settings") {
+      const settings = game.normalizeCasinoSettings(req.settings);
+      const errors = game.validateCasinoSettings(settings);
+      if (errors.length) throw new BadRequestError(errors.join(" "));
+      writeConfig(txApp, game.CASINO_KEY, Object.assign({}, casino, { settings, updatedAtMs: now }));
+      bossAdminLog(txApp, e, game.CASINO_KEY, "Casino : réglages", { réglages: { avant: JSON.stringify(casino.settings).slice(0, 300), après: JSON.stringify(settings).slice(0, 300) } }, now);
+      out = { settings };
+      return;
+    }
+    if (req.action !== "grant") throw new BadRequestError("Action inconnue.");
+    const tokens = Math.floor(Number(req.tokens) || 0);
+    if (!(tokens >= 1 && tokens <= 100)) throw new BadRequestError("Entre 1 et 100 jetons.");
+    const target = String(req.target || "").trim();
+    const note = String(req.note || "").trim().slice(0, 140);
+    let players = proceduralPlayers(txApp);
+    if (target === "active") players = players.filter((p) => now - (Number(p.lastActiveMs) || 0) < 7 * 86400000);
+    else if (target !== "all") players = players.filter((p) => String(p.pseudo).toLowerCase() === target.toLowerCase() || p.uid === target);
+    if (players.length === 0) throw new BadRequestError("Aucun joueur trouvé.");
+    players.forEach((p) => {
+      const loaded = loadPlayer(txApp, game, p.uid);
+      game.grantTokens(loaded.player, tokens);
+      savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+      notify(txApp, p.uid, [{ kind: "gift", title: `🎰 ${tokens} jeton${tokens > 1 ? "s" : ""} de casino`, message: note || "Offerts par l'équipe : tente ta chance au Casino orbital !", createdAtMs: now, read: false, link: "/game/casino" }]);
+    });
+    bossAdminLog(txApp, e, game.CASINO_KEY, "Casino : jetons offerts", { jetons: { avant: "", après: `${tokens} × ${players.length} joueur(s) (${target})` } }, now);
+    out = { players: players.length, tokens };
+  });
+  return e.json(200, out);
+}
+
+module.exports = { casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

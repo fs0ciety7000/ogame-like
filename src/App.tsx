@@ -50,6 +50,7 @@ const GazettePage = lazy(() => import("@/pages/GazettePage").then((m) => ({ defa
 const SeasonBossPage = lazy(() => import("@/pages/SeasonBossPage").then((m) => ({ default: m.SeasonBossPage })));
 const BossHallPage = lazy(() => import("@/pages/BossHallPage").then((m) => ({ default: m.BossHallPage })));
 const AlliancePublicPage = lazy(() => import("@/pages/AlliancePublicPage").then((m) => ({ default: m.AlliancePublicPage })));
+const CasinoPage = lazy(() => import("@/pages/CasinoPage").then((m) => ({ default: m.CasinoPage })));
 const ContestsPage = lazy(() => import("@/pages/ContestsPage").then((m) => ({ default: m.ContestsPage })));
 const WarlordsPage = lazy(() => import("@/pages/WarlordsPage").then((m) => ({ default: m.WarlordsPage })));
 const SeasonPassPage = lazy(() => import("@/pages/SeasonPassPage").then((m) => ({ default: m.SeasonPassPage })));
@@ -108,6 +109,7 @@ export default function App() {
                 <Route path="boss" element={<SeasonBossPage />} />
                 <Route path="hall-of-fame" element={<BossHallPage />} />
                 <Route path="concours" element={<ContestsPage />} />
+                <Route path="casino" element={<CasinoPage />} />
                 <Route path="gazette" element={<GazettePage />} />
                 <Route path="succes" element={<AchievementsPage />} />
                 <Route path="alliance" element={<AlliancePage />} />

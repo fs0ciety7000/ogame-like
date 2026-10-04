@@ -1018,6 +1018,153 @@ body {
   .ck-boot, .ck-boot p { animation-duration: 0.01ms; animation-delay: 0s !important; }
 }
 
+/* ---------- v5.12 : Casino orbital (machine à sous) ---------- */
+.slot-cabinet {
+  --gold: var(--th-gold);
+  position: relative;
+  width: min(100%, 560px);
+  margin-inline: auto;
+  padding: 14px 18px;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--th-space-700), var(--th-space-950));
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--gold) 14%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6);
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+}
+:root[data-theme="holo"] .slot-cabinet { clip-path: none; }
+.slot-cabinet-win { box-shadow: 0 0 46px color-mix(in srgb, var(--th-ok) 35%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
+.slot-cabinet-jackpot { animation: slot-jackpot-glow 0.5s ease-in-out infinite alternate; }
+@keyframes slot-jackpot-glow {
+  from { box-shadow: 0 0 30px color-mix(in srgb, var(--gold) 40%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
+  to { box-shadow: 0 0 80px color-mix(in srgb, var(--gold) 80%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
+}
+.slot-lights { display: flex; justify-content: space-between; padding: 0 6px; }
+.slot-lights > i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); animation: slot-light 0.7s steps(1) infinite; }
+.slot-lights-bottom { margin-top: 10px; }
+.slot-cabinet-jackpot .slot-lights > i { animation-duration: 0.18s; }
+@keyframes slot-light { 50% { opacity: 0.2; box-shadow: none; } }
+.slot-marquee { display: grid; justify-items: center; gap: 6px; margin: 8px 0 12px; text-align: center; }
+.slot-title {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff6d0, var(--gold) 55%, var(--th-ember));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 50%, transparent));
+}
+.slot-jackpot { display: grid; justify-items: center; gap: 2px; }
+.slot-led {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--gold);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--gold) 70%, transparent);
+  background: #0a0603;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.slot-body { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.slot-window {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: #05030a;
+  border: 2px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.9);
+}
+.slot-reel {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #1a1426, #f2ecdf 22%, #fffaf0 50%, #f2ecdf 78%, #1a1426);
+}
+.slot-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.75));
+}
+.slot-payline { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--th-danger); box-shadow: 0 0 10px var(--th-danger); opacity: 0.75; pointer-events: none; }
+.slot-cabinet-win .slot-payline, .slot-cabinet-jackpot .slot-payline { background: var(--th-ok); box-shadow: 0 0 16px var(--th-ok); opacity: 1; }
+.slot-arrow { position: absolute; top: 50%; width: 0; height: 0; margin-top: -7px; border: 7px solid transparent; }
+.slot-arrow-left { left: -9px; border-left-color: var(--th-danger); }
+.slot-arrow-right { right: -9px; border-right-color: var(--th-danger); }
+.slot-seven {
+  background: linear-gradient(180deg, #ffe680 0%, #ff9a1f 45%, #e0202f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 2px #6b0710;
+  filter: drop-shadow(0 2px 0 #3a0207);
+}
+.slot-bar { background: #111; color: #ffd84a; border: 2px solid #ffd84a; box-shadow: 0 2px 0 #6b4d00; }
+.slot-star { color: #f5b300; fill: #ffd84a; filter: drop-shadow(0 2px 0 #8a5a00); }
+.slot-cherry { color: #b3001b; fill: #e5202f; filter: drop-shadow(0 2px 0 #5a000c); }
+.slot-skull { color: #3b3348; }
+.slot-planet { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
+.slot-lever { position: relative; width: 26px; height: 150px; flex: none; background: none; border: 0; cursor: pointer; }
+.slot-lever:disabled { cursor: not-allowed; opacity: 0.6; }
+.slot-lever-stick { position: absolute; left: 50%; bottom: 10px; width: 6px; height: 110px; margin-left: -3px; background: linear-gradient(90deg, #6d6d78, #e6e6ef, #6d6d78); transform-origin: 50% 100%; transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
+.slot-lever-ball { position: absolute; left: 50%; top: 4px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9aa4, var(--th-danger) 55%, #5a0010); box-shadow: 0 0 12px color-mix(in srgb, var(--th-danger) 60%, transparent); transform-origin: 50% 132px; transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
+.slot-lever::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 22px; height: 14px; margin-left: -11px; background: var(--th-space-600); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); }
+.slot-lever-pulled .slot-lever-stick { transform: scaleY(0.25); }
+.slot-lever-pulled .slot-lever-ball { transform: translateY(96px); }
+.slot-lever:hover:not(:disabled) .slot-lever-ball { filter: brightness(1.2); }
+.slot-console { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.slot-credits { display: grid; gap: 2px; }
+.slot-spin {
+  flex: 1;
+  min-width: 160px;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 10px 18px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #2a0a00;
+  background: linear-gradient(180deg, #ffe680, var(--gold) 40%, var(--th-ember));
+  border: 0;
+  box-shadow: 0 4px 0 #7a3a00, 0 0 22px color-mix(in srgb, var(--gold) 45%, transparent);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.15s;
+}
+.slot-spin small { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.14em; font-weight: 600; opacity: 0.75; }
+.slot-spin:hover:not(:disabled) { filter: brightness(1.1); }
+.slot-spin:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #7a3a00; }
+.slot-spin:disabled { cursor: not-allowed; filter: grayscale(0.7) brightness(0.7); }
+.slot-coin {
+  position: absolute;
+  top: -40px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c0, var(--th-gold) 50%, #a86b00);
+  box-shadow: inset 0 0 0 3px rgba(122, 74, 0, 0.6), 0 0 10px color-mix(in srgb, var(--th-gold) 50%, transparent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 12px;
+  color: #7a4a00;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot-lights > i, .slot-cabinet-jackpot { animation: none; }
+}
+
 /* ---------- Page de maintenance (v2.5) ---------- */
 @layer components {
   .mt-hazard {

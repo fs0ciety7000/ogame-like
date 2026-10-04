@@ -44,6 +44,22 @@ export function useIsAdmin(): boolean {
   return isAdmin;
 }
 
+/** Comme useIsAdmin, mais null tant que la vérification n'est pas finie (pour ne pas rediriger trop tôt). */
+export function useAdminStatus(): boolean | null {
+  const uid = useAuthStore((s) => s.user?.uid);
+  const [state, setState] = useState<{ uid: string; admin: boolean } | null>(null);
+  useEffect(() => {
+    if (!uid) return;
+    let active = true;
+    checkIsAdmin(uid).then((admin) => active && setState({ uid, admin }));
+    return () => {
+      active = false;
+    };
+  }, [uid]);
+  if (!uid) return false;
+  return state && state.uid === uid ? state.admin : null;
+}
+
 export type AdminPlayer = PlayerState & { id: string };
 
 export async function adminListPlayers(): Promise<AdminPlayer[]> {

@@ -188,3 +188,4 @@ export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
 export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
 export { allianceWeekId } from "@/game/allianceBoss";
 export { closeLeagues, LEAGUES_KEY, leagueInfo, normalizeLeagues } from "@/game/leagues";
+export { CASINO_KEY, casinoOpen, casinoOpeningId, claimDailyTokens, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
