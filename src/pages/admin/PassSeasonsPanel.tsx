@@ -10,6 +10,7 @@ import { COMMANDER_ROLES, COMMANDERS, seasonCommanderDef, type CommanderId } fro
 import { nextMonthId, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { describePassReward, OBJECTIVE_LABELS, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
+import { CATALOG_START, catalogEntryFor, THEME_PRIMARY } from "@/game/seasonCatalog";
 import { STORY_SPEAKERS, type Speaker } from "@/game/story";
 import { adminPassSeasonGenerate } from "@/services/adminService";
 import { saveContentSection, useContentStore } from "@/services/contentService";
@@ -109,6 +110,8 @@ export function PassSeasonsPanel() {
         Chaque mois, le générateur écrit un brouillon : thème, scénario en quatre temps, 30 paliers, prérequis aux paliers 10, 20 et 30, et au dernier palier un commandant de saison inédit avec {PASS_FINAL_AMBER} Ambre. Relis, retouche, puis publie. Un brouillon non publié au début de son mois est publié d'office ; un passe publié remplace le passe par défaut (en dessous) ce mois-là.
       </p>
 
+      <CatalogOverview current={current} />
+
       {seasons.length === 0 ? (
         <p className="text-sm text-slate-500">Aucun passe généré pour l'instant.</p>
       ) : (
@@ -133,7 +136,7 @@ export function PassSeasonsPanel() {
             </HudChip>
             {dirty && <HudChip size="sm" tone="gold">Modifié</HudChip>}
             <div className="ml-auto flex flex-wrap gap-2">
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void generate(draft.id, (draft.auto?.variant ?? 0) + 1)} title="Nouveau tirage : thème, scénario, commandant…">
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void generate(draft.id, (draft.auto?.variant ?? 0) + 1)} title="Nouveau tirage : paliers, prérequis et répliques (thème et commandant suivent le catalogue)">
                 <RefreshCw className="h-3.5 w-3.5" /> Régénérer
               </Button>
               <Button size="sm" variant="outline" disabled={busy || !dirty || errors.length > 0} onClick={() => void save(draft, "Passe enregistré.")}>
@@ -175,6 +178,11 @@ export function PassSeasonsPanel() {
             </Field>
             <NumberField label="Points par palier" value={draft.pointsPerTier} min={1} onChange={(v) => set({ pointsPerTier: Math.max(1, v ?? 1) })} />
             <ImageField label="Illustration (en-tête de la page du passe)" value={draft.theme.image} onChange={(image) => set({ theme: { ...draft.theme, image } })} />
+            {draft.theme.prompt && (
+              <div className="sm:col-span-2">
+                <PromptBox prompt={draft.theme.prompt} title="Copier le prompt Midjourney de l'illustration" />
+              </div>
+            )}
           </section>
 
           {/* Scénario */}
@@ -246,21 +254,63 @@ function CommanderEditor({ draft, set }: { draft: PassSeason; set: (patch: Parti
       <p className="text-xs text-slate-300">
         Bonus au niveau 10 : <span className="text-slate-100">{def.bonus(10)}</span>. Progresse comme {COMMANDERS.find((x) => x.id === c.primary)?.title.toLowerCase()}.
       </p>
-      <div className="hud-cut-sm flex items-start gap-2 border border-white/10 bg-white/[0.02] p-2">
-        <p className="min-w-0 flex-1 break-words font-mono text-[11px] text-slate-400">{c.prompt}</p>
-        <Button
-          size="icon"
-          variant="ghost"
-          title="Copier le prompt Midjourney du portrait"
-          onClick={() => {
-            void navigator.clipboard?.writeText(c.prompt);
-            toast.success("Prompt copié.");
-          }}
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      <PromptBox prompt={c.prompt} title="Copier le prompt Midjourney du portrait" />
     </section>
+  );
+}
+
+/** Prompt Midjourney à copier (portrait, illustration). */
+function PromptBox({ prompt, title }: { prompt: string; title: string }) {
+  return (
+    <div className="hud-cut-sm flex items-start gap-2 border border-white/10 bg-white/[0.02] p-2">
+      <p className="min-w-0 flex-1 break-words font-mono text-[11px] text-slate-400">{prompt}</p>
+      <Button
+        size="icon"
+        variant="ghost"
+        title={title}
+        onClick={() => {
+          void navigator.clipboard?.writeText(prompt);
+          toast.success("Prompt copié.");
+        }}
+      >
+        <Copy className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+/** v5.14 : les 36 saisons du catalogue (douze thèmes en rotation, trois ans). */
+function CatalogOverview({ current }: { current: string }) {
+  const months = useMemo(() => {
+    const out: string[] = [];
+    let m = CATALOG_START;
+    for (let i = 0; i < 36; i++) {
+      out.push(m);
+      m = nextMonthId(m);
+    }
+    return out;
+  }, []);
+  const role = (r: CommanderId) => COMMANDERS.find((c) => c.id === r)?.title ?? r;
+  return (
+    <details className="hud-cut-sm border border-white/10 p-3">
+      <summary className="cursor-pointer text-xs text-slate-300">Catalogue des 36 saisons (douze thèmes, trois ans, un commandant aux effets uniques par saison)</summary>
+      <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {months.map((m, i) => {
+          const e = catalogEntryFor(m);
+          return (
+            <div key={m} className={cn("flex flex-col gap-0.5 border-l-2 py-1 pl-2", m === current ? "border-cyan-glow" : "border-white/10")}>
+              <p className="font-mono text-[10px] text-slate-500">
+                {i + 1} / 36 · {seasonLabel(m)} · année {e.year}
+              </p>
+              <p className="text-sm text-white">{e.name}</p>
+              <p className="text-xs text-slate-400">
+                {e.commander.name}, {e.commander.title.toLowerCase()} · {role(THEME_PRIMARY[e.theme])} + {role(e.commander.secondary).toLowerCase()}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 

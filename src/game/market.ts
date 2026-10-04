@@ -1,3 +1,4 @@
+import { playerModifiers } from "@/game/modifiers";
 import { recordChronicle } from "@/game/chronicles";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { GameActionError } from "@/game/errors";
@@ -74,8 +75,9 @@ export function priceBounds(giveRes: ResourceId, giveAmount: number, wantRes: Re
 }
 
 /** Taxe due par le vendeur sur ce qu'il reçoit. */
-export function marketTax(wantAmount: number, sameAlliance: boolean): number {
-  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct));
+export function marketTax(wantAmount: number, sameAlliance: boolean, reduction = 0): number {
+  // v5.14 : la Diplomate en poste du vendeur réduit la taxe (couche empire, plafonnée).
+  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct) * (1 - Math.min(1, Math.max(0, reduction))));
 }
 
 export interface NewOffer {
@@ -119,7 +121,7 @@ export function acceptOffer(
   if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} achats par jour atteinte.`);
   if ((buyer.resources[offer.wantRes] ?? 0) < offer.wantAmount) throw new GameActionError(`Pas assez de ${label(offer.wantRes)} pour cette offre.`);
   const sameAlliance = !!offer.sellerAllianceId && offer.sellerAllianceId === (buyer.allianceId ?? "");
-  const tax = marketTax(offer.wantAmount, sameAlliance);
+  const tax = marketTax(offer.wantAmount, sameAlliance, playerModifiers(seller).tradeTax);
   buyer.resources[offer.wantRes] -= offer.wantAmount;
   buyer.resources[offer.giveRes] = (buyer.resources[offer.giveRes] ?? 0) + offer.giveAmount;
   seller.resources[offer.wantRes] = (seller.resources[offer.wantRes] ?? 0) + offer.wantAmount - tax;
@@ -132,6 +134,8 @@ export function acceptOffer(
   // v5.6 : l'Intendant en poste progresse des deux côtés de l'échange.
   grantCommanderXp(buyer, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(seller, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(buyer, "diplomat", COMMANDER_XP.marketTrade);
+  grantCommanderXp(seller, "diplomat", COMMANDER_XP.marketTrade);
   return { tax, sameAlliance };
 }
 
@@ -168,7 +172,7 @@ export function fillBuyOrder(
   const payment = buyOrderPaid(order, filled) - buyOrderPaid(order, already);
   if (payment <= 0) throw new GameActionError("Quantité trop faible : livre davantage pour être payé.");
   const sameAlliance = !!order.sellerAllianceId && order.sellerAllianceId === (supplier.allianceId ?? "");
-  const tax = marketTax(qty, sameAlliance);
+  const tax = marketTax(qty, sameAlliance, playerModifiers(owner).tradeTax);
   supplier.resources[order.wantRes] -= qty;
   supplier.resources[order.giveRes] = (supplier.resources[order.giveRes] ?? 0) + payment;
   owner.resources[order.wantRes] = (owner.resources[order.wantRes] ?? 0) + qty - tax;
@@ -180,6 +184,8 @@ export function fillBuyOrder(
   recordChronicle(supplier, "market", now);
   grantCommanderXp(supplier, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(owner, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(supplier, "diplomat", COMMANDER_XP.marketTrade);
+  grantCommanderXp(owner, "diplomat", COMMANDER_XP.marketTrade);
   return { qty, payment, tax, filled, done: filled >= order.wantAmount };
 }
 

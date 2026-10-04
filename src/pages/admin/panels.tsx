@@ -1,3 +1,5 @@
+import { WORLD_BOSS_RULES } from "@/game/worldBosses";
+import { worldBossForStart } from "@/game/leviathan";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rocket, CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
@@ -21,7 +23,7 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
+import { NumberField, Section } from "@/pages/admin/fields";
 import { BossScheduleFields } from "@/pages/admin/bossFields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
@@ -44,7 +46,7 @@ export function RulesPanel() {
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
   // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
   const bossClash =
-    rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
+    rules.events.bossWeekly === false && rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
       ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
       : undefined;
 
@@ -464,10 +466,19 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, wars: { ...r.wars, titleDays: v ?? 0 } }))}
           />
         </Section>
-        <Section title="Léviathan">
+        <Section title="Boss mondiaux (Léviathan et ses cinq rivaux)">
           <BossScheduleFields
-            label="Léviathan"
-            value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours, dates: rules.events.bossDates ?? [] }}
+            label="Boss mondiaux"
+            value={{
+              enabled: rules.events.bossWeekly !== false || rules.events.bossMonthly !== false,
+              weekend: rules.events.bossWeekend ?? "first",
+              startHour: rules.leviathan.startHour ?? 18,
+              durationHours: rules.leviathan.durationHours,
+              dates: rules.events.bossDates ?? [],
+              ...(rules.events.bossWeekly !== false ? { weekly: { minGapDays: Math.min(6, Math.max(WORLD_BOSS_RULES.minGapDays, Math.ceil(rules.leviathan.durationHours / 24))) } } : {}),
+            }}
+            weekly={{ on: rules.events.bossWeekly !== false, onChange: (v) => setRules((r) => ({ ...r, events: { ...r.events, bossWeekly: v } })) }}
+            nameFor={(ms) => worldBossForStart(ms).name}
             onChange={(p) =>
               setRules((r) => ({
                 ...r,
@@ -477,10 +488,8 @@ export function RulesPanel() {
             }
             clash={bossClash}
           />
-          <TextField label="Nom" value={rules.leviathan.name} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, name: v } }))} />
-          <TextField label="Titre du n° 1 des dégâts" value={rules.leviathan.title} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, title: v } }))} />
           <NumberField
-            label="Structure : facteur × puissance d'attaque des actifs"
+            label="Structure : facteur × puissance d'attaque des actifs (× celui de chaque boss)"
             value={rules.leviathan.hpFactor}
             step={0.5}
             onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, hpFactor: v ?? 0 } }))}

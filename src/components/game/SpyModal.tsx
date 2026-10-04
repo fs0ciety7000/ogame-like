@@ -184,7 +184,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
 
   const count = Math.max(0, Math.min(owned, probes));
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const flight = player && count > 0 ? spyTravelSeconds(distance, fleetSpeed(player.units, { [probeId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
+  const flight = player && count > 0 ? spyTravelSeconds(distance, fleetSpeed(player.units, { [probeId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
   const level = player ? espionageLevel(player) : 0;
 
   const send = async () => {

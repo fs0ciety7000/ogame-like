@@ -347,7 +347,10 @@ export type AdminPlayerAction =
   | { action: "testMode"; on: boolean }
   | { action: "finishAll" }
   | { action: "officers" }
-  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string };
+  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string }
+  | { action: "officer"; officerId: string; reason: string }
+  | { action: "relic"; template: string; rarity: string; reason: string }
+  | { action: "capsule"; capsule: string; level: number; reason: string };
 
 export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Promise<Record<string, unknown>> {
   return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid, ...payload } });

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Crosshair, Radio, Skull, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PlayerName } from "@/components/ui/player-name";
-import { BOSS_PHASE_INFO, BOSS_PHASE_RULES, bossFightPhase, bossPhase, bossWeakness, type BossFightPhase, type BossPhase, type LeviathanState } from "@/game/leviathan";
+import { bossPhaseLabel, BOSS_PHASE_RULES, bossFightPhase, bossPhase, bossWeakness, type BossFightPhase, type BossPhase, type LeviathanState } from "@/game/leviathan";
 import { findUnit } from "@/game/units";
 import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatNumber, alpha } from "@/lib/utils";
@@ -162,12 +162,12 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
       <div className="grid grid-cols-3 gap-1.5 text-[10px] uppercase tracking-[0.14em]">
         {([1, 2, 3] as BossFightPhase[]).map((p) => (
           <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
-            {p}. {BOSS_PHASE_INFO[p].name}
+            {p}. {bossPhaseLabel(state, p).name}
           </span>
         ))}
       </div>
       <p className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-        <span>{BOSS_PHASE_INFO[phase].desc}</span>
+        <span>{bossPhaseLabel(state, phase).desc}</span>
         {weak && (
           <span className="inline-flex items-center gap-1.5 border border-[#ff5df0]/50 bg-[#ff5df0]/10 px-2 py-0.5 text-[#ff5df0]">
             <img src={weak.image} alt="" className="h-5 w-5 object-contain" /> Faiblesse : {weak.name}
@@ -204,7 +204,7 @@ export function BossFeed({ state, uid, now, max = 12 }: { state: LeviathanState;
               <motion.li key={`${f.t}-${f.uid ?? f.phase}`} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className={cn("flex items-center gap-2 text-xs", f.uid === uid && "text-cyan-glow")}>
                 {f.phase ? (
                   <span className="flex-1 border-l-2 border-[#ff5df0] pl-2 font-semibold text-[#ff5df0]">
-                    Phase {f.phase} : {BOSS_PHASE_INFO[f.phase].name} ! {f.phase === 3 ? `Faiblesse révélée : ${findUnit(bossWeakness(state))?.name ?? "?"}.` : "Il riposte."}
+                    Phase {f.phase} : {bossPhaseLabel(state, f.phase).name} ! {f.phase === 3 ? `Faiblesse révélée : ${findUnit(bossWeakness(state))?.name ?? "?"}.` : "Il riposte."}
                   </span>
                 ) : (
                   <>

@@ -1,3 +1,4 @@
+import { playerModifiers } from "@/game/modifiers";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
@@ -225,7 +226,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
-      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels) * 1000;
+      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels, player) * 1000;
       return undefined;
     }
 
@@ -485,8 +486,9 @@ export interface GiftOutput {
 export const GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
 
 /** Part qui arrive à destination (1 entre membres d'une même alliance). */
-export function giftDeliveryRate(sender: Pick<PlayerState, "allianceId">, recipient: Pick<PlayerState, "allianceId">): number {
-  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax;
+export function giftDeliveryRate(sender: Pick<PlayerState, "allianceId"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "talents" | "territory">>, recipient: Pick<PlayerState, "allianceId">): number {
+  // v5.14 : la Diplomate en poste de l'expéditeur réduit la taxe de transport.
+  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax * (1 - playerModifiers(sender).tradeTax);
 }
 
 /** Raison qui empêche ce compte d'envoyer ou de recevoir un cadeau (null si rien). */
@@ -529,6 +531,7 @@ export function performGift(
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
   bumpStat(s.player, "giftsSent");
+  grantCommanderXp(s.player, "diplomat", COMMANDER_XP.giftSent);
   // v5.10 : hors alliance, une part se perd en route (taxe de transport).
   const rate = giftDeliveryRate(sender, recipient);
   const delivered: Partial<Record<ResourceId, number>> = {};

@@ -37,7 +37,7 @@ export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHisto
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
-export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan, worldBossForStart, worldBossName, worldBossOf, worldBossTitle } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
@@ -74,9 +74,11 @@ export {
   consumeJammer,
 } from "@/game/bounties";
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
-export { anomalyChance, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+export { anomalyChance, COMMANDER_XP, grantCommanderXp, RARE_OFFICER_RULES, rollRareOfficer, adminGrantOfficer } from "@/game/commanders";
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
-export { addRelic, expeditionRelicChance, grantMythicRelic, mythicFor, rollRelic } from "@/game/relics";
+export { addRelic, expeditionRelicChance, grantMythicRelic, makeRelic, mythicFor, relicLabel, rollRelic } from "@/game/relics";
+export { addCapsule, CAPSULES } from "@/game/synthesis";
+export { describeLoot, LOOT_TABLES, rollLoot } from "@/game/loot";
 export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";

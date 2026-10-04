@@ -1,4 +1,5 @@
 import { galaxyCoords } from "@/game/galaxy";
+import type { EffectGrant } from "@/game/effects";
 import type { Buildings } from "@/types/game";
 
 /* =====================================================
@@ -97,6 +98,12 @@ export function computeTerritories(players: TerritoryPlayer[], now: number): { s
 /** Bonus de production en vigueur (0 s'il a expiré). */
 export function territoryBonus(t: PlayerTerritory | null | undefined, now: number): number {
   return t && t.untilMs > now ? Math.min(TERRITORY_RULES.maxBonus, Math.max(0, t.pct)) : 0;
+}
+
+/** v5.14 : effet du territoire d'alliance (circuit d'effets, couche empire). */
+export function territoryEffects(t: PlayerTerritory | null | undefined, now: number): EffectGrant[] {
+  const pct = territoryBonus(t, now);
+  return pct > 0 ? [{ stat: "productionAll", value: pct, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${t?.sectors.length ?? 0} secteur${(t?.sectors.length ?? 0) > 1 ? "s" : ""})` } }] : [];
 }
 
 /** Secteurs tenus par une alliance (classement des guerres de saison). */

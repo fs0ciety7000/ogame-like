@@ -1,5 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { currentSeasonId } from "@/game/seasons";
+import type { EffectGrant, EffectStat } from "@/game/effects";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -103,4 +104,15 @@ export function resetTalents(player: PlayerState, now: number): TalentState {
 export function talentBonuses(player: Pick<PlayerState, "talents">): { def: TalentDef; value: number }[] {
   const st = talentState(player);
   return TALENTS.filter((t) => (st.ranks[t.id] ?? 0) > 0).map((def) => ({ def, value: def.perRank * (st.ranks[def.id] ?? 0) }));
+}
+
+/** v5.14 : effets des talents appris (circuit d'effets, couche empire). */
+export function talentEffects(player: Pick<PlayerState, "talents">): EffectGrant[] {
+  return talentBonuses(player).map(({ def, value }) => ({
+    stat: def.effect.kind as EffectStat,
+    target: def.effect.kind === "production" ? def.effect.res : undefined,
+    value,
+    layer: "empire" as const,
+    source: { kind: "talent" as const, id: def.id, label: def.name },
+  }));
 }

@@ -641,7 +641,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                       <span className="truncate font-semibold">{u.name}</span>
                       <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
                       <span className="font-mono text-[10px] text-slate-500">
-                        {formatDuration(getUnitBuildTime(u, player.techLevels))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
+                        {formatDuration(getUnitBuildTime(u, player.techLevels, player))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
                       </span>
                     </span>
                   </button>

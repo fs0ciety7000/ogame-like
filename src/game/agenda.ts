@@ -1,5 +1,5 @@
 import { bossWindows, weekendEventsBetween } from "@/game/events";
-import { leviathanSchedule, LEVIATHAN_RULES } from "@/game/leviathan";
+import { leviathanSchedule, worldBossForStart } from "@/game/leviathan";
 import { chroniclesConfig, episodeUnlockMs, seasonBossSchedule } from "@/game/chronicles";
 import { seasonEndMs } from "@/game/seasons";
 
@@ -52,7 +52,7 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
   const to = now + days * DAY;
   const items: AgendaItem[] = [];
   for (const w of bossWindows(now, leviathanSchedule(), 6)) {
-    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: LEVIATHAN_RULES.name, startMs: w.startMs, endMs: w.endMs, link: "/game/leviathan", fixed: w.fixed, emoji: "🐋", ...(w.fixed ? { source: { type: "levDate" as const, startMs: w.startMs } } : {}) });
+    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/leviathan", fixed: w.fixed, emoji: "🐋", ...(w.fixed ? { source: { type: "levDate" as const, startMs: w.startMs } } : {}) });
   }
   const months = chroniclesConfig().months;
   for (const w of bossWindows(now, seasonBossSchedule(), 6)) {

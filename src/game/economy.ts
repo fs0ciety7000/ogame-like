@@ -7,9 +7,8 @@ import { eventBoundaries, productionMultipliers } from "@/game/events";
 import { allianceBastionBonus, allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor, upkeepFreeUntil } from "@/game/ascension";
 import type { Buildings, PlayerState, ResourceId, Resources, TechLevels, Units } from "@/types/game";
-import { playerModifiers } from "@/game/modifiers";
-import { activeLevels } from "@/game/commanders";
-import { territoryBonus } from "@/game/territories";
+import { empireEffects, playerModifiers } from "@/game/modifiers";
+import type { EffectScope } from "@/game/effects";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
 
 /* =====================================================
@@ -60,6 +59,8 @@ export interface EconomyInput {
   productionFactor?: number;
   /** Colonies : multiplicateur d'entrepôt (spécialisation « Dépôt logistique »). */
   storageFactor?: number;
+  /** v5.14 : portée des effets (« colonies » : Gouverneure en poste comprise). */
+  effectScope?: EffectScope;
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -77,7 +78,7 @@ function boostAt(input: EconomyInput, at: number): number {
 /** Capacité de l'entrepôt, Intendant en poste compris (v4.0). */
 export function storageCapacityOf(input: EconomyInput): number {
   const base = getStorageCapacity(input.buildings, input.techLevels);
-  const bonus = input.commanders ? playerModifiers(input).storage : 0;
+  const bonus = input.commanders ? playerModifiers(input, Date.now(), input.effectScope).storage : 0;
   const factor = (1 + Math.max(0, bonus)) * (input.storageFactor ?? 1);
   return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
@@ -114,8 +115,8 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
   const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost * (input.productionFactor ?? 1);
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
   // v4.0 : Intendant en poste et reliques ; v5.2 : aussi secteur d'alliance et talents
-  // (auparavant ignorés sans officier ni relique).
-  const mods = playerModifiers(input);
+  // (auparavant ignorés sans officier ni relique). v5.14 : portée des colonies comprise.
+  const mods = playerModifiers(input, Date.now(), input.effectScope);
   for (const res of Object.keys(gross) as ResourceId[]) {
     const f = 1 + mods.productionAll + (mods.production[res] ?? 0);
     if (f !== 1) gross[res] = (gross[res] ?? 0) * f;
@@ -211,11 +212,12 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
 }
 
 /** Quantité d'une ressource à l'abri du pillage (bunker de l'entrepôt). */
-export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>): number {
+export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels);
   // v3.3 : le Bastion fédéral s'ajoute (et repousse le plafond d'autant).
-  const bastion = allianceBastionBonus(allianceLevels);
+  // v5.14 : la Gardienne en poste aussi (couche empire, plafonnée à part).
+  const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
   const pct = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage") + bastion);
   return Number.isFinite(capacity) ? Math.floor(capacity * pct) : 0;
 }
@@ -259,13 +261,15 @@ export function productionBonuses(input: EconomyInput, now: number, res: Resourc
   if (alliance > 0) out.push({ label: "Recherche d'alliance", pct: alliance });
   const asc = ascensionProductionFactor(input) - 1;
   if (asc > 0) out.push({ label: "Ascensions", pct: asc });
-  const steward = activeLevels(input as Pick<PlayerState, "commanders">).steward * 0.01;
-  if (steward > 0) out.push({ label: "Intendant", pct: steward });
-  const territory = territoryBonus(input.territory, now);
-  if (territory > 0) out.push({ label: "Secteurs d'alliance", pct: territory });
-  const mods = playerModifiers(input);
-  const other = mods.productionAll - steward - territory + (mods.production[res] ?? 0);
-  if (other > 0.0001) out.push({ label: "Reliques et talents", pct: other });
+  // v5.14 : lu dans le circuit d'effets, regroupé par famille de source.
+  const bySource: Record<string, number> = {};
+  for (const g of empireEffects(input, now)) {
+    if (g.stat !== "productionAll" && !(g.stat === "production" && g.target === res)) continue;
+    if (g.scope && g.scope !== "all" && g.scope !== input.effectScope) continue;
+    const label = g.source.kind === "officer" ? "Officiers" : g.source.kind === "territory" ? "Secteurs d'alliance" : "Reliques et talents";
+    bySource[label] = (bySource[label] ?? 0) + g.value;
+  }
+  for (const label of ["Officiers", "Secteurs d'alliance", "Reliques et talents"]) if ((bySource[label] ?? 0) > 0.0001) out.push({ label, pct: bySource[label] });
   if (boostAt(input, now) > 1) out.push({ label: "Gelée de la Reine", pct: KESH_BOOST_PCT });
   const ev = productionMultipliers(now)[res];
   if (ev && ev !== 1) out.push({ label: "Événement en cours", pct: ev - 1 });

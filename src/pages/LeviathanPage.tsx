@@ -17,7 +17,8 @@ import { BossRecapPanel } from "@/components/game/BossRecap";
 import { BossDeathOverlay, BossFeed, BossHero, BossNextCard, BossPhasePanel, bossPhase, type BossArt } from "@/components/game/BossStage";
 import { FORMATIONS, type FormationId } from "@/game/formations";
 import { describeBossSchedule, hasBossSchedule } from "@/game/events";
-import { BOSS_PHASE_RULES, bossAssaultEstimate, bossFightPhase, bossWeakness, isActive, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
+import { BOSS_PHASE_RULES, bossAssaultEstimate, bossFightPhase, bossWeakness, isActive, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, nextLeviathanStart, rewardHours, upcomingLeviathanStart, worldBossForStart, worldBossOf, type LeviathanState } from "@/game/leviathan";
+import { WORLD_BOSSES, type WorldBossDef } from "@/game/worldBosses";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { sendLeviathanAssault, useLeviathan } from "@/services/leviathanService";
 import { useAdminStatus } from "@/services/maintenanceService";
@@ -135,7 +136,7 @@ export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) 
   );
 }
 
-function RulesCard() {
+function RulesCard({ boss }: { boss: WorldBossDef }) {
   return (
     <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
       <h2 className="hud-title text-sm">Règles</h2>
@@ -143,17 +144,21 @@ function RulesCard() {
       <p>
         Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier (avec 25 % de ses dégâts, tu touches déjà la moitié du bonus) ; moitié moins s'il survit. S'il tombe : +{LEVIATHAN_RULES.podiumHours.join(" / ")} h pour le podium, une relique épique pour les {LEVIATHAN_RULES.topRelics} premiers (rare pour les autres, de l'Ambre si ta collection est pleine), et une relique mythique pour le premier.
       </p>
-      <p>Le premier en dégâts gagne le titre « {LEVIATHAN_RULES.title} » pendant {LEVIATHAN_RULES.titleDays} jours. Chaque participant à sa chute débloque le succès « Tueur de Léviathan ».</p>
+      <p>Le premier en dégâts gagne le titre « {boss.title} » pendant {LEVIATHAN_RULES.titleDays} jours. Chaque participant à la chute d'un boss mondial débloque le succès « Tueur de Léviathan ».</p>
+      <p>
+        {boss.name} : structure ×{String(boss.hpMult).replace(".", ",")}, pertes ×{String(boss.lossMult).replace(".", ",")}, récompenses ×{String(boss.rewardMult).replace(".", ",")}. Phases : {boss.phases.map((p) => p.name).join(", puis ")}.
+      </p>
+      <p className="text-xs text-slate-500">Six boss mondiaux se relaient, un par semaine ({WORLD_BOSSES.map((b) => b.name).join(", ")}), jamais le même jour que le précédent.</p>
     </Card>
   );
 }
 
-const LEVIATHAN_ART: BossArt = {
-  name: LEVIATHAN_RULES.name,
-  image: "/assets/leviathan/leviathan.webp",
-  portrait: "/assets/leviathan/leviathan-portrait.webp",
-  emblem: "/assets/leviathan/leviathan-emblem.webp",
-};
+/** v5.14 : mise en scène du boss mondial (le Léviathan garde ses images dédiées). */
+function worldBossArt(boss: WorldBossDef): BossArt {
+  if (boss.id === "leviathan")
+    return { name: boss.name, image: boss.image, portrait: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", lore: boss.story };
+  return { name: boss.name, image: boss.image, fallbackImage: "/assets/leviathan/leviathan.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", lore: boss.story };
+}
 
 export function LeviathanPage() {
   useNowTicker();
@@ -177,12 +182,15 @@ export function LeviathanPage() {
   // Combat terminé : la fenêtre en cours est passée, on annonce la suivante.
   const next = phase === "active" ? nextLeviathanStart(now) : upcomingLeviathanStart(now);
   const ended = phase === "killed" || phase === "failed";
+  // v5.14 : boss du combat en cours ou terminé, sinon celui de la prochaine apparition.
+  const boss = state && phase !== "dormant" ? worldBossOf(state) : next ? worldBossForStart(next) : worldBossOf(null);
+  const art = worldBossArt(boss);
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        eyebrow="Cosmic Empires / Grands ennemis"
-        title="Le Léviathan"
+        eyebrow={`Boss mondial de la semaine · ${boss.epithet}`}
+        title={boss.name}
         description={
           phase === "killed"
             ? "Le colosse est tombé : voici le bilan du combat et ce que chacun a gagné."
@@ -194,22 +202,22 @@ export function LeviathanPage() {
         }
       />
 
-      <BossHero art={LEVIATHAN_ART} phase={phase} state={state} now={now} next={next} />
+      <BossHero art={art} phase={phase} state={state} now={now} next={next} />
 
       {ended && state && (
         <BossRecapPanel
           state={state}
           uid={player.uid}
-          name={LEVIATHAN_RULES.name}
-          image="/assets/leviathan/leviathan.webp"
+          name={boss.name}
+          image={boss.image}
           accent="var(--color-danger-glow)"
           active={active}
-          legacyNote={state.rewards ? undefined : `${String(Math.round(rewardHours(state, player.uid) * 10) / 10).replace(".", ",")} h de ta production${leviathanRanking(state)[0]?.uid === player.uid && state.status === "killed" ? ` et le titre « ${LEVIATHAN_RULES.title} »` : ""}`}
+          legacyNote={state.rewards ? undefined : `${String(Math.round(rewardHours(state, player.uid) * 10) / 10).replace(".", ",")} h de ta production${leviathanRanking(state)[0]?.uid === player.uid && state.status === "killed" ? ` et le titre « ${boss.title} »` : ""}`}
         />
       )}
 
       {(ended || phase === "dormant") && (
-        <BossNextCard art={LEVIATHAN_ART} next={next} now={now} phase={phase} tip="Renforce ta flotte d'attaque d'ici là : les Traqueurs Kesh frappent 50 % plus fort contre lui." />
+        <BossNextCard art={art} next={next} now={now} phase={phase} tip="Renforce ta flotte d'attaque d'ici là : les Traqueurs Kesh frappent 50 % plus fort contre lui." />
       )}
 
       <MythicRelicNotice source="leviathan" />
@@ -252,14 +260,14 @@ export function LeviathanPage() {
             <Ranking state={state} uid={player.uid} />
           </Card>
         )}
-        <RulesCard />
+        <RulesCard boss={boss} />
       </div>
 
       {admin === true && <LeviathanAdminPanel state={state} />}
       {admin === true && <BossRewardsAdmin state={state} kind="leviathan" />}
 
-      <AssaultDialog open={open} onClose={() => setOpen(false)} state={state} />
-      <BossDeathOverlay phase={phase} name={LEVIATHAN_RULES.name} killer={state?.killedBy} />
+      <AssaultDialog open={open} onClose={() => setOpen(false)} state={state} title={`Assaut sur ${boss.name}`} />
+      <BossDeathOverlay phase={phase} name={boss.name} killer={state?.killedBy} />
     </div>
   );
 }

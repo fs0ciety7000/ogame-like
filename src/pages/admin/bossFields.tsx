@@ -5,7 +5,7 @@ import { BOSS_WEEKENDS, bossWindows, describeBossSchedule, MAX_BOSS_DATES, type 
 import { CheckboxField, Field, NumberField, SelectField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
 
-/* v5.10.4 : occurrence d'un boss mensuel (Léviathan, boss de saison) dans
+/* v5.10.4 : occurrence d'un boss (boss mondiaux, boss de saison) dans
    les règles : actif, week-end du mois, heure de départ, durée — avec un
    aperçu des prochaines apparitions calculé sur les valeurs en cours.
    v5.10.5 : apparitions à date précise, en plus du rendez-vous mensuel. */
@@ -18,15 +18,49 @@ function toLocalInput(ms: number): string {
   return new Date(ms - new Date(ms).getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-export function BossScheduleFields({ label, value, onChange, clash }: { label: string; value: BossSchedule; onChange: (patch: Partial<BossSchedule>) => void; clash?: string }) {
+/** v5.14 : `weekly` — boss mondiaux en rotation hebdomadaire (le rendez-vous mensuel
+ *  ne sert plus qu'en repli) ; `nameFor` nomme le boss de chaque apparition. */
+export function BossScheduleFields({
+  label,
+  value,
+  onChange,
+  clash,
+  weekly,
+  nameFor,
+}: {
+  label: string;
+  value: BossSchedule;
+  onChange: (patch: Partial<BossSchedule>) => void;
+  clash?: string;
+  weekly?: { on: boolean; onChange: (v: boolean) => void };
+  nameFor?: (startMs: number) => string;
+}) {
   const now = Date.now();
-  const upcoming = bossWindows(now, value, 4);
+  const upcoming = bossWindows(now, value, weekly?.on ? 6 : 4);
   const dates = value.dates ?? [];
+  const isWeekly = !!weekly?.on;
   return (
     <>
-      <CheckboxField label={`${label} : rendez-vous mensuel`} checked={value.enabled} onChange={(v) => onChange({ enabled: v })} hint="Décoché : plus d'apparition chaque mois. Les dates précises ci-dessous et le lancement manuel restent possibles." />
-      <SelectField<BossWeekend> label="Week-end du mois" value={value.weekend} options={BOSS_WEEKENDS.map((w) => ({ value: w.id, label: w.label }))} onChange={(v) => onChange({ weekend: v })} />
-      <NumberField label="Départ le vendredi à (heure de Paris)" value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />
+      {weekly && (
+        <CheckboxField
+          label={`${label} : rotation hebdomadaire`}
+          checked={weekly.on}
+          onChange={weekly.onChange}
+          hint="Un boss par semaine, un jour différent du précédent, au moins 4 jours d'écart (plus si la durée l'exige). Catalogue des boss : onglet Boss mondiaux."
+        />
+      )}
+      {!isWeekly && (
+        <>
+          <CheckboxField
+            label={weekly ? "Repli : Léviathan seul, une fois par mois" : `${label} : rendez-vous mensuel`}
+            checked={value.enabled}
+            onChange={(v) => onChange({ enabled: v })}
+            hint="Décoché : plus d'apparition chaque mois. Les dates précises ci-dessous et le lancement manuel restent possibles."
+          />
+          <SelectField<BossWeekend> label="Week-end du mois" value={value.weekend} options={BOSS_WEEKENDS.map((w) => ({ value: w.id, label: w.label }))} onChange={(v) => onChange({ weekend: v })} />
+        </>
+      )}
+      <NumberField label={isWeekly ? "Heure d'apparition (heure de Paris)" : "Départ le vendredi à (heure de Paris)"} value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />
       <NumberField label="Durée de présence (h)" value={value.durationHours} min={1} step={1} onChange={(v) => onChange({ durationHours: Math.min(160, Math.max(1, Math.round(v ?? 1))) })} />
       <BossDatesEditor dates={dates} defaultHours={value.durationHours} onChange={(d) => onChange({ dates: d })} />
       <Field label="Prochaines apparitions" hint={clash} className="sm:col-span-2">
@@ -39,6 +73,7 @@ export function BossScheduleFields({ label, value, onChange, clash }: { label: s
                   <span key={w.startMs}>
                     {i > 0 && " · "}
                     {short(w.startMs)}
+                    {nameFor && <span className="text-slate-400"> ({nameFor(w.startMs)})</span>}
                     {w.fixed && <span className="text-gold-glow"> (date précise)</span>}
                   </span>
                 ))}

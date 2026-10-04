@@ -1,3 +1,4 @@
+import { WORLD_BOSSES } from "@/game/worldBosses";
 import { METRICS, type AchievementMetric } from "@/game/achievements";
 import type { PlayerState } from "@/types/game";
 
@@ -75,7 +76,14 @@ export function withLateDefaults(defs: TitleDef[]): TitleDef[] {
   return [...defs, ...DEFAULT_TITLES.filter((t) => LATE_DEFAULTS.includes(t.id) && !have.has(t.id)).map((t) => structuredClone(t))];
 }
 
+/** v5.14 : titres des boss mondiaux (le Léviathan a déjà le sien), tirés du catalogue. */
+export function derivedTitles(): TitleDef[] {
+  return WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => T(`wb_${b.id}`, b.title, `Premier en dégâts contre ${b.name}.`, "🐉", "mythic"));
+}
+
 export function setTitles(defs: TitleDef[]): void {
+  const have = new Set(defs.map((t) => t.id));
+  defs = [...defs, ...derivedTitles().filter((t) => !have.has(t.id))];
   TITLES.splice(0, TITLES.length, ...defs);
   BY_LABEL.clear();
   for (const t of defs) if (t.label) BY_LABEL.set(t.label.toLowerCase(), t);

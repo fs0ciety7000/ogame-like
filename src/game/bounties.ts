@@ -366,6 +366,7 @@ export function resolveBountyHunt(
     applyXpDelta(player, xp, now);
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
     addPassPoints(player, "bounty", now);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(note(`${fugitive.name} capturé !`, `Prime « ${t.label} » remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));

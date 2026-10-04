@@ -73,7 +73,7 @@ export function AttackModal({
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, v]) => v > 0));
   const hasShips = Object.keys(selected).length > 0;
   const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
-  const factor = player ? allianceFlightFactor(player.allianceResearch, player.techLevels) : 1;
+  const factor = player ? allianceFlightFactor(player.allianceResearch, player.techLevels, player) : 1;
   const flight = player && hasShips ? attackTravelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
   const uncapped = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
   // v3.7 : le ou les vaisseaux qui fixent l'allure, et le trajet sans eux.

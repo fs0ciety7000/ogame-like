@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validateRules } from "@/game/content";
 import { bossEndLabel, bossWindows, describeBossSchedule, eveReminderDue, EVENT_RULES, parisRelativeLabel, parisWhenLabel, validateBossSchedule, type BossSchedule } from "@/game/events";
 import { endingReminderDue, leviathanWindow, LEVIATHAN_RULES, nextLeviathanStart, rescheduleBoss, type LeviathanState } from "@/game/leviathan";
@@ -9,6 +9,12 @@ import { SEASON_BOSS_RULES, seasonBossWindow } from "@/game/chronicles";
 const paris = (iso: string) => new Date(iso).getTime();
 const sched = (patch: Partial<BossSchedule> = {}): BossSchedule => ({ enabled: true, weekend: "first", startHour: 18, durationHours: 72, ...patch });
 const saved = { ev: { ...EVENT_RULES }, lev: { ...LEVIATHAN_RULES }, sb: { ...SEASON_BOSS_RULES } };
+
+// Ces tests couvrent le rendez-vous mensuel (option conservée) ; la rotation
+// hebdomadaire des boss mondiaux a ses propres tests (worldBosses.test.ts).
+beforeEach(() => {
+  EVENT_RULES.bossWeekly = false;
+});
 
 afterEach(() => {
   Object.assign(EVENT_RULES, saved.ev);

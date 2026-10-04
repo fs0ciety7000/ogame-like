@@ -134,7 +134,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   const needed = Math.min(owned, Math.ceil(total / perDrone));
   const count = Math.max(0, Math.min(owned, drones || needed));
   const capacity = player ? recyclerCapacity(player.units, { [droneId]: count }) : 0;
-  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
+  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {
     if (!field || count <= 0) return;
@@ -212,7 +212,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
   const energy = player?.resources.energy ?? 0;
   const flight =
     player && uid && target && hasShips
-      ? travelSeconds(distanceBetween(uid, target.uid), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels))
+      ? travelSeconds(distanceBetween(uid, target.uid), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels, player))
       : null;
 
   const close = () => {

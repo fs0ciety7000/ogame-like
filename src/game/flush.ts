@@ -130,6 +130,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   notifications.push(...advanceBuildPlan(player, queues, now, finishedAt));
 
   // --- Files de production d'unités ---
+  let unitsDone = 0;
   (["attack", "defense"] as const).forEach((category) => {
     const queue = queues.unitQueues[category];
     let guard = 0;
@@ -137,7 +138,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       const front = queue[0];
       if (front.endTime === null) {
         const u = findUnit(front.unitId);
-        front.endTime = now + (u ? getUnitBuildTime(u, player.techLevels) : 0) * 1000;
+        front.endTime = now + (u ? getUnitBuildTime(u, player.techLevels, player) : 0) * 1000;
         break;
       }
       if (front.endTime > now) break;
@@ -147,6 +148,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         if (!player.units[u.id]) player.units[u.id] = { level: 1, count: 0 };
         player.units[u.id].count += 1;
         bumpStat(player, "unitsBuilt");
+        unitsDone += 1;
       }
       const completedEndTime = front.endTime;
       queue.shift();
@@ -157,10 +159,13 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         // si le joueur était hors-ligne longtemps, plusieurs unités en file
         // peuvent ainsi se terminer d'affilée dans ce même flush, au lieu de
         // réinitialiser le minuteur sur l'instant présent à chaque appel.
-        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels) : 0) * 1000;
+        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels, player) : 0) * 1000;
       }
     }
   });
+
+  // v5.14 : le Mécanicien progresse par tranche de 10 unités sorties des chantiers.
+  if (unitsDone > 0) grantCommanderXp(player, "mechanic", COMMANDER_XP.unitsBuilt * Math.ceil(unitsDone / 10));
 
   // --- Recherches actives ---
   const stillActiveResearch = [];

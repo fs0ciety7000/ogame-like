@@ -1,0 +1,83 @@
+import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, type EffectStat } from "@/game/effects";
+import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, SEASON_SECONDARY_SHARE } from "@/game/commanders";
+import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
+import { TALENT_RULES, TALENTS } from "@/game/talents";
+import { TERRITORY_RULES } from "@/game/territories";
+import { effectValuePerLevel, TECH_EFFECT_STAT, techEffects, TECHNOLOGIES } from "@/game/technologies";
+
+/* =====================================================
+   v5.14 : rapport d'impact du circuit d'effets (administration). Pour
+   chaque grandeur : toutes les sources que le contenu peut donner, leur
+   maximum, et le total théorique (plafonds compris). Une techno, une
+   relique ou un rôle ajouté apparaît ici sans autre code.
+===================================================== */
+
+export interface ImpactSource {
+  kind: EffectSourceKind;
+  label: string;
+  /** Valeur maximale (techno au niveau max, officier niveau 20, relique de la meilleure rareté…). */
+  max: number;
+  note?: string;
+}
+
+export interface ImpactRow {
+  stat: EffectStat;
+  target?: string;
+  layer: EffectLayer;
+  sources: ImpactSource[];
+  /** Somme des maxima, avant plafond. */
+  raw: number;
+  /** Total théorique, plafond compris. */
+  total: number;
+  capped: boolean;
+}
+
+export function effectImpactReport(): ImpactRow[] {
+  const rows = new Map<string, ImpactRow>();
+  const add = (stat: EffectStat, target: string | undefined, layer: EffectLayer, src: ImpactSource) => {
+    if (!(src.max > 0)) return;
+    const key = `${layer}|${stat}|${target ?? ""}`;
+    let row = rows.get(key);
+    if (!row) rows.set(key, (row = { stat, target, layer, sources: [], raw: 0, total: 0, capped: false }));
+    row.sources.push(src);
+  };
+
+  // Technologies : niveau maximal.
+  for (const tech of TECHNOLOGIES) {
+    for (const e of techEffects(tech)) {
+      const stat = TECH_EFFECT_STAT[e.type];
+      if (stat) add(stat, e.target, "tech", { kind: "tech", label: tech.nom, max: effectValuePerLevel(e) * tech.maxLevel, note: `niveau ${tech.maxLevel}` });
+    }
+  }
+  // Officiers : un par rôle, niveau maximal (en poste : deux ou trois à la fois).
+  for (const c of COMMANDERS) {
+    for (const e of ROLE_EFFECTS[c.role] ?? []) {
+      add(e.stat, e.target, "empire", { kind: "officer", label: `${c.title} ${c.name}`, max: e.perLevel * COMMANDER_RULES.maxLevel, note: `niveau ${COMMANDER_RULES.maxLevel}${e.scope && e.scope !== "all" ? `, ${e.scope === "colonies" ? "colonies" : e.scope}` : ""}${c.rare ? ", rare" : ""}` });
+    }
+  }
+  // Reliques : meilleure rareté possible (mythique pour les mythiques, sinon légendaire).
+  const best = (mythic: boolean) => RARITIES.find((r) => r.id === (mythic ? "mythic" : "legendary"))?.pct ?? 0;
+  for (const t of RELICS) {
+    if (t.disabled) continue;
+    const m = RELIC_EFFECT_STAT[t.effect];
+    if (m) add(m.stat, m.target, "empire", { kind: "relic", label: t.name, max: best(!!t.mythicOnly) * (m.scale ?? 1), note: t.mythicOnly ? "mythique" : "légendaire" });
+  }
+  // Talents d'Ascension : rang maximal.
+  for (const t of TALENTS) {
+    add(t.effect.kind as EffectStat, t.effect.kind === "production" ? t.effect.res : undefined, "empire", { kind: "talent", label: t.name, max: t.perRank * TALENT_RULES.maxRank, note: `rang ${TALENT_RULES.maxRank}` });
+  }
+  // Territoire d'alliance.
+  add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });
+
+  const order = Object.keys(EFFECT_STATS);
+  return [...rows.values()]
+    .map((r) => {
+      const raw = r.sources.reduce((a, s) => a + s.max, 0);
+      const total = clampEffect(r.stat, r.layer, raw);
+      return { ...r, sources: r.sources.sort((a, b) => b.max - a.max), raw, total, capped: Math.abs(total - raw) > 1e-9 };
+    })
+    .sort((a, b) => order.indexOf(a.stat) - order.indexOf(b.stat) || (a.layer < b.layer ? 1 : a.layer > b.layer ? -1 : 0) || ((a.target ?? "") < (b.target ?? "") ? -1 : 1));
+}
+
+/** Part du second rôle d'un commandant de saison (rappel pour l'affichage). */
+export const SEASON_SHARE_NOTE = `Commandants de saison : rôle principal entier, second rôle à ${Math.round(SEASON_SECONDARY_SHARE * 100)} %.`;

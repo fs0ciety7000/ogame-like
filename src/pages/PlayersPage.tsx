@@ -172,7 +172,7 @@ export function PlayersPage() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={mode} onValueChange={(v) => setMode(v as LeaderboardMode)}>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as LeaderboardMode)} className="min-w-0 max-w-full">
           <TabsList>
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>

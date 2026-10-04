@@ -208,7 +208,7 @@ export function GalaxyPage() {
     );
     if (speeds.length === 0) return { distance: distanceBetween(uid, selected.uid), fast: null, slow: null };
     const distance = distanceBetween(uid, selected.uid);
-    const f = allianceFlightFactor(me.allianceResearch, me.techLevels);
+    const f = allianceFlightFactor(me.allianceResearch, me.techLevels, me);
     return { distance, fast: attackTravelSeconds(distance, Math.max(...speeds), f), slow: attackTravelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
   }, [uid, me, selected, selectedIsMine]);
 
