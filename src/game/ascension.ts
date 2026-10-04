@@ -21,6 +21,16 @@ export const ASCENSION_RULES = {
   upkeepFreeDays: 7,
 };
 
+/** 5.15 : insigne d'ascension (illustration à venir, voir docs/prompts-ascension.md).
+ *  Tant qu'il vaut null, l'interface affiche une icône vectorielle à la place. */
+export const ASCENSION_INSIGNIA: string | null = null;
+
+const ROMAN = ["", "I", "II", "III", "IV", "V"];
+/** « Ascension III » */
+export function ascensionLabel(n: number): string {
+  return n > 0 ? `Ascension ${ROMAN[n] ?? n}` : "";
+}
+
 const DAY = 24 * 3600_000;
 
 type AscPlayer = Pick<PlayerState, "ascensions" | "ascendedAtMs">;

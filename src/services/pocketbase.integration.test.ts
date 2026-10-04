@@ -544,8 +544,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
       // A reçoit sa récompense individuelle et celle de son alliance championne.
       const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
-      // Individuelle, alliance championne et, v5.10.5, ligue.
-      expect(notif.length).toBe(3);
+      // Individuelle et alliance championne (5.15 : les divisions se clôturent le lundi, plus avec la saison).
+      expect(notif.length).toBe(2);
       expect(aAfter.titles.map((t: { label: string }) => t.label)).toContain("Allié champion de Décembre 1999");
       expect((await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="alliance"` }))[0]?.allianceId).toBe(allianceId);
 
@@ -2396,6 +2396,40 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const reg = await pb.send("/api/cosmic/passkey/register/options", { method: "POST" });
     expect(reg.authenticatorSelection.residentKey).toBe("required");
     expect(await pb.collection("passkeys").getFullList()).toEqual([]);
+  });
+
+  it("5.15 divisions: placement, weekly close, casino tokens and champion title", async () => {
+    await expect(pb.send("/api/cosmic/admin/leagues", { method: "POST" })).rejects.toMatchObject({ status: 403 });
+    const rec = await admin.collection("game_config").getFirstListItem('key="leagues"').catch(() => null);
+    const saved = rec ? rec.data : null;
+    try {
+      const a0 = await snap(aId);
+      const b0 = await snap(bId);
+      expect(a0.xp).toBeGreaterThan(0);
+      // Semaine passée (lointaine) : A a gagné de l'XP, B rien.
+      const past = { version: 2, weekId: "2020-01-06", tiers: { [aId]: "or", [bId]: "or" }, base: { [aId]: 0, [bId]: b0.xp }, last: null, history: {} };
+      const id = rec ? rec.id : (await admin.collection("game_config").create({ key: "leagues", data: past })).id;
+      await admin.collection("game_config").update(id, { data: past });
+      const out = await admin.send("/api/cosmic/admin/leagues", { method: "POST" });
+      expect(out.closed).toBe("2020-01-06");
+      const st = (await admin.collection("game_config").getOne(id)).data as { weekId: string; tiers: Record<string, string>; base: Record<string, number>; history: Record<string, { tier: string; rank: number }[]> };
+      expect(st.weekId).not.toBe("2020-01-06");
+      expect(st.tiers[aId]).toBe("platine");
+      expect(st.tiers[bId]).toBe("argent");
+      expect(st.base[aId]).toBe(a0.xp);
+      expect(st.history[aId].at(-1)).toMatchObject({ tier: "or", rank: 1 });
+      const a1 = await snap(aId);
+      expect((a1.casino?.tokens ?? 0) - (a0.casino?.tokens ?? 0)).toBe(2);
+      expect((a1.titles ?? []).some((t: { label: string }) => t.label === "Champion Or")).toBe(true);
+      const b1 = await snap(bId);
+      expect((b1.titles ?? []).some((t: { label: string }) => t.label === "Champion Or")).toBe(false);
+      // Passage suivant dans la même semaine : rien ne bouge, rien n'est versé.
+      const again = await admin.send("/api/cosmic/admin/leagues", { method: "POST" });
+      expect(again).toMatchObject({ closed: null, rewarded: 0 });
+    } finally {
+      const now = await admin.collection("game_config").getFirstListItem('key="leagues"').catch(() => null);
+      if (now) await admin.collection("game_config").update(now.id, { data: saved ?? {} });
+    }
   });
 
   it("changes password and keeps the session", async () => {

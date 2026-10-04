@@ -28,6 +28,7 @@ const ThreatsPage = lazy(() => import("@/pages/ThreatsPage").then((m) => ({ defa
 const HallOfFamePage = lazy(() => import("@/pages/HallOfFamePage").then((m) => ({ default: m.HallOfFamePage })));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 const BlogEditorPage = lazy(() => import("@/pages/BlogEditorPage").then((m) => ({ default: m.BlogEditorPage })));
+const AscensionPage = lazy(() => import("@/pages/AscensionPage").then((m) => ({ default: m.AscensionPage })));
 const EmpireStatsPage = lazy(() => import("@/pages/EmpireStatsPage").then((m) => ({ default: m.EmpireStatsPage })));
 const FormulasPage = lazy(() => import("@/pages/FormulasPage").then((m) => ({ default: m.FormulasPage })));
 const PublicFormulasPage = lazy(() => import("@/pages/PublicFormulasPage").then((m) => ({ default: m.PublicFormulasPage })));
@@ -102,6 +103,7 @@ export default function App() {
                 <Route path="passe" element={<SeasonPassPage />} />
                 <Route path="colonies" element={<ColoniesPage />} />
                 <Route path="statistiques" element={<EmpireStatsPage />} />
+                <Route path="ascension" element={<AscensionPage />} />
                 <Route path="redaction" element={<BlogEditorPage />} />
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />

@@ -69,7 +69,7 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "Léviathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
-    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/banniere-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v5.14 : une bannière par boss mondial, tirée du catalogue.
     ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => ({
       id: `wb:${b.id}`,
@@ -126,7 +126,7 @@ export function emblemOptions(p: StylePlayer): CosmeticOption[] {
     { id: "kesh", label: "Emblème de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du Léviathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
-    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/sceau-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => ({ ...b, hint: "Participer à la chute du boss de saison" })),
   ];

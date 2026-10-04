@@ -1,0 +1,47 @@
+name: Vérification du site
+
+# 5.14.3 : après chaque merge sur main (et toutes les 6 h), on ouvre le vrai
+# site comme un joueur : la page, chacun de ses fichiers JS/CSS (qui doivent
+# arriver en JavaScript/CSS, pas en page HTML) et une illustration de
+# bâtiment. C'est ce qui a cassé le 4 octobre (boucle de rechargement).
+# Adresse modifiable via la variable de dépôt SITE_URL.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Page, scripts et images servis correctement
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      SITE: ${{ vars.SITE_URL || 'https://empire.fs0ciety.org' }}
+    steps:
+      - name: Laisser Vercel publier
+        if: github.event_name == 'workflow_run'
+        run: sleep 180
+      - name: Vérifier
+        run: |
+          set -u
+          fail=0
+          html=$(curl -sfL "$SITE/?check=$(date +%s)") || { echo "::error::$SITE ne répond pas."; exit 1; }
+          assets=$(printf '%s' "$html" | grep -oE '/assets/[^"'"'"' ]+\.(js|css)' | sort -u)
+          [ -n "$assets" ] || { echo "::error::Aucun fichier /assets/ dans la page."; exit 1; }
+          for a in $assets; do
+            type=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$SITE$a")
+            echo "$a → $type"
+            case "$a" in
+              *.js) echo "$type" | grep -qE '^200 .*javascript' || { echo "::error::$a ne revient pas en JavaScript ($type)."; fail=1; } ;;
+              *.css) echo "$type" | grep -qE '^200 text/css' || { echo "::error::$a ne revient pas en CSS ($type)."; fail=1; } ;;
+            esac
+          done
+          img=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$SITE/assets/buildings/extracteur_ferraille.webp?v=check")
+          echo "illustration → $img"
+          echo "$img" | grep -qE '^200 image/webp' || { echo "::error::Illustration de bâtiment indisponible ($img)."; fail=1; }
+          exit $fail

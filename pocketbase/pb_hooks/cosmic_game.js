@@ -198,6 +198,7 @@ __export(hooksEntry_exports, {
   challengeTier: () => challengeTier,
   challengeTierIndex: () => challengeTierIndex,
   challengeTokens: () => challengeTokens,
+  championTitle: () => championTitle,
   chapterDifficulty: () => chapterDifficulty,
   checkAllianceBossLaunch: () => checkAllianceBossLaunch,
   checkCoalitionTrigger: () => checkCoalitionTrigger,
@@ -215,7 +216,6 @@ __export(hooksEntry_exports, {
   clearOfficerCooldowns: () => clearOfficerCooldowns,
   clientChallenge: () => clientChallenge,
   closeElite: () => closeElite,
-  closeLeagues: () => closeLeagues,
   closeLeviathan: () => closeLeviathan,
   coalitionRanking: () => coalitionRanking,
   codexEntries: () => codexEntries,
@@ -299,6 +299,7 @@ __export(hooksEntry_exports, {
   grantCodexTitle: () => grantCodexTitle,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
+  grantLeagueTitle: () => grantLeagueTitle,
   grantLeviathanReward: () => grantLeviathanReward,
   grantMythicRelic: () => grantMythicRelic,
   grantReferral: () => grantReferral,
@@ -316,6 +317,8 @@ __export(hooksEntry_exports, {
   isWarlordUid: () => isWarlordUid,
   jackpotAmounts: () => jackpotAmounts,
   leagueInfo: () => leagueInfo,
+  leagueTick: () => leagueTick,
+  leagueWeekLabel: () => leagueWeekLabel,
   leviathanRanking: () => leviathanRanking,
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
@@ -12986,7 +12989,7 @@ function bannerOptions(p) {
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "L\xE9viathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
-    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/banniere-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v5.14 : une bannière par boss mondial, tirée du catalogue.
     ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => {
       var _a2, _b2;
@@ -13045,7 +13048,7 @@ function emblemOptions(p) {
     { id: "kesh", label: "Embl\xE8me de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du L\xE9viathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un L\xE9viathan", unlocked: leviathanKills(p) > 0 },
     // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
-    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/sceau-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => __spreadProps(__spreadValues({}, b), { hint: "Participer \xE0 la chute du boss de saison" }))
   ];
@@ -15307,7 +15310,7 @@ function codexEntries(player, fought, now) {
     category: "legends",
     name: "La Main d'or",
     subtitle: "Casino orbital \xB7 gros lot 7-7-7",
-    image: "/assets/casino/salle-777.webp",
+    image: "/assets/casino/main-or.webp",
     text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
     unlocked: Math.floor(Number((_i = player.casino) == null ? void 0 : _i.jackpots) || 0) > 0
   });
@@ -19862,57 +19865,147 @@ function startAllianceChallengeWeek(players, now, previous) {
 // src/game/leagues.ts
 var LEAGUES_KEY = "leagues";
 var LEAGUE_TIERS = [
-  { id: "bronze", label: "Bronze", emoji: "\u{1F949}", color: "#e0a26b", rewardHours: 1 },
-  { id: "argent", label: "Argent", emoji: "\u{1F948}", color: "#cbd5e1", rewardHours: 2 },
-  { id: "or", label: "Or", emoji: "\u{1F947}", color: "#ffd86b", rewardHours: 3 },
-  { id: "platine", label: "Platine", emoji: "\u{1F4A0}", color: "#4be8ff", rewardHours: 4 },
-  { id: "diamant", label: "Diamant", emoji: "\u{1F48E}", color: "#a78bfa", rewardHours: 6 }
+  { id: "bronze", label: "Bronze", color: "var(--th-medal-bronze)", tokens: 1, placementPct: 0.25 },
+  { id: "argent", label: "Argent", color: "var(--th-medal-silver)", tokens: 1, placementPct: 0.25 },
+  { id: "or", label: "Or", color: "var(--th-medal-gold)", tokens: 2, placementPct: 0.2 },
+  { id: "platine", label: "Platine", color: "var(--th-rarity-rare)", tokens: 2, placementPct: 0.15 },
+  { id: "diamant", label: "Diamant", color: "var(--th-rarity-epic)", tokens: 3, placementPct: 0.1 },
+  { id: "mythique", label: "Mythique", color: "var(--th-rarity-mythic)", tokens: 4, placementPct: 0.05 }
 ];
 var LEAGUE_RULES = {
-  /** Part de chaque ligue qui monte / descend à la fin de la saison. */
+  /** Part de chaque division qui monte / descend à la fin de la semaine. */
   promotePct: 0.2,
-  relegatePct: 0.2
+  relegatePct: 0.2,
+  /** Semaines gardées dans l'historique de chaque joueur. */
+  historyWeeks: 8
 };
+var WEEK_MS = 7 * 24 * 3600 * 1e3;
+function leagueWeekStart(now) {
+  const d = new Date(now);
+  const day = (d.getUTCDay() + 6) % 7;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+}
+function leagueWeekId(now) {
+  return new Date(leagueWeekStart(now)).toISOString().slice(0, 10);
+}
+function leagueWeekLabel(weekId2) {
+  var _a;
+  const months = ["janv.", "f\xE9vr.", "mars", "avr.", "mai", "juin", "juil.", "ao\xFBt", "sept.", "oct.", "nov.", "d\xE9c."];
+  const [, m, d] = weekId2.split("-").map(Number);
+  return `semaine du ${d != null ? d : "?"} ${(_a = months[(m != null ? m : 1) - 1]) != null ? _a : ""}`.trim();
+}
+var TIER_IDS = new Set(LEAGUE_TIERS.map((t) => t.id));
 function normalizeLeagues(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
-  const ids = new Set(LEAGUE_TIERS.map((t) => t.id));
+  if (r.version !== 2) return { version: 2, weekId: "", tiers: {}, base: {}, last: null, history: {} };
   const tiers2 = {};
-  for (const [uid, t] of Object.entries(r.tiers && typeof r.tiers === "object" ? r.tiers : {})) if (ids.has(t)) tiers2[uid] = t;
-  return { seasonId: typeof r.seasonId === "string" ? r.seasonId : "", tiers: tiers2, last: r.last && typeof r.last === "object" ? r.last : null };
-}
-function leagueTier(state, uid) {
-  var _a;
-  return (_a = state == null ? void 0 : state.tiers[uid]) != null ? _a : "bronze";
+  for (const [uid, t] of Object.entries(r.tiers && typeof r.tiers === "object" ? r.tiers : {})) if (TIER_IDS.has(t)) tiers2[uid] = t;
+  const base = {};
+  for (const [uid, v] of Object.entries(r.base && typeof r.base === "object" ? r.base : {})) if (Number.isFinite(Number(v))) base[uid] = Math.max(0, Number(v));
+  const history = {};
+  for (const [uid, list] of Object.entries(r.history && typeof r.history === "object" ? r.history : {})) {
+    if (!Array.isArray(list)) continue;
+    history[uid] = list.filter((h) => h && typeof h.weekId === "string" && TIER_IDS.has(h.tier)).slice(-LEAGUE_RULES.historyWeeks);
+  }
+  return { version: 2, weekId: typeof r.weekId === "string" ? r.weekId : "", tiers: tiers2, base, last: r.last && typeof r.last === "object" ? r.last : null, history };
 }
 function leagueInfo(tier) {
   var _a;
   return (_a = LEAGUE_TIERS.find((t) => t.id === tier)) != null ? _a : LEAGUE_TIERS[0];
 }
 var index = (tier) => LEAGUE_TIERS.findIndex((t) => t.id === tier);
-function leagueStandings(entries, state, seasonId, tier) {
-  const members = entries.filter((e3) => leagueTier(state, e3.uid) === tier).map((e3) => ({ uid: e3.uid, pseudo: e3.pseudo, seasonXp: seasonXpFor(e3, seasonId) })).sort((a, b) => b.seasonXp - a.seasonXp || (a.pseudo < b.pseudo ? -1 : 1));
+var xpOf = (e3) => Math.max(0, Number(e3.xp) || 0);
+function placementTiers(entries) {
+  const sorted = entries.filter((e3) => !e3.npc).sort((a, b) => xpOf(b) - xpOf(a) || (a.uid < b.uid ? -1 : 1));
+  const n = sorted.length;
+  const out = {};
+  const fromTop = [...LEAGUE_TIERS].reverse();
+  sorted.forEach((e3, i) => {
+    var _a, _b;
+    if (xpOf(e3) <= 0) {
+      out[e3.uid] = "bronze";
+      return;
+    }
+    const f = (i + 0.5) / n;
+    let acc = 0;
+    out[e3.uid] = (_b = (_a = fromTop.find((t) => (acc += t.placementPct) >= f - 1e-9)) == null ? void 0 : _a.id) != null ? _b : "bronze";
+  });
+  return out;
+}
+function weeklyScore(state, e3) {
+  const base = state.base[e3.uid];
+  return base === void 0 ? 0 : Math.max(0, xpOf(e3) - base);
+}
+function leagueStandings(entries, state, tier) {
+  const placed = placementTiers(entries);
+  const members = entries.filter((e3) => {
+    var _a, _b;
+    return !e3.npc && ((_b = (_a = state.tiers[e3.uid]) != null ? _a : placed[e3.uid]) != null ? _b : "bronze") === tier;
+  }).map((e3) => ({ uid: e3.uid, pseudo: e3.pseudo, score: weeklyScore(state, e3) })).sort((a, b) => b.score - a.score || (a.pseudo < b.pseudo ? -1 : 1));
   const n = members.length;
-  const up = index(tier) < LEAGUE_TIERS.length - 1 ? Math.ceil(n * LEAGUE_RULES.promotePct) : 0;
+  const top = index(tier) === LEAGUE_TIERS.length - 1;
+  const up = top ? 0 : Math.ceil(n * LEAGUE_RULES.promotePct);
   const down = index(tier) > 0 ? Math.floor(n * LEAGUE_RULES.relegatePct) : 0;
   return members.map((m, i) => __spreadProps(__spreadValues({}, m), {
     rank: i + 1,
-    // Les inactifs (0 XP) ne montent jamais et descendent toujours (hors bronze).
-    zone: m.seasonXp > 0 && i < up ? "up" : index(tier) > 0 && (m.seasonXp <= 0 || i >= n - down) ? "down" : "stay"
+    // Les inactifs (0 XP dans la semaine) ne montent jamais et descendent toujours (hors Bronze).
+    zone: m.score > 0 && i < up ? "up" : index(tier) > 0 && (m.score <= 0 || i >= n - down) ? "down" : "stay"
   }));
 }
-function closeLeagues(state, entries, seasonId, nextSeasonId) {
+function championTitle(tier) {
+  return `Champion ${leagueInfo(tier).label}`;
+}
+function leagueTick(stateIn, entries, now) {
+  var _a, _b, _c;
+  const players = entries.filter((e3) => !e3.npc);
+  const week = leagueWeekId(now);
+  const baseOf = () => Object.fromEntries(players.map((e3) => [e3.uid, xpOf(e3)]));
+  if (!stateIn.weekId) {
+    return { state: { version: 2, weekId: week, tiers: placementTiers(players), base: baseOf(), last: null, history: (_a = stateIn.history) != null ? _a : {} }, rewards: [], closedWeekId: null };
+  }
+  if (stateIn.weekId === week) {
+    const placed = placementTiers(players);
+    const tiers3 = __spreadValues({}, stateIn.tiers);
+    const base = __spreadValues({}, stateIn.base);
+    let changed = false;
+    for (const e3 of players) {
+      if (!tiers3[e3.uid]) {
+        tiers3[e3.uid] = (_b = placed[e3.uid]) != null ? _b : "bronze";
+        changed = true;
+      }
+      if (base[e3.uid] === void 0) {
+        base[e3.uid] = xpOf(e3);
+        changed = true;
+      }
+    }
+    return { state: changed ? __spreadProps(__spreadValues({}, stateIn), { tiers: tiers3, base }) : stateIn, rewards: [], closedWeekId: null };
+  }
+  const state = __spreadProps(__spreadValues({}, stateIn), { tiers: __spreadValues({}, stateIn.tiers) });
+  for (const e3 of players) if (!state.tiers[e3.uid]) state.tiers[e3.uid] = "bronze";
   const tiers2 = __spreadValues({}, state.tiers);
   const moves = {};
+  const history = __spreadValues({}, state.history);
   const rewards = [];
   for (const t of LEAGUE_TIERS) {
-    for (const row of leagueStandings(entries, state, seasonId, t.id)) {
+    for (const row of leagueStandings(players, state, t.id)) {
       const to = row.zone === "up" ? LEAGUE_TIERS[index(t.id) + 1].id : row.zone === "down" ? LEAGUE_TIERS[index(t.id) - 1].id : t.id;
       tiers2[row.uid] = to;
       moves[row.uid] = { from: t.id, to, rank: row.rank };
-      if (row.seasonXp > 0) rewards.push({ uid: row.uid, tier: t.id, hours: t.rewardHours, move: row.zone, to, rank: row.rank });
+      history[row.uid] = [...(_c = history[row.uid]) != null ? _c : [], { weekId: stateIn.weekId, tier: t.id, rank: row.rank, score: row.score, move: row.zone }].slice(-LEAGUE_RULES.historyWeeks);
+      if (row.score > 0) rewards.push({ uid: row.uid, tier: t.id, to, rank: row.rank, score: row.score, move: row.zone, tokens: t.tokens, title: row.rank === 1 ? championTitle(t.id) : "" });
     }
   }
-  return { state: { seasonId: nextSeasonId, tiers: tiers2, last: { seasonId, moves } }, rewards };
+  const alive = new Set(players.map((e3) => e3.uid));
+  for (const uid of Object.keys(tiers2)) if (!alive.has(uid)) delete tiers2[uid];
+  for (const uid of Object.keys(history)) if (!alive.has(uid)) delete history[uid];
+  return { state: { version: 2, weekId: week, tiers: tiers2, base: baseOf(), last: { weekId: stateIn.weekId, moves }, history }, rewards, closedWeekId: stateIn.weekId };
+}
+function grantLeagueTitle(player, title, rank2, now) {
+  var _a;
+  if (!title) return;
+  const entry = { label: title, seasonId: currentSeasonId(now), rank: rank2 };
+  player.titles = [...((_a = player.titles) != null ? _a : []).filter((t) => t.label !== title), entry];
+  if (!player.activeTitle) player.activeTitle = title;
 }
 
 // src/server/hooksEntry.ts

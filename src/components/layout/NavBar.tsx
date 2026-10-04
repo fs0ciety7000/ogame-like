@@ -81,6 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/labo", label: "Labo", icon: FlaskConical },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
+      { to: "/game/ascension", label: "Ascension", icon: Sparkles },
       { to: "/game/statistiques", label: "Statistiques", icon: BarChart3 },
     ],
   },
@@ -161,12 +162,15 @@ const NAV_GROUPS: NavGroup[] = [
 export function useHiddenRoutes(): ReadonlySet<string> {
   const casino = useCasinoVisible();
   const admin = useIsAdmin();
+  // 5.15 : la page Ascension n'est au menu qu'après la première ascension (avant : raccourci sur Bâtiments).
+  const ascended = usePlayerStore((s) => (s.player?.ascensions ?? 0) > 0);
   return useMemo(() => {
     const hidden = new Set<string>();
     if (!casino) hidden.add("/game/casino");
     if (!admin) hidden.add("/game/concours");
+    if (!ascended) hidden.add("/game/ascension");
     return hidden;
-  }, [casino, admin]);
+  }, [casino, admin, ascended]);
 }
 
 function useNavGroups(): NavGroup[] {

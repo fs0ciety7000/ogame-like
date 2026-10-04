@@ -6,13 +6,13 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Lock, Wrench } from "lucide-react";
 import { Card, HudBrackets } from "@/components/ui/card";
-import { CostPill, HudTag, LevelTicks } from "@/components/ui/hud";
+import { CostPill, HudChip, HudTag, LevelTicks } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { AscensionCard } from "@/components/game/AscensionCard";
-import { TalentTreeCard } from "@/components/game/TalentTreeCard";
+import { ascensionProgress } from "@/components/game/AscensionCard";
+import { Link } from "react-router-dom";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -95,8 +95,12 @@ export function BuildingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
 
-      <AscensionCard />
-      <TalentTreeCard />
+      {/* 5.15 : l'Ascension a sa page ; un raccourci ici quand elle est ouverte. */}
+      {player && ascensionProgress(player).unlocked && (
+        <HudChip asChild tone="gold" size="md" className="self-start">
+          <Link to="/game/ascension">Ascension disponible · voir la page</Link>
+        </HudChip>
+      )}
       <BuildPlanCard player={player} queues={queues} now={now} />
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">

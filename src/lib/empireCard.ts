@@ -13,6 +13,9 @@ export interface EmpireCardInput {
   tag?: string;
   rank: string;
   rankIcon: string;
+  /** Ascensions (prestige des bâtiments) : 0 à 5, dessinées en étoiles. */
+  ascensions?: number;
+  ascensionLabel?: string;
   /** Titre affiché sous le pseudo (titre actif). */
   title?: string;
   avatar?: string;
@@ -42,6 +45,25 @@ function clipText(ctx: CanvasRenderingContext2D, text: string, max: number): str
   let t = text;
   while (t.length > 1 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);
   return `${t}…`;
+}
+
+/** Étoile à cinq branches, pleine (dorée) ou vide (contour). */
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, filled: boolean): void {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  if (filled) {
+    ctx.fillStyle = "#ffd86b";
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = "rgba(148,163,184,0.6)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
 }
 
 export async function drawEmpireCard(canvas: HTMLCanvasElement, input: EmpireCardInput): Promise<void> {
@@ -143,6 +165,18 @@ export async function drawEmpireCard(canvas: HTMLCanvasElement, input: EmpireCar
   ctx.fillStyle = "#cbd5e1";
   ctx.font = "600 24px Inter, sans-serif";
   ctx.fillText(input.rank, tx + (rankIcon ? 44 : 0), ay + 130);
+  // 5.15 : ascensions, cinq emplacements d'étoile après le rang.
+  if ((input.ascensions ?? 0) > 0) {
+    const sx = tx + (rankIcon ? 44 : 0) + ctx.measureText(input.rank).width + 28;
+    for (let i = 0; i < 5; i++) {
+      drawStar(ctx, sx + i * 26, ay + 121, 11, i < (input.ascensions ?? 0));
+    }
+    if (input.ascensionLabel) {
+      ctx.fillStyle = "#ffd86b";
+      ctx.font = "600 15px 'JetBrains Mono', monospace";
+      ctx.fillText(input.ascensionLabel.toUpperCase(), sx + 5 * 26 + 6, ay + 127);
+    }
+  }
   if (input.title) {
     ctx.fillStyle = "#ffd86b";
     ctx.font = "italic 600 24px Inter, sans-serif";
