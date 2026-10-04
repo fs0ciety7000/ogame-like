@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { BookOpen, Coins, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -223,7 +224,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
           ) : (
             <>
               <Button size="sm" variant="secondary" disabled={busy || amber < COMMANDER_RULES.recruitAmber} onClick={() => void act(() => recruitCommander(def.id, "amber"), `${def.title} ${def.name} rejoint ta flotte !`)}>
-                <UserPlus className="h-3.5 w-3.5" /> {COMMANDER_RULES.recruitAmber} Ambre
+                <UserPlus className="h-3.5 w-3.5" /> <AmberAmount value={COMMANDER_RULES.recruitAmber} />
               </Button>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => void act(() => recruitCommander(def.id, "production"), `${def.title} ${def.name} rejoint ta flotte !`)}>
                 {COMMANDER_RULES.recruitProductionHours} h de production

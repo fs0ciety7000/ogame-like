@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AmberIcon } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -61,9 +62,7 @@ import type { PlayerState } from "@/types/game";
    proie d'élite de la semaine et le Comptoir de la Ruche.
 ===================================================== */
 
-function Amber({ className }: { className?: string }) {
-  return <img src={assetUrl(KESH.amberIcon)} alt="Ambre" className={cn("inline-block h-4 w-4 object-contain align-[-0.2em]", className)} />;
-}
+const Amber = AmberIcon;
 
 function Stars({ n, className }: { n: number; className?: string }) {
   return (

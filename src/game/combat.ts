@@ -109,6 +109,17 @@ export function pveAttackFactor(units: Units, techLevels: TechLevels, fleet: Rec
   return 1 + (KESH_PVE_BONUS * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"])) / all;
 }
 
+/** v5.9 : en défense contre un PNJ (raid de menace, seigneur de guerre), les
+ *  Traqueurs à quai gardent leur +50 % d'attaque dans la puissance défensive. */
+export function pveHomeDefenseFactor(units: Units, techLevels: TechLevels, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1): number {
+  const hunters = units[KESH_HUNTER_UNIT.id]?.count ?? 0;
+  if (!(hunters > 0)) return 1;
+  const base = homeDefensePower(units, techLevels, homeFleetFactor, defenseFactor);
+  if (!(base > 0)) return 1;
+  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
+  return 1 + extra / base;
+}
+
 export function computeFullPower(
   units: Units,
   techLevels: TechLevels,

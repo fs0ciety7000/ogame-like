@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkPrereqs, findTech, getTechCost, getTechTime, TECHNOLOGIES } from "@/game/technologies";
+import { checkPrereqs, findTech, getTechCost, getTechTime, TECHNOLOGIES, type TechDef } from "@/game/technologies";
+import { ownedBlueprints } from "@/game/units";
 
 describe("findTech", () => {
   it("finds every declared technology", () => {
@@ -56,5 +57,41 @@ describe("checkPrereqs", () => {
     const tech5 = findTech("tech5")!; // prereq: { tech1: 2, tech3: 2 }
     expect(checkPrereqs(tech5, { tech1: 2, tech3: 1 }).valid).toBe(false);
     expect(checkPrereqs(tech5, { tech1: 2, tech3: 2 }).valid).toBe(true);
+  });
+});
+
+describe("v5.9 plan d'unité requis", () => {
+  // Techno ajoutée depuis l'administration qui améliore le Traqueur Kesh (unité à plan).
+  const kesh: TechDef = {
+    id: "tech_kesh",
+    nom: "Traqueur Kesh",
+    desc: "",
+    maxLevel: 20,
+    baseCost: { scrap: 1 },
+    baseTime: 1,
+    effects: [{ type: "unlock_next_level", target: "traqueur_kesh" }, { type: "unit_attack" }],
+    prereq: { tech1: 1 },
+  };
+
+  it("bloque la techno tant que le plan n'est pas acheté", () => {
+    const check = checkPrereqs(kesh, { tech1: 5 });
+    expect(check.valid).toBe(false);
+    expect(check.list.find((r) => r.kind === "plan")).toMatchObject({ nom: "Plan : Traqueur Kesh", valide: false });
+  });
+
+  it("la débloque une fois le plan possédé, avec les autres prérequis", () => {
+    expect(checkPrereqs(kesh, { tech1: 5 }, ownedBlueprints({ bounties: { owned: ["blueprint"] } })).valid).toBe(true);
+    expect(checkPrereqs(kesh, { tech1: 0 }, ["traqueur_kesh"]).valid).toBe(false);
+  });
+
+  it("ne change rien aux technos sans unité à plan", () => {
+    const tech13 = findTech("tech13")!;
+    expect(checkPrereqs(tech13, { tech10: 5, tech7: 1, tech1: 14 }).valid).toBe(true);
+    expect(checkPrereqs(tech13, {}).list.every((r) => r.kind === "tech")).toBe(true);
+  });
+
+  it("seul le plan acheté au Comptoir compte", () => {
+    expect(ownedBlueprints({})).toEqual([]);
+    expect(ownedBlueprints({ bounties: { owned: ["title"] } })).toEqual([]);
   });
 });

@@ -249,6 +249,7 @@ export function validateGameContent(content: GameContent): string[] {
       for (const e of t.effects) errors.push(...validateTechEffect(label, e, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
     } else if (t.effect !== undefined && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
     checkResources(`${label} (coût)`, t.baseCost);
+    if (t.amberCost !== undefined && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label} : ambre par niveau invalide.`);
     for (const req of Object.keys(t.prereq ?? {})) {
       if (!techIds.has(req)) errors.push(`${label} : prérequis « ${req} » inexistant.`);
       if (req === t.id) errors.push(`${label} : ne peut pas être son propre prérequis.`);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AmberAmount } from "@/components/ui/amber";
 import { NumberInput } from "@/components/ui/number-input";
 import { toast } from "sonner";
 import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
@@ -125,7 +126,7 @@ export function PassPanel() {
         <h2 className="font-display text-base text-white">Passe de saison</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <span className="text-xs text-slate-500">
-          {cfg.tiers.length} paliers · {amber} Ambre au total
+          {cfg.tiers.length} paliers · <AmberAmount value={amber} /> au total
         </span>
         <div className="ml-auto flex gap-2">
           <Button
