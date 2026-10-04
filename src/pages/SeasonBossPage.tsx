@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
-import { toast } from "sonner";
-import { Crosshair, Flame, Play, Square, Trophy } from "lucide-react";
+import { Crosshair, Flame, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag, StatTile } from "@/components/ui/hud";
@@ -10,16 +9,20 @@ import { BossRecapPanel } from "@/components/game/BossRecap";
 import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
-import { bossMonthOf, chronicleOf, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
+import { bossMonthOf, chronicleOf, seasonBossSchedule, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
+import { describeBossSchedule } from "@/game/events";
 import { LEVIATHAN_RULES, leviathanRanking } from "@/game/leviathan";
 import { PASS_POINTS } from "@/game/seasonPass";
-import { adminSeasonBoss, sendSeasonBossAssault, useSeasonBoss } from "@/services/seasonBossService";
+import { sendSeasonBossAssault, useSeasonBoss } from "@/services/seasonBossService";
+import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 
-/* v4.3 : boss de saison, le dernier week-end du mois (moteur du Léviathan). */
+/* v4.3 : boss de saison, un week-end par mois (le dernier par défaut ; moteur du Léviathan). */
+
+const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 export function SeasonBossPage() {
   useNowTicker();
@@ -28,7 +31,6 @@ export function SeasonBossPage() {
   const state = useSeasonBoss();
   const admin = useAdminStatus();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   if (!player) return null;
 
   // v5.10.2 : comme le Léviathan, la page entière change selon l'état du combat.
@@ -55,18 +57,6 @@ export function SeasonBossPage() {
     accent: month?.theme.accent,
   };
 
-  const adminRun = async (action: "start" | "stop") => {
-    setBusy(true);
-    try {
-      await adminSeasonBoss(action);
-      toast.success(action === "start" ? "Boss de saison lancé." : "Boss de saison arrêté (récompenses versées).");
-    } catch (err) {
-      toast.error((err as { response?: { message?: string } })?.response?.message ?? "Action impossible.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -77,7 +67,9 @@ export function SeasonBossPage() {
             ? "Le boss de la chronique est tombé : voici le bilan du combat et ce que chacun a gagné."
             : phase === "failed"
               ? "Le boss s'est retiré avant de tomber. Chaque participant garde ses points de passe."
-              : "Le dernier week-end de chaque mois, du vendredi 18 h au dimanche 23 h, le boss de la chronique surgit. Tout le serveur frappe ensemble."
+              : seasonBossSchedule().enabled
+                ? `${capitalize(describeBossSchedule(seasonBossSchedule()))}, le boss de la chronique surgit. Tout le serveur frappe ensemble.`
+                : "Aucune apparition du boss de saison n'est programmée pour l'instant."
         }
       />
 
@@ -156,17 +148,7 @@ export function SeasonBossPage() {
         </Card>
       </div>
 
-      {admin === true && (
-        <Card className="flex flex-wrap items-center gap-2 p-4">
-          <span className="text-xs text-slate-400">Administration :</span>
-          <Button size="sm" variant="secondary" disabled={busy || active} onClick={() => void adminRun("start")}>
-            <Play className="mr-1 h-3.5 w-3.5" /> Lancer maintenant
-          </Button>
-          <Button size="sm" variant="ghost" disabled={busy || !active} onClick={() => void adminRun("stop")}>
-            <Square className="mr-1 h-3.5 w-3.5" /> Arrêter et récompenser
-          </Button>
-        </Card>
-      )}
+      {admin === true && <LeviathanAdminPanel state={state} kind="seasonboss" />}
       {admin === true && <BossRewardsAdmin state={state} kind="seasonboss" />}
 
       <AssaultDialog open={open} onClose={() => setOpen(false)} title={`Assaut : ${boss?.name ?? "boss de saison"}`} send={sendSeasonBossAssault} />

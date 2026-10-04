@@ -49,8 +49,10 @@ export interface GameEvent {
 
 export const EVENT_RULES: {
   rotationEnabled: boolean;
-  /** v3.1 : le premier week-end du mois, le Léviathan remplace l'événement. */
+  /** v3.1 : un week-end par mois, le Léviathan remplace l'événement. */
   bossMonthly: boolean;
+  /** v5.10.4 : week-end du mois du Léviathan (premier par défaut). */
+  bossWeekend: BossWeekend;
   /** Heure de début le vendredi (heure de Paris). */
   startHour: number;
   rotation: string[];
@@ -59,6 +61,7 @@ export const EVENT_RULES: {
 } = {
   rotationEnabled: true,
   bossMonthly: true,
+  bossWeekend: "first",
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -130,7 +133,7 @@ export function findEventType(id: string): EventType | undefined {
 }
 
 /** Fenêtre du week-end en cours ou à venir (rotation). */
-export function weekendWindow(now: number, weeksAhead = 0): { startMs: number; endMs: number; week: number; firstOfMonth: boolean } {
+export function weekendWindow(now: number, weeksAhead = 0): { startMs: number; endMs: number; week: number; firstOfMonth: boolean; nth: number; lastOfMonth: boolean; fridayMs: number } {
   const local = now + parisOffsetMs(now);
   const localMidnight = Math.floor(local / DAY) * DAY;
   const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
@@ -140,14 +143,92 @@ export function weekendWindow(now: number, weeksAhead = 0): { startMs: number; e
     endMs: parisLocalToUtc(friday + 3 * DAY),
     week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY)),
     firstOfMonth: new Date(friday).getUTCDate() <= 7,
+    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
+    lastOfMonth: new Date(friday + 7 * DAY).getUTCMonth() !== new Date(friday).getUTCMonth(),
+    fridayMs: parisLocalToUtc(friday),
   };
 }
 
-function rotationEvent(window: { startMs: number; endMs: number; week: number; firstOfMonth: boolean }): GameEvent | null {
+/* =====================================================
+   v5.10.4 : occurrence des boss mensuels (Léviathan, boss de saison),
+   réglable dans l'administration : quel week-end du mois, heure de
+   départ le vendredi (heure de Paris) et durée.
+===================================================== */
+
+export type BossWeekend = "first" | "second" | "third" | "fourth" | "last";
+
+export const BOSS_WEEKENDS: { id: BossWeekend; label: string }[] = [
+  { id: "first", label: "Premier week-end du mois" },
+  { id: "second", label: "Deuxième week-end du mois" },
+  { id: "third", label: "Troisième week-end du mois" },
+  { id: "fourth", label: "Quatrième week-end du mois" },
+  { id: "last", label: "Dernier week-end du mois" },
+];
+
+const NTH: Record<Exclude<BossWeekend, "last">, number> = { first: 1, second: 2, third: 3, fourth: 4 };
+
+export interface BossSchedule {
+  enabled: boolean;
+  weekend: BossWeekend;
+  /** Heure de départ le vendredi (heure de Paris). */
+  startHour: number;
+  durationHours: number;
+}
+
+export function onWeekend(w: { nth: number; lastOfMonth: boolean }, which: BossWeekend | undefined): boolean {
+  if (which === "last") return w.lastOfMonth;
+  return w.nth === NTH[which ?? "first"];
+}
+
+/** Prochaines fenêtres (en cours comprise) d'un boss mensuel, dans l'ordre. */
+export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs: number; endMs: number }[] {
+  const out: { startMs: number; endMs: number }[] = [];
+  if (!s.enabled) return out;
+  for (let i = -1; i < 60 && out.length < count; i++) {
+    const w = weekendWindow(now, i);
+    if (!onWeekend(w, s.weekend)) continue;
+    const startMs = w.fridayMs + s.startHour * HOUR;
+    const endMs = startMs + s.durationHours * HOUR;
+    if (endMs > now) out.push({ startMs, endMs });
+  }
+  return out;
+}
+
+const DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const WEEKEND_WORDS: Record<BossWeekend, string> = { first: "premier", second: "deuxième", third: "troisième", fourth: "quatrième", last: "dernier" };
+
+/** « 18 h », « 23 h 30 » */
+function hourLabel(h: number): string {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
+}
+
+/** Fin d'un boss : « lundi 18 h » (jour de la semaine et heure de Paris). */
+export function bossEndLabel(s: Pick<BossSchedule, "startHour" | "durationHours">): string {
+  const end = s.startHour + s.durationHours;
+  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+
+/** « le premier week-end de chaque mois, du vendredi 18 h au lundi 18 h » */
+export function describeBossSchedule(s: BossSchedule): string {
+  if (!s.enabled) return "pas d'apparition programmée pour l'instant";
+  return `le ${WEEKEND_WORDS[s.weekend] ?? "premier"} week-end de chaque mois, du vendredi ${hourLabel(s.startHour)} au ${bossEndLabel(s)}`;
+}
+
+export function validateBossSchedule(label: string, s: Partial<BossSchedule>): string[] {
+  const errors: string[] = [];
+  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label} : week-end inconnu.`);
+  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label} : heure de départ entre 0 et 23.`);
+  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label} : durée entre 1 et 160 h.`);
+  return errors;
+}
+
+function rotationEvent(window: { startMs: number; endMs: number; week: number; nth: number; lastOfMonth: boolean }): GameEvent | null {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
   // Week-end du Léviathan : pas d'événement de la rotation.
-  if (EVENT_RULES.bossMonthly && window.firstOfMonth) return null;
+  if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
   const type = findEventType(list[((window.week % list.length) + list.length) % list.length])!;
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }

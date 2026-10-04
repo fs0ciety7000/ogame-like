@@ -66,10 +66,10 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
           hint="Du vendredi (heure ci-contre) au dimanche 23 h 59, heure de Paris."
         />
         <CheckboxField
-          label="Léviathan le premier week-end du mois"
+          label="Léviathan mensuel"
           checked={events.bossMonthly !== false}
           onChange={(v) => setEvents({ bossMonthly: v })}
-          hint="Il remplace alors l'événement de la rotation, du vendredi au lundi même heure."
+          hint="Il remplace l'événement de la rotation son week-end-là. Week-end, heure et durée : section Léviathan."
         />
         <NumberField label="Début le vendredi à (heure de Paris)" value={events.startHour} min={0} step={1} onChange={(v) => setEvents({ startHour: Math.min(23, Math.max(0, v ?? 18)) })} />
         <Field label="Ordre de rotation" hint="Identifiants séparés par des virgules." className="sm:col-span-2">

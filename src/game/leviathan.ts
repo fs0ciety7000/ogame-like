@@ -4,7 +4,7 @@ import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
-import { EVENT_RULES, weekendWindow } from "@/game/events";
+import { bossWindows, EVENT_RULES, type BossSchedule } from "@/game/events";
 import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
 import { bumpStat } from "@/game/stats";
@@ -28,6 +28,9 @@ export const LEVIATHAN_RULES = {
   hpFactor: 4,
   minHp: 100_000,
   durationHours: 72,
+  /** v5.10.4 : heure d'apparition le vendredi (heure de Paris). Le week-end du mois et
+   *  l'activation sont dans les règles des événements (bossWeekend, bossMonthly). */
+  startHour: 18,
   /** Un assaut toutes les N heures par joueur. */
   cooldownHours: 4,
   /** Trajet aller (et retour), en minutes. */
@@ -162,24 +165,21 @@ export function inferKilledBy(state: LeviathanState, flightMinutes = LEVIATHAN_R
   return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 
-/** Fenêtre mensuelle en cours (ou null) : premier week-end du mois. */
-export function leviathanWindow(now: number): { id: string; startMs: number; endMs: number } | null {
-  if (!EVENT_RULES.bossMonthly) return null;
-  const w = weekendWindow(now);
-  if (!w.firstOfMonth) return null;
-  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR;
-  if (now < w.startMs || now >= endMs) return null;
-  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
+/** v5.10.4 : occurrence du Léviathan (réglable dans l'administration). */
+export function leviathanSchedule(): BossSchedule {
+  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: EVENT_RULES.bossWeekend ?? "first", startHour: LEVIATHAN_RULES.startHour ?? 18, durationHours: LEVIATHAN_RULES.durationHours };
 }
 
-/** Prochain départ du Léviathan (affichage). */
+/** Fenêtre mensuelle en cours (ou null). */
+export function leviathanWindow(now: number): { id: string; startMs: number; endMs: number } | null {
+  const [w] = bossWindows(now, leviathanSchedule(), 1);
+  if (!w || now < w.startMs) return null;
+  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs: w.endMs };
+}
+
+/** Prochain départ du Léviathan (affichage) : la fenêtre en cours si elle n'est pas finie. */
 export function nextLeviathanStart(now: number): number | null {
-  if (!EVENT_RULES.bossMonthly) return null;
-  for (let i = 0; i < 6; i++) {
-    const w = weekendWindow(now, i);
-    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR > now) return w.startMs;
-  }
-  return null;
+  return bossWindows(now, leviathanSchedule(), 1)[0]?.startMs ?? null;
 }
 
 /** v5.10 : prochaine apparition strictement à venir (pas la fenêtre en cours, déjà ouverte). */
@@ -363,4 +363,13 @@ export function resizeLeviathan(state: LeviathanState, maxHp: number, now: numbe
   const done = state.maxHp - state.hp;
   if (!(next > done)) throw new GameActionError(`La structure doit dépasser les dégâts déjà infligés (${done}).`);
   return { ...state, maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) };
+}
+
+/** v5.10.4 : ajustement à chaud (admin) de la fin d'un combat en cours (prolonger ou écourter). */
+export function rescheduleBoss(state: LeviathanState | null, endMs: number, now: number): LeviathanState {
+  if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
+  const end = Math.round(endMs);
+  if (!(end > now + 5 * 60_000)) throw new GameActionError("La nouvelle fin doit être dans plus de 5 minutes.");
+  if (end - state.startMs > 14 * 24 * HOUR) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
+  return { ...state, endMs: end };
 }

@@ -2632,7 +2632,7 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false, link: "/game/leviathan" }]);
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: `Un monstre colossal menace la galaxie : unissez vos flottes avant ${game.bossEndLabel(game.leviathanSchedule())} (page Léviathan).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -2651,6 +2651,22 @@ function leviathanTick(now) {
 }
 
 /** POST /api/cosmic/admin/leviathan { action: "start" | "stop" | "resize", maxHp? } */
+/** v5.10.4 : réglage à chaud d'un boss mondial, consigné dans le journal admin. */
+function bossAdminLog(txApp, e, recordId, label, changes, now) {
+  const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+  log.load({
+    actorId: e.auth ? e.auth.id : "superuser",
+    actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+    action: "update",
+    targetCollection: "game_config",
+    recordId,
+    recordLabel: label,
+    changes,
+    createdAtMs: now,
+  });
+  txApp.save(log);
+}
+
 function adminLeviathan(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
@@ -2686,6 +2702,15 @@ function adminLeviathan(e) {
         createdAtMs: now,
       });
       txApp.save(log);
+    } else if (action === "reschedule") {
+      // v5.10.4 : prolonger ou écourter le combat en cours.
+      const before = state ? state.endMs : 0;
+      try {
+        state = game.rescheduleBoss(state, Number(body(e).endMs), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      bossAdminLog(txApp, e, "leviathan", "Léviathan : fin du combat déplacée", { endMs: { avant: before, après: state.endMs } }, now);
     } else throw new BadRequestError("Action inconnue.");
     writeLeviathan(txApp, state);
     out = state;
@@ -6012,7 +6037,7 @@ function seasonBossArrival(txApp, game, rec, now) {
   writeSeasonBoss(txApp, game, next);
 }
 
-/** Tâche planifiée : apparition le dernier vendredi du mois à 18 h, fin dimanche 23 h, récompenses. */
+/** Tâche planifiée : apparition (week-end réglable, dernier du mois par défaut), échéance, récompenses. */
 function seasonBossTick(now) {
   const game = loadGame();
   let changed = false;
@@ -6045,7 +6070,7 @@ function seasonBossTick(now) {
       const month = game.bossMonthOf(state);
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: "Fin de la chronique du mois : tout le secteur doit frapper avant dimanche 23 h (page Boss de saison).", createdAtMs: now, read: false, link: "/game/boss" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.bossEndLabel(game.seasonBossSchedule())} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
         } catch (_) {
           /* facultatif */
         }
@@ -6084,11 +6109,22 @@ function adminSeasonBoss(e) {
       if (!state || state.status !== "active") throw new BadRequestError("Aucun boss en cours.");
       state = distributeSeasonBoss(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
     } else if (action === "resize") {
+      const before = state ? state.maxHp : 0;
       try {
         state = game.resizeLeviathan(state, Number(req.maxHp), now);
       } catch (err) {
         throw asHttpError(game, err);
       }
+      bossAdminLog(txApp, e, "season_boss", "Boss de saison : structure ajustée", { maxHp: { avant: before, après: state.maxHp } }, now);
+    } else if (action === "reschedule") {
+      // v5.10.4 : prolonger ou écourter le combat en cours.
+      const before = state ? state.endMs : 0;
+      try {
+        state = game.rescheduleBoss(state, Number(req.endMs), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      bossAdminLog(txApp, e, "season_boss", "Boss de saison : fin du combat déplacée", { endMs: { avant: before, après: state.endMs } }, now);
     } else throw new BadRequestError("Action inconnue.");
     writeSeasonBoss(txApp, game, state);
     out = state;

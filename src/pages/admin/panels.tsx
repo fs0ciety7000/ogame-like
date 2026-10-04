@@ -21,7 +21,8 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
+import { BossScheduleFields } from "@/pages/admin/bossFields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -41,6 +42,11 @@ export function RulesPanel() {
   const [busy, setBusy] = useState(false);
   const pvp = rules.pvp;
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
+  // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
+  const bossClash =
+    rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
+      ? "⚠️ Le Léviathan et le boss de saison tombent le même week-end : ils seront là en même temps."
+      : undefined;
 
   const save = async () => {
     setBusy(true);
@@ -448,6 +454,20 @@ export function RulesPanel() {
           />
         </Section>
         <Section title="Léviathan">
+          <BossScheduleFields
+            label="Léviathan"
+            value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours }}
+            onChange={(p) =>
+              setRules((r) => ({
+                ...r,
+                events: { ...r.events, ...(p.enabled !== undefined ? { bossMonthly: p.enabled } : {}), ...(p.weekend ? { bossWeekend: p.weekend } : {}) },
+                leviathan: { ...r.leviathan, ...(p.startHour !== undefined ? { startHour: p.startHour } : {}), ...(p.durationHours !== undefined ? { durationHours: p.durationHours } : {}) },
+              }))
+            }
+            clash={bossClash}
+          />
+          <TextField label="Nom" value={rules.leviathan.name} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, name: v } }))} />
+          <TextField label="Titre du n° 1 des dégâts" value={rules.leviathan.title} onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, title: v } }))} />
           <NumberField
             label="Structure : facteur × puissance d'attaque des actifs"
             value={rules.leviathan.hpFactor}
@@ -455,10 +475,10 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, hpFactor: v ?? 0 } }))}
           />
           <NumberField
-            label="Durée de présence (h)"
-            value={rules.leviathan.durationHours}
-            step={1}
-            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, durationHours: v ?? 0 } }))}
+            label="Structure minimale"
+            value={rules.leviathan.minHp}
+            step={100000}
+            onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, minHp: v ?? 0 } }))}
           />
           <NumberField
             label="Délai entre deux assauts d'un joueur (h)"
@@ -501,6 +521,29 @@ export function RulesPanel() {
             value={rules.leviathan.titleDays}
             step={1}
             onChange={(v) => setRules((r) => ({ ...r, leviathan: { ...r.leviathan, titleDays: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Boss de saison">
+          <BossScheduleFields label="Boss de saison" value={rules.seasonBoss} onChange={(p) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, ...p } }))} clash={bossClash} />
+          <NumberField
+            label="Structure : facteur × puissance d'attaque des actifs"
+            value={rules.seasonBoss.hpFactor}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, hpFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Structure minimale"
+            value={rules.seasonBoss.minHp}
+            step={100000}
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, minHp: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Reliques épiques pour les N premiers"
+            value={rules.seasonBoss.topRelics}
+            min={0}
+            step={1}
+            hint="Le boss (nom, image, titre) change chaque mois : il se règle dans l'onglet Chroniques."
+            onChange={(v) => setRules((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, topRelics: Math.max(0, Math.round(v ?? 0)) } }))}
           />
         </Section>
         <Section title="Flottes en vol">

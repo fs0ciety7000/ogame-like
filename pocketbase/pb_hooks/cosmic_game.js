@@ -158,6 +158,7 @@ __export(hooksEntry_exports, {
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
   blogPostFromRecord: () => blogPostFromRecord,
+  bossEndLabel: () => bossEndLabel,
   bossHistoryEntry: () => bossHistoryEntry,
   bossMonthOf: () => bossMonthOf,
   bountyIdOf: () => bountyIdOf,
@@ -278,6 +279,7 @@ __export(hooksEntry_exports, {
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
   leviathanRanking: () => leviathanRanking,
+  leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
   linkReferrer: () => linkReferrer,
   lossesPower: () => lossesPower,
@@ -355,6 +357,7 @@ __export(hooksEntry_exports, {
   renderBlogRss: () => renderBlogRss,
   renderBlogSitemap: () => renderBlogSitemap,
   reportStatusLabel: () => reportStatusLabel,
+  rescheduleBoss: () => rescheduleBoss,
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
   resolveBountyHunt: () => resolveBountyHunt,
@@ -376,6 +379,7 @@ __export(hooksEntry_exports, {
   sanitizeNewReport: () => sanitizeNewReport,
   sanitizePactMessage: () => sanitizePactMessage,
   scoreBattle: () => scoreBattle,
+  seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
   seasonPowerOf: () => seasonPowerOf,
   seasonRewardFor: () => seasonRewardFor,
@@ -1468,6 +1472,7 @@ var GameActionError = class extends Error {
 var EVENT_RULES = {
   rotationEnabled: true,
   bossMonthly: true,
+  bossWeekend: "first",
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -1537,13 +1542,57 @@ function weekendWindow(now, weeksAhead = 0) {
     startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
     endMs: parisLocalToUtc(friday + 3 * DAY),
     week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY)),
-    firstOfMonth: new Date(friday).getUTCDate() <= 7
+    firstOfMonth: new Date(friday).getUTCDate() <= 7,
+    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
+    lastOfMonth: new Date(friday + 7 * DAY).getUTCMonth() !== new Date(friday).getUTCMonth(),
+    fridayMs: parisLocalToUtc(friday)
   };
+}
+var BOSS_WEEKENDS = [
+  { id: "first", label: "Premier week-end du mois" },
+  { id: "second", label: "Deuxi\xE8me week-end du mois" },
+  { id: "third", label: "Troisi\xE8me week-end du mois" },
+  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
+  { id: "last", label: "Dernier week-end du mois" }
+];
+var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
+function onWeekend(w, which) {
+  if (which === "last") return w.lastOfMonth;
+  return w.nth === NTH[which != null ? which : "first"];
+}
+function bossWindows(now, s, count2 = 1) {
+  const out = [];
+  if (!s.enabled) return out;
+  for (let i = -1; i < 60 && out.length < count2; i++) {
+    const w = weekendWindow(now, i);
+    if (!onWeekend(w, s.weekend)) continue;
+    const startMs = w.fridayMs + s.startHour * HOUR;
+    const endMs = startMs + s.durationHours * HOUR;
+    if (endMs > now) out.push({ startMs, endMs });
+  }
+  return out;
+}
+var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function hourLabel(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
+}
+function bossEndLabel(s) {
+  const end = s.startHour + s.durationHours;
+  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+function validateBossSchedule(label3, s) {
+  const errors = [];
+  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
+  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
+  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
+  return errors;
 }
 function rotationEvent(window) {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
-  if (EVENT_RULES.bossMonthly && window.firstOfMonth) return null;
+  if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
   const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
@@ -2621,10 +2670,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY12 = 864e5;
+  const DAY11 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY12) * DAY12;
-  return new Date(midnight - (day + 6) % 7 * DAY12).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY11) * DAY11;
+  return new Date(midnight - (day + 6) % 7 * DAY11).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -6489,6 +6538,9 @@ var LEVIATHAN_RULES = {
   hpFactor: 4,
   minHp: 1e5,
   durationHours: 72,
+  /** v5.10.4 : heure d'apparition le vendredi (heure de Paris). Le week-end du mois et
+   *  l'activation sont dans les règles des événements (bossWeekend, bossMonthly). */
+  startHour: 18,
   /** Un assaut toutes les N heures par joueur. */
   cooldownHours: 4,
   /** Trajet aller (et retour), en minutes. */
@@ -6536,21 +6588,18 @@ function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
   }
   return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
+function leviathanSchedule() {
+  var _a, _b;
+  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first", startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18, durationHours: LEVIATHAN_RULES.durationHours };
+}
 function leviathanWindow(now) {
-  if (!EVENT_RULES.bossMonthly) return null;
-  const w = weekendWindow(now);
-  if (!w.firstOfMonth) return null;
-  const endMs = w.startMs + LEVIATHAN_RULES.durationHours * HOUR5;
-  if (now < w.startMs || now >= endMs) return null;
-  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs };
+  const [w] = bossWindows(now, leviathanSchedule(), 1);
+  if (!w || now < w.startMs) return null;
+  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs: w.endMs };
 }
 function nextLeviathanStart(now) {
-  if (!EVENT_RULES.bossMonthly) return null;
-  for (let i = 0; i < 6; i++) {
-    const w = weekendWindow(now, i);
-    if (w.firstOfMonth && w.startMs + LEVIATHAN_RULES.durationHours * HOUR5 > now) return w.startMs;
-  }
-  return null;
+  var _a, _b;
+  return (_b = (_a = bossWindows(now, leviathanSchedule(), 1)[0]) == null ? void 0 : _a.startMs) != null ? _b : null;
 }
 function isActive(state, now) {
   return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
@@ -6660,6 +6709,13 @@ function resizeLeviathan(state, maxHp, now) {
   const done = state.maxHp - state.hp;
   if (!(next > done)) throw new GameActionError(`La structure doit d\xE9passer les d\xE9g\xE2ts d\xE9j\xE0 inflig\xE9s (${done}).`);
   return __spreadProps(__spreadValues({}, state), { maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) });
+}
+function rescheduleBoss(state, endMs, now) {
+  if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
+  const end = Math.round(endMs);
+  if (!(end > now + 5 * 6e4)) throw new GameActionError("La nouvelle fin doit \xEAtre dans plus de 5 minutes.");
+  if (end - state.startMs > 14 * 24 * HOUR5) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
+  return __spreadProps(__spreadValues({}, state), { endMs: end });
 }
 
 // src/game/chronicles.ts
@@ -6998,7 +7054,6 @@ function validateChronicles(cfg) {
   return errors;
 }
 var HOUR6 = 36e5;
-var DAY6 = 24 * HOUR6;
 function parisDate(now) {
   const local = new Date(now + parisOffsetMs(now));
   return { y: local.getUTCFullYear(), m: local.getUTCMonth() + 1, d: local.getUTCDate() };
@@ -7090,27 +7145,26 @@ onPassPoints((player, source, now, times) => {
 });
 var SEASON_BOSS_KEY = "season_boss";
 var SEASON_BOSS_RULES = {
-  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
+  enabled: true,
+  weekend: "last",
+  startHour: 18,
   hpFactor: 3,
   minHp: 1e5,
-  /** Vendredi 18 h → dimanche 23 h (heure de Paris). */
   durationHours: 53,
   topRelics: 3
 };
+function seasonBossSchedule() {
+  var _a, _b;
+  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last", startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18, durationHours: SEASON_BOSS_RULES.durationHours };
+}
 function seasonBossWindow(now, includeUpcoming = false) {
-  for (let i = 0; i < 6; i++) {
-    const w = weekendWindow(now, i);
-    const friday = parisDate(w.startMs);
-    const nextWeek = parisDate(w.startMs + 7 * DAY6);
-    if (nextWeek.m === friday.m) continue;
-    const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
-    const endMs = w.startMs + SEASON_BOSS_RULES.durationHours * HOUR6;
-    if (now >= endMs) continue;
-    if (!config.months.some((m) => m.id === monthId)) return null;
-    if (now < w.startMs && !includeUpcoming) return null;
-    return { id: `boss-${monthId}`, monthId, startMs: w.startMs, endMs };
-  }
-  return null;
+  const [w] = bossWindows(now, seasonBossSchedule(), 1);
+  if (!w) return null;
+  const friday = parisDate(w.startMs);
+  const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
+  if (!config.months.some((m) => m.id === monthId)) return null;
+  if (now < w.startMs && !includeUpcoming) return null;
+  return { id: `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 function seasonBossHp(activePlayers) {
   const power = activePlayers.reduce((a, p) => {
@@ -7310,7 +7364,7 @@ function setOnboardingHidden(player, hidden) {
 }
 
 // src/game/retention.ts
-var DAY7 = 24 * 36e5;
+var DAY6 = 24 * 36e5;
 var ACTIVITY_DAYS_KEPT = 60;
 var PRESENCE_WRITE_MS = 2 * 6e4;
 var ONLINE_MS = 5 * 6e4;
@@ -7326,7 +7380,7 @@ function parisDay(now) {
   return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
 }
 function dayDiff(a, b) {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY7);
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY6);
 }
 function recordActiveDay(player, now) {
   var _a, _b, _c;
@@ -7351,7 +7405,7 @@ function computeRetention(players, now) {
   }).sort();
   const trackingSince = (_a = allDays[0]) != null ? _a : null;
   const daily = Array.from({ length: 30 }, (_, i) => {
-    const day = parisDay(now - (29 - i) * DAY7);
+    const day = parisDay(now - (29 - i) * DAY6);
     return {
       day,
       active: players.filter((p) => days(p).has(day)).length,
@@ -7359,14 +7413,14 @@ function computeRetention(players, now) {
     };
   });
   const active = {
-    d1: players.filter((p) => now - lastSeen(p) < DAY7).length,
-    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY7).length,
-    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY7).length,
+    d1: players.filter((p) => now - lastSeen(p) < DAY6).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY6).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY6).length,
     total: players.length
   };
   const cohorts = Array.from({ length: 6 }, (_, i) => {
-    const end = now - i * 7 * DAY7;
-    const start = end - 7 * DAY7;
+    const end = now - i * 7 * DAY6;
+    const start = end - 7 * DAY6;
     const members = players.filter((p) => {
       var _a2, _b2;
       return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
@@ -7384,12 +7438,12 @@ function computeRetention(players, now) {
       signups: members.length,
       d1Pct: d1Eligible.length > 0 ? pct3(d1, d1Eligible.length) : null,
       d7Pct: d7Eligible.length > 0 ? pct3(d7, d7Eligible.length) : null,
-      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY7).length, members.length)
+      activeNowPct: pct3(members.filter((p) => now - lastSeen(p) < 3 * DAY6).length, members.length)
     };
   }).reverse();
   const recent = players.filter((p) => {
     var _a2;
-    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY7;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY6;
   });
   const funnel = ONBOARDING_STEPS.map((step) => {
     const reached = recent.filter((p) => {
@@ -7401,7 +7455,7 @@ function computeRetention(players, now) {
     }).length;
     return { id: step.id, label: step.label, reached, pct: pct3(reached, recent.length) };
   });
-  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY7);
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY6);
   const stopAt = /* @__PURE__ */ new Map();
   for (const p of stalled) {
     const step = ONBOARDING_STEPS.find((s) => {
@@ -7444,17 +7498,17 @@ var ALLIANCE_BOSSES = [
   { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
   { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
 ];
-var DAY8 = 24 * 36e5;
+var DAY7 = 24 * 36e5;
 var HOUR7 = 36e5;
 function allianceWeekId(now) {
   const day = parisDay(now);
   const t = Date.parse(`${day}T00:00:00Z`);
   const dow = new Date(t).getUTCDay();
-  return new Date(t - (dow + 6) % 7 * DAY8).toISOString().slice(0, 10);
+  return new Date(t - (dow + 6) % 7 * DAY7).toISOString().slice(0, 10);
 }
 function allianceBossOfWeek(now) {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
-  const index = Math.floor(monday / (7 * DAY8));
+  const index = Math.floor(monday / (7 * DAY7));
   return ALLIANCE_BOSSES[(index % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
 }
 function allianceBossDef(state) {
@@ -10620,7 +10674,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 
 // src/game/analytics.ts
 var HOUR9 = 36e5;
-var DAY9 = 24 * HOUR9;
+var DAY8 = 24 * HOUR9;
 function median2(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -10711,7 +10765,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     var _a;
     return { key: m.key, name: m.name, running: (_a = missionCounts.get(m.key)) != null ? _a : 0 };
   }).sort((a, b) => b.running - a.running);
-  const since = now - windowDays * DAY9;
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since;
@@ -10721,11 +10775,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     if (r.outcome in outcomes) outcomes[r.outcome]++;
   });
   const perDay = Array.from({ length: windowDays }, (_, i) => {
-    const start = now - (windowDays - i) * DAY9;
-    const d = new Date(start + DAY9);
+    const start = now - (windowDays - i) * DAY8;
+    const d = new Date(start + DAY8);
     return {
       day: `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
-      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY9).length
+      count: recent.filter((r) => r.timestamp >= start && r.timestamp < start + DAY8).length
     };
   });
   const lootTotals = recent.filter((r) => r.outcome === "attacker_win").map((r) => {
@@ -10736,11 +10790,11 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
     generatedAt: now,
     players: {
       total: n,
-      active24h: players.filter((p) => now - lastSeen(p) < DAY9).length,
-      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY9).length,
+      active24h: players.filter((p) => now - lastSeen(p) < DAY8).length,
+      active7d: players.filter((p) => now - lastSeen(p) < 7 * DAY8).length,
       new7d: players.filter((p) => {
         var _a;
-        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY9;
+        return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY8;
       }).length,
       medianPlaytimeHours: round1(median2(players.map((p) => {
         var _a;
@@ -10799,7 +10853,7 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
   return stats;
 }
 function computeEndgame(players, queues, reports, now, windowDays) {
-  const since = now - windowDays * DAY9;
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a;
     return ((_a = r.timestamp) != null ? _a : 0) >= since && r.attackerUid !== PIRATE_OWNER_UID;
@@ -10894,19 +10948,19 @@ var sumValues = (r) => Object.values(r != null ? r : {}).reduce((a, v) => a + (v
 function computeBalance(players, reports, now, windowDays) {
   var _a, _b;
   const seen = (p) => Math.min(now, lastActivity(p));
-  const days = (ms) => Math.floor(ms / DAY9);
-  const since = now - windowDays * DAY9;
+  const days = (ms) => Math.floor(ms / DAY8);
+  const since = now - windowDays * DAY8;
   const recent = reports.filter((r) => {
     var _a2;
     return ((_a2 = r.timestamp) != null ? _a2 : 0) >= since;
   });
-  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY9 && now - seen(p) < 30 * DAY9).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
+  const dormant = players.filter((p) => now - seen(p) >= 3 * DAY8 && now - seen(p) < 30 * DAY8).map((p) => ({ pseudo: p.pseudo, days: days(now - seen(p)) })).sort((a, b) => a.days - b.days);
   const byFamily = /* @__PURE__ */ new Map();
   players.forEach((p) => {
     var _a2, _b2;
     if (!p.createdAtMs) return;
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
-    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY9]);
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY8]);
   });
   const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median2(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -10936,7 +10990,7 @@ function computeBalance(players, reports, now, windowDays) {
       lairWinPct: pct4(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length)
     };
   });
-  const active = players.filter((p) => now - seen(p) < 7 * DAY9);
+  const active = players.filter((p) => now - seen(p) < 7 * DAY8);
   const productionPerHour = Math.round(active.reduce((a, p) => {
     var _a2, _b2;
     return a + sumValues(getProductionRatesPerSecond((_a2 = p.buildings) != null ? _a2 : {}, (_b2 = p.techLevels) != null ? _b2 : {})) * 3600;
@@ -10958,9 +11012,9 @@ function computeBalance(players, reports, now, windowDays) {
   return {
     windowDays,
     activity: {
-      active1d: players.filter((p) => now - seen(p) < DAY9).length,
+      active1d: players.filter((p) => now - seen(p) < DAY8).length,
       active7d: active.length,
-      active30d: players.filter((p) => now - seen(p) < 30 * DAY9).length,
+      active30d: players.filter((p) => now - seen(p) < 30 * DAY8).length,
       dormant
     },
     rankAge,
@@ -11158,6 +11212,7 @@ var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
 var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
+var DEFAULT_SEASON_BOSS_RULES = __spreadValues({}, SEASON_BOSS_RULES);
 var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
 function defaultGameContent() {
   return structuredClone({
@@ -11174,7 +11229,7 @@ function defaultGameContent() {
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -11182,7 +11237,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -11222,7 +11277,8 @@ function applyGameContent(overrides) {
         weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_P = (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) == null ? void 0 : _O.weights) != null ? _P : {})
       }),
       leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.leviathan) != null ? _R : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_T = (_S = overrides.rules) == null ? void 0 : _S.wars) != null ? _T : {})
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.seasonBoss) != null ? _T : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {})
     }
   };
   setBuildings(content.buildings);
@@ -11237,7 +11293,7 @@ function applyGameContent(overrides) {
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
   setRelics(content.relics, content.relicSettings);
-  setTitles((_U = content.titles) != null ? _U : DEFAULT_TITLES);
+  setTitles((_W = content.titles) != null ? _W : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -11252,14 +11308,18 @@ function applyGameContent(overrides) {
   Object.assign(MARKET_RULES, content.rules.market);
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
+  Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const errors = [];
+  const lev = content.rules.leviathan;
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_a = content.rules.events.bossWeekend) != null ? _a : "first", startHour: (_b = lev.startHour) != null ? _b : 18, durationHours: lev.durationHours }));
+  if (content.rules.seasonBoss) errors.push(...validateBossSchedule("Boss de saison", content.rules.seasonBoss));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
   const unitIds = new Set(content.units.map((u) => u.id));
@@ -11282,19 +11342,19 @@ function validateGameContent(content) {
     const label3 = `B\xE2timent ${b.name || b.id}`;
     if (!(b.maxLevel >= 1)) errors.push(`${label3} : niveau max doit \xEAtre \u2265 1.`);
     checkResources(`${label3} (d\xE9blocage)`, b.unlockCost);
-    checkResources(`${label3} (co\xFBt initial)`, (_a = b.upgrade) == null ? void 0 : _a.baseCost);
-    checkResources(`${label3} (co\xFBt max)`, (_b = b.upgrade) == null ? void 0 : _b.maxCost);
+    checkResources(`${label3} (co\xFBt initial)`, (_c = b.upgrade) == null ? void 0 : _c.baseCost);
+    checkResources(`${label3} (co\xFBt max)`, (_d = b.upgrade) == null ? void 0 : _d.maxCost);
     if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label3} : techno \xAB ${b.unlockedByTech} \xBB inexistante.`);
     if (b.production && !resources.has(b.production.resource)) errors.push(`${label3} : ressource produite inconnue.`);
     if (b.production && b.production.perSecond.length === 0) errors.push(`${label3} : table de production vide.`);
-    const t2 = (_c = b.upgrade) == null ? void 0 : _c.tier2;
+    const t2 = (_e = b.upgrade) == null ? void 0 : _e.tier2;
     if (t2) {
       if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label3} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
       checkResources(`${label3} (second palier, co\xFBt initial)`, t2.baseCost);
       checkResources(`${label3} (second palier, co\xFBt max)`, t2.maxCost);
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
     }
-    if (((_d = b.effect) == null ? void 0 : _d.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
+    if (((_f = b.effect) == null ? void 0 : _f.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
   checkIds("Unit\xE9s", content.units.map((u) => u.id));
@@ -11314,7 +11374,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_e = t.prereq) != null ? _e : {})) {
+    for (const req of Object.keys((_g = t.prereq) != null ? _g : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
     }
@@ -11339,21 +11399,21 @@ function validateGameContent(content) {
   for (const m of content.missions) {
     const label3 = `Mission ${m.name || m.key}`;
     if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_f = m.prereq) != null ? _f : {})) {
+    for (const unitId of Object.keys((_h = m.prereq) != null ? _h : {})) {
       if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
     }
-    const res = __spreadValues({}, (_g = m.reward) != null ? _g : {});
+    const res = __spreadValues({}, (_i = m.reward) != null ? _i : {});
     delete res.xp;
     checkResources(`${label3} (r\xE9compense)`, res);
   }
-  errors.push(...validateFactions((_h = content.factions) != null ? _h : []));
+  errors.push(...validateFactions((_j = content.factions) != null ? _j : []));
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
-  errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
-  errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
-  errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
-  errors.push(...validateTitles((_m = content.titles) != null ? _m : []));
+  errors.push(...validateRanks((_k = content.ranks) != null ? _k : []));
+  errors.push(...validateAchievements((_l = content.achievements) != null ? _l : []));
+  errors.push(...validateRelics((_m = content.relics) != null ? _m : [], (_n = content.relicSettings) != null ? _n : defaultRelicSettings()));
+  errors.push(...validateTitles((_o = content.titles) != null ? _o : []));
   return [...new Set(errors)];
 }
 
@@ -11675,12 +11735,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY10 = 864e5;
+var DAY9 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY10) * DAY10;
-  const startMs = midnight - (day + 6) % 7 * DAY10;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY10 };
+  const midnight = Math.floor(now / DAY9) * DAY9;
+  const startMs = midnight - (day + 6) % 7 * DAY9;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY9 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
@@ -12093,7 +12153,7 @@ var COALITION_RULES = {
   failGrowth: 0.1
 };
 var HOUR12 = 36e5;
-var DAY11 = 24 * HOUR12;
+var DAY10 = 24 * HOUR12;
 function coalitionState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -12119,14 +12179,14 @@ function checkCoalitionTrigger(c, lords, topHumanPower, now) {
     else delete c.overSince[l.id];
   }
   if (c.coalition && c.coalition.status === "active") return null;
-  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY11) return null;
+  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY10) return null;
   const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR12).sort((a, b) => b.power - a.power)[0];
   if (!ready) return null;
   const coalition = {
     id: `coal-${ready.id}-${now}`,
     warlordId: ready.id,
     startedAtMs: now,
-    endsAtMs: now + COALITION_RULES.durationDays * DAY11,
+    endsAtMs: now + COALITION_RULES.durationDays * DAY10,
     goal: Math.max(1, Math.round(ready.fleetPower * COALITION_RULES.goalFactor)),
     dealt: 0,
     contributions: {},

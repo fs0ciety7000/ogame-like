@@ -17,7 +17,8 @@ import { BossRecapPanel } from "@/components/game/BossRecap";
 import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
 import { computeFleetPower } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
-import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
+import { describeBossSchedule } from "@/game/events";
+import { isActive, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { sendLeviathanAssault, useLeviathan } from "@/services/leviathanService";
 import { useAdminStatus } from "@/services/maintenanceService";
@@ -162,7 +163,9 @@ export function LeviathanPage() {
             ? "Le colosse est tombé : voici le bilan du combat et ce que chacun a gagné."
             : phase === "failed"
               ? "Le colosse s'est retiré avant de tomber. Les participants sont récompensés à moitié."
-              : "Un monstre colossal surgit le premier week-end de chaque mois. Tout le serveur s'unit pour l'abattre ; chacun est récompensé selon ses dégâts."
+              : leviathanSchedule().enabled
+                ? `Un monstre colossal surgit ${describeBossSchedule(leviathanSchedule())}. Tout le serveur s'unit pour l'abattre ; chacun est récompensé selon ses dégâts.`
+                : "Le colosse dort : aucune apparition n'est programmée pour l'instant."
         }
       />
 
