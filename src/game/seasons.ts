@@ -244,3 +244,12 @@ export function setActiveTitle(player: PlayerState, label: string): void {
   if (label && !(player.titles ?? []).some((t) => t.label === label)) throw new GameActionError("Tu n'as pas gagné ce titre.");
   player.activeTitle = label;
 }
+
+/** 5.15.9 : ce que coûte une clôture de saison pour `active` joueurs actifs (aperçu admin).
+ *  Le lot du podium est versé en entier (partagé entre le 2e et le 3e). */
+export function seasonPayoutSummary(rules: Pick<typeof SEASON_RULES, "champion" | "podium" | "participation">, active: number): { tokens: number; amber: number; common: number } {
+  const n = Math.max(0, Math.floor(active));
+  const lots = [n >= 1 ? rules.champion : null, n >= 2 ? rules.podium : null].filter((x): x is SeasonPrize => !!x);
+  const sum = (k: keyof SeasonPrize) => lots.reduce((a, l) => a + (Number(l[k]) || 0), 0) + n * (Number(rules.participation[k]) || 0);
+  return { tokens: sum("tokens"), amber: sum("amber"), common: sum("common") };
+}

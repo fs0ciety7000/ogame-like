@@ -109,3 +109,15 @@ export function claimStreak(
   player.streak = { count, lastDay: status.today, best: Math.max(st.best, count), total: st.total + 1 };
   return { count, resources: reward.resources, amber: reward.amber, tokens: reward.tokens, chest };
 }
+
+/** 5.15.9 : ce que rapporte une semaine complète de série (aperçu admin).
+ *  Le coffre compte pour sa valeur moyenne (milieu des bornes). */
+export function streakWeekSummary(rules: typeof STREAK_RULES): { hours: number; tokens: number; amber: number; chestCommon: number } {
+  const mid = ([lo, hi]: [number, number]) => (lo + hi) / 2;
+  return {
+    hours: rules.hours.reduce((a, h) => a + h, 0),
+    tokens: rules.dailyTokens * rules.hours.length + mid(rules.chest.tokens),
+    amber: rules.amberDay6 + mid(rules.chest.amber),
+    chestCommon: mid(rules.chest.common),
+  };
+}

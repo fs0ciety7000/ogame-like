@@ -3,12 +3,13 @@ import { Plus, Trash2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { GameRules } from "@/game/content";
+import { currentGameContent, type GameRules } from "@/game/content";
 import type { EventEffects, EventType } from "@/game/events";
 import { previousSeasonId, seasonLabel } from "@/game/seasons";
 import { adminCloseSeason } from "@/services/adminService";
 import { CheckboxField, Field, NumberField, Section, SelectField, TextField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
+import { SeasonPayoutPreview, StreakSection } from "@/pages/admin/RewardsPreview";
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
@@ -29,6 +30,8 @@ const EFFECT_FIELDS: { key: keyof EventEffects; label: string; step: number }[] 
 
 /** Réglages des événements du week-end et des récompenses de saison. */
 export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules; setRules: SetRules }) {
+  // 5.15.9 : règles enregistrées, pour les aperçus « avant / après ».
+  const saved = currentGameContent().rules;
   const events = rules.events;
   const setEvents = (patch: Partial<GameRules["events"]>) => setRules((r) => ({ ...r, events: { ...r.events, ...patch } }));
   const setType = (id: string, patch: Partial<EventType>) => setEvents({ types: events.types.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
@@ -196,6 +199,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
           </div>
         ))}
         <NumberField label="Joueur actif : XP de saison minimale" value={seasons.participationXp} min={0} step={10} onChange={(v) => setSeasons({ participationXp: v ?? 0 })} />
+        <SeasonPayoutPreview rules={rules} saved={saved} />
         <div className="sm:col-span-2">
           <Button variant="outline" size="sm" className="h-auto min-h-8 whitespace-normal py-1.5 text-left" disabled={closing} onClick={() => void closeSeason()}>
             <Trophy className="mr-1 h-3.5 w-3.5" /> Clôturer la saison {seasonLabel(previousSeasonId())} maintenant
@@ -203,6 +207,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
           <p className="mt-1 text-[11px] text-slate-500">Automatique chaque heure après le changement de mois : ce bouton ne sert qu'en cas de besoin. Une saison n'est jamais close deux fois.</p>
         </div>
       </Section>
+      <StreakSection rules={rules} setRules={setRules} saved={saved} />
     </>
   );
 }

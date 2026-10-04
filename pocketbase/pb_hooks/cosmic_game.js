@@ -14253,6 +14253,7 @@ var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
 var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14279,7 +14280,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14340,7 +14341,14 @@ function applyGameContent(overrides) {
       leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_P = (_O = overrides.rules) == null ? void 0 : _O.leviathan) != null ? _P : {}),
       seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {})
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
+      streak: (() => {
+        var _a2, _b2, _c2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
+        const d = defaults.rules.streak;
+        const hours2 = Array.isArray(o.hours) && o.hours.length === d.hours.length && o.hours.every((h) => Number.isFinite(h) && h >= 0) ? [...o.hours] : [...d.hours];
+        return __spreadProps(__spreadValues(__spreadValues({}, d), o), { hours: hours2, chest: __spreadValues(__spreadValues({}, d.chest), (_c2 = o.chest) != null ? _c2 : {}) });
+      })()
     }
   };
   setBuildings(content.buildings);
@@ -14384,6 +14392,7 @@ function applyGameContent(overrides) {
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
+  Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   current = content;
   return content;
 }
@@ -14404,10 +14413,11 @@ var RULE_GROUP_LABELS = {
   leviathan: "L\xE9viathan",
   seasonBoss: "Boss de saison",
   allianceBoss: "Boss d'alliance",
-  wars: "Guerres"
+  wars: "Guerres",
+  streak: "S\xE9rie de connexion"
 };
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e;
+  var _a, _b, _c, _d, _e, _f;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -14440,6 +14450,14 @@ function validateRules(rules) {
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  const st = merged.streak;
+  if (st) {
+    if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
+    for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
+      const r = (_f = st.chest) == null ? void 0 : _f[key];
+      if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
+    }
+  }
   return errors;
 }
 function mergeRulesForCheck(rules) {
