@@ -177,7 +177,7 @@ export function CasinoPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Social" title="Casino orbital" description="Le pot commun du serveur est le gros lot. Un jeton, un tirage : aligne trois 7 pour rafler la moitié du pot." />
+      <PageHeader backdrop="/assets/casino/salle-777.webp" eyebrow="Cosmic Empires / Social" title="Casino orbital" description="Le pot commun du serveur est le gros lot. Un jeton, un tirage : aligne trois 7 pour rafler la moitié du pot." />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-3">

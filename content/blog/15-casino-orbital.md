@@ -49,6 +49,8 @@ Le casino n'est pas ouvert en permanence. Par défaut, il ouvre **chaque week-en
 
 ## Et quand quelqu'un gagne
 
+![Pluie de pièces dans la salle de jeu](/assets/blog/articles/5-12/gros-lot.webp "Trois 7, et toute la station lève les yeux")
+
 Trois 7 alignés, c'est une pluie de pièces sur l'écran du gagnant, et une notification pour **tous les joueurs** du serveur. Son nom rejoint le palmarès des **gros lots**, visible sur la page, à côté du fil des derniers gains.
 
 > [!NOTE] Côté interface

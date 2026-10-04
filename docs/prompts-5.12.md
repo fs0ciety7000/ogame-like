@@ -7,8 +7,9 @@ Même ambiance que le reste du jeu : espace sombre, néons cyan `#4be8ff` et or 
 Aucun texte dans l'image : Midjourney écrit mal, et les titres sont ajoutés par l'article.
 
 **Images reçues** : jeton (trois-quarts → `jeton.webp`, détouré), jeton de face (→ `jeton-icone.webp`, icône), pile de jetons,
-couverture (salle aux machines bleu nuit) et salle de jeu (`salle-de-jeu.webp`, section du billet). Le visuel « gros lot »
-reste à intégrer.
+couverture (salle aux machines bleu nuit), salle de jeu (`salle-de-jeu.webp`), gros lot (`gros-lot.webp`, section
+« Et quand quelqu'un gagne ») et grande salle aux trois 7 (`public/assets/casino/salle-777.webp`, fond de l'en-tête de la
+page Casino via `PageHeader backdrop`).
 
 Le jeton suit le design system (`docs/DESIGN.md`) : **coins coupés** (octogone ou carré biseauté, pas de pièce ronde),
 **or = récompense**, liseré cyan discret pour le côté instrument. On évite les casinos « Las Vegas » (velours rouge,

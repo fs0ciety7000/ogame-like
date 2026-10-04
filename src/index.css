@@ -1018,6 +1018,24 @@ body {
   .ck-boot, .ck-boot p { animation-duration: 0.01ms; animation-delay: 0s !important; }
 }
 
+/* En-tête de page avec illustration (PageHeader backdrop) : image discrète, fondue vers la gauche et le bas. */
+.page-header-backdrop-img {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(100%, 760px);
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 35%;
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%), linear-gradient(180deg, #000 55%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 45%), linear-gradient(180deg, #000 55%, transparent);
+  mask-composite: intersect;
+}
+@media (max-width: 640px) { .page-header-backdrop-img { opacity: 0.25; } }
+
 /* ---------- v5.12 : Casino orbital (machine à sous) ----------
    Instrument du HUD : panneau à coins coupés, jetons du thème uniquement.
    Couleurs = sens : or (récompense) pour la machine, accent pour l'action (levier, bouton),
