@@ -4,7 +4,7 @@ import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
-import { bossWindows, EVENT_RULES, type BossSchedule } from "@/game/events";
+import { BOSS_REMINDERS, bossWindows, EVENT_RULES, type BossSchedule } from "@/game/events";
 import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
 import { bumpStat } from "@/game/stats";
@@ -75,6 +75,8 @@ export interface LeviathanState {
   archived?: boolean;
   /** v5.10.2 : coup de grâce recherché pour un combat d'avant la 5.10 (une seule fois). */
   legacyChecked?: boolean;
+  /** v5.10.5 : rappel « plus que N heures » déjà envoyé. */
+  endingNotified?: boolean;
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -142,6 +144,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
     ...(r.archived === true ? { archived: true } : {}),
     ...(r.legacyChecked === true ? { legacyChecked: true } : {}),
+    ...(r.endingNotified === true ? { endingNotified: true } : {}),
   };
 }
 
@@ -371,5 +374,13 @@ export function rescheduleBoss(state: LeviathanState | null, endMs: number, now:
   const end = Math.round(endMs);
   if (!(end > now + 5 * 60_000)) throw new GameActionError("La nouvelle fin doit être dans plus de 5 minutes.");
   if (end - state.startMs > 14 * 24 * HOUR) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
-  return { ...state, endMs: end };
+  // Fin repoussée au-delà du rappel : il pourra repartir.
+  const next: LeviathanState = { ...state, endMs: end };
+  if (end - now > BOSS_REMINDERS.endingHours * HOUR) delete next.endingNotified;
+  return next;
+}
+
+/** v5.10.5 : faut-il envoyer le rappel « plus que N heures » ? */
+export function endingReminderDue(state: LeviathanState | null, now: number): boolean {
+  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR;
 }

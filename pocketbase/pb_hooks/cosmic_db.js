@@ -2591,6 +2591,44 @@ function leviathanArrival(txApp, game, rec, now) {
   writeLeviathan(txApp, next);
 }
 
+/**
+ * v5.10.5 : rappels des boss mondiaux — la veille de l'apparition, puis N heures
+ * avant la fin s'il tient encore. Chacun n'est envoyé qu'une fois. Retourne l'état
+ * (marqué si le rappel de fin est parti).
+ */
+function bossReminders(txApp, game, kind, state, next, now) {
+  const isLev = kind === "leviathan";
+  const month = !isLev && state ? game.bossMonthOf(state) : null;
+  const link = isLev ? "/game/leviathan" : "/game/boss";
+  const actives = () => txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 });
+  const send = (title, message) =>
+    actives().forEach((r) => {
+      try {
+        notify(txApp, r.id, [{ kind: "event", title, message, createdAtMs: now, read: false, link }]);
+      } catch (_) {
+        /* facultatif */
+      }
+    });
+  // La veille.
+  const rec = configRecord(txApp, "boss_reminders");
+  const sent = rec ? toPlain(rec).data || {} : {};
+  if (game.eveReminderDue(next, sent[kind], now)) {
+    const nextMonth = !isLev ? game.bossMonthOf({ id: next.id || "" }) : null;
+    const name = isLev ? game.LEVIATHAN_RULES.name : nextMonth ? nextMonth.boss.name : "Le boss de saison";
+    send(`${name} arrive ${game.parisRelativeLabel(next.startMs, now)}`, `Préparez vos flottes d'attaque : ${isLev ? "tout le serveur" : "tout le secteur"} devra frapper ensemble. Un assaut toutes les ${game.LEVIATHAN_RULES.cooldownHours} h.`);
+    writeConfig(txApp, "boss_reminders", Object.assign({}, sent, { [kind]: next.startMs }));
+  }
+  // Avant la fin, s'il tient encore.
+  if (game.endingReminderDue(state, now)) {
+    const name = isLev ? game.LEVIATHAN_RULES.name : month ? month.boss.name : "Le boss de saison";
+    const pct = Math.max(1, Math.round((state.hp / state.maxHp) * 100));
+    const hours = Math.max(1, Math.round((state.endMs - now) / 3600000));
+    send(`Plus que ${hours} h contre ${name} !`, `Il lui reste ${pct} % de sa structure. Un dernier effort avant ${game.parisWhenLabel(state.endMs)}, sinon il repart et les récompenses sont réduites.`);
+    return Object.assign({}, state, { endingNotified: true });
+  }
+  return state;
+}
+
 /** Tâche planifiée : apparition, échéance, récompenses, fin du titre. */
 function leviathanTick(now) {
   const game = loadGame();
@@ -2632,11 +2670,18 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: `Un monstre colossal menace la galaxie : unissez vos flottes avant ${game.bossEndLabel(game.leviathanSchedule())} (page Léviathan).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: `Un monstre colossal menace la galaxie : unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Léviathan).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
       });
+    }
+    // v5.10.5 : rappels (la veille, avant la fin).
+    const upcoming = game.bossWindows(now, game.leviathanSchedule(), 2).filter((w) => w.startMs > now)[0] || null;
+    const reminded = bossReminders(txApp, game, "leviathan", state, upcoming, now);
+    if (reminded !== state) {
+      state = reminded;
+      changed = true;
     }
     if (state) {
       const sampled = game.recordLeviathanTimeline(state, now);
@@ -6070,11 +6115,18 @@ function seasonBossTick(now) {
       const month = game.bossMonthOf(state);
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.bossEndLabel(game.seasonBossSchedule())} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
         } catch (_) {
           /* facultatif */
         }
       });
+    }
+    // v5.10.5 : rappels (la veille, avant la fin).
+    const coming = game.seasonBossWindow(now, true);
+    const reminded = bossReminders(txApp, game, "seasonboss", state, coming && coming.startMs > now ? coming : null, now);
+    if (reminded !== state) {
+      state = reminded;
+      changed = true;
     }
     if (state) {
       const sampled = game.recordLeviathanTimeline(state, now);

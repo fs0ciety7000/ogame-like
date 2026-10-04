@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { bossEndLabel, bossWindows, describeBossSchedule, EVENT_RULES, validateBossSchedule, type BossSchedule } from "@/game/events";
-import { leviathanWindow, LEVIATHAN_RULES, nextLeviathanStart, rescheduleBoss, type LeviathanState } from "@/game/leviathan";
+import { bossEndLabel, bossWindows, describeBossSchedule, eveReminderDue, EVENT_RULES, parisRelativeLabel, parisWhenLabel, validateBossSchedule, type BossSchedule } from "@/game/events";
+import { endingReminderDue, leviathanWindow, LEVIATHAN_RULES, nextLeviathanStart, rescheduleBoss, type LeviathanState } from "@/game/leviathan";
 import { SEASON_BOSS_RULES, seasonBossWindow } from "@/game/chronicles";
 
 /* v5.10.4 : occurrence des boss mensuels réglable dans l'administration. */
@@ -95,5 +95,32 @@ describe("dates précises (v5.10.5)", () => {
     const d = paris("2026-10-14T20:00:00+02:00");
     SEASON_BOSS_RULES.dates = [{ startMs: d, durationHours: 24 }];
     expect(seasonBossWindow(d + 3600_000)?.id).toBe(`boss-2026-10-d${d}`);
+  });
+});
+
+describe("rappels des boss (v5.10.5)", () => {
+  it("libellés relatifs à l'heure de Paris", () => {
+    const now = paris("2026-10-01T12:00:00+02:00");
+    expect(parisRelativeLabel(paris("2026-10-01T18:00:00+02:00"), now)).toBe("aujourd'hui à 18 h");
+    expect(parisRelativeLabel(paris("2026-10-02T18:00:00+02:00"), now)).toBe("demain à 18 h");
+    expect(parisWhenLabel(paris("2026-11-09T18:30:00+01:00"))).toBe("lundi 9 novembre à 18 h 30");
+  });
+
+  it("la veille : une seule fois, pas à moins d'une heure", () => {
+    const start = paris("2026-10-02T18:00:00+02:00");
+    expect(eveReminderDue({ startMs: start }, undefined, start - 30 * 3600_000)).toBe(false);
+    expect(eveReminderDue({ startMs: start }, undefined, start - 20 * 3600_000)).toBe(true);
+    expect(eveReminderDue({ startMs: start }, start, start - 20 * 3600_000)).toBe(false);
+    expect(eveReminderDue({ startMs: start }, undefined, start - 30 * 60_000)).toBe(false);
+  });
+
+  it("avant la fin : seulement s'il tient encore, et de nouveau si la fin est repoussée", () => {
+    const now = paris("2026-10-04T12:00:00+02:00");
+    const st = { id: "lev-x", startMs: now - 48 * 3600_000, endMs: now + 5 * 3600_000, maxHp: 10, hp: 5, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [] } as LeviathanState;
+    expect(endingReminderDue(st, now)).toBe(true);
+    expect(endingReminderDue({ ...st, endingNotified: true }, now)).toBe(false);
+    expect(endingReminderDue({ ...st, endMs: now + 10 * 3600_000 }, now)).toBe(false);
+    expect(endingReminderDue({ ...st, hp: 0, status: "killed" }, now)).toBe(false);
+    expect(rescheduleBoss({ ...st, endingNotified: true }, now + 24 * 3600_000, now).endingNotified).toBeUndefined();
   });
 });

@@ -72,6 +72,7 @@ __export(hooksEntry_exports, {
   BLOG_JS: () => BLOG_JS,
   BLOG_WELCOME: () => BLOG_WELCOME,
   BOSS_HISTORY_KEY: () => BOSS_HISTORY_KEY,
+  BOSS_REMINDERS: () => BOSS_REMINDERS,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
@@ -161,6 +162,7 @@ __export(hooksEntry_exports, {
   bossEndLabel: () => bossEndLabel,
   bossHistoryEntry: () => bossHistoryEntry,
   bossMonthOf: () => bossMonthOf,
+  bossWindows: () => bossWindows,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
   buyOrderPaid: () => buyOrderPaid,
@@ -233,9 +235,11 @@ __export(hooksEntry_exports, {
   emptyServerPot: () => emptyServerPot,
   endGarrison: () => endGarrison,
   endVacation: () => endVacation,
+  endingReminderDue: () => endingReminderDue,
   episodeUnlockMs: () => episodeUnlockMs,
   errorKey: () => errorKey,
   errorQuotaKey: () => errorQuotaKey,
+  eveReminderDue: () => eveReminderDue,
   exchangeAmber: () => exchangeAmber,
   expeditionRelicChance: () => expeditionRelicChance,
   extendUltimatums: () => extendUltimatums,
@@ -308,6 +312,8 @@ __export(hooksEntry_exports, {
   openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
   parisDay: () => parisDay,
+  parisRelativeLabel: () => parisRelativeLabel,
+  parisWhenLabel: () => parisWhenLabel,
   parseResetOptions: () => parseResetOptions,
   passkeyUtf8: () => utf8Encode,
   patrolTurnaround: () => patrolTurnaround,
@@ -1587,6 +1593,31 @@ function hourLabel(h) {
 function bossEndLabel(s) {
   const end = s.startHour + s.durationHours;
   return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
+function parisWhenLabel(ms) {
+  const local = new Date(ms + parisOffsetMs(ms));
+  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
+}
+function parisRelativeLabel(ms, now) {
+  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY);
+  const local = new Date(ms + parisOffsetMs(ms));
+  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
+  const diff = day(ms) - day(now);
+  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
+  if (diff === 1) return `demain \xE0 ${at}`;
+  return parisWhenLabel(ms);
+}
+var BOSS_REMINDERS = {
+  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
+  eveHours: 24,
+  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
+  endingHours: 6
+};
+function eveReminderDue(next, lastAnnounced, now) {
+  if (!next) return false;
+  const left = next.startMs - now;
+  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
 }
 function validateBossSchedule(label3, s) {
   var _a;
@@ -6578,7 +6609,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues(__spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6590,7 +6621,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {}), r.endingNotified === true ? { endingNotified: true } : {});
 }
 function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
   var _a;
@@ -6732,7 +6763,12 @@ function rescheduleBoss(state, endMs, now) {
   const end = Math.round(endMs);
   if (!(end > now + 5 * 6e4)) throw new GameActionError("La nouvelle fin doit \xEAtre dans plus de 5 minutes.");
   if (end - state.startMs > 14 * 24 * HOUR5) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
-  return __spreadProps(__spreadValues({}, state), { endMs: end });
+  const next = __spreadProps(__spreadValues({}, state), { endMs: end });
+  if (end - now > BOSS_REMINDERS.endingHours * HOUR5) delete next.endingNotified;
+  return next;
+}
+function endingReminderDue(state, now) {
+  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR5;
 }
 
 // src/game/chronicles.ts

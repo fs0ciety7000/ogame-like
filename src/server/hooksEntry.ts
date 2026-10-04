@@ -37,7 +37,7 @@ export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHisto
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
-export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, spawnLeviathan } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
@@ -166,7 +166,7 @@ export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/
 export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { currentGameContent, validateGameContent } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
-export { bossEndLabel } from "@/game/events";
+export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
 export { chapterDifficulty, generateChapter, monthsToGenerate, normalizeProcedural, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";

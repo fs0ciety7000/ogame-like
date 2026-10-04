@@ -228,6 +228,40 @@ export function bossEndLabel(s: Pick<BossSchedule, "startHour" | "durationHours"
   return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
 }
 
+const MONTH_NAMES = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+/** v5.10.5 : « lundi 9 novembre à 18 h » (heure de Paris), sans Intl (code serveur). */
+export function parisWhenLabel(ms: number): string {
+  const local = new Date(ms + parisOffsetMs(ms));
+  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} à ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
+}
+
+/** v5.10.5 : « aujourd'hui à 18 h », « demain à 18 h », sinon « lundi 9 novembre à 18 h ». */
+export function parisRelativeLabel(ms: number, now: number): string {
+  const day = (t: number) => Math.floor((t + parisOffsetMs(t)) / DAY);
+  const local = new Date(ms + parisOffsetMs(ms));
+  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
+  const diff = day(ms) - day(now);
+  if (diff === 0) return `aujourd'hui à ${at}`;
+  if (diff === 1) return `demain à ${at}`;
+  return parisWhenLabel(ms);
+}
+
+/** v5.10.5 : rappels des boss mondiaux (la veille, puis avant la fin s'il tient encore). */
+export const BOSS_REMINDERS = {
+  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
+  eveHours: 24,
+  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
+  endingHours: 6,
+};
+
+/** Apparition à annoncer maintenant (la veille), ou null. */
+export function eveReminderDue(next: { startMs: number } | null | undefined, lastAnnounced: number | undefined, now: number): boolean {
+  if (!next) return false;
+  const left = next.startMs - now;
+  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
+}
+
 /** « le premier week-end de chaque mois, du vendredi 18 h au lundi 18 h » */
 export function describeBossSchedule(s: BossSchedule, now = Date.now()): string {
   const extra = (s.dates ?? []).some((d) => d.startMs + d.durationHours * HOUR > now);
