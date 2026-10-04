@@ -9,6 +9,7 @@ import { gazettePublishAt, type GazetteSectionKind } from "@/game/gazette";
 import { adminPublishGazette, useGazetteStore } from "@/services/gazetteService";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { cn } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.6 : la Gazette du secteur, chaque lundi à 9 h. */
 
@@ -34,7 +35,7 @@ export function GazettePage() {
   const next = gazettePublishAt(now) > now ? gazettePublishAt(now) : gazettePublishAt(now + 7 * 86400_000);
 
   const publish = async () => {
-    if (!confirm("Publier un numéro maintenant ? Tous les joueurs seront notifiés.")) return;
+    if (!(await askConfirm({ title: "Publier un numéro maintenant ?", message: "Tous les joueurs seront notifiés.", confirmLabel: "Publier" }))) return;
     setBusy(true);
     try {
       await adminPublishGazette();

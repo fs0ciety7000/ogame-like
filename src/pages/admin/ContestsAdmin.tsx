@@ -8,6 +8,7 @@ import { METRICS, type AchievementMetric } from "@/game/achievements";
 import { CONTEST_RULES, contestPhase, validateContest, type ContestsState } from "@/game/contests";
 import { adminCancelContest, adminCreateContest, useContests } from "@/services/contestService";
 import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.10.5 : création et suivi des concours du pot commun. */
 
@@ -55,7 +56,7 @@ export function ContestsAdmin() {
     }
   };
   const cancel = async (id: string) => {
-    if (!confirm("Annuler ce concours ? Aucun prix ne sera versé.")) return;
+    if (!(await askConfirm({ title: "Annuler ce concours ?", message: "Aucun prix ne sera versé.", confirmLabel: "Annuler le concours", tone: "danger" }))) return;
     try {
       setState(await adminCancelContest(id));
       toast.success("Concours annulé.");

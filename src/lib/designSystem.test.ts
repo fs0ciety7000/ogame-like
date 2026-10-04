@@ -43,4 +43,17 @@ describe("design system", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it("aucune boîte native du navigateur (confirm, alert, prompt) : askConfirm", () => {
+    // 5.15 : la boîte grise du navigateur sort du thème ; ConfirmHost la remplace.
+    const offenders: string[] = [];
+    for (const file of files("src")) {
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (/(?:^|[^\w.])(?:window\.)?(?:confirm|alert|prompt)\(/.test(line)) offenders.push(`${file}:${i + 1}`);
+        });
+    }
+    expect(offenders).toEqual([]);
+  });
 });

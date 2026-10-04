@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { AmberIcon } from "@/components/ui/amber";
+import { AmberAmount, AmberIcon } from "@/components/ui/amber";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { HudTag, StatTile } from "@/components/ui/hud";
+import { CostPill, HudTag, StatTile } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconSelect } from "@/components/ui/icon-select";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -466,7 +467,26 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
   const status = itemStatus(item, st, now);
   const Icon = ITEM_ICONS[item.id];
   const buy = async () => {
-    if (item.price >= 150 && !window.confirm(`${item.name} pour ${item.price} Ambre ?`)) return;
+    if (
+      item.price >= 150 &&
+      !(await askConfirm({
+        title: `Acheter ${item.name} ?`,
+        message: item.description,
+        details: (
+          <div className="flex flex-wrap items-center gap-3">
+            <CostPill>
+              <AmberAmount value={item.price} />
+            </CostPill>
+            <span className="text-xs text-slate-400">
+              Solde après achat : <AmberAmount value={Math.max(0, st.amber - item.price)} label={false} className="font-mono tabular-nums text-slate-200" />
+            </span>
+          </div>
+        ),
+        confirmLabel: "Acheter",
+        tone: "gold",
+      }))
+    )
+      return;
     setBusy(true);
     try {
       toast.success((await buyBountyItem(item.id, buildingId || undefined)).message);

@@ -58,6 +58,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatClock, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 type Amounts = Partial<Record<ResourceId, number>>;
 
@@ -271,8 +272,8 @@ function ColonySpecPicker({ colony, busy, onPick }: { colony: Colony; busy: bool
               type="button"
               aria-pressed={active}
               disabled={busy || active || locked}
-              onClick={() => {
-                if (!current || window.confirm(`Passer ${colony.name} en ${sp.name} ? Prochain changement possible dans 7 jours.`)) onPick(sp.id);
+              onClick={async () => {
+                if (!current || (await askConfirm({ title: `Passer ${colony.name} en ${sp.name} ?`, message: "Prochain changement possible dans 7 jours.", confirmLabel: "Spécialiser", tone: "ember" }))) onPick(sp.id);
               }}
               className={cn(
                 "hud-cut-sm flex flex-col gap-0.5 border p-2 text-left transition-colors disabled:cursor-not-allowed",

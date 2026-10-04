@@ -8,6 +8,7 @@ import { isActive, leviathanRanking, type LeviathanState } from "@/game/leviatha
 import { pb } from "@/lib/pocketbase";
 import { formatCompact } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.10 : administration des récompenses d'un boss — ce que chaque
    participant a reçu, et relance d'une distribution restée bloquée. */
@@ -24,7 +25,7 @@ export function BossRewardsAdmin({ state, kind }: { state: LeviathanState | null
   const stuck = ended && !state.rewarded;
 
   const distribute = async () => {
-    if (!confirm("Verser maintenant les récompenses de ce boss à tous les participants ?")) return;
+    if (!(await askConfirm({ title: "Verser les récompenses ?", message: "Les récompenses de ce boss partent maintenant à tous les participants.", confirmLabel: "Verser", tone: "gold" }))) return;
     setBusy(true);
     try {
       await pb.send("/api/cosmic/admin/bossrewards", { method: "POST", body: { kind, action: "distribute" } });

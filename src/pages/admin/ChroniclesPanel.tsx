@@ -9,6 +9,7 @@ import { OBJECTIVE_LABELS, type ChronicleMonth, type ChronicleObjective, type Ch
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.3 : arcs mensuels des Chroniques (épisodes, objectifs, boss, teinte). */
 
@@ -140,8 +141,8 @@ export function ChroniclesPanel() {
                 size="sm"
                 variant="ghost"
                 disabled={cfg.months.length <= 1}
-                onClick={() => {
-                  if (!confirm(`Supprimer la chronique ${month.id} ?`)) return;
+                onClick={async () => {
+                  if (!(await askConfirm({ title: `Supprimer la chronique ${month.id} ?`, confirmLabel: "Supprimer", tone: "danger" }))) return;
                   setCfg((c) => ({ months: c.months.filter((_, i) => i !== selected) }));
                   setSelected(0);
                 }}

@@ -13,6 +13,7 @@ import { seasonBossSchedule } from "@/game/chronicles";
 import { adminLeviathan } from "@/services/leviathanService";
 import { adminSeasonBoss } from "@/services/seasonBossService";
 import { formatCompact, formatNumber } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /** Courbe des points de structure relevés chaque heure. */
 function HpChart({ state }: { state: LeviathanState }) {
@@ -58,8 +59,8 @@ export function LeviathanAdminPanel({ state, kind = "leviathan" }: { state: Levi
   const upcoming = bossWindows(now, schedule, 4).filter((w) => w.startMs > now).slice(0, 3);
 
   const run = async (action: "start" | "stop" | "resize" | "reschedule", value?: number) => {
-    if (action === "resize" && !window.confirm(`Passer la structure maximale à ${formatNumber(value ?? 0)} ?`)) return;
-    if (action === "reschedule" && !window.confirm(`Déplacer la fin du combat au ${new Date(value ?? 0).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })} ?`)) return;
+    if (action === "resize" && !(await askConfirm({ title: `Passer la structure maximale à ${formatNumber(value ?? 0)} ?`, tone: "ember" }))) return;
+    if (action === "reschedule" && !(await askConfirm({ title: "Déplacer la fin du combat ?", message: `Nouvelle fin : ${new Date(value ?? 0).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })}.`, confirmLabel: "Déplacer", tone: "ember" }))) return;
     setBusy(true);
     try {
       if (kind === "leviathan") await adminLeviathan(action, action === "resize" ? value : undefined, action === "reschedule" ? value : undefined, action === "start" && bossId ? bossId : undefined);

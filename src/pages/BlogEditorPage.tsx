@@ -13,6 +13,7 @@ import { addBlogAuthor, authorAvatarUrl, BLOG_URL, createBlogPost, fetchAllBlogP
 import { usePlayerStore } from "@/store/playerStore";
 import { cn } from "@/lib/utils";
 import { bundledBlogDrafts, type BlogDraftFile } from "@/lib/blogDrafts";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.8 : espace rédaction du devblog (auteurs et administrateurs). */
 
@@ -395,7 +396,7 @@ function AuthorsCard({ authors, onChange }: { authors: BlogAuthor[]; onChange: (
               type="button"
               title="Retirer"
               className="p-1 text-slate-500 hover:text-danger-glow"
-              onClick={() => window.confirm(`Retirer ${a.pseudo} des auteurs ? Ses articles restent en ligne.`) && void removeBlogAuthor(a.id).then(onChange)}
+              onClick={() => void askConfirm({ title: `Retirer ${a.pseudo} des auteurs ?`, message: "Ses articles restent en ligne.", confirmLabel: "Retirer", tone: "danger" }).then((ok) => { if (ok) void removeBlogAuthor(a.id).then(onChange); })}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>

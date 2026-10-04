@@ -27,7 +27,7 @@ export function CancelJobButton({ target, className, compact }: { target: Cancel
     quote = null;
   }
 
-  const confirm = async () => {
+  const confirmCancel = async () => {
     setBusy(true);
     try {
       const done = await cancelJob(target);
@@ -79,7 +79,7 @@ export function CancelJobButton({ target, className, compact }: { target: Cancel
                 <Button variant="ghost" onClick={() => setOpen(false)}>
                   Continuer
                 </Button>
-                <Button variant="danger" disabled={busy} onClick={() => void confirm()}>
+                <Button variant="danger" disabled={busy} onClick={() => void confirmCancel()}>
                   Oui, annuler
                 </Button>
               </div>

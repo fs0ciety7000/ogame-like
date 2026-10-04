@@ -10,6 +10,7 @@ import { announcementStatus, type AnnouncementSettings, type CustomAnnouncement 
 import { previewAnnouncement, saveAnnouncementSettings, useAnnouncementSettings } from "@/services/announcementService";
 import { ImageField, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* =====================================================
    v4.5 : annonces plein écran. Chaque annonce s'affiche une fois par
@@ -174,8 +175,8 @@ export function AnnouncementsPanel() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          if (!confirm(`Supprimer l'annonce « ${custom.title} » ?`)) return;
+                        onClick={async () => {
+                          if (!(await askConfirm({ title: `Supprimer l'annonce « ${custom.title} » ?`, confirmLabel: "Supprimer", tone: "danger" }))) return;
                           setCfg((c) => {
                             const schedule = { ...c.schedule };
                             delete schedule[a.id];
