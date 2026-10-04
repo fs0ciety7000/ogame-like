@@ -2486,6 +2486,30 @@ function archiveBoss(txApp, game, kind, state, meta) {
   }
 }
 
+/**
+ * v5.10.2 : combat d'avant la 5.10 → coup de grâce retrouvé (une seule fois) puis archivé.
+ * La flotte qui l'a abattu porte l'issue « attacker_win » depuis la 3.1 ; à défaut, on le
+ * déduit des derniers assauts.
+ */
+function withLegacyKiller(txApp, game, state, mission) {
+  let killer = state.killedBy || null;
+  if (!killer && state.status === "killed") {
+    try {
+      const recs = txApp.findRecordsByFilter("fleets", "mission = {:m} && outcome = 'attacker_win' && arriveAtMs >= {:a} && arriveAtMs <= {:b}", "-arriveAtMs", 1, 0, {
+        m: mission,
+        a: state.startMs,
+        b: (state.endedAtMs || state.endMs) + 600000,
+      });
+      const uid = recs.length ? recs[0].getString("ownerUid") : "";
+      if (uid && state.contributions[uid]) killer = { uid, pseudo: state.contributions[uid].pseudo };
+    } catch (_) {
+      /* flottes purgées : déduction ci-dessous */
+    }
+    if (!killer) killer = game.inferKilledBy(state);
+  }
+  return Object.assign({}, state, { archived: true, legacyChecked: true }, killer ? { killedBy: killer } : {});
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
@@ -2594,9 +2618,10 @@ function leviathanTick(now) {
         changed = true;
       }
       // v5.10 : combat terminé avant le Hall of fame → archivé une fois.
-      if (state.status !== "active" && state.rewarded && !state.archived) {
+      // v5.10.2 : un boss abattu avant la 5.10 retrouve son coup de grâce (archive mise à jour).
+      if (state.status !== "active" && state.rewarded && (!state.archived || (state.status === "killed" && !state.killedBy && !state.legacyChecked))) {
+        state = withLegacyKiller(txApp, game, state, "leviathan");
         archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
-        state = Object.assign({}, state, { archived: true });
         changed = true;
       }
     }
@@ -6005,10 +6030,10 @@ function seasonBossTick(now) {
         changed = true;
       }
       // v5.10 : combat terminé avant le Hall of fame → archivé une fois.
-      if (state.status !== "active" && state.rewarded && !state.archived) {
+      if (state.status !== "active" && state.rewarded && (!state.archived || (state.status === "killed" && !state.killedBy && !state.legacyChecked))) {
+        state = withLegacyKiller(txApp, game, state, "seasonboss");
         const month = game.bossMonthOf(state);
         archiveBoss(txApp, game, "seasonboss", state, { name: month ? month.boss.name : "Le boss de saison", image: month ? month.boss.image : undefined });
-        state = Object.assign({}, state, { archived: true });
         changed = true;
       }
     }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bossHistoryEntry, bossRecords, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
-import { resolveLeviathanAssault, type LeviathanState } from "@/game/leviathan";
+import { inferKilledBy, LEVIATHAN_RULES, resolveLeviathanAssault, type LeviathanState } from "@/game/leviathan";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
 
@@ -48,5 +48,31 @@ describe("v5.10 Hall of fame des boss", () => {
     const res = resolveLeviathanAssault(st, p, { fregate: 10_000 }, "balanced", 1000);
     expect(res.killed).toBe(true);
     expect(res.state.killedBy).toEqual({ uid: "k", pseudo: "Killer" });
+  });
+});
+
+describe("inferKilledBy (v5.10.2)", () => {
+  const FLIGHT = LEVIATHAN_RULES.flightMinutes * 60_000;
+  const killedAt = 10 * 3600_000;
+  const st = (extra: Partial<LeviathanState> = {}): LeviathanState =>
+    base({
+      killedBy: undefined,
+      endedAtMs: killedAt,
+      contributions: {
+        a: { pseudo: "Alpha", damage: 600, assaults: 2, lastLaunchMs: killedAt - FLIGHT - 3600_000 },
+        b: { pseudo: "Bravo", damage: 400, assaults: 3, lastLaunchMs: killedAt - FLIGHT },
+        // Lancé trop tard : arrivé après la chute, sans dégâts sur ce dernier assaut.
+        c: { pseudo: "Charlie", damage: 50, assaults: 1, lastLaunchMs: killedAt + 3600_000 },
+      },
+      ...extra,
+    });
+
+  it("retrouve le dernier assaut arrivé avant la chute", () => {
+    expect(inferKilledBy(st())).toEqual({ uid: "b", pseudo: "Bravo" });
+  });
+
+  it("garde le coup de grâce déjà connu et ignore un boss retiré", () => {
+    expect(inferKilledBy(st({ killedBy: { uid: "a", pseudo: "Alpha" } }))).toEqual({ uid: "a", pseudo: "Alpha" });
+    expect(inferKilledBy(st({ status: "failed", hp: 10 }))).toBeNull();
   });
 });

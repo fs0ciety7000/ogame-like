@@ -1,8 +1,9 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useState } from "react";
-import { isActive } from "@/game/leviathan";
+import { bossPhase, isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
+import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
@@ -194,8 +195,68 @@ function Badge({ count }: { count: number }) {
   );
 }
 
+/* v5.10.2 : les onglets des boss changent selon l'état du combat. */
+const BOSS_NAV: Record<BossPhase, { label: string; chip: string; color: string }> = {
+  active: { label: "En cours", chip: "En cours", color: "var(--color-danger-glow)" },
+  killed: { label: "Abattu", chip: "Abattu", color: "var(--color-mint-glow)" },
+  failed: { label: "Retiré", chip: "Retiré", color: "var(--color-ember-glow)" },
+  dormant: { label: "En sommeil", chip: "Zzz", color: "#64748b" },
+};
+
+/** Minute courante (les fins de combat sont gérées sans attendre le serveur). */
+function useMinute(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+/** État du boss d'une page de la navigation (null pour les autres pages). */
+function useBossNavPhase(to: string): BossPhase | null {
+  const leviathan = useLeviathan();
+  const seasonBoss = useSeasonBoss();
+  const now = useMinute();
+  if (to === "/game/leviathan") return bossPhase(leviathan, now);
+  if (to === "/game/boss") return bossPhase(seasonBoss, now);
+  return null;
+}
+
+/** Point d'état posé sur l'icône (pulsant pendant le combat). */
+function BossDot({ phase, className }: { phase: BossPhase | null; className?: string }) {
+  if (!phase) return null;
+  const { color, label } = BOSS_NAV[phase];
+  return (
+    <span aria-label={label} title={label} className={cn("absolute -bottom-1 -right-1 grid h-2.5 w-2.5 place-items-center", className)}>
+      {phase === "active" && <span className="absolute inset-0 animate-ping rounded-full opacity-75" style={{ background: color }} />}
+      <span className="relative h-2 w-2 rounded-full border border-space-950" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+    </span>
+  );
+}
+
+/** Pastille de texte à droite du libellé (barre latérale). */
+function BossChip({ phase }: { phase: BossPhase }) {
+  const { color, label, chip } = BOSS_NAV[phase];
+  return (
+    <span title={label} className="shrink-0 border px-1 py-px font-mono text-[8.5px] font-bold uppercase tracking-[0.12em]" style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
+      {chip}
+    </span>
+  );
+}
+
+/** Classes de l'icône selon l'état : rouge en combat, vert abattu, éteinte en sommeil. */
+function bossIconClass(phase: BossPhase | null): string {
+  if (phase === "active") return "text-danger-glow drop-shadow-[0_0_6px_var(--color-danger-glow)]";
+  if (phase === "killed") return "text-mint-glow";
+  if (phase === "failed") return "text-ember-glow";
+  if (phase === "dormant") return "opacity-50";
+  return "";
+}
+
 /** Lien de la barre latérale (bureau), aux couleurs de son groupe (--nav-accent). */
 function SideLink({ item, badge }: { item: NavItem; badge: number }) {
+  const phase = useBossNavPhase(item.to);
   return (
     <ItemLink
       item={item}
@@ -221,11 +282,13 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
                   : "border-white/[0.06] bg-space-900/60 group-hover:border-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] group-hover:text-[var(--nav-accent)]",
               )}
             >
-              <item.icon className="h-3.5 w-3.5" />
+              <item.icon className={cn("h-3.5 w-3.5", bossIconClass(phase))} />
             </span>
             <Badge count={badge} />
+            {!badge && <BossDot phase={phase} />}
           </span>
-          <span className="flex-1 truncate">{item.label}</span>
+          <span className={cn("flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
+          {phase && <BossChip phase={phase} />}
           {isActive && <span className="h-1.5 w-1.5 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
       )}
@@ -362,10 +425,11 @@ function useWideScreen(): boolean {
 }
 
 function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
+  const phase = useBossNavPhase(item.to);
   return (
     <ItemLink
       item={item}
-      title={item.label}
+      title={phase ? `${item.label} · ${BOSS_NAV[phase].label}` : item.label}
       aria-label={item.label}
       className={({ isActive }) =>
         cn(
@@ -376,8 +440,9 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
         )
       }
     >
-      <item.icon className="h-4 w-4" />
+      <item.icon className={cn("h-4 w-4", bossIconClass(phase))} />
       {badge > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+      <BossDot phase={phase} className="bottom-0.5 right-0.5" />
     </ItemLink>
   );
 }
@@ -515,6 +580,7 @@ function saveTabs(tabs: string[]) {
 
 function TabLink({ item }: { item: NavItem }) {
   const badge = useBadge(item.to);
+  const phase = useBossNavPhase(item.to);
   return (
     <ItemLink
       item={item}
@@ -527,8 +593,9 @@ function TabLink({ item }: { item: NavItem }) {
       }
     >
       <span className="relative">
-        <item.icon className="h-5 w-5" />
+        <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
         <Badge count={badge} />
+        {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
     </ItemLink>
@@ -604,6 +671,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
 
 function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
   const badge = useBadge(item.to);
+  const phase = useBossNavPhase(item.to);
   return (
     <ItemLink
       item={item}
@@ -616,10 +684,12 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
       }
     >
       <span className="relative">
-        <item.icon className="h-5 w-5" />
+        <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
         <Badge count={badge} />
+        {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
+      {phase && <span className="-mt-1 font-mono text-[8.5px] tracking-[0.12em]" style={{ color: BOSS_NAV[phase].color }}>{BOSS_NAV[phase].label}</span>}
     </ItemLink>
   );
 }

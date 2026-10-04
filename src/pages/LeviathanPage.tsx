@@ -1,7 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { markLeviathanSeen } from "@/store/leviathanSeenStore";
 import { toast } from "sonner";
 import { Crosshair, Skull, Trophy } from "lucide-react";
@@ -15,6 +14,7 @@ import { FormationPicker } from "@/components/game/FormationPicker";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { BossRecapPanel } from "@/components/game/BossRecap";
+import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/game/BossStage";
 import { computeFleetPower } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { isActive, LEVIATHAN_RULES, leviathanRanking, nextLeviathanStart, rewardHours, upcomingLeviathanStart, type LeviathanState } from "@/game/leviathan";
@@ -26,7 +26,6 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
-import { assetUrl } from "@/lib/assets";
 
 export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan", send: sendAssault = sendLeviathanAssault, flightMinutes = LEVIATHAN_RULES.flightMinutes }: { open: boolean; onClose: () => void; title?: string; send?: (fleet: Record<string, number>, formation: string) => Promise<unknown>; flightMinutes?: number }) {
   const player = usePlayerStore((s) => s.player);
@@ -109,90 +108,6 @@ export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) 
   );
 }
 
-/** « 12 j 4 h », « 5 h 20 min », « 3 min » */
-function countdown(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const d = Math.floor(s / 86_400);
-  const h = Math.floor((s % 86_400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d} j ${h} h`;
-  if (h > 0) return `${h} h ${m} min`;
-  return `${Math.max(1, m)} min`;
-}
-
-type Phase = "dormant" | "active" | "killed" | "failed";
-
-const PHASE_STYLE: Record<Phase, { label: string; color: string; stamp?: string }> = {
-  dormant: { label: "En sommeil", color: "#94a3b8" },
-  active: { label: "Menace en cours", color: "#ff5c7a" },
-  killed: { label: "Abattu", color: "#5cf2b0", stamp: "Abattu" },
-  failed: { label: "Retiré", color: "#ffb347", stamp: "Retiré" },
-};
-
-/** v5.10 : bandeau du Léviathan, différent selon l'état du combat. */
-function LeviathanHero({ phase, state, now, next }: { phase: Phase; state: LeviathanState | null; now: number; next: number | null }) {
-  const st = PHASE_STYLE[phase];
-  const ended = phase === "killed" || phase === "failed";
-  const hpPct = state ? Math.max(0, Math.min(100, (state.hp / state.maxHp) * 100)) : 0;
-  return (
-    <div className="hud-cut relative overflow-hidden border" style={{ borderColor: `${st.color}55` }}>
-      <picture>
-        <source media="(max-width: 640px)" srcSet={assetUrl("/assets/leviathan/leviathan-portrait.webp")} />
-        <img
-          src={assetUrl("/assets/leviathan/leviathan.webp")}
-          alt="Le Léviathan"
-          className={cn(
-            "h-64 w-full object-cover object-[center_72%] transition-[filter,opacity] duration-700 sm:h-72 lg:h-80",
-            phase === "killed" && "opacity-50 grayscale",
-            phase === "failed" && "opacity-60 grayscale-[60%]",
-            phase === "dormant" && "opacity-35 blur-[1px] grayscale-[70%]",
-          )}
-        />
-      </picture>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/30 to-transparent" />
-      {phase === "killed" && <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(92,242,176,0.10),transparent_70%)]" />}
-
-      {/* Tampon de fin de combat. */}
-      {st.stamp && (
-        <div
-          className="absolute right-6 top-6 -rotate-6 border-4 px-4 py-1 font-display text-2xl font-black uppercase tracking-[0.25em] sm:right-10 sm:top-10 sm:text-4xl"
-          style={{ color: st.color, borderColor: st.color, textShadow: `0 0 18px ${st.color}88`, boxShadow: `0 0 24px ${st.color}44` }}
-        >
-          {st.stamp}
-        </div>
-      )}
-
-      <div className="absolute inset-x-4 bottom-3 flex flex-wrap items-end gap-3">
-        <img src={assetUrl("/assets/leviathan/leviathan-emblem.webp")} alt="" className={cn("h-14 w-14 drop-shadow-[0_0_14px_rgba(255,60,60,0.45)]", ended && "grayscale")} />
-        <div className="min-w-0 flex-1">
-          <p className="hud-title text-lg text-white">{LEVIATHAN_RULES.name}</p>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: st.color }}>
-            {st.label}
-            {phase === "killed" && state && <> · le {new Date(state.endedAtMs || state.endMs).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</>}
-            {phase === "failed" && state && <> · structure entamée à {Math.round(100 - hpPct)} %</>}
-          </p>
-          {phase === "killed" && state?.killedBy && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-300">
-              <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-white" />
-            </p>
-          )}
-        </div>
-        {/* Compte à rebours : départ (en cours) ou retour (sinon). */}
-        <div className="text-right">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : next ? "Retour dans" : ""}</p>
-          <p className="font-display text-xl tabular-nums text-white">{phase === "active" && state ? countdown(state.endMs - now) : next ? countdown(next - now) : "—"}</p>
-        </div>
-      </div>
-
-      {phase === "active" && (
-        <div className="absolute inset-x-0 top-0 h-1.5 bg-black/40">
-          <i className="block h-full bg-gradient-to-r from-danger-glow to-ember-glow transition-[width] duration-700" style={{ width: `${hpPct}%` }} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 function RulesCard() {
   return (
     <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
@@ -206,25 +121,12 @@ function RulesCard() {
   );
 }
 
-function NextCard({ next, now, phase }: { next: number | null; now: number; phase: Phase }) {
-  return (
-    <Card className="flex flex-wrap items-center gap-4 p-4">
-      <img src={assetUrl("/assets/leviathan/leviathan-emblem.webp")} alt="" className="h-10 w-10 opacity-80" />
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-sm text-white">{phase === "dormant" ? "Le Léviathan dort" : "Il reviendra"}</p>
-        <p className="text-xs text-slate-400">
-          {next
-            ? `Prochaine apparition : ${new Date(next).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} — dans ${countdown(next - now)}.`
-            : "Les apparitions mensuelles sont désactivées."}{" "}
-          Renforce ta flotte d'attaque d'ici là : les Traqueurs Kesh frappent 50 % plus fort contre lui.
-        </p>
-      </div>
-      <Link to="/game/hall-of-fame" className="inline-flex items-center gap-1.5 border border-gold-glow/40 px-3 py-1.5 text-xs text-gold-glow hover:bg-gold-glow/10">
-        <Trophy className="h-3.5 w-3.5" /> Hall of fame
-      </Link>
-    </Card>
-  );
-}
+const LEVIATHAN_ART: BossArt = {
+  name: LEVIATHAN_RULES.name,
+  image: "/assets/leviathan/leviathan.webp",
+  portrait: "/assets/leviathan/leviathan-portrait.webp",
+  emblem: "/assets/leviathan/leviathan-emblem.webp",
+};
 
 export function LeviathanPage() {
   useNowTicker();
@@ -242,7 +144,7 @@ export function LeviathanPage() {
   const active = !!state && isActive(state, now);
   // v5.10 : la page entière change selon l'état du combat.
   // (fin du temps pas encore clôturée par le serveur : déjà traitée comme une retraite.)
-  const phase: Phase = !state ? "dormant" : active ? "active" : state.status === "killed" || state.hp <= 0 ? "killed" : "failed";
+  const phase = bossPhase(state, now);
   const mine = state?.contributions[player.uid];
   const wait = mine ? mine.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * 3600_000 - now : 0;
   // Combat terminé : la fenêtre en cours est passée, on annonce la suivante.
@@ -264,7 +166,7 @@ export function LeviathanPage() {
         }
       />
 
-      <LeviathanHero phase={phase} state={state} now={now} next={next} />
+      <BossHero art={LEVIATHAN_ART} phase={phase} state={state} now={now} next={next} />
 
       {ended && state && (
         <BossRecapPanel
@@ -278,7 +180,9 @@ export function LeviathanPage() {
         />
       )}
 
-      {(ended || phase === "dormant") && <NextCard next={next} now={now} phase={phase} />}
+      {(ended || phase === "dormant") && (
+        <BossNextCard art={LEVIATHAN_ART} next={next} now={now} phase={phase} tip="Renforce ta flotte d'attaque d'ici là : les Traqueurs Kesh frappent 50 % plus fort contre lui." />
+      )}
 
       <MythicRelicNotice source="leviathan" />
 
