@@ -1152,17 +1152,9 @@ body {
 .slot-coin {
   position: absolute;
   top: -40px;
-  width: 24px;
-  height: 24px;
   display: grid;
   place-items: center;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--th-gold);
-  background: color-mix(in srgb, var(--th-gold) 16%, var(--th-space-950));
-  border: 1px solid var(--th-gold);
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--th-gold) 45%, transparent));
 }
 @media (prefers-reduced-motion: reduce) {
   .slot-lights > i, .slot-cabinet-spinning .slot-lights > i, .slot-cabinet-win .slot-lights > i, .slot-cabinet-jackpot .slot-lights > i, .slot-cabinet-jackpot { animation: none; }

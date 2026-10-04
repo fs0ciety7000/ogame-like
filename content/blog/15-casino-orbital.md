@@ -5,7 +5,7 @@ excerpt: "Le pot commun devient un gros lot. Une machine à sous 777, un jeton p
 category: mises-a-jour
 tags: [casino, pot-commun, evenements, interface]
 version: "5.12"
-cover: /assets/blog/articles/5-10/pot-commun.webp
+cover: /assets/blog/articles/5-12/couverture.webp
 ---
 > [!LORE] Anneau marchand de la station Vashka, niveau inférieur
 > On n'y entre pas par hasard. Derrière une porte blindée, sous des néons dorés, une vieille machine récupérée sur une épave de luxe clignote encore. Les pilotes l'appellent simplement « la 777 ».
@@ -13,6 +13,8 @@ cover: /assets/blog/articles/5-10/pot-commun.webp
 Depuis la 5.10, les taxes du marché et la part perdue des cadeaux remplissent le **pot commun** du serveur. Il fallait bien qu'un jour, quelqu'un le vide. Ce jour est arrivé.
 
 ## Une machine, trois rouleaux
+
+![La salle de jeu de l'anneau marchand](/assets/blog/articles/5-12/salle-de-jeu.webp "Trois machines, une baie vitrée sur le trafic de la station")
 
 Le **Casino orbital** (menu Social) abrite une machine à sous à l'ancienne : trois rouleaux, une ligne de paiement, un levier. Un jeton, un tirage. Les rouleaux s'arrêtent l'un après l'autre… et on retient son souffle sur le dernier.
 
@@ -34,6 +36,8 @@ Le tirage est fait par le serveur, avec des probabilités fixes : impossible de 
 ## Des jetons, pas des ressources
 
 On ne mise rien de son empire : on joue avec des **jetons**.
+
+![Des jetons du Casino orbital](/assets/casino/jetons-pile.webp "Octogonaux, cerclés d'or : les jetons du casino")
 
 - Chaque jour d'ouverture, un **jeton du jour** vous attend sur la page du casino.
 - L'équipe en **distribue** aussi lors des évènements, à tout le serveur ou aux plus actifs.

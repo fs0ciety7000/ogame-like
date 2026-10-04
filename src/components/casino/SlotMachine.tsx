@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Cherry, Skull, Star } from "lucide-react";
 import { SLOT_SYMBOLS, type SlotSymbol } from "@/game/casino";
 import { Button } from "@/components/ui/button";
+import { TokenIcon } from "@/components/casino/TokenIcon";
 import { cn } from "@/lib/utils";
 
 /* =====================================================
@@ -150,7 +151,10 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
       <div className="slot-console">
         <div className="slot-credits">
           <span className="hud-eyebrow text-[10px] text-slate-400">Jetons</span>
-          <span className="slot-led">{String(tokens).padStart(2, "0")}</span>
+          <span className="slot-led">
+            <TokenIcon size={18} />
+            {String(tokens).padStart(2, "0")}
+          </span>
         </div>
         <Button size="lg" className="slot-spin" onClick={onPull} disabled={disabled}>
           {spinning ? "Ça tourne…" : "Tirer"}

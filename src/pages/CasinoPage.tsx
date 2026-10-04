@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { Coins, Crown, History } from "lucide-react";
+import { Crown, History } from "lucide-react";
+import { TokenIcon } from "@/components/casino/TokenIcon";
+import { assetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +54,7 @@ function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseud
     <motion.div className="fixed inset-0 z-[80] grid place-items-center overflow-hidden bg-space-950/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal aria-label="Gros lot">
       {coins.map((c) => (
         <motion.span key={c.id} className="slot-coin" style={{ left: `${c.x}%` }} initial={{ y: -60, rotate: 0 }} animate={{ y: "110vh", rotate: c.rot }} transition={{ duration: c.dur, delay: c.delay, repeat: Infinity, ease: "easeIn" }}>
-          7
+          <TokenIcon size={30} variant="art" />
         </motion.span>
       ))}
       <motion.div className="relative z-10 grid justify-items-center gap-3 text-center" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.15 }}>
@@ -210,7 +212,11 @@ export function CasinoPage() {
                     <HudCallout tone={last.outcome === "jackpot" ? "gold" : "mint"} className="flex flex-wrap items-center justify-center gap-3 py-2">
                       <span className="hud-title text-sm text-white">{OUTCOME_LABELS[last.outcome]}</span>
                       <Gains resources={last.resources} />
-                      {last.token && <HudChip size="sm" tone="mint">+1 jeton</HudChip>}
+                      {last.token && (
+                        <HudChip size="sm" tone="mint">
+                          <TokenIcon size={14} /> +1 jeton
+                        </HudChip>
+                      )}
                     </HudCallout>
                   )}
                 </motion.div>
@@ -227,7 +233,7 @@ export function CasinoPage() {
 
         <div className="flex flex-col gap-3">
           <HudCallout tone={daily ? "gold" : "neutral"} className="flex items-center gap-3">
-            <Coins className="h-5 w-5 shrink-0 text-[var(--c)]" />
+            <img src={assetUrl("/assets/casino/jetons-pile.webp")} alt="" aria-hidden className="hud-cut-sm h-12 w-12 shrink-0 object-cover" />
             <span className="min-w-0 flex-1 text-sm">
               <b className="block text-slate-100">Jeton du jour</b>
               <span className="text-xs text-slate-400">

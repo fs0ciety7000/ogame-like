@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Coins, Dices, Plus, Trash2 } from "lucide-react";
+import { Dices, Plus, Trash2 } from "lucide-react";
+import { TokenIcon } from "@/components/casino/TokenIcon";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,7 +165,7 @@ export function CasinoAdmin() {
 
       <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
         <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
-          <Coins className="h-3.5 w-3.5 text-gold-glow" /> Offrir des jetons
+          <TokenIcon size={16} /> Offrir des jetons
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem]">
           <SelectField
@@ -190,7 +191,7 @@ export function CasinoAdmin() {
         </div>
         <div className="flex justify-end">
           <Button size="sm" disabled={busy || (target === "player" && !pseudo.trim())} onClick={() => void grant()}>
-            <Coins className="mr-1 h-3.5 w-3.5" /> Offrir
+            <TokenIcon size={16} className="mr-1" /> Offrir
           </Button>
         </div>
       </div>
