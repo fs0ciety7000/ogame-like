@@ -4,7 +4,7 @@ import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
-import { buildColonyDefense, renameColony, startColonization, upgradeColonyBuilding } from "@/game/colonies";
+import { buildColonyDefense, renameColony, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
@@ -73,6 +73,7 @@ export type GameAction =
   | { type: "colonyUpgrade"; colonyId: string; buildingId: string }
   | { type: "colonyDefense"; colonyId: string; unitId: string; qty: number }
   | { type: "colonyRename"; colonyId: string; name: string }
+  | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
   | { type: "commanderAssign"; ids: string[] }
   | { type: "commanderTrain"; commanderId: string }
@@ -335,6 +336,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "colonyRename":
       renameColony(player, String(action.colonyId ?? ""), action.name);
+      return undefined;
+
+    case "colonySpec":
+      setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);
       return undefined;
 
     case "commanderRecruit": {

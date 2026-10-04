@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { EmptyState, HudTag } from "@/components/ui/hud";
+import { EmptyState, HudChip, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { findBuilding } from "@/game/buildings";
@@ -32,7 +32,12 @@ import { homeLevels,
   colonyUpgradeCost,
   colonyUpgradeSeconds,
   nextColonySlot,
+  COLONY_SPECS,
+  colonySpecEffects,
+  colonySpecReadyAt,
+  findColonySpec,
   type Colony,
+  type ColonySpecId,
 } from "@/game/colonies";
 import { RESOURCE_LIST } from "@/game/resources";
 import { iconUrl, type GameIconName } from "@/lib/icons";
@@ -44,13 +49,14 @@ import {
   GameActionError,
   renameColony,
   sendTransport,
+  setColonySpec,
   startColonization,
   upgradeColonyBuilding,
 } from "@/services/playerService";
 import { useFleetStore } from "@/store/fleetStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
-import { cn, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
+import { cn, formatClock, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 type Amounts = Partial<Record<ResourceId, number>>;
@@ -243,11 +249,54 @@ function SectionTitle({ icon: Icon, children, aside }: { icon: typeof Hammer; ch
 
 /* ---------- une colonie ---------- */
 
+/** v5.11 : spécialisation (premier choix libre, puis un changement tous les 7 jours). */
+function ColonySpecPicker({ colony, busy, onPick }: { colony: Colony; busy: boolean; onPick: (id: ColonySpecId) => void }) {
+  const now = Date.now();
+  const ready = colonySpecReadyAt(colony);
+  const locked = ready > now;
+  const current = findColonySpec(colony.spec);
+  return (
+    <div className="mt-3">
+      <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+        Spécialisation
+        {current ? <HudChip size="sm" tone="mint">{current.emoji} {current.name}</HudChip> : <HudChip size="sm" tone="ember" alert>À choisir</HudChip>}
+        {locked && <span className="normal-case tracking-normal">changement possible dans {formatClock(Math.ceil((ready - now) / 1000))}</span>}
+      </p>
+      <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+        {COLONY_SPECS.map((sp) => {
+          const active = colony.spec === sp.id;
+          return (
+            <button
+              key={sp.id}
+              type="button"
+              aria-pressed={active}
+              disabled={busy || active || locked}
+              onClick={() => {
+                if (!current || window.confirm(`Passer ${colony.name} en ${sp.name} ? Prochain changement possible dans 7 jours.`)) onPick(sp.id);
+              }}
+              className={cn(
+                "hud-cut-sm flex flex-col gap-0.5 border p-2 text-left transition-colors disabled:cursor-not-allowed",
+                active ? "border-mint-glow/60 bg-mint-glow/10" : "border-white/10 bg-white/[0.02] enabled:hover:border-cyan-glow/50 disabled:opacity-50",
+              )}
+            >
+              <span className="hud-title text-xs text-slate-100">
+                {sp.emoji} {sp.name}
+              </span>
+              <span className="text-[11px] leading-snug text-slate-400">{sp.summary}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Ce que rapporte le niveau suivant d'un entrepôt ou d'un hangar de défense. */
 function effectLine(colony: Colony, player: PlayerState, id: string, level: number): string | null {
   if (id === DEPOSIT_ID) {
     const res = RESOURCE_LIST.find((r) => r.id === colonyBiome(colony))?.name ?? "";
-    return `${res} : +${formatPerSecond(depositPerSecond(level) * 3600)} → +${formatPerSecond(depositPerSecond(level + 1) * 3600)}`;
+    const k = colonySpecEffects(colony).deposit * 3600;
+    return `${res} : +${formatPerSecond(depositPerSecond(level) * k)} → +${formatPerSecond(depositPerSecond(level + 1) * k)}`;
   }
   const def = findBuilding(id);
   if (def?.effect?.type === "hangar" && def.effect.category === "defense") {
@@ -467,6 +516,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             </span>
             {shielded && <HudTag tone="accent">Bouclier actif</HudTag>}
           </div>
+          <ColonySpecPicker colony={colony} busy={busy} onPick={(id) => void act(() => setColonySpec(colony.id, id), "Spécialisation enregistrée.")} />
         </div>
         <div className="relative flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setTransport("deliver")}>
@@ -553,7 +603,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           {colony.defenseJob ? (
             (() => {
               const job = colony.defenseJob;
-              const total = colonyDefenseSeconds(player, job.unitId, job.qty) * 1000;
+              const total = colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1000;
               const left = Math.max(0, job.endTime - now);
               return (
                 <div className="border border-cyan-glow/30 bg-cyan-glow/[0.04] p-2.5">
@@ -603,7 +653,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                   <span className="flex flex-1 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
                     <CostChips cost={batchCost} stock={colony.resources} />
                     <span className="inline-flex items-center gap-1 font-mono" title="Temps de construction">
-                      <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty))}
+                      <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty, colony))}
                     </span>
                     <span className={cn("inline-flex items-center gap-1 font-mono", batchSpace > free ? "text-ember-glow" : "")}>
                       <Warehouse className="h-3 w-3" /> {formatCompact(batchSpace)}/{formatCompact(free)}

@@ -3230,9 +3230,11 @@ function boostAt(input, at) {
   return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
 }
 function storageCapacityOf(input) {
+  var _a;
   const base = getStorageCapacity(input.buildings, input.techLevels);
   const bonus = input.commanders ? playerModifiers(input).storage : 0;
-  return bonus > 0 && Number.isFinite(base) ? Math.floor(base * (1 + bonus)) : base;
+  const factor = (1 + Math.max(0, bonus)) * ((_a = input.storageFactor) != null ? _a : 1);
+  return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
 function getFleetUpkeep(units, techLevels2) {
   let upkeep = 0;
@@ -3408,6 +3410,39 @@ function applyFoundation(colony, home) {
   }
   colony.foundation = 1;
 }
+var COLONY_SPECS = [
+  { id: "forge", name: "Forge industrielle", emoji: "\u{1F3ED}", summary: "Ressources communes +25 %, gisement rare \u221220 %.", production: 1.25, deposit: 0.8 },
+  { id: "extraction", name: "Comptoir minier", emoji: "\u{1F48E}", summary: "Gisement rare +60 %, ressources communes \u221210 %.", production: 0.9, deposit: 1.6 },
+  { id: "bastion", name: "Bastion", emoji: "\u{1F6E1}\uFE0F", summary: "Hangar de d\xE9fense +50 % et d\xE9fenses 30 % plus rapides, production \u221210 %.", production: 0.9, hangar: 1.5, defenseTime: 0.7 },
+  { id: "depot", name: "D\xE9p\xF4t logistique", emoji: "\u{1F4E6}", summary: "Entrep\xF4t +60 % : la colonie stocke plus longtemps sans perte.", storage: 1.6 }
+];
+var COLONY_SPEC_RULES = {
+  /** Délai entre deux changements (le premier choix est libre). */
+  changeCooldownMs: 7 * 24 * 36e5
+};
+function findColonySpec(id) {
+  return COLONY_SPECS.find((s) => s.id === id);
+}
+function colonySpecEffects(colony) {
+  var _a, _b, _c, _d, _e;
+  const s = findColonySpec(colony.spec);
+  return { production: (_a = s == null ? void 0 : s.production) != null ? _a : 1, deposit: (_b = s == null ? void 0 : s.deposit) != null ? _b : 1, storage: (_c = s == null ? void 0 : s.storage) != null ? _c : 1, hangar: (_d = s == null ? void 0 : s.hangar) != null ? _d : 1, defenseTime: (_e = s == null ? void 0 : s.defenseTime) != null ? _e : 1 };
+}
+function colonySpecReadyAt(colony) {
+  return colony.spec && colony.specChangedAtMs ? colony.specChangedAtMs + COLONY_SPEC_RULES.changeCooldownMs : 0;
+}
+function setColonySpec(player, colonyIdIn, specIn, now) {
+  const colony = colonyOf(player, colonyIdIn);
+  if (!colony) throw new GameActionError("Colonie introuvable.");
+  const spec = findColonySpec(specIn);
+  if (!spec) throw new GameActionError("Sp\xE9cialisation inconnue.");
+  if (colony.spec === spec.id) throw new GameActionError("Cette colonie a d\xE9j\xE0 cette sp\xE9cialisation.");
+  const ready = colonySpecReadyAt(colony);
+  if (ready > now) throw new GameActionError(`Changement possible dans ${Math.ceil((ready - now) / 36e5)} h.`);
+  colony.spec = spec.id;
+  colony.specChangedAtMs = now;
+  return colony;
+}
 var HOUR2 = 36e5;
 var DEPOSIT_ID = "gisement";
 var BIOMES = {
@@ -3443,6 +3478,9 @@ function depositLevel(colony) {
 function depositPerSecond(level3) {
   if (level3 <= 0) return 0;
   return DEPOSIT_RULES.perSecond[Math.min(level3, DEPOSIT_RULES.perSecond.length) - 1];
+}
+function colonyDepositPerSecond(colony) {
+  return depositPerSecond(depositLevel(colony)) * colonySpecEffects(colony).deposit;
 }
 function colonyBuildingName(colony, id) {
   var _a, _b;
@@ -3532,7 +3570,8 @@ function economyInput(colony, player) {
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
-    productionFactor: 1 + COLONY_RULES.productionBonus,
+    productionFactor: (1 + COLONY_RULES.productionBonus) * colonySpecEffects(colony).production,
+    storageFactor: colonySpecEffects(colony).storage,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
     relics: player.relics,
@@ -3552,7 +3591,7 @@ function advanceColony(colony, player, now) {
     if (until > at) {
       colony.resources = advanceResources(economyInput(colony, player), (until - at) / 1e3, at);
       const rare = colonyBiome(colony);
-      colony.resources[rare] = ((_e = colony.resources[rare]) != null ? _e : 0) + depositPerSecond(depositLevel(colony)) * ((until - at) / 1e3);
+      colony.resources[rare] = ((_e = colony.resources[rare]) != null ? _e : 0) + colonyDepositPerSecond(colony) * ((until - at) / 1e3);
       at = until;
     }
     if (next > now) break;
@@ -3632,11 +3671,11 @@ function colonyDefenseHangar(colony) {
     var _a, _b;
     return a + ((_b = (_a = findUnit(id)) == null ? void 0 : _a.hangarSpace) != null ? _b : 1) * s.count;
   }, 0);
-  return { used, capacity: getUnitCapacity(colony.buildings, "defense") };
+  return { used, capacity: Math.floor(getUnitCapacity(colony.buildings, "defense") * colonySpecEffects(colony).hangar) };
 }
-function colonyDefenseSeconds(player, unitId, qty) {
+function colonyDefenseSeconds(player, unitId, qty, colony) {
   const unit = findUnit(unitId);
-  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) : 0;
+  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
 }
 function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   var _a, _b;
@@ -3652,7 +3691,7 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
   const paid = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
   payFrom(colony.resources, paid, "ces d\xE9fenses");
-  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1e3, startedAtMs: now, paid };
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty, colony) * 1e3, startedAtMs: now, paid };
   return colony.defenseJob;
 }
 function renameColony(player, colonyIdIn, nameIn) {
@@ -10413,7 +10452,7 @@ function quoteCancel(player, queues, target, now) {
       const unit = job ? findUnit(job.unitId) : void 0;
       if (!colony || !job || !unit) throw new GameActionError("Aucune d\xE9fense en construction sur cette colonie.");
       const paid = (_m = job.paid) != null ? _m : { scrap: unit.cost.scrap * job.qty, energy: unit.cost.energy * job.qty };
-      const start = (_n = job.startedAtMs) != null ? _n : job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty) * 1e3;
+      const start = (_n = job.startedAtMs) != null ? _n : job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1e3;
       const fraction = refundFraction(start, job.endTime, now);
       return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${job.qty} \xD7 ${unit.name}` };
     }
@@ -10651,7 +10690,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -10814,6 +10853,9 @@ function applyAction(s, action) {
       return buildColonyDefense(player, String((_s = action.colonyId) != null ? _s : ""), String((_t = action.unitId) != null ? _t : ""), action.qty, now);
     case "colonyRename":
       renameColony(player, String((_u = action.colonyId) != null ? _u : ""), action.name);
+      return void 0;
+    case "colonySpec":
+      setColonySpec(player, String((_v = action.colonyId) != null ? _v : ""), String((_w = action.spec) != null ? _w : ""), now);
       return void 0;
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";

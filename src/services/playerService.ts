@@ -661,6 +661,10 @@ export function renameColony(colonyId: string, name: string) {
   return act({ type: "colonyRename", colonyId, name });
 }
 
+export function setColonySpec(colonyId: string, spec: string) {
+  return act({ type: "colonySpec", colonyId, spec });
+}
+
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
 }
