@@ -11791,6 +11791,7 @@ function normalizeChallengeState(raw) {
 // src/game/bossHistory.ts
 var BOSS_HISTORY_KEY = "boss_history";
 var MAX_ENTRIES = 120;
+var MAX_RANKED = 150;
 var BOSS_KIND_LABELS = {
   leviathan: "L\xE9viathan",
   seasonboss: "Boss de saison",
@@ -11800,7 +11801,7 @@ function bossHistoryEntry(kind, state, meta) {
   var _a;
   const ranking = leviathanRanking(state);
   const ended = state.endedAtMs || state.endMs;
-  return __spreadValues(__spreadProps(__spreadValues(__spreadValues({
+  return __spreadValues(__spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({
     id: `${kind}:${state.id}`,
     kind,
     name: meta.name
@@ -11813,7 +11814,12 @@ function bossHistoryEntry(kind, state, meta) {
     participants: ranking.length,
     assaults: ranking.reduce((a, c) => a + c.assaults, 0),
     top: ranking.slice(0, 5).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage }))
-  }), state.killedBy ? { killedBy: state.killedBy } : {});
+  }), state.killedBy ? { killedBy: state.killedBy } : {}), {
+    ranking: ranking.slice(0, MAX_RANKED).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults }))
+  }), state.rewards ? { rewards: Object.fromEntries(ranking.slice(0, MAX_RANKED).filter((c) => {
+    var _a2;
+    return (_a2 = state.rewards) == null ? void 0 : _a2[c.uid];
+  }).map((c) => [c.uid, state.rewards[c.uid]])) } : {});
 }
 function normalizeBossHistory(raw) {
   const list = raw && typeof raw === "object" && Array.isArray(raw.entries) ? raw.entries : [];

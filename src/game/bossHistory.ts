@@ -1,4 +1,4 @@
-import { leviathanRanking, type LeviathanState } from "@/game/leviathan";
+import { leviathanRanking, type BossReward, type LeviathanState } from "@/game/leviathan";
 
 /* =====================================================
    v5.10 : Hall of fame des boss. À chaque distribution, le serveur archive
@@ -9,6 +9,8 @@ import { leviathanRanking, type LeviathanState } from "@/game/leviathan";
 
 export const BOSS_HISTORY_KEY = "boss_history";
 const MAX_ENTRIES = 120;
+/** v5.10.3 : participants gardés par combat (bilan rouvert depuis le Hall of fame). */
+const MAX_RANKED = 150;
 
 export type BossKind = "leviathan" | "seasonboss" | "allianceboss";
 
@@ -35,6 +37,9 @@ export interface BossHistoryEntry {
   assaults: number;
   top: { uid: string; pseudo: string; damage: number }[];
   killedBy?: { uid: string; pseudo: string };
+  /** v5.10.3 : classement complet et récompenses, pour rouvrir le bilan du combat. */
+  ranking?: { uid: string; pseudo: string; damage: number; assaults: number }[];
+  rewards?: Record<string, BossReward>;
 }
 
 export function bossHistoryEntry(kind: BossKind, state: LeviathanState, meta: { name: string; image?: string; allianceId?: string; allianceName?: string }): BossHistoryEntry {
@@ -55,6 +60,37 @@ export function bossHistoryEntry(kind: BossKind, state: LeviathanState, meta: { 
     assaults: ranking.reduce((a, c) => a + c.assaults, 0),
     top: ranking.slice(0, 5).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage })),
     ...(state.killedBy ? { killedBy: state.killedBy } : {}),
+    ranking: ranking.slice(0, MAX_RANKED).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })),
+    ...(state.rewards ? { rewards: Object.fromEntries(ranking.slice(0, MAX_RANKED).filter((c) => state.rewards?.[c.uid]).map((c) => [c.uid, state.rewards![c.uid]])) } : {}),
+  };
+}
+
+/**
+ * v5.10.3 : état de combat reconstitué depuis une entrée du Hall of fame, pour
+ * rouvrir le bilan. Les archives d'avant la 5.10.3 n'ont que le podium.
+ */
+export function bossHistoryState(e: BossHistoryEntry): { state: LeviathanState; complete: boolean; totals: { totalDamage: number; participants: number; assaults: number } } {
+  const complete = Array.isArray(e.ranking) && e.ranking.length > 0;
+  const rows = complete ? e.ranking! : e.top.map((t) => ({ ...t, assaults: 0 }));
+  const contributions = Object.fromEntries(rows.map((r) => [r.uid, { pseudo: r.pseudo, damage: r.damage, assaults: r.assaults, lastLaunchMs: 0 }]));
+  return {
+    complete: complete || e.participants <= rows.length,
+    totals: { totalDamage: e.totalDamage, participants: e.participants, assaults: e.assaults },
+    state: {
+      id: e.id.slice(e.id.indexOf(":") + 1),
+      startMs: e.startMs,
+      endMs: e.endedAtMs,
+      endedAtMs: e.endedAtMs,
+      maxHp: e.maxHp,
+      hp: e.won ? 0 : Math.max(0, e.maxHp - e.totalDamage),
+      status: e.won ? "killed" : "failed",
+      contributions,
+      rewarded: true,
+      titleHolder: null,
+      timeline: [],
+      ...(e.rewards ? { rewards: e.rewards } : {}),
+      ...(e.killedBy ? { killedBy: e.killedBy } : {}),
+    },
   };
 }
 

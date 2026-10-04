@@ -96,9 +96,10 @@ export interface BossRecap {
   reward: BossReward | null;
 }
 
-export function bossRecap(state: LeviathanState, uid: string, topCount = 5): BossRecap {
+/** totals : chiffres du combat entier quand l'état ne garde qu'une partie des participants (archive du Hall of fame). */
+export function bossRecap(state: LeviathanState, uid: string, topCount = 5, totals?: { totalDamage: number; participants: number; assaults: number }): BossRecap {
   const ranking = leviathanRanking(state);
-  const totalDamage = ranking.reduce((a, c) => a + c.damage, 0);
+  const totalDamage = totals?.totalDamage ?? ranking.reduce((a, c) => a + c.damage, 0);
   const share = (d: number) => (totalDamage > 0 ? d / totalDamage : 0);
   const myIndex = ranking.findIndex((c) => c.uid === uid);
   const me = myIndex >= 0 ? ranking[myIndex] : null;
@@ -107,8 +108,8 @@ export function bossRecap(state: LeviathanState, uid: string, topCount = 5): Bos
     won: state.status === "killed",
     durationMs: Math.max(0, end - state.startMs),
     totalDamage,
-    participants: ranking.length,
-    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
+    participants: totals?.participants ?? ranking.length,
+    assaults: totals?.assaults ?? ranking.reduce((a, c) => a + c.assaults, 0),
     hpDealtPct: state.maxHp > 0 ? Math.min(1, (state.maxHp - state.hp) / state.maxHp) : 0,
     top: ranking.slice(0, topCount).map((c, i) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults, share: share(c.damage), rank: i + 1 })),
     mine: me ? { rank: myIndex + 1, damage: me.damage, assaults: me.assaults, share: share(me.damage) } : null,

@@ -1,11 +1,16 @@
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Crown, Flag, Hourglass, Skull, Swords, Trophy, Zap } from "lucide-react";
+import { ChevronRight, Crown, Flag, Hourglass, Skull, Swords, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PlayerName } from "@/components/ui/player-name";
-import { BOSS_KIND_LABELS, bossRecords, type BossHistoryEntry, type BossKind } from "@/game/bossHistory";
+import { BossRecapDialog } from "@/components/game/BossRecap";
+import { BOSS_KIND_LABELS, bossHistoryState, bossRecords, type BossHistoryEntry, type BossKind } from "@/game/bossHistory";
+import { bossMonthOf } from "@/game/chronicles";
+import type { LeviathanState } from "@/game/leviathan";
+import { useLeviathan } from "@/services/leviathanService";
+import { useSeasonBoss } from "@/services/seasonBossService";
 import { useBossHistory } from "@/services/bossHistoryService";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
@@ -60,7 +65,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
   );
 }
 
-function FightRow({ e, index }: { e: BossHistoryEntry; index: number }) {
+function FightRow({ e, index, onOpen }: { e: BossHistoryEntry; index: number; onOpen: () => void }) {
   const reduce = useReducedMotion();
   const tone = e.won ? "#5cf2b0" : "#ffb347";
   const pct = e.maxHp > 0 ? Math.min(100, Math.round((e.totalDamage / e.maxHp) * 100)) : 0;
@@ -69,8 +74,10 @@ function FightRow({ e, index }: { e: BossHistoryEntry; index: number }) {
       initial={reduce ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 10) * 0.04 }}
-      className="relative overflow-hidden border border-white/[0.06] bg-white/[0.02]"
+      className="relative overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-colors hover:border-white/20 hover:bg-white/[0.04]"
     >
+      {/* v5.10.3 : toute la ligne ouvre le bilan du combat. */}
+      <button type="button" onClick={onOpen} aria-label={`Voir le bilan : ${e.name}, ${dateLabel(e.endedAtMs)}`} className="absolute inset-0 z-10 cursor-pointer focus-visible:outline focus-visible:outline-1 focus-visible:outline-cyan-glow" />
       {e.image && <img src={assetUrl(e.image)} alt="" className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-15 [mask-image:linear-gradient(to_left,black,transparent)]" />}
       <div className="relative flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -102,6 +109,7 @@ function FightRow({ e, index }: { e: BossHistoryEntry; index: number }) {
               <Skull className="h-3.5 w-3.5" /> coup de grâce : <PlayerName uid={e.killedBy.uid} pseudo={e.killedBy.pseudo} className="text-slate-200" />
             </span>
           )}
+          <ChevronRight className="hidden h-4 w-4 text-slate-500 sm:block" aria-hidden />
         </div>
       </div>
     </motion.li>
@@ -112,6 +120,10 @@ export function BossHallPage() {
   const all = useBossHistory();
   const allianceId = usePlayerStore((s) => s.player?.allianceId);
   const [filter, setFilter] = useState<Filter>("all");
+  const [opened, setOpened] = useState<BossHistoryEntry | null>(null);
+  const uid = usePlayerStore((s) => s.player?.uid ?? "");
+  const leviathan = useLeviathan();
+  const seasonBoss = useSeasonBoss();
   // Les boss d'alliance ne sont visibles que pour leur alliance.
   const visible = useMemo(() => (all ?? []).filter((e) => e.kind !== "allianceboss" || (allianceId && e.allianceId === allianceId)), [all, allianceId]);
   const shown = filter === "all" ? visible : visible.filter((e) => e.kind === filter);
@@ -176,10 +188,33 @@ export function BossHallPage() {
                 ))}
               </div>
             </div>
-            {shown.length === 0 ? <p className="text-xs text-slate-500">Rien dans cette catégorie.</p> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} />)}</ul>}
+            {shown.length === 0 ? <p className="text-xs text-slate-500">Rien dans cette catégorie.</p> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} onOpen={() => setOpened(e)} />)}</ul>}
           </Card>
         </>
       )}
+      {opened && <HallRecap e={opened} uid={uid} live={{ leviathan, seasonboss: seasonBoss }} onClose={() => setOpened(null)} />}
     </div>
+  );
+}
+
+/** Bilan d'un combat archivé : l'état complet s'il est encore celui du boss en jeu, sinon l'archive. */
+function HallRecap({ e, uid, live, onClose }: { e: BossHistoryEntry; uid: string; live: Partial<Record<BossKind, LeviathanState | null>>; onClose: () => void }) {
+  const archived = bossHistoryState(e);
+  const current = live[e.kind];
+  const full = current && current.id === archived.state.id && current.status !== "active" ? current : null;
+  const state = full ?? archived.state;
+  const accent = e.kind === "leviathan" ? "#ff5c7a" : e.kind === "seasonboss" ? (bossMonthOf(state)?.theme.accent ?? undefined) : undefined;
+  return (
+    <BossRecapDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      state={state}
+      uid={uid}
+      name={e.name}
+      image={e.image}
+      accent={accent}
+      totals={full ? undefined : archived.totals}
+      missingNote={full || archived.complete ? undefined : "Ce combat a été archivé avant l'enregistrement de tous les participants : seul le podium est connu."}
+    />
   );
 }
