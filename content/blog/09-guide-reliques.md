@@ -5,7 +5,7 @@ excerpt: "Expéditions, primes, boss, seigneurs de guerre, passe de saison : tou
 category: notes
 tags: [reliques, guide, boss, expeditions]
 version: "5.9"
-cover: /assets/relics/egide_reine.webp
+cover: /assets/blog/articles/reliques/couverture.webp
 ---
 C'est l'une des questions qu'on reçoit le plus : « comment on récupère des reliques ? ». Elles ne s'achètent pas : elles se **gagnent**, et presque toujours en allant chercher la bagarre. Voici où les trouver, ce qu'elles valent, et comment tirer le meilleur de ta collection.
 
@@ -25,7 +25,7 @@ Le bonus dépend de la **rareté** :
 | Légendaire | +15 % | 100 ambre |
 | Mythique | +20 % | ne se recycle pas |
 
-![Égide de la Reine, relique légendaire](/assets/relics/egide_reine.webp "L'Égide de la Reine, l'une des deux reliques réservées aux légendaires")
+![Quelques reliques : Codex de l'Aube, Écaille de Léviathan, Égide de la Reine, Couronne de l'Essaim, Engrenage de Varan](/assets/blog/articles/reliques/couverture.webp "Au centre, l'Égide de la Reine, l'une des deux reliques réservées aux légendaires")
 
 ## Toutes les sources de reliques
 
