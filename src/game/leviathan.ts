@@ -70,6 +70,8 @@ export interface LeviathanState {
   killedBy?: { uid: string; pseudo: string };
   /** v5.10 : combat archivé dans le Hall of fame. */
   archived?: boolean;
+  /** v5.10.2 : coup de grâce recherché pour un combat d'avant la 5.10 (une seule fois). */
+  legacyChecked?: boolean;
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -135,7 +137,28 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
     ...(r.archived === true ? { archived: true } : {}),
+    ...(r.legacyChecked === true ? { legacyChecked: true } : {}),
   };
+}
+
+/**
+ * v5.10.2 : coup de grâce d'un boss abattu avant la 5.10 (non enregistré à l'époque).
+ * Le dernier assaut arrivé avant la chute : son lancement + le trajet tombe au plus
+ * tard à la mort du boss (un assaut arrivé après rebondit sans dégâts).
+ */
+export function inferKilledBy(state: LeviathanState, flightMinutes = LEVIATHAN_RULES.flightMinutes): { uid: string; pseudo: string } | null {
+  if (state.status !== "killed" || state.killedBy) return state.killedBy ?? null;
+  const end = state.endedAtMs || state.endMs;
+  let best: { uid: string; pseudo: string; at: number } | null = null;
+  for (const [uid, c] of Object.entries(state.contributions)) {
+    // Assaut daté d'avant le combat : donnée incomplète, rien à en tirer.
+    if (!c || !(c.damage > 0) || !(c.lastLaunchMs >= state.startMs)) continue;
+    const at = c.lastLaunchMs + flightMinutes * 60_000;
+    // Une minute de marge : l'arrivée est traitée par une tâche planifiée.
+    if (at > end + 60_000) continue;
+    if (!best || at > best.at) best = { uid, pseudo: c.pseudo, at };
+  }
+  return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 
 /** Fenêtre mensuelle en cours (ou null) : premier week-end du mois. */
@@ -167,6 +190,16 @@ export function upcomingLeviathanStart(now: number): number | null {
 
 export function isActive(state: LeviathanState | null, now: number): boolean {
   return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+
+/** v5.10.2 : état affiché d'un boss (pages et menu). Un combat dont le temps est écoulé
+ *  mais pas encore clôturé par le serveur compte déjà comme terminé. */
+export type BossPhase = "dormant" | "active" | "killed" | "failed";
+
+export function bossPhase(state: LeviathanState | null, now: number): BossPhase {
+  if (!state) return "dormant";
+  if (isActive(state, now)) return "active";
+  return state.status === "killed" || state.hp <= 0 ? "killed" : "failed";
 }
 
 /** Points de structure : facteur × puissance d'attaque de toute la flotte des joueurs actifs. */
