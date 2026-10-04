@@ -28,14 +28,6 @@ export const MARKET_RULES = {
   offerHours: 48,
   /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
   priceBand: 3,
-  /** v5.5 : Courtier du Comptoir (marchand PNJ), voir marketMaker.ts. */
-  makerEnabled: true,
-  /** Offres ouvertes des joueurs en dessous desquelles il intervient (par ressource et par sens). */
-  makerMinOffers: 2,
-  /** Écart au taux du comptoir (0,12 = vend 12 % plus cher, achète 12 % moins cher). */
-  makerSpread: 0.12,
-  /** Taille d'une offre : heures de production commune médiane des joueurs actifs. */
-  makerSizeHours: 2,
 };
 
 export type OfferStatus = "open" | "filled" | "cancelled" | "expired";

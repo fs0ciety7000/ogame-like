@@ -8,6 +8,7 @@ import { BOSS_REMINDERS, bossWindows, EVENT_RULES, type BossSchedule } from "@/g
 import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
 import { bumpStat } from "@/game/stats";
+import { bountyState } from "@/game/bounties";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -40,9 +41,16 @@ export const LEVIATHAN_RULES = {
   flightMinutes: 30,
   /** Part de chaque type de vaisseau détruite à chaque assaut (réparable à l'Atelier). */
   lossPct: 0.08,
-  /** Récompense : base + bonus × (dégâts / dégâts du premier), en heures de production. */
-  baseRewardHours: 2,
-  bonusRewardHours: 10,
+  /** Récompense : base + bonus × √(dégâts / dégâts du premier), en heures de production.
+   *  v5.13 : racine carrée, pour que les gros participants ne soient plus loin derrière le premier. */
+  baseRewardHours: 3,
+  bonusRewardHours: 12,
+  /** v5.13 : bonus du podium (1er, 2e, 3e) quand le Léviathan tombe, en heures de production. */
+  podiumHours: [6, 4, 2],
+  /** v5.13 : reliques épiques pour les N premiers (rare pour les autres participants). */
+  topRelics: 3,
+  /** v5.13 : Ambre versée à la place d'une relique quand la collection est pleine. */
+  relicAmber: { epic: 60, rare: 30 },
   /** Récompenses si le Léviathan survit. */
   failedRewardFactor: 0.5,
   title: "Fléau du Léviathan",
@@ -372,12 +380,14 @@ export function rewardHours(state: LeviathanState, uid: string): number {
   const top = ranking[0]?.damage ?? 0;
   const mine = state.contributions[uid]?.damage ?? 0;
   if (!(mine > 0) || !(top > 0)) return 0;
-  const hours = LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * (mine / top);
-  return state.status === "killed" ? hours : hours * LEVIATHAN_RULES.failedRewardFactor;
+  const hours = LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * Math.sqrt(mine / top);
+  if (state.status !== "killed") return hours * LEVIATHAN_RULES.failedRewardFactor;
+  const rank = ranking.findIndex((r) => r.uid === uid);
+  return hours + (LEVIATHAN_RULES.podiumHours[rank] ?? 0);
 }
 
 /** Verse la récompense d'un participant (et le titre au premier). */
-export function grantLeviathanReward(state: LeviathanState, player: PlayerState, random: () => number = Math.random): { gain: Partial<Record<ResourceId, number>>; title: boolean; relic?: string } {
+export function grantLeviathanReward(state: LeviathanState, player: PlayerState, random: () => number = Math.random): { gain: Partial<Record<ResourceId, number>>; title: boolean; relic?: string; amber?: number } {
   const hours = rewardHours(state, player.uid);
   const gain = hours > 0 ? productionHours(player, hours) : {};
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
@@ -388,10 +398,18 @@ export function grantLeviathanReward(state: LeviathanState, player: PlayerState,
     player.titles = [...(player.titles ?? []), { label: LEVIATHAN_RULES.title, seasonId: `leviathan:${state.id}`, rank: 1 }];
     player.activeTitle = LEVIATHAN_RULES.title;
   }
-  // v4.0 : Léviathan abattu, une relique (épique au moins pour le premier).
+  // Léviathan abattu : une relique, épique pour le podium (v5.13 : top 3), rare pour les autres ;
+  // collection pleine : de l'Ambre à la place (plus de participant reparti les mains vides).
   if (state.status === "killed" && hours > 0) {
-    const item = rollRelic("leviathan", Date.now(), random, title ? "epic" : "rare");
+    const rank = leviathanRanking(state).findIndex((r) => r.uid === player.uid);
+    const rarity = rank >= 0 && rank < LEVIATHAN_RULES.topRelics ? "epic" : "rare";
+    const item = rollRelic("leviathan", Date.now(), random, rarity);
     if (addRelic(player, item)) return { gain, title, relic: relicLabel(item) };
+    const amber = LEVIATHAN_RULES.relicAmber[rarity];
+    const b = bountyState(player);
+    b.amber += amber;
+    player.bounties = b;
+    return { gain, title, amber };
   }
   return { gain, title };
 }

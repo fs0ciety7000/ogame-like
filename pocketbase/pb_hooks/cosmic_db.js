@@ -2567,11 +2567,11 @@ function distributeLeviathan(txApp, game, state, now) {
       {
         kind: "event",
         title: won ? "Le Léviathan est tombé !" : "Le Léviathan s'est retiré",
-        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
+        message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}${out.amber ? ` +${out.amber} Ambre (collection de reliques pleine).` : ""}${tokens ? ` +${game.tokensLabel(tokens)}.` : ""}`,
         createdAtMs: now,
         read: false,
         link: "/game/leviathan",
-        data: tokenNotifData(bossNotifData(out.gain, out.relic, mythic), tokens),
+        data: tokenNotifData(Object.assign({}, bossNotifData(out.gain, out.relic, mythic) || {}, out.amber ? { amber: out.amber } : {}), tokens),
       },
     ]));
   });
@@ -2875,9 +2875,10 @@ function marketAccept(e) {
     const offer = toPlain(rec);
     if (offer.sellerId === uid) throw new BadRequestError("Tu ne peux pas accepter ta propre offre.");
     const buyer = loadFlushed(txApp, game, uid);
-    // v5.5 : le Courtier du Comptoir n'a pas de fiche : contrepartie virtuelle, jamais enregistrée.
-    const maker = game.isMarketMaker(offer.sellerId);
-    const seller = maker ? { player: game.marketMakerPlayer(), notifications: [] } : loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    // v5.13 : plus d'échange avec un PNJ (Courtier du Comptoir, seigneurs de guerre).
+    if (offer.sellerId === "market_maker") throw new BadRequestError("Cette offre a été retirée du marché.");
+    const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
+    if (seller.loaded.rec.getString("npc")) throw new BadRequestError("Cette offre a été retirée du marché.");
     if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
@@ -2974,54 +2975,26 @@ function marketCancel(e) {
   return e.json(200, out);
 }
 
-/** v5.5 : le Courtier du Comptoir publie là où le marché est presque vide (tâche horaire). */
-function marketMakerTick(now) {
-  const game = loadGame();
-  let created = 0;
-  $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const open = txApp.findRecordsByFilter("market_offers", 'status = "open"', "", 2000, 0).map((r) => toPlain(r));
-    const since = now - 14 * 24 * 3600 * 1000;
-    const perHour = txApp
-      .findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: since })
-      .map((r) => {
-        const p = toPlain(r);
-        const rates = game.getProductionRatesPerSecond(p.buildings || {}, p.techLevels || {});
-        return (game.COMMON_RESOURCES.reduce((a, res) => a + (rates[res] || 0), 0) / game.COMMON_RESOURCES.length) * 3600;
-      })
-      .sort((a, b) => a - b);
-    const median = perHour.length ? perHour[Math.floor(perHour.length / 2)] : 0;
-    const col = txApp.findCollectionByNameOrId("market_offers");
-    game.planMakerOffers(open, median, now).forEach((o) => {
-      const rec = new Record(col);
-      rec.load({
-        sellerId: game.MARKET_MAKER_ID,
-        sellerPseudo: game.MARKET_MAKER_PSEUDO,
-        sellerAllianceId: "",
-        giveRes: o.giveRes,
-        giveAmount: o.giveAmount,
-        wantRes: o.wantRes,
-        wantAmount: o.wantAmount,
-        status: "open",
-        createdAtMs: now,
-        expiresAtMs: o.expiresAtMs,
-        buyerId: "",
-        buyerPseudo: "",
-        filledAtMs: 0,
-        tax: 0,
-        kind: o.kind,
-        filled: 0,
-      });
-      txApp.save(rec);
-      created++;
-    });
+/** v5.13 : plus de ventes automatiques des PNJ (Courtier du Comptoir, seigneurs de guerre) : leurs offres encore ouvertes sont retirées. */
+function purgeNpcMarketOffers() {
+  const npcs = {};
+  $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).forEach((r) => (npcs[r.id] = true));
+  let count = 0;
+  $app.findRecordsByFilter("market_offers", 'status = "open"', "", 0, 0).forEach((r) => {
+    const seller = r.getString("sellerId");
+    if (seller !== "market_maker" && !npcs[seller]) return;
+    r.set("status", "expired");
+    $app.save(r);
+    count++;
   });
-  return created;
+  if (count > 0) console.log(`[cosmic] ${count} offre(s) de PNJ retirée(s) du marché`);
+  return count;
 }
 
 /** Offres expirées : marchandise rendue au vendeur (tâche planifiée). */
 function expireMarketOffers(now) {
   const game = loadGame();
+  purgeNpcMarketOffers();
   const due = $app.findRecordsByFilter("market_offers", 'status = "open" && expiresAtMs <= {:n}', "expiresAtMs", 200, 0, { n: now });
   let count = 0;
   due.forEach((r) => {
@@ -6010,46 +5983,6 @@ function warlordTick(now, opts) {
       }
     });
 
-    // Marchands : offres au marché.
-    active
-      .filter((d) => d.personality === "merchant")
-      .forEach((d) => {
-        const uid = game.warlordUid(d.id);
-        const rt = state.byId[d.id];
-        if (now < rt.nextMarketAtMs) return;
-        rt.nextMarketAtMs = now + game.nextMarketDelayMs(Math.random);
-        try {
-          const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
-          if (open >= game.MARKET_RULES.maxOpenOffers) return;
-          const npc = loadPlayer(txApp, game, uid);
-          const wanted = game.warlordOffer(npc.player, Math.random);
-          if (!wanted) return;
-          const offer = game.createOffer(npc.player, wanted, open, now);
-          savePlayer(txApp, game, npc, npc.player, npc.queues);
-          const rec = new Record(txApp.findCollectionByNameOrId("market_offers"));
-          rec.load({
-            sellerId: uid,
-            sellerPseudo: d.name,
-            sellerAllianceId: "",
-            giveRes: offer.giveRes,
-            giveAmount: offer.giveAmount,
-            wantRes: offer.wantRes,
-            wantAmount: offer.wantAmount,
-            status: "open",
-            createdAtMs: now,
-            expiresAtMs: offer.expiresAtMs,
-            buyerId: "",
-            buyerPseudo: "",
-            filledAtMs: 0,
-            tax: 0,
-          });
-          txApp.save(rec);
-          summary.offers++;
-        } catch (err) {
-          console.log(`[cosmic] offre du seigneur ${d.id} : ${err}`);
-        }
-      });
-
     // Premier contact : le seigneur le plus proche se présente aux joueurs arrivés à Bronze I.
     if (active.length > 0) {
       humans
@@ -6998,4 +6931,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

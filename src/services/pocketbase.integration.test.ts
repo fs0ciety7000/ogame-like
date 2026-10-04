@@ -2234,18 +2234,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(saga.sagas.length).toBeGreaterThan(0);
       expect(saga.standing.rows).toBeDefined();
 
-      const made = await admin.send("/api/cosmic/admin/market-maker", { method: "POST" });
-      expect(made.created).toBeGreaterThanOrEqual(0);
-      const makerOffer = (await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker" && status = "open" && kind = "sell" && giveRes = "nano"' }))[0];
-      expect(makerOffer).toBeTruthy();
-      await loginPlayer(B.email, B.pw);
-      const bBefore = await snap(bId);
-      await admin.collection("players").update(bId, { resources: { ...bBefore.resources, [makerOffer.wantRes]: makerOffer.wantAmount + 10 } });
-      await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: makerOffer.id } });
-      expect((await snap(bId)).resources.nano).toBeGreaterThanOrEqual(makerOffer.giveAmount);
-      await admin.collection("players").update(bId, { resources: bBefore.resources });
     } finally {
-      for (const r of await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker"' })) await admin.collection("market_offers").delete(r.id);
       for (const [key, rec] of [["balance_history", keep.history], ["alliance_saga", keep.saga]] as const) {
         const now = await cfg(key);
         if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });

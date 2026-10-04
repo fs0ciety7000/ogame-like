@@ -1,9 +1,9 @@
 ---
 slug: jetons-tournoi-et-couleurs
-title: "5.13 : des jetons partout, un tournoi à chaque ouverture"
-excerpt: "Les jetons du casino se gagnent avec le passe, les défis et les boss. Chaque ouverture devient un tournoi avec son podium et son titre, et toute l'interface suit enfin votre thème."
+title: "5.13 : jetons partout, tournoi du casino et économie assainie"
+excerpt: "Les jetons du casino se gagnent avec le passe, les défis et les boss, chaque ouverture devient un tournoi, le marché redevient 100 % joueurs, le passe se mérite au combat et le Léviathan récompense tous ses gros participants."
 category: mises-a-jour
-tags: [casino, passe, boss, defis, titres, interface]
+tags: [casino, passe, boss, defis, titres, marche, equilibrage, interface]
 version: "5.13"
 cover: /assets/casino/salle-777.webp
 ---
@@ -18,7 +18,7 @@ Une semaine après l'ouverture du **Casino orbital**, une question revenait sans
 
 - Le **passe de saison** en glisse aux paliers **7, 17 et 27**.
 - Le **défi de la semaine** réussi en rapporte **1**, ou **2** si l'objectif est dépassé de moitié.
-- Chaque **boss abattu** (Léviathan, boss de saison, boss d'alliance) en verse **1** à tous ses participants, et **3** au premier en dégâts.
+- Chaque **boss abattu** (Léviathan, boss de saison, boss d'alliance) en verse **1** à tous ses participants, **2** au deuxième et au troisième, et **3** au premier en dégâts.
 - Le **jeton du jour** et les jetons offerts par l'équipe restent bien sûr de la partie.
 
 Les jetons gagnés apparaissent dans la notification, avec leur pastille dorée, et dans le bilan du boss.
@@ -49,6 +49,26 @@ Et celui qui aligne trois 7 gagne, en plus de la moitié du pot, un titre à vie
 ## Le suspense du dernier rouleau
 
 Deux 7 sur les deux premiers rouleaux ? Le dernier ralentit et s'éclaire en or le temps de s'arrêter. Parfois, c'est le gros lot. Souvent, c'est un « deux 7 ». Toujours, on retient son souffle.
+
+## Un marché 100 % joueurs
+
+Le **Courtier du Comptoir** et les ventes automatiques des **seigneurs de guerre** quittent le marché. Ils publiaient des offres à prix fixes, à toute heure : pratique pour se dépanner, mais ils tiraient les prix et vidaient l'intérêt de commercer entre commandants. Désormais, chaque offre vient d'un joueur. Leurs offres encore ouvertes ont été retirées.
+
+## Le passe se mérite au combat
+
+Le passe de saison filait trop vite, porté par les missions qu'on enchaîne sans y penser. Les missions ne rapportent plus de points. En échange, **un combat gagné passe de 5 à 8 points**, et un **raid de faction repoussé de 6 à 8**. Contrats, primes, boss, Chroniques, vendettas et coalitions ne changent pas.
+
+> [!TIP] Où trouver ses points
+> Le détail des sources est sur la page du passe. En résumé : attaquer, défendre, repousser les factions, remplir contrats et primes, et participer aux boss.
+
+## Le Léviathan récompense tout le podium
+
+Jusqu'ici, le premier repartait avec la relique mythique, le titre et le gros des heures de production ; les autres, même très actifs, avec peu de chose. On rééquilibre :
+
+- Le bonus suit maintenant la **racine** de vos dégâts comparés au premier : avec 25 % de ses dégâts, vous touchez déjà la moitié du bonus. Base 3 h, bonus jusqu'à 12 h.
+- S'il tombe, le **podium** gagne 6, 4 et 2 heures de plus, et les **trois premiers** reçoivent une **relique épique** (rare pour tous les autres).
+- Collection de reliques pleine ? Vous recevez de l'**Ambre** à la place, au lieu de rien.
+- Le premier garde sa relique mythique et le titre « Fléau du Léviathan ».
 
 ## Toute l'interface suit votre thème
 

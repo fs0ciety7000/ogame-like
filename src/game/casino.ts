@@ -70,7 +70,7 @@ export interface CasinoRewards {
   challenge: number[];
   /** Boss abattu (Léviathan, boss de saison, boss d'alliance) : jetons par participant. */
   bossWin: number;
-  /** En plus pour le premier en dégâts d'un boss abattu. */
+  /** En plus pour le premier en dégâts d'un boss abattu (la moitié pour le 2e et le 3e). */
   bossTop: number;
   /** Boss qui s'est retiré : jetons par participant (souvent 0). */
   bossFail: number;
@@ -383,7 +383,8 @@ export function tournamentResult(t: CasinoTournament, s: CasinoSettings, now: nu
 /** Jetons d'un participant à un boss terminé (rank : 0 pour le premier en dégâts). */
 export function bossTokens(s: CasinoSettings, won: boolean, rank: number): number {
   if (!won) return s.rewards.bossFail;
-  return s.rewards.bossWin + (rank === 0 ? s.rewards.bossTop : 0);
+  const podium = rank === 0 ? s.rewards.bossTop : rank === 1 || rank === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
+  return s.rewards.bossWin + podium;
 }
 
 /** Jetons d'un défi hebdo réussi, selon le palier atteint (index 0 : premier palier). */

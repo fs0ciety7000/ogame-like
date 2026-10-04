@@ -1,6 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { bossPhase, isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { useSeasonBoss } from "@/services/seasonBossService";
@@ -8,6 +8,7 @@ import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
+import { useIsAdmin } from "@/services/adminService";
 import { HudSwitch } from "@/components/ui/hud";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
@@ -156,9 +157,21 @@ const NAV_GROUPS: NavGroup[] = [
 
 /** Groupes listés dans la barre latérale ; le dernier (Compte) est en pied de barre. */
 /** v5.12 : pages visibles seulement quand elles sont ouvertes (le casino), sauf pour l'administration. */
-function useNavGroups(): NavGroup[] {
+/** Pages cachées du menu : casino fermé (sauf admin), concours (réservés aux admins depuis la 5.13). */
+export function useHiddenRoutes(): ReadonlySet<string> {
   const casino = useCasinoVisible();
-  return casino ? NAV_GROUPS : NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => i.to !== "/game/casino") }));
+  const admin = useIsAdmin();
+  return useMemo(() => {
+    const hidden = new Set<string>();
+    if (!casino) hidden.add("/game/casino");
+    if (!admin) hidden.add("/game/concours");
+    return hidden;
+  }, [casino, admin]);
+}
+
+function useNavGroups(): NavGroup[] {
+  const hidden = useHiddenRoutes();
+  return hidden.size === 0 ? NAV_GROUPS : NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !hidden.has(i.to)) }));
 }
 
 const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
@@ -745,8 +758,8 @@ function MobileTabBar() {
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
-  const casinoVisible = useCasinoVisible();
-  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && (casinoVisible || i.to !== "/game/casino"));
+  const hidden = useHiddenRoutes();
+  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && !hidden.has(i.to));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
     <>

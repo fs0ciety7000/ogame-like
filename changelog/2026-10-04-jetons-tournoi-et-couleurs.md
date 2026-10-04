@@ -2,9 +2,9 @@
 version: 5.13.0
 iteration: 80
 date: 2026-10-04
-title: Jetons partout, tournoi du casino et couleurs du thème
+title: Jetons partout, tournoi du casino, économie assainie
 ---
-Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouverture devient un tournoi, et toute l'interface suit enfin les couleurs de votre thème.
+Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouverture devient un tournoi, le marché redevient 100 % joueurs, le passe se mérite au combat, et le Léviathan récompense mieux tous ses gros participants.
 
 ## Casino orbital
 - [Nouveau] **Des jetons à gagner partout** : paliers 7, 17 et 27 du **passe de saison**, **défi de la semaine** réussi (1 ou 2 jetons selon le palier), **boss abattus** (Léviathan, boss de saison, boss d'alliance : 1 jeton chacun, 3 pour le premier en dégâts).
@@ -15,6 +15,13 @@ Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouve
 - [Amélioration] **Suspense** : quand les deux premiers rouleaux montrent un 7, le dernier ralentit et s'éclaire en or.
 - [Amélioration] **Vrais jetons** : le jeton illustré apparaît dans le solde de la machine, la carte « Jeton du jour », les gains et la pluie du gros lot ; la page du casino a son décor (la salle aux trois 7).
 
+## Économie et équilibrage
+- [Équilibrage] **Le marché redevient 100 % joueurs** : le Courtier du Comptoir et les ventes automatiques des seigneurs de guerre disparaissent (ils faussaient les prix). Leurs offres encore ouvertes sont retirées.
+- [Équilibrage] **Passe de saison** : les missions ne rapportent plus de points (le passe avançait trop vite). Le combat devient la voie royale : combat gagné 5 → 8 points, raid de faction repoussé 6 → 8. Contrats, primes, boss, Chroniques, vendettas et coalitions ne changent pas.
+- [Équilibrage] **Léviathan, des gains mieux répartis** : le bonus suit la racine de vos dégâts comparés au premier (avec 25 % de ses dégâts, vous touchez déjà la moitié du bonus), base 2 → 3 h et bonus 10 → 12 h. S'il tombe : +6 / 4 / 2 h pour le podium, une **relique épique pour les 3 premiers** (rare pour les autres) et, si votre collection de reliques est pleine, de l'Ambre à la place au lieu de rien. Le premier garde sa relique mythique et son titre.
+- [Équilibrage] Jetons du casino des boss : le 2e et le 3e reçoivent aussi un bonus (la moitié de celui du premier).
+- [Amélioration] Les **concours** du pot commun ne sont plus montrés aux joueurs (page réservée à l'équipe, lien retiré du menu, de l'accueil et de l'agenda).
+
 ## Interface
 - [Amélioration] **Toutes les couleurs suivent votre thème** : médailles, raretés, commandants, capsules, Hall of fame, podium, rangs… plus aucune couleur figée. Les statistiques de l'empire passent aux jauges droites du cockpit.
 - [Amélioration] **Illustrations d'en-tête** : État-major, Palmarès et Hall of fame des boss ont leur décor.
@@ -24,4 +31,5 @@ Les jetons du Casino orbital se gagnent maintenant dans tout le jeu, chaque ouve
 
 ## Administration
 - [Admin] **Jetons gagnés en jeu** (onglet Pot commun → Casino) : jetons par palier du défi hebdo, par boss abattu ou retiré, bonus du premier, jetons du podium du tournoi, libellés des titres « As du casino » et « Main d'or ».
-- [Admin] **Passe de saison** : nouveau type de récompense « Jetons du casino » (le total des jetons s'affiche à côté de l'Ambre).
+- [Admin] **Passe de saison** : nouveau type de récompense « Jetons du casino » (le total des jetons s'affiche à côté de l'Ambre). Les missions ne figurent plus dans les points réglables (toujours 0).
+- [Admin] **Marché** : réglages du Courtier du Comptoir retirés. **Concours** : la page reste accessible aux administrateurs.

@@ -1,3 +1,4 @@
+import { useIsAdmin } from "@/services/adminService";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -22,9 +23,11 @@ const when = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "sh
 
 export function useAgenda(now: number, days = DAYS): AgendaItem[] {
   const contests = useContests();
+  // v5.13 : les concours ne sont montrés qu'aux administrateurs.
+  const admin = useIsAdmin();
   const leviathan = useLeviathan();
   const seasonBoss = useSeasonBoss();
-  const extra: AgendaItem[] = (contests?.list ?? [])
+  const extra: AgendaItem[] = (admin ? (contests?.list ?? []) : [])
     .filter((c) => ["scheduled", "running"].includes(contestPhase(c, now)))
     .map((c) => ({ id: c.id, kind: "contest", title: `Concours : ${c.title}`, startMs: c.startMs, endMs: c.endMs, link: "/game/concours", emoji: "🎁" }));
   // Un boss déjà abattu (ou retiré) dans sa fenêtre en cours n'est plus « en cours ».

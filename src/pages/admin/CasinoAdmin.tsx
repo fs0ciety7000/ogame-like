@@ -168,7 +168,7 @@ export function CasinoAdmin() {
           <NumberField label="Défi hebdo, palier 1" value={rw.challenge[0] ?? 0} min={0} onChange={(v) => setRw({ challenge: at(rw.challenge, 0, v ?? 0) })} />
           <NumberField label="Défi hebdo, palier 2" value={rw.challenge[1] ?? 0} min={0} onChange={(v) => setRw({ challenge: at(rw.challenge, 1, v ?? 0) })} />
           <NumberField label="Boss abattu (chacun)" value={rw.bossWin} min={0} onChange={(v) => setRw({ bossWin: v ?? 0 })} />
-          <NumberField label="Boss : bonus du 1er" value={rw.bossTop} min={0} onChange={(v) => setRw({ bossTop: v ?? 0 })} />
+          <NumberField label="Boss : bonus du 1er (½ aux 2e et 3e)" value={rw.bossTop} min={0} onChange={(v) => setRw({ bossTop: v ?? 0 })} />
           <NumberField label="Boss retiré (chacun)" value={rw.bossFail} min={0} onChange={(v) => setRw({ bossFail: v ?? 0 })} />
         </div>
         <p className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">

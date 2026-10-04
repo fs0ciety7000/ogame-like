@@ -98,7 +98,6 @@ export {
   lossesPower,
   nearestWarlord,
   nextAttackDelayMs,
-  nextMarketDelayMs,
   openVendetta,
   pickWarlordTarget,
   recordVendettaDamage,
@@ -111,7 +110,6 @@ export {
   warlordFleetPower,
   warlordLine,
   warlordLootCap,
-  warlordOffer,
   warlordPublic,
   warlordReference,
   warlordsConfig,
@@ -173,7 +171,6 @@ export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balan
 export { defaultGameContent } from "@/game/content";
 export { getProductionRatesPerSecond } from "@/game/production";
 export { COMMON_RESOURCES } from "@/game/economy";
-export { isMarketMaker, MARKET_MAKER_ID, MARKET_MAKER_PSEUDO, marketMakerPlayer, planMakerOffers } from "@/game/marketMaker";
 export { ALLIANCE_SAGA_KEY, ALLIANCE_SAGA_RULES, generateAllianceSaga, readAllianceSaga, sagaMonthId, sagaOf, sagaPoints, sagaProgress, sagaStandings } from "@/game/allianceSaga";
 // v5.8 : devblog (pages rendues par PocketBase).
 export { blogPostFromRecord, publicPosts, shortHash, slugify, isPublic } from "@/game/blog";

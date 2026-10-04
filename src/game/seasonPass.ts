@@ -21,11 +21,13 @@ export const PASS_RULES = { tiers: 30, pointsPerTier: 40 };
 export const PASS_POINTS = {
   contract: 10,
   bounty: 8,
-  raidRepelled: 6,
-  victory: 5,
+  raidRepelled: 8,
+  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
+  victory: 8,
   bossAssault: 5,
   dailyLogin: 5,
-  mission: 2,
+  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
+  mission: 0,
   /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
   vendetta: 40,
   /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
@@ -103,6 +105,8 @@ export function setSeasonPass(cfg: Partial<SeasonPassConfig> | null | undefined)
   const d = defaultSeasonPassConfig();
   Object.assign(PASS_RULES, d.rules, cfg?.rules ?? {});
   Object.assign(PASS_POINTS, d.points, cfg?.points ?? {});
+  // v5.13 : les missions ne rapportent plus de points, même dans un passe personnalisé avant la 5.13.
+  PASS_POINTS.mission = 0;
   const tiers = Array.isArray(cfg?.tiers) && cfg!.tiers.length > 0 ? cfg!.tiers : d.tiers;
   PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers));
   PASS_RULES.tiers = PASS_TIERS.length;

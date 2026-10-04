@@ -19,6 +19,7 @@ describe("casino : jetons, tournoi, bilan", () => {
   it("jetons des boss et des défis", () => {
     const s = DEFAULT_CASINO;
     expect(bossTokens(s, true, 0)).toBe(s.rewards.bossWin + s.rewards.bossTop);
+    expect(bossTokens(s, true, 1)).toBe(s.rewards.bossWin + Math.floor(s.rewards.bossTop / 2));
     expect(bossTokens(s, true, 3)).toBe(s.rewards.bossWin);
     expect(bossTokens(s, false, 0)).toBe(s.rewards.bossFail);
     expect(challengeTokens(s, -1)).toBe(0);

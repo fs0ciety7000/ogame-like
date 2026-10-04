@@ -101,8 +101,6 @@ __export(hooksEntry_exports, {
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
-  MARKET_MAKER_ID: () => MARKET_MAKER_ID,
-  MARKET_MAKER_PSEUDO: () => MARKET_MAKER_PSEUDO,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
   PASSKEY_RULES: () => PASSKEY_RULES,
@@ -301,7 +299,6 @@ __export(hooksEntry_exports, {
   inferKilledBy: () => inferKilledBy,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
-  isMarketMaker: () => isMarketMaker,
   isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
   isWarlordUid: () => isWarlordUid,
@@ -313,7 +310,6 @@ __export(hooksEntry_exports, {
   linkReferrer: () => linkReferrer,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
-  marketMakerPlayer: () => marketMakerPlayer,
   mergeDebris: () => mergeDebris,
   monthsToGenerate: () => monthsToGenerate,
   mythicFor: () => mythicFor,
@@ -321,7 +317,6 @@ __export(hooksEntry_exports, {
   newPlayerProfile: () => newPlayerProfile,
   nextAttackDelayMs: () => nextAttackDelayMs,
   nextMaintenance: () => nextMaintenance,
-  nextMarketDelayMs: () => nextMarketDelayMs,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeAllianceChallenge: () => normalizeAllianceChallenge,
   normalizeBossHistory: () => normalizeBossHistory,
@@ -357,7 +352,6 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
-  planMakerOffers: () => planMakerOffers,
   playerCasino: () => playerCasino,
   previousSeasonId: () => previousSeasonId,
   previousSummary: () => previousSummary,
@@ -472,7 +466,6 @@ __export(hooksEntry_exports, {
   warlordFleetPower: () => warlordFleetPower,
   warlordLine: () => warlordLine,
   warlordLootCap: () => warlordLootCap,
-  warlordOffer: () => warlordOffer,
   warlordPublic: () => warlordPublic,
   warlordReference: () => warlordReference,
   warlordTravelMs: () => warlordTravelMs,
@@ -2313,7 +2306,8 @@ function tournamentResult(t, s, now) {
 }
 function bossTokens(s, won, rank2) {
   if (!won) return s.rewards.bossFail;
-  return s.rewards.bossWin + (rank2 === 0 ? s.rewards.bossTop : 0);
+  const podium = rank2 === 0 ? s.rewards.bossTop : rank2 === 1 || rank2 === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
+  return s.rewards.bossWin + podium;
 }
 function challengeTokens(s, tierIndex) {
   var _a;
@@ -7216,11 +7210,13 @@ var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
 var PASS_POINTS = {
   contract: 10,
   bounty: 8,
-  raidRepelled: 6,
-  victory: 5,
+  raidRepelled: 8,
+  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
+  victory: 8,
   bossAssault: 5,
   dailyLogin: 5,
-  mission: 2,
+  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
+  mission: 0,
   /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
   vendetta: 40,
   /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
@@ -7275,6 +7271,7 @@ function setSeasonPass(cfg) {
   const d = defaultSeasonPassConfig();
   Object.assign(PASS_RULES, d.rules, (_a = cfg == null ? void 0 : cfg.rules) != null ? _a : {});
   Object.assign(PASS_POINTS, d.points, (_b = cfg == null ? void 0 : cfg.points) != null ? _b : {});
+  PASS_POINTS.mission = 0;
   const tiers2 = Array.isArray(cfg == null ? void 0 : cfg.tiers) && cfg.tiers.length > 0 ? cfg.tiers : d.tiers;
   PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
   PASS_RULES.tiers = PASS_TIERS.length;
@@ -7478,9 +7475,16 @@ var LEVIATHAN_RULES = {
   flightMinutes: 30,
   /** Part de chaque type de vaisseau détruite à chaque assaut (réparable à l'Atelier). */
   lossPct: 0.08,
-  /** Récompense : base + bonus × (dégâts / dégâts du premier), en heures de production. */
-  baseRewardHours: 2,
-  bonusRewardHours: 10,
+  /** Récompense : base + bonus × √(dégâts / dégâts du premier), en heures de production.
+   *  v5.13 : racine carrée, pour que les gros participants ne soient plus loin derrière le premier. */
+  baseRewardHours: 3,
+  bonusRewardHours: 12,
+  /** v5.13 : bonus du podium (1er, 2e, 3e) quand le Léviathan tombe, en heures de production. */
+  podiumHours: [6, 4, 2],
+  /** v5.13 : reliques épiques pour les N premiers (rare pour les autres participants). */
+  topRelics: 3,
+  /** v5.13 : Ambre versée à la place d'une relique quand la collection est pleine. */
+  relicAmber: { epic: 60, rare: 30 },
   /** Récompenses si le Léviathan survit. */
   failedRewardFactor: 0.5,
   title: "Fl\xE9au du L\xE9viathan",
@@ -7640,13 +7644,15 @@ function leviathanRanking(state) {
   return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.damage - a.damage);
 }
 function rewardHours(state, uid) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const ranking = leviathanRanking(state);
   const top = (_b = (_a = ranking[0]) == null ? void 0 : _a.damage) != null ? _b : 0;
   const mine = (_d = (_c = state.contributions[uid]) == null ? void 0 : _c.damage) != null ? _d : 0;
   if (!(mine > 0) || !(top > 0)) return 0;
-  const hours2 = LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * (mine / top);
-  return state.status === "killed" ? hours2 : hours2 * LEVIATHAN_RULES.failedRewardFactor;
+  const hours2 = LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * Math.sqrt(mine / top);
+  if (state.status !== "killed") return hours2 * LEVIATHAN_RULES.failedRewardFactor;
+  const rank2 = ranking.findIndex((r) => r.uid === uid);
+  return hours2 + ((_e = LEVIATHAN_RULES.podiumHours[rank2]) != null ? _e : 0);
 }
 function grantLeviathanReward(state, player, random = Math.random) {
   var _a, _b, _c;
@@ -7661,8 +7667,15 @@ function grantLeviathanReward(state, player, random = Math.random) {
     player.activeTitle = LEVIATHAN_RULES.title;
   }
   if (state.status === "killed" && hours2 > 0) {
-    const item = rollRelic("leviathan", Date.now(), random, title ? "epic" : "rare");
+    const rank2 = leviathanRanking(state).findIndex((r) => r.uid === player.uid);
+    const rarity = rank2 >= 0 && rank2 < LEVIATHAN_RULES.topRelics ? "epic" : "rare";
+    const item = rollRelic("leviathan", Date.now(), random, rarity);
     if (addRelic(player, item)) return { gain, title, relic: relicLabel(item) };
+    const amber = LEVIATHAN_RULES.relicAmber[rarity];
+    const b = bountyState(player);
+    b.amber += amber;
+    player.bounties = b;
+    return { gain, title, amber };
   }
   return { gain, title };
 }
@@ -8932,15 +8945,7 @@ var MARKET_RULES = {
   /** Durée de vie d'une offre (h) ; à l'expiration, le vendeur est remboursé. */
   offerHours: 48,
   /** Écart maximal au taux du comptoir, dans un sens comme dans l'autre (×). */
-  priceBand: 3,
-  /** v5.5 : Courtier du Comptoir (marchand PNJ), voir marketMaker.ts. */
-  makerEnabled: true,
-  /** Offres ouvertes des joueurs en dessous desquelles il intervient (par ressource et par sens). */
-  makerMinOffers: 2,
-  /** Écart au taux du comptoir (0,12 = vend 12 % plus cher, achète 12 % moins cher). */
-  makerSpread: 0.12,
-  /** Taille d'une offre : heures de production commune médiane des joueurs actifs. */
-  makerSizeHours: 2
+  priceBand: 3
 };
 var RESOURCE_IDS2 = new Set(RESOURCE_LIST.map((r) => r.id));
 var label = (res) => {
@@ -9890,9 +9895,6 @@ var WARLORD_RULES = {
   /** Part de la puissance en vaisseaux d'attaque (le reste en défenses). */
   offenseShare: { aggressive: 0.8, opportunist: 0.7, builder: 0.3, merchant: 0.4 },
   /** Marchands : 3 offres par jour environ, à ±10 % du taux du comptoir. */
-  marketOffersPerDay: 3,
-  marketSpread: 0.1,
-  marketOfferHours: 4,
   /** Messages : un par jour au plus, par seigneur et par joueur. */
   messageEveryHours: 24,
   /** Vendetta. */
@@ -10307,24 +10309,6 @@ function capLoot(loot, cap) {
   if (!(cap >= 0) || total2 <= cap || total2 <= 0) return loot;
   const k = cap / total2;
   return Object.fromEntries(Object.entries(loot).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * k)]));
-}
-function warlordOffer(npc, random = Math.random) {
-  var _a;
-  const stocked = COMMON_RESOURCES2.filter((r) => {
-    var _a2, _b;
-    return ((_b = (_a2 = npc.resources) == null ? void 0 : _a2[r]) != null ? _b : 0) > 1e3;
-  });
-  if (stocked.length === 0) return null;
-  const giveRes = stocked[Math.floor(random() * stocked.length)];
-  const others = COMMON_RESOURCES2.filter((r) => r !== giveRes);
-  const wantRes = others[Math.floor(random() * others.length)];
-  const giveAmount = Math.max(500, Math.floor(((_a = npc.resources[giveRes]) != null ? _a : 0) * (0.1 + 0.15 * random())));
-  const rate = getTradeRate(giveRes, wantRes);
-  const wantAmount = Math.max(1, Math.round(giveAmount * rate * (1 + (random() * 2 - 1) * WARLORD_RULES.marketSpread)));
-  return { giveRes, giveAmount, wantRes, wantAmount };
-}
-function nextMarketDelayMs(random = Math.random) {
-  return Math.round(24 / WARLORD_RULES.marketOffersPerDay * (0.6 + 0.8 * random()) * 36e5);
 }
 function warlordLine(d, key, pseudo, random = Math.random) {
   var _a, _b;
@@ -14158,50 +14142,6 @@ function proposeAchievementTiers(defs, players, now) {
       holders,
       reason: `${holders} joueur(s) ont atteint \xAB ${top.name} \xBB (${formatInt(top.threshold)}) : nouveau palier \xE0 ${formatInt(threshold)}.`
     });
-  }
-  return out;
-}
-
-// src/game/marketMaker.ts
-var MARKET_MAKER_ID = "market_maker";
-var MARKET_MAKER_PSEUDO = "Courtier du Comptoir";
-var MARKET_MAKER_RULES = {
-  /** Taille minimale (en équivalent ferraille). */
-  minSize: 5e3,
-  offerHours: 12
-};
-function marketMakerPlayer() {
-  return __spreadProps(__spreadValues({}, defaultPlayerState(MARKET_MAKER_ID, MARKET_MAKER_PSEUDO)), { createdAt: 0 });
-}
-function isMarketMaker(uid) {
-  return uid === MARKET_MAKER_ID;
-}
-function payWith(res) {
-  return res === "scrap" ? "energy" : "scrap";
-}
-function planMakerOffers(open, commonPerHour, now) {
-  if (!MARKET_RULES.makerEnabled) return [];
-  const live = open.filter((o) => o.status === "open");
-  const sizeScrap = Math.max(MARKET_MAKER_RULES.minSize, Math.round(commonPerHour * MARKET_RULES.makerSizeHours));
-  const band = Math.max(1, MARKET_RULES.priceBand);
-  const spread = Math.max(0, Math.min(MARKET_RULES.makerSpread, band - 1));
-  const out = [];
-  for (const r of RESOURCE_LIST) {
-    const res = r.id;
-    const pay2 = payWith(res);
-    const size = Math.max(1, Math.round(sizeScrap * getTradeRate("scrap", res)));
-    const reference = size * getTradeRate(res, pay2);
-    const sells = live.filter((o) => {
-      var _a;
-      return ((_a = o.kind) != null ? _a : "sell") === "sell" && o.giveRes === res;
-    });
-    if (sells.length < MARKET_RULES.makerMinOffers && !sells.some((o) => isMarketMaker(o.sellerId))) {
-      out.push({ kind: "sell", giveRes: res, giveAmount: size, wantRes: pay2, wantAmount: Math.ceil(reference * (1 + spread)), expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
-    }
-    const buys = live.filter((o) => o.kind === "buy" && o.wantRes === res);
-    if (buys.length < MARKET_RULES.makerMinOffers && !buys.some((o) => isMarketMaker(o.sellerId))) {
-      out.push({ kind: "buy", giveRes: pay2, giveAmount: Math.max(1, Math.floor(reference * (1 - spread))), wantRes: res, wantAmount: size, expiresAtMs: now + MARKET_MAKER_RULES.offerHours * 36e5 });
-    }
   }
   return out;
 }

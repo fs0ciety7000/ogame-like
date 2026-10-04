@@ -141,7 +141,7 @@ function RulesCard() {
       <h2 className="hud-title text-sm">Règles</h2>
       <p>Structure : {LEVIATHAN_RULES.hpFactor} fois la puissance d'attaque cumulée des commandants actifs ces 7 derniers jours.</p>
       <p>
-        Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier ; moitié moins s'il survit.
+        Récompense : {LEVIATHAN_RULES.baseRewardHours} h de ta production, plus jusqu'à {LEVIATHAN_RULES.bonusRewardHours} h selon tes dégâts comparés au premier (avec 25 % de ses dégâts, tu touches déjà la moitié du bonus) ; moitié moins s'il survit. S'il tombe : +{LEVIATHAN_RULES.podiumHours.join(" / ")} h pour le podium, une relique épique pour les {LEVIATHAN_RULES.topRelics} premiers (rare pour les autres, de l'Ambre si ta collection est pleine), et une relique mythique pour le premier.
       </p>
       <p>Le premier en dégâts gagne le titre « {LEVIATHAN_RULES.title} » pendant {LEVIATHAN_RULES.titleDays} jours. Chaque participant à sa chute débloque le succès « Tueur de Léviathan ».</p>
     </Card>

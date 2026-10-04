@@ -29,7 +29,6 @@ const SOURCES: [keyof typeof PASS_POINTS, string][] = [
   ["victory", "Combat gagné (attaque, défense, repaire)"],
   ["bossAssault", "Assaut sur le Léviathan ou la proie d'élite"],
   ["dailyLogin", "Connexion du jour"],
-  ["mission", "Mission terminée"],
 ];
 
 function rewardIcon(r: PassReward): string {

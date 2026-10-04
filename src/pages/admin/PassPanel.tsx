@@ -21,7 +21,6 @@ const POINT_LABELS: Record<string, string> = {
   victory: "Combat gagné",
   bossAssault: "Assaut sur un boss",
   dailyLogin: "Connexion du jour",
-  mission: "Mission terminée",
   vendetta: "Vendetta gagnée",
   chronicle: "Épisode des Chroniques",
   seasonBoss: "Participation au boss de saison",
@@ -154,7 +153,7 @@ export function PassPanel() {
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Points">
           <NumberField label="Points par palier" value={cfg.rules.pointsPerTier} min={1} onChange={(v) => setCfg((c) => ({ ...c, rules: { ...c.rules, pointsPerTier: v ?? 40 } }))} />
-          {Object.keys(cfg.points).map((k) => (
+          {Object.keys(cfg.points).filter((k) => k !== "mission").map((k) => (
             <NumberField key={k} label={POINT_LABELS[k] ?? k} value={cfg.points[k as keyof typeof cfg.points]} min={0} onChange={(v) => setCfg((c) => ({ ...c, points: { ...c.points, [k]: v ?? 0 } }))} />
           ))}
         </Section>
