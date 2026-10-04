@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimStreak, streakStatus } from "@/game/streak";
+import { claimStreak, rollStreakChest, streakStatus } from "@/game/streak";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
 
@@ -22,13 +22,28 @@ describe("v5.3 série de connexion", () => {
     expect(streakStatus(p, T0 + DAY).claimed).toBe(true);
   });
 
-  it("le 7e jour donne de l'Ambre, et un jour manqué remet à 1", () => {
+  it("5.15.6 : 2 jetons par jour, 35 Ambre au 6e jour, coffre au 7e ; un jour manqué remet à 1", () => {
     const p = player();
-    for (let d = 0; d < 6; d++) claimStreak(p, T0 + d * DAY);
-    const seventh = claimStreak(p, T0 + 6 * DAY);
+    const first = claimStreak(p, T0);
+    expect(first.tokens).toBe(2);
+    expect(p.casino?.tokens).toBe(2);
+    expect(first.chest).toBeNull();
+    for (let d = 1; d < 5; d++) claimStreak(p, T0 + d * DAY);
+    const sixth = claimStreak(p, T0 + 5 * DAY);
+    expect(sixth.amber).toBe(35);
+    expect(p.bounties?.amber).toBe(35);
+    // Coffre : tirage bas puis haut (bornes incluses).
+    const scrap = p.resources.scrap;
+    const seventh = claimStreak(p, T0 + 6 * DAY, () => 0);
     expect(seventh.count).toBe(7);
-    expect(seventh.amber).toBe(15);
-    expect(p.bounties?.amber).toBe(15);
+    expect(seventh.chest).toMatchObject({ amber: 50, tokens: 1 });
+    expect(seventh.chest?.resources.scrap).toBe(45_000_000);
+    expect(p.resources.scrap).toBeGreaterThanOrEqual(scrap + 45_000_000);
+    expect(p.bounties?.amber).toBe(35 + 50);
+    expect(p.casino?.tokens).toBe(7 * 2 + 1);
+    const top = rollStreakChest(() => 0.999999);
+    expect(top).toMatchObject({ amber: 300, tokens: 25 });
+    expect(top.resources.data).toBe(280_000_000);
     expect(claimStreak(p, T0 + 9 * DAY).count).toBe(1);
     expect(p.streak?.best).toBe(7);
   });

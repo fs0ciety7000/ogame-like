@@ -726,7 +726,7 @@ export function resetTalents() {
 
 /** v5.3 : récompense de la série de connexion du jour. */
 export function claimStreak() {
-  return act<{ count: number; resources: Partial<Record<ResourceId, number>>; amber: number }>({ type: "streakClaim" });
+  return act<{ count: number; resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; chest: import("@/game/streak").StreakChest | null }>({ type: "streakClaim" });
 }
 
 export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {

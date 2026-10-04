@@ -11773,11 +11773,22 @@ function lostPower(losses, units, techLevels2) {
 var STREAK_RULES = {
   /** Heures de production des ressources communes, jours 1 à 7. */
   hours: [1, 1.5, 2, 2.5, 3, 3.5, 5],
-  /** Ambre offerte au 7e jour du cycle. */
-  amberDay7: 15,
+  /** Jetons du casino chaque jour. */
+  dailyTokens: 2,
+  /** Ambre du 6e jour du cycle. */
+  amberDay6: 35,
+  /** Coffre du 7e jour : bornes des tirages (chaque ressource commune tirée à part). */
+  chest: { amber: [50, 300], tokens: [1, 25], common: [45e6, 28e7] },
   /** Plancher par ressource commune (petits empires). */
   floor: 2e3
 };
+function rollStreakChest(random = Math.random) {
+  const c = STREAK_RULES.chest;
+  const int = ([lo, hi]) => Math.floor(lo + random() * (hi - lo + 1));
+  const resources = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) resources[res] = Math.min(c.common[1], Math.round(int(c.common) / 1e6) * 1e6);
+  return { amber: int(c.amber), tokens: int(c.tokens), resources };
+}
 function streakState(player) {
   var _a, _b;
   const raw = (_a = player.streak) != null ? _a : {};
@@ -11795,7 +11806,7 @@ function streakReward(player, count2) {
   const raw = productionHours(player, STREAK_RULES.hours[day - 1]);
   const resources = {};
   for (const res of ["scrap", "energy", "nano", "data"]) resources[res] = Math.max(STREAK_RULES.floor, (_a = raw[res]) != null ? _a : 0);
-  return { resources, amber: day === 7 ? STREAK_RULES.amberDay7 : 0 };
+  return { resources, amber: day === 6 ? STREAK_RULES.amberDay6 : 0, tokens: STREAK_RULES.dailyTokens, chest: day === 7 };
 }
 function streakStatus(player, now) {
   const st = streakState(player);
@@ -11804,22 +11815,28 @@ function streakStatus(player, now) {
   const alive = st.lastDay === previousDay2(today);
   return { today, claimed: false, next: alive ? st.count + 1 : 1, current: alive ? st.count : 0 };
 }
-function claimStreak(player, now) {
-  var _a, _b;
+function claimStreak(player, now, random = Math.random) {
+  var _a, _b, _c, _d, _e;
   const status = streakStatus(player, now);
   if (status.claimed) throw new GameActionError("R\xE9compense du jour d\xE9j\xE0 r\xE9clam\xE9e : reviens demain !");
   const st = streakState(player);
   const count2 = status.next;
   const reward = streakReward(player, count2);
-  for (const [res, n] of Object.entries(reward.resources)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
-  if (reward.amber > 0) {
+  const chest = reward.chest ? rollStreakChest(random) : null;
+  const resources = __spreadValues({}, reward.resources);
+  if (chest) for (const [res, n] of Object.entries(chest.resources)) resources[res] = ((_a = resources[res]) != null ? _a : 0) + n;
+  for (const [res, n] of Object.entries(resources)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + n;
+  const amber = reward.amber + ((_c = chest == null ? void 0 : chest.amber) != null ? _c : 0);
+  if (amber > 0) {
     const b = bountyState(player);
-    b.amber += reward.amber;
-    b.amberEarned = ((_b = b.amberEarned) != null ? _b : 0) + reward.amber;
+    b.amber += amber;
+    b.amberEarned = ((_d = b.amberEarned) != null ? _d : 0) + amber;
     player.bounties = b;
   }
+  const tokens = reward.tokens + ((_e = chest == null ? void 0 : chest.tokens) != null ? _e : 0);
+  if (tokens > 0) grantTokens(player, tokens);
   player.streak = { count: count2, lastDay: status.today, best: Math.max(st.best, count2), total: st.total + 1 };
-  return __spreadValues({ count: count2 }, reward);
+  return { count: count2, resources: reward.resources, amber: reward.amber, tokens: reward.tokens, chest };
 }
 
 // src/game/advancedGuide.ts
