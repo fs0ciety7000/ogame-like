@@ -36,6 +36,8 @@ export interface PlayerStats {
   leviathanKills?: number;
   expeditions?: number;
   traded?: number;
+  /** v5.10 : cadeaux envoyés à d'autres joueurs. */
+  giftsSent?: number;
   ultimatums?: number;
   /** Factions qui ont déjà adressé un ultimatum au joueur. */
   threatenedBy?: string[];

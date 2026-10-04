@@ -1,4 +1,5 @@
 import { subscribePacts, usePactStore } from "@/services/diplomacyService";
+import { TitleBadge } from "@/components/game/TitleBadge";
 import { bindingPactBetween } from "@/game/diplomacy";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
@@ -40,7 +41,6 @@ import { AttackModal } from "@/components/game/AttackModal";
 import { TradeModal } from "@/components/game/TradeModal";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
 import type { Alliance } from "@/types/game";
-import { GameIcon } from "@/components/ui/game-icon";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
@@ -341,7 +341,7 @@ export function PlayersPage() {
                   </p>
                   {p.activeTitle && (
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className="border border-gold-glow/35 bg-gold-glow/[0.06] px-1.5 py-px text-[11px] text-gold-glow"><GameIcon name="trophy" /> {p.activeTitle}</span>
+                      <TitleBadge label={p.activeTitle} size="xs" />
                     </div>
                   )}
                   {/* Rang sous le pseudo quand la colonne dédiée n'a pas la place. */}

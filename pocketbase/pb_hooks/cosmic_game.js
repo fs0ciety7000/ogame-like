@@ -4388,6 +4388,10 @@ var METRICS = {
     var _a;
     return (_a = playerStats(p).traded) != null ? _a : 0;
   } },
+  giftsSent: { label: "Cadeaux envoy\xE9s (v5.10)", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).giftsSent) != null ? _a : 0;
+  } },
   inAlliance: { label: "Membre d'une alliance (0/1)", value: (p) => p.allianceId ? 1 : 0 },
   allianceFounded: { label: "Alliance fond\xE9e (0/1)", value: (p) => {
     var _a;
@@ -4464,7 +4468,7 @@ var DEFAULT_ACHIEVEMENTS = [
   def("veteran", "combat", "bronze", "victories", 10, "V\xE9t\xE9ran", "Remporte 10 combats.", "\u{1F396}\uFE0F"),
   def("warlord", "combat", "argent", "victories", 50, "Seigneur de guerre", "Remporte 50 combats.", "\u{1F5E1}\uFE0F"),
   def("star_scourge", "combat", "or", "victories", 200, "Fl\xE9au des \xE9toiles", "Remporte 200 combats.", "\u2604\uFE0F"),
-  def("eternal_conqueror", "combat", "legendaire", "victories", 1e3, "Conqu\xE9rant \xE9ternel", "Remporte 1 000 combats.", "\u{1F451}", { title: "Conqu\xE9rant" }),
+  def("eternal_conqueror", "combat", "legendaire", "victories", 1e3, "Conqu\xE9rant \xE9ternel", "Remporte 1 000 combats.", "\u{1F451}", { title: "Conqu\xE9rant", titleId: "conquerant" }),
   def("raider", "combat", "bronze", "loot", 1e5, "Pillard", "Pille 100 000 ressources.", "\u{1F4B0}"),
   def("corsair", "combat", "argent", "loot", 1e6, "Corsaire", "Pille 1 million de ressources.", "\u{1F3F4}\u200D\u2620\uFE0F"),
   def("galactic_razzia", "combat", "or", "loot", 2e7, "Razzia galactique", "Pille 20 millions de ressources.", "\u{1F48E}"),
@@ -4479,20 +4483,20 @@ var DEFAULT_ACHIEVEMENTS = [
   def("master_builder", "construction", "argent", "maxBuildingLevel", 15, "Ma\xEEtre d'\u0153uvre", "Am\xE8ne un b\xE2timent au niveau 15.", "\u{1F4D0}"),
   def("masterpiece", "construction", "or", "maxBuildingLevel", 20, "Chef-d'\u0153uvre", "Am\xE8ne un b\xE2timent au niveau 20.", "\u{1F5FC}"),
   def("expansion", "construction", "argent", "buildingsUnlockedPct", 100, "Empire en expansion", "D\xE9bloque tous les b\xE2timents.", "\u{1F5FA}\uFE0F"),
-  def("world_city", "construction", "legendaire", "minBuildingLevel", 20, "Cit\xE9-monde", "Am\xE8ne tous les b\xE2timents au niveau 20.", "\u{1F30D}", { title: "B\xE2tisseur de mondes" }),
+  def("world_city", "construction", "legendaire", "minBuildingLevel", 20, "Cit\xE9-monde", "Am\xE8ne tous les b\xE2timents au niveau 20.", "\u{1F30D}", { title: "B\xE2tisseur de mondes", titleId: "batisseur_mondes" }),
   // Recherche
   def("curious", "recherche", "bronze", "techCount", 1, "Curieux", "Termine ta premi\xE8re recherche.", "\u{1F50E}"),
   def("researcher", "recherche", "bronze", "techCount", 5, "Chercheur", "Recherche 5 technologies diff\xE9rentes.", "\u{1F52C}"),
   def("scholar", "recherche", "argent", "techLevels", 25, "\xC9rudit", "Cumule 25 niveaux de technologies.", "\u{1F4DA}"),
   def("savant", "recherche", "or", "techLevels", 75, "Savant", "Cumule 75 niveaux de technologies.", "\u{1F9E0}"),
-  def("omniscience", "recherche", "legendaire", "techsMaxedPct", 100, "Omniscience", "Am\xE8ne toutes les technologies au maximum.", "\u{1F30C}", { title: "Omniscient" }),
+  def("omniscience", "recherche", "legendaire", "techsMaxedPct", 100, "Omniscience", "Am\xE8ne toutes les technologies au maximum.", "\u{1F30C}", { title: "Omniscient", titleId: "omniscient" }),
   def("specialist", "recherche", "argent", "maxTechLevel", 10, "Sp\xE9cialiste", "Am\xE8ne une technologie au niveau 10.", "\u{1F9EA}"),
   def("night_owl", "recherche", "bronze", "nightResearch", 1, "Nuit blanche", "Lance une recherche entre 3 h et 5 h du matin.", "\u{1F989}", { secret: true }),
   // Flotte
   def("fleet", "flotte", "bronze", "unitsTotal", 50, "Flotte redoutable", "Poss\xE8de 50 unit\xE9s au total.", "\u{1F680}"),
   def("squadron", "flotte", "argent", "unitsTotal", 500, "Escadre", "Poss\xE8de 500 unit\xE9s.", "\u{1F6F8}"),
   def("armada", "flotte", "or", "unitsTotal", 5e3, "Armada", "Poss\xE8de 5 000 unit\xE9s.", "\u{1F320}"),
-  def("steel_tide", "flotte", "legendaire", "unitsTotal", 5e4, "Mar\xE9e d'acier", "Poss\xE8de 50 000 unit\xE9s.", "\u{1F30A}", { title: "Amiral de la Mar\xE9e" }),
+  def("steel_tide", "flotte", "legendaire", "unitsTotal", 5e4, "Mar\xE9e d'acier", "Poss\xE8de 50 000 unit\xE9s.", "\u{1F30A}", { title: "Amiral de la Mar\xE9e", titleId: "amiral_maree" }),
   def("collector", "flotte", "argent", "unitTypesPct", 100, "Collectionneur", "D\xE9bloque tous les types d'unit\xE9s.", "\u{1F5C2}\uFE0F"),
   def("tireless_yard", "flotte", "or", "unitsBuilt", 1e4, "Chantier infatigable", "Construis 10 000 unit\xE9s.", "\u{1F6E0}\uFE0F"),
   def("naval_engineer", "flotte", "argent", "maxUnitLevel", 10, "Ing\xE9nieur naval", "Am\xE8ne une unit\xE9 au niveau 10.", "\u2699\uFE0F"),
@@ -4530,7 +4534,7 @@ var DEFAULT_ACHIEVEMENTS = [
   def("defiant", "menaces", "bronze", "raidsRepelled", 1, "Insoumis", "Repousse un raid de faction.", "\u270A"),
   def("rampart", "menaces", "argent", "raidsRepelled", 10, "Rempart", "Repousse 10 raids de faction.", "\u{1F9F1}"),
   def("bounty_hunter", "menaces", "or", "lairsTaken", 1, "Chasseur de primes", "Prends un repaire de faction.", "\u{1F3AF}"),
-  def("factions_bane", "menaces", "legendaire", "lairFactions", 3, "Fl\xE9au des factions", "Fais tomber les repaires de 3 factions diff\xE9rentes.", "\u{1F480}", { title: "Fl\xE9au des factions" }),
+  def("factions_bane", "menaces", "legendaire", "lairFactions", 3, "Fl\xE9au des factions", "Fais tomber les repaires de 3 factions diff\xE9rentes.", "\u{1F480}", { title: "Fl\xE9au des factions", titleId: "fleau_factions" }),
   def("wanted", "menaces", "or", "maxNotoriety", 1, "T\xEAte mise \xE0 prix", "Atteins la Notori\xE9t\xE9 maximale aupr\xE8s d'une faction.", "\u{1F4F8}"),
   def("diplomat", "menaces", "argent", "diplomat", 20, "Diplomate", "Paie 20 tributs sans jamais refuser.", "\u{1F54A}\uFE0F", { secret: true }),
   def("all_against_me", "menaces", "argent", "factionsThreatened", 4, "Tous contre moi", "Re\xE7ois les ultimatums de 4 factions diff\xE9rentes.", "\u{1F3AD}", { secret: true }),
@@ -4584,6 +4588,102 @@ function validateAchievements(defs) {
     if (!(a.threshold > 0)) errors.push(`${label3} : seuil invalide.`);
     if (!(a.tier in TIER_LABELS)) errors.push(`${label3} : palier inconnu.`);
     if (!(a.category in CATEGORY_LABELS)) errors.push(`${label3} : cat\xE9gorie inconnue.`);
+  }
+  return errors;
+}
+
+// src/game/titles.ts
+var TITLE_RARITIES = [
+  { id: "common", label: "Commun", color: "#cbd5e1" },
+  { id: "rare", label: "Rare", color: "#4be8ff" },
+  { id: "epic", label: "\xC9pique", color: "#a78bfa" },
+  { id: "legendary", label: "L\xE9gendaire", color: "#ffd86b" },
+  { id: "mythic", label: "Mythique", color: "#ff5df0" }
+];
+var T = (id, label3, description, icon, rarity, unlock) => __spreadValues({
+  id,
+  label: label3,
+  description,
+  icon,
+  rarity,
+  enabled: true
+}, unlock ? { unlock } : {});
+var DEFAULT_TITLES = [
+  // Décernés par des succès (voir leur champ titleId).
+  T("conquerant", "Conqu\xE9rant", "Mille victoires au compteur.", "\u{1F451}", "legendary"),
+  T("batisseur_mondes", "B\xE2tisseur de mondes", "Un empire b\xE2ti pierre apr\xE8s pierre.", "\u{1F3D9}\uFE0F", "legendary"),
+  T("omniscient", "Omniscient", "Toutes les sciences du secteur ma\xEEtris\xE9es.", "\u{1F9E0}", "legendary"),
+  T("amiral_maree", "Amiral de la Mar\xE9e", "Une flotte capable de noyer l'horizon.", "\u{1F30A}", "legendary"),
+  T("fleau_factions", "Fl\xE9au des factions", "Les factions murmurent ton nom avec crainte.", "\u2620\uFE0F", "legendary"),
+  // Gagnés ailleurs : le catalogue les habille.
+  T("fleau_leviathan", "Fl\xE9au du L\xE9viathan", "Premier en d\xE9g\xE2ts contre le L\xE9viathan.", "\u{1F40B}", "mythic"),
+  T("pilier_semaine", "Pilier de la semaine", "Meilleur contributeur du d\xE9fi de la semaine.", "\u{1F3DB}\uFE0F", "epic"),
+  // Déblocage automatique sur une mesure.
+  T("mecene", "M\xE9c\xE8ne", "A offert 10 cadeaux \xE0 d'autres commandants.", "\u{1F381}", "rare", { metric: "giftsSent", threshold: 10 }),
+  T("marchand_etoiles", "Marchand des \xE9toiles", "Un million de ressources \xE9chang\xE9es au march\xE9.", "\u{1FA99}", "rare", { metric: "traded", threshold: 1e6 }),
+  T("eclaireur", "\xC9claireur", "100 sondes d'espionnage lanc\xE9es.", "\u{1F6F0}\uFE0F", "common", { metric: "spies", threshold: 100 }),
+  T("chasseur_epaves", "Chasseur d'\xE9paves", "Un million de ressources recycl\xE9es.", "\u267B\uFE0F", "rare", { metric: "recycled", threshold: 1e6 })
+];
+var TITLES = [];
+var BY_LABEL = /* @__PURE__ */ new Map();
+function setTitles(defs) {
+  TITLES.splice(0, TITLES.length, ...defs);
+  BY_LABEL.clear();
+  for (const t of defs) if (t.label) BY_LABEL.set(t.label.toLowerCase(), t);
+}
+setTitles(structuredClone(DEFAULT_TITLES));
+function findTitle(id) {
+  return id ? TITLES.find((t) => t.id === id) : void 0;
+}
+function titleByLabel(label3) {
+  var _a;
+  return label3 ? (_a = BY_LABEL.get(label3.toLowerCase())) != null ? _a : null : null;
+}
+function titleRarity(id) {
+  var _a;
+  return (_a = TITLE_RARITIES.find((r) => r.id === id)) != null ? _a : TITLE_RARITIES[0];
+}
+function titleStyle(label3) {
+  const t = titleByLabel(label3);
+  if (!t) return { icon: "\u{1F3C6}", color: "#ffd86b", description: "", rarity: "" };
+  const r = titleRarity(t.rarity);
+  return { icon: t.icon || "\u{1F3C6}", color: r.color, description: t.description, rarity: r.label };
+}
+function grantTitle(player, label3, sourceId) {
+  var _a, _b;
+  if (!label3) return false;
+  if (((_a = player.titles) != null ? _a : []).some((t) => t.label === label3)) return false;
+  player.titles = [...(_b = player.titles) != null ? _b : [], { label: label3, seasonId: sourceId, rank: 1 }];
+  return true;
+}
+function titleProgress(t, player) {
+  if (!t.unlock) return 0;
+  const m = METRICS[t.unlock.metric];
+  return m ? m.value(player) : 0;
+}
+function checkNewTitles(player) {
+  var _a;
+  const owned = new Set(((_a = player.titles) != null ? _a : []).map((t) => t.label));
+  return TITLES.filter((t) => t.enabled && t.unlock && t.label && !owned.has(t.label) && titleProgress(t, player) >= t.unlock.threshold);
+}
+function validateTitles(defs) {
+  var _a, _b, _c;
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  const labels = /* @__PURE__ */ new Set();
+  for (const t of defs) {
+    if (!/^[a-z0-9_]+$/.test((_a = t.id) != null ? _a : "")) errors.push(`Titre \xAB ${t.label || t.id} \xBB : identifiant invalide (minuscules, chiffres, _).`);
+    if (ids.has(t.id)) errors.push(`Titre ${t.id} : identifiant en double.`);
+    ids.add(t.id);
+    if (!((_b = t.label) == null ? void 0 : _b.trim())) errors.push(`Titre ${t.id} : libell\xE9 vide.`);
+    const key = ((_c = t.label) != null ? _c : "").toLowerCase();
+    if (key && labels.has(key)) errors.push(`Titre \xAB ${t.label} \xBB : libell\xE9 en double.`);
+    labels.add(key);
+    if (!TITLE_RARITIES.some((r) => r.id === t.rarity)) errors.push(`Titre ${t.id} : raret\xE9 inconnue.`);
+    if (t.unlock) {
+      if (!(t.unlock.metric in METRICS)) errors.push(`Titre ${t.id} : mesure de d\xE9blocage inconnue.`);
+      if (!(Number(t.unlock.threshold) > 0)) errors.push(`Titre ${t.id} : seuil de d\xE9blocage invalide.`);
+    }
   }
   return errors;
 }
@@ -4958,6 +5058,10 @@ function recordResourceHistory(player, now) {
   const next = [...history, { t: now, r: __spreadValues({}, player.resources) }];
   player.resourceHistory = next.length > RESOURCE_HISTORY_MAX_POINTS ? next.slice(next.length - RESOURCE_HISTORY_MAX_POINTS) : next;
 }
+function achievementTitle(a) {
+  var _a, _b;
+  return (_b = (_a = findTitle(a.titleId)) == null ? void 0 : _a.label) != null ? _b : a.title;
+}
 function flushState(playerIn, queuesIn, now) {
   var _a, _b, _c, _d, _e, _f, _g;
   const player = structuredClone(playerIn);
@@ -5119,9 +5223,7 @@ function flushState(playerIn, queuesIn, now) {
       }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
-      if (a.title && !((_f = player.titles) != null ? _f : []).some((t) => t.label === a.title)) {
-        player.titles = [...(_g = player.titles) != null ? _g : [], { label: a.title, seasonId: `achievement:${a.id}`, rank: 1 }];
-      }
+      grantTitle(player, (_g = (_f = findTitle(a.titleId)) == null ? void 0 : _f.label) != null ? _g : a.title, `achievement:${a.id}`);
     }
     if (newAchievements.length > 3) {
       notifications.push({
@@ -5138,7 +5240,7 @@ function flushState(playerIn, queuesIn, now) {
         notifications.push({
           kind: "achievement",
           title: "Succ\xE8s d\xE9bloqu\xE9 !",
-          message: `${a.emoji} ${a.name} \u2014 ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${a.title ? ` \xB7 titre \xAB ${a.title} \xBB` : ""}`,
+          message: `${a.emoji} ${a.name} \u2014 ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` \xB7 titre \xAB ${achievementTitle(a)} \xBB` : ""}`,
           createdAtMs: now,
           read: false,
           link: "/game/succes",
@@ -5146,6 +5248,18 @@ function flushState(playerIn, queuesIn, now) {
         });
       }
     }
+  }
+  for (const t of checkNewTitles(player)) {
+    if (!grantTitle(player, t.label, `title:${t.id}`)) continue;
+    const style = titleStyle(t.label);
+    notifications.push({
+      kind: "achievement",
+      title: "Nouveau titre !",
+      message: `${style.icon} \xAB ${t.label} \xBB${style.rarity ? ` (${style.rarity.toLowerCase()})` : ""} \u2014 ${t.description} Affiche-le depuis ton profil.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game/profil"
+    });
   }
   return { player, queues, notifications };
 }
@@ -10275,6 +10389,7 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   const r = flushState(__spreadProps(__spreadValues({}, recipient), { buildings: withMissingBuildings(recipient.buildings, recipient.resources) }), recipientQueues, now);
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
+  bumpStat(s.player, "giftsSent");
   const rate = giftDeliveryRate(sender, recipient);
   const delivered = {};
   for (const [res, amt] of Object.entries(resources)) {
@@ -10875,7 +10990,7 @@ var GAME_FIELDS = [
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings", "titles"];
 function withFixedUnits(units) {
   return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
 }
@@ -10908,6 +11023,7 @@ function defaultGameContent() {
     chronicles: defaultChroniclesConfig(),
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
+    titles: DEFAULT_TITLES,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
@@ -10916,7 +11032,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -10930,7 +11046,8 @@ function applyGameContent(overrides) {
     seasonPass: (_i = overrides.seasonPass) != null ? _i : defaults.seasonPass,
     chronicles: (_j = overrides.chronicles) != null ? _j : defaults.chronicles,
     relics: (_k = overrides.relics) != null ? _k : defaults.relics,
-    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_l = overrides.relicSettings) != null ? _l : {}), {
+    titles: (_l = overrides.titles) != null ? _l : defaults.titles,
+    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_m = overrides.relicSettings) != null ? _m : {}), {
       rarities: Object.fromEntries(
         Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
           var _a2, _b2, _c2;
@@ -10939,23 +11056,23 @@ function applyGameContent(overrides) {
       )
     }),
     rules: {
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_n = (_m = overrides.rules) == null ? void 0 : _m.pvp) != null ? _n : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_p = (_o = overrides.rules) == null ? void 0 : _o.combat) != null ? _p : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_r = (_q = overrides.rules) == null ? void 0 : _q.economy) != null ? _r : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_t = (_s = overrides.rules) == null ? void 0 : _s.fleets) != null ? _t : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_v = (_u = overrides.rules) == null ? void 0 : _u.spy) != null ? _v : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_x = (_w = overrides.rules) == null ? void 0 : _w.debris) != null ? _x : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_z = (_y = overrides.rules) == null ? void 0 : _y.patrol) != null ? _z : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_B = (_A = overrides.rules) == null ? void 0 : _A.events) != null ? _B : {}),
-      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_D = (_C = overrides.rules) == null ? void 0 : _C.seasons) != null ? _D : {}),
-      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_F = (_E = overrides.rules) == null ? void 0 : _E.alliances) != null ? _F : {}),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_H = (_G = overrides.rules) == null ? void 0 : _G.pirates) != null ? _H : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_J = (_I = overrides.rules) == null ? void 0 : _I.market) != null ? _J : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_L = (_K = overrides.rules) == null ? void 0 : _K.expeditions) != null ? _L : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_O = (_N = (_M = overrides.rules) == null ? void 0 : _M.expeditions) == null ? void 0 : _N.weights) != null ? _O : {})
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_o = (_n = overrides.rules) == null ? void 0 : _n.pvp) != null ? _o : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_q = (_p = overrides.rules) == null ? void 0 : _p.combat) != null ? _q : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_s = (_r = overrides.rules) == null ? void 0 : _r.economy) != null ? _s : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_u = (_t = overrides.rules) == null ? void 0 : _t.fleets) != null ? _u : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_w = (_v = overrides.rules) == null ? void 0 : _v.spy) != null ? _w : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_y = (_x = overrides.rules) == null ? void 0 : _x.debris) != null ? _y : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_A = (_z = overrides.rules) == null ? void 0 : _z.patrol) != null ? _A : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_C = (_B = overrides.rules) == null ? void 0 : _B.events) != null ? _C : {}),
+      seasons: __spreadValues(__spreadValues({}, defaults.rules.seasons), (_E = (_D = overrides.rules) == null ? void 0 : _D.seasons) != null ? _E : {}),
+      alliances: __spreadValues(__spreadValues({}, defaults.rules.alliances), (_G = (_F = overrides.rules) == null ? void 0 : _F.alliances) != null ? _G : {}),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_I = (_H = overrides.rules) == null ? void 0 : _H.pirates) != null ? _I : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_K = (_J = overrides.rules) == null ? void 0 : _J.market) != null ? _K : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_M = (_L = overrides.rules) == null ? void 0 : _L.expeditions) != null ? _M : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_P = (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) == null ? void 0 : _O.weights) != null ? _P : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_Q = (_P = overrides.rules) == null ? void 0 : _P.leviathan) != null ? _Q : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_S = (_R = overrides.rules) == null ? void 0 : _R.wars) != null ? _S : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.leviathan) != null ? _R : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_T = (_S = overrides.rules) == null ? void 0 : _S.wars) != null ? _T : {})
     }
   };
   setBuildings(content.buildings);
@@ -10970,6 +11087,7 @@ function applyGameContent(overrides) {
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
   setRelics(content.relics, content.relicSettings);
+  setTitles((_U = content.titles) != null ? _U : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -10990,7 +11108,7 @@ function applyGameContent(overrides) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const errors = [];
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
@@ -11085,6 +11203,7 @@ function validateGameContent(content) {
   errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
   errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
   errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
+  errors.push(...validateTitles((_m = content.titles) != null ? _m : []));
   return [...new Set(errors)];
 }
 

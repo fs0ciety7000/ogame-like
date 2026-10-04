@@ -497,6 +497,7 @@ export function performGift(
   const r = flushState({ ...recipient, buildings: withMissingBuildings(recipient.buildings, recipient.resources) }, recipientQueues, now);
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
+  bumpStat(s.player, "giftsSent");
   // v5.10 : hors alliance, une part se perd en route (taxe de transport).
   const rate = giftDeliveryRate(sender, recipient);
   const delivered: Partial<Record<ResourceId, number>> = {};

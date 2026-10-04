@@ -1,4 +1,5 @@
 import { targetsPlayer } from "@/game/fleets";
+import { TitleBadge } from "@/components/game/TitleBadge";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
@@ -546,7 +547,7 @@ export function GalaxyPage() {
                   )}
                   {selectedIsMine && <span className="ml-2 text-xs text-gold-glow">(toi)</span>}
                 </p>
-                {selected.activeTitle && <p className="text-xs text-gold-glow">🏆 {selected.activeTitle}</p>}
+                {selected.activeTitle && <TitleBadge label={selected.activeTitle} size="xs" className="mt-0.5" />}
                 <p className="tabular-mono text-xs text-slate-500">
                   Secteur {formatCoords(selected.coords)} · {getRankLabel(selected.xp)}
                   {selected.allianceId && allianceById.get(selected.allianceId) && ` · [${allianceById.get(selected.allianceId)!.tag}]`}

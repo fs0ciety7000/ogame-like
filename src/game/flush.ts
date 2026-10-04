@@ -7,7 +7,8 @@ import { MISSIONS } from "@/game/missions";
 import { missionRewardFactor } from "@/game/events";
 import { buildingsUnlockedByTech, findTech, techBonus, techEffects, TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, UNIT_TO_TECH } from "@/game/units";
-import { achievementReward, checkNewAchievements } from "@/game/achievements";
+import { achievementReward, checkNewAchievements, type AchievementDef } from "@/game/achievements";
+import { checkNewTitles, findTitle, grantTitle, titleStyle } from "@/game/titles";
 import { bumpStat, recordMission, setStat } from "@/game/stats";
 import { contractDay } from "@/game/contracts";
 import { formatInt } from "@/game/format";
@@ -54,6 +55,11 @@ function recordResourceHistory(player: PlayerState, now: number): void {
 
 /** Rejoue localement (côté client) le temps écoulé depuis la dernière synchro :
  *  production continue, files de construction / recherche / missions terminées. */
+/** Titre décerné par un succès : celui du catalogue s'il est choisi, sinon le libellé libre. */
+function achievementTitle(a: AchievementDef): string {
+  return findTitle(a.titleId)?.label ?? a.title;
+}
+
 export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: number): FlushResult {
   const player: PlayerState = structuredClone(playerIn);
   const queues: QueuesState = structuredClone(queuesIn);
@@ -244,9 +250,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       }
       if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
       totalXp += a.rewardXp;
-      if (a.title && !(player.titles ?? []).some((t) => t.label === a.title)) {
-        player.titles = [...(player.titles ?? []), { label: a.title, seasonId: `achievement:${a.id}`, rank: 1 }];
-      }
+      // v5.10 : titre du catalogue (titleId) en priorité, sinon libellé libre.
+      grantTitle(player, findTitle(a.titleId)?.label ?? a.title, `achievement:${a.id}`);
     }
     // Plusieurs succès d'un coup (rattrapage) : une seule notification.
     if (newAchievements.length > 3) {
@@ -264,7 +269,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         notifications.push({
           kind: "achievement",
           title: "Succès débloqué !",
-          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${a.title ? ` · titre « ${a.title} »` : ""}`,
+          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` · titre « ${achievementTitle(a)} »` : ""}`,
           createdAtMs: now,
           read: false,
           link: "/game/succes",
@@ -272,6 +277,20 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         });
       }
     }
+  }
+
+  // --- v5.10 : titres du catalogue débloqués par une mesure ---
+  for (const t of checkNewTitles(player)) {
+    if (!grantTitle(player, t.label, `title:${t.id}`)) continue;
+    const style = titleStyle(t.label);
+    notifications.push({
+      kind: "achievement",
+      title: "Nouveau titre !",
+      message: `${style.icon} « ${t.label} »${style.rarity ? ` (${style.rarity.toLowerCase()})` : ""} — ${t.description} Affiche-le depuis ton profil.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game/profil",
+    });
   }
 
   return { player, queues, notifications };
