@@ -28,12 +28,42 @@ export const COLONY_RULES = {
   foundRareCost: 1_000_000,
   /** Voyage du vaisseau colonial (heures). */
   foundHours: 2,
-  /** Stock de départ de chaque ressource commune. */
-  startStock: 1_000_000,
-  maxLevel: 15,
-  /** Coût des bâtiments d'une colonie : × ce facteur par rapport à la planète mère. */
-  costFactor: 1.5,
+  /** Stock de départ de chaque ressource commune (v5.10 : 1 M → 5 M). */
+  startStock: 5_000_000,
+  /** v5.10 : 15 → 18. */
+  maxLevel: 18,
+  /** Coût des bâtiments d'une colonie : × ce facteur par rapport à la planète mère (v5.10 : 1,5 → 1). */
+  costFactor: 1,
+  /** v5.10 : terres neuves — production des colonies × (1 + bonus). */
+  productionBonus: 0.5,
+  /** v5.10 : à la fondation, chaque extracteur et l'entrepôt démarrent à cette part du niveau de la planète mère… */
+  foundationShare: 0.5,
+  /** …sans dépasser ce niveau. */
+  foundationMax: 8,
 };
+
+/** Bâtiments relevés à la fondation (extracteurs communs et entrepôt). */
+function foundationBuildingIds(): string[] {
+  return colonyBuildingIds().filter((id) => {
+    const res = PRODUCTION_RESOURCE_BY_BUILDING[id];
+    return (res && COMMON_RESOURCES.includes(res as ResourceId)) || findBuilding(id)?.effect?.type === "storage";
+  });
+}
+
+/** v5.10 : niveau de départ d'un bâtiment de colonie selon la planète mère. */
+export function foundationLevel(homeLevel: number): number {
+  return Math.max(1, Math.min(COLONY_RULES.foundationMax, Math.floor((homeLevel || 0) * COLONY_RULES.foundationShare)));
+}
+
+/** v5.10 : relève les extracteurs et l'entrepôt d'une colonie au niveau de fondation (jamais à la baisse). */
+export function applyFoundation(colony: Colony, home: Buildings | undefined): void {
+  for (const id of foundationBuildingIds()) {
+    const target = foundationLevel(home?.[id]?.level ?? 0);
+    const cur = colony.buildings[id]?.level ?? 1;
+    if (target > cur) colony.buildings[id] = { ...(colony.buildings[id] ?? { unlocked: true }), level: target, unlocked: true };
+  }
+  colony.foundation = 1;
+}
 
 export interface ColonyBuildingJob {
   id: string;
@@ -68,6 +98,8 @@ export interface Colony {
   lastDefeatAtMs?: number;
   /** v5.1 : biome tiré à la fondation (ressource rare du gisement). */
   biome?: RareResourceId;
+  /** v5.10 : niveaux de fondation appliqués (colonies plus anciennes : relevées une fois). */
+  foundation?: number;
 }
 
 export interface Colonizing {
@@ -208,14 +240,16 @@ export function startColonization(player: PlayerState, nameIn: string, now: numb
   return player.colonizing;
 }
 
-export function foundColony(uid: string, job: Colonizing, at: number): Colony {
+export function foundColony(uid: string, job: Colonizing, at: number, home?: Buildings): Colony {
   const buildings: Buildings = {};
   for (const id of colonyBuildingIds()) buildings[id] = { level: 1, unlocked: true };
   const resources = emptyResources();
   for (const res of COMMON_RESOURCES) resources[res] = COLONY_RULES.startStock;
   buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
   const id = colonyId(uid, job.slot);
-  return { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
+  const colony: Colony = { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
+  applyFoundation(colony, home);
+  return colony;
 }
 
 /** Entrées économiques d'une colonie : technologies, alliance et ascensions de l'empire. */
@@ -227,6 +261,7 @@ function economyInput(colony: Colony, player: PlayerState) {
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
+    productionFactor: 1 + COLONY_RULES.productionBonus,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
     relics: player.relics,
@@ -252,6 +287,9 @@ export function colonyHourlyRates(colony: Colony, player: PlayerState): Partial<
 /** Rattrape une colonie jusqu'à `now` : production, construction, défenses. */
 export function advanceColony(colony: Colony, player: PlayerState, now: number): NewNotification[] {
   const notes: NewNotification[] = [];
+  // v5.10 : colonies fondées avant le rééquilibrage — production rattrapée à l'ancien
+  // niveau jusqu'ici, puis extracteurs et entrepôt relevés au niveau de fondation.
+  const upgradeOld = !colony.foundation;
   let at = colony.updatedAtMs || now;
   for (let guard = 0; guard < 10; guard++) {
     const next = Math.min(colony.building?.endTime ?? Infinity, colony.defenseJob?.endTime ?? Infinity);
@@ -266,7 +304,8 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
     if (next > now) break;
     if (colony.building && colony.building.endTime <= now) {
       const job = colony.building;
-      colony.buildings[job.id] = { ...(colony.buildings[job.id] ?? { unlocked: true }), level: job.level };
+      // v5.10 : jamais à la baisse (un chantier lancé avant la fondation relevée).
+      colony.buildings[job.id] = { ...(colony.buildings[job.id] ?? { unlocked: true }), level: Math.max(job.level, colony.buildings[job.id]?.level ?? 0) };
       colony.building = null;
       // v5.6 : l'Ingénieure en poste progresse aussi avec les chantiers des colonies.
       grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
@@ -281,6 +320,10 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
     }
   }
   colony.updatedAtMs = now;
+  if (upgradeOld) {
+    applyFoundation(colony, player.buildings);
+    notes.push({ kind: "building", title: "Colonie modernisée", message: `${colony.name} : ses extracteurs et son entrepôt ont été relevés au niveau de fondation, et les colonies produisent désormais 50 % de plus.`, createdAtMs: now, read: false, link: "/game/colonies" });
+  }
   return notes;
 }
 
@@ -289,7 +332,7 @@ export function advanceColonies(player: PlayerState, now: number): NewNotificati
   const notes: NewNotification[] = [];
   if (player.colonizing && player.colonizing.endTime <= now) {
     const job = player.colonizing;
-    player.colonies = [...(player.colonies ?? []), foundColony(player.uid, job, job.endTime)];
+    player.colonies = [...(player.colonies ?? []), foundColony(player.uid, job, job.endTime, player.buildings)];
     player.colonizing = null;
     notes.push({ kind: "building", title: "Nouvelle colonie !", message: `${job.name} est fondée : construis ses extracteurs et envoie-lui des ressources.`, createdAtMs: now, read: false });
   }

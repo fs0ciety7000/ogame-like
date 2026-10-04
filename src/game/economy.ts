@@ -56,6 +56,8 @@ export interface EconomyInput {
   /** v5.1 : bonus de secteur d'alliance et talents d'Ascension. */
   territory?: PlayerState["territory"];
   talents?: PlayerState["talents"];
+  /** v5.10 : multiplicateur propre à la planète (colonies : terres neuves). */
+  productionFactor?: number;
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -106,7 +108,7 @@ export interface EconomySnapshot {
 /** Production brute, avec les bonus d'événement donnés. */
 function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, number>>, boost = 1): Partial<Resources> {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
-  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost;
+  const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost * (input.productionFactor ?? 1);
   if (alliance !== 1) for (const res of Object.keys(gross) as ResourceId[]) gross[res] = (gross[res] ?? 0) * alliance;
   // v4.0 : Intendant en poste et reliques ; v5.2 : aussi secteur d'alliance et talents
   // (auparavant ignorés sans officier ni relique).
