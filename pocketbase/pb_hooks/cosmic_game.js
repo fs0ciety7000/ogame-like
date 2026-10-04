@@ -9268,11 +9268,19 @@ var ALLIANCE_BOSS_RULES = {
   killPoints: 40,
   failPoints: 15
 };
-var ALLIANCE_BOSSES = [
+var DEFAULT_ALLIANCE_BOSSES = [
   { id: "gravhorn", name: "Cuirass\xE9 Gravhorn", image: "/assets/story/gravhorn.webp", lore: "Un cuirass\xE9 du Syndicat, blind\xE9 comme un coffre-fort, venu saisir les dettes de ton alliance." },
   { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
   { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
 ];
+var ALLIANCE_BOSSES = DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b));
+function setAllianceBosses(defs) {
+  const list = (defs != null ? defs : []).filter((b) => {
+    var _a, _b;
+    return b && /^[a-z0-9_]+$/.test((_a = b.id) != null ? _a : "") && String((_b = b.name) != null ? _b : "").trim();
+  });
+  ALLIANCE_BOSSES.splice(0, ALLIANCE_BOSSES.length, ...(list.length ? list : DEFAULT_ALLIANCE_BOSSES).map((b) => __spreadValues({}, b)));
+}
 var DAY9 = 24 * 36e5;
 var HOUR7 = 36e5;
 function allianceWeekId(now) {
@@ -14110,6 +14118,7 @@ var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
 var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
 var DEFAULT_SEASON_BOSS_RULES = __spreadValues({}, SEASON_BOSS_RULES);
+var DEFAULT_ALLIANCE_BOSS_RULES = __spreadProps(__spreadValues({}, ALLIANCE_BOSS_RULES), { bosses: DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b)) });
 var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
 function defaultGameContent() {
   return structuredClone({
@@ -14129,7 +14138,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14137,7 +14146,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14181,7 +14190,8 @@ function applyGameContent(overrides) {
       }),
       leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.leviathan) != null ? _R : {}),
       seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.seasonBoss) != null ? _T : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {})
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_V = (_U = overrides.rules) == null ? void 0 : _U.allianceBoss) != null ? _V : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_X = (_W = overrides.rules) == null ? void 0 : _W.wars) != null ? _X : {})
     }
   };
   setBuildings(content.buildings);
@@ -14199,7 +14209,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_W = content.relicSettings) == null ? void 0 : _W.loot);
+  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14221,6 +14231,9 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
+  const _Z = content.rules.allianceBoss, { bosses: allianceBosses } = _Z, allianceBossRules = __objRest(_Z, ["bosses"]);
+  Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
+  setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -14241,6 +14254,7 @@ var RULE_GROUP_LABELS = {
   expeditions: "Exp\xE9ditions",
   leviathan: "L\xE9viathan",
   seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
   wars: "Guerres"
 };
 function validateRules(rules) {

@@ -1,3 +1,4 @@
+import { ALLIANCE_BOSS_RULES, DEFAULT_ALLIANCE_BOSSES, setAllianceBosses, type AllianceBossDef } from "@/game/allianceBoss";
 import { DEFAULT_WORLD_BOSSES, setWorldBosses, validateWorldBosses, type WorldBossDef } from "@/game/worldBosses";
 import { defaultOfficersConfig, setOfficers, validateOfficers, type OfficersConfig } from "@/game/commanders";
 import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
@@ -57,6 +58,8 @@ export interface GameRules {
   leviathan: typeof LEVIATHAN_RULES;
   /** v5.10.4 : boss de saison (occurrence, structure, reliques). */
   seasonBoss: typeof SEASON_BOSS_RULES;
+  /** 5.15 : boss d'alliance (structure, rythme, coût, récompenses, catalogue). */
+  allianceBoss: typeof ALLIANCE_BOSS_RULES & { bosses: AllianceBossDef[] };
   wars: typeof WAR_RULES;
 }
 
@@ -111,6 +114,7 @@ const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
 const DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 const DEFAULT_LEVIATHAN_RULES = { ...LEVIATHAN_RULES };
 const DEFAULT_SEASON_BOSS_RULES = { ...SEASON_BOSS_RULES };
+const DEFAULT_ALLIANCE_BOSS_RULES = { ...ALLIANCE_BOSS_RULES, bosses: DEFAULT_ALLIANCE_BOSSES.map((b) => ({ ...b })) };
 const DEFAULT_WAR_RULES = { ...WAR_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
@@ -132,7 +136,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
 
@@ -189,6 +193,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       },
       leviathan: { ...defaults.rules.leviathan, ...(overrides.rules?.leviathan ?? {}) },
       seasonBoss: { ...defaults.rules.seasonBoss, ...(overrides.rules?.seasonBoss ?? {}) },
+      allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
     },
   };
@@ -233,6 +238,10 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
+  // 5.15 : boss d'alliance (chiffres + catalogue).
+  const { bosses: allianceBosses, ...allianceBossRules } = content.rules.allianceBoss;
+  Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
+  setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -256,6 +265,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   expeditions: "Expéditions",
   leviathan: "Léviathan",
   seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
   wars: "Guerres",
 };
 

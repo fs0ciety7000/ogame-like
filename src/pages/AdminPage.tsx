@@ -44,8 +44,7 @@ import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ImpactReportPanel } from "@/pages/admin/ImpactReportPanel";
-import { WorldBossesPanel } from "@/pages/admin/WorldBossesPanel";
-import { SeasonBossPanel } from "@/pages/admin/SeasonBossPanel";
+import { BossesPanel } from "@/pages/admin/BossesPanel";
 import { OfficersPanel } from "@/pages/admin/OfficersPanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
@@ -111,8 +110,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "ranks", label: "Rangs", icon: Medal, hint: "Seuils d'XP et emblèmes." },
       { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion, recyclage et tables de butin des combats." },
-      { id: "worldBosses", label: "Boss mondiaux", icon: Fish, hint: "Les six colosses de la rotation hebdomadaire : identité, histoire, statistiques, phases, faiblesses, titre." },
-      { id: "seasonBoss", label: "Boss de saison", icon: Crown, hint: "Le boss des Chroniques : boss du mois, calendrier, combat (délai, trajet, pertes, faiblesses), reliques et butin." },
+      { id: "bosses", label: "Boss", icon: Fish, hint: "Tous les boss en sous-onglets : mondiaux (rotation hebdo, calendrier, combat, récompenses), de saison (boss du mois, réglages, butin) et d'alliance (catalogue, combat, coût, butin)." },
       { id: "officers", label: "Officiers", icon: UserCog, hint: "Douze rôles : noms, effets par niveau, recrutement, chances de trouver un officier rare." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "titles", label: "Titres", icon: Crown, hint: "Catalogue des titres : libellé, rareté, icône, déblocage automatique ; décernés aussi par les succès." },
@@ -145,7 +143,9 @@ export function AdminPage() {
   // Onglet dans l'URL : il survit au rechargement de l'écran qui suit
   // chaque enregistrement de contenu (voir AppShell).
   const [params, setParams] = useSearchParams();
-  const tab = params.get("onglet") ?? "stats";
+  // 5.15 : anciens onglets de boss regroupés dans « Boss » (liens gardés).
+  const rawTab = params.get("onglet") ?? "stats";
+  const tab = rawTab === "worldBosses" || rawTab === "seasonBoss" ? "bosses" : rawTab;
   const maintenance = useMaintenance();
   const customized = useContentStore((s) => s.customized);
   const pendingReports = useReportBadges((s) => s.pendingNew);
@@ -375,11 +375,8 @@ export function AdminPage() {
             renderForm={(a, onChange, isNew) => <AchievementForm value={a} onChange={onChange} isNew={isNew} />}
           />
         </TabsContent>
-        <TabsContent value="worldBosses">
-          <WorldBossesPanel />
-        </TabsContent>
-        <TabsContent value="seasonBoss">
-          <SeasonBossPanel />
+        <TabsContent value="bosses">
+          <BossesPanel />
         </TabsContent>
         <TabsContent value="officers">
           <OfficersPanel />
