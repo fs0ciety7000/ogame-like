@@ -327,6 +327,8 @@ function economyInput(colony: Colony, player: PlayerState) {
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
     productionFactor: (1 + COLONY_RULES.productionBonus) * colonySpecEffects(colony).production,
+    // v5.14 : effets propres aux colonies (Gouverneure en poste).
+    effectScope: "colonies" as const,
     storageFactor: colonySpecEffects(colony).storage,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
@@ -339,7 +341,7 @@ function economyInput(colony: Colony, player: PlayerState) {
 
 /** Entrepôt de la colonie (v5.3 : Intendant en poste compris, comme pour la production). */
 export function colonyStorage(colony: Colony, player: Pick<PlayerState, "techLevels" | "commanders">): number {
-  return storageCapacityOf({ buildings: colony.buildings, techLevels: player.techLevels, resources: colony.resources, commanders: player.commanders, storageFactor: colonySpecEffects(colony).storage });
+  return storageCapacityOf({ buildings: colony.buildings, techLevels: player.techLevels, resources: colony.resources, commanders: player.commanders, storageFactor: colonySpecEffects(colony).storage, effectScope: "colonies" });
 }
 
 /** Production horaire d'une colonie (affichage). */
@@ -375,6 +377,7 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
       colony.building = null;
       // v5.6 : l'Ingénieure en poste progresse aussi avec les chantiers des colonies.
       grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
+      grantCommanderXp(player, "governor", COMMANDER_XP.buildingDone);
       notes.push({ kind: "building", title: "Colonie : construction terminée", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
@@ -452,9 +455,9 @@ export function colonyDefenseHangar(colony: Colony): { used: number; capacity: n
 }
 
 /** Durée de construction (secondes) d'un lot de défenses sur une colonie. */
-export function colonyDefenseSeconds(player: Pick<PlayerState, "techLevels">, unitId: string, qty: number, colony?: Pick<Colony, "spec">): number {
+export function colonyDefenseSeconds(player: Pick<PlayerState, "techLevels"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "talents" | "territory">>, unitId: string, qty: number, colony?: Pick<Colony, "spec">): number {
   const unit = findUnit(unitId);
-  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
+  return unit ? getUnitBuildTime(unit, player.techLevels, player) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
 }
 
 export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unitId: string, qtyIn: number, now: number): ColonyDefenseJob {

@@ -14,11 +14,14 @@ import type { PlayerState } from "@/types/game";
 
 const FAR = Date.UTC(2100, 0, 1);
 
+// Les cinq officiers d'origine (les rôles rares n'existaient pas lors de l'instantané).
+const BASE = COMMANDERS.filter((c) => !c.rare);
+
 function fixture(i: number): Partial<PlayerState> {
   const r = seededRandom(`golden-${i}`);
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)];
-  const active = [...new Set([pick(COMMANDERS).id, pick(COMMANDERS).id, pick(COMMANDERS).id])].slice(0, 1 + Math.floor(r() * 3));
-  const roster = Object.fromEntries(COMMANDERS.map((c) => [c.id, { xp: xpForLevel(1 + Math.floor(r() * 20)) }]));
+  const active = [...new Set([pick(BASE).id, pick(BASE).id, pick(BASE).id])].slice(0, 1 + Math.floor(r() * 3));
+  const roster = Object.fromEntries(BASE.map((c) => [c.id, { xp: xpForLevel(1 + Math.floor(r() * 20)) }]));
   const items = Array.from({ length: 4 }, (_, k) => ({ id: `r${k}`, template: pick(DEFAULT_RELICS).id, rarity: pick(RARITIES).id, foundAtMs: 0, source: "golden" }));
   const ranks = Object.fromEntries(TALENTS.filter(() => r() < 0.4).map((t) => [t.id, 1 + Math.floor(r() * 3)]));
   const techLevels = Object.fromEntries(TECHNOLOGIES.filter(() => r() < 0.6).map((t) => [t.id, 1 + Math.floor(r() * Math.min(10, t.maxLevel))]));
@@ -32,6 +35,8 @@ function fixture(i: number): Partial<PlayerState> {
   };
 }
 
+const HISTORIC = ["attack", "defense", "buildTime", "researchTime", "productionAll", "production", "storage", "spyLevel", "detection", "repair", "cargo", "bossDamage"];
+
 const TECH_TARGETS: Partial<Record<TechEffectType, string[]>> = { resource_production: ["scrap", "energy", "nano", "data"], hangar_capacity: ["attack", "defense"] };
 
 function snapshotOf(p: Partial<PlayerState>) {
@@ -40,7 +45,10 @@ function snapshotOf(p: Partial<PlayerState>) {
     tech[type] = techBonus(p.techLevels, type);
     for (const t of TECH_TARGETS[type] ?? []) tech[`${type}:${t}`] = techBonus(p.techLevels, type, t);
   }
-  return round({ mods: playerModifiers(p), tech });
+  // Grandeurs historiques seulement (les rôles rares en ajoutent de nouvelles).
+  const all = playerModifiers(p) as unknown as Record<string, unknown>;
+  const mods = Object.fromEntries(HISTORIC.map((k) => [k, all[k]]));
+  return round({ mods, tech });
 }
 
 /** Arrondi à 1e-9 : l'ordre des additions peut changer sans changer l'équilibrage. */

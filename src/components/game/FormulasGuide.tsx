@@ -249,7 +249,7 @@ panne d'énergie (stock à 0 et bilan négatif) : × ${ECONOMY_RULES.outageProdu
         {p && (
           <Mine>
             <Row label="Capacité par ressource" value={n(storageCapacityOf(p))} hint={Number.isFinite(getStorageCapacity(p.buildings, tech)) ? undefined : "pas encore d'entrepôt : illimité"} />
-            <Row label="À l'abri du pillage" value={n(protectedAmount(p.buildings, "scrap", tech, p.allianceResearch))} hint="par ressource commune" />
+            <Row label="À l'abri du pillage" value={n(protectedAmount(p.buildings, "scrap", tech, p.allianceResearch, p))} hint="par ressource commune" />
             {eco && eco.full.length > 0 && <p className="text-gold-glow">Plein : {eco.full.map(resName).join(", ")}.</p>}
           </Mine>
         )}

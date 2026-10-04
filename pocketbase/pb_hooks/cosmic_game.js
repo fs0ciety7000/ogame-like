@@ -82,7 +82,7 @@ __export(hooksEntry_exports, {
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
-  COMMON_RESOURCES: () => COMMON_RESOURCES2,
+  COMMON_RESOURCES: () => COMMON_RESOURCES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   CONTESTS_KEY: () => CONTESTS_KEY,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
@@ -112,6 +112,7 @@ __export(hooksEntry_exports, {
   PVP_RULES: () => PVP_RULES,
   PasskeyError: () => PasskeyError,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
+  RARE_OFFICER_RULES: () => RARE_OFFICER_RULES,
   REFERRAL_RULES: () => REFERRAL_RULES,
   RENAME_RULES: () => RENAME_RULES,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
@@ -412,6 +413,7 @@ __export(hooksEntry_exports, {
   resolveSpyArrival: () => resolveSpyArrival,
   rollExpeditionEvent: () => rollExpeditionEvent,
   rollOutcome: () => rollOutcome,
+  rollRareOfficer: () => rollRareOfficer,
   rollRelic: () => rollRelic,
   rollTournament: () => rollTournament,
   sagaMonthId: () => sagaMonthId,
@@ -485,1349 +487,9 @@ __export(hooksEntry_exports, {
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
-// src/game/effects.ts
-var TECH_REDUCTION_CAP = 0.75;
-var EMPIRE_TIME_CAP = 0.5;
-var EFFECT_STATS = {
-  attack: { label: "Attaque", unit: "pct", group: "combat" },
-  defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
-  bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
-  repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
-  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
-  production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
-  storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
-  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  buildingDiscount: { label: "Co\xFBt des b\xE2timents", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
-  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
-  hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
-  spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
-  detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
-  counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
-};
-var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
-function inScope(g, scope) {
-  var _a;
-  const s = (_a = g.scope) != null ? _a : "all";
-  return s === "all" || s === scope;
-}
-function rawEffectTotal(grants, layer, stat, opts = {}) {
-  let total2 = 0;
-  for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
-    if (opts.target !== void 0 && g.target !== opts.target) continue;
-    total2 += g.value;
-  }
-  return total2;
-}
-function clampEffect(stat, layer, total2) {
-  var _a;
-  const info = EFFECT_STATS[stat];
-  let v = total2;
-  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
-  if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
-  return v;
-}
-function effectTotal(grants, layer, stat, opts = {}) {
-  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
-}
-
-// src/game/technologies.ts
-var ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
-var TECH_EFFECT_DEFAULTS = {
-  energy_efficiency: 0.1,
-  unit_attack: 0.1,
-  unit_defense: 0.1,
-  building_discount: 0.05,
-  resource_production: 0.1,
-  storage_capacity: 0.1,
-  protected_storage: 0.02,
-  fleet_speed: 0.05,
-  cargo_capacity: 0.1,
-  building_time: 0.05,
-  unit_time: 0.05,
-  research_time: 0.05,
-  fleet_upkeep: 0.05,
-  counter_spy: 1,
-  hangar_capacity: 0.05
-};
-var TECH_EFFECT_LABELS = {
-  unlock_recipe: "D\xE9bloque des recettes (niveau = nombre de recettes)",
-  energy_efficiency: "Production de toutes les ressources (% par niveau)",
-  unit_attack: "Attaque de toutes les unit\xE9s (% par niveau)",
-  unit_defense: "D\xE9fense de toutes les unit\xE9s (% par niveau)",
-  building_discount: "Co\xFBt des b\xE2timents (\u2212% par niveau)",
-  unlock_hangars: "D\xE9bloque les b\xE2timents li\xE9s (ancien nom de unlock_buildings)",
-  unlock_buildings: "D\xE9bloque des b\xE2timents",
-  unlock_next_level: "D\xE9bloque puis am\xE9liore une unit\xE9 (niveau = niveau de l'unit\xE9)",
-  unlock_defense_units: "Pr\xE9requis pour des unit\xE9s de d\xE9fense (aucun effet direct)",
-  unlock_attack_units: "Pr\xE9requis pour des unit\xE9s d'attaque (aucun effet direct)",
-  resource_production: "Production d'une ressource (% par niveau)",
-  storage_capacity: "Capacit\xE9 des entrep\xF4ts (% par niveau)",
-  protected_storage: "Part de l'entrep\xF4t \xE0 l'abri du pillage (points de % par niveau)",
-  fleet_speed: "Temps de vol des flottes (\u2212% par niveau)",
-  cargo_capacity: "Cargaison des vaisseaux (% par niveau)",
-  building_time: "Temps de construction des b\xE2timents (\u2212% par niveau)",
-  unit_time: "Temps de construction des unit\xE9s (\u2212% par niveau)",
-  research_time: "Temps de recherche (\u2212% par niveau)",
-  fleet_upkeep: "Entretien de la flotte (\u2212% par niveau)",
-  counter_spy: "Contre-espionnage (points par niveau)",
-  hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)"
-};
-var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
-var DEFAULT_TECHNOLOGIES = [
-  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
-  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
-  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
-  { id: "tech20", nom: "Espionnage", desc: "D\xE9bloque la Sonde d'espionnage, puis l'am\xE9liore : chaque niveau rend tes rapports plus complets et prot\xE8ge mieux ta base des sondes adverses.", maxLevel: 10, baseCost: { scrap: 300, energy: 150, data: 50 }, baseTime: 60, effect: "unlock_next_level", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
-  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
-  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
-  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
-  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
-  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
-  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
-  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
-  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
-  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
-  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
-  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
-  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
-  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
-  // v3.6 : technologies de fin de partie, entre le Canon plasma / l'Intercepteur et l'Étoile noire.
-  { id: "tech21", nom: "M\xE9tallurgie quantique", desc: "Alliages stabilis\xE9s \xE0 l'\xE9chelle quantique : +2 % de d\xE9fense des unit\xE9s par niveau. D\xE9bloque la Fonderie quantique.", maxLevel: 10, baseCost: { scrap: 2e5, nano: 1e5, reinforcedSteel: 400, cyberModule: 200 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unit_defense", value: 0.02 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech2: 8, tech16: 3 } },
-  { id: "tech22", nom: "Cortex neuronal", desc: "R\xE9seaux de calcul organiques : \u22122 % de temps de recherche et +1 contre-espionnage par niveau. D\xE9bloque le Synth\xE9tiseur neuronal.", maxLevel: 10, baseCost: { data: 3e5, energy: 15e4, aiFragment: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "research_time", value: 0.02 }, { type: "counter_spy", value: 1 }, { type: "unlock_buildings" }], prereq: { tech1: 17, tech20: 6, tech18: 3 } },
-  { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'\xE9nergie, prot\xE9ger les stocks : +1 point de stock \xE0 l'abri du pillage par niveau. D\xE9bloque le G\xE9n\xE9rateur de bouclier plan\xE9taire.", maxLevel: 10, baseCost: { energy: 3e5, nano: 2e5, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
-  { id: "tech24", nom: "Propulsion \xE0 antimati\xE8re", desc: "D\xE9bloque le Croiseur Nova, puis l'am\xE9liore (+250 attaque et d\xE9fense par niveau). \u22122 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 4e5, energy: 4e5, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
-  { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
-  // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
-  { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de d\xE9fense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 15e4, nano: 8e4, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
-  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
-];
-var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
-function setTechnologies(defs) {
-  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
-}
-function techEffects(tech) {
-  if (tech.effects && tech.effects.length > 0) return tech.effects;
-  if (!tech.effect) return [];
-  const type = tech.effect === "unlock_hangars" ? "unlock_buildings" : tech.effect;
-  return [tech.effectValue === void 0 ? { type } : { type, value: tech.effectValue }];
-}
-function effectValuePerLevel(effect) {
-  var _a, _b;
-  return (_b = (_a = effect.value) != null ? _a : TECH_EFFECT_DEFAULTS[effect.type]) != null ? _b : 0;
-}
-var TECH_EFFECT_STAT = {
-  energy_efficiency: "productionAll",
-  resource_production: "production",
-  unit_attack: "attack",
-  unit_defense: "defense",
-  building_discount: "buildingDiscount",
-  storage_capacity: "storage",
-  protected_storage: "protectedStorage",
-  fleet_speed: "fleetSpeed",
-  cargo_capacity: "cargo",
-  building_time: "buildTime",
-  unit_time: "unitTime",
-  research_time: "researchTime",
-  fleet_upkeep: "fleetUpkeep",
-  counter_spy: "counterSpy",
-  hangar_capacity: "hangarCapacity"
-};
-function techEffectGrants(techLevels2) {
-  var _a;
-  const out = [];
-  if (!techLevels2) return out;
-  for (const tech of TECHNOLOGIES) {
-    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
-    if (level3 <= 0) continue;
-    for (const e3 of techEffects(tech)) {
-      const stat = TECH_EFFECT_STAT[e3.type];
-      if (!stat) continue;
-      out.push({ stat, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
-    }
-  }
-  return out;
-}
-function techBonus(techLevels2, type, target) {
-  var _a;
-  if (!techLevels2) return 0;
-  const stat = TECH_EFFECT_STAT[type];
-  if (stat) return effectTotal(techEffectGrants(techLevels2), "tech", stat, { target });
-  let total2 = 0;
-  for (const tech of TECHNOLOGIES) {
-    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
-    if (level3 <= 0) continue;
-    for (const e3 of techEffects(tech)) {
-      if (e3.type !== type && !(type === "unlock_buildings" && e3.type === "unlock_hangars")) continue;
-      if (target !== void 0 && e3.target !== target) continue;
-      total2 += level3 * effectValuePerLevel(e3);
-    }
-  }
-  return total2;
-}
-function techReductionFactor(techLevels2, type) {
-  return 1 - techBonus(techLevels2, type);
-}
-function buildingsUnlockedByTech(techId, buildings) {
-  var _a;
-  const tech = findTech(techId);
-  const ids = new Set(buildings.filter((b) => b.unlockedByTech === techId).map((b) => b.id));
-  for (const e3 of tech ? techEffects(tech) : []) if (e3.type === "unlock_buildings" || e3.type === "unlock_hangars") for (const id of (_a = e3.targets) != null ? _a : []) ids.add(id);
-  return [...ids];
-}
-var MAX_CONCURRENT_RESEARCH = 4;
-var COST_GROWTH = 2.7;
-var TIME_GROWTH = 1.67;
-function findTech(id) {
-  return TECHNOLOGIES.find((t) => t.id === id);
-}
-function getTechCost(tech, level3) {
-  var _a;
-  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
-  const factor = Math.pow(growth, level3 - 1);
-  const cost = {};
-  for (const [res, amount3] of Object.entries(tech.baseCost)) {
-    cost[res] = Math.floor(amount3 * factor);
-  }
-  return cost;
-}
-function getTechAmberCost(tech) {
-  const n = Number(tech.amberCost);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
-}
-function getTechTime(tech, level3) {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level3 - 1));
-}
-var BLUEPRINT_UNITS = /* @__PURE__ */ new Map();
-function blueprintsRequiredBy(tech) {
-  return techEffects(tech).filter((e3) => e3.type === "unlock_next_level" && e3.target && BLUEPRINT_UNITS.has(e3.target)).map((e3) => e3.target);
-}
-function checkPrereqs(tech, levels, ownedPlans = []) {
-  const list = Object.entries(tech.prereq).map(([reqId, reqLevel]) => {
-    var _a, _b, _c;
-    const current2 = (_a = levels[reqId]) != null ? _a : 0;
-    return { id: reqId, nom: (_c = (_b = findTech(reqId)) == null ? void 0 : _b.nom) != null ? _c : reqId, requis: reqLevel, actuel: current2, valide: current2 >= reqLevel, kind: "tech" };
-  });
-  for (const unitId of blueprintsRequiredBy(tech)) {
-    const owned = ownedPlans.includes(unitId);
-    list.push({ id: `plan:${unitId}`, nom: `Plan : ${BLUEPRINT_UNITS.get(unitId)}`, requis: 1, actuel: owned ? 1 : 0, valide: owned, kind: "plan" });
-  }
-  return { valid: list.every((r) => r.valide), list };
-}
-var EFFECT_MAX_PER_LEVEL = {
-  building_discount: 0.5,
-  fleet_speed: 0.5,
-  building_time: 0.5,
-  unit_time: 0.5,
-  research_time: 0.5,
-  fleet_upkeep: 0.5,
-  protected_storage: 0.5,
-  counter_spy: 10,
-  hangar_capacity: 0.5
-};
-function validateTechEffect(label3, e3, refs) {
-  var _a, _b;
-  const errors = [];
-  if (!(e3.type in TECH_EFFECT_LABELS)) return [`${label3} : effet \xAB ${e3.type} \xBB inconnu.`];
-  if (e3.type === "resource_production" && (!e3.target || !refs.resources.has(e3.target))) errors.push(`${label3} : ressource vis\xE9e manquante ou inconnue.`);
-  if (e3.type === "hangar_capacity" && e3.target !== "attack" && e3.target !== "defense") errors.push(`${label3} : hangar vis\xE9 manquant (attaque ou d\xE9fense).`);
-  if (e3.type === "unlock_next_level" && e3.target && !refs.unitIds.has(e3.target)) errors.push(`${label3} : unit\xE9 \xAB ${e3.target} \xBB inexistante.`);
-  for (const id of (_a = e3.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
-  if (e3.value !== void 0) {
-    const max = (_b = EFFECT_MAX_PER_LEVEL[e3.type]) != null ? _b : 5;
-    if (!Number.isFinite(e3.value) || e3.value < 0 || e3.value > max) errors.push(`${label3} : valeur par niveau de \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB entre 0 et ${max}.`);
-  }
-  return errors;
-}
-
-// src/game/units.ts
-var KESH_HUNTER_UNIT = {
-  id: "traqueur_kesh",
-  name: "Traqueur Kesh",
-  image: "/assets/units/traqueur_kesh.webp",
-  maxLevel: 1,
-  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le L\xE9viathan, en attaque comme en d\xE9fense.",
-  cost: { scrap: 6e3, energy: 3e3 },
-  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
-  category: "attack",
-  unlockTech: "",
-  hangarSpace: 25,
-  blueprint: true
-};
-function ownedBlueprints(player) {
-  var _a, _b;
-  return ((_b = (_a = player.bounties) == null ? void 0 : _a.owned) == null ? void 0 : _b.includes("blueprint")) ? [KESH_HUNTER_UNIT.id] : [];
-}
-var KESH_PVE_BONUS = 0.5;
-var UNIT_LEVEL_BONUS_DEFAULT = 5;
-var DEFAULT_UNITS = [
-  {
-    id: "drone_recuperateur",
-    name: "Drone r\xE9cup\xE9rateur",
-    image: "/assets/units/drone_recuperateur.webp",
-    maxLevel: 10,
-    description: "Petit drone autonome con\xE7u pour r\xE9cup\xE9rer des ressources dispers\xE9es.",
-    cost: { scrap: 500, energy: 200 },
-    stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
-    category: "attack",
-    unlockTech: "tech9",
-    hangarSpace: 1
-  },
-  {
-    id: "sonde_espionnage",
-    name: "Sonde d'espionnage",
-    image: "/assets/units/sonde_espionnage.webp",
-    maxLevel: 10,
-    description: "Sonde furtive et tr\xE8s rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
-    cost: { scrap: 300, energy: 150 },
-    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
-    category: "attack",
-    unlockTech: "tech20",
-    hangarSpace: 1
-  },
-  {
-    id: "fregate",
-    name: "Fr\xE9gate",
-    image: "/assets/units/fregate.webp",
-    maxLevel: 10,
-    description: "Vaisseau polyvalent, \xE9quilibr\xE9 entre attaque et d\xE9fense.",
-    cost: { scrap: 1e3, energy: 500 },
-    stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
-    category: "attack",
-    unlockTech: "tech10",
-    hangarSpace: 1
-  },
-  {
-    id: "cargo",
-    name: "Cargo",
-    image: "/assets/units/cargo.webp",
-    maxLevel: 10,
-    description: "Transporteur massif con\xE7u pour d\xE9placer de grandes quantit\xE9s de ressources.",
-    cost: { scrap: 1200, energy: 300 },
-    stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
-    category: "attack",
-    unlockTech: "tech11",
-    hangarSpace: 1
-  },
-  {
-    id: "sentinelle",
-    name: "Sentinelle",
-    image: "/assets/units/sentinelle.webp",
-    maxLevel: 10,
-    description: "Unit\xE9 offensive sp\xE9cialis\xE9e dans la d\xE9tection et la protection.",
-    cost: { scrap: 800, energy: 400 },
-    stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
-    category: "attack",
-    unlockTech: "tech12",
-    hangarSpace: 1
-  },
-  {
-    id: "chasseur",
-    name: "Chasseur",
-    image: "/assets/units/chasseur.webp",
-    maxLevel: 10,
-    description: "Vaisseau rapide con\xE7u pour les attaques \xE9clairs.",
-    cost: { scrap: 1500, energy: 800 },
-    stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
-    category: "attack",
-    unlockTech: "tech13",
-    // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
-    hangarSpace: 2
-  },
-  {
-    id: "etoile_noire",
-    name: "\xC9toile Noire",
-    image: "/assets/units/etoile_noire.webp",
-    maxLevel: 10,
-    description: "Arme ultime. Capacit\xE9 de destruction massive.",
-    cost: { scrap: 5e4, energy: 3e4 },
-    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
-    category: "attack",
-    unlockTech: "tech19",
-    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
-    hangarSpace: 80,
-    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
-    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
-    levelBonus: 1700
-  },
-  // v3.6 : unités de fin de partie.
-  {
-    id: "croiseur_nova",
-    name: "Croiseur Nova",
-    image: "/assets/units/croiseur_nova.webp",
-    maxLevel: 10,
-    description: "Croiseur de ligne propuls\xE9 par un c\u0153ur d'antimati\xE8re. Assez rapide pour frapper, assez blind\xE9 pour encaisser.",
-    cost: { scrap: 15e3, energy: 9e3 },
-    stats: { attaque: 1500, defense: 1e3, vitesse: 6, cargo: 300 },
-    category: "attack",
-    unlockTech: "tech24",
-    hangarSpace: 20,
-    levelBonus: 250
-  },
-  {
-    id: "lance_gravitationnelle",
-    name: "Lance gravitationnelle",
-    image: "/assets/units/lance_gravitationnelle.webp",
-    maxLevel: 10,
-    description: "Projecteur orbital qui \xE9crase les coques ennemies sous un puits de gravit\xE9.",
-    cost: { scrap: 18e3, energy: 12e3 },
-    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech25",
-    // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
-    hangarSpace: 12,
-    levelBonus: 150
-  },
-  {
-    id: "roquette",
-    name: "Roquette",
-    image: "/assets/units/roquette.webp",
-    maxLevel: 10,
-    description: "Arme simple mais efficace pour saturer une zone.",
-    cost: { scrap: 200, energy: 100 },
-    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech14",
-    hangarSpace: 1
-  },
-  {
-    id: "canon_impulsion",
-    name: "Canon \xE0 impulsion",
-    image: "/assets/units/canon_impulsion.webp",
-    maxLevel: 10,
-    description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
-    // v5.4 : moins cher que la Batterie AA, qu'il ne bat pas (2000/1200 avant).
-    cost: { scrap: 1200, energy: 600 },
-    stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech15",
-    hangarSpace: 1
-  },
-  {
-    id: "canon_plasma",
-    name: "Canon Plasma",
-    image: "/assets/units/canon_plasma.webp",
-    maxLevel: 10,
-    description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
-    // v5.4 : entre le Canon à impulsion et la Batterie AA (2500/1500 avant).
-    cost: { scrap: 1500, energy: 750 },
-    stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech16",
-    hangarSpace: 1
-  },
-  {
-    id: "batterie_aa",
-    name: "Batterie Anti-A\xE9rienne",
-    image: "/assets/units/batterie_aa.webp",
-    maxLevel: 10,
-    description: "D\xE9fense sp\xE9cialis\xE9e contre les unit\xE9s rapides et a\xE9riennes.",
-    cost: { scrap: 1800, energy: 900 },
-    stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
-    category: "defense",
-    unlockTech: "tech17",
-    hangarSpace: 1
-  },
-  {
-    id: "intercepteur",
-    name: "Intercepteur",
-    image: "/assets/units/intercepteur.webp",
-    maxLevel: 10,
-    description: "Vaisseau ultra-rapide con\xE7u pour intercepter les cibles prioritaires.",
-    cost: { scrap: 2e3, energy: 1200 },
-    stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
-    category: "defense",
-    unlockTech: "tech18",
-    // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
-    hangarSpace: 2
-  },
-  KESH_HUNTER_UNIT
-];
-var UNITS = [];
-var UNIT_BASE_STATS = {};
-var UNIT_TO_TECH = {};
-var OFFENSIVE_UNITS = [];
-var DEFENSIVE_UNITS = [];
-function setUnits(defs) {
-  UNITS.splice(0, UNITS.length, ...defs);
-  for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
-  for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
-  BLUEPRINT_UNITS.clear();
-  for (const u of defs) {
-    if (u.blueprint) BLUEPRINT_UNITS.set(u.id, u.name);
-    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
-    if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
-  }
-  OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
-  DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
-}
-setUnits(DEFAULT_UNITS);
-function unitLevelBonus(u) {
-  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
-}
-function findUnit(id) {
-  return UNITS.find((u) => u.id === id);
-}
-function getUnitBuildTime(unit, techLevels2) {
-  const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
-  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
-  return techLevels2 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time"))) : base;
-}
-
-// src/game/format.ts
-function formatInt(value2) {
-  const n = Math.round(Number(value2) || 0);
-  const digits = String(Math.abs(n));
-  let out = "";
-  for (let i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
-    out += digits[i];
-  }
-  return n < 0 ? `-${out}` : out;
-}
-function describeGain(gain) {
-  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
-  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
-    var _a;
-    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
-  });
-  return parts.length ? parts.join(", ") : "rien";
-}
-
-// src/game/resources.ts
-var RESOURCE_LIST = [
-  { id: "scrap", name: "Ferraille", emoji: "\u{1F529}", rarity: "common" },
-  { id: "energy", name: "\xC9nergie instable", emoji: "\u26A1", rarity: "common" },
-  { id: "nano", name: "Nanocomposants", emoji: "\u{1F9EC}", rarity: "common" },
-  { id: "data", name: "Donn\xE9es anciennes", emoji: "\u{1F4E1}", rarity: "common" },
-  { id: "reinforcedSteel", name: "Acier renforc\xE9", emoji: "\u{1F6E0}\uFE0F", rarity: "rare" },
-  { id: "cyberModule", name: "Module cybern\xE9tique", emoji: "\u{1F9E9}", rarity: "rare" },
-  { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
-  { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
-];
-function getTradeRate(sellId, buyId) {
-  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
-  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
-  if (!sell || !buy) return 1;
-  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
-  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
-  return 1;
-}
-function canAffordAll(resources, costs) {
-  return Object.entries(costs).every(([res, val]) => {
-    var _a;
-    return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
-  });
-}
-
-// src/game/buildings.ts
-var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
-var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
-function tier2(common, commonMax, rare, rareMax) {
-  return {
-    fromLevel: 11,
-    baseCost: __spreadValues(__spreadValues({}, common), rare),
-    maxCost: __spreadValues(__spreadValues({}, commonMax), rareMax),
-    baseSeconds: 3 * 3600,
-    secondsPerLevel: 3600
-  };
-}
-var extractorUpgrade = (rare) => ({
-  baseCost: { scrap: 50, energy: 20 },
-  maxCost: { scrap: 25e5, energy: 18e5 },
-  costFromLevel: 1,
-  secondsPerLevel: 600,
-  tier2: tier2({ scrap: 5e6, energy: 3e6 }, { scrap: 5e8, energy: 3e8 }, { [rare]: 2e4 }, { [rare]: 2e6 })
-});
-var hangarUpgrade = (rares) => ({
-  baseCost: { scrap: 300, energy: 150 },
-  maxCost: { scrap: 5e6, energy: 75e5 },
-  costFromLevel: 1,
-  secondsPerLevel: 900,
-  tier2: tier2(
-    { scrap: 8e6, energy: 8e6 },
-    { scrap: 7e8, energy: 7e8 },
-    { [rares[0]]: 15e3, [rares[1]]: 15e3 },
-    { [rares[0]]: 15e5, [rares[1]]: 15e5 }
-  )
-});
-var DEFAULT_BUILDINGS = [
-  {
-    id: "extracteur_ferraille",
-    name: "Extracteur de ferraille",
-    description: "R\xE9cup\xE8re automatiquement de la ferraille dans les d\xE9bris environnants.",
-    image: "/assets/buildings/extracteur_ferraille.webp",
-    maxLevel: 20,
-    startsUnlocked: true,
-    upgrade: extractorUpgrade("reinforcedSteel"),
-    production: { resource: "scrap", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "reacteur_instable",
-    name: "R\xE9acteur instable",
-    description: "G\xE9n\xE8re de l'\xE9nergie brute, au prix d'une certaine instabilit\xE9.",
-    image: "/assets/buildings/reacteur_instable.webp",
-    maxLevel: 20,
-    unlockCost: { scrap: 500 },
-    upgrade: extractorUpgrade("cyberModule"),
-    production: { resource: "energy", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "extracteur_nanocomposants",
-    name: "Extracteur de nanocomposants",
-    description: "Synth\xE9tise des nanocomposants \xE0 partir de mati\xE8res recycl\xE9es.",
-    image: "/assets/buildings/extracteur_nanocomposants.webp",
-    maxLevel: 20,
-    unlockCost: { energy: 500 },
-    upgrade: extractorUpgrade("syntheticNanites"),
-    production: { resource: "nano", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "archives_fracturees",
-    name: "Archives fractur\xE9es",
-    description: "Fouille des donn\xE9es anciennes dans des serveurs endommag\xE9s.",
-    image: "/assets/buildings/archives_fracturees.webp",
-    maxLevel: 20,
-    unlockCost: { nano: 500 },
-    upgrade: extractorUpgrade("aiFragment"),
-    production: { resource: "data", perSecond: PRODUCTION_TABLE }
-  },
-  {
-    id: "atelier_reparation",
-    name: "Atelier de r\xE9paration",
-    description: "R\xE9pare une partie des unit\xE9s perdues apr\xE8s chaque combat.",
-    image: "/assets/buildings/atelier_reparation.webp",
-    maxLevel: 20,
-    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
-    upgrade: {
-      baseCost: { nano: 1e3, data: 1e3 },
-      maxCost: { nano: 1e7, data: 95e5 },
-      costFromLevel: 2,
-      secondsPerLevel: 1200,
-      tier2: tier2(
-        { nano: 1e7, data: 1e7 },
-        { nano: 8e8, data: 8e8 },
-        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
-        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
-      )
-    },
-    // 5 % par niveau jusqu'au niveau 10 (50 %), puis 2 % par niveau (70 % au niveau 20).
-    effect: { type: "repair", perLevel: 0.05, max: 0.7, bonusFromLevel: 11, bonusPerLevel: 0.02 }
-  },
-  {
-    id: "hangar_attaque",
-    name: "Hangar d'attaque",
-    description: "Augmente la capacit\xE9 de stockage des unit\xE9s offensives.",
-    image: "/assets/buildings/hangar_attaque.webp",
-    maxLevel: 20,
-    unlockedByTech: "tech6",
-    upgrade: hangarUpgrade(["reinforcedSteel", "cyberModule"]),
-    effect: { type: "hangar", category: "attack", perLevel: 2e3 }
-  },
-  {
-    id: "hangar_defense",
-    name: "Hangar de d\xE9fense",
-    description: "Augmente la capacit\xE9 de stockage des unit\xE9s d\xE9fensives.",
-    image: "/assets/buildings/hangar_defense.webp",
-    maxLevel: 20,
-    unlockedByTech: "tech6",
-    upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
-    effect: { type: "hangar", category: "defense", perLevel: 2e3 }
-  },
-  {
-    id: "entrepot",
-    name: "Entrep\xF4t",
-    description: "Stocke les ressources communes. Plein, la production s'arr\xEAte ; une partie du stock est \xE0 l'abri du pillage.",
-    image: "/assets/buildings/entrepot.webp",
-    maxLevel: 20,
-    startsUnlocked: true,
-    upgrade: {
-      baseCost: { scrap: 2e4, energy: 1e4 },
-      maxCost: { scrap: 2e7, energy: 1e7 },
-      costFromLevel: 2,
-      secondsPerLevel: 600,
-      tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
-    },
-    effect: { type: "storage", base: 2e6, growth: 1.6 }
-  },
-  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
-  {
-    id: "fonderie_quantique",
-    name: "Fonderie quantique",
-    description: "Forge de l'acier renforc\xE9 \xE0 partir de mati\xE8re stabilis\xE9e \xE0 l'\xE9chelle quantique : une production continue de ressource rare.",
-    image: "/assets/buildings/fonderie_quantique.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech21",
-    upgrade: { baseCost: { scrap: 2e7, energy: 1e7, cyberModule: 2e4 }, maxCost: { scrap: 15e8, energy: 8e8, cyberModule: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION }
-  },
-  {
-    id: "synthetiseur_neuronal",
-    name: "Synth\xE9tiseur neuronal",
-    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
-    image: "/assets/buildings/synthetiseur_neuronal.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech22",
-    upgrade: { baseCost: { data: 2e7, nano: 1e7, syntheticNanites: 2e4 }, maxCost: { data: 15e8, nano: 8e8, syntheticNanites: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION }
-  },
-  {
-    id: "generateur_bouclier",
-    name: "G\xE9n\xE9rateur de bouclier plan\xE9taire",
-    description: "Un d\xF4me d'\xE9nergie hexagonal renforce le bouclier de la base au-del\xE0 de ce que permettent les hangars.",
-    image: "/assets/buildings/generateur_bouclier.webp",
-    maxLevel: 10,
-    endgame: true,
-    unlockedByTech: "tech23",
-    upgrade: { baseCost: { energy: 3e7, scrap: 2e7, reinforcedSteel: 2e4 }, maxCost: { energy: 2e9, scrap: 13e8, reinforcedSteel: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
-    effect: { type: "shield", perLevel: 5e-3, max: 0.05 }
-  }
-];
-var SYNTH_BUILDING_ID = "labo_synthese";
-var SYNTH_BUILDING = {
-  id: SYNTH_BUILDING_ID,
-  name: "Labo de synth\xE8se",
-  description: "Des cuves bouillonnantes o\xF9 m\xFBrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
-  image: "/assets/buildings/labo_synthese.webp",
-  maxLevel: 10,
-  endgame: true,
-  unlockCost: { scrap: 15e5, energy: 8e5, data: 3e5 },
-  upgrade: {
-    baseCost: { scrap: 4e5, energy: 25e4, data: 1e5 },
-    maxCost: { scrap: 15e7, energy: 9e7, data: 4e7 },
-    costFromLevel: 2,
-    secondsPerLevel: 5400
-  }
-};
-DEFAULT_BUILDINGS.push(SYNTH_BUILDING);
-function withFixedBuildings(defs) {
-  return defs.some((b) => b.id === SYNTH_BUILDING_ID) ? defs : [...defs, SYNTH_BUILDING];
-}
-var BUILDINGS = [];
-var LOCKABLE_BUILDINGS = [];
-var BUILDING_UNLOCK_COST = {};
-var PRODUCTION_RESOURCE_BY_BUILDING = {};
-function setBuildings(defs) {
-  var _a;
-  BUILDINGS.splice(0, BUILDINGS.length, ...defs);
-  LOCKABLE_BUILDINGS.splice(
-    0,
-    LOCKABLE_BUILDINGS.length,
-    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id)
-  );
-  for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
-  for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
-  for (const b of defs) {
-    const entries = Object.entries((_a = b.unlockCost) != null ? _a : {}).filter(([, v]) => (v != null ? v : 0) > 0);
-    const items = entries.map(([resource, amount3]) => {
-      var _a2, _b;
-      return { resource, amount: amount3, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
-    });
-    if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
-    else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
-    if (b.production) PRODUCTION_RESOURCE_BY_BUILDING[b.id] = b.production.resource;
-  }
-}
-setBuildings(DEFAULT_BUILDINGS);
-function findBuilding(id) {
-  return BUILDINGS.find((b) => b.id === id);
-}
-function productionPerSecond(buildingId, level3) {
-  var _a, _b, _c, _d;
-  if (level3 <= 0) return 0;
-  const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
-  return (_d = table[Math.min(level3, table.length) - 1]) != null ? _d : 0;
-}
-function geometricCost(baseCost, maxCost, fromLevel, toLevel, level3) {
-  var _a;
-  const steps = Math.max(1, toLevel - fromLevel);
-  const cost = {};
-  for (const [res, base] of Object.entries(baseCost)) {
-    const target = (_a = maxCost[res]) != null ? _a : base;
-    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
-    cost[res] = Math.floor(base * Math.pow(rate, level3 - fromLevel));
-  }
-  return cost;
-}
-function tierFor(building, level3) {
-  const t2 = building.upgrade.tier2;
-  return t2 && level3 >= t2.fromLevel ? t2 : null;
-}
-function getBuildingUpgradeCost(building, nextLevel) {
-  const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
-  const t2 = tierFor(building, nextLevel);
-  if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
-  const lastLevel = tier22 ? Math.min(building.maxLevel, tier22.fromLevel - 1) : building.maxLevel;
-  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
-}
-function applyBuildingDiscount(cost, discount) {
-  if (!discount) return cost;
-  const out = __spreadValues({}, cost);
-  for (const key of Object.keys(out)) {
-    const val = out[key];
-    if (typeof val === "number") {
-      out[key] = Math.max(0, Math.floor(val * (1 - discount)));
-    }
-  }
-  return out;
-}
-function getBuildingUpgradeTime(building, nextLevel) {
-  const t2 = tierFor(building, nextLevel);
-  if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
-  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
-}
-function getRepairPercent(buildings) {
-  var _a;
-  let pct5 = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    pct5 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
-  }
-  return pct5;
-}
-function repairPercentAt(effect, level3) {
-  var _a;
-  const from = effect.bonusFromLevel;
-  const base = from ? Math.min(level3, from - 1) * effect.perLevel : level3 * effect.perLevel;
-  const bonus = from ? Math.max(0, level3 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
-  return Math.max(0, Math.min(effect.max, base + bonus));
-}
-function getStorageCapacity(buildings, techLevels2) {
-  var _a;
-  let capacity = 0;
-  let hasStorage = false;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "storage") continue;
-    hasStorage = true;
-    capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
-  }
-  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
-}
-function storageCapacityAt(effect, level3) {
-  return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
-}
-function getUnitCapacity(buildings, category, techLevels2) {
-  var _a, _b, _c;
-  let capacity = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
-    capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
-  }
-  const bonus = techLevels2 ? techBonus(techLevels2, "hangar_capacity", category) : 0;
-  return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
-}
-function effectiveBuildingLevel(buildings, id) {
-  var _a;
-  const state = buildings[id];
-  return (state == null ? void 0 : state.unlocked) ? (_a = state.level) != null ? _a : 0 : 0;
-}
-function defaultBuildings() {
-  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
-}
-function withMissingBuildings(buildings, resources) {
-  var _a;
-  const out = __spreadValues({}, buildings != null ? buildings : {});
-  for (const b of BUILDINGS) {
-    if (out[b.id]) continue;
-    let level3 = 1;
-    if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
-      const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
-        var _a2;
-        return (_a2 = resources[r.id]) != null ? _a2 : 0;
-      }));
-      while (level3 < b.maxLevel && storageCapacityAt(b.effect, level3) < biggest) level3++;
-    }
-    out[b.id] = { level: level3, unlocked: !!b.startsUnlocked };
-  }
-  return out;
-}
-
-// src/game/combat.ts
-var COMBAT_RULES = {
-  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
-  lootPercent: 0.08,
-  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
-  lootPercentCommon: 0.1,
-  /** Bonus de puissance du défenseur, qui se bat chez lui. */
-  homeDefenseBonus: 0.15,
-  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
-  shieldPerLevel: 75e-4,
-  /** …plafonnée à cette valeur. */
-  shieldMax: 0.15,
-  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
-   *  puissance, et subissent la même part des pertes. Réglé pour viser
-   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
-  homeFleetDefenseFactor: 0.1,
-  /** Part des défenses détruites reconstruites gratuitement après le combat. */
-  defenseRebuildPct: 0.6,
-  /* v3.0 — formations d'attaque (choisies au lancement). */
-  /** Assaut : attaque +10 %, pertes subies +15 %. */
-  assaultAttack: 0.1,
-  assaultLosses: 0.15,
-  /** Prudente : attaque −10 %, pertes subies −25 %. */
-  cautiousAttack: -0.1,
-  cautiousLosses: -0.25,
-  /** Raid : attaque −15 %, cargaison +30 %. */
-  raidAttack: -0.15,
-  raidCargo: 0.3,
-  /* v3.0 — postures de la base (défenseur). */
-  /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
-  bunkerDefense: 0.08,
-  /** Riposte : vaisseaux à quai engagés à 25 %. */
-  riposteHomeFleet: 0.25,
-  /** Délai entre deux changements de posture (h). */
-  postureCooldownHours: 1
-};
-function getShieldPercent(buildings, allianceBonus = 0) {
-  var _a, _b;
-  let levels = 0;
-  let extra = 0;
-  for (const b of BUILDINGS) {
-    if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
-    if (((_b = b.effect) == null ? void 0 : _b.type) === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
-  }
-  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
-}
-var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var COMMON_RESOURCES = ["scrap", "energy", "nano", "data"];
-function fleetCargoCapacity(units, fleet, techLevels2) {
-  var _a, _b, _c;
-  let total2 = 0;
-  for (const [id, qty] of Object.entries(fleet)) {
-    const def3 = findUnit(id);
-    const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
-    if (!def3 || qty <= 0 || level3 <= 0) continue;
-    total2 += ((_c = def3.stats.cargo) != null ? _c : 0) * level3 * qty;
-  }
-  return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
-}
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-function unitStat(units, techLevels2, unitId, stat) {
-  var _a, _b, _c, _d;
-  const def3 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
-  const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
-  if (level3 <= 0) return 0;
-  let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
-  return value2;
-}
-function computeFleetPower(units, techLevels2, fleet, stats) {
-  let total2 = 0;
-  for (const id in fleet) {
-    const qty = fleet[id];
-    if (qty <= 0) continue;
-    let value2 = 0;
-    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
-    total2 += value2 * qty;
-  }
-  return total2;
-}
-function pveAttackFactor(units, techLevels2, fleet) {
-  var _a;
-  const hunters = (_a = fleet[KESH_HUNTER_UNIT.id]) != null ? _a : 0;
-  if (!(hunters > 0)) return 1;
-  const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
-  if (!(all > 0)) return 1;
-  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
-}
-function pveHomeDefenseFactor(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
-  var _a, _b;
-  const hunters = (_b = (_a = units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _a.count) != null ? _b : 0;
-  if (!(hunters > 0)) return 1;
-  const base = homeDefensePower(units, techLevels2, homeFleetFactor, defenseFactor);
-  if (!(base > 0)) return 1;
-  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
-  return 1 + extra / base;
-}
-function computeFullPower(units, techLevels2, idList, stats) {
-  let total2 = 0;
-  idList.forEach((id) => {
-    var _a, _b;
-    const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
-    let value2 = 0;
-    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
-    total2 += value2 * count2;
-  });
-  return total2;
-}
-function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
-  return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
-}
-function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
-  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
-  const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
-  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
-  const garrisons = (_d = params.garrisons) != null ? _d : [];
-  const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
-  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
-  const defenderPower = ((_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower) * Math.max(0, (_i = params.defenderPowerFactor) != null ? _i : 1);
-  const totalPower = attackerPower + defenderPower;
-  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
-  let outcome;
-  if (attackerPower > defenderPower) outcome = "attacker_win";
-  else if (attackerPower < defenderPower) outcome = "defender_win";
-  else outcome = "draw";
-  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
-  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
-  let attackerLossPct, defenderLossPct;
-  if (outcome === "attacker_win") {
-    attackerLossPct = winnerLossPct;
-    defenderLossPct = loserLossPct;
-  } else if (outcome === "defender_win") {
-    attackerLossPct = loserLossPct;
-    defenderLossPct = winnerLossPct;
-  } else {
-    attackerLossPct = 0.3;
-    defenderLossPct = 0.3;
-  }
-  if (params.attackerLossFactor !== void 0) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
-  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
-  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
-  const attackerLosses = {};
-  const attackerRecovered = {};
-  for (const unitId in fleet) {
-    const sent = fleet[unitId];
-    const rawLost = Math.floor(sent * attackerLossPct);
-    const recovered = Math.floor(rawLost * attackerRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      attackerLosses[unitId] = effectiveLost;
-      attackerRecovered[unitId] = recovered;
-    }
-  }
-  const defenderLosses = {};
-  const defenderRecovered = {};
-  const defenderRebuilt = {};
-  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
-    var _a2, _b2;
-    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
-    const isDefense = DEFENSIVE_UNITS.includes(unitId);
-    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
-    if (rawLost <= 0) return;
-    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
-    defenderLosses[unitId] = rawLost - recovered;
-    defenderRecovered[unitId] = recovered;
-    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
-  });
-  const garrisonLosses = garrisons.map((g) => {
-    const lost = {};
-    for (const [unitId, qty] of Object.entries(g.fleet)) {
-      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
-      if (n > 0) lost[unitId] = Math.min(qty, n);
-    }
-    return lost;
-  });
-  const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_k = params.cargoFactor) != null ? _k : 1));
-  let loot = null;
-  if (outcome === "attacker_win") {
-    const wanted = {};
-    let total2 = 0;
-    for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
-      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
-      wanted[res] = amount3;
-      total2 += amount3;
-    }
-    const ratio = total2 > cargoCapacity ? cargoCapacity / total2 : 1;
-    loot = {};
-    const entries = Object.entries(wanted);
-    for (const [res, amount3] of entries) loot[res] = Math.floor(amount3 * ratio);
-    let left = Math.min(total2, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
-      var _a2;
-      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
-    }, 0);
-    const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
-    for (const { res } of byRemainder) {
-      if (left <= 0) break;
-      if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
-        loot[res] = ((_p = loot[res]) != null ? _p : 0) + 1;
-        left--;
-      }
-    }
-  }
-  return {
-    outcome,
-    attackerPower,
-    defenderPower,
-    attackerLossPercent: attackerLossPct,
-    defenderLossPercent: defenderLossPct,
-    attackerLosses,
-    attackerRecovered,
-    defenderLosses,
-    defenderRecovered,
-    loot,
-    cargoCapacity,
-    shieldPercent: shield,
-    defenderRebuilt,
-    garrisonLosses,
-    garrisonPower
-  };
-}
-
-// src/game/story.ts
-var STORY_SPEAKERS = {
-  vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
-  varan: { name: "Capitaine Orsk Varan", role: "Confr\xE9rie du Vide", image: "/assets/story/varan.webp", color: "#ff7a45" },
-  // v4.3 : voix des Chroniques mensuelles.
-  kor: { name: "Madame Vashti Kor", role: "Cartel N\xE9on", image: "/assets/story/cartel.webp", color: "#ff5fd2" },
-  ilyon: { name: "Cantor Ilyon", role: "D\xE9serteur du Ch\u0153ur", image: "/assets/warlords/ilyon.webp", color: "#b18cff" },
-  nerea: { name: "S\u0153ur N\xE9r\xE9a des \xC9chos", role: "Marchande", image: "/assets/warlords/nerea.webp", color: "#d6b4ff" },
-  brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
-  lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
-  vesper: { name: "L'Archonte Vesper", role: "Le Ch\u0153ur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
-  // v4.7 : voix des Chroniques de janvier à mars 2027.
-  kragmor: { name: "Kragmor Corne-Fendue", role: "Mercenaire Gravhorn", image: "/assets/warlords/kragmor.webp", color: "#7fd1ff" },
-  maru: { name: "Le Proph\xE8te Maru", role: "Culte du L\xE9viathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" }
-};
-var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
-var TUTORIAL_TITLE = "Recrue de Vashka";
-
 // src/game/errors.ts
 var GameActionError = class extends Error {
 };
-
-// src/game/events.ts
-var EVENT_RULES = {
-  rotationEnabled: true,
-  bossMonthly: true,
-  bossWeekend: "first",
-  bossDates: [],
-  startHour: 18,
-  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
-  types: [
-    {
-      id: "tempete_ferraille",
-      name: "Temp\xEAte de ferraille",
-      emoji: "\u{1F32A}\uFE0F",
-      description: "+50 % de production de ferraille et de nanocomposants.",
-      effects: { production: { scrap: 1.5, nano: 1.5 } }
-    },
-    {
-      id: "chantiers_acceleres",
-      name: "Chantiers acc\xE9l\xE9r\xE9s",
-      emoji: "\u{1F3D7}\uFE0F",
-      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
-      effects: { buildTime: 0.75 }
-    },
-    {
-      id: "recherche_eclair",
-      name: "Recherche \xE9clair",
-      emoji: "\u{1F52C}",
-      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { researchTime: 0.75 }
-    },
-    {
-      id: "chasse_tresor",
-      name: "Chasse au tr\xE9sor",
-      emoji: "\u{1F48E}",
-      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { missionRewards: 1.5 }
-    },
-    {
-      id: "guerre_ouverte",
-      name: "Guerre ouverte",
-      emoji: "\u2694\uFE0F",
-      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
-      effects: { loot: 1.5, debrisPercent: 0.5 }
-    }
-  ],
-  scheduled: []
-};
-var HOUR = 36e5;
-var DAY = 24 * HOUR;
-var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
-function lastSundayAt1Utc(year, month2) {
-  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
-  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
-  return d.getTime();
-}
-function parisOffsetMs(utcMs) {
-  const year = new Date(utcMs).getUTCFullYear();
-  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
-  return (summer ? 2 : 1) * HOUR;
-}
-function parisLocalToUtc(localMs) {
-  return localMs - parisOffsetMs(localMs - 2 * HOUR);
-}
-function findEventType(id) {
-  return EVENT_RULES.types.find((t) => t.id === id);
-}
-function weekendWindow(now, weeksAhead = 0) {
-  const local = now + parisOffsetMs(now);
-  const localMidnight = Math.floor(local / DAY) * DAY;
-  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
-  const friday = localMidnight - daysSinceFriday * DAY + weeksAhead * 7 * DAY;
-  return {
-    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
-    endMs: parisLocalToUtc(friday + 3 * DAY),
-    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY)),
-    firstOfMonth: new Date(friday).getUTCDate() <= 7,
-    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
-    lastOfMonth: new Date(friday + 7 * DAY).getUTCMonth() !== new Date(friday).getUTCMonth(),
-    fridayMs: parisLocalToUtc(friday)
-  };
-}
-var BOSS_WEEKENDS = [
-  { id: "first", label: "Premier week-end du mois" },
-  { id: "second", label: "Deuxi\xE8me week-end du mois" },
-  { id: "third", label: "Troisi\xE8me week-end du mois" },
-  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
-  { id: "last", label: "Dernier week-end du mois" }
-];
-var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
-var MAX_BOSS_DATES = 24;
-function onWeekend(w, which) {
-  if (which === "last") return w.lastOfMonth;
-  return w.nth === NTH[which != null ? which : "first"];
-}
-function bossWindows(now, s, count2 = 1) {
-  var _a;
-  const out = [];
-  for (let i = -1; s.enabled && i < 60 && out.length < count2; i++) {
-    const w = weekendWindow(now, i);
-    if (!onWeekend(w, s.weekend)) continue;
-    const startMs = w.fridayMs + s.startHour * HOUR;
-    const endMs = startMs + s.durationHours * HOUR;
-    if (endMs > now) out.push({ startMs, endMs });
-  }
-  for (const d of (_a = s.dates) != null ? _a : []) {
-    const endMs = d.startMs + d.durationHours * HOUR;
-    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
-  }
-  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
-}
-var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-function hourLabel(h) {
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
-  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
-}
-function bossEndLabel(s) {
-  const end = s.startHour + s.durationHours;
-  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
-}
-var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
-function parisWhenLabel(ms) {
-  const local = new Date(ms + parisOffsetMs(ms));
-  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
-}
-function parisRelativeLabel(ms, now) {
-  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY);
-  const local = new Date(ms + parisOffsetMs(ms));
-  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
-  const diff = day(ms) - day(now);
-  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
-  if (diff === 1) return `demain \xE0 ${at}`;
-  return parisWhenLabel(ms);
-}
-var BOSS_REMINDERS = {
-  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
-  eveHours: 24,
-  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
-  endingHours: 6
-};
-function eveReminderDue(next, lastAnnounced, now) {
-  if (!next) return false;
-  const left = next.startMs - now;
-  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
-}
-function validateBossSchedule(label3, s) {
-  var _a;
-  const errors = [];
-  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
-  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
-  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
-  const dates = (_a = s.dates) != null ? _a : [];
-  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
-  dates.forEach((d, i) => {
-    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
-    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
-  });
-  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
-  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
-  return errors;
-}
-function rotationEvent(window) {
-  var _a;
-  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
-  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
-  if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
-  if (((_a = EVENT_RULES.bossDates) != null ? _a : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
-  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
-  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
-}
-function scheduledEvents() {
-  var _a;
-  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
-    const type = findEventType(s.type);
-    return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
-  }).filter((e3) => e3 !== null);
-}
-function eventAt(now) {
-  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
-  if (scheduled) return scheduled;
-  const rotation = rotationEvent(weekendWindow(now));
-  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
-}
-function eventBoundaries(from, to) {
-  const points = /* @__PURE__ */ new Set();
-  for (const e3 of scheduledEvents()) {
-    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
-    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
-  }
-  if (EVENT_RULES.rotationEnabled) {
-    for (let w = 0; ; w++) {
-      const win = weekendWindow(from, w);
-      if (win.startMs >= to) break;
-      if (win.startMs > from) points.add(win.startMs);
-      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
-      if (w > 60) break;
-    }
-  }
-  return [...points].sort((a, b) => a - b);
-}
-function productionMultipliers(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
-}
-function buildTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
-}
-function researchTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
-}
-function missionRewardFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
-}
-function lootFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
-}
-function eventDebrisPercent(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
-}
 
 // src/game/ranks.ts
 var rank = (id, name, family, xp) => ({ id, name, family, xp, image: `/assets/ranks/${id}.webp` });
@@ -1888,656 +550,10 @@ function validateRanks(defs) {
   return errors;
 }
 
-// src/game/onboarding.ts
-var ONBOARDING_RANK = "fer2";
-var ONBOARDING_TITLE = "Recrue";
-var level = (p, id) => {
-  var _a, _b, _c;
-  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
-};
-var count = (p, id) => {
-  var _a, _b, _c;
-  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
-};
-function onboardingRankXp() {
-  var _a, _b;
-  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
-}
-var ONBOARDING_STEPS = [
-  {
-    id: "scrap3",
-    label: "Extracteur de ferraille au niveau 3",
-    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
-    to: "/game/batiments",
-    reward: { scrap: 1e3, energy: 500 },
-    done: (p) => level(p, "extracteur_ferraille") >= 3
-  },
-  {
-    id: "reactor3",
-    label: "R\xE9acteur au niveau 3",
-    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
-    to: "/game/batiments",
-    reward: { scrap: 1500, energy: 1e3 },
-    done: (p) => level(p, "reacteur_instable") >= 3
-  },
-  {
-    id: "research",
-    label: "Lancer une premi\xE8re recherche",
-    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
-    to: "/game/labo",
-    reward: { nano: 2e3, data: 2e3 },
-    done: (p) => {
-      var _a;
-      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
-    }
-  },
-  {
-    id: "drones5",
-    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
-    hint: "Les drones ouvrent les premi\xE8res missions.",
-    to: "/game/unites",
-    reward: { scrap: 3e3 },
-    done: (p) => count(p, "drone_recuperateur") >= 5
-  },
-  {
-    id: "mission",
-    label: "Terminer une mission",
-    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
-    to: "/game/missions",
-    reward: { scrap: 5e3, energy: 2e3 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "storage2",
-    label: "Entrep\xF4t au niveau 2",
-    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
-    to: "/game/batiments",
-    reward: { scrap: 5e3, energy: 5e3 },
-    done: (p) => level(p, "entrepot") >= 2
-  },
-  {
-    id: "rockets10",
-    label: "Installer 10 roquettes",
-    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
-    to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
-    done: (p) => count(p, "roquette") >= 10
-  },
-  {
-    id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
-    to: "/game/galaxie",
-    reward: { cyberModule: 30 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "alliance",
-    label: "Rejoindre ou cr\xE9er une alliance",
-    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
-    to: "/game/alliance",
-    reward: { scrap: 1e4, energy: 1e4 },
-    done: (p) => !!p.allianceId
-  },
-  {
-    id: "rank",
-    label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
-    title: ONBOARDING_TITLE,
-    done: (p) => {
-      var _a;
-      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
-    }
-  }
-];
-function onboardingState(p) {
-  const raw = p.onboarding;
-  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
-  return __spreadValues(__spreadValues(__spreadValues({
-    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
-    hidden: (raw == null ? void 0 : raw.hidden) === true
-  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
-}
-function onboardingEligible(p) {
-  var _a;
-  const st = onboardingState(p);
-  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
-  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
-}
-function onboardingProgress(p) {
-  const st = onboardingState(p);
-  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
-}
-function claimOnboarding(player, stepId) {
-  var _a, _b, _c, _d, _e, _f;
-  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
-  const st = onboardingState(player);
-  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
-    if (!player.activeTitle) player.activeTitle = step.title;
-  }
-  const claimed = [...st.claimed, step.id];
-  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
-  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
-  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return step.reward;
-}
-function setOnboardingHidden(player, hidden) {
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
-}
-
-// src/game/stats.ts
-function playerStats(player) {
-  var _a;
-  return (_a = player.stats) != null ? _a : {};
-}
-function bumpStat(player, key, n = 1) {
-  var _a, _b, _c;
-  if (!(n > 0)) return;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
-}
-function setStat(player, key, value2) {
-  var _a;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
-}
-function recordThreat(player, factionId) {
-  var _a, _b, _c;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
-  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
-  player.stats = s;
-}
-function recordMission(player, day) {
-  var _a, _b, _c, _d;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
-  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
-  s.missionDay = day;
-  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
-  player.stats = s;
-}
-function parisHour(now) {
-  const d = new Date(now);
-  const y = d.getUTCFullYear();
-  const lastSunday = (month2) => {
-    const last = new Date(Date.UTC(y, month2 + 1, 0));
-    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
-  };
-  const summer = now >= lastSunday(2) && now < lastSunday(9);
-  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
-}
-
-// src/game/retention.ts
-var DAY2 = 24 * 36e5;
-var ACTIVITY_DAYS_KEPT = 60;
-var PRESENCE_WRITE_MS = 2 * 6e4;
-var ONLINE_MS = 5 * 6e4;
-function lastActivity(p) {
-  var _a, _b;
-  if (p.lastActiveMs) return p.lastActiveMs;
-  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
-  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
-  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
-}
-function parisDay(now) {
-  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
-  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
-}
-function dayDiff(a, b) {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY2);
-}
-function recordActiveDay(player, now) {
-  var _a, _b, _c;
-  const day = parisDay(now);
-  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
-  if (days[days.length - 1] === day) return;
-  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
-}
-var pct = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
-function computeRetention(players, now) {
-  var _a, _b, _c;
-  const today = parisDay(now);
-  const lastSeen = (p) => Math.min(now, lastActivity(p));
-  const days = (p) => {
-    var _a2, _b2;
-    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
-  };
-  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
-  const allDays = players.flatMap((p) => {
-    var _a2, _b2;
-    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
-  }).sort();
-  const trackingSince = (_a = allDays[0]) != null ? _a : null;
-  const daily = Array.from({ length: 30 }, (_, i) => {
-    const day = parisDay(now - (29 - i) * DAY2);
-    return {
-      day,
-      active: players.filter((p) => days(p).has(day)).length,
-      signups: players.filter((p) => signupDay(p) === day).length
-    };
-  });
-  const active = {
-    d1: players.filter((p) => now - lastSeen(p) < DAY2).length,
-    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY2).length,
-    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY2).length,
-    total: players.length
-  };
-  const cohorts = Array.from({ length: 8 }, (_, i) => {
-    const end = now - i * 7 * DAY2;
-    const start = end - 7 * DAY2;
-    const members = players.filter((p) => {
-      var _a2, _b2;
-      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
-    });
-    const tracked = trackingSince ? members.filter((p) => {
-      var _a2;
-      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
-    }) : [];
-    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
-    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
-    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
-    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
-    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
-    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
-    return {
-      week: parisDay(start),
-      signups: members.length,
-      d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
-      d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
-      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
-      activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY2).length, members.length)
-    };
-  }).reverse();
-  const recent = players.filter((p) => {
-    var _a2;
-    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY2;
-  });
-  const funnel = ONBOARDING_STEPS.map((step) => {
-    const reached = recent.filter((p) => {
-      try {
-        return step.done(p);
-      } catch (e3) {
-        return false;
-      }
-    }).length;
-    return { id: step.id, label: step.label, reached, pct: pct(reached, recent.length) };
-  });
-  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY2);
-  const stopAt = /* @__PURE__ */ new Map();
-  for (const p of stalled) {
-    const step = ONBOARDING_STEPS.find((s) => {
-      try {
-        return !s.done(p);
-      } catch (e3) {
-        return true;
-      }
-    });
-    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
-    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
-  }
-  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
-    var _a2, _b2;
-    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
-  }).sort((a, b) => b.count - a.count);
-  const ageDays = (p) => {
-    var _a2;
-    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY2);
-  };
-  const lastDayAfterSignup = (p) => {
-    var _a2;
-    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY2);
-  };
-  const survival = [1, 3, 7, 14, 30].map((day) => {
-    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
-    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
-    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
-  });
-  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY2);
-  const buckets = [
-    ["Le jour m\xEAme", (d) => d < 1],
-    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
-    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
-    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
-    ["Apr\xE8s un mois", (d) => d >= 30]
-  ];
-  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
-}
-
-// src/game/casino.ts
-var CASINO_KEY = "casino";
-var DEFAULT_CASINO = {
-  mode: "scheduled",
-  weekends: true,
-  windows: [],
-  dailyTokens: 1,
-  maxTokens: 20,
-  jackpotShare: 0.5,
-  jackpotFallbackHours: 12,
-  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
-  hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
-  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" }
-};
-var OUTCOME_POINTS = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
-var OUTCOME_LABELS = {
-  jackpot: "GROS LOT 7-7-7",
-  star3: "Trois \xE9toiles",
-  planet3: "Trois plan\xE8tes",
-  bar3: "Triple BAR",
-  cherry3: "Trois cerises",
-  seven2: "Deux 7",
-  cherry: "Une cerise : jeton rendu",
-  lose: "Perdu"
-};
-var num = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
-};
-function normalizeCasinoSettings(raw) {
-  var _a, _b;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const d = DEFAULT_CASINO;
-  const odds = {};
-  for (const k of Object.keys(d.odds)) odds[k] = num((_a = r.odds) == null ? void 0 : _a[k], d.odds[k], 0, 1);
-  const hours2 = {};
-  for (const k of Object.keys(d.hours)) hours2[k] = num((_b = r.hours) == null ? void 0 : _b[k], d.hours[k], 0, 168);
-  const legacy = r.enabled;
-  const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
-  const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
-  return {
-    mode,
-    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
-    windows,
-    dailyTokens: Math.floor(num(r.dailyTokens, d.dailyTokens, 0, 10)),
-    maxTokens: Math.floor(num(r.maxTokens, d.maxTokens, 1, 1e3)),
-    jackpotShare: num(r.jackpotShare, d.jackpotShare, 0, 1),
-    jackpotFallbackHours: num(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
-    odds,
-    hours: hours2,
-    rewards: normalizeRewards(r.rewards)
-  };
-}
-function normalizeRewards(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const d = DEFAULT_CASINO.rewards;
-  const list = (v, def3) => Array.isArray(v) ? v.slice(0, 10).map((x) => Math.floor(num(x, 0, 0, 100))) : [...def3];
-  const label3 = (v, def3) => typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : def3;
-  return {
-    challenge: list(r.challenge, d.challenge),
-    bossWin: Math.floor(num(r.bossWin, d.bossWin, 0, 100)),
-    bossTop: Math.floor(num(r.bossTop, d.bossTop, 0, 100)),
-    bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
-    tournament: list(r.tournament, d.tournament),
-    tournamentTitle: label3(r.tournamentTitle, d.tournamentTitle),
-    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle)
-  };
-}
-function cleanTournament(raw) {
-  var _a, _b;
-  if (!raw || typeof raw !== "object") return null;
-  const t = raw;
-  if (typeof t.id !== "string" || !t.id) return null;
-  const scores = {};
-  for (const [uid, v] of Object.entries((_a = t.scores) != null ? _a : {})) {
-    const x = v != null ? v : {};
-    scores[uid] = { pseudo: String((_b = x.pseudo) != null ? _b : ""), points: Math.max(0, Math.floor(Number(x.points) || 0)), spins: Math.max(0, Math.floor(Number(x.spins) || 0)) };
-  }
-  return { id: t.id, startMs: Number(t.startMs) || 0, scores };
-}
-function cleanResult(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  if (typeof r.id !== "string") return null;
-  const podium = (Array.isArray(r.podium) ? r.podium : []).slice(0, 10).map((p) => {
-    var _a, _b;
-    return { uid: String((_a = p == null ? void 0 : p.uid) != null ? _a : ""), pseudo: String((_b = p == null ? void 0 : p.pseudo) != null ? _b : ""), points: Math.floor(Number(p == null ? void 0 : p.points) || 0), tokens: Math.floor(Number(p == null ? void 0 : p.tokens) || 0) };
-  });
-  return { id: r.id, endedAtMs: Number(r.endedAtMs) || 0, participants: Math.floor(Number(r.participants) || 0), podium, titleUid: typeof r.titleUid === "string" ? r.titleUid : "" };
-}
-function cleanWin(w) {
-  var _a, _b;
-  if (!w || typeof w !== "object") return null;
-  const x = w;
-  if (typeof x.uid !== "string" || !(String(x.outcome) in OUTCOME_LABELS)) return null;
-  const resources = {};
-  for (const [k, v] of Object.entries((_a = x.resources) != null ? _a : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
-  return __spreadValues({ uid: x.uid, pseudo: String((_b = x.pseudo) != null ? _b : ""), atMs: Number(x.atMs) || 0, outcome: x.outcome, resources }, x.token ? { token: true } : {});
-}
-function normalizeCasino(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const list = (v, max) => (Array.isArray(v) ? v : []).map(cleanWin).filter((w) => !!w).slice(0, max);
-  return {
-    settings: normalizeCasinoSettings(r.settings),
-    recent: list(r.recent, 40),
-    jackpots: list(r.jackpots, 30),
-    totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
-    announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
-    tournament: cleanTournament(r.tournament),
-    lastTournament: cleanResult(r.lastTournament),
-    updatedAtMs: Number(r.updatedAtMs) || 0
-  };
-}
-function validateCasinoSettings(s) {
-  const errors = [];
-  const total2 = Object.values(s.odds).reduce((a, b) => a + b, 0);
-  if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
-  if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
-  if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
-  if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un cr\xE9neau.");
-  if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place r\xE9compens\xE9e.");
-  return errors;
-}
-var DAY3 = 864e5;
-function parisWeekend(now) {
-  const d = (/* @__PURE__ */ new Date(`${parisDay(now)}T12:00:00Z`)).getUTCDay();
-  return d === 0 || d === 6;
-}
-function casinoOpeningId(s, now) {
-  if (s.mode === "open") return "open";
-  if (s.mode === "closed") return null;
-  const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
-  if (w) return `w-${w.startMs}`;
-  if (s.weekends && parisWeekend(now)) {
-    const day = parisDay(now);
-    const sat = (/* @__PURE__ */ new Date(`${day}T12:00:00Z`)).getUTCDay() === 6 ? day : parisDay(now - DAY3);
-    return `we-${sat}`;
-  }
-  return null;
-}
-function casinoOpen(s, now) {
-  return casinoOpeningId(s, now) !== null;
-}
-function tournamentId(s, now) {
-  const id = casinoOpeningId(s, now);
-  if (!id) return null;
-  return id === "open" ? `open-${casinoWeekId(now)}` : id;
-}
-function rollTournament(state, now) {
-  const id = tournamentId(state.settings, now);
-  const cur = state.tournament;
-  if (cur && cur.id === id) return { state, closed: null };
-  const closed = cur && Object.keys(cur.scores).length > 0 ? cur : null;
-  return { state: __spreadProps(__spreadValues({}, state), { tournament: id ? { id, startMs: now, scores: {} } : null }), closed };
-}
-function scoreSpin(state, uid, pseudo, outcome) {
-  var _a;
-  const t = state.tournament;
-  if (!t) return state;
-  const prev = (_a = t.scores[uid]) != null ? _a : { pseudo, points: 0, spins: 0 };
-  return __spreadProps(__spreadValues({}, state), { tournament: __spreadProps(__spreadValues({}, t), { scores: __spreadProps(__spreadValues({}, t.scores), { [uid]: { pseudo, points: prev.points + OUTCOME_POINTS[outcome], spins: prev.spins + 1 } }) }) });
-}
-function tournamentRanking(t) {
-  if (!t) return [];
-  return Object.entries(t.scores).map(([uid, v]) => __spreadValues({ uid }, v)).filter((x) => x.spins > 0).sort((a, b) => b.points - a.points || a.spins - b.spins || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0));
-}
-function tournamentResult(t, s, now) {
-  const ranking = tournamentRanking(t);
-  const podium = ranking.slice(0, Math.max(3, s.rewards.tournament.length)).map((x, i) => {
-    var _a;
-    return { uid: x.uid, pseudo: x.pseudo, points: x.points, tokens: x.points > 0 ? (_a = s.rewards.tournament[i]) != null ? _a : 0 : 0 };
-  });
-  return { id: t.id, endedAtMs: now, participants: ranking.length, podium, titleUid: podium[0] && podium[0].points > 0 ? podium[0].uid : "" };
-}
-function bossTokens(s, won, rank2) {
-  if (!won) return s.rewards.bossFail;
-  const podium = rank2 === 0 ? s.rewards.bossTop : rank2 === 1 || rank2 === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
-  return s.rewards.bossWin + podium;
-}
-function challengeTokens(s, tierIndex) {
-  var _a;
-  if (tierIndex < 0) return 0;
-  const list = s.rewards.challenge;
-  return (_a = list[Math.min(tierIndex, list.length - 1)]) != null ? _a : 0;
-}
-function giveTitle(p, label3, source, active = false) {
-  var _a, _b;
-  if (!label3) return;
-  if (!((_a = p.titles) != null ? _a : []).some((t) => t.label === label3)) p.titles = [...(_b = p.titles) != null ? _b : [], { label: label3, seasonId: source, rank: 1 }];
-  if (active) p.activeTitle = label3;
-}
-function removeTitle(p, label3) {
-  var _a, _b;
-  p.titles = ((_a = p.titles) != null ? _a : []).filter((t) => t.label !== label3);
-  if (p.activeTitle === label3) p.activeTitle = (_b = p.titles[0]) == null ? void 0 : _b.label;
-}
-var tokensLabel = (n) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
-function playerCasino(p) {
-  var _a, _b, _c;
-  const c = (_a = p.casino) != null ? _a : {};
-  const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
-  const w = (_b = c.week) != null ? _b : {};
-  const resources = {};
-  for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
-  const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
-}
-function casinoWeekId(now) {
-  const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY3) * DAY3;
-  return `wk-${new Date(midnight - (day + 6) % 7 * DAY3).toISOString().slice(0, 10)}`;
-}
-function casinoWeek(p, now) {
-  const w = playerCasino(p).week;
-  return w.id === casinoWeekId(now) ? w : { id: casinoWeekId(now), spins: 0, wins: 0, points: 0, resources: {} };
-}
-function applySpin(p, outcome, gained, now) {
-  var _a;
-  const c = playerCasino(p);
-  const won = outcome !== "lose";
-  const w = casinoWeek(p, now);
-  const resources = __spreadValues({}, w.resources);
-  for (const [k, v] of Object.entries(gained)) if (Number(v) > 0) resources[k] = ((_a = resources[k]) != null ? _a : 0) + Math.floor(Number(v));
-  const next = __spreadProps(__spreadValues({}, c), {
-    tokens: c.tokens - 1 + (outcome === "cherry" ? 1 : 0),
-    spins: c.spins + 1,
-    wins: c.wins + (won ? 1 : 0),
-    jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
-    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources }
-  });
-  p.casino = next;
-  return next;
-}
-function dailyTokenReady(p, settings, now) {
-  const c = playerCasino(p);
-  return casinoOpen(settings, now) && settings.dailyTokens > 0 && c.dailyDay !== parisDay(now) && c.tokens < settings.maxTokens;
-}
-function claimDailyTokens(p, settings, now) {
-  if (!dailyTokenReady(p, settings, now)) return 0;
-  const c = playerCasino(p);
-  const add2 = Math.min(settings.dailyTokens, settings.maxTokens - c.tokens);
-  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2, dailyDay: parisDay(now) });
-  return add2;
-}
-function grantTokens(p, n) {
-  const c = playerCasino(p);
-  const add2 = Math.max(0, Math.min(1e3, Math.floor(n)));
-  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2 });
-  return add2;
-}
-function rollOutcome(settings, random) {
-  let r = random();
-  for (const k of ["jackpot", "star3", "planet3", "bar3", "cherry3", "seven2", "cherry"]) {
-    if (r < settings.odds[k]) return k;
-    r -= settings.odds[k];
-  }
-  return "lose";
-}
-var pick = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
-function evaluateReels(reels) {
-  const [a, b, c] = reels;
-  if (a === b && b === c) {
-    if (a === "seven") return "jackpot";
-    if (a === "star") return "star3";
-    if (a === "planet") return "planet3";
-    if (a === "bar") return "bar3";
-    if (a === "cherry") return "cherry3";
-    return "lose";
-  }
-  if (reels.filter((s) => s === "seven").length === 2) return "seven2";
-  if (reels.includes("cherry")) return "cherry";
-  return "lose";
-}
-function reelsFor(outcome, random) {
-  const triple = { jackpot: "seven", star3: "star", planet3: "planet", bar3: "bar", cherry3: "cherry" };
-  const t = triple[outcome];
-  if (t) return [t, t, t];
-  const shuffle2 = (r) => {
-    const a = [...r];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  };
-  if (outcome === "seven2") return shuffle2(["seven", "seven", pick(["star", "planet", "bar", "skull"], random)]);
-  if (outcome === "cherry") {
-    const others = ["star", "planet", "bar", "skull", "seven"];
-    const a = pick(others, random);
-    const b = pick(others.filter((s) => s !== a), random);
-    return shuffle2(random() < 0.25 ? ["cherry", "cherry", a] : ["cherry", a, b]);
-  }
-  for (let guard = 0; guard < 50; guard++) {
-    const pool = ["seven", "star", "planet", "bar", "skull"];
-    const reels = random() < 0.35 ? shuffle2(["seven", pick(["star", "planet", "bar", "skull"], random), pick(["star", "planet", "bar", "skull"], random)]) : [pick(pool, random), pick(pool, random), pick(pool, random)];
-    if (evaluateReels(reels) === "lose") return reels;
-  }
-  return ["skull", "bar", "star"];
-}
-function jackpotAmounts(pot, share) {
-  const out = {};
-  for (const [k, v] of Object.entries(pot.resources)) {
-    const n = Math.floor((Number(v) || 0) * share);
-    if (n > 0) out[k] = n;
-  }
-  return out;
-}
-function recordWin(state, win) {
-  return __spreadProps(__spreadValues({}, state), {
-    recent: win.outcome === "lose" ? state.recent : [win, ...state.recent].slice(0, 40),
-    jackpots: win.outcome === "jackpot" ? [win, ...state.jackpots].slice(0, 30) : state.jackpots,
-    totalSpins: state.totalSpins + 1,
-    updatedAtMs: win.atMs
-  });
-}
-
 // src/game/commanders.ts
-var COMMANDER_ROLES = ["admiral", "strategist", "engineer", "spy", "steward"];
+var RECRUITABLE_ROLES = ["admiral", "strategist", "engineer", "spy", "steward"];
+var RARE_ROLES = ["logistician", "mechanic", "governor", "corsair", "warden", "diplomat", "hunter"];
+var COMMANDER_ROLES = [...RECRUITABLE_ROLES, ...RARE_ROLES];
 var BASE_COMMANDERS = [
   {
     id: "admiral",
@@ -2578,6 +594,70 @@ var BASE_COMMANDERS = [
     portrait: "/assets/commanders/steward.webp",
     domain: "Missions, contrats du jour, \xE9changes au Comptoir et au march\xE9.",
     bonus: (l) => `+${l} % de production, +${l * 2} % d'entrep\xF4t`
+  },
+  // v5.14 : rôles rares.
+  {
+    id: "logistician",
+    name: "Tamsin Okoro",
+    title: "Logisticienne",
+    portrait: "/assets/commanders/logistician.webp",
+    domain: "Flottes envoy\xE9es : transports, livraisons, colonies, champs de d\xE9bris.",
+    bonus: (l) => `\u2212${l} % de temps de vol, +${l} % de soute`,
+    rare: true
+  },
+  {
+    id: "mechanic",
+    name: "Brann Kessel",
+    title: "M\xE9canicien",
+    portrait: "/assets/commanders/mechanic.webp",
+    domain: "Unit\xE9s sorties des chantiers (plan\xE8te m\xE8re et colonies).",
+    bonus: (l) => `+${l} % de vaisseaux r\xE9par\xE9s, \u2212${l} % de temps de production des unit\xE9s`,
+    rare: true
+  },
+  {
+    id: "governor",
+    name: "Livia Marchetti",
+    title: "Gouverneure",
+    portrait: "/assets/commanders/governor.webp",
+    domain: "B\xE2timents termin\xE9s dans les colonies.",
+    bonus: (l) => `+${l * 2} % de production et +${l * 2} % d'entrep\xF4t dans les colonies`,
+    rare: true
+  },
+  {
+    id: "corsair",
+    name: "Dax Morrow",
+    title: "Corsaire",
+    portrait: "/assets/commanders/corsair.webp",
+    domain: "Attaques gagn\xE9es, repaires pris, primes remplies.",
+    bonus: (l) => `+${l} % de butin pill\xE9`,
+    rare: true
+  },
+  {
+    id: "warden",
+    name: "Ysolde Grey",
+    title: "Gardienne",
+    portrait: "/assets/commanders/warden.webp",
+    domain: "Attaques et raids repouss\xE9s.",
+    bonus: (l) => `+${l} % d'entrep\xF4t \xE0 l'abri du pillage, +${Math.floor(l * 0.2)} point${l >= 10 ? "s" : ""} de contre-espionnage`,
+    rare: true
+  },
+  {
+    id: "diplomat",
+    name: "Auren Sol",
+    title: "Diplomate",
+    portrait: "/assets/commanders/diplomat.webp",
+    domain: "\xC9changes au march\xE9, contrats entre joueurs, cadeaux envoy\xE9s.",
+    bonus: (l) => `\u2212${l * 2} % de taxe sur le march\xE9 et les cadeaux`,
+    rare: true
+  },
+  {
+    id: "hunter",
+    name: "Kaelen Voss",
+    title: "Chasseur de colosses",
+    portrait: "/assets/commanders/hunter.webp",
+    domain: "Assauts sur les boss (mondiaux, de saison, d'alliance).",
+    bonus: (l) => `+${(l * 1.5).toFixed(1).replace(".", ",").replace(",0", "")} % de d\xE9g\xE2ts contre les boss`,
+    rare: true
   }
 ];
 var COMMANDERS = BASE_COMMANDERS.map((c) => __spreadProps(__spreadValues({}, c), { role: c.id }));
@@ -2636,7 +716,12 @@ var COMMANDER_XP = {
   probesCaught: 10,
   missionDone: 5,
   contractClaimed: 10,
-  marketTrade: 5
+  marketTrade: 5,
+  // v5.14 : rôles rares.
+  fleetDispatched: 5,
+  unitsBuilt: 5,
+  giftSent: 5,
+  playerContract: 10
 };
 var COMMANDER_SOURCES = {
   admiral: [
@@ -2662,7 +747,25 @@ var COMMANDER_SOURCES = {
     { label: "Mission termin\xE9e", xp: COMMANDER_XP.missionDone },
     { label: "Contrat du jour r\xE9cup\xE9r\xE9", xp: COMMANDER_XP.contractClaimed },
     { label: "\xC9change au Comptoir ou au march\xE9", xp: COMMANDER_XP.marketTrade }
-  ]
+  ],
+  logistician: [{ label: "Flotte envoy\xE9e (transport, livraison, colonie, d\xE9bris)", xp: COMMANDER_XP.fleetDispatched }],
+  mechanic: [{ label: "Lot d'unit\xE9s termin\xE9", xp: COMMANDER_XP.unitsBuilt }],
+  governor: [{ label: "B\xE2timent termin\xE9 dans une colonie", xp: COMMANDER_XP.buildingDone }],
+  corsair: [
+    { label: "Attaque gagn\xE9e", xp: COMMANDER_XP.attackWin },
+    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
+    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin }
+  ],
+  warden: [
+    { label: "Attaque repouss\xE9e", xp: COMMANDER_XP.defenseWin },
+    { label: "Raid de faction repouss\xE9", xp: COMMANDER_XP.raidRepelled }
+  ],
+  diplomat: [
+    { label: "\xC9change au march\xE9", xp: COMMANDER_XP.marketTrade },
+    { label: "Contrat entre joueurs honor\xE9", xp: COMMANDER_XP.playerContract },
+    { label: "Cadeau envoy\xE9", xp: COMMANDER_XP.giftSent }
+  ],
+  hunter: [{ label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault }]
 };
 function findCommander(id) {
   var _a;
@@ -2691,7 +794,7 @@ function commanderSlots(player) {
 function activeLevels(player) {
   var _a, _b;
   const st = commandersState(player);
-  const out = { admiral: 0, strategist: 0, engineer: 0, spy: 0, steward: 0 };
+  const out = Object.fromEntries(COMMANDER_ROLES.map((r) => [r, 0]));
   for (const id of st.active) {
     const def3 = findCommander(id);
     if (!def3) continue;
@@ -2715,7 +818,26 @@ var ROLE_EFFECTS = {
   steward: [
     { stat: "productionAll", perLevel: 0.01 },
     { stat: "storage", perLevel: 0.02 }
-  ]
+  ],
+  logistician: [
+    { stat: "fleetSpeed", perLevel: 0.01 },
+    { stat: "cargo", perLevel: 0.01 }
+  ],
+  mechanic: [
+    { stat: "repair", perLevel: 0.01 },
+    { stat: "unitTime", perLevel: 0.01 }
+  ],
+  governor: [
+    { stat: "productionAll", perLevel: 0.02, scope: "colonies" },
+    { stat: "storage", perLevel: 0.02, scope: "colonies" }
+  ],
+  corsair: [{ stat: "loot", perLevel: 0.01 }],
+  warden: [
+    { stat: "protectedStorage", perLevel: 0.01 },
+    { stat: "counterSpy", perLevel: 0.2 }
+  ],
+  diplomat: [{ stat: "tradeTax", perLevel: 0.02 }],
+  hunter: [{ stat: "bossDamage", perLevel: 0.015 }]
 };
 function commanderEffects(player) {
   var _a, _b, _c;
@@ -2728,7 +850,7 @@ function commanderEffects(player) {
     const source = { kind: "officer", id: def3.id, label: def3.name };
     const roles = [[def3.role, level3]];
     if (def3.secondary) roles.push([def3.secondary, level3 * SEASON_SECONDARY_SHARE]);
-    for (const [role, lv] of roles) for (const e3 of (_c = ROLE_EFFECTS[role]) != null ? _c : []) out.push({ stat: e3.stat, target: e3.target, value: lv * e3.perLevel, layer: "empire", source });
+    for (const [role, lv] of roles) for (const e3 of (_c = ROLE_EFFECTS[role]) != null ? _c : []) out.push({ stat: e3.stat, target: e3.target, value: lv * e3.perLevel, layer: "empire", scope: e3.scope, source });
   }
   return out;
 }
@@ -2754,6 +876,26 @@ function unlockSeasonCommander(player, id) {
   player.commanders = st;
   return true;
 }
+var RARE_OFFICER_RULES = {
+  /** Chance par participant à un boss abattu. */
+  participant: 2e-3,
+  /** Chance pour les trois premiers en dégâts. */
+  podium: 5e-3
+};
+function missingRareOfficers(player) {
+  const st = commandersState(player);
+  return COMMANDERS.filter((c) => c.rare && !st.roster[c.id]);
+}
+function rollRareOfficer(player, chance, random = Math.random) {
+  const pool = missingRareOfficers(player);
+  if (pool.length === 0 || !(random() < chance)) return null;
+  const def3 = pool[Math.floor(random() * pool.length) % pool.length];
+  const st = commandersState(player);
+  st.roster[def3.id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(def3.id);
+  player.commanders = st;
+  return def3;
+}
 function recruitCost(player) {
   return Object.keys(commandersState(player).roster).length === 0 ? "free" : "paid";
 }
@@ -2761,6 +903,7 @@ function recruitCommander(player, id, pay2, method) {
   const def3 = findCommander(id);
   if (!def3) throw new GameActionError("Officier inconnu.");
   if (def3.season) throw new GameActionError(`${def3.title} ${def3.name} se gagne au dernier palier du passe de ${def3.season.label}.`);
+  if (def3.rare) throw new GameActionError(`${def3.title} ${def3.name} ne se recrute pas : son r\xF4le se d\xE9bloque au dernier palier d'un passe, ou tr\xE8s rarement sur un boss.`);
   const st = commandersState(player);
   if (st.roster[def3.id]) throw new GameActionError(`${def3.title} ${def3.name} sert d\xE9j\xE0 dans ta flotte.`);
   if (recruitCost(player) === "paid") pay2(method);
@@ -2807,663 +950,6 @@ function addDossiers(player, n) {
 }
 function anomalyChance(player) {
   return Math.min(1, activeLevels(player).spy * COMMANDER_RULES.anomalyPerLevel);
-}
-
-// src/game/allianceProfile.ts
-var ALLIANCE_PERMS = [
-  { id: "treasury", label: "Tr\xE9sor", hint: "Verser des ressources du tr\xE9sor aux membres." },
-  { id: "research", label: "Recherches", hint: "Lancer les recherches d'alliance." },
-  { id: "projects", label: "Projets", hint: "Financer les projets avec le tr\xE9sor." },
-  { id: "diplomacy", label: "Diplomatie", hint: "Pactes, guerres et redditions." },
-  { id: "boss", label: "Boss", hint: "Appeler le boss d'alliance de la semaine." },
-  { id: "recruit", label: "Recrutement", hint: "Fiche publique, candidatures \xE0 accepter ou refuser." },
-  { id: "kick", label: "Exclusion", hint: "Exclure un membre (jamais le fondateur)." }
-];
-var ALLIANCE_PROFILE_RULES = { maxRanks: 6, maxApplications: 30, descriptionMax: 600, messageMax: 300 };
-var PERM_IDS = new Set(ALLIANCE_PERMS.map((p) => p.id));
-var COLOR = /^#[0-9a-fA-F]{6}$/;
-var LEGACY_PERMS = {
-  founder: ALLIANCE_PERMS.map((p) => p.id),
-  officer: ["treasury", "research", "projects", "diplomacy", "boss", "recruit"],
-  diplomat: ["diplomacy"],
-  member: []
-};
-function normalizeAllianceProfile(raw) {
-  var _a;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).filter((k) => k && typeof k.id === "string" && typeof k.name === "string").slice(0, ALLIANCE_PROFILE_RULES.maxRanks).map((k) => ({ id: k.id, name: k.name.slice(0, 24), color: COLOR.test(k.color) ? k.color : "#94a3b8", perms: (Array.isArray(k.perms) ? k.perms : []).filter((p) => PERM_IDS.has(p)) }));
-  const rankIds = new Set(ranks.map((k) => k.id));
-  const memberRanks = {};
-  for (const [uid, id] of Object.entries(r.memberRanks && typeof r.memberRanks === "object" ? r.memberRanks : {})) if (rankIds.has(String(id))) memberRanks[uid] = String(id);
-  return {
-    description: String((_a = r.description) != null ? _a : "").slice(0, ALLIANCE_PROFILE_RULES.descriptionMax),
-    recruiting: r.recruiting === "apply" || r.recruiting === "closed" ? r.recruiting : "open",
-    ranks,
-    memberRanks,
-    applications: (Array.isArray(r.applications) ? r.applications : []).filter((a) => a && typeof a.uid === "string").map((a) => {
-      var _a2, _b;
-      return { uid: a.uid, pseudo: String((_a2 = a.pseudo) != null ? _a2 : ""), message: String((_b = a.message) != null ? _b : "").slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: Number(a.atMs) || 0 };
-    }).slice(-ALLIANCE_PROFILE_RULES.maxApplications)
-  };
-}
-function alliancePerms(alliance, uid) {
-  var _a;
-  const role = allianceRole(alliance, uid);
-  if (!role) return /* @__PURE__ */ new Set();
-  const perms = new Set(LEGACY_PERMS[role]);
-  if (role !== "founder") {
-    const profile = normalizeAllianceProfile(alliance.profile);
-    const rank2 = profile.ranks.find((k) => k.id === profile.memberRanks[uid]);
-    for (const p of (_a = rank2 == null ? void 0 : rank2.perms) != null ? _a : []) perms.add(p);
-  }
-  return perms;
-}
-function hasAlliancePerm(alliance, uid, perm) {
-  return alliancePerms(alliance, uid).has(perm);
-}
-function withProfile(alliance, profile) {
-  return __spreadProps(__spreadValues({}, alliance), { profile });
-}
-function founderOnly(alliance, uid) {
-  if (allianceRole(alliance, uid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les rangs.");
-}
-function saveRank(alliance, actorUid, raw) {
-  var _a;
-  founderOnly(alliance, actorUid);
-  const profile = normalizeAllianceProfile(alliance.profile);
-  const name = String((_a = raw.name) != null ? _a : "").trim().slice(0, 24);
-  if (!name) throw new GameActionError("Donne un nom au rang.");
-  const color = COLOR.test(String(raw.color)) ? String(raw.color) : "#94a3b8";
-  const perms = (Array.isArray(raw.perms) ? raw.perms : []).filter((p) => PERM_IDS.has(p));
-  const id = raw.id && profile.ranks.some((k) => k.id === raw.id) ? raw.id : `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
-  if (!profile.ranks.some((k) => k.id === id) && profile.ranks.length >= ALLIANCE_PROFILE_RULES.maxRanks) throw new GameActionError(`${ALLIANCE_PROFILE_RULES.maxRanks} rangs au plus.`);
-  const rank2 = { id, name, color, perms };
-  const ranks = profile.ranks.some((k) => k.id === id) ? profile.ranks.map((k) => k.id === id ? rank2 : k) : [...profile.ranks, rank2];
-  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks }));
-}
-function deleteRank(alliance, actorUid, rankId) {
-  founderOnly(alliance, actorUid);
-  const profile = normalizeAllianceProfile(alliance.profile);
-  const memberRanks = Object.fromEntries(Object.entries(profile.memberRanks).filter(([, id]) => id !== rankId));
-  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks: profile.ranks.filter((k) => k.id !== rankId), memberRanks }));
-}
-function assignRank(alliance, actorUid, targetUid, rankId) {
-  founderOnly(alliance, actorUid);
-  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas recevoir de rang.");
-  const profile = normalizeAllianceProfile(alliance.profile);
-  if (rankId && !profile.ranks.some((k) => k.id === rankId)) throw new GameActionError("Rang inconnu.");
-  const memberRanks = __spreadValues({}, profile.memberRanks);
-  if (rankId) memberRanks[targetUid] = rankId;
-  else delete memberRanks[targetUid];
-  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { memberRanks }));
-}
-function setAllianceProfile(alliance, actorUid, patch) {
-  if (!hasAlliancePerm(alliance, actorUid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour modifier la fiche.");
-  const profile = normalizeAllianceProfile(alliance.profile);
-  return withProfile(alliance, __spreadValues(__spreadValues(__spreadValues({}, profile), patch.description !== void 0 ? { description: String(patch.description).trim().slice(0, ALLIANCE_PROFILE_RULES.descriptionMax) } : {}), patch.recruiting === "open" || patch.recruiting === "apply" || patch.recruiting === "closed" ? { recruiting: patch.recruiting } : {}));
-}
-function applyToAlliance(alliance, player, message, now) {
-  const profile = normalizeAllianceProfile(alliance.profile);
-  if (player.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
-  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu fais d\xE9j\xE0 partie de cette alliance.");
-  if (profile.recruiting === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
-  if (profile.recruiting === "open") throw new GameActionError("Cette alliance est ouverte : rejoins-la directement.");
-  if (profile.applications.some((a) => a.uid === player.uid)) throw new GameActionError("Ta candidature est d\xE9j\xE0 en attente.");
-  if (profile.applications.length >= ALLIANCE_PROFILE_RULES.maxApplications) throw new GameActionError("Trop de candidatures en attente : r\xE9essaie plus tard.");
-  const app = { uid: player.uid, pseudo: player.pseudo, message: String(message != null ? message : "").trim().slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: now };
-  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: [...profile.applications, app] }));
-}
-function dropApplication(alliance, uid) {
-  const profile = normalizeAllianceProfile(alliance.profile);
-  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: profile.applications.filter((a) => a.uid !== uid) }));
-}
-function assertCanJoin(alliance) {
-  const r = normalizeAllianceProfile(alliance.profile).recruiting;
-  if (r === "apply") throw new GameActionError("Cette alliance recrute sur candidature : postule depuis sa fiche.");
-  if (r === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
-}
-
-// src/game/alliances.ts
-var ALLIANCE_RULES = {
-  maxMembers: 6,
-  /** Versement : au plus cette part du stock d'une ressource du trésor. */
-  distributionMaxPct: 0.2,
-  /** Versements par jour (UTC) pour toute l'alliance. */
-  distributionsPerDay: 10,
-  /** Coût du niveau n : base × croissance^(n−1). */
-  researchCommonCost: 5e7,
-  researchRareCost: 1e6,
-  researchGrowth: 2,
-  researchHoursPerLevel: 12,
-  /** Garnison : part de la puissance d'attaque engagée en défense. */
-  garrisonPower: 0.5,
-  garrisonMinHours: 1,
-  garrisonMaxHours: 24,
-  maxGarrisonsPerHost: 3,
-  /** Onglet Renseignement : rapports des membres sur cette période. */
-  sharedReportsDays: 7,
-  sharedReportsMax: 50,
-  /** Saison : somme des XP de saison des N meilleurs membres. */
-  seasonTopMembers: 5,
-  seasonRewardHours: 8,
-  seasonTitle: "Alli\xE9 champion",
-  researches: [
-    { id: "logistique", name: "Logistique f\xE9d\xE9r\xE9e", emoji: "\u{1F6F0}\uFE0F", description: "R\xE9duit le temps de vol de toutes les flottes des membres.", perLevel: 0.05, maxLevel: 5 },
-    { id: "industrie", name: "Industrie coop\xE9rative", emoji: "\u{1F3ED}", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5 },
-    { id: "brouillage", name: "R\xE9seau de brouillage", emoji: "\u{1F4E1}", description: "Ajoute des points de contre-espionnage \xE0 chaque membre.", perLevel: 1, maxLevel: 5 },
-    { id: "bouclier", name: "Bouclier f\xE9d\xE9ral", emoji: "\u{1F6E1}\uFE0F", description: "Renforce le bouclier des bases des membres, au-del\xE0 du plafond habituel.", perLevel: 0.01, maxLevel: 5 }
-  ],
-  /** v3.3 : projets (méga-structures). Coût du palier n : base × croissance^(n−1). */
-  projectCommonCost: 5e8,
-  projectRareCost: 5e6,
-  projectGrowth: 2,
-  /** Construction du palier n : n × ce nombre d'heures, une fois financé. */
-  projectHoursPerLevel: 24,
-  projects: [
-    { id: "forge", name: "Anneau-forge", emoji: "\u{1F528}", description: "R\xE9duit la dur\xE9e des constructions et des recherches des membres.", perLevel: 0.02, maxLevel: 5 },
-    { id: "siege", name: "Batterie de si\xE8ge", emoji: "\u{1F3AF}", description: "Augmente l'attaque des membres contre le L\xE9viathan et les repaires pirates.", perLevel: 0.04, maxLevel: 5 },
-    { id: "bastion", name: "Bastion f\xE9d\xE9ral", emoji: "\u{1F3F0}", description: "Met \xE0 l'abri du pillage une part suppl\xE9mentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5 }
-  ]
-};
-var MAX_DIPLOMATS = 2;
-function canDiplomacy(role) {
-  return role === "founder" || role === "officer" || role === "diplomat";
-}
-function canDiplomacyIn(alliance, uid) {
-  return hasAlliancePerm(alliance, uid, "diplomacy");
-}
-var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
-function findAllianceResearch(id) {
-  return ALLIANCE_RULES.researches.find((r) => r.id === id);
-}
-function allianceRole(alliance, uid) {
-  var _a, _b;
-  if (!((_a = alliance.members) == null ? void 0 : _a.includes(uid))) return null;
-  if (alliance.createdBy === uid) return "founder";
-  const r = (_b = alliance.roles) == null ? void 0 : _b[uid];
-  return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
-}
-function level2(levels, id) {
-  var _a;
-  const def3 = findAllianceResearch(id);
-  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
-}
-function allianceFlightFactor(levels, techLevels2) {
-  var _a, _b;
-  return Math.max(0.1, (1 - level2(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed"));
-}
-function allianceProductionFactor(levels) {
-  var _a, _b;
-  return 1 + level2(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
-}
-function allianceCounterSpy(levels) {
-  var _a, _b;
-  return level2(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
-}
-function allianceShieldBonus(levels) {
-  var _a, _b;
-  return level2(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
-}
-var projectKey = (id) => `projet_${id}`;
-function findAllianceProject(id) {
-  return ALLIANCE_RULES.projects.find((p) => p.id === id);
-}
-function memberProjectLevel(levels, id) {
-  var _a;
-  const def3 = findAllianceProject(id);
-  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[projectKey(id)]) || 0)));
-}
-function projectEffect(levels, id) {
-  var _a, _b;
-  return memberProjectLevel(levels, id) * ((_b = (_a = findAllianceProject(id)) == null ? void 0 : _a.perLevel) != null ? _b : 0);
-}
-function allianceForgeFactor(levels) {
-  return Math.max(0.5, 1 - projectEffect(levels, "forge"));
-}
-function allianceSiegeFactor(levels) {
-  return 1 + projectEffect(levels, "siege");
-}
-function allianceBastionBonus(levels) {
-  return projectEffect(levels, "bastion");
-}
-function newAlliance(founder, nameIn, tagIn, now) {
-  const name = String(nameIn != null ? nameIn : "").trim();
-  const tag = String(tagIn != null ? tagIn : "").trim().toUpperCase();
-  if (name.length < 3 || name.length > 40) throw new GameActionError("Le nom doit contenir entre 3 et 40 caract\xE8res.");
-  if (!/^[A-Z0-9]{2,5}$/.test(tag)) throw new GameActionError("Le tag doit contenir 2 \xE0 5 lettres ou chiffres.");
-  return {
-    name,
-    tag,
-    createdBy: founder.uid,
-    createdAtMs: now,
-    members: [founder.uid],
-    memberPseudos: { [founder.uid]: founder.pseudo },
-    roles: {},
-    treasury: {},
-    research: {},
-    activeResearch: null,
-    distributions: { day: "", count: 0 }
-  };
-}
-function addMember(alliance, player) {
-  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu es d\xE9j\xE0 membre de cette alliance.");
-  if (alliance.members.length >= ALLIANCE_RULES.maxMembers) throw new GameActionError(`Cette alliance est compl\xE8te (${ALLIANCE_RULES.maxMembers} membres).`);
-  return __spreadProps(__spreadValues({}, alliance), { members: [...alliance.members, player.uid], memberPseudos: __spreadProps(__spreadValues({}, alliance.memberPseudos), { [player.uid]: player.pseudo }) });
-}
-function removeMember(alliance, uid) {
-  var _a, _b;
-  if (!alliance.members.includes(uid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
-  const members = alliance.members.filter((m) => m !== uid);
-  if (members.length === 0) return null;
-  const memberPseudos = __spreadValues({}, alliance.memberPseudos);
-  delete memberPseudos[uid];
-  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
-  delete roles[uid];
-  let createdBy = alliance.createdBy;
-  if (createdBy === uid) {
-    createdBy = (_b = members.find((m) => roles[m] === "officer")) != null ? _b : members[0];
-    delete roles[createdBy];
-  }
-  return __spreadProps(__spreadValues({}, alliance), { members, memberPseudos, roles, createdBy });
-}
-function kickMember(alliance, actorUid, targetUid) {
-  if (!hasAlliancePerm(alliance, actorUid, "kick")) throw new GameActionError("Il te faut le droit \xAB Exclusion \xBB pour exclure un membre.");
-  if (actorUid === targetUid) throw new GameActionError("Tu ne peux pas t'exclure toi-m\xEAme.");
-  if (targetUid === alliance.createdBy) throw new GameActionError("Le fondateur ne peut pas \xEAtre exclu.");
-  return removeMember(alliance, targetUid);
-}
-function setOfficer(alliance, actorUid, targetUid, officer) {
-  return setRole(alliance, actorUid, targetUid, officer ? "officer" : "member");
-}
-function setRole(alliance, actorUid, targetUid, role) {
-  var _a;
-  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les r\xF4les.");
-  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de r\xF4le.");
-  if (role !== "officer" && role !== "diplomat" && role !== "member") throw new GameActionError("R\xF4le inconnu.");
-  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
-  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= MAX_DIPLOMATS) {
-    throw new GameActionError(`${MAX_DIPLOMATS} diplomates au plus par alliance.`);
-  }
-  if (role === "member") delete roles[targetUid];
-  else roles[targetUid] = role;
-  return __spreadProps(__spreadValues({}, alliance), { roles });
-}
-function parseAmounts(raw) {
-  const out = {};
-  for (const [res, value2] of Object.entries(raw != null ? raw : {})) {
-    const n = Math.floor(Number(value2));
-    if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n <= 0) continue;
-    out[res] = n;
-  }
-  if (Object.keys(out).length === 0) throw new GameActionError("Indique au moins un montant.");
-  return out;
-}
-function deposit(alliance, player, amounts) {
-  var _a, _b, _c, _d;
-  if (!alliance.members.includes(player.uid)) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
-  for (const [res, amount3] of Object.entries(amounts)) {
-    if (((_b = player.resources[res]) != null ? _b : 0) < amount3) throw new GameActionError("Ressources insuffisantes pour ce d\xE9p\xF4t.");
-  }
-  for (const [res, amount3] of Object.entries(amounts)) {
-    player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - amount3;
-    treasury[res] = ((_d = treasury[res]) != null ? _d : 0) + amount3;
-  }
-  return __spreadProps(__spreadValues({}, alliance), { treasury });
-}
-function utcDay(now) {
-  return new Date(now).toISOString().slice(0, 10);
-}
-function distribute(alliance, actorUid, targetUid, amounts, now) {
-  var _a, _b, _c, _d;
-  if (!hasAlliancePerm(alliance, actorUid, "treasury")) throw new GameActionError("Il te faut le droit \xAB Tr\xE9sor \xBB pour verser des ressources.");
-  if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
-  const day = utcDay(now);
-  const count2 = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
-  if (count2 >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
-  const treasury = __spreadValues({}, (_b = alliance.treasury) != null ? _b : {});
-  for (const [res, amount3] of Object.entries(amounts)) {
-    const max = Math.floor(((_c = treasury[res]) != null ? _c : 0) * ALLIANCE_RULES.distributionMaxPct);
-    if (amount3 > max) {
-      throw new GameActionError(`Un versement est limit\xE9 \xE0 ${Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock du tr\xE9sor (${max} pour cette ressource).`);
-    }
-  }
-  for (const [res, amount3] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount3;
-  return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count2 + 1 } });
-}
-function allianceResearchCost(nextLevel) {
-  const factor = Math.pow(ALLIANCE_RULES.researchGrowth, Math.max(0, nextLevel - 1));
-  const cost = {};
-  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.researchRareCost : ALLIANCE_RULES.researchCommonCost) * factor);
-  return cost;
-}
-function allianceResearchSeconds(nextLevel) {
-  return Math.round(ALLIANCE_RULES.researchHoursPerLevel * nextLevel * 3600);
-}
-function startAllianceResearch(alliance, actorUid, researchId, now) {
-  var _a, _b, _c;
-  if (!hasAlliancePerm(alliance, actorUid, "research")) throw new GameActionError("Il te faut le droit \xAB Recherches \xBB pour lancer une recherche.");
-  const def3 = findAllianceResearch(researchId);
-  if (!def3) throw new GameActionError("Recherche inconnue.");
-  if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
-  const next = level2(alliance.research, def3.id) + 1;
-  if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
-  const cost = allianceResearchCost(next);
-  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
-  for (const [res, amount3] of Object.entries(cost)) {
-    if (((_b = treasury[res]) != null ? _b : 0) < amount3) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
-  }
-  for (const [res, amount3] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount3;
-  return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def3.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
-}
-function completeAllianceResearch(alliance, now) {
-  var _a;
-  const active = alliance.activeResearch;
-  if (!active || active.endTime > now) return { alliance, completed: null };
-  return {
-    alliance: __spreadProps(__spreadValues({}, alliance), { research: __spreadProps(__spreadValues({}, (_a = alliance.research) != null ? _a : {}), { [active.id]: active.level }), activeResearch: null }),
-    completed: { id: active.id, level: active.level }
-  };
-}
-function allianceProjectCost(nextLevel) {
-  const factor = Math.pow(ALLIANCE_RULES.projectGrowth, Math.max(0, nextLevel - 1));
-  const cost = {};
-  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.projectRareCost : ALLIANCE_RULES.projectCommonCost) * factor);
-  return cost;
-}
-function allianceProjectSeconds(nextLevel) {
-  return Math.round(ALLIANCE_RULES.projectHoursPerLevel * nextLevel * 3600);
-}
-function projectState(alliance, id) {
-  var _a, _b;
-  const raw = (_a = alliance.projects) == null ? void 0 : _a[id];
-  return { level: Math.max(0, Math.floor(Number(raw == null ? void 0 : raw.level) || 0)), funded: __spreadValues({}, (_b = raw == null ? void 0 : raw.funded) != null ? _b : {}), buildEndMs: Number(raw == null ? void 0 : raw.buildEndMs) || 0 };
-}
-function memberLevels(alliance) {
-  var _a;
-  const out = __spreadValues({}, (_a = alliance == null ? void 0 : alliance.research) != null ? _a : {});
-  for (const def3 of ALLIANCE_RULES.projects) {
-    const level3 = alliance ? projectState(alliance, def3.id).level : 0;
-    if (level3 > 0) out[projectKey(def3.id)] = level3;
-  }
-  return out;
-}
-function contributionValue(amounts) {
-  return Object.entries(amounts).reduce((a, [res, n]) => {
-    var _a;
-    return a + (n != null ? n : 0) * (((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? 100 : 1);
-  }, 0);
-}
-function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
-  const def3 = findAllianceProject(projectId);
-  if (!def3) throw new GameActionError("Projet inconnu.");
-  const role = allianceRole(alliance, actor.uid);
-  if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  if (source === "treasury" && !hasAlliancePerm(alliance, actor.uid, "projects")) throw new GameActionError("Il te faut le droit \xAB Projets \xBB pour puiser dans le tr\xE9sor.");
-  const state = projectState(alliance, def3.id);
-  if (state.buildEndMs > 0) throw new GameActionError("Ce palier est d\xE9j\xE0 en construction.");
-  const next = state.level + 1;
-  if (next > def3.maxLevel) throw new GameActionError("Ce projet est achev\xE9.");
-  const cost = allianceProjectCost(next);
-  const pool = source === "treasury" ? __spreadValues({}, (_a = alliance.treasury) != null ? _a : {}) : actor.resources;
-  const used = {};
-  for (const [res, amount3] of Object.entries(amounts)) {
-    const missing = Math.max(0, ((_b = cost[res]) != null ? _b : 0) - ((_c = state.funded[res]) != null ? _c : 0));
-    const n = Math.min(amount3, missing);
-    if (n <= 0) continue;
-    if (((_d = pool[res]) != null ? _d : 0) < n) throw new GameActionError(source === "treasury" ? "Le tr\xE9sor ne suffit pas pour ce versement." : "Ressources insuffisantes pour ce versement.");
-    used[res] = n;
-  }
-  if (Object.keys(used).length === 0) throw new GameActionError("Ces ressources sont d\xE9j\xE0 r\xE9unies pour ce palier.");
-  for (const [res, n] of Object.entries(used)) {
-    pool[res] = ((_e = pool[res]) != null ? _e : 0) - n;
-    state.funded[res] = ((_f = state.funded[res]) != null ? _f : 0) + n;
-  }
-  const complete = Object.entries(cost).every(([res, n]) => {
-    var _a2;
-    return ((_a2 = state.funded[res]) != null ? _a2 : 0) >= n;
-  });
-  const started = complete ? now + allianceProjectSeconds(next) * 1e3 : null;
-  const nextState = complete ? { level: state.level, funded: {}, buildEndMs: started } : state;
-  const contributors = __spreadValues({}, (_g = alliance.projectContributors) != null ? _g : {});
-  if (source === "self") contributors[actor.uid] = ((_h = contributors[actor.uid]) != null ? _h : 0) + contributionValue(used);
-  return {
-    alliance: __spreadProps(__spreadValues({}, alliance), {
-      treasury: source === "treasury" ? pool : alliance.treasury,
-      projects: __spreadProps(__spreadValues({}, (_i = alliance.projects) != null ? _i : {}), { [def3.id]: nextState }),
-      projectContributors: contributors
-    }),
-    used,
-    started
-  };
-}
-function completeAllianceProjects(alliance, now) {
-  var _a;
-  const completed = [];
-  const projects = __spreadValues({}, (_a = alliance.projects) != null ? _a : {});
-  for (const def3 of ALLIANCE_RULES.projects) {
-    const state = projectState(alliance, def3.id);
-    if (state.buildEndMs > 0 && state.buildEndMs <= now) {
-      projects[def3.id] = { level: state.level + 1, funded: {}, buildEndMs: 0 };
-      completed.push({ id: def3.id, level: state.level + 1 });
-    }
-  }
-  return { alliance: completed.length ? __spreadProps(__spreadValues({}, alliance), { projects }) : alliance, completed };
-}
-function allianceNextDueMs(alliance) {
-  var _a, _b;
-  const dues = [(_b = (_a = alliance.activeResearch) == null ? void 0 : _a.endTime) != null ? _b : 0, ...ALLIANCE_RULES.projects.map((p) => projectState(alliance, p.id).buildEndMs)].filter((t) => t > 0);
-  return dues.length ? Math.min(...dues) : 0;
-}
-function allianceStandings(members, bonuses = {}) {
-  var _a;
-  const byAlliance = /* @__PURE__ */ new Map();
-  for (const m of members) {
-    if (!m.allianceId || !(m.seasonXp > 0)) continue;
-    byAlliance.set(m.allianceId, [...(_a = byAlliance.get(m.allianceId)) != null ? _a : [], m.seasonXp]);
-  }
-  return [...byAlliance.entries()].map(([allianceId, xps]) => {
-    var _a2;
-    return {
-      allianceId,
-      // v3.2 : bonus des guerres gagnées pendant la saison.
-      score: Math.round(
-        xps.sort((a, b) => b - a).slice(0, ALLIANCE_RULES.seasonTopMembers).reduce((a, b) => a + b, 0) * (1 + ((_a2 = bonuses[allianceId]) != null ? _a2 : 0))
-      )
-    };
-  }).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
-}
-function note(title, message, now) {
-  return { kind: "alliance", title, message, createdAtMs: now, read: false };
-}
-function performAllianceAction(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
-  const { action, now, actor } = input;
-  const alliance = input.alliance;
-  const out = { alliance, actor, target: (_a = input.target) != null ? _a : null, memberships: {}, logs: [], notifications: {} };
-  const log = (entry) => out.logs.push(__spreadValues({ actorUid: actor.uid, actorPseudo: actor.pseudo, createdAtMs: now }, entry));
-  const research = (a) => memberLevels(a);
-  switch (action == null ? void 0 : action.type) {
-    case "create": {
-      if (actor.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
-      out.alliance = newAlliance({ uid: actor.uid, pseudo: actor.pseudo }, action.name, action.tag, now);
-      setStat(actor, "allianceFounded", 1);
-      return out;
-    }
-    case "join": {
-      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
-      if (actor.allianceId && actor.allianceId !== alliance.id) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
-      assertCanJoin(alliance);
-      out.alliance = addMember(alliance, { uid: actor.uid, pseudo: actor.pseudo });
-      out.memberships[actor.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
-      log({ kind: "join" });
-      return out;
-    }
-    case "leave": {
-      if (!alliance || !alliance.members.includes(actor.uid)) {
-        out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
-        out.alliance = alliance;
-        return out;
-      }
-      out.alliance = removeMember(alliance, actor.uid);
-      out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
-      log({ kind: "leave" });
-      return out;
-    }
-    case "kick": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const targetPseudo = (_b = alliance.memberPseudos[action.targetUid]) != null ? _b : "?";
-      out.alliance = kickMember(alliance, actor.uid, String((_c = action.targetUid) != null ? _c : ""));
-      out.memberships[action.targetUid] = { allianceId: "", allianceResearch: {} };
-      out.notifications[action.targetUid] = [note("Exclu de l'alliance", `${actor.pseudo} t'a exclu de [${alliance.tag}] ${alliance.name}.`, now)];
-      log({ kind: "kick", targetUid: action.targetUid, targetPseudo });
-      return out;
-    }
-    case "promote":
-    case "demote": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = setOfficer(alliance, actor.uid, String((_d = action.targetUid) != null ? _d : ""), action.type === "promote");
-      return out;
-    }
-    case "setRole": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = setRole(alliance, actor.uid, String((_e = action.targetUid) != null ? _e : ""), action.role);
-      return out;
-    }
-    case "deposit": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const amounts = parseAmounts(action.resources);
-      out.alliance = deposit(alliance, actor, amounts);
-      bumpStat(actor, "donated", Object.values(amounts).reduce((a, b) => a + (b != null ? b : 0), 0));
-      log({ kind: "deposit", resources: amounts });
-      return out;
-    }
-    case "distribute": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const target = input.target;
-      if (!target || target.uid !== action.targetUid) throw new GameActionError("Ce joueur est introuvable.");
-      const amounts = parseAmounts(action.resources);
-      out.alliance = distribute(alliance, actor.uid, target.uid, amounts, now);
-      for (const [res, amount3] of Object.entries(amounts)) target.resources[res] = ((_f = target.resources[res]) != null ? _f : 0) + amount3;
-      out.notifications[target.uid] = [note("Versement du tr\xE9sor", `${actor.pseudo} t'a vers\xE9 des ressources du tr\xE9sor de l'alliance.`, now)];
-      log({ kind: "distribute", targetUid: target.uid, targetPseudo: target.pseudo, resources: amounts });
-      return out;
-    }
-    case "research": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const started = startAllianceResearch(alliance, actor.uid, String((_g = action.researchId) != null ? _g : ""), now);
-      out.alliance = started;
-      const def3 = findAllianceResearch(started.activeResearch.id);
-      log({ kind: "research", text: `${def3.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
-      return out;
-    }
-    case "project": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      const source = action.source === "treasury" ? "treasury" : "self";
-      const res = fundAllianceProject(alliance, actor, String((_h = action.projectId) != null ? _h : ""), source, parseAmounts(action.resources), now);
-      out.alliance = res.alliance;
-      const def3 = findAllianceProject(String(action.projectId));
-      const next = projectState(alliance, def3.id).level + 1;
-      if (source === "self") bumpStat(actor, "donated", Object.values(res.used).reduce((a, b) => a + (b != null ? b : 0), 0));
-      log({ kind: "project", text: `${def3.name} niveau ${next}${source === "treasury" ? " (tr\xE9sor)" : ""}${res.started ? " : financ\xE9, construction lanc\xE9e" : ""}`, resources: res.used });
-      if (res.started) {
-        for (const uid of alliance.members) {
-          out.notifications[uid] = [note("Projet d'alliance financ\xE9", `${def3.emoji} ${def3.name} niveau ${next} : construction lanc\xE9e.`, now)];
-        }
-      }
-      return out;
-    }
-    case "profile": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = setAllianceProfile(alliance, actor.uid, { description: action.description, recruiting: action.recruiting });
-      return out;
-    }
-    case "rankSave": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = saveRank(alliance, actor.uid, action.rank);
-      return out;
-    }
-    case "rankDelete": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = deleteRank(alliance, actor.uid, String((_i = action.rankId) != null ? _i : ""));
-      return out;
-    }
-    case "rankAssign": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      out.alliance = assignRank(alliance, actor.uid, String((_j = action.targetUid) != null ? _j : ""), action.rankId ? String(action.rankId) : null);
-      return out;
-    }
-    case "apply": {
-      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
-      out.alliance = applyToAlliance(alliance, actor, action.message, now);
-      for (const uid of alliance.members) {
-        if (hasAlliancePerm(alliance, uid, "recruit")) out.notifications[uid] = [__spreadProps(__spreadValues({}, note("Nouvelle candidature", `${actor.pseudo} souhaite rejoindre [${alliance.tag}] : r\xE9ponds depuis l'onglet Fiche de l'alliance.`, now)), { link: "/game/alliance?onglet=fiche" })];
-      }
-      return out;
-    }
-    case "withdraw": {
-      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
-      out.alliance = dropApplication(alliance, actor.uid);
-      return out;
-    }
-    case "applicationAccept":
-    case "applicationDecline": {
-      if (!alliance) throw new GameActionError("Alliance introuvable.");
-      if (!hasAlliancePerm(alliance, actor.uid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour r\xE9pondre aux candidatures.");
-      const targetUid = String((_k = action.targetUid) != null ? _k : "");
-      const app = normalizeAllianceProfile(alliance.profile).applications.find((a) => a.uid === targetUid);
-      if (!app) throw new GameActionError("Candidature introuvable.");
-      const cleaned = dropApplication(alliance, targetUid);
-      if (action.type === "applicationDecline") {
-        out.alliance = cleaned;
-        out.notifications[targetUid] = [note("Candidature refus\xE9e", `[${alliance.tag}] ${alliance.name} n'a pas retenu ta candidature cette fois.`, now)];
-        return out;
-      }
-      const target = input.target;
-      if (!target || target.uid !== targetUid) throw new GameActionError("Ce joueur est introuvable.");
-      if (target.allianceId) {
-        out.alliance = cleaned;
-        out.notifications[actor.uid] = [note("Candidature caduque", `${app.pseudo} a d\xE9j\xE0 rejoint une autre alliance.`, now)];
-        return out;
-      }
-      out.alliance = addMember(cleaned, { uid: target.uid, pseudo: target.pseudo });
-      out.memberships[target.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
-      out.notifications[target.uid] = [__spreadProps(__spreadValues({}, note("Candidature accept\xE9e !", `Bienvenue dans [${alliance.tag}] ${alliance.name}.`, now)), { link: "/game/alliance" })];
-      out.logs.push({ kind: "join", actorUid: target.uid, actorPseudo: target.pseudo, text: `(candidature accept\xE9e par ${actor.pseudo})`, createdAtMs: now });
-      return out;
-    }
-    default:
-      throw new GameActionError("Action d'alliance inconnue.");
-  }
-}
-function finishAllianceResearch(alliance, now) {
-  var _a, _b, _c, _d;
-  const done = completeAllianceResearch(alliance, now);
-  const built = completeAllianceProjects(done.alliance, now);
-  if (!done.completed && built.completed.length === 0) return null;
-  const labels = [];
-  const logs = [];
-  if (done.completed) {
-    const def3 = findAllianceResearch(done.completed.id);
-    const label3 = `${(_a = def3 == null ? void 0 : def3.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
-    labels.push(`${(_b = def3 == null ? void 0 : def3.emoji) != null ? _b : ""} ${label3}`.trim());
-    logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
-  }
-  for (const c of built.completed) {
-    const def3 = findAllianceProject(c.id);
-    const label3 = `${(_c = def3 == null ? void 0 : def3.name) != null ? _c : c.id} niveau ${c.level}`;
-    labels.push(`${(_d = def3 == null ? void 0 : def3.emoji) != null ? _d : ""} ${label3}`.trim());
-    logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
-  }
-  const memberships = {};
-  const notifications = {};
-  const title = done.completed && built.completed.length === 0 ? "Recherche d'alliance termin\xE9e" : built.completed.length && !done.completed ? "Projet d'alliance achev\xE9" : "Alliance : travaux termin\xE9s";
-  for (const uid of built.alliance.members) {
-    memberships[uid] = { allianceId: alliance.id, allianceResearch: memberLevels(built.alliance) };
-    notifications[uid] = [note(title, `${labels.join(" \xB7 ")} : le bonus s'applique \xE0 tous les membres.`, now)];
-  }
-  return { alliance: built.alliance, memberships, notifications, logs };
 }
 
 // src/game/relics.ts
@@ -3827,6 +1313,640 @@ function territoryEffects(t, now) {
   return pct5 > 0 ? [{ stat: "productionAll", value: pct5, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
 }
 
+// src/game/format.ts
+function formatInt(value2) {
+  const n = Math.round(Number(value2) || 0);
+  const digits = String(Math.abs(n));
+  let out = "";
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
+    out += digits[i];
+  }
+  return n < 0 ? `-${out}` : out;
+}
+function describeGain(gain) {
+  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
+    var _a;
+    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
+  });
+  return parts.length ? parts.join(", ") : "rien";
+}
+
+// src/game/resources.ts
+var RESOURCE_LIST = [
+  { id: "scrap", name: "Ferraille", emoji: "\u{1F529}", rarity: "common" },
+  { id: "energy", name: "\xC9nergie instable", emoji: "\u26A1", rarity: "common" },
+  { id: "nano", name: "Nanocomposants", emoji: "\u{1F9EC}", rarity: "common" },
+  { id: "data", name: "Donn\xE9es anciennes", emoji: "\u{1F4E1}", rarity: "common" },
+  { id: "reinforcedSteel", name: "Acier renforc\xE9", emoji: "\u{1F6E0}\uFE0F", rarity: "rare" },
+  { id: "cyberModule", name: "Module cybern\xE9tique", emoji: "\u{1F9E9}", rarity: "rare" },
+  { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
+  { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
+];
+function getTradeRate(sellId, buyId) {
+  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
+  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
+  if (!sell || !buy) return 1;
+  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
+  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
+  return 1;
+}
+function canAffordAll(resources, costs) {
+  return Object.entries(costs).every(([res, val]) => {
+    var _a;
+    return ((_a = resources[res]) != null ? _a : 0) >= (val != null ? val : 0);
+  });
+}
+
+// src/game/effects.ts
+var TECH_REDUCTION_CAP = 0.75;
+var EMPIRE_TIME_CAP = 0.5;
+var EFFECT_STATS = {
+  attack: { label: "Attaque", unit: "pct", group: "combat" },
+  defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
+  bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
+  repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
+  loot: { label: "Butin pill\xE9", unit: "pct", group: "combat" },
+  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
+  production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
+  storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
+  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
+  buildingDiscount: { label: "Co\xFBt des b\xE2timents", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  tradeTax: { label: "Taxe du march\xE9 et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
+  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
+  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
+  spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
+  detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
+  counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
+};
+var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
+function inScope(g, scope) {
+  var _a;
+  const s = (_a = g.scope) != null ? _a : "all";
+  return s === "all" || s === scope;
+}
+function rawEffectTotal(grants, layer, stat, opts = {}) {
+  let total2 = 0;
+  for (const g of grants) {
+    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
+    if (opts.target !== void 0 && g.target !== opts.target) continue;
+    total2 += g.value;
+  }
+  return total2;
+}
+function clampEffect(stat, layer, total2) {
+  var _a;
+  const info = EFFECT_STATS[stat];
+  let v = total2;
+  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
+  if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
+  return v;
+}
+function effectTotal(grants, layer, stat, opts = {}) {
+  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
+}
+
+// src/game/technologies.ts
+var ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
+var TECH_EFFECT_DEFAULTS = {
+  energy_efficiency: 0.1,
+  unit_attack: 0.1,
+  unit_defense: 0.1,
+  building_discount: 0.05,
+  resource_production: 0.1,
+  storage_capacity: 0.1,
+  protected_storage: 0.02,
+  fleet_speed: 0.05,
+  cargo_capacity: 0.1,
+  building_time: 0.05,
+  unit_time: 0.05,
+  research_time: 0.05,
+  fleet_upkeep: 0.05,
+  counter_spy: 1,
+  hangar_capacity: 0.05
+};
+var TECH_EFFECT_LABELS = {
+  unlock_recipe: "D\xE9bloque des recettes (niveau = nombre de recettes)",
+  energy_efficiency: "Production de toutes les ressources (% par niveau)",
+  unit_attack: "Attaque de toutes les unit\xE9s (% par niveau)",
+  unit_defense: "D\xE9fense de toutes les unit\xE9s (% par niveau)",
+  building_discount: "Co\xFBt des b\xE2timents (\u2212% par niveau)",
+  unlock_hangars: "D\xE9bloque les b\xE2timents li\xE9s (ancien nom de unlock_buildings)",
+  unlock_buildings: "D\xE9bloque des b\xE2timents",
+  unlock_next_level: "D\xE9bloque puis am\xE9liore une unit\xE9 (niveau = niveau de l'unit\xE9)",
+  unlock_defense_units: "Pr\xE9requis pour des unit\xE9s de d\xE9fense (aucun effet direct)",
+  unlock_attack_units: "Pr\xE9requis pour des unit\xE9s d'attaque (aucun effet direct)",
+  resource_production: "Production d'une ressource (% par niveau)",
+  storage_capacity: "Capacit\xE9 des entrep\xF4ts (% par niveau)",
+  protected_storage: "Part de l'entrep\xF4t \xE0 l'abri du pillage (points de % par niveau)",
+  fleet_speed: "Temps de vol des flottes (\u2212% par niveau)",
+  cargo_capacity: "Cargaison des vaisseaux (% par niveau)",
+  building_time: "Temps de construction des b\xE2timents (\u2212% par niveau)",
+  unit_time: "Temps de construction des unit\xE9s (\u2212% par niveau)",
+  research_time: "Temps de recherche (\u2212% par niveau)",
+  fleet_upkeep: "Entretien de la flotte (\u2212% par niveau)",
+  counter_spy: "Contre-espionnage (points par niveau)",
+  hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)"
+};
+var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
+var DEFAULT_TECHNOLOGIES = [
+  { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
+  { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
+  { id: "tech9", nom: "Drone r\xE9cup\xE9rateur", desc: "D\xE9bloque le Drone r\xE9cup\xE9rateur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 200, reinforcedSteel: 20 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 1 } },
+  { id: "tech20", nom: "Espionnage", desc: "D\xE9bloque la Sonde d'espionnage, puis l'am\xE9liore : chaque niveau rend tes rapports plus complets et prot\xE8ge mieux ta base des sondes adverses.", maxLevel: 10, baseCost: { scrap: 300, energy: 150, data: 50 }, baseTime: 60, effect: "unlock_next_level", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech2", nom: "Blindage avanc\xE9", desc: "Renforce la r\xE9sistance des unit\xE9s.", maxLevel: 10, baseCost: { scrap: 300, nano: 50 }, baseTime: 60, effect: "unit_defense", prereq: { tech8: 1, tech14: 4 } },
+  { id: "tech5", nom: "Puissance d'attaque", desc: "Augmente la puissance d'attaque de toutes les unit\xE9s.", maxLevel: 10, baseCost: { energy: 200, nano: 100 }, baseTime: 50, effect: "unit_attack", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech4", nom: "Optimisation industrielle", desc: "R\xE9duit le co\xFBt des am\xE9liorations de b\xE2timents.", maxLevel: 10, baseCost: { scrap: 400, data: 50 }, baseTime: 90, effect: "building_discount", prereq: { tech1: 5, tech3: 4 } },
+  { id: "tech6", nom: "Infrastructure spatiale", desc: "D\xE9bloque les hangars orbitaux.", maxLevel: 1, baseCost: { scrap: 800, energy: 400, nano: 200 }, baseTime: 120, effect: "unlock_hangars", prereq: { tech4: 3, tech3: 5 } },
+  { id: "tech11", nom: "Cargo", desc: "D\xE9bloque le Cargo, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 300, syntheticNanites: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech9: 3, tech6: 1 } },
+  { id: "tech10", nom: "Fr\xE9gate", desc: "D\xE9bloque la Fr\xE9gate, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, energy: 100, cyberModule: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3, tech3: 2 } },
+  { id: "tech14", nom: "Roquette", desc: "D\xE9bloque la Roquette, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 250, nano: 80 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech1: 3 } },
+  { id: "tech8", nom: "Syst\xE8mes d\xE9fensifs", desc: "D\xE9bloque les unit\xE9s de d\xE9fense renforc\xE9es.", maxLevel: 4, baseCost: { scrap: 500, nano: 200, data: 100 }, baseTime: 70, effect: "unlock_defense_units", prereq: { tech1: 2, tech3: 2 } },
+  { id: "tech7", nom: "Armes exp\xE9rimentales", desc: "D\xE9bloque les unit\xE9s d'attaque avanc\xE9es.", maxLevel: 5, baseCost: { energy: 600, nano: 300, data: 150 }, baseTime: 75, effect: "unlock_attack_units", prereq: { tech5: 6, tech1: 8 } },
+  { id: "tech12", nom: "Sentinelle", desc: "D\xE9bloque la Sentinelle, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 400, syntheticNanites: 150, cyberModule: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 1, tech2: 6 } },
+  { id: "tech17", nom: "Batterie Anti-a\xE9rienne", desc: "D\xE9bloque la Batterie anti-a\xE9rienne, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 500, syntheticNanites: 200, nano: 150 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech8: 2, tech14: 5 } },
+  { id: "tech13", nom: "Chasseur", desc: "D\xE9bloque le Chasseur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 600, energy: 300, syntheticNanites: 250 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech10: 5, tech7: 1, tech1: 14 } },
+  { id: "tech15", nom: "Canon \xE0 impulsion", desc: "D\xE9bloque le Canon \xE0 impulsion, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 800, nano: 400, syntheticNanites: 200 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech7: 2, tech3: 7 } },
+  { id: "tech16", nom: "Canon plasma", desc: "D\xE9bloque le Canon plasma, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { energy: 1200, nano: 600, data: 300, aiFragment: 50 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech15: 5, tech7: 4, tech1: 10 } },
+  { id: "tech18", nom: "Intercepteur", desc: "D\xE9bloque l'Intercepteur, puis l'am\xE9liore : +5 attaque et +5 d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1e3, syntheticNanites: 500, data: 400, aiFragment: 100 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech13: 5, tech16: 2, tech1: 15 } },
+  // v3.6 : technologies de fin de partie, entre le Canon plasma / l'Intercepteur et l'Étoile noire.
+  { id: "tech21", nom: "M\xE9tallurgie quantique", desc: "Alliages stabilis\xE9s \xE0 l'\xE9chelle quantique : +2 % de d\xE9fense des unit\xE9s par niveau. D\xE9bloque la Fonderie quantique.", maxLevel: 10, baseCost: { scrap: 2e5, nano: 1e5, reinforcedSteel: 400, cyberModule: 200 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unit_defense", value: 0.02 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech2: 8, tech16: 3 } },
+  { id: "tech22", nom: "Cortex neuronal", desc: "R\xE9seaux de calcul organiques : \u22122 % de temps de recherche et +1 contre-espionnage par niveau. D\xE9bloque le Synth\xE9tiseur neuronal.", maxLevel: 10, baseCost: { data: 3e5, energy: 15e4, aiFragment: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "research_time", value: 0.02 }, { type: "counter_spy", value: 1 }, { type: "unlock_buildings" }], prereq: { tech1: 17, tech20: 6, tech18: 3 } },
+  { id: "tech23", nom: "Champs de confinement", desc: "Contenir l'\xE9nergie, prot\xE9ger les stocks : +1 point de stock \xE0 l'abri du pillage par niveau. D\xE9bloque le G\xE9n\xE9rateur de bouclier plan\xE9taire.", maxLevel: 10, baseCost: { energy: 3e5, nano: 2e5, reinforcedSteel: 300, syntheticNanites: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "protected_storage", value: 0.01 }, { type: "unlock_buildings" }], prereq: { tech1: 16, tech8: 4, tech17: 5 } },
+  { id: "tech24", nom: "Propulsion \xE0 antimati\xE8re", desc: "D\xE9bloque le Croiseur Nova, puis l'am\xE9liore (+250 attaque et d\xE9fense par niveau). \u22122 % de temps de vol par niveau.", maxLevel: 10, baseCost: { scrap: 4e5, energy: 4e5, aiFragment: 500, cyberModule: 500 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "croiseur_nova" }, { type: "fleet_speed", value: 0.02 }], prereq: { tech1: 17, tech18: 5, tech11: 6, tech21: 2 } },
+  { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
+  // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
+  { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de d\xE9fense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 15e4, nano: 8e4, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
+  { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
+];
+var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
+function setTechnologies(defs) {
+  TECHNOLOGIES.splice(0, TECHNOLOGIES.length, ...defs);
+}
+function techEffects(tech) {
+  if (tech.effects && tech.effects.length > 0) return tech.effects;
+  if (!tech.effect) return [];
+  const type = tech.effect === "unlock_hangars" ? "unlock_buildings" : tech.effect;
+  return [tech.effectValue === void 0 ? { type } : { type, value: tech.effectValue }];
+}
+function effectValuePerLevel(effect) {
+  var _a, _b;
+  return (_b = (_a = effect.value) != null ? _a : TECH_EFFECT_DEFAULTS[effect.type]) != null ? _b : 0;
+}
+var TECH_EFFECT_STAT = {
+  energy_efficiency: "productionAll",
+  resource_production: "production",
+  unit_attack: "attack",
+  unit_defense: "defense",
+  building_discount: "buildingDiscount",
+  storage_capacity: "storage",
+  protected_storage: "protectedStorage",
+  fleet_speed: "fleetSpeed",
+  cargo_capacity: "cargo",
+  building_time: "buildTime",
+  unit_time: "unitTime",
+  research_time: "researchTime",
+  fleet_upkeep: "fleetUpkeep",
+  counter_spy: "counterSpy",
+  hangar_capacity: "hangarCapacity"
+};
+function techEffectGrants(techLevels2) {
+  var _a;
+  const out = [];
+  if (!techLevels2) return out;
+  for (const tech of TECHNOLOGIES) {
+    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
+    if (level3 <= 0) continue;
+    for (const e3 of techEffects(tech)) {
+      const stat = TECH_EFFECT_STAT[e3.type];
+      if (!stat) continue;
+      out.push({ stat, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+    }
+  }
+  return out;
+}
+function techBonus(techLevels2, type, target) {
+  var _a;
+  if (!techLevels2) return 0;
+  const stat = TECH_EFFECT_STAT[type];
+  if (stat) return effectTotal(techEffectGrants(techLevels2), "tech", stat, { target });
+  let total2 = 0;
+  for (const tech of TECHNOLOGIES) {
+    const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
+    if (level3 <= 0) continue;
+    for (const e3 of techEffects(tech)) {
+      if (e3.type !== type && !(type === "unlock_buildings" && e3.type === "unlock_hangars")) continue;
+      if (target !== void 0 && e3.target !== target) continue;
+      total2 += level3 * effectValuePerLevel(e3);
+    }
+  }
+  return total2;
+}
+function techReductionFactor(techLevels2, type) {
+  return 1 - techBonus(techLevels2, type);
+}
+function buildingsUnlockedByTech(techId, buildings) {
+  var _a;
+  const tech = findTech(techId);
+  const ids = new Set(buildings.filter((b) => b.unlockedByTech === techId).map((b) => b.id));
+  for (const e3 of tech ? techEffects(tech) : []) if (e3.type === "unlock_buildings" || e3.type === "unlock_hangars") for (const id of (_a = e3.targets) != null ? _a : []) ids.add(id);
+  return [...ids];
+}
+var MAX_CONCURRENT_RESEARCH = 4;
+var COST_GROWTH = 2.7;
+var TIME_GROWTH = 1.67;
+function findTech(id) {
+  return TECHNOLOGIES.find((t) => t.id === id);
+}
+function getTechCost(tech, level3) {
+  var _a;
+  const growth = (_a = tech.costGrowth) != null ? _a : COST_GROWTH;
+  const factor = Math.pow(growth, level3 - 1);
+  const cost = {};
+  for (const [res, amount3] of Object.entries(tech.baseCost)) {
+    cost[res] = Math.floor(amount3 * factor);
+  }
+  return cost;
+}
+function getTechAmberCost(tech) {
+  const n = Number(tech.amberCost);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+function getTechTime(tech, level3) {
+  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level3 - 1));
+}
+var BLUEPRINT_UNITS = /* @__PURE__ */ new Map();
+function blueprintsRequiredBy(tech) {
+  return techEffects(tech).filter((e3) => e3.type === "unlock_next_level" && e3.target && BLUEPRINT_UNITS.has(e3.target)).map((e3) => e3.target);
+}
+function checkPrereqs(tech, levels, ownedPlans = []) {
+  const list = Object.entries(tech.prereq).map(([reqId, reqLevel]) => {
+    var _a, _b, _c;
+    const current2 = (_a = levels[reqId]) != null ? _a : 0;
+    return { id: reqId, nom: (_c = (_b = findTech(reqId)) == null ? void 0 : _b.nom) != null ? _c : reqId, requis: reqLevel, actuel: current2, valide: current2 >= reqLevel, kind: "tech" };
+  });
+  for (const unitId of blueprintsRequiredBy(tech)) {
+    const owned = ownedPlans.includes(unitId);
+    list.push({ id: `plan:${unitId}`, nom: `Plan : ${BLUEPRINT_UNITS.get(unitId)}`, requis: 1, actuel: owned ? 1 : 0, valide: owned, kind: "plan" });
+  }
+  return { valid: list.every((r) => r.valide), list };
+}
+var EFFECT_MAX_PER_LEVEL = {
+  building_discount: 0.5,
+  fleet_speed: 0.5,
+  building_time: 0.5,
+  unit_time: 0.5,
+  research_time: 0.5,
+  fleet_upkeep: 0.5,
+  protected_storage: 0.5,
+  counter_spy: 10,
+  hangar_capacity: 0.5
+};
+function validateTechEffect(label3, e3, refs) {
+  var _a, _b;
+  const errors = [];
+  if (!(e3.type in TECH_EFFECT_LABELS)) return [`${label3} : effet \xAB ${e3.type} \xBB inconnu.`];
+  if (e3.type === "resource_production" && (!e3.target || !refs.resources.has(e3.target))) errors.push(`${label3} : ressource vis\xE9e manquante ou inconnue.`);
+  if (e3.type === "hangar_capacity" && e3.target !== "attack" && e3.target !== "defense") errors.push(`${label3} : hangar vis\xE9 manquant (attaque ou d\xE9fense).`);
+  if (e3.type === "unlock_next_level" && e3.target && !refs.unitIds.has(e3.target)) errors.push(`${label3} : unit\xE9 \xAB ${e3.target} \xBB inexistante.`);
+  for (const id of (_a = e3.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
+  if (e3.value !== void 0) {
+    const max = (_b = EFFECT_MAX_PER_LEVEL[e3.type]) != null ? _b : 5;
+    if (!Number.isFinite(e3.value) || e3.value < 0 || e3.value > max) errors.push(`${label3} : valeur par niveau de \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB entre 0 et ${max}.`);
+  }
+  return errors;
+}
+
+// src/game/buildings.ts
+var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
+var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
+function tier2(common, commonMax, rare, rareMax) {
+  return {
+    fromLevel: 11,
+    baseCost: __spreadValues(__spreadValues({}, common), rare),
+    maxCost: __spreadValues(__spreadValues({}, commonMax), rareMax),
+    baseSeconds: 3 * 3600,
+    secondsPerLevel: 3600
+  };
+}
+var extractorUpgrade = (rare) => ({
+  baseCost: { scrap: 50, energy: 20 },
+  maxCost: { scrap: 25e5, energy: 18e5 },
+  costFromLevel: 1,
+  secondsPerLevel: 600,
+  tier2: tier2({ scrap: 5e6, energy: 3e6 }, { scrap: 5e8, energy: 3e8 }, { [rare]: 2e4 }, { [rare]: 2e6 })
+});
+var hangarUpgrade = (rares) => ({
+  baseCost: { scrap: 300, energy: 150 },
+  maxCost: { scrap: 5e6, energy: 75e5 },
+  costFromLevel: 1,
+  secondsPerLevel: 900,
+  tier2: tier2(
+    { scrap: 8e6, energy: 8e6 },
+    { scrap: 7e8, energy: 7e8 },
+    { [rares[0]]: 15e3, [rares[1]]: 15e3 },
+    { [rares[0]]: 15e5, [rares[1]]: 15e5 }
+  )
+});
+var DEFAULT_BUILDINGS = [
+  {
+    id: "extracteur_ferraille",
+    name: "Extracteur de ferraille",
+    description: "R\xE9cup\xE8re automatiquement de la ferraille dans les d\xE9bris environnants.",
+    image: "/assets/buildings/extracteur_ferraille.webp",
+    maxLevel: 20,
+    startsUnlocked: true,
+    upgrade: extractorUpgrade("reinforcedSteel"),
+    production: { resource: "scrap", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "reacteur_instable",
+    name: "R\xE9acteur instable",
+    description: "G\xE9n\xE8re de l'\xE9nergie brute, au prix d'une certaine instabilit\xE9.",
+    image: "/assets/buildings/reacteur_instable.webp",
+    maxLevel: 20,
+    unlockCost: { scrap: 500 },
+    upgrade: extractorUpgrade("cyberModule"),
+    production: { resource: "energy", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "extracteur_nanocomposants",
+    name: "Extracteur de nanocomposants",
+    description: "Synth\xE9tise des nanocomposants \xE0 partir de mati\xE8res recycl\xE9es.",
+    image: "/assets/buildings/extracteur_nanocomposants.webp",
+    maxLevel: 20,
+    unlockCost: { energy: 500 },
+    upgrade: extractorUpgrade("syntheticNanites"),
+    production: { resource: "nano", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "archives_fracturees",
+    name: "Archives fractur\xE9es",
+    description: "Fouille des donn\xE9es anciennes dans des serveurs endommag\xE9s.",
+    image: "/assets/buildings/archives_fracturees.webp",
+    maxLevel: 20,
+    unlockCost: { nano: 500 },
+    upgrade: extractorUpgrade("aiFragment"),
+    production: { resource: "data", perSecond: PRODUCTION_TABLE }
+  },
+  {
+    id: "atelier_reparation",
+    name: "Atelier de r\xE9paration",
+    description: "R\xE9pare une partie des unit\xE9s perdues apr\xE8s chaque combat.",
+    image: "/assets/buildings/atelier_reparation.webp",
+    maxLevel: 20,
+    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
+    upgrade: {
+      baseCost: { nano: 1e3, data: 1e3 },
+      maxCost: { nano: 1e7, data: 95e5 },
+      costFromLevel: 2,
+      secondsPerLevel: 1200,
+      tier2: tier2(
+        { nano: 1e7, data: 1e7 },
+        { nano: 8e8, data: 8e8 },
+        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
+        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
+      )
+    },
+    // 5 % par niveau jusqu'au niveau 10 (50 %), puis 2 % par niveau (70 % au niveau 20).
+    effect: { type: "repair", perLevel: 0.05, max: 0.7, bonusFromLevel: 11, bonusPerLevel: 0.02 }
+  },
+  {
+    id: "hangar_attaque",
+    name: "Hangar d'attaque",
+    description: "Augmente la capacit\xE9 de stockage des unit\xE9s offensives.",
+    image: "/assets/buildings/hangar_attaque.webp",
+    maxLevel: 20,
+    unlockedByTech: "tech6",
+    upgrade: hangarUpgrade(["reinforcedSteel", "cyberModule"]),
+    effect: { type: "hangar", category: "attack", perLevel: 2e3 }
+  },
+  {
+    id: "hangar_defense",
+    name: "Hangar de d\xE9fense",
+    description: "Augmente la capacit\xE9 de stockage des unit\xE9s d\xE9fensives.",
+    image: "/assets/buildings/hangar_defense.webp",
+    maxLevel: 20,
+    unlockedByTech: "tech6",
+    upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
+    effect: { type: "hangar", category: "defense", perLevel: 2e3 }
+  },
+  {
+    id: "entrepot",
+    name: "Entrep\xF4t",
+    description: "Stocke les ressources communes. Plein, la production s'arr\xEAte ; une partie du stock est \xE0 l'abri du pillage.",
+    image: "/assets/buildings/entrepot.webp",
+    maxLevel: 20,
+    startsUnlocked: true,
+    upgrade: {
+      baseCost: { scrap: 2e4, energy: 1e4 },
+      maxCost: { scrap: 2e7, energy: 1e7 },
+      costFromLevel: 2,
+      secondsPerLevel: 600,
+      tier2: tier2({ scrap: 3e7, energy: 15e6 }, { scrap: 4e8, energy: 2e8 }, {}, {})
+    },
+    effect: { type: "storage", base: 2e6, growth: 1.6 }
+  },
+  // v3.6 : bâtiments de fin de partie, débloqués par les nouvelles technologies.
+  {
+    id: "fonderie_quantique",
+    name: "Fonderie quantique",
+    description: "Forge de l'acier renforc\xE9 \xE0 partir de mati\xE8re stabilis\xE9e \xE0 l'\xE9chelle quantique : une production continue de ressource rare.",
+    image: "/assets/buildings/fonderie_quantique.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech21",
+    upgrade: { baseCost: { scrap: 2e7, energy: 1e7, cyberModule: 2e4 }, maxCost: { scrap: 15e8, energy: 8e8, cyberModule: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "reinforcedSteel", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "synthetiseur_neuronal",
+    name: "Synth\xE9tiseur neuronal",
+    description: "Un cortex de cristal cultive des fragments d'IA, jour et nuit : une production continue de ressource rare.",
+    image: "/assets/buildings/synthetiseur_neuronal.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech22",
+    upgrade: { baseCost: { data: 2e7, nano: 1e7, syntheticNanites: 2e4 }, maxCost: { data: 15e8, nano: 8e8, syntheticNanites: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    production: { resource: "aiFragment", perSecond: ENDGAME_PRODUCTION }
+  },
+  {
+    id: "generateur_bouclier",
+    name: "G\xE9n\xE9rateur de bouclier plan\xE9taire",
+    description: "Un d\xF4me d'\xE9nergie hexagonal renforce le bouclier de la base au-del\xE0 de ce que permettent les hangars.",
+    image: "/assets/buildings/generateur_bouclier.webp",
+    maxLevel: 10,
+    endgame: true,
+    unlockedByTech: "tech23",
+    upgrade: { baseCost: { energy: 3e7, scrap: 2e7, reinforcedSteel: 2e4 }, maxCost: { energy: 2e9, scrap: 13e8, reinforcedSteel: 2e6 }, costFromLevel: 2, secondsPerLevel: 10800 },
+    effect: { type: "shield", perLevel: 5e-3, max: 0.05 }
+  }
+];
+var SYNTH_BUILDING_ID = "labo_synthese";
+var SYNTH_BUILDING = {
+  id: SYNTH_BUILDING_ID,
+  name: "Labo de synth\xE8se",
+  description: "Des cuves bouillonnantes o\xF9 m\xFBrissent stimulants, carapaces et brouilleurs. Son niveau fixe la puissance des capsules (5 % par niveau).",
+  image: "/assets/buildings/labo_synthese.webp",
+  maxLevel: 10,
+  endgame: true,
+  unlockCost: { scrap: 15e5, energy: 8e5, data: 3e5 },
+  upgrade: {
+    baseCost: { scrap: 4e5, energy: 25e4, data: 1e5 },
+    maxCost: { scrap: 15e7, energy: 9e7, data: 4e7 },
+    costFromLevel: 2,
+    secondsPerLevel: 5400
+  }
+};
+DEFAULT_BUILDINGS.push(SYNTH_BUILDING);
+function withFixedBuildings(defs) {
+  return defs.some((b) => b.id === SYNTH_BUILDING_ID) ? defs : [...defs, SYNTH_BUILDING];
+}
+var BUILDINGS = [];
+var LOCKABLE_BUILDINGS = [];
+var BUILDING_UNLOCK_COST = {};
+var PRODUCTION_RESOURCE_BY_BUILDING = {};
+function setBuildings(defs) {
+  var _a;
+  BUILDINGS.splice(0, BUILDINGS.length, ...defs);
+  LOCKABLE_BUILDINGS.splice(
+    0,
+    LOCKABLE_BUILDINGS.length,
+    ...defs.filter((b) => b.production && !b.startsUnlocked && !b.unlockedByTech).map((b) => b.id)
+  );
+  for (const key of Object.keys(BUILDING_UNLOCK_COST)) delete BUILDING_UNLOCK_COST[key];
+  for (const key of Object.keys(PRODUCTION_RESOURCE_BY_BUILDING)) delete PRODUCTION_RESOURCE_BY_BUILDING[key];
+  for (const b of defs) {
+    const entries = Object.entries((_a = b.unlockCost) != null ? _a : {}).filter(([, v]) => (v != null ? v : 0) > 0);
+    const items = entries.map(([resource, amount3]) => {
+      var _a2, _b;
+      return { resource, amount: amount3, label: (_b = (_a2 = RESOURCE_LIST.find((r) => r.id === resource)) == null ? void 0 : _a2.name) != null ? _b : resource };
+    });
+    if (items.length === 1) BUILDING_UNLOCK_COST[b.id] = items[0];
+    else if (items.length > 1) BUILDING_UNLOCK_COST[b.id] = { multi: true, resources: items };
+    if (b.production) PRODUCTION_RESOURCE_BY_BUILDING[b.id] = b.production.resource;
+  }
+}
+setBuildings(DEFAULT_BUILDINGS);
+function findBuilding(id) {
+  return BUILDINGS.find((b) => b.id === id);
+}
+function productionPerSecond(buildingId, level3) {
+  var _a, _b, _c, _d;
+  if (level3 <= 0) return 0;
+  const table = (_c = (_b = (_a = findBuilding(buildingId)) == null ? void 0 : _a.production) == null ? void 0 : _b.perSecond) != null ? _c : [];
+  return (_d = table[Math.min(level3, table.length) - 1]) != null ? _d : 0;
+}
+function geometricCost(baseCost, maxCost, fromLevel, toLevel, level3) {
+  var _a;
+  const steps = Math.max(1, toLevel - fromLevel);
+  const cost = {};
+  for (const [res, base] of Object.entries(baseCost)) {
+    const target = (_a = maxCost[res]) != null ? _a : base;
+    const rate = base > 0 ? Math.pow(target / base, 1 / steps) : 1;
+    cost[res] = Math.floor(base * Math.pow(rate, level3 - fromLevel));
+  }
+  return cost;
+}
+function tierFor(building, level3) {
+  const t2 = building.upgrade.tier2;
+  return t2 && level3 >= t2.fromLevel ? t2 : null;
+}
+function getBuildingUpgradeCost(building, nextLevel) {
+  const { baseCost, maxCost, costFromLevel, tier2: tier22 } = building.upgrade;
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
+  const lastLevel = tier22 ? Math.min(building.maxLevel, tier22.fromLevel - 1) : building.maxLevel;
+  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
+}
+function applyBuildingDiscount(cost, discount) {
+  if (!discount) return cost;
+  const out = __spreadValues({}, cost);
+  for (const key of Object.keys(out)) {
+    const val = out[key];
+    if (typeof val === "number") {
+      out[key] = Math.max(0, Math.floor(val * (1 - discount)));
+    }
+  }
+  return out;
+}
+function getBuildingUpgradeTime(building, nextLevel) {
+  const t2 = tierFor(building, nextLevel);
+  if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
+  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
+}
+function getRepairPercent(buildings) {
+  var _a;
+  let pct5 = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
+    pct5 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  return pct5;
+}
+function repairPercentAt(effect, level3) {
+  var _a;
+  const from = effect.bonusFromLevel;
+  const base = from ? Math.min(level3, from - 1) * effect.perLevel : level3 * effect.perLevel;
+  const bonus = from ? Math.max(0, level3 - from + 1) * ((_a = effect.bonusPerLevel) != null ? _a : effect.perLevel) : 0;
+  return Math.max(0, Math.min(effect.max, base + bonus));
+}
+function getStorageCapacity(buildings, techLevels2) {
+  var _a;
+  let capacity = 0;
+  let hasStorage = false;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "storage") continue;
+    hasStorage = true;
+    capacity += storageCapacityAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  return hasStorage ? Math.floor(capacity * (1 + techBonus(techLevels2, "storage_capacity"))) : Infinity;
+}
+function storageCapacityAt(effect, level3) {
+  return level3 > 0 ? Math.floor(effect.base * Math.pow(effect.growth, level3)) : 0;
+}
+function getUnitCapacity(buildings, category, techLevels2) {
+  var _a, _b, _c;
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "hangar" || b.effect.category !== category) continue;
+    capacity += ((_c = (_b = buildings[b.id]) == null ? void 0 : _b.level) != null ? _c : 0) * b.effect.perLevel;
+  }
+  const bonus = techLevels2 ? techBonus(techLevels2, "hangar_capacity", category) : 0;
+  return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
+}
+function effectiveBuildingLevel(buildings, id) {
+  var _a;
+  const state = buildings[id];
+  return (state == null ? void 0 : state.unlocked) ? (_a = state.level) != null ? _a : 0 : 0;
+}
+function defaultBuildings() {
+  return Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: !!b.startsUnlocked }]));
+}
+function withMissingBuildings(buildings, resources) {
+  var _a;
+  const out = __spreadValues({}, buildings != null ? buildings : {});
+  for (const b of BUILDINGS) {
+    if (out[b.id]) continue;
+    let level3 = 1;
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "storage" && resources) {
+      const biggest = Math.max(0, ...RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
+        var _a2;
+        return (_a2 = resources[r.id]) != null ? _a2 : 0;
+      }));
+      while (level3 < b.maxLevel && storageCapacityAt(b.effect, level3) < biggest) level3++;
+    }
+    out[b.id] = { level: level3, unlocked: !!b.startsUnlocked };
+  }
+  return out;
+}
+
 // src/game/production.ts
 function getProductionBonus(techLevels2) {
   return techBonus(techLevels2, "energy_efficiency");
@@ -3899,6 +2019,705 @@ function grantResources(player, input) {
   return given;
 }
 
+// src/game/allianceProfile.ts
+var ALLIANCE_PERMS = [
+  { id: "treasury", label: "Tr\xE9sor", hint: "Verser des ressources du tr\xE9sor aux membres." },
+  { id: "research", label: "Recherches", hint: "Lancer les recherches d'alliance." },
+  { id: "projects", label: "Projets", hint: "Financer les projets avec le tr\xE9sor." },
+  { id: "diplomacy", label: "Diplomatie", hint: "Pactes, guerres et redditions." },
+  { id: "boss", label: "Boss", hint: "Appeler le boss d'alliance de la semaine." },
+  { id: "recruit", label: "Recrutement", hint: "Fiche publique, candidatures \xE0 accepter ou refuser." },
+  { id: "kick", label: "Exclusion", hint: "Exclure un membre (jamais le fondateur)." }
+];
+var ALLIANCE_PROFILE_RULES = { maxRanks: 6, maxApplications: 30, descriptionMax: 600, messageMax: 300 };
+var PERM_IDS = new Set(ALLIANCE_PERMS.map((p) => p.id));
+var COLOR = /^#[0-9a-fA-F]{6}$/;
+var LEGACY_PERMS = {
+  founder: ALLIANCE_PERMS.map((p) => p.id),
+  officer: ["treasury", "research", "projects", "diplomacy", "boss", "recruit"],
+  diplomat: ["diplomacy"],
+  member: []
+};
+function normalizeAllianceProfile(raw) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const ranks = (Array.isArray(r.ranks) ? r.ranks : []).filter((k) => k && typeof k.id === "string" && typeof k.name === "string").slice(0, ALLIANCE_PROFILE_RULES.maxRanks).map((k) => ({ id: k.id, name: k.name.slice(0, 24), color: COLOR.test(k.color) ? k.color : "#94a3b8", perms: (Array.isArray(k.perms) ? k.perms : []).filter((p) => PERM_IDS.has(p)) }));
+  const rankIds = new Set(ranks.map((k) => k.id));
+  const memberRanks = {};
+  for (const [uid, id] of Object.entries(r.memberRanks && typeof r.memberRanks === "object" ? r.memberRanks : {})) if (rankIds.has(String(id))) memberRanks[uid] = String(id);
+  return {
+    description: String((_a = r.description) != null ? _a : "").slice(0, ALLIANCE_PROFILE_RULES.descriptionMax),
+    recruiting: r.recruiting === "apply" || r.recruiting === "closed" ? r.recruiting : "open",
+    ranks,
+    memberRanks,
+    applications: (Array.isArray(r.applications) ? r.applications : []).filter((a) => a && typeof a.uid === "string").map((a) => {
+      var _a2, _b;
+      return { uid: a.uid, pseudo: String((_a2 = a.pseudo) != null ? _a2 : ""), message: String((_b = a.message) != null ? _b : "").slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: Number(a.atMs) || 0 };
+    }).slice(-ALLIANCE_PROFILE_RULES.maxApplications)
+  };
+}
+function alliancePerms(alliance, uid) {
+  var _a;
+  const role = allianceRole(alliance, uid);
+  if (!role) return /* @__PURE__ */ new Set();
+  const perms = new Set(LEGACY_PERMS[role]);
+  if (role !== "founder") {
+    const profile = normalizeAllianceProfile(alliance.profile);
+    const rank2 = profile.ranks.find((k) => k.id === profile.memberRanks[uid]);
+    for (const p of (_a = rank2 == null ? void 0 : rank2.perms) != null ? _a : []) perms.add(p);
+  }
+  return perms;
+}
+function hasAlliancePerm(alliance, uid, perm) {
+  return alliancePerms(alliance, uid).has(perm);
+}
+function withProfile(alliance, profile) {
+  return __spreadProps(__spreadValues({}, alliance), { profile });
+}
+function founderOnly(alliance, uid) {
+  if (allianceRole(alliance, uid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les rangs.");
+}
+function saveRank(alliance, actorUid, raw) {
+  var _a;
+  founderOnly(alliance, actorUid);
+  const profile = normalizeAllianceProfile(alliance.profile);
+  const name = String((_a = raw.name) != null ? _a : "").trim().slice(0, 24);
+  if (!name) throw new GameActionError("Donne un nom au rang.");
+  const color = COLOR.test(String(raw.color)) ? String(raw.color) : "#94a3b8";
+  const perms = (Array.isArray(raw.perms) ? raw.perms : []).filter((p) => PERM_IDS.has(p));
+  const id = raw.id && profile.ranks.some((k) => k.id === raw.id) ? raw.id : `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e3)}`;
+  if (!profile.ranks.some((k) => k.id === id) && profile.ranks.length >= ALLIANCE_PROFILE_RULES.maxRanks) throw new GameActionError(`${ALLIANCE_PROFILE_RULES.maxRanks} rangs au plus.`);
+  const rank2 = { id, name, color, perms };
+  const ranks = profile.ranks.some((k) => k.id === id) ? profile.ranks.map((k) => k.id === id ? rank2 : k) : [...profile.ranks, rank2];
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks }));
+}
+function deleteRank(alliance, actorUid, rankId) {
+  founderOnly(alliance, actorUid);
+  const profile = normalizeAllianceProfile(alliance.profile);
+  const memberRanks = Object.fromEntries(Object.entries(profile.memberRanks).filter(([, id]) => id !== rankId));
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { ranks: profile.ranks.filter((k) => k.id !== rankId), memberRanks }));
+}
+function assignRank(alliance, actorUid, targetUid, rankId) {
+  founderOnly(alliance, actorUid);
+  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas recevoir de rang.");
+  const profile = normalizeAllianceProfile(alliance.profile);
+  if (rankId && !profile.ranks.some((k) => k.id === rankId)) throw new GameActionError("Rang inconnu.");
+  const memberRanks = __spreadValues({}, profile.memberRanks);
+  if (rankId) memberRanks[targetUid] = rankId;
+  else delete memberRanks[targetUid];
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { memberRanks }));
+}
+function setAllianceProfile(alliance, actorUid, patch) {
+  if (!hasAlliancePerm(alliance, actorUid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour modifier la fiche.");
+  const profile = normalizeAllianceProfile(alliance.profile);
+  return withProfile(alliance, __spreadValues(__spreadValues(__spreadValues({}, profile), patch.description !== void 0 ? { description: String(patch.description).trim().slice(0, ALLIANCE_PROFILE_RULES.descriptionMax) } : {}), patch.recruiting === "open" || patch.recruiting === "apply" || patch.recruiting === "closed" ? { recruiting: patch.recruiting } : {}));
+}
+function applyToAlliance(alliance, player, message, now) {
+  const profile = normalizeAllianceProfile(alliance.profile);
+  if (player.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu fais d\xE9j\xE0 partie de cette alliance.");
+  if (profile.recruiting === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
+  if (profile.recruiting === "open") throw new GameActionError("Cette alliance est ouverte : rejoins-la directement.");
+  if (profile.applications.some((a) => a.uid === player.uid)) throw new GameActionError("Ta candidature est d\xE9j\xE0 en attente.");
+  if (profile.applications.length >= ALLIANCE_PROFILE_RULES.maxApplications) throw new GameActionError("Trop de candidatures en attente : r\xE9essaie plus tard.");
+  const app = { uid: player.uid, pseudo: player.pseudo, message: String(message != null ? message : "").trim().slice(0, ALLIANCE_PROFILE_RULES.messageMax), atMs: now };
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: [...profile.applications, app] }));
+}
+function dropApplication(alliance, uid) {
+  const profile = normalizeAllianceProfile(alliance.profile);
+  return withProfile(alliance, __spreadProps(__spreadValues({}, profile), { applications: profile.applications.filter((a) => a.uid !== uid) }));
+}
+function assertCanJoin(alliance) {
+  const r = normalizeAllianceProfile(alliance.profile).recruiting;
+  if (r === "apply") throw new GameActionError("Cette alliance recrute sur candidature : postule depuis sa fiche.");
+  if (r === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
+}
+
+// src/game/stats.ts
+function playerStats(player) {
+  var _a;
+  return (_a = player.stats) != null ? _a : {};
+}
+function bumpStat(player, key, n = 1) {
+  var _a, _b, _c;
+  if (!(n > 0)) return;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
+}
+function setStat(player, key, value2) {
+  var _a;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
+}
+function recordThreat(player, factionId) {
+  var _a, _b, _c;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
+  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
+  player.stats = s;
+}
+function recordMission(player, day) {
+  var _a, _b, _c, _d;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
+  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
+  s.missionDay = day;
+  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
+  player.stats = s;
+}
+function parisHour(now) {
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const lastSunday = (month2) => {
+    const last = new Date(Date.UTC(y, month2 + 1, 0));
+    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
+  };
+  const summer = now >= lastSunday(2) && now < lastSunday(9);
+  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
+}
+
+// src/game/alliances.ts
+var ALLIANCE_RULES = {
+  maxMembers: 6,
+  /** Versement : au plus cette part du stock d'une ressource du trésor. */
+  distributionMaxPct: 0.2,
+  /** Versements par jour (UTC) pour toute l'alliance. */
+  distributionsPerDay: 10,
+  /** Coût du niveau n : base × croissance^(n−1). */
+  researchCommonCost: 5e7,
+  researchRareCost: 1e6,
+  researchGrowth: 2,
+  researchHoursPerLevel: 12,
+  /** Garnison : part de la puissance d'attaque engagée en défense. */
+  garrisonPower: 0.5,
+  garrisonMinHours: 1,
+  garrisonMaxHours: 24,
+  maxGarrisonsPerHost: 3,
+  /** Onglet Renseignement : rapports des membres sur cette période. */
+  sharedReportsDays: 7,
+  sharedReportsMax: 50,
+  /** Saison : somme des XP de saison des N meilleurs membres. */
+  seasonTopMembers: 5,
+  seasonRewardHours: 8,
+  seasonTitle: "Alli\xE9 champion",
+  researches: [
+    { id: "logistique", name: "Logistique f\xE9d\xE9r\xE9e", emoji: "\u{1F6F0}\uFE0F", description: "R\xE9duit le temps de vol de toutes les flottes des membres.", perLevel: 0.05, maxLevel: 5 },
+    { id: "industrie", name: "Industrie coop\xE9rative", emoji: "\u{1F3ED}", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5 },
+    { id: "brouillage", name: "R\xE9seau de brouillage", emoji: "\u{1F4E1}", description: "Ajoute des points de contre-espionnage \xE0 chaque membre.", perLevel: 1, maxLevel: 5 },
+    { id: "bouclier", name: "Bouclier f\xE9d\xE9ral", emoji: "\u{1F6E1}\uFE0F", description: "Renforce le bouclier des bases des membres, au-del\xE0 du plafond habituel.", perLevel: 0.01, maxLevel: 5 }
+  ],
+  /** v3.3 : projets (méga-structures). Coût du palier n : base × croissance^(n−1). */
+  projectCommonCost: 5e8,
+  projectRareCost: 5e6,
+  projectGrowth: 2,
+  /** Construction du palier n : n × ce nombre d'heures, une fois financé. */
+  projectHoursPerLevel: 24,
+  projects: [
+    { id: "forge", name: "Anneau-forge", emoji: "\u{1F528}", description: "R\xE9duit la dur\xE9e des constructions et des recherches des membres.", perLevel: 0.02, maxLevel: 5 },
+    { id: "siege", name: "Batterie de si\xE8ge", emoji: "\u{1F3AF}", description: "Augmente l'attaque des membres contre le L\xE9viathan et les repaires pirates.", perLevel: 0.04, maxLevel: 5 },
+    { id: "bastion", name: "Bastion f\xE9d\xE9ral", emoji: "\u{1F3F0}", description: "Met \xE0 l'abri du pillage une part suppl\xE9mentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5 }
+  ]
+};
+var MAX_DIPLOMATS = 2;
+function canDiplomacy(role) {
+  return role === "founder" || role === "officer" || role === "diplomat";
+}
+function canDiplomacyIn(alliance, uid) {
+  return hasAlliancePerm(alliance, uid, "diplomacy");
+}
+var RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id));
+function findAllianceResearch(id) {
+  return ALLIANCE_RULES.researches.find((r) => r.id === id);
+}
+function allianceRole(alliance, uid) {
+  var _a, _b;
+  if (!((_a = alliance.members) == null ? void 0 : _a.includes(uid))) return null;
+  if (alliance.createdBy === uid) return "founder";
+  const r = (_b = alliance.roles) == null ? void 0 : _b[uid];
+  return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
+}
+function level(levels, id) {
+  var _a;
+  const def3 = findAllianceResearch(id);
+  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
+}
+function allianceFlightFactor(levels, techLevels2, player) {
+  var _a, _b;
+  const empire = player ? playerModifiers(player).fleetSpeed : 0;
+  return Math.max(0.1, (1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed") * (1 - empire));
+}
+function allianceProductionFactor(levels) {
+  var _a, _b;
+  return 1 + level(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function allianceCounterSpy(levels) {
+  var _a, _b;
+  return level(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function allianceShieldBonus(levels) {
+  var _a, _b;
+  return level(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+var projectKey = (id) => `projet_${id}`;
+function findAllianceProject(id) {
+  return ALLIANCE_RULES.projects.find((p) => p.id === id);
+}
+function memberProjectLevel(levels, id) {
+  var _a;
+  const def3 = findAllianceProject(id);
+  return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[projectKey(id)]) || 0)));
+}
+function projectEffect(levels, id) {
+  var _a, _b;
+  return memberProjectLevel(levels, id) * ((_b = (_a = findAllianceProject(id)) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+}
+function allianceForgeFactor(levels) {
+  return Math.max(0.5, 1 - projectEffect(levels, "forge"));
+}
+function allianceSiegeFactor(levels) {
+  return 1 + projectEffect(levels, "siege");
+}
+function allianceBastionBonus(levels) {
+  return projectEffect(levels, "bastion");
+}
+function newAlliance(founder, nameIn, tagIn, now) {
+  const name = String(nameIn != null ? nameIn : "").trim();
+  const tag = String(tagIn != null ? tagIn : "").trim().toUpperCase();
+  if (name.length < 3 || name.length > 40) throw new GameActionError("Le nom doit contenir entre 3 et 40 caract\xE8res.");
+  if (!/^[A-Z0-9]{2,5}$/.test(tag)) throw new GameActionError("Le tag doit contenir 2 \xE0 5 lettres ou chiffres.");
+  return {
+    name,
+    tag,
+    createdBy: founder.uid,
+    createdAtMs: now,
+    members: [founder.uid],
+    memberPseudos: { [founder.uid]: founder.pseudo },
+    roles: {},
+    treasury: {},
+    research: {},
+    activeResearch: null,
+    distributions: { day: "", count: 0 }
+  };
+}
+function addMember(alliance, player) {
+  if (alliance.members.includes(player.uid)) throw new GameActionError("Tu es d\xE9j\xE0 membre de cette alliance.");
+  if (alliance.members.length >= ALLIANCE_RULES.maxMembers) throw new GameActionError(`Cette alliance est compl\xE8te (${ALLIANCE_RULES.maxMembers} membres).`);
+  return __spreadProps(__spreadValues({}, alliance), { members: [...alliance.members, player.uid], memberPseudos: __spreadProps(__spreadValues({}, alliance.memberPseudos), { [player.uid]: player.pseudo }) });
+}
+function removeMember(alliance, uid) {
+  var _a, _b;
+  if (!alliance.members.includes(uid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
+  const members = alliance.members.filter((m) => m !== uid);
+  if (members.length === 0) return null;
+  const memberPseudos = __spreadValues({}, alliance.memberPseudos);
+  delete memberPseudos[uid];
+  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
+  delete roles[uid];
+  let createdBy = alliance.createdBy;
+  if (createdBy === uid) {
+    createdBy = (_b = members.find((m) => roles[m] === "officer")) != null ? _b : members[0];
+    delete roles[createdBy];
+  }
+  return __spreadProps(__spreadValues({}, alliance), { members, memberPseudos, roles, createdBy });
+}
+function kickMember(alliance, actorUid, targetUid) {
+  if (!hasAlliancePerm(alliance, actorUid, "kick")) throw new GameActionError("Il te faut le droit \xAB Exclusion \xBB pour exclure un membre.");
+  if (actorUid === targetUid) throw new GameActionError("Tu ne peux pas t'exclure toi-m\xEAme.");
+  if (targetUid === alliance.createdBy) throw new GameActionError("Le fondateur ne peut pas \xEAtre exclu.");
+  return removeMember(alliance, targetUid);
+}
+function setOfficer(alliance, actorUid, targetUid, officer) {
+  return setRole(alliance, actorUid, targetUid, officer ? "officer" : "member");
+}
+function setRole(alliance, actorUid, targetUid, role) {
+  var _a;
+  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur g\xE8re les r\xF4les.");
+  if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de r\xF4le.");
+  if (role !== "officer" && role !== "diplomat" && role !== "member") throw new GameActionError("R\xF4le inconnu.");
+  const roles = __spreadValues({}, (_a = alliance.roles) != null ? _a : {});
+  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= MAX_DIPLOMATS) {
+    throw new GameActionError(`${MAX_DIPLOMATS} diplomates au plus par alliance.`);
+  }
+  if (role === "member") delete roles[targetUid];
+  else roles[targetUid] = role;
+  return __spreadProps(__spreadValues({}, alliance), { roles });
+}
+function parseAmounts(raw) {
+  const out = {};
+  for (const [res, value2] of Object.entries(raw != null ? raw : {})) {
+    const n = Math.floor(Number(value2));
+    if (!RESOURCE_IDS.has(res) || !Number.isFinite(n) || n <= 0) continue;
+    out[res] = n;
+  }
+  if (Object.keys(out).length === 0) throw new GameActionError("Indique au moins un montant.");
+  return out;
+}
+function deposit(alliance, player, amounts) {
+  var _a, _b, _c, _d;
+  if (!alliance.members.includes(player.uid)) throw new GameActionError("Tu n'es pas membre de cette alliance.");
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, amount3] of Object.entries(amounts)) {
+    if (((_b = player.resources[res]) != null ? _b : 0) < amount3) throw new GameActionError("Ressources insuffisantes pour ce d\xE9p\xF4t.");
+  }
+  for (const [res, amount3] of Object.entries(amounts)) {
+    player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - amount3;
+    treasury[res] = ((_d = treasury[res]) != null ? _d : 0) + amount3;
+  }
+  return __spreadProps(__spreadValues({}, alliance), { treasury });
+}
+function utcDay(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function distribute(alliance, actorUid, targetUid, amounts, now) {
+  var _a, _b, _c, _d;
+  if (!hasAlliancePerm(alliance, actorUid, "treasury")) throw new GameActionError("Il te faut le droit \xAB Tr\xE9sor \xBB pour verser des ressources.");
+  if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
+  const day = utcDay(now);
+  const count2 = ((_a = alliance.distributions) == null ? void 0 : _a.day) === day ? alliance.distributions.count : 0;
+  if (count2 >= ALLIANCE_RULES.distributionsPerDay) throw new GameActionError(`Limite de ${ALLIANCE_RULES.distributionsPerDay} versements par jour atteinte.`);
+  const treasury = __spreadValues({}, (_b = alliance.treasury) != null ? _b : {});
+  for (const [res, amount3] of Object.entries(amounts)) {
+    const max = Math.floor(((_c = treasury[res]) != null ? _c : 0) * ALLIANCE_RULES.distributionMaxPct);
+    if (amount3 > max) {
+      throw new GameActionError(`Un versement est limit\xE9 \xE0 ${Math.round(ALLIANCE_RULES.distributionMaxPct * 100)} % du stock du tr\xE9sor (${max} pour cette ressource).`);
+    }
+  }
+  for (const [res, amount3] of Object.entries(amounts)) treasury[res] = ((_d = treasury[res]) != null ? _d : 0) - amount3;
+  return __spreadProps(__spreadValues({}, alliance), { treasury, distributions: { day, count: count2 + 1 } });
+}
+function allianceResearchCost(nextLevel) {
+  const factor = Math.pow(ALLIANCE_RULES.researchGrowth, Math.max(0, nextLevel - 1));
+  const cost = {};
+  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.researchRareCost : ALLIANCE_RULES.researchCommonCost) * factor);
+  return cost;
+}
+function allianceResearchSeconds(nextLevel) {
+  return Math.round(ALLIANCE_RULES.researchHoursPerLevel * nextLevel * 3600);
+}
+function startAllianceResearch(alliance, actorUid, researchId, now) {
+  var _a, _b, _c;
+  if (!hasAlliancePerm(alliance, actorUid, "research")) throw new GameActionError("Il te faut le droit \xAB Recherches \xBB pour lancer une recherche.");
+  const def3 = findAllianceResearch(researchId);
+  if (!def3) throw new GameActionError("Recherche inconnue.");
+  if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
+  const next = level(alliance.research, def3.id) + 1;
+  if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+  const cost = allianceResearchCost(next);
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, amount3] of Object.entries(cost)) {
+    if (((_b = treasury[res]) != null ? _b : 0) < amount3) throw new GameActionError("Le tr\xE9sor ne suffit pas pour cette recherche.");
+  }
+  for (const [res, amount3] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - amount3;
+  return __spreadProps(__spreadValues({}, alliance), { treasury, activeResearch: { id: def3.id, level: next, endTime: now + allianceResearchSeconds(next) * 1e3 } });
+}
+function completeAllianceResearch(alliance, now) {
+  var _a;
+  const active = alliance.activeResearch;
+  if (!active || active.endTime > now) return { alliance, completed: null };
+  return {
+    alliance: __spreadProps(__spreadValues({}, alliance), { research: __spreadProps(__spreadValues({}, (_a = alliance.research) != null ? _a : {}), { [active.id]: active.level }), activeResearch: null }),
+    completed: { id: active.id, level: active.level }
+  };
+}
+function allianceProjectCost(nextLevel) {
+  const factor = Math.pow(ALLIANCE_RULES.projectGrowth, Math.max(0, nextLevel - 1));
+  const cost = {};
+  for (const r of RESOURCE_LIST) cost[r.id] = Math.round((r.rarity === "rare" ? ALLIANCE_RULES.projectRareCost : ALLIANCE_RULES.projectCommonCost) * factor);
+  return cost;
+}
+function allianceProjectSeconds(nextLevel) {
+  return Math.round(ALLIANCE_RULES.projectHoursPerLevel * nextLevel * 3600);
+}
+function projectState(alliance, id) {
+  var _a, _b;
+  const raw = (_a = alliance.projects) == null ? void 0 : _a[id];
+  return { level: Math.max(0, Math.floor(Number(raw == null ? void 0 : raw.level) || 0)), funded: __spreadValues({}, (_b = raw == null ? void 0 : raw.funded) != null ? _b : {}), buildEndMs: Number(raw == null ? void 0 : raw.buildEndMs) || 0 };
+}
+function memberLevels(alliance) {
+  var _a;
+  const out = __spreadValues({}, (_a = alliance == null ? void 0 : alliance.research) != null ? _a : {});
+  for (const def3 of ALLIANCE_RULES.projects) {
+    const level3 = alliance ? projectState(alliance, def3.id).level : 0;
+    if (level3 > 0) out[projectKey(def3.id)] = level3;
+  }
+  return out;
+}
+function contributionValue(amounts) {
+  return Object.entries(amounts).reduce((a, [res, n]) => {
+    var _a;
+    return a + (n != null ? n : 0) * (((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? 100 : 1);
+  }, 0);
+}
+function fundAllianceProject(alliance, actor, projectId, source, amounts, now) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  const def3 = findAllianceProject(projectId);
+  if (!def3) throw new GameActionError("Projet inconnu.");
+  const role = allianceRole(alliance, actor.uid);
+  if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
+  if (source === "treasury" && !hasAlliancePerm(alliance, actor.uid, "projects")) throw new GameActionError("Il te faut le droit \xAB Projets \xBB pour puiser dans le tr\xE9sor.");
+  const state = projectState(alliance, def3.id);
+  if (state.buildEndMs > 0) throw new GameActionError("Ce palier est d\xE9j\xE0 en construction.");
+  const next = state.level + 1;
+  if (next > def3.maxLevel) throw new GameActionError("Ce projet est achev\xE9.");
+  const cost = allianceProjectCost(next);
+  const pool = source === "treasury" ? __spreadValues({}, (_a = alliance.treasury) != null ? _a : {}) : actor.resources;
+  const used = {};
+  for (const [res, amount3] of Object.entries(amounts)) {
+    const missing = Math.max(0, ((_b = cost[res]) != null ? _b : 0) - ((_c = state.funded[res]) != null ? _c : 0));
+    const n = Math.min(amount3, missing);
+    if (n <= 0) continue;
+    if (((_d = pool[res]) != null ? _d : 0) < n) throw new GameActionError(source === "treasury" ? "Le tr\xE9sor ne suffit pas pour ce versement." : "Ressources insuffisantes pour ce versement.");
+    used[res] = n;
+  }
+  if (Object.keys(used).length === 0) throw new GameActionError("Ces ressources sont d\xE9j\xE0 r\xE9unies pour ce palier.");
+  for (const [res, n] of Object.entries(used)) {
+    pool[res] = ((_e = pool[res]) != null ? _e : 0) - n;
+    state.funded[res] = ((_f = state.funded[res]) != null ? _f : 0) + n;
+  }
+  const complete = Object.entries(cost).every(([res, n]) => {
+    var _a2;
+    return ((_a2 = state.funded[res]) != null ? _a2 : 0) >= n;
+  });
+  const started = complete ? now + allianceProjectSeconds(next) * 1e3 : null;
+  const nextState = complete ? { level: state.level, funded: {}, buildEndMs: started } : state;
+  const contributors = __spreadValues({}, (_g = alliance.projectContributors) != null ? _g : {});
+  if (source === "self") contributors[actor.uid] = ((_h = contributors[actor.uid]) != null ? _h : 0) + contributionValue(used);
+  return {
+    alliance: __spreadProps(__spreadValues({}, alliance), {
+      treasury: source === "treasury" ? pool : alliance.treasury,
+      projects: __spreadProps(__spreadValues({}, (_i = alliance.projects) != null ? _i : {}), { [def3.id]: nextState }),
+      projectContributors: contributors
+    }),
+    used,
+    started
+  };
+}
+function completeAllianceProjects(alliance, now) {
+  var _a;
+  const completed = [];
+  const projects = __spreadValues({}, (_a = alliance.projects) != null ? _a : {});
+  for (const def3 of ALLIANCE_RULES.projects) {
+    const state = projectState(alliance, def3.id);
+    if (state.buildEndMs > 0 && state.buildEndMs <= now) {
+      projects[def3.id] = { level: state.level + 1, funded: {}, buildEndMs: 0 };
+      completed.push({ id: def3.id, level: state.level + 1 });
+    }
+  }
+  return { alliance: completed.length ? __spreadProps(__spreadValues({}, alliance), { projects }) : alliance, completed };
+}
+function allianceNextDueMs(alliance) {
+  var _a, _b;
+  const dues = [(_b = (_a = alliance.activeResearch) == null ? void 0 : _a.endTime) != null ? _b : 0, ...ALLIANCE_RULES.projects.map((p) => projectState(alliance, p.id).buildEndMs)].filter((t) => t > 0);
+  return dues.length ? Math.min(...dues) : 0;
+}
+function allianceStandings(members, bonuses = {}) {
+  var _a;
+  const byAlliance = /* @__PURE__ */ new Map();
+  for (const m of members) {
+    if (!m.allianceId || !(m.seasonXp > 0)) continue;
+    byAlliance.set(m.allianceId, [...(_a = byAlliance.get(m.allianceId)) != null ? _a : [], m.seasonXp]);
+  }
+  return [...byAlliance.entries()].map(([allianceId, xps]) => {
+    var _a2;
+    return {
+      allianceId,
+      // v3.2 : bonus des guerres gagnées pendant la saison.
+      score: Math.round(
+        xps.sort((a, b) => b - a).slice(0, ALLIANCE_RULES.seasonTopMembers).reduce((a, b) => a + b, 0) * (1 + ((_a2 = bonuses[allianceId]) != null ? _a2 : 0))
+      )
+    };
+  }).sort((a, b) => b.score - a.score || (a.allianceId < b.allianceId ? -1 : 1)).map((s, i) => __spreadProps(__spreadValues({}, s), { rank: i + 1 }));
+}
+function note(title, message, now) {
+  return { kind: "alliance", title, message, createdAtMs: now, read: false };
+}
+function performAllianceAction(input) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  const { action, now, actor } = input;
+  const alliance = input.alliance;
+  const out = { alliance, actor, target: (_a = input.target) != null ? _a : null, memberships: {}, logs: [], notifications: {} };
+  const log = (entry) => out.logs.push(__spreadValues({ actorUid: actor.uid, actorPseudo: actor.pseudo, createdAtMs: now }, entry));
+  const research = (a) => memberLevels(a);
+  switch (action == null ? void 0 : action.type) {
+    case "create": {
+      if (actor.allianceId) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      out.alliance = newAlliance({ uid: actor.uid, pseudo: actor.pseudo }, action.name, action.tag, now);
+      setStat(actor, "allianceFounded", 1);
+      return out;
+    }
+    case "join": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      if (actor.allianceId && actor.allianceId !== alliance.id) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      assertCanJoin(alliance);
+      out.alliance = addMember(alliance, { uid: actor.uid, pseudo: actor.pseudo });
+      out.memberships[actor.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
+      log({ kind: "join" });
+      return out;
+    }
+    case "leave": {
+      if (!alliance || !alliance.members.includes(actor.uid)) {
+        out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
+        out.alliance = alliance;
+        return out;
+      }
+      out.alliance = removeMember(alliance, actor.uid);
+      out.memberships[actor.uid] = { allianceId: "", allianceResearch: {} };
+      log({ kind: "leave" });
+      return out;
+    }
+    case "kick": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const targetPseudo = (_b = alliance.memberPseudos[action.targetUid]) != null ? _b : "?";
+      out.alliance = kickMember(alliance, actor.uid, String((_c = action.targetUid) != null ? _c : ""));
+      out.memberships[action.targetUid] = { allianceId: "", allianceResearch: {} };
+      out.notifications[action.targetUid] = [note("Exclu de l'alliance", `${actor.pseudo} t'a exclu de [${alliance.tag}] ${alliance.name}.`, now)];
+      log({ kind: "kick", targetUid: action.targetUid, targetPseudo });
+      return out;
+    }
+    case "promote":
+    case "demote": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setOfficer(alliance, actor.uid, String((_d = action.targetUid) != null ? _d : ""), action.type === "promote");
+      return out;
+    }
+    case "setRole": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setRole(alliance, actor.uid, String((_e = action.targetUid) != null ? _e : ""), action.role);
+      return out;
+    }
+    case "deposit": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const amounts = parseAmounts(action.resources);
+      out.alliance = deposit(alliance, actor, amounts);
+      bumpStat(actor, "donated", Object.values(amounts).reduce((a, b) => a + (b != null ? b : 0), 0));
+      log({ kind: "deposit", resources: amounts });
+      return out;
+    }
+    case "distribute": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const target = input.target;
+      if (!target || target.uid !== action.targetUid) throw new GameActionError("Ce joueur est introuvable.");
+      const amounts = parseAmounts(action.resources);
+      out.alliance = distribute(alliance, actor.uid, target.uid, amounts, now);
+      for (const [res, amount3] of Object.entries(amounts)) target.resources[res] = ((_f = target.resources[res]) != null ? _f : 0) + amount3;
+      out.notifications[target.uid] = [note("Versement du tr\xE9sor", `${actor.pseudo} t'a vers\xE9 des ressources du tr\xE9sor de l'alliance.`, now)];
+      log({ kind: "distribute", targetUid: target.uid, targetPseudo: target.pseudo, resources: amounts });
+      return out;
+    }
+    case "research": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const started = startAllianceResearch(alliance, actor.uid, String((_g = action.researchId) != null ? _g : ""), now);
+      out.alliance = started;
+      const def3 = findAllianceResearch(started.activeResearch.id);
+      log({ kind: "research", text: `${def3.name} niveau ${started.activeResearch.level}`, resources: allianceResearchCost(started.activeResearch.level) });
+      return out;
+    }
+    case "project": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      const source = action.source === "treasury" ? "treasury" : "self";
+      const res = fundAllianceProject(alliance, actor, String((_h = action.projectId) != null ? _h : ""), source, parseAmounts(action.resources), now);
+      out.alliance = res.alliance;
+      const def3 = findAllianceProject(String(action.projectId));
+      const next = projectState(alliance, def3.id).level + 1;
+      if (source === "self") bumpStat(actor, "donated", Object.values(res.used).reduce((a, b) => a + (b != null ? b : 0), 0));
+      log({ kind: "project", text: `${def3.name} niveau ${next}${source === "treasury" ? " (tr\xE9sor)" : ""}${res.started ? " : financ\xE9, construction lanc\xE9e" : ""}`, resources: res.used });
+      if (res.started) {
+        for (const uid of alliance.members) {
+          out.notifications[uid] = [note("Projet d'alliance financ\xE9", `${def3.emoji} ${def3.name} niveau ${next} : construction lanc\xE9e.`, now)];
+        }
+      }
+      return out;
+    }
+    case "profile": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setAllianceProfile(alliance, actor.uid, { description: action.description, recruiting: action.recruiting });
+      return out;
+    }
+    case "rankSave": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = saveRank(alliance, actor.uid, action.rank);
+      return out;
+    }
+    case "rankDelete": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = deleteRank(alliance, actor.uid, String((_i = action.rankId) != null ? _i : ""));
+      return out;
+    }
+    case "rankAssign": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = assignRank(alliance, actor.uid, String((_j = action.targetUid) != null ? _j : ""), action.rankId ? String(action.rankId) : null);
+      return out;
+    }
+    case "apply": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = applyToAlliance(alliance, actor, action.message, now);
+      for (const uid of alliance.members) {
+        if (hasAlliancePerm(alliance, uid, "recruit")) out.notifications[uid] = [__spreadProps(__spreadValues({}, note("Nouvelle candidature", `${actor.pseudo} souhaite rejoindre [${alliance.tag}] : r\xE9ponds depuis l'onglet Fiche de l'alliance.`, now)), { link: "/game/alliance?onglet=fiche" })];
+      }
+      return out;
+    }
+    case "withdraw": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = dropApplication(alliance, actor.uid);
+      return out;
+    }
+    case "applicationAccept":
+    case "applicationDecline": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      if (!hasAlliancePerm(alliance, actor.uid, "recruit")) throw new GameActionError("Il te faut le droit \xAB Recrutement \xBB pour r\xE9pondre aux candidatures.");
+      const targetUid = String((_k = action.targetUid) != null ? _k : "");
+      const app = normalizeAllianceProfile(alliance.profile).applications.find((a) => a.uid === targetUid);
+      if (!app) throw new GameActionError("Candidature introuvable.");
+      const cleaned = dropApplication(alliance, targetUid);
+      if (action.type === "applicationDecline") {
+        out.alliance = cleaned;
+        out.notifications[targetUid] = [note("Candidature refus\xE9e", `[${alliance.tag}] ${alliance.name} n'a pas retenu ta candidature cette fois.`, now)];
+        return out;
+      }
+      const target = input.target;
+      if (!target || target.uid !== targetUid) throw new GameActionError("Ce joueur est introuvable.");
+      if (target.allianceId) {
+        out.alliance = cleaned;
+        out.notifications[actor.uid] = [note("Candidature caduque", `${app.pseudo} a d\xE9j\xE0 rejoint une autre alliance.`, now)];
+        return out;
+      }
+      out.alliance = addMember(cleaned, { uid: target.uid, pseudo: target.pseudo });
+      out.memberships[target.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
+      out.notifications[target.uid] = [__spreadProps(__spreadValues({}, note("Candidature accept\xE9e !", `Bienvenue dans [${alliance.tag}] ${alliance.name}.`, now)), { link: "/game/alliance" })];
+      out.logs.push({ kind: "join", actorUid: target.uid, actorPseudo: target.pseudo, text: `(candidature accept\xE9e par ${actor.pseudo})`, createdAtMs: now });
+      return out;
+    }
+    default:
+      throw new GameActionError("Action d'alliance inconnue.");
+  }
+}
+function finishAllianceResearch(alliance, now) {
+  var _a, _b, _c, _d;
+  const done = completeAllianceResearch(alliance, now);
+  const built = completeAllianceProjects(done.alliance, now);
+  if (!done.completed && built.completed.length === 0) return null;
+  const labels = [];
+  const logs = [];
+  if (done.completed) {
+    const def3 = findAllianceResearch(done.completed.id);
+    const label3 = `${(_a = def3 == null ? void 0 : def3.name) != null ? _a : done.completed.id} niveau ${done.completed.level}`;
+    labels.push(`${(_b = def3 == null ? void 0 : def3.emoji) != null ? _b : ""} ${label3}`.trim());
+    logs.push({ kind: "research-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
+  }
+  for (const c of built.completed) {
+    const def3 = findAllianceProject(c.id);
+    const label3 = `${(_c = def3 == null ? void 0 : def3.name) != null ? _c : c.id} niveau ${c.level}`;
+    labels.push(`${(_d = def3 == null ? void 0 : def3.emoji) != null ? _d : ""} ${label3}`.trim());
+    logs.push({ kind: "project-done", actorUid: "", actorPseudo: "", text: label3, createdAtMs: now });
+  }
+  const memberships = {};
+  const notifications = {};
+  const title = done.completed && built.completed.length === 0 ? "Recherche d'alliance termin\xE9e" : built.completed.length && !done.completed ? "Projet d'alliance achev\xE9" : "Alliance : travaux termin\xE9s";
+  for (const uid of built.alliance.members) {
+    memberships[uid] = { allianceId: alliance.id, allianceResearch: memberLevels(built.alliance) };
+    notifications[uid] = [note(title, `${labels.join(" \xB7 ")} : le bonus s'applique \xE0 tous les membres.`, now)];
+  }
+  return { alliance: built.alliance, memberships, notifications, logs };
+}
+
 // src/game/defaults.ts
 function defaultResources() {
   return {
@@ -3957,7 +2776,7 @@ var ASCENSION_RULES = {
   shieldHours: 72,
   upkeepFreeDays: 7
 };
-var DAY4 = 24 * 36e5;
+var DAY = 24 * 36e5;
 function ascensionCount(player) {
   return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
 }
@@ -3969,7 +2788,7 @@ function ascensionBuildTimeFactor(player) {
 }
 function upkeepFreeUntil(player) {
   const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY4 : 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY : 0;
 }
 function canAscend(player, queues, now) {
   var _a;
@@ -3987,8 +2806,8 @@ function canAscend(player, queues, now) {
   });
   if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
   if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY4 - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY4)} jour(s).`, missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY)} jour(s).`, missing };
   if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
   return { ok: true, missing };
 }
@@ -4006,6 +2825,231 @@ function ascend(player, queues, now) {
   player.ascensions = ascensionCount(player) + 1;
   player.ascendedAtMs = now;
   bumpStat(player, "ascensions");
+}
+
+// src/game/events.ts
+var EVENT_RULES = {
+  rotationEnabled: true,
+  bossMonthly: true,
+  bossWeekend: "first",
+  bossDates: [],
+  startHour: 18,
+  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
+  types: [
+    {
+      id: "tempete_ferraille",
+      name: "Temp\xEAte de ferraille",
+      emoji: "\u{1F32A}\uFE0F",
+      description: "+50 % de production de ferraille et de nanocomposants.",
+      effects: { production: { scrap: 1.5, nano: 1.5 } }
+    },
+    {
+      id: "chantiers_acceleres",
+      name: "Chantiers acc\xE9l\xE9r\xE9s",
+      emoji: "\u{1F3D7}\uFE0F",
+      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
+      effects: { buildTime: 0.75 }
+    },
+    {
+      id: "recherche_eclair",
+      name: "Recherche \xE9clair",
+      emoji: "\u{1F52C}",
+      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { researchTime: 0.75 }
+    },
+    {
+      id: "chasse_tresor",
+      name: "Chasse au tr\xE9sor",
+      emoji: "\u{1F48E}",
+      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { missionRewards: 1.5 }
+    },
+    {
+      id: "guerre_ouverte",
+      name: "Guerre ouverte",
+      emoji: "\u2694\uFE0F",
+      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
+      effects: { loot: 1.5, debrisPercent: 0.5 }
+    }
+  ],
+  scheduled: []
+};
+var HOUR = 36e5;
+var DAY2 = 24 * HOUR;
+var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
+function lastSundayAt1Utc(year, month2) {
+  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+function parisOffsetMs(utcMs) {
+  const year = new Date(utcMs).getUTCFullYear();
+  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
+  return (summer ? 2 : 1) * HOUR;
+}
+function parisLocalToUtc(localMs) {
+  return localMs - parisOffsetMs(localMs - 2 * HOUR);
+}
+function findEventType(id) {
+  return EVENT_RULES.types.find((t) => t.id === id);
+}
+function weekendWindow(now, weeksAhead = 0) {
+  const local = now + parisOffsetMs(now);
+  const localMidnight = Math.floor(local / DAY2) * DAY2;
+  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
+  const friday = localMidnight - daysSinceFriday * DAY2 + weeksAhead * 7 * DAY2;
+  return {
+    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
+    endMs: parisLocalToUtc(friday + 3 * DAY2),
+    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY2)),
+    firstOfMonth: new Date(friday).getUTCDate() <= 7,
+    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
+    lastOfMonth: new Date(friday + 7 * DAY2).getUTCMonth() !== new Date(friday).getUTCMonth(),
+    fridayMs: parisLocalToUtc(friday)
+  };
+}
+var BOSS_WEEKENDS = [
+  { id: "first", label: "Premier week-end du mois" },
+  { id: "second", label: "Deuxi\xE8me week-end du mois" },
+  { id: "third", label: "Troisi\xE8me week-end du mois" },
+  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
+  { id: "last", label: "Dernier week-end du mois" }
+];
+var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
+var MAX_BOSS_DATES = 24;
+function onWeekend(w, which) {
+  if (which === "last") return w.lastOfMonth;
+  return w.nth === NTH[which != null ? which : "first"];
+}
+function bossWindows(now, s, count2 = 1) {
+  var _a;
+  const out = [];
+  for (let i = -1; s.enabled && i < 60 && out.length < count2; i++) {
+    const w = weekendWindow(now, i);
+    if (!onWeekend(w, s.weekend)) continue;
+    const startMs = w.fridayMs + s.startHour * HOUR;
+    const endMs = startMs + s.durationHours * HOUR;
+    if (endMs > now) out.push({ startMs, endMs });
+  }
+  for (const d of (_a = s.dates) != null ? _a : []) {
+    const endMs = d.startMs + d.durationHours * HOUR;
+    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
+}
+var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function hourLabel(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
+}
+function bossEndLabel(s) {
+  const end = s.startHour + s.durationHours;
+  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
+function parisWhenLabel(ms) {
+  const local = new Date(ms + parisOffsetMs(ms));
+  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
+}
+function parisRelativeLabel(ms, now) {
+  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY2);
+  const local = new Date(ms + parisOffsetMs(ms));
+  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
+  const diff = day(ms) - day(now);
+  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
+  if (diff === 1) return `demain \xE0 ${at}`;
+  return parisWhenLabel(ms);
+}
+var BOSS_REMINDERS = {
+  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
+  eveHours: 24,
+  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
+  endingHours: 6
+};
+function eveReminderDue(next, lastAnnounced, now) {
+  if (!next) return false;
+  const left = next.startMs - now;
+  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
+}
+function validateBossSchedule(label3, s) {
+  var _a;
+  const errors = [];
+  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
+  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
+  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
+  const dates = (_a = s.dates) != null ? _a : [];
+  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
+  dates.forEach((d, i) => {
+    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
+    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
+  });
+  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
+  return errors;
+}
+function rotationEvent(window) {
+  var _a;
+  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
+  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
+  if (((_a = EVENT_RULES.bossDates) != null ? _a : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
+  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
+  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
+}
+function scheduledEvents() {
+  var _a;
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
+    const type = findEventType(s.type);
+    return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
+  }).filter((e3) => e3 !== null);
+}
+function eventAt(now) {
+  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
+  if (scheduled) return scheduled;
+  const rotation = rotationEvent(weekendWindow(now));
+  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function eventBoundaries(from, to) {
+  const points = /* @__PURE__ */ new Set();
+  for (const e3 of scheduledEvents()) {
+    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
+    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
+  }
+  if (EVENT_RULES.rotationEnabled) {
+    for (let w = 0; ; w++) {
+      const win = weekendWindow(from, w);
+      if (win.startMs >= to) break;
+      if (win.startMs > from) points.add(win.startMs);
+      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
+      if (w > 60) break;
+    }
+  }
+  return [...points].sort((a, b) => a - b);
+}
+function productionMultipliers(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
+}
+function buildTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
+}
+function researchTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
+}
+function missionRewardFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
+}
+function lootFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
+}
+function eventDebrisPercent(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
 }
 
 // src/game/bonuses.ts
@@ -4035,7 +3079,7 @@ var ECONOMY_RULES = {
   // v5.4 : 500 000 → 150 000 (les missions rares valaient < 1 % d'une heure de production en fin de partie).
   missionRareProductionRef: 15e4
 };
-var COMMON_RESOURCES2 = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
 var KESH_BOOST_PCT = 0.2;
 function boostUntil(input) {
   var _a;
@@ -4048,7 +3092,7 @@ function boostAt(input, at) {
 function storageCapacityOf(input) {
   var _a;
   const base = getStorageCapacity(input.buildings, input.techLevels);
-  const bonus = input.commanders ? playerModifiers(input).storage : 0;
+  const bonus = input.commanders ? playerModifiers(input, Date.now(), input.effectScope).storage : 0;
   const factor = (1 + Math.max(0, bonus)) * ((_a = input.storageFactor) != null ? _a : 1);
   return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
@@ -4067,7 +3111,7 @@ function boostedRates(input, multipliers, boost = 1) {
   const gross = getProductionRatesPerSecond(input.buildings, input.techLevels);
   const alliance = allianceProductionFactor(input.allianceResearch) * ascensionProductionFactor(input) * boost * ((_a = input.productionFactor) != null ? _a : 1);
   if (alliance !== 1) for (const res of Object.keys(gross)) gross[res] = ((_b = gross[res]) != null ? _b : 0) * alliance;
-  const mods = playerModifiers(input);
+  const mods = playerModifiers(input, Date.now(), input.effectScope);
   for (const res of Object.keys(gross)) {
     const f = 1 + mods.productionAll + ((_c = mods.production[res]) != null ? _c : 0);
     if (f !== 1) gross[res] = ((_d = gross[res]) != null ? _d : 0) * f;
@@ -4132,7 +3176,7 @@ function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, 
   const gross = boostedRates(input, multipliers, boost);
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
   const capacity = storageCapacityOf(input);
-  const capOf = (res) => COMMON_RESOURCES2.includes(res) ? capacity : Infinity;
+  const capOf = (res) => COMMON_RESOURCES.includes(res) ? capacity : Infinity;
   const energyNet = ((_a = gross.energy) != null ? _a : 0) - upkeep;
   const energyStock = (_b = out.energy) != null ? _b : 0;
   let normalSeconds = elapsedSeconds;
@@ -4149,10 +3193,10 @@ function advanceSegment(input, elapsedSeconds, multipliers, upkeepFree = false, 
   }
   return out;
 }
-function protectedAmount(buildings, res, techLevels2, allianceLevels) {
-  if (!COMMON_RESOURCES2.includes(res)) return 0;
+function protectedAmount(buildings, res, techLevels2, allianceLevels, player) {
+  if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
-  const bastion = allianceBastionBonus(allianceLevels);
+  const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
   const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
   return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
 }
@@ -4161,10 +3205,10 @@ function rareRewardScale(player) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const development = 1 + levels / Math.max(1, ECONOMY_RULES.missionRareLevelDivisor);
   const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES2.reduce((a, r) => {
+  const perHour = COMMON_RESOURCES.reduce((a, r) => {
     var _a2;
     return a + ((_a2 = rates[r]) != null ? _a2 : 0);
-  }, 0) / Math.max(1, COMMON_RESOURCES2.length) * 3600;
+  }, 0) / Math.max(1, COMMON_RESOURCES.length) * 3600;
   const ref = ECONOMY_RULES.missionRareProductionRef;
   const production = ref > 0 ? perHour / ref : 0;
   return Math.max(development, production);
@@ -4176,7 +3220,7 @@ function missionRewards(mission, player) {
   const out = {};
   for (const [res, fixed] of Object.entries(mission.reward)) {
     if (res === "xp") out.xp = fixed;
-    else if (COMMON_RESOURCES2.includes(res)) {
+    else if (COMMON_RESOURCES.includes(res)) {
       const indexed = Math.floor(ECONOMY_RULES.missionProductionMultiplier * mission.duration * ((_a = rates[res]) != null ? _a : 0));
       out[res] = Math.max(fixed, indexed);
     } else out[res] = Math.floor(fixed * rareScale);
@@ -4211,7 +3255,7 @@ function foundationBuildingIds() {
   return colonyBuildingIds().filter((id) => {
     var _a, _b;
     const res = PRODUCTION_RESOURCE_BY_BUILDING[id];
-    return res && COMMON_RESOURCES2.includes(res) || ((_b = (_a = findBuilding(id)) == null ? void 0 : _a.effect) == null ? void 0 : _b.type) === "storage";
+    return res && COMMON_RESOURCES.includes(res) || ((_b = (_a = findBuilding(id)) == null ? void 0 : _a.effect) == null ? void 0 : _b.type) === "storage";
   });
 }
 function foundationLevel(homeLevel) {
@@ -4306,7 +3350,7 @@ function colonyBuildingIds() {
   return BUILDINGS.filter((b) => {
     var _a, _b;
     const res = PRODUCTION_RESOURCE_BY_BUILDING[b.id];
-    if (res && COMMON_RESOURCES2.includes(res)) return true;
+    if (res && COMMON_RESOURCES.includes(res)) return true;
     if (((_a = b.effect) == null ? void 0 : _a.type) === "storage") return true;
     return ((_b = b.effect) == null ? void 0 : _b.type) === "hangar" && b.effect.category === "defense";
   }).map((b) => b.id);
@@ -4371,7 +3415,7 @@ function foundColony(uid, job, at, home) {
   const buildings = {};
   for (const id2 of colonyBuildingIds()) buildings[id2] = { level: 1, unlocked: true };
   const resources = emptyResources();
-  for (const res of COMMON_RESOURCES2) resources[res] = COLONY_RULES.startStock;
+  for (const res of COMMON_RESOURCES) resources[res] = COLONY_RULES.startStock;
   buildings[DEPOSIT_ID] = { level: 1, unlocked: true };
   const id = colonyId(uid, job.slot);
   const colony = { id, slot: job.slot, name: job.name, foundedAtMs: at, buildings, resources, updatedAtMs: at, building: null, defenses: {}, defenseJob: null, biome: biomeFor(`${id}:${at}`) };
@@ -4387,6 +3431,8 @@ function economyInput(colony, player) {
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
     productionFactor: (1 + COLONY_RULES.productionBonus) * colonySpecEffects(colony).production,
+    // v5.14 : effets propres aux colonies (Gouverneure en poste).
+    effectScope: "colonies",
     storageFactor: colonySpecEffects(colony).storage,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
@@ -4416,6 +3462,7 @@ function advanceColony(colony, player, now) {
       colony.buildings[job.id] = __spreadProps(__spreadValues({}, (_f = colony.buildings[job.id]) != null ? _f : { unlocked: true }), { level: Math.max(job.level, (_h = (_g = colony.buildings[job.id]) == null ? void 0 : _g.level) != null ? _h : 0) });
       colony.building = null;
       grantCommanderXp(player, "engineer", COMMANDER_XP.buildingDone);
+      grantCommanderXp(player, "governor", COMMANDER_XP.buildingDone);
       notes.push({ kind: "building", title: "Colonie : construction termin\xE9e", message: `${colony.name} : ${colonyBuildingName(colony, job.id)} niveau ${job.level}.`, createdAtMs: now, read: false });
     }
     if (colony.defenseJob && colony.defenseJob.endTime <= now) {
@@ -4491,7 +3538,7 @@ function colonyDefenseHangar(colony) {
 }
 function colonyDefenseSeconds(player, unitId, qty, colony) {
   const unit = findUnit(unitId);
-  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
+  return unit ? getUnitBuildTime(unit, player.techLevels, player) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
 }
 function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   var _a, _b;
@@ -4750,6 +3797,631 @@ function hasPrerequisites(mission, units) {
   });
 }
 
+// src/game/story.ts
+var STORY_SPEAKERS = {
+  vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
+  varan: { name: "Capitaine Orsk Varan", role: "Confr\xE9rie du Vide", image: "/assets/story/varan.webp", color: "#ff7a45" },
+  // v4.3 : voix des Chroniques mensuelles.
+  kor: { name: "Madame Vashti Kor", role: "Cartel N\xE9on", image: "/assets/story/cartel.webp", color: "#ff5fd2" },
+  ilyon: { name: "Cantor Ilyon", role: "D\xE9serteur du Ch\u0153ur", image: "/assets/warlords/ilyon.webp", color: "#b18cff" },
+  nerea: { name: "S\u0153ur N\xE9r\xE9a des \xC9chos", role: "Marchande", image: "/assets/warlords/nerea.webp", color: "#d6b4ff" },
+  brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
+  lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
+  vesper: { name: "L'Archonte Vesper", role: "Le Ch\u0153ur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
+  // v4.7 : voix des Chroniques de janvier à mars 2027.
+  kragmor: { name: "Kragmor Corne-Fendue", role: "Mercenaire Gravhorn", image: "/assets/warlords/kragmor.webp", color: "#7fd1ff" },
+  maru: { name: "Le Proph\xE8te Maru", role: "Culte du L\xE9viathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" }
+};
+var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
+var TUTORIAL_TITLE = "Recrue de Vashka";
+
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level2 = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level2(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level2(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level2(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
+  return __spreadValues(__spreadValues(__spreadValues({
+    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
+    hidden: (raw == null ? void 0 : raw.hidden) === true
+  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function onboardingProgress(p) {
+  const st = onboardingState(p);
+  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c, _d, _e, _f;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
+// src/game/retention.ts
+var DAY3 = 24 * 36e5;
+var ACTIVITY_DAYS_KEPT = 60;
+var PRESENCE_WRITE_MS = 2 * 6e4;
+var ONLINE_MS = 5 * 6e4;
+function lastActivity(p) {
+  var _a, _b;
+  if (p.lastActiveMs) return p.lastActiveMs;
+  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
+  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
+  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
+}
+function parisDay(now) {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
+}
+function dayDiff(a, b) {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY3);
+}
+function recordActiveDay(player, now) {
+  var _a, _b, _c;
+  const day = parisDay(now);
+  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
+  if (days[days.length - 1] === day) return;
+  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
+}
+var pct = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+function computeRetention(players, now) {
+  var _a, _b, _c;
+  const today = parisDay(now);
+  const lastSeen = (p) => Math.min(now, lastActivity(p));
+  const days = (p) => {
+    var _a2, _b2;
+    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
+  };
+  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
+  const allDays = players.flatMap((p) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
+  }).sort();
+  const trackingSince = (_a = allDays[0]) != null ? _a : null;
+  const daily = Array.from({ length: 30 }, (_, i) => {
+    const day = parisDay(now - (29 - i) * DAY3);
+    return {
+      day,
+      active: players.filter((p) => days(p).has(day)).length,
+      signups: players.filter((p) => signupDay(p) === day).length
+    };
+  });
+  const active = {
+    d1: players.filter((p) => now - lastSeen(p) < DAY3).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY3).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY3).length,
+    total: players.length
+  };
+  const cohorts = Array.from({ length: 8 }, (_, i) => {
+    const end = now - i * 7 * DAY3;
+    const start = end - 7 * DAY3;
+    const members = players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
+    });
+    const tracked = trackingSince ? members.filter((p) => {
+      var _a2;
+      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
+    }) : [];
+    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
+    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
+    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
+    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
+    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
+    return {
+      week: parisDay(start),
+      signups: members.length,
+      d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
+      d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
+      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
+      activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY3).length, members.length)
+    };
+  }).reverse();
+  const recent = players.filter((p) => {
+    var _a2;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY3;
+  });
+  const funnel = ONBOARDING_STEPS.map((step) => {
+    const reached = recent.filter((p) => {
+      try {
+        return step.done(p);
+      } catch (e3) {
+        return false;
+      }
+    }).length;
+    return { id: step.id, label: step.label, reached, pct: pct(reached, recent.length) };
+  });
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY3);
+  const stopAt = /* @__PURE__ */ new Map();
+  for (const p of stalled) {
+    const step = ONBOARDING_STEPS.find((s) => {
+      try {
+        return !s.done(p);
+      } catch (e3) {
+        return true;
+      }
+    });
+    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
+    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
+  }
+  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
+    var _a2, _b2;
+    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
+  }).sort((a, b) => b.count - a.count);
+  const ageDays = (p) => {
+    var _a2;
+    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY3);
+  };
+  const lastDayAfterSignup = (p) => {
+    var _a2;
+    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY3);
+  };
+  const survival = [1, 3, 7, 14, 30].map((day) => {
+    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
+    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
+    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
+  });
+  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY3);
+  const buckets = [
+    ["Le jour m\xEAme", (d) => d < 1],
+    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
+    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
+    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
+    ["Apr\xE8s un mois", (d) => d >= 30]
+  ];
+  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
+}
+
+// src/game/casino.ts
+var CASINO_KEY = "casino";
+var DEFAULT_CASINO = {
+  mode: "scheduled",
+  weekends: true,
+  windows: [],
+  dailyTokens: 1,
+  maxTokens: 20,
+  jackpotShare: 0.5,
+  jackpotFallbackHours: 12,
+  odds: { jackpot: 2e-3, star3: 6e-3, planet3: 0.012, bar3: 0.025, cherry3: 0.04, seven2: 0.06, cherry: 0.15 },
+  hours: { star3: 6, planet3: 4, bar3: 3, cherry3: 2, seven2: 1 },
+  rewards: { challenge: [1, 2], bossWin: 1, bossTop: 2, bossFail: 0, tournament: [5, 3, 2], tournamentTitle: "As du casino", jackpotTitle: "Main d'or" }
+};
+var OUTCOME_POINTS = { jackpot: 100, star3: 30, planet3: 20, bar3: 15, cherry3: 10, seven2: 5, cherry: 1, lose: 0 };
+var OUTCOME_LABELS = {
+  jackpot: "GROS LOT 7-7-7",
+  star3: "Trois \xE9toiles",
+  planet3: "Trois plan\xE8tes",
+  bar3: "Triple BAR",
+  cherry3: "Trois cerises",
+  seven2: "Deux 7",
+  cherry: "Une cerise : jeton rendu",
+  lose: "Perdu"
+};
+var num = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
+};
+function normalizeCasinoSettings(raw) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = DEFAULT_CASINO;
+  const odds = {};
+  for (const k of Object.keys(d.odds)) odds[k] = num((_a = r.odds) == null ? void 0 : _a[k], d.odds[k], 0, 1);
+  const hours2 = {};
+  for (const k of Object.keys(d.hours)) hours2[k] = num((_b = r.hours) == null ? void 0 : _b[k], d.hours[k], 0, 168);
+  const legacy = r.enabled;
+  const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
+  const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
+  return {
+    mode,
+    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
+    windows,
+    dailyTokens: Math.floor(num(r.dailyTokens, d.dailyTokens, 0, 10)),
+    maxTokens: Math.floor(num(r.maxTokens, d.maxTokens, 1, 1e3)),
+    jackpotShare: num(r.jackpotShare, d.jackpotShare, 0, 1),
+    jackpotFallbackHours: num(r.jackpotFallbackHours, d.jackpotFallbackHours, 0, 168),
+    odds,
+    hours: hours2,
+    rewards: normalizeRewards(r.rewards)
+  };
+}
+function normalizeRewards(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = DEFAULT_CASINO.rewards;
+  const list = (v, def3) => Array.isArray(v) ? v.slice(0, 10).map((x) => Math.floor(num(x, 0, 0, 100))) : [...def3];
+  const label3 = (v, def3) => typeof v === "string" && v.trim() ? v.trim().slice(0, 40) : def3;
+  return {
+    challenge: list(r.challenge, d.challenge),
+    bossWin: Math.floor(num(r.bossWin, d.bossWin, 0, 100)),
+    bossTop: Math.floor(num(r.bossTop, d.bossTop, 0, 100)),
+    bossFail: Math.floor(num(r.bossFail, d.bossFail, 0, 100)),
+    tournament: list(r.tournament, d.tournament),
+    tournamentTitle: label3(r.tournamentTitle, d.tournamentTitle),
+    jackpotTitle: label3(r.jackpotTitle, d.jackpotTitle)
+  };
+}
+function cleanTournament(raw) {
+  var _a, _b;
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw;
+  if (typeof t.id !== "string" || !t.id) return null;
+  const scores = {};
+  for (const [uid, v] of Object.entries((_a = t.scores) != null ? _a : {})) {
+    const x = v != null ? v : {};
+    scores[uid] = { pseudo: String((_b = x.pseudo) != null ? _b : ""), points: Math.max(0, Math.floor(Number(x.points) || 0)), spins: Math.max(0, Math.floor(Number(x.spins) || 0)) };
+  }
+  return { id: t.id, startMs: Number(t.startMs) || 0, scores };
+}
+function cleanResult(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (typeof r.id !== "string") return null;
+  const podium = (Array.isArray(r.podium) ? r.podium : []).slice(0, 10).map((p) => {
+    var _a, _b;
+    return { uid: String((_a = p == null ? void 0 : p.uid) != null ? _a : ""), pseudo: String((_b = p == null ? void 0 : p.pseudo) != null ? _b : ""), points: Math.floor(Number(p == null ? void 0 : p.points) || 0), tokens: Math.floor(Number(p == null ? void 0 : p.tokens) || 0) };
+  });
+  return { id: r.id, endedAtMs: Number(r.endedAtMs) || 0, participants: Math.floor(Number(r.participants) || 0), podium, titleUid: typeof r.titleUid === "string" ? r.titleUid : "" };
+}
+function cleanWin(w) {
+  var _a, _b;
+  if (!w || typeof w !== "object") return null;
+  const x = w;
+  if (typeof x.uid !== "string" || !(String(x.outcome) in OUTCOME_LABELS)) return null;
+  const resources = {};
+  for (const [k, v] of Object.entries((_a = x.resources) != null ? _a : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
+  return __spreadValues({ uid: x.uid, pseudo: String((_b = x.pseudo) != null ? _b : ""), atMs: Number(x.atMs) || 0, outcome: x.outcome, resources }, x.token ? { token: true } : {});
+}
+function normalizeCasino(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const list = (v, max) => (Array.isArray(v) ? v : []).map(cleanWin).filter((w) => !!w).slice(0, max);
+  return {
+    settings: normalizeCasinoSettings(r.settings),
+    recent: list(r.recent, 40),
+    jackpots: list(r.jackpots, 30),
+    totalSpins: Math.max(0, Math.floor(Number(r.totalSpins) || 0)),
+    announcedId: typeof r.announcedId === "string" ? r.announcedId : "",
+    tournament: cleanTournament(r.tournament),
+    lastTournament: cleanResult(r.lastTournament),
+    updatedAtMs: Number(r.updatedAtMs) || 0
+  };
+}
+function validateCasinoSettings(s) {
+  const errors = [];
+  const total2 = Object.values(s.odds).reduce((a, b) => a + b, 0);
+  if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
+  if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
+  if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
+  if (s.mode === "scheduled" && !s.weekends && s.windows.length === 0) errors.push("Programme vide : coche les week-ends ou ajoute un cr\xE9neau.");
+  if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place r\xE9compens\xE9e.");
+  return errors;
+}
+var DAY4 = 864e5;
+function parisWeekend(now) {
+  const d = (/* @__PURE__ */ new Date(`${parisDay(now)}T12:00:00Z`)).getUTCDay();
+  return d === 0 || d === 6;
+}
+function casinoOpeningId(s, now) {
+  if (s.mode === "open") return "open";
+  if (s.mode === "closed") return null;
+  const w = s.windows.find((x) => now >= x.startMs && now < x.endMs);
+  if (w) return `w-${w.startMs}`;
+  if (s.weekends && parisWeekend(now)) {
+    const day = parisDay(now);
+    const sat = (/* @__PURE__ */ new Date(`${day}T12:00:00Z`)).getUTCDay() === 6 ? day : parisDay(now - DAY4);
+    return `we-${sat}`;
+  }
+  return null;
+}
+function casinoOpen(s, now) {
+  return casinoOpeningId(s, now) !== null;
+}
+function tournamentId(s, now) {
+  const id = casinoOpeningId(s, now);
+  if (!id) return null;
+  return id === "open" ? `open-${casinoWeekId(now)}` : id;
+}
+function rollTournament(state, now) {
+  const id = tournamentId(state.settings, now);
+  const cur = state.tournament;
+  if (cur && cur.id === id) return { state, closed: null };
+  const closed = cur && Object.keys(cur.scores).length > 0 ? cur : null;
+  return { state: __spreadProps(__spreadValues({}, state), { tournament: id ? { id, startMs: now, scores: {} } : null }), closed };
+}
+function scoreSpin(state, uid, pseudo, outcome) {
+  var _a;
+  const t = state.tournament;
+  if (!t) return state;
+  const prev = (_a = t.scores[uid]) != null ? _a : { pseudo, points: 0, spins: 0 };
+  return __spreadProps(__spreadValues({}, state), { tournament: __spreadProps(__spreadValues({}, t), { scores: __spreadProps(__spreadValues({}, t.scores), { [uid]: { pseudo, points: prev.points + OUTCOME_POINTS[outcome], spins: prev.spins + 1 } }) }) });
+}
+function tournamentRanking(t) {
+  if (!t) return [];
+  return Object.entries(t.scores).map(([uid, v]) => __spreadValues({ uid }, v)).filter((x) => x.spins > 0).sort((a, b) => b.points - a.points || a.spins - b.spins || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0));
+}
+function tournamentResult(t, s, now) {
+  const ranking = tournamentRanking(t);
+  const podium = ranking.slice(0, Math.max(3, s.rewards.tournament.length)).map((x, i) => {
+    var _a;
+    return { uid: x.uid, pseudo: x.pseudo, points: x.points, tokens: x.points > 0 ? (_a = s.rewards.tournament[i]) != null ? _a : 0 : 0 };
+  });
+  return { id: t.id, endedAtMs: now, participants: ranking.length, podium, titleUid: podium[0] && podium[0].points > 0 ? podium[0].uid : "" };
+}
+function bossTokens(s, won, rank2) {
+  if (!won) return s.rewards.bossFail;
+  const podium = rank2 === 0 ? s.rewards.bossTop : rank2 === 1 || rank2 === 2 ? Math.floor(s.rewards.bossTop / 2) : 0;
+  return s.rewards.bossWin + podium;
+}
+function challengeTokens(s, tierIndex) {
+  var _a;
+  if (tierIndex < 0) return 0;
+  const list = s.rewards.challenge;
+  return (_a = list[Math.min(tierIndex, list.length - 1)]) != null ? _a : 0;
+}
+function giveTitle(p, label3, source, active = false) {
+  var _a, _b;
+  if (!label3) return;
+  if (!((_a = p.titles) != null ? _a : []).some((t) => t.label === label3)) p.titles = [...(_b = p.titles) != null ? _b : [], { label: label3, seasonId: source, rank: 1 }];
+  if (active) p.activeTitle = label3;
+}
+function removeTitle(p, label3) {
+  var _a, _b;
+  p.titles = ((_a = p.titles) != null ? _a : []).filter((t) => t.label !== label3);
+  if (p.activeTitle === label3) p.activeTitle = (_b = p.titles[0]) == null ? void 0 : _b.label;
+}
+var tokensLabel = (n) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
+function playerCasino(p) {
+  var _a, _b, _c;
+  const c = (_a = p.casino) != null ? _a : {};
+  const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const w = (_b = c.week) != null ? _b : {};
+  const resources = {};
+  for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
+  const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
+}
+function casinoWeekId(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY4) * DAY4;
+  return `wk-${new Date(midnight - (day + 6) % 7 * DAY4).toISOString().slice(0, 10)}`;
+}
+function casinoWeek(p, now) {
+  const w = playerCasino(p).week;
+  return w.id === casinoWeekId(now) ? w : { id: casinoWeekId(now), spins: 0, wins: 0, points: 0, resources: {} };
+}
+function applySpin(p, outcome, gained, now) {
+  var _a;
+  const c = playerCasino(p);
+  const won = outcome !== "lose";
+  const w = casinoWeek(p, now);
+  const resources = __spreadValues({}, w.resources);
+  for (const [k, v] of Object.entries(gained)) if (Number(v) > 0) resources[k] = ((_a = resources[k]) != null ? _a : 0) + Math.floor(Number(v));
+  const next = __spreadProps(__spreadValues({}, c), {
+    tokens: c.tokens - 1 + (outcome === "cherry" ? 1 : 0),
+    spins: c.spins + 1,
+    wins: c.wins + (won ? 1 : 0),
+    jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
+    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources }
+  });
+  p.casino = next;
+  return next;
+}
+function dailyTokenReady(p, settings, now) {
+  const c = playerCasino(p);
+  return casinoOpen(settings, now) && settings.dailyTokens > 0 && c.dailyDay !== parisDay(now) && c.tokens < settings.maxTokens;
+}
+function claimDailyTokens(p, settings, now) {
+  if (!dailyTokenReady(p, settings, now)) return 0;
+  const c = playerCasino(p);
+  const add2 = Math.min(settings.dailyTokens, settings.maxTokens - c.tokens);
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2, dailyDay: parisDay(now) });
+  return add2;
+}
+function grantTokens(p, n) {
+  const c = playerCasino(p);
+  const add2 = Math.max(0, Math.min(1e3, Math.floor(n)));
+  p.casino = __spreadProps(__spreadValues({}, c), { tokens: c.tokens + add2 });
+  return add2;
+}
+function rollOutcome(settings, random) {
+  let r = random();
+  for (const k of ["jackpot", "star3", "planet3", "bar3", "cherry3", "seven2", "cherry"]) {
+    if (r < settings.odds[k]) return k;
+    r -= settings.odds[k];
+  }
+  return "lose";
+}
+var pick = (list, random) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
+function evaluateReels(reels) {
+  const [a, b, c] = reels;
+  if (a === b && b === c) {
+    if (a === "seven") return "jackpot";
+    if (a === "star") return "star3";
+    if (a === "planet") return "planet3";
+    if (a === "bar") return "bar3";
+    if (a === "cherry") return "cherry3";
+    return "lose";
+  }
+  if (reels.filter((s) => s === "seven").length === 2) return "seven2";
+  if (reels.includes("cherry")) return "cherry";
+  return "lose";
+}
+function reelsFor(outcome, random) {
+  const triple = { jackpot: "seven", star3: "star", planet3: "planet", bar3: "bar", cherry3: "cherry" };
+  const t = triple[outcome];
+  if (t) return [t, t, t];
+  const shuffle2 = (r) => {
+    const a = [...r];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  if (outcome === "seven2") return shuffle2(["seven", "seven", pick(["star", "planet", "bar", "skull"], random)]);
+  if (outcome === "cherry") {
+    const others = ["star", "planet", "bar", "skull", "seven"];
+    const a = pick(others, random);
+    const b = pick(others.filter((s) => s !== a), random);
+    return shuffle2(random() < 0.25 ? ["cherry", "cherry", a] : ["cherry", a, b]);
+  }
+  for (let guard = 0; guard < 50; guard++) {
+    const pool = ["seven", "star", "planet", "bar", "skull"];
+    const reels = random() < 0.35 ? shuffle2(["seven", pick(["star", "planet", "bar", "skull"], random), pick(["star", "planet", "bar", "skull"], random)]) : [pick(pool, random), pick(pool, random), pick(pool, random)];
+    if (evaluateReels(reels) === "lose") return reels;
+  }
+  return ["skull", "bar", "star"];
+}
+function jackpotAmounts(pot, share) {
+  const out = {};
+  for (const [k, v] of Object.entries(pot.resources)) {
+    const n = Math.floor((Number(v) || 0) * share);
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+function recordWin(state, win) {
+  return __spreadProps(__spreadValues({}, state), {
+    recent: win.outcome === "lose" ? state.recent : [win, ...state.recent].slice(0, 40),
+    jackpots: win.outcome === "jackpot" ? [win, ...state.jackpots].slice(0, 30) : state.jackpots,
+    totalSpins: state.totalSpins + 1,
+    updatedAtMs: win.atMs
+  });
+}
+
 // src/game/formations.ts
 var pct2 = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
 var FORMATIONS = [
@@ -4806,6 +4478,1045 @@ function setPosture(player, id, now) {
   if (wait > 0) throw new GameActionError(`Changement de posture possible dans ${Math.ceil(wait / 6e4)} min.`);
   player.posture = { id, changedAtMs: now };
   return id;
+}
+
+// src/game/bounties.ts
+var BOUNTY_RULES = {
+  dailyLimit: 4,
+  refreshHours: 8,
+  /** Un échec laisse la prime ouverte une fois de plus. */
+  retries: 1,
+  /** +10 % d'Ambre par rang au-delà du premier. */
+  amberPerRank: 0.1,
+  tiers: {
+    1: { label: "Traque", pct: 0.5, minMinutes: 20, maxMinutes: 40, xp: 60, amber: 10, rep: 1, floor: 200, minRank: 1 },
+    2: { label: "Chasse", pct: 0.8, minMinutes: 40, maxMinutes: 60, xp: 120, amber: 25, rep: 2, floor: 500, minRank: 1 },
+    3: { label: "Proie majeure", pct: 1.1, minMinutes: 60, maxMinutes: 90, xp: 250, amber: 60, rep: 4, floor: 1200, minRank: 3 },
+    4: { label: "\xC9lite", pct: 1.25, minMinutes: 75, maxMinutes: 90, xp: 400, amber: 120, rep: 6, floor: 3e3, minRank: 5 }
+  },
+  ranks: [
+    { name: "Larve", at: 0 },
+    { name: "\xC9claireur", at: 10 },
+    { name: "Traqueur", at: 30 },
+    { name: "Lame de l'Essaim", at: 70 },
+    { name: "Main de la Reine", at: 150 }
+  ],
+  exchange: { rarePerAmber: 40, weeklyCap: 100 }
+};
+var KESH = {
+  name: "Kesh'Vaar",
+  full: "L'Essaim de la Traque",
+  leader: "Vashka, Matriarche-Chasseuse",
+  currency: "Ambre de Ruche",
+  art: "/assets/bounties/vashka.webp",
+  hunters: "/assets/bounties/hunters.webp",
+  banner: "/assets/bounties/banner.webp",
+  emblem: "/assets/bounties/emblem.webp",
+  amberIcon: "/assets/bounties/amber.webp",
+  story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
+};
+var FUGITIVES = [
+  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
+  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
+  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
+  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
+  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
+  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
+  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
+  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
+  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
+  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
+  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
+  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
+  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
+  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
+  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
+  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
+  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
+  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
+  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
+  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
+  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
+  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
+];
+var ELITE_FUGITIVES = [
+  { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
+  { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
+  { name: "L'Archiviste P\xE2le", factionId: "inquisition", crime: "d\xE9tient le dernier \u0153uf de la Reine" },
+  { name: "Moloch-7", factionId: "meute", crime: "a d\xE9vor\xE9 trois nids en une nuit" },
+  { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
+  { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
+];
+function emptyBountyState() {
+  return {
+    amber: 0,
+    amberEarned: 0,
+    reputation: 0,
+    board: [],
+    slot: -1,
+    day: "",
+    doneToday: 0,
+    completed: 0,
+    failed: 0,
+    exchangeWeek: "",
+    exchanged: 0,
+    boostUntilMs: 0,
+    jammers: 0,
+    beacons: 0,
+    shieldUntilMs: 0,
+    shieldBoughtAtMs: 0,
+    owned: []
+  };
+}
+function num2(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+function bountyState(player) {
+  var _a;
+  const raw = (_a = player.bounties) != null ? _a : {};
+  const base = emptyBountyState();
+  return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
+    amber: Math.max(0, num2(raw.amber)),
+    amberEarned: num2(raw.amberEarned),
+    reputation: num2(raw.reputation),
+    board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
+    slot: raw.slot === void 0 ? -1 : num2(raw.slot),
+    doneToday: num2(raw.doneToday),
+    owned: Array.isArray(raw.owned) ? raw.owned.map(String) : []
+  });
+}
+function bountyRank(reputation) {
+  let rank2 = 1;
+  BOUNTY_RULES.ranks.forEach((r, i) => {
+    if (reputation >= r.at) rank2 = i + 1;
+  });
+  return rank2;
+}
+function rankName(rank2) {
+  return BOUNTY_RULES.ranks[Math.max(0, Math.min(BOUNTY_RULES.ranks.length - 1, rank2 - 1))].name;
+}
+function amberFor(tier, rank2) {
+  return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
+}
+var HOUR3 = 36e5;
+var DAY5 = 24 * HOUR3;
+function boardSlot(now) {
+  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR3));
+}
+function boardTiers(rank2) {
+  if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
+  if (rank2 >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
+  return [1, 2, 2];
+}
+function generateBoard(uid, slot, rank2, exclude = []) {
+  const rand = seededRandom(`${uid}:bounty:${slot}`);
+  const used = new Set(exclude);
+  return boardTiers(rank2).map((tier, i) => {
+    let fugitive = Math.floor(rand() * FUGITIVES.length);
+    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
+    used.add(fugitive);
+    const t = BOUNTY_RULES.tiers[tier];
+    const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
+    return { id: `${slot}-${i}`, tier, fugitive, minutes, status: "open", tries: 0 };
+  });
+}
+function refreshBounties(st, uid, now) {
+  const day = contractDay(now);
+  if (st.day !== day) {
+    st.day = day;
+    st.doneToday = 0;
+  }
+  const slot = boardSlot(now);
+  if (st.slot !== slot) {
+    const hunting = st.board.filter((c) => c.status === "hunting");
+    st.board = [...hunting, ...generateBoard(uid, slot, bountyRank(st.reputation), hunting.map((c) => c.fugitive))];
+    st.slot = slot;
+  }
+  return st;
+}
+function hunterPower(player) {
+  var _a, _b;
+  return computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+}
+function fugitivePower(tier, player) {
+  const t = BOUNTY_RULES.tiers[tier];
+  return Math.round(Math.max(t.floor, hunterPower(player) * t.pct));
+}
+function bountyTarget(contract) {
+  return `bounty_${contract.id}`;
+}
+function startBounty(player, contractId, now) {
+  var _a;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
+  if (contract.status !== "open") throw new GameActionError("Une flotte traque d\xE9j\xE0 ce fugitif.");
+  if (st.doneToday >= BOUNTY_RULES.dailyLimit) throw new GameActionError(`${BOUNTY_RULES.dailyLimit} primes par jour : l'Essaim te recontactera demain.`);
+  if (bountyRank(st.reputation) < BOUNTY_RULES.tiers[contract.tier].minRank) throw new GameActionError("Ton rang dans l'Essaim est trop bas pour cette prime.");
+  const power = fugitivePower(contract.tier, player);
+  contract.status = "hunting";
+  st.doneToday += 1;
+  player.bounties = st;
+  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
+}
+function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
+  var _a, _b, _c, _d, _e, _f;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
+  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
+  const fx = formationEffects(formation);
+  const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
+    attackerUnits: player.units,
+    attackerTechLevels: player.techLevels,
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
+    fleet,
+    defenderUnits: {},
+    defenderTechLevels: {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderPowerOverride: power
+  }));
+  const survivors = {};
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0));
+  const notifications = [...flushed.notifications];
+  const success = combat.outcome === "attacker_win";
+  const t = BOUNTY_RULES.tiers[tier];
+  let amber = 0;
+  let xp = 0;
+  if (success) {
+    const rankBefore = bountyRank(st.reputation);
+    amber = amberFor(tier, rankBefore);
+    xp = t.xp;
+    st.amber += amber;
+    st.amberEarned += amber;
+    st.reputation += t.rep;
+    st.completed += 1;
+    st.board = st.board.filter((c) => c.id !== contractId);
+    applyXpDelta(player, xp, now);
+    bumpStat(player, "bounties");
+    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
+    addPassPoints(player, "bounty", now);
+    player.victories = ((_e = player.victories) != null ? _e : 0) + 1;
+    notifications.push(note2(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
+    const rankAfter = bountyRank(st.reputation);
+    if (rankAfter > rankBefore) {
+      notifications.push(note2(`Nouveau rang : ${rankName(rankAfter)}`, rankUpMessage(rankAfter), now));
+    }
+  } else {
+    st.failed += 1;
+    player.defeats = ((_f = player.defeats) != null ? _f : 0) + 1;
+    if (contract) {
+      contract.tries += 1;
+      if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
+      else contract.status = "open";
+    }
+    const retry = !!contract && contract.tries <= BOUNTY_RULES.retries;
+    notifications.push(note2(`${fugitive.name} s'est \xE9chapp\xE9`, `Ta flotte n'a pas pu le ma\xEEtriser.${retry ? " La prime reste ouverte une derni\xE8re fois." : " Le contrat est perdu."}`, now));
+  }
+  player.bounties = st;
+  const report = {
+    attackerUid: player.uid,
+    attackerPseudo: player.pseudo,
+    defenderUid: `bounty_${contractId}`,
+    defenderPseudo: fugitive.name,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: combat.attackerLosses,
+    attackerRecovered: combat.attackerRecovered,
+    defenderLosses: {},
+    defenderRecovered: {},
+    loot: null,
+    defenderProcessed: true,
+    defenderApplied: true,
+    attackerXpDelta: xp,
+    defenderXpDelta: 0,
+    attackerFleet: fleet
+  };
+  return { player, queues: flushed.queues, combat, survivors, report, notifications, success, amber, xp };
+}
+function releaseBounty(player, contractId) {
+  const st = bountyState(player);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (contract && contract.status === "hunting") contract.status = "open";
+  player.bounties = st;
+}
+function rankUpMessage(rank2) {
+  if (rank2 === BOUNTY_RULES.tiers[3].minRank) return "L'Essaim te confie d\xE9sormais les proies majeures (\u2605\u2605\u2605).";
+  if (rank2 === BOUNTY_RULES.tiers[4].minRank) return "La Reine elle-m\xEAme te reconna\xEEt : les primes d'\xE9lite (\u2605\u2605\u2605\u2605) te sont ouvertes.";
+  return `L'Essaim te verse ${Math.round(BOUNTY_RULES.amberPerRank * (rank2 - 1) * 100)} % d'Ambre en plus par prime.`;
+}
+function note2(title, message, now) {
+  return { kind: "bounty", title, message, createdAtMs: now, read: false, link: "/game/primes" };
+}
+var BOUNTY_SHOP_RULES = {
+  acceleratorMinutes: 60,
+  boostPct: KESH_BOOST_PCT,
+  boostHours: 24,
+  maxCharges: 3,
+  shieldHours: 6,
+  shieldCooldownDays: 7,
+  title: "Chasseur de l'Essaim"
+};
+var SHOP_ITEMS = [
+  { id: "accelerator", name: "Acc\xE9l\xE9rateur de chantier", price: 30, group: "consumable", description: "Une construction de b\xE2timent en cours se termine 1 h plus t\xF4t." },
+  { id: "boost", name: "Gel\xE9e de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
+  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage re\xE7u \xE9choue : les sondes rentrent sans rapport. 3 en r\xE9serve au plus." },
+  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
+  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
+  { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
+  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
+  { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
+  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
+  { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
+  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." }
+];
+function findShopItem(id) {
+  return SHOP_ITEMS.find((i) => i.id === id);
+}
+var ONE_TIME = ["blueprint", "title", "frame", "emblem", "emojis"];
+function owns(st, id) {
+  return st.owned.includes(id);
+}
+function shopBlocker(player, item, now, queues) {
+  var _a;
+  const st = bountyState(player);
+  if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "D\xE9j\xE0 acquis.";
+  if (item.id === "jammer" && st.jammers >= BOUNTY_SHOP_RULES.maxCharges || item.id === "beacon" && st.beacons >= BOUNTY_SHOP_RULES.maxCharges) {
+    return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
+  }
+  if (item.id === "shield") {
+    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY5;
+    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY5)} j.`;
+  }
+  if (item.id === "accelerator" && queues && !Object.values((_a = queues.buildingUpgrades) != null ? _a : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
+  if (st.amber < item.price) return "Pas assez d'Ambre.";
+  return null;
+}
+function buyShopItem(player, queues, itemId, now, buildingId) {
+  var _a, _b, _c, _d, _e, _f;
+  const item = findShopItem(itemId);
+  if (!item) throw new GameActionError("Objet inconnu.");
+  const blocker = shopBlocker(player, item, now, queues);
+  if (blocker) throw new GameActionError(blocker);
+  const st = bountyState(player);
+  let message = `${item.name} : acquis.`;
+  switch (item.id) {
+    case "accelerator": {
+      const entries = Object.entries((_a = queues.buildingUpgrades) != null ? _a : {}).filter(([, u]) => u && u.endTime > now);
+      const chosen = (_b = entries.find(([id]) => id === buildingId)) != null ? _b : entries.sort((a, b) => a[1].endTime - b[1].endTime)[0];
+      const entry = chosen[1];
+      entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 6e4);
+      message = "Chantier acc\xE9l\xE9r\xE9 d'une heure.";
+      break;
+    }
+    case "boost":
+      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR3;
+      message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
+      break;
+    case "jammer":
+      st.jammers += 1;
+      message = "Brouilleur en place : le prochain espionnage \xE9chouera.";
+      break;
+    case "beacon":
+      st.beacons += 1;
+      message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
+      break;
+    case "shield":
+      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR3;
+      st.shieldBoughtAtMs = now;
+      message = "Voile de chitine actif pendant 6 h.";
+      break;
+    case "dossier":
+      addDossiers(player, 1);
+      message = "Dossier d'entra\xEEnement rang\xE9 : remets-le \xE0 un officier depuis la page Commandants.";
+      break;
+    case "blueprint":
+      player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_d = (_c = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _c.count) != null ? _d : 0 };
+      message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
+      break;
+    case "title":
+      if (!((_e = player.titles) != null ? _e : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
+        player.titles = [...(_f = player.titles) != null ? _f : [], { label: BOUNTY_SHOP_RULES.title, seasonId: "kesh", rank: 1 }];
+      }
+      player.activeTitle = BOUNTY_SHOP_RULES.title;
+      break;
+  }
+  if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
+  st.amber -= item.price;
+  player.bounties = st;
+  return { message };
+}
+function weekId(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY5) * DAY5;
+  return new Date(midnight - (day + 6) % 7 * DAY5).toISOString().slice(0, 10);
+}
+function exchangeAmber(player, amountIn, now) {
+  var _a;
+  const amount3 = Math.floor(Number(amountIn));
+  if (!(amount3 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
+  const st = bountyState(player);
+  const week = weekId(now);
+  if (st.exchangeWeek !== week) {
+    st.exchangeWeek = week;
+    st.exchanged = 0;
+  }
+  if (amount3 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
+  if (amount3 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
+  const gain = {};
+  for (const r of RESOURCE_LIST) {
+    if (r.rarity !== "rare") continue;
+    gain[r.id] = amount3 * BOUNTY_RULES.exchange.rarePerAmber;
+    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
+  }
+  st.amber -= amount3;
+  st.exchanged += amount3;
+  player.bounties = st;
+  return gain;
+}
+function shieldUntil(player) {
+  var _a;
+  return num2((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
+}
+function dropShield(player, now) {
+  const st = bountyState(player);
+  if (st.shieldUntilMs > now) {
+    st.shieldUntilMs = now;
+    player.bounties = st;
+  }
+}
+function consumeJammer(player) {
+  const st = bountyState(player);
+  if (st.jammers <= 0) return false;
+  st.jammers -= 1;
+  player.bounties = st;
+  return true;
+}
+function consumeBeacon(player) {
+  const st = bountyState(player);
+  if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
+  st.beacons -= 1;
+  player.bounties = st;
+}
+var KESH_EMOJIS = [
+  { code: "kesh_gg", url: "/assets/bounties/emoji-gg.webp" },
+  { code: "kesh_ok", url: "/assets/bounties/emoji-ok.webp" },
+  { code: "kesh_joie", url: "/assets/bounties/emoji-joie.webp" },
+  { code: "kesh_top", url: "/assets/bounties/emoji-top.webp" }
+];
+function assertKeshEmojis(player, text) {
+  if (!/:kesh_[a-z]+:/.test(text)) return;
+  if (KESH_EMOJIS.some((e3) => text.includes(`:${e3.code}:`)) && !owns(bountyState(player), "emojis")) {
+    throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
+  }
+}
+var ELITE_KEY = "bounty_elite";
+var ELITE_RULES = {
+  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs. */
+  hpFactor: 1,
+  minHp: 5e4,
+  /** Un assaut toutes les N heures par joueur. */
+  cooldownHours: 12,
+  flightMinutes: 45,
+  lossPct: 0.1,
+  /** Rang minimal dans l'Essaim. */
+  minRank: 2,
+  /** Part minimale des points de structure pour être récompensé. */
+  minShare: 5e-3,
+  killed: { xp: 300, amber: 150, rep: 8 },
+  failed: { xp: 100, amber: 50, rep: 3 }
+};
+function eliteWindow(now) {
+  const id = weekId(now);
+  const startMs = Date.parse(`${id}T00:00:00Z`);
+  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY5 };
+}
+function normalizeElite(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(num2(r.maxHp) > 0)) return null;
+  return {
+    id: String(r.id),
+    fugitive: num2(r.fugitive),
+    startMs: num2(r.startMs),
+    endMs: num2(r.endMs),
+    maxHp: num2(r.maxHp),
+    hp: num2(r.hp),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    endedAtMs: num2(r.endedAtMs),
+    rewarded: !!r.rewarded,
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
+  };
+}
+function spawnElite(now, activePlayers) {
+  const w = eliteWindow(now);
+  let h = 0;
+  for (const c of w.id) h = h * 31 + c.charCodeAt(0) >>> 0;
+  const total2 = activePlayers.reduce((sum3, p) => sum3 + hunterPower(p), 0);
+  const maxHp = Math.round(Math.max(ELITE_RULES.minHp, total2 * ELITE_RULES.hpFactor));
+  return { id: w.id, fugitive: h % ELITE_FUGITIVES.length, startMs: w.startMs, endMs: w.endMs, maxHp, hp: maxHp, status: "active", endedAtMs: 0, rewarded: false, contributions: {} };
+}
+function eliteActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+function eliteReadyAt(state, uid) {
+  var _a, _b;
+  const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
+  return last ? last + ELITE_RULES.cooldownHours * HOUR3 : 0;
+}
+function checkEliteLaunch(state, player, now) {
+  var _a;
+  if (!state || !eliteActive(state, now)) throw new GameActionError("Aucune proie d'\xE9lite \xE0 traquer en ce moment.");
+  if (bountyRank(bountyState(player).reputation) < ELITE_RULES.minRank) throw new GameActionError(`Il faut le rang ${rankName(ELITE_RULES.minRank)} dans l'Essaim pour traquer la proie d'\xE9lite.`);
+  const ready = eliteReadyAt(state, player.uid);
+  if (ready > now) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil((ready - now) / 6e4)} min.`);
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: 0 };
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, lastLaunchMs: now }) }) });
+}
+function resolveEliteAssault(state, player, fleet, formation, now) {
+  var _a;
+  const fx = formationEffects(formation);
+  const power = Math.round(
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
+  );
+  const active = eliteActive(state, now);
+  const damage = active ? Math.min(state.hp, power) : 0;
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
+  const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
+  const survivors = {};
+  const lost = {};
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const gone = raw - Math.floor(raw * repair);
+    if (gone > 0) lost[id] = gone;
+    survivors[id] = qty - gone;
+  }
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
+  const hp = state.hp - damage;
+  const killed = active && hp <= 0;
+  return {
+    state: __spreadProps(__spreadValues({}, state), {
+      hp: Math.max(0, hp),
+      status: killed ? "killed" : state.status,
+      endedAtMs: killed ? now : state.endedAtMs,
+      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
+    }),
+    damage,
+    survivors,
+    lost,
+    killed
+  };
+}
+function closeElite(state, now) {
+  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
+  return state;
+}
+function eliteRanking(state) {
+  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => ({ uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })).sort((a, b) => b.damage - a.damage);
+}
+function eliteRewardees(state) {
+  if (state.status === "active") return [];
+  return eliteRanking(state).filter((c) => c.damage >= state.maxHp * ELITE_RULES.minShare).map((c) => c.uid);
+}
+function grantEliteReward(state, player, now, random = Math.random) {
+  if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
+  const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
+  const st = bountyState(player);
+  st.amber += r.amber;
+  st.amberEarned += r.amber;
+  st.reputation += r.rep;
+  player.bounties = st;
+  applyXpDelta(player, r.xp, now);
+  if (state.status === "killed") {
+    const item = rollRelic("elite", now, random, "rare");
+    if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
+  }
+  return { xp: r.xp, amber: r.amber };
+}
+function describeElite(state) {
+  return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
+}
+function eliteNotice(state, reward, now) {
+  const f = describeElite(state);
+  return note2(
+    state.status === "killed" ? `${f.name} est tomb\xE9` : `${f.name} s'est enfui`,
+    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
+    now
+  );
+}
+
+// src/game/synthesis.ts
+var CAPSULES = {
+  assault: {
+    name: "Stimulant d'assaut",
+    short: "Attaque",
+    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
+    use: "launch"
+  },
+  armor: {
+    name: "Carapace r\xE9active",
+    short: "D\xE9fense",
+    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
+    use: "activate"
+  },
+  decoy: {
+    name: "Brouilleur d'approche",
+    short: "Leurre",
+    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
+    use: "launch"
+  },
+  veil: {
+    name: "Brouilleur de d\xE9fense",
+    short: "Voile",
+    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
+    use: "activate"
+  }
+};
+var CAPSULE_TYPES = Object.keys(CAPSULES);
+var SYNTH_RULES = {
+  pctPerLevel: 5,
+  maxStock: 3,
+  activeHours: 12,
+  /** Coût : 2 h de production commune par niveau de capsule. */
+  costHoursPerLevel: 2,
+  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
+  baseMinutes: 30,
+  minutesPerLevel: 77
+};
+function capsulePct(level3) {
+  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
+}
+function synthesisState(player) {
+  var _a, _b, _c, _d;
+  const raw = (_a = player.synthesis) != null ? _a : {};
+  const stock = {};
+  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
+  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
+  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
+  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
+}
+function synthLevel(player) {
+  var _a, _b;
+  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
+  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
+}
+function craftSeconds(level3) {
+  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
+}
+function capsuleCost(player, level3) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
+  const out = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
+  return out;
+}
+function advanceSynthesis(player, now) {
+  const st = synthesisState(player);
+  if (!st.crafting || st.crafting.endsAtMs > now) return null;
+  const done = { type: st.crafting.type, level: st.crafting.level };
+  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
+  st.crafting = null;
+  player.synthesis = st;
+  return done;
+}
+function craftCapsule(player, typeIn, levelIn, now) {
+  var _a, _b, _c;
+  const type = typeIn;
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const level3 = Math.floor(Number(levelIn));
+  const max = synthLevel(player);
+  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
+  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
+  const st = synthesisState(player);
+  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
+  const cost = capsuleCost(player, level3);
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
+  }
+  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
+  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
+  player.synthesis = st;
+  return st.crafting;
+}
+function takeCapsule(player, type, levelIn) {
+  const st = synthesisState(player);
+  const stock = [...st.stock[type]].sort((a, b) => b - a);
+  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
+  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
+  const i = stock.indexOf(wanted);
+  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
+  stock.splice(i, 1);
+  st.stock[type] = stock;
+  player.synthesis = st;
+  return capsulePct(wanted);
+}
+function activateCapsule(player, typeIn, levelIn, now) {
+  const type = typeIn;
+  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
+  const st = synthesisState(player);
+  const current2 = st[type];
+  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
+  const pct5 = takeCapsule(player, type, levelIn);
+  const after = synthesisState(player);
+  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  player.synthesis = after;
+  return pct5;
+}
+function consumeArmor(player, now) {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now) return 0;
+  const pct5 = st.armor.pct;
+  st.armor = null;
+  player.synthesis = st;
+  return pct5;
+}
+function activeVeil(player, now) {
+  const v = synthesisState(player).veil;
+  return v && v.untilMs > now ? v.pct : 0;
+}
+function decoyUnits(real, pct5, pool, random = Math.random) {
+  var _a;
+  const out = {};
+  const swing = pct5 / 100;
+  for (const [id, qty] of Object.entries(real)) {
+    if (!(qty > 0)) continue;
+    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
+    let target = id;
+    if (pool.length > 1 && random() < swing) {
+      const others = pool.filter((p) => p !== id);
+      target = others[Math.floor(random() * others.length) % others.length];
+    }
+    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
+  }
+  return out;
+}
+function veilCounts(entries, pct5, random = Math.random) {
+  if (!entries) return entries;
+  const swing = pct5 / 100;
+  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
+}
+function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
+  const req = request && typeof request === "object" ? request : {};
+  const out = { boosts: {}, fakeUnits: null };
+  const level3 = (v) => v === true ? void 0 : v;
+  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
+  if (req.decoy) {
+    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
+    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
+  }
+  return out;
+}
+function recordDecoy(player, fleetId, units) {
+  const st = synthesisState(player);
+  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
+  player.synthesis = st;
+}
+function clearDecoy(player, fleetId) {
+  const st = synthesisState(player);
+  if (!st.decoys[fleetId]) return;
+  const next = __spreadValues({}, st.decoys);
+  delete next[fleetId];
+  st.decoys = next;
+  player.synthesis = st;
+}
+
+// src/game/seasonPass.ts
+var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
+var PASS_POINTS = {
+  contract: 10,
+  bounty: 8,
+  raidRepelled: 8,
+  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
+  victory: 8,
+  bossAssault: 5,
+  dailyLogin: 5,
+  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
+  mission: 0,
+  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
+  vendetta: 40,
+  /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
+  chronicle: 40,
+  seasonBoss: 60,
+  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
+  allianceBoss: 40,
+  allianceBossTry: 15,
+  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
+  coalition: 50,
+  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
+  allianceDaily: 15
+};
+var OBJECTIVE_LABELS = {
+  contract: "Contrats du jour r\xE9cup\xE9r\xE9s",
+  bounty: "Primes Kesh'Vaar remplies",
+  raidRepelled: "Raids de faction repouss\xE9s",
+  victory: "Combats gagn\xE9s",
+  bossAssault: "Assauts sur un boss",
+  mission: "Missions termin\xE9es",
+  spy: "Sondes d'espionnage lanc\xE9es",
+  market: "Offres achet\xE9es au march\xE9",
+  warlordWin: "Seigneurs de guerre pill\xE9s"
+};
+var PASS_TIERS = [
+  [{ kind: "production", hours: 2 }],
+  [{ kind: "amber", amount: 20 }],
+  [{ kind: "capsule", capsule: "assault", level: 3 }],
+  [{ kind: "production", hours: 3 }],
+  [{ kind: "dossier", count: 1 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
+  [{ kind: "capsule", capsule: "armor", level: 3 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
+  [{ kind: "production", hours: 5 }],
+  [{ kind: "capsule", capsule: "decoy", level: 4 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "production", hours: 6 }],
+  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "veil", level: 4 }],
+  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "assault", level: 5 }],
+  [{ kind: "relic", rarity: "rare" }],
+  [{ kind: "production", hours: 8 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "armor", level: 5 }],
+  [{ kind: "production", hours: 9 }],
+  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
+  [{ kind: "production", hours: 10 }],
+  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
+  [{ kind: "capsule", capsule: "decoy", level: 5 }],
+  [{ kind: "production", hours: 12 }],
+  [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }]
+];
+var DEFAULT_PASS = structuredClone({ rules: PASS_RULES, points: PASS_POINTS, tiers: PASS_TIERS });
+function defaultSeasonPassConfig() {
+  return structuredClone(DEFAULT_PASS);
+}
+function setSeasonPass(cfg) {
+  var _a, _b;
+  const d = defaultSeasonPassConfig();
+  Object.assign(PASS_RULES, d.rules, (_a = cfg == null ? void 0 : cfg.rules) != null ? _a : {});
+  Object.assign(PASS_POINTS, d.points, (_b = cfg == null ? void 0 : cfg.points) != null ? _b : {});
+  PASS_POINTS.mission = 0;
+  const tiers2 = Array.isArray(cfg == null ? void 0 : cfg.tiers) && cfg.tiers.length > 0 ? cfg.tiers : d.tiers;
+  PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
+  PASS_RULES.tiers = PASS_TIERS.length;
+}
+var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
+function validateSeasonPass(cfg) {
+  var _a;
+  const errors = [];
+  if (!cfg) return errors;
+  if (cfg.rules && !(cfg.rules.pointsPerTier >= 1)) errors.push("Passe : points par palier \u2265 1.");
+  for (const [k, v] of Object.entries((_a = cfg.points) != null ? _a : {})) if (!(typeof v === "number" && v >= 0)) errors.push(`Passe : points invalides pour \xAB ${k} \xBB.`);
+  if (cfg.tiers) {
+    if (cfg.tiers.length < 1 || cfg.tiers.length > 60) errors.push("Passe : entre 1 et 60 paliers.");
+    cfg.tiers.forEach(
+      (list, i) => (list != null ? list : []).forEach((r) => {
+        if (!REWARD_KINDS.includes(r == null ? void 0 : r.kind)) errors.push(`Passe, palier ${i + 1} : r\xE9compense inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : raret\xE9 inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
+      })
+    );
+  }
+  return errors;
+}
+var CAPSULE_AMBER = 15;
+function passTitle(seasonId) {
+  const month2 = seasonLabel(seasonId).toLowerCase();
+  return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
+}
+function passState(player, now) {
+  var _a, _b, _c;
+  const raw = (_a = player.seasonPass) != null ? _a : {};
+  const seasonId = currentSeasonId(now);
+  const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
+  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
+  const activity = {};
+  for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
+  return __spreadValues({
+    seasonId,
+    points: Math.max(0, Number(raw.points) || 0),
+    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
+    loginDay: String((_c = raw.loginDay) != null ? _c : ""),
+    completed,
+    activity
+  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {});
+}
+function passTierToAnnounce(player, now) {
+  var _a;
+  if (!player.seasonPass) return { tier: 0, claimable: 0 };
+  const st = passState(player, now);
+  const tier = passTier(st.points, st.seasonId);
+  if (tier <= ((_a = st.notifiedTier) != null ? _a : 0)) return { tier: 0, claimable: 0 };
+  st.notifiedTier = tier;
+  player.seasonPass = st;
+  let claimable = 0;
+  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) claimable += 1;
+  return { tier, claimable };
+}
+var MONTH_PASSES = /* @__PURE__ */ new Map();
+var SEASON_OVERRIDES = /* @__PURE__ */ new Map();
+function setPassSeasonOverrides(map) {
+  SEASON_OVERRIDES.clear();
+  for (const [k, v] of map) SEASON_OVERRIDES.set(k, v);
+}
+function setMonthPasses(list) {
+  MONTH_PASSES.clear();
+  for (const m of list) if (m.pass && m.pass.pointsPerTier >= 1 && Array.isArray(m.pass.tiers) && m.pass.tiers.length > 0) MONTH_PASSES.set(m.id, m.pass);
+}
+function activePass(seasonId = currentSeasonId()) {
+  var _a, _b;
+  return (_b = (_a = SEASON_OVERRIDES.get(seasonId)) != null ? _a : MONTH_PASSES.get(seasonId)) != null ? _b : { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+}
+function tierRequirement(player, tier, now) {
+  var _a, _b, _c;
+  const st = passState(player, now);
+  const req = (_a = activePass(st.seasonId).requirements) == null ? void 0 : _a[String(tier)];
+  if (!req) return null;
+  const done = (_c = (_b = st.activity) == null ? void 0 : _b[req.key]) != null ? _c : 0;
+  return __spreadProps(__spreadValues({}, req), { done, met: done >= req.count });
+}
+function passTier(points, seasonId = currentSeasonId()) {
+  const pass = activePass(seasonId);
+  return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
+}
+function passMax(seasonId) {
+  const pass = activePass(seasonId);
+  return pass.tiers.length * pass.pointsPerTier;
+}
+function trackActivity(player, key, now, times = 1) {
+  var _a, _b, _c;
+  if (!(times > 0)) return;
+  const st = passState(player, now);
+  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
+  player.seasonPass = st;
+}
+var passHook = null;
+function onPassPoints(hook) {
+  passHook = hook;
+}
+function addPassPoints(player, source, now, times = 1) {
+  passHook == null ? void 0 : passHook(player, source, now, times);
+  trackActivity(player, source, now, times);
+  const st = passState(player, now);
+  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS[source] * Math.max(0, times));
+  player.seasonPass = st;
+}
+function passDailyLogin(player, now) {
+  var _a, _b, _c;
+  const st = passState(player, now);
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (st.loginDay === day) return false;
+  st.loginDay = day;
+  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { dailyLogin: ((_c = (_b = st.activity) == null ? void 0 : _b.dailyLogin) != null ? _c : 0) + 1 });
+  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
+  player.seasonPass = st;
+  return true;
+}
+function describePassReward(r, seasonId) {
+  switch (r.kind) {
+    case "production":
+      return `${r.hours} h de production`;
+    case "amber":
+      return `${r.amount} Ambre`;
+    case "dossier":
+      return r.count > 1 ? `${r.count} Dossiers d'entra\xEEnement` : "Dossier d'entra\xEEnement";
+    case "capsule":
+      return `${CAPSULES[r.capsule].name} N${r.level}`;
+    case "relic":
+      return `Relique ${RARITY_LABELS[r.rarity]}`;
+    case "tokens":
+      return tokensLabel(r.count);
+    case "commander": {
+      const def3 = findCommander(r.id);
+      return def3 ? `Commandant de saison : ${def3.title} ${def3.name}` : "Commandant de saison";
+    }
+    case "cosmetic":
+      return seasonId ? `Banni\xE8re et titre \xAB ${passTitle(seasonId)} \xBB` : "Banni\xE8re et titre de la saison";
+  }
+}
+var RARITY_LABELS = { common: "commune", rare: "rare", epic: "\xE9pique", legendary: "l\xE9gendaire", mythic: "mythique" };
+function grantPassReward(player, r, seasonId, now, random = Math.random) {
+  var _a, _b, _c;
+  if (r.kind === "production") {
+    for (const [res, n] of Object.entries(productionHours(player, r.hours))) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+    return describePassReward(r);
+  }
+  if (r.kind === "amber") {
+    const b = bountyState(player);
+    b.amber += r.amount;
+    player.bounties = b;
+    return describePassReward(r);
+  }
+  if (r.kind === "dossier") {
+    addDossiers(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "capsule") {
+    const syn = synthesisState(player);
+    if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
+      syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
+      player.synthesis = syn;
+      return describePassReward(r);
+    }
+    const b = bountyState(player);
+    b.amber += CAPSULE_AMBER;
+    player.bounties = b;
+    return `${CAPSULE_AMBER} Ambre (r\xE9serve de capsules pleine)`;
+  }
+  if (r.kind === "tokens") {
+    grantTokens(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "commander") {
+    if (unlockSeasonCommander(player, r.id)) return describePassReward(r);
+    addDossiers(player, 2);
+    return "2 Dossiers d'entra\xEEnement (commandant d\xE9j\xE0 recrut\xE9)";
+  }
+  if (r.kind === "relic") {
+    let first = true;
+    const item = rollRelic("pass", now, () => first ? (first = false, 0) : random(), r.rarity);
+    if (addRelic(player, item)) return `Relique : ${relicLabel(item)}`;
+    const b = bountyState(player);
+    b.amber += 40;
+    player.bounties = b;
+    return "40 Ambre (collection de reliques pleine)";
+  }
+  const title = passTitle(seasonId);
+  if (!((_b = player.titles) != null ? _b : []).some((t) => t.label === title)) player.titles = [...(_c = player.titles) != null ? _c : [], { label: title, seasonId: `pass:${seasonId}`, rank: 1 }];
+  const st = passState(player, now);
+  if (!st.completed.includes(seasonId)) st.completed = [...st.completed, seasonId];
+  player.seasonPass = st;
+  return describePassReward(r, seasonId);
+}
+function claimPassTier(player, tierIn, now, random = Math.random) {
+  const tier = Math.floor(Number(tierIn));
+  const st = passState(player, now);
+  const pass = activePass(st.seasonId);
+  if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
+  if (st.claimed.includes(tier)) throw new GameActionError("Palier d\xE9j\xE0 r\xE9clam\xE9.");
+  if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
+  const req = tierRequirement(player, tier, now);
+  if (req && !req.met) throw new GameActionError(`Palier verrouill\xE9 : ${OBJECTIVE_LABELS[req.key].toLowerCase()} ${req.done} / ${req.count} ce mois-ci.`);
+  const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
+  const after = passState(player, now);
+  after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
+  player.seasonPass = after;
+  return gained;
 }
 
 // src/game/pirates.ts
@@ -5032,7 +5743,7 @@ function productionHours(player, h) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const out = {};
-  for (const res of COMMON_RESOURCES2) {
+  for (const res of COMMON_RESOURCES) {
     const n = Math.floor(((_a = rates[res]) != null ? _a : 0) * h * 3600);
     if (n > 0) out[res] = n;
   }
@@ -5061,14 +5772,14 @@ function raidPower(faction, player, notoriety, adapt = 1) {
 function exposedStock(player) {
   var _a, _b, _c;
   const out = {};
-  for (const res of COMMON_RESOURCES2) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res, player.techLevels, player.allianceResearch));
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, ((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0) - protectedAmount((_c = player.buildings) != null ? _c : {}, res, player.techLevels, player.allianceResearch, player));
   return out;
 }
 function storageFillPct(player) {
   var _a;
   const cap = getStorageCapacity((_a = player.buildings) != null ? _a : {}, player.techLevels);
   if (!(cap > 0)) return 0;
-  return Math.floor(Math.max(...COMMON_RESOURCES2.map((r) => {
+  return Math.floor(Math.max(...COMMON_RESOURCES.map((r) => {
     var _a2, _b;
     return (_b = (_a2 = player.resources) == null ? void 0 : _a2[r]) != null ? _b : 0;
   })) / cap * 100);
@@ -5103,7 +5814,7 @@ function tributeFor(faction, player, aggression) {
   const floor = productionHours(player, faction.tribute.minHours);
   return total(fromPlunder) >= total(floor) ? fromPlunder : floor;
 }
-function note2(kind, title, message, now, data) {
+function note3(kind, title, message, now, data) {
   return __spreadValues({ kind, title, message, createdAtMs: now, read: false }, data ? { data } : {});
 }
 function pirateTick(player, now, options = {}) {
@@ -5122,7 +5833,7 @@ function pirateTick(player, now, options = {}) {
       out.raid = launchRaid(player, faction, st, now, random);
       out.changed = true;
       out.notifications.push(
-        note2("fleet", `${faction.enforcer} arrive`, `Tu n'as pas r\xE9pondu \xE0 ${faction.leader} : raid dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min.`, now)
+        note3("fleet", `${faction.enforcer} arrive`, `Tu n'as pas r\xE9pondu \xE0 ${faction.leader} : raid dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min.`, now)
       );
       return out;
     }
@@ -5182,7 +5893,7 @@ function pirateTick(player, now, options = {}) {
     recordThreat(player, faction.id);
     out.changed = true;
     out.notifications.push(
-      note2(
+      note3(
         "fleet",
         faction.ultimatum.title.replace(/[«»"]/g, "").trim(),
         `${faction.leader} exige ${formatInt(total(tribute))} ressources. R\xE9ponds avant ${faction.answerHours} h, ou ${faction.enforcer} viendra se servir.`,
@@ -5218,12 +5929,12 @@ function answerUltimatum(player, answer, now, random = Math.random) {
     st.tributesPaid += 1;
     st.nextListAtMs = now + nextListDelay(faction, random);
     setState(player, faction.id, st);
-    return { raid: null, notifications: [note2("fleet", "Tribut pay\xE9", `${faction.leader} te laisse en paix\u2026 pour l'instant.`, now)] };
+    return { raid: null, notifications: [note3("fleet", "Tribut pay\xE9", `${faction.leader} te laisse en paix\u2026 pour l'instant.`, now)] };
   }
   const raid = launchRaid(player, faction, st, now, random);
   return {
     raid,
-    notifications: [note2("fleet", "Tu as refus\xE9", `${faction.enforcer} est en route : impact dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min. Pr\xE9pare-toi !`, now)]
+    notifications: [note3("fleet", "Tu as refus\xE9", `${faction.enforcer} est en route : impact dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min. Pr\xE9pare-toi !`, now)]
   };
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
@@ -5264,9 +5975,9 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   const notifications = [...flushed.notifications];
   st.raidUntilMs = 0;
   if (combat.outcome === "attacker_win") {
-    const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES2;
+    const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, ((_f = player.resources[res]) != null ? _f : 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
+      const exposed = Math.max(0, ((_f = player.resources[res]) != null ? _f : 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
@@ -5279,7 +5990,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
-    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
+    notifications.push(note3("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
@@ -5291,13 +6002,14 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     st.repelled += 1;
     st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
+    grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     notifications.push(
-      note2(
+      note3(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
         `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.`,
@@ -5305,7 +6017,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
         { resources: bounty, xp: faction.bounty.xp || void 0 }
       )
     );
-    if (lairNow) notifications.push(note2("fleet", `${faction.lair.name} localis\xE9`, "Sa position a fuit\xE9 : lance l'assaut depuis la page Menaces !", now));
+    if (lairNow) notifications.push(note3("fleet", `${faction.lair.name} localis\xE9`, "Sa position a fuit\xE9 : lance l'assaut depuis la page Menaces !", now));
   }
   setState(player, faction.id, st);
   const report = {
@@ -5355,7 +6067,7 @@ function checkLairLaunch(faction, player, fleet) {
   return units;
 }
 function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   const st = pirateState(player, faction.id);
@@ -5381,11 +6093,13 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);
     for (const r of RARE) reward[r] = ((_b = reward[r]) != null ? _b : 0) + faction.lair.rare;
-    for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + amount3;
+    const loot = 1 + playerModifiers(player).loot;
+    if (loot !== 1) for (const r of Object.keys(reward)) reward[r] = Math.floor(((_c = reward[r]) != null ? _c : 0) * loot);
+    for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
     applyXpDelta(player, faction.lair.xp, now);
     const title = faction.lair.title;
-    if (title && !((_d = player.titles) != null ? _d : []).some((t) => t.label === title)) {
-      player.titles = [...(_e = player.titles) != null ? _e : [], { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
+    if (title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === title)) {
+      player.titles = [...(_f = player.titles) != null ? _f : [], { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
       if (!player.activeTitle) player.activeTitle = title;
     }
     st.lairOpen = false;
@@ -5393,10 +6107,11 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     st.notoriety = 0;
     st.lairsTaken += 1;
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
-    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
+    player.victories = ((_g = player.victories) != null ? _g : 0) + 1;
     notifications.push(
-      note2(
+      note3(
         "combat-attacker",
         `${faction.lair.name} est tomb\xE9 !`,
         `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.`,
@@ -5404,8 +6119,8 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
       )
     );
   } else {
-    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
-    notifications.push(note2("combat-attacker", "Assaut repouss\xE9", `Les d\xE9fenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
+    player.defeats = ((_h = player.defeats) != null ? _h : 0) + 1;
+    notifications.push(note3("combat-attacker", "Assaut repouss\xE9", `Les d\xE9fenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
   }
   setState(player, faction.id, st);
   const report = {
@@ -5763,7 +6478,7 @@ function achievementReward(a, player) {
   if (!(a.rewardHours > 0)) return {};
   const rates = getProductionRatesPerSecond((_a = player.buildings) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {});
   const out = {};
-  for (const res of COMMON_RESOURCES2) {
+  for (const res of COMMON_RESOURCES) {
     const n = Math.floor(((_c = rates[res]) != null ? _c : 0) * a.rewardHours * 3600);
     if (n > 0) out[res] = n;
   }
@@ -5889,188 +6604,11 @@ function validateTitles(defs) {
   return errors;
 }
 
-// src/game/synthesis.ts
-var CAPSULES = {
-  assault: {
-    name: "Stimulant d'assaut",
-    short: "Attaque",
-    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
-    use: "launch"
-  },
-  armor: {
-    name: "Carapace r\xE9active",
-    short: "D\xE9fense",
-    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
-    use: "activate"
-  },
-  decoy: {
-    name: "Brouilleur d'approche",
-    short: "Leurre",
-    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
-    use: "launch"
-  },
-  veil: {
-    name: "Brouilleur de d\xE9fense",
-    short: "Voile",
-    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
-    use: "activate"
-  }
-};
-var CAPSULE_TYPES = Object.keys(CAPSULES);
-var SYNTH_RULES = {
-  pctPerLevel: 5,
-  maxStock: 3,
-  activeHours: 12,
-  /** Coût : 2 h de production commune par niveau de capsule. */
-  costHoursPerLevel: 2,
-  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
-  baseMinutes: 30,
-  minutesPerLevel: 77
-};
-function capsulePct(level3) {
-  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
-}
-function synthesisState(player) {
-  var _a, _b, _c, _d;
-  const raw = (_a = player.synthesis) != null ? _a : {};
-  const stock = {};
-  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
-  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
-  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
-  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
-}
-function synthLevel(player) {
-  var _a, _b;
-  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
-  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
-}
-function craftSeconds(level3) {
-  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
-}
-function capsuleCost(player, level3) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
-  const out = {};
-  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
-  return out;
-}
-function advanceSynthesis(player, now) {
-  const st = synthesisState(player);
-  if (!st.crafting || st.crafting.endsAtMs > now) return null;
-  const done = { type: st.crafting.type, level: st.crafting.level };
-  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
-  st.crafting = null;
-  player.synthesis = st;
-  return done;
-}
-function craftCapsule(player, typeIn, levelIn, now) {
-  var _a, _b, _c;
-  const type = typeIn;
-  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
-  const level3 = Math.floor(Number(levelIn));
-  const max = synthLevel(player);
-  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
-  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
-  const st = synthesisState(player);
-  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
-  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
-  const cost = capsuleCost(player, level3);
-  for (const [res, n] of Object.entries(cost)) {
-    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
-  }
-  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
-  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
-  player.synthesis = st;
-  return st.crafting;
-}
-function takeCapsule(player, type, levelIn) {
-  const st = synthesisState(player);
-  const stock = [...st.stock[type]].sort((a, b) => b - a);
-  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
-  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
-  const i = stock.indexOf(wanted);
-  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
-  stock.splice(i, 1);
-  st.stock[type] = stock;
-  player.synthesis = st;
-  return capsulePct(wanted);
-}
-function activateCapsule(player, typeIn, levelIn, now) {
-  const type = typeIn;
-  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
-  const st = synthesisState(player);
-  const current2 = st[type];
-  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct5 = takeCapsule(player, type, levelIn);
-  const after = synthesisState(player);
-  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
-  player.synthesis = after;
-  return pct5;
-}
-function consumeArmor(player, now) {
-  const st = synthesisState(player);
-  if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct5 = st.armor.pct;
-  st.armor = null;
-  player.synthesis = st;
-  return pct5;
-}
-function activeVeil(player, now) {
-  const v = synthesisState(player).veil;
-  return v && v.untilMs > now ? v.pct : 0;
-}
-function decoyUnits(real, pct5, pool, random = Math.random) {
-  var _a;
-  const out = {};
-  const swing = pct5 / 100;
-  for (const [id, qty] of Object.entries(real)) {
-    if (!(qty > 0)) continue;
-    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
-    let target = id;
-    if (pool.length > 1 && random() < swing) {
-      const others = pool.filter((p) => p !== id);
-      target = others[Math.floor(random() * others.length) % others.length];
-    }
-    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
-  }
-  return out;
-}
-function veilCounts(entries, pct5, random = Math.random) {
-  if (!entries) return entries;
-  const swing = pct5 / 100;
-  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
-}
-function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
-  const req = request && typeof request === "object" ? request : {};
-  const out = { boosts: {}, fakeUnits: null };
-  const level3 = (v) => v === true ? void 0 : v;
-  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
-  if (req.decoy) {
-    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
-    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
-  }
-  return out;
-}
-function recordDecoy(player, fleetId, units) {
-  const st = synthesisState(player);
-  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
-  player.synthesis = st;
-}
-function clearDecoy(player, fleetId) {
-  const st = synthesisState(player);
-  if (!st.decoys[fleetId]) return;
-  const next = __spreadValues({}, st.decoys);
-  delete next[fleetId];
-  st.decoys = next;
-  player.synthesis = st;
-}
-
 // src/game/weeklyRecap.ts
-var DAY5 = 864e5;
+var DAY6 = 864e5;
 function weekIdOf(now) {
   const d = new Date(now);
-  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY5;
+  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY6;
   return new Date(monday).toISOString().slice(0, 10);
 }
 function weeklySnapshot(player, weekId2) {
@@ -6131,8 +6669,8 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
-var DAY6 = 864e5;
-var HOUR3 = 36e5;
+var DAY7 = 864e5;
+var HOUR4 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
   return !!v && !v.endedAtMs && v.startedAtMs <= now && now < v.untilMs;
@@ -6145,17 +6683,17 @@ function startVacation(player, daysIn, ctx, now) {
   }
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
-  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY6) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY6 - now) / HOUR3);
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY7) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY7 - now) / HOUR4);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
   if (ctx.hostileIncoming > 0) throw new GameActionError("Une flotte hostile approche : impossible de partir maintenant.");
   if (ctx.ultimatum) throw new GameActionError("R\xE9ponds d'abord \xE0 l'ultimatum en cours.");
-  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR3) {
+  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR4) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
-  const v = { startedAtMs: now, untilMs: now + days * DAY6 };
+  const v = { startedAtMs: now, untilMs: now + days * DAY7 };
   player.vacation = v;
   return v;
 }
@@ -6163,8 +6701,8 @@ function endVacation(player, queues, at, early = false) {
   var _a, _b;
   const v = player.vacation;
   if (!v || v.endedAtMs) return;
-  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR3) {
-    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR3 - at) / HOUR3);
+  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR4) {
+    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR4 - at) / HOUR4);
     throw new GameActionError(`Retour possible apr\xE8s ${VACATION_RULES.minStayHours} h de vacances : encore ${left} h.`);
   }
   const end = Math.min(at, v.untilMs);
@@ -6372,6 +6910,7 @@ function flushState(playerIn, queuesIn, now) {
     delete queues.buildingUpgrades[buildingId];
   }
   notifications.push(...advanceBuildPlan(player, queues, now, finishedAt));
+  let unitsDone = 0;
   ["attack", "defense"].forEach((category) => {
     const queue = queues.unitQueues[category];
     let guard = 0;
@@ -6379,7 +6918,7 @@ function flushState(playerIn, queuesIn, now) {
       const front = queue[0];
       if (front.endTime === null) {
         const u2 = findUnit(front.unitId);
-        front.endTime = now + (u2 ? getUnitBuildTime(u2, player.techLevels) : 0) * 1e3;
+        front.endTime = now + (u2 ? getUnitBuildTime(u2, player.techLevels, player) : 0) * 1e3;
         break;
       }
       if (front.endTime > now) break;
@@ -6388,15 +6927,17 @@ function flushState(playerIn, queuesIn, now) {
         if (!player.units[u.id]) player.units[u.id] = { level: 1, count: 0 };
         player.units[u.id].count += 1;
         bumpStat(player, "unitsBuilt");
+        unitsDone += 1;
       }
       const completedEndTime = front.endTime;
       queue.shift();
       if (queue.length > 0 && queue[0].endTime === null) {
         const nu = findUnit(queue[0].unitId);
-        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels) : 0) * 1e3;
+        queue[0].endTime = completedEndTime + (nu ? getUnitBuildTime(nu, player.techLevels, player) : 0) * 1e3;
       }
     }
   });
+  if (unitsDone > 0) grantCommanderXp(player, "mechanic", COMMANDER_XP.unitsBuilt * Math.ceil(unitsDone / 10));
   const stillActiveResearch = [];
   for (const entry of queues.activeResearches) {
     const tech = findTech(entry.id);
@@ -6784,7 +7325,7 @@ function talentEffects(player) {
 
 // src/game/modifiers.ts
 function emptyModifiers() {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
 }
 function empireEffects(player, now = Date.now()) {
   if (!player) return [];
@@ -6809,14 +7350,20 @@ function modifiersFrom(grants, scope) {
   m.repair = sum3("repair");
   m.cargo = sum3("cargo");
   m.bossDamage = sum3("bossDamage");
+  m.fleetSpeed = sum3("fleetSpeed");
+  m.unitTime = sum3("unitTime");
+  m.loot = sum3("loot");
+  m.protectedStorage = sum3("protectedStorage");
+  m.counterSpy = sum3("counterSpy");
+  m.tradeTax = sum3("tradeTax");
   for (const g of grants) {
     if (g.layer !== "empire" || g.stat !== "production" || !g.target || m.production[g.target] !== void 0) continue;
     m.production[g.target] = rawEffectTotal(grants, "empire", "production", { target: g.target, scope });
   }
   return m;
 }
-function playerModifiers(player, now = Date.now()) {
-  return modifiersFrom(empireEffects(player, now));
+function playerModifiers(player, now = Date.now(), scope) {
+  return modifiersFrom(empireEffects(player, now), scope);
 }
 function withRepairBonus(base, player) {
   return Math.min(0.95, base + playerModifiers(player).repair);
@@ -6825,865 +7372,470 @@ function playerCargoCapacity(player, fleet) {
   return Math.floor(fleetCargoCapacity(player.units, fleet, player.techLevels) * (1 + playerModifiers(player).cargo));
 }
 
-// src/game/bounties.ts
-var BOUNTY_RULES = {
-  dailyLimit: 4,
-  refreshHours: 8,
-  /** Un échec laisse la prime ouverte une fois de plus. */
-  retries: 1,
-  /** +10 % d'Ambre par rang au-delà du premier. */
-  amberPerRank: 0.1,
-  tiers: {
-    1: { label: "Traque", pct: 0.5, minMinutes: 20, maxMinutes: 40, xp: 60, amber: 10, rep: 1, floor: 200, minRank: 1 },
-    2: { label: "Chasse", pct: 0.8, minMinutes: 40, maxMinutes: 60, xp: 120, amber: 25, rep: 2, floor: 500, minRank: 1 },
-    3: { label: "Proie majeure", pct: 1.1, minMinutes: 60, maxMinutes: 90, xp: 250, amber: 60, rep: 4, floor: 1200, minRank: 3 },
-    4: { label: "\xC9lite", pct: 1.25, minMinutes: 75, maxMinutes: 90, xp: 400, amber: 120, rep: 6, floor: 3e3, minRank: 5 }
+// src/game/units.ts
+var KESH_HUNTER_UNIT = {
+  id: "traqueur_kesh",
+  name: "Traqueur Kesh",
+  image: "/assets/units/traqueur_kesh.webp",
+  maxLevel: 1,
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambr\xE9e. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le L\xE9viathan, en attaque comme en d\xE9fense.",
+  cost: { scrap: 6e3, energy: 3e3 },
+  stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
+  category: "attack",
+  unlockTech: "",
+  hangarSpace: 25,
+  blueprint: true
+};
+function ownedBlueprints(player) {
+  var _a, _b;
+  return ((_b = (_a = player.bounties) == null ? void 0 : _a.owned) == null ? void 0 : _b.includes("blueprint")) ? [KESH_HUNTER_UNIT.id] : [];
+}
+var KESH_PVE_BONUS = 0.5;
+var UNIT_LEVEL_BONUS_DEFAULT = 5;
+var DEFAULT_UNITS = [
+  {
+    id: "drone_recuperateur",
+    name: "Drone r\xE9cup\xE9rateur",
+    image: "/assets/units/drone_recuperateur.webp",
+    maxLevel: 10,
+    description: "Petit drone autonome con\xE7u pour r\xE9cup\xE9rer des ressources dispers\xE9es.",
+    cost: { scrap: 500, energy: 200 },
+    stats: { attaque: 15, defense: 5, vitesse: 5, cargo: 10 },
+    category: "attack",
+    unlockTech: "tech9",
+    hangarSpace: 1
   },
-  ranks: [
-    { name: "Larve", at: 0 },
-    { name: "\xC9claireur", at: 10 },
-    { name: "Traqueur", at: 30 },
-    { name: "Lame de l'Essaim", at: 70 },
-    { name: "Main de la Reine", at: 150 }
-  ],
-  exchange: { rarePerAmber: 40, weeklyCap: 100 }
-};
-var KESH = {
-  name: "Kesh'Vaar",
-  full: "L'Essaim de la Traque",
-  leader: "Vashka, Matriarche-Chasseuse",
-  currency: "Ambre de Ruche",
-  art: "/assets/bounties/vashka.webp",
-  hunters: "/assets/bounties/hunters.webp",
-  banner: "/assets/bounties/banner.webp",
-  emblem: "/assets/bounties/emblem.webp",
-  amberIcon: "/assets/bounties/amber.webp",
-  story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
-};
-var FUGITIVES = [
-  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
-  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
-  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
-  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
-  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
-  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
-  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
-  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
-  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
-  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
-  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
-  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
-  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
-  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
-  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
-  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
-  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
-  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
-  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
-  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
-  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
-  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
+  {
+    id: "sonde_espionnage",
+    name: "Sonde d'espionnage",
+    image: "/assets/units/sonde_espionnage.webp",
+    maxLevel: 10,
+    description: "Sonde furtive et tr\xE8s rapide : rapporte les ressources, la flotte et les plans d'un autre joueur. Plus tu en envoies, plus le rapport est complet.",
+    cost: { scrap: 300, energy: 150 },
+    stats: { attaque: 0, defense: 2, vitesse: 20, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech20",
+    hangarSpace: 1
+  },
+  {
+    id: "fregate",
+    name: "Fr\xE9gate",
+    image: "/assets/units/fregate.webp",
+    maxLevel: 10,
+    description: "Vaisseau polyvalent, \xE9quilibr\xE9 entre attaque et d\xE9fense.",
+    cost: { scrap: 1e3, energy: 500 },
+    stats: { attaque: 100, defense: 20, vitesse: 3, cargo: 5 },
+    category: "attack",
+    unlockTech: "tech10",
+    hangarSpace: 1
+  },
+  {
+    id: "cargo",
+    name: "Cargo",
+    image: "/assets/units/cargo.webp",
+    maxLevel: 10,
+    description: "Transporteur massif con\xE7u pour d\xE9placer de grandes quantit\xE9s de ressources.",
+    cost: { scrap: 1200, energy: 300 },
+    stats: { attaque: 50, defense: 10, vitesse: 3, cargo: 50 },
+    category: "attack",
+    unlockTech: "tech11",
+    hangarSpace: 1
+  },
+  {
+    id: "sentinelle",
+    name: "Sentinelle",
+    image: "/assets/units/sentinelle.webp",
+    maxLevel: 10,
+    description: "Unit\xE9 offensive sp\xE9cialis\xE9e dans la d\xE9tection et la protection.",
+    cost: { scrap: 800, energy: 400 },
+    stats: { attaque: 120, defense: 30, vitesse: 1, detection: 10, cargo: 0 },
+    category: "attack",
+    unlockTech: "tech12",
+    hangarSpace: 1
+  },
+  {
+    id: "chasseur",
+    name: "Chasseur",
+    image: "/assets/units/chasseur.webp",
+    maxLevel: 10,
+    description: "Vaisseau rapide con\xE7u pour les attaques \xE9clairs.",
+    cost: { scrap: 1500, energy: 800 },
+    stats: { attaque: 245, defense: 10, vitesse: 8, cargo: 5 },
+    category: "attack",
+    unlockTech: "tech13",
+    // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
+    hangarSpace: 2
+  },
+  {
+    id: "etoile_noire",
+    name: "\xC9toile Noire",
+    image: "/assets/units/etoile_noire.webp",
+    maxLevel: 10,
+    description: "Arme ultime. Capacit\xE9 de destruction massive.",
+    cost: { scrap: 5e4, energy: 3e4 },
+    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
+    category: "attack",
+    unlockTech: "tech19",
+    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    hangarSpace: 80,
+    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
+    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
+    levelBonus: 1700
+  },
+  // v3.6 : unités de fin de partie.
+  {
+    id: "croiseur_nova",
+    name: "Croiseur Nova",
+    image: "/assets/units/croiseur_nova.webp",
+    maxLevel: 10,
+    description: "Croiseur de ligne propuls\xE9 par un c\u0153ur d'antimati\xE8re. Assez rapide pour frapper, assez blind\xE9 pour encaisser.",
+    cost: { scrap: 15e3, energy: 9e3 },
+    stats: { attaque: 1500, defense: 1e3, vitesse: 6, cargo: 300 },
+    category: "attack",
+    unlockTech: "tech24",
+    hangarSpace: 20,
+    levelBonus: 250
+  },
+  {
+    id: "lance_gravitationnelle",
+    name: "Lance gravitationnelle",
+    image: "/assets/units/lance_gravitationnelle.webp",
+    maxLevel: 10,
+    description: "Projecteur orbital qui \xE9crase les coques ennemies sous un puits de gravit\xE9.",
+    cost: { scrap: 18e3, energy: 12e3 },
+    stats: { attaque: 600, defense: 1200, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech25",
+    // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
+    hangarSpace: 12,
+    levelBonus: 150
+  },
+  {
+    id: "roquette",
+    name: "Roquette",
+    image: "/assets/units/roquette.webp",
+    maxLevel: 10,
+    description: "Arme simple mais efficace pour saturer une zone.",
+    cost: { scrap: 200, energy: 100 },
+    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech14",
+    hangarSpace: 1
+  },
+  {
+    id: "canon_impulsion",
+    name: "Canon \xE0 impulsion",
+    image: "/assets/units/canon_impulsion.webp",
+    maxLevel: 10,
+    description: "Canon \xE9nerg\xE9tique puissant, id\xE9al contre les cibles blind\xE9es.",
+    // v5.4 : moins cher que la Batterie AA, qu'il ne bat pas (2000/1200 avant).
+    cost: { scrap: 1200, energy: 600 },
+    stats: { attaque: 80, defense: 10, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech15",
+    hangarSpace: 1
+  },
+  {
+    id: "canon_plasma",
+    name: "Canon Plasma",
+    image: "/assets/units/canon_plasma.webp",
+    maxLevel: 10,
+    description: "Arme lourde tirant des projectiles de plasma surchauff\xE9.",
+    // v5.4 : entre le Canon à impulsion et la Batterie AA (2500/1500 avant).
+    cost: { scrap: 1500, energy: 750 },
+    stats: { attaque: 105, defense: 20, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech16",
+    hangarSpace: 1
+  },
+  {
+    id: "batterie_aa",
+    name: "Batterie Anti-A\xE9rienne",
+    image: "/assets/units/batterie_aa.webp",
+    maxLevel: 10,
+    description: "D\xE9fense sp\xE9cialis\xE9e contre les unit\xE9s rapides et a\xE9riennes.",
+    cost: { scrap: 1800, energy: 900 },
+    stats: { attaque: 135, defense: 15, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech17",
+    hangarSpace: 1
+  },
+  {
+    id: "intercepteur",
+    name: "Intercepteur",
+    image: "/assets/units/intercepteur.webp",
+    maxLevel: 10,
+    description: "Vaisseau ultra-rapide con\xE7u pour intercepter les cibles prioritaires.",
+    cost: { scrap: 2e3, energy: 1200 },
+    stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
+    category: "defense",
+    unlockTech: "tech18",
+    // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
+    hangarSpace: 2
+  },
+  KESH_HUNTER_UNIT
 ];
-var ELITE_FUGITIVES = [
-  { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
-  { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
-  { name: "L'Archiviste P\xE2le", factionId: "inquisition", crime: "d\xE9tient le dernier \u0153uf de la Reine" },
-  { name: "Moloch-7", factionId: "meute", crime: "a d\xE9vor\xE9 trois nids en une nuit" },
-  { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
-  { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
-];
-function emptyBountyState() {
-  return {
-    amber: 0,
-    amberEarned: 0,
-    reputation: 0,
-    board: [],
-    slot: -1,
-    day: "",
-    doneToday: 0,
-    completed: 0,
-    failed: 0,
-    exchangeWeek: "",
-    exchanged: 0,
-    boostUntilMs: 0,
-    jammers: 0,
-    beacons: 0,
-    shieldUntilMs: 0,
-    shieldBoughtAtMs: 0,
-    owned: []
-  };
-}
-function num2(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-function bountyState(player) {
-  var _a;
-  const raw = (_a = player.bounties) != null ? _a : {};
-  const base = emptyBountyState();
-  return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
-    amber: Math.max(0, num2(raw.amber)),
-    amberEarned: num2(raw.amberEarned),
-    reputation: num2(raw.reputation),
-    board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
-    slot: raw.slot === void 0 ? -1 : num2(raw.slot),
-    doneToday: num2(raw.doneToday),
-    owned: Array.isArray(raw.owned) ? raw.owned.map(String) : []
-  });
-}
-function bountyRank(reputation) {
-  let rank2 = 1;
-  BOUNTY_RULES.ranks.forEach((r, i) => {
-    if (reputation >= r.at) rank2 = i + 1;
-  });
-  return rank2;
-}
-function rankName(rank2) {
-  return BOUNTY_RULES.ranks[Math.max(0, Math.min(BOUNTY_RULES.ranks.length - 1, rank2 - 1))].name;
-}
-function amberFor(tier, rank2) {
-  return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
-}
-var HOUR4 = 36e5;
-var DAY7 = 24 * HOUR4;
-function boardSlot(now) {
-  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR4));
-}
-function boardTiers(rank2) {
-  if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
-  if (rank2 >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
-  return [1, 2, 2];
-}
-function generateBoard(uid, slot, rank2, exclude = []) {
-  const rand = seededRandom(`${uid}:bounty:${slot}`);
-  const used = new Set(exclude);
-  return boardTiers(rank2).map((tier, i) => {
-    let fugitive = Math.floor(rand() * FUGITIVES.length);
-    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
-    used.add(fugitive);
-    const t = BOUNTY_RULES.tiers[tier];
-    const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
-    return { id: `${slot}-${i}`, tier, fugitive, minutes, status: "open", tries: 0 };
-  });
-}
-function refreshBounties(st, uid, now) {
-  const day = contractDay(now);
-  if (st.day !== day) {
-    st.day = day;
-    st.doneToday = 0;
+var UNITS = [];
+var UNIT_BASE_STATS = {};
+var UNIT_TO_TECH = {};
+var OFFENSIVE_UNITS = [];
+var DEFENSIVE_UNITS = [];
+function setUnits(defs) {
+  UNITS.splice(0, UNITS.length, ...defs);
+  for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
+  for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
+  BLUEPRINT_UNITS.clear();
+  for (const u of defs) {
+    if (u.blueprint) BLUEPRINT_UNITS.set(u.id, u.name);
+    UNIT_BASE_STATS[u.id] = { attack: u.stats.attaque, defense: u.stats.defense, perLevel: unitLevelBonus(u) };
+    if (u.unlockTech) UNIT_TO_TECH[u.id] = u.unlockTech;
   }
-  const slot = boardSlot(now);
-  if (st.slot !== slot) {
-    const hunting = st.board.filter((c) => c.status === "hunting");
-    st.board = [...hunting, ...generateBoard(uid, slot, bountyRank(st.reputation), hunting.map((c) => c.fugitive))];
-    st.slot = slot;
-  }
-  return st;
+  OFFENSIVE_UNITS.splice(0, OFFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "attack").map((u) => u.id));
+  DEFENSIVE_UNITS.splice(0, DEFENSIVE_UNITS.length, ...defs.filter((u) => u.category === "defense").map((u) => u.id));
 }
-function hunterPower(player) {
-  var _a, _b;
-  return computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+setUnits(DEFAULT_UNITS);
+function unitLevelBonus(u) {
+  return typeof u.levelBonus === "number" && Number.isFinite(u.levelBonus) && u.levelBonus >= 0 ? u.levelBonus : UNIT_LEVEL_BONUS_DEFAULT;
 }
-function fugitivePower(tier, player) {
-  const t = BOUNTY_RULES.tiers[tier];
-  return Math.round(Math.max(t.floor, hunterPower(player) * t.pct));
+function findUnit(id) {
+  return UNITS.find((u) => u.id === id);
 }
-function bountyTarget(contract) {
-  return `bounty_${contract.id}`;
-}
-function startBounty(player, contractId, now) {
-  var _a;
-  const st = refreshBounties(bountyState(player), player.uid, now);
-  const contract = st.board.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
-  if (contract.status !== "open") throw new GameActionError("Une flotte traque d\xE9j\xE0 ce fugitif.");
-  if (st.doneToday >= BOUNTY_RULES.dailyLimit) throw new GameActionError(`${BOUNTY_RULES.dailyLimit} primes par jour : l'Essaim te recontactera demain.`);
-  if (bountyRank(st.reputation) < BOUNTY_RULES.tiers[contract.tier].minRank) throw new GameActionError("Ton rang dans l'Essaim est trop bas pour cette prime.");
-  const power = fugitivePower(contract.tier, player);
-  contract.status = "hunting";
-  st.doneToday += 1;
-  player.bounties = st;
-  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
-}
-function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f;
-  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
-  const player = flushed.player;
-  const st = refreshBounties(bountyState(player), player.uid, now);
-  const contract = st.board.find((c) => c.id === contractId);
-  const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
-  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
-  const fx = formationEffects(formation);
-  const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
-    attackerUnits: player.units,
-    attackerTechLevels: player.techLevels,
-    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
-    fleet,
-    defenderUnits: {},
-    defenderTechLevels: {},
-    defenderRepairPct: 0,
-    defenderResources: {},
-    defenderPowerOverride: power
-  }));
-  const survivors = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0));
-  const notifications = [...flushed.notifications];
-  const success = combat.outcome === "attacker_win";
-  const t = BOUNTY_RULES.tiers[tier];
-  let amber = 0;
-  let xp = 0;
-  if (success) {
-    const rankBefore = bountyRank(st.reputation);
-    amber = amberFor(tier, rankBefore);
-    xp = t.xp;
-    st.amber += amber;
-    st.amberEarned += amber;
-    st.reputation += t.rep;
-    st.completed += 1;
-    st.board = st.board.filter((c) => c.id !== contractId);
-    applyXpDelta(player, xp, now);
-    bumpStat(player, "bounties");
-    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
-    addPassPoints(player, "bounty", now);
-    player.victories = ((_e = player.victories) != null ? _e : 0) + 1;
-    notifications.push(note3(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
-    const rankAfter = bountyRank(st.reputation);
-    if (rankAfter > rankBefore) {
-      notifications.push(note3(`Nouveau rang : ${rankName(rankAfter)}`, rankUpMessage(rankAfter), now));
-    }
-  } else {
-    st.failed += 1;
-    player.defeats = ((_f = player.defeats) != null ? _f : 0) + 1;
-    if (contract) {
-      contract.tries += 1;
-      if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
-      else contract.status = "open";
-    }
-    const retry = !!contract && contract.tries <= BOUNTY_RULES.retries;
-    notifications.push(note3(`${fugitive.name} s'est \xE9chapp\xE9`, `Ta flotte n'a pas pu le ma\xEEtriser.${retry ? " La prime reste ouverte une derni\xE8re fois." : " Le contrat est perdu."}`, now));
-  }
-  player.bounties = st;
-  const report = {
-    attackerUid: player.uid,
-    attackerPseudo: player.pseudo,
-    defenderUid: `bounty_${contractId}`,
-    defenderPseudo: fugitive.name,
-    timestamp: now,
-    outcome: combat.outcome,
-    attackerPower: combat.attackerPower,
-    defenderPower: combat.defenderPower,
-    attackerLossPercent: combat.attackerLossPercent,
-    defenderLossPercent: combat.defenderLossPercent,
-    attackerLosses: combat.attackerLosses,
-    attackerRecovered: combat.attackerRecovered,
-    defenderLosses: {},
-    defenderRecovered: {},
-    loot: null,
-    defenderProcessed: true,
-    defenderApplied: true,
-    attackerXpDelta: xp,
-    defenderXpDelta: 0,
-    attackerFleet: fleet
-  };
-  return { player, queues: flushed.queues, combat, survivors, report, notifications, success, amber, xp };
-}
-function releaseBounty(player, contractId) {
-  const st = bountyState(player);
-  const contract = st.board.find((c) => c.id === contractId);
-  if (contract && contract.status === "hunting") contract.status = "open";
-  player.bounties = st;
-}
-function rankUpMessage(rank2) {
-  if (rank2 === BOUNTY_RULES.tiers[3].minRank) return "L'Essaim te confie d\xE9sormais les proies majeures (\u2605\u2605\u2605).";
-  if (rank2 === BOUNTY_RULES.tiers[4].minRank) return "La Reine elle-m\xEAme te reconna\xEEt : les primes d'\xE9lite (\u2605\u2605\u2605\u2605) te sont ouvertes.";
-  return `L'Essaim te verse ${Math.round(BOUNTY_RULES.amberPerRank * (rank2 - 1) * 100)} % d'Ambre en plus par prime.`;
-}
-function note3(title, message, now) {
-  return { kind: "bounty", title, message, createdAtMs: now, read: false, link: "/game/primes" };
-}
-var BOUNTY_SHOP_RULES = {
-  acceleratorMinutes: 60,
-  boostPct: KESH_BOOST_PCT,
-  boostHours: 24,
-  maxCharges: 3,
-  shieldHours: 6,
-  shieldCooldownDays: 7,
-  title: "Chasseur de l'Essaim"
-};
-var SHOP_ITEMS = [
-  { id: "accelerator", name: "Acc\xE9l\xE9rateur de chantier", price: 30, group: "consumable", description: "Une construction de b\xE2timent en cours se termine 1 h plus t\xF4t." },
-  { id: "boost", name: "Gel\xE9e de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
-  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage re\xE7u \xE9choue : les sondes rentrent sans rapport. 3 en r\xE9serve au plus." },
-  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
-  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
-  { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
-  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
-  { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
-  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
-  { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
-  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." }
-];
-function findShopItem(id) {
-  return SHOP_ITEMS.find((i) => i.id === id);
-}
-var ONE_TIME = ["blueprint", "title", "frame", "emblem", "emojis"];
-function owns(st, id) {
-  return st.owned.includes(id);
-}
-function shopBlocker(player, item, now, queues) {
-  var _a;
-  const st = bountyState(player);
-  if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "D\xE9j\xE0 acquis.";
-  if (item.id === "jammer" && st.jammers >= BOUNTY_SHOP_RULES.maxCharges || item.id === "beacon" && st.beacons >= BOUNTY_SHOP_RULES.maxCharges) {
-    return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
-  }
-  if (item.id === "shield") {
-    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY7;
-    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY7)} j.`;
-  }
-  if (item.id === "accelerator" && queues && !Object.values((_a = queues.buildingUpgrades) != null ? _a : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
-  if (st.amber < item.price) return "Pas assez d'Ambre.";
-  return null;
-}
-function buyShopItem(player, queues, itemId, now, buildingId) {
-  var _a, _b, _c, _d, _e, _f;
-  const item = findShopItem(itemId);
-  if (!item) throw new GameActionError("Objet inconnu.");
-  const blocker = shopBlocker(player, item, now, queues);
-  if (blocker) throw new GameActionError(blocker);
-  const st = bountyState(player);
-  let message = `${item.name} : acquis.`;
-  switch (item.id) {
-    case "accelerator": {
-      const entries = Object.entries((_a = queues.buildingUpgrades) != null ? _a : {}).filter(([, u]) => u && u.endTime > now);
-      const chosen = (_b = entries.find(([id]) => id === buildingId)) != null ? _b : entries.sort((a, b) => a[1].endTime - b[1].endTime)[0];
-      const entry = chosen[1];
-      entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 6e4);
-      message = "Chantier acc\xE9l\xE9r\xE9 d'une heure.";
-      break;
-    }
-    case "boost":
-      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR4;
-      message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
-      break;
-    case "jammer":
-      st.jammers += 1;
-      message = "Brouilleur en place : le prochain espionnage \xE9chouera.";
-      break;
-    case "beacon":
-      st.beacons += 1;
-      message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
-      break;
-    case "shield":
-      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR4;
-      st.shieldBoughtAtMs = now;
-      message = "Voile de chitine actif pendant 6 h.";
-      break;
-    case "dossier":
-      addDossiers(player, 1);
-      message = "Dossier d'entra\xEEnement rang\xE9 : remets-le \xE0 un officier depuis la page Commandants.";
-      break;
-    case "blueprint":
-      player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_d = (_c = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _c.count) != null ? _d : 0 };
-      message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
-      break;
-    case "title":
-      if (!((_e = player.titles) != null ? _e : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
-        player.titles = [...(_f = player.titles) != null ? _f : [], { label: BOUNTY_SHOP_RULES.title, seasonId: "kesh", rank: 1 }];
-      }
-      player.activeTitle = BOUNTY_SHOP_RULES.title;
-      break;
-  }
-  if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
-  st.amber -= item.price;
-  player.bounties = st;
-  return { message };
-}
-function weekId(now) {
-  const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY7) * DAY7;
-  return new Date(midnight - (day + 6) % 7 * DAY7).toISOString().slice(0, 10);
-}
-function exchangeAmber(player, amountIn, now) {
-  var _a;
-  const amount3 = Math.floor(Number(amountIn));
-  if (!(amount3 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
-  const st = bountyState(player);
-  const week = weekId(now);
-  if (st.exchangeWeek !== week) {
-    st.exchangeWeek = week;
-    st.exchanged = 0;
-  }
-  if (amount3 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
-  if (amount3 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
-  const gain = {};
-  for (const r of RESOURCE_LIST) {
-    if (r.rarity !== "rare") continue;
-    gain[r.id] = amount3 * BOUNTY_RULES.exchange.rarePerAmber;
-    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
-  }
-  st.amber -= amount3;
-  st.exchanged += amount3;
-  player.bounties = st;
-  return gain;
-}
-function shieldUntil(player) {
-  var _a;
-  return num2((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
-}
-function dropShield(player, now) {
-  const st = bountyState(player);
-  if (st.shieldUntilMs > now) {
-    st.shieldUntilMs = now;
-    player.bounties = st;
-  }
-}
-function consumeJammer(player) {
-  const st = bountyState(player);
-  if (st.jammers <= 0) return false;
-  st.jammers -= 1;
-  player.bounties = st;
-  return true;
-}
-function consumeBeacon(player) {
-  const st = bountyState(player);
-  if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
-  st.beacons -= 1;
-  player.bounties = st;
-}
-var KESH_EMOJIS = [
-  { code: "kesh_gg", url: "/assets/bounties/emoji-gg.webp" },
-  { code: "kesh_ok", url: "/assets/bounties/emoji-ok.webp" },
-  { code: "kesh_joie", url: "/assets/bounties/emoji-joie.webp" },
-  { code: "kesh_top", url: "/assets/bounties/emoji-top.webp" }
-];
-function assertKeshEmojis(player, text) {
-  if (!/:kesh_[a-z]+:/.test(text)) return;
-  if (KESH_EMOJIS.some((e3) => text.includes(`:${e3.code}:`)) && !owns(bountyState(player), "emojis")) {
-    throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
-  }
-}
-var ELITE_KEY = "bounty_elite";
-var ELITE_RULES = {
-  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs. */
-  hpFactor: 1,
-  minHp: 5e4,
-  /** Un assaut toutes les N heures par joueur. */
-  cooldownHours: 12,
-  flightMinutes: 45,
-  lossPct: 0.1,
-  /** Rang minimal dans l'Essaim. */
-  minRank: 2,
-  /** Part minimale des points de structure pour être récompensé. */
-  minShare: 5e-3,
-  killed: { xp: 300, amber: 150, rep: 8 },
-  failed: { xp: 100, amber: 50, rep: 3 }
-};
-function eliteWindow(now) {
-  const id = weekId(now);
-  const startMs = Date.parse(`${id}T00:00:00Z`);
-  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY7 };
-}
-function normalizeElite(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  if (!r.id || !(num2(r.maxHp) > 0)) return null;
-  return {
-    id: String(r.id),
-    fugitive: num2(r.fugitive),
-    startMs: num2(r.startMs),
-    endMs: num2(r.endMs),
-    maxHp: num2(r.maxHp),
-    hp: num2(r.hp),
-    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
-    endedAtMs: num2(r.endedAtMs),
-    rewarded: !!r.rewarded,
-    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
-  };
-}
-function spawnElite(now, activePlayers) {
-  const w = eliteWindow(now);
-  let h = 0;
-  for (const c of w.id) h = h * 31 + c.charCodeAt(0) >>> 0;
-  const total2 = activePlayers.reduce((sum3, p) => sum3 + hunterPower(p), 0);
-  const maxHp = Math.round(Math.max(ELITE_RULES.minHp, total2 * ELITE_RULES.hpFactor));
-  return { id: w.id, fugitive: h % ELITE_FUGITIVES.length, startMs: w.startMs, endMs: w.endMs, maxHp, hp: maxHp, status: "active", endedAtMs: 0, rewarded: false, contributions: {} };
-}
-function eliteActive(state, now) {
-  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
-}
-function eliteReadyAt(state, uid) {
-  var _a, _b;
-  const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
-  return last ? last + ELITE_RULES.cooldownHours * HOUR4 : 0;
-}
-function checkEliteLaunch(state, player, now) {
-  var _a;
-  if (!state || !eliteActive(state, now)) throw new GameActionError("Aucune proie d'\xE9lite \xE0 traquer en ce moment.");
-  if (bountyRank(bountyState(player).reputation) < ELITE_RULES.minRank) throw new GameActionError(`Il faut le rang ${rankName(ELITE_RULES.minRank)} dans l'Essaim pour traquer la proie d'\xE9lite.`);
-  const ready = eliteReadyAt(state, player.uid);
-  if (ready > now) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil((ready - now) / 6e4)} min.`);
-  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: 0 };
-  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, lastLaunchMs: now }) }) });
-}
-function resolveEliteAssault(state, player, fleet, formation, now) {
-  var _a;
-  const fx = formationEffects(formation);
-  const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
-  );
-  const active = eliteActive(state, now);
-  const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
-  const survivors = {};
-  const lost = {};
-  for (const [id, qty] of Object.entries(fleet)) {
-    const raw = active ? Math.floor(qty * lossPct) : 0;
-    const gone = raw - Math.floor(raw * repair);
-    if (gone > 0) lost[id] = gone;
-    survivors[id] = qty - gone;
-  }
-  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
-  const hp = state.hp - damage;
-  const killed = active && hp <= 0;
-  return {
-    state: __spreadProps(__spreadValues({}, state), {
-      hp: Math.max(0, hp),
-      status: killed ? "killed" : state.status,
-      endedAtMs: killed ? now : state.endedAtMs,
-      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
-    }),
-    damage,
-    survivors,
-    lost,
-    killed
-  };
-}
-function closeElite(state, now) {
-  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
-  return state;
-}
-function eliteRanking(state) {
-  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => ({ uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })).sort((a, b) => b.damage - a.damage);
-}
-function eliteRewardees(state) {
-  if (state.status === "active") return [];
-  return eliteRanking(state).filter((c) => c.damage >= state.maxHp * ELITE_RULES.minShare).map((c) => c.uid);
-}
-function grantEliteReward(state, player, now, random = Math.random) {
-  if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
-  const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
-  const st = bountyState(player);
-  st.amber += r.amber;
-  st.amberEarned += r.amber;
-  st.reputation += r.rep;
-  player.bounties = st;
-  applyXpDelta(player, r.xp, now);
-  if (state.status === "killed") {
-    const item = rollRelic("elite", now, random, "rare");
-    if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
-  }
-  return { xp: r.xp, amber: r.amber };
-}
-function describeElite(state) {
-  return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
-}
-function eliteNotice(state, reward, now) {
-  const f = describeElite(state);
-  return note3(
-    state.status === "killed" ? `${f.name} est tomb\xE9` : `${f.name} s'est enfui`,
-    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
-    now
-  );
+function getUnitBuildTime(unit, techLevels2, player) {
+  const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
+  const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
+  const empire = player ? 1 - playerModifiers(player).unitTime : 1;
+  return techLevels2 || empire !== 1 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time") * empire)) : base;
 }
 
-// src/game/seasonPass.ts
-var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
-var PASS_POINTS = {
-  contract: 10,
-  bounty: 8,
-  raidRepelled: 8,
-  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
-  victory: 8,
-  bossAssault: 5,
-  dailyLogin: 5,
-  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
-  mission: 0,
-  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
-  vendetta: 40,
-  /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
-  chronicle: 40,
-  seasonBoss: 60,
-  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
-  allianceBoss: 40,
-  allianceBossTry: 15,
-  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
-  coalition: 50,
-  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
-  allianceDaily: 15
+// src/game/combat.ts
+var COMBAT_RULES = {
+  /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
+  lootPercent: 0.08,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
+  lootPercentCommon: 0.1,
+  /** Bonus de puissance du défenseur, qui se bat chez lui. */
+  homeDefenseBonus: 0.15,
+  /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
+  shieldPerLevel: 75e-4,
+  /** …plafonnée à cette valeur. */
+  shieldMax: 0.15,
+  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
+   *  puissance, et subissent la même part des pertes. Réglé pour viser
+   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
+  homeFleetDefenseFactor: 0.1,
+  /** Part des défenses détruites reconstruites gratuitement après le combat. */
+  defenseRebuildPct: 0.6,
+  /* v3.0 — formations d'attaque (choisies au lancement). */
+  /** Assaut : attaque +10 %, pertes subies +15 %. */
+  assaultAttack: 0.1,
+  assaultLosses: 0.15,
+  /** Prudente : attaque −10 %, pertes subies −25 %. */
+  cautiousAttack: -0.1,
+  cautiousLosses: -0.25,
+  /** Raid : attaque −15 %, cargaison +30 %. */
+  raidAttack: -0.15,
+  raidCargo: 0.3,
+  /* v3.0 — postures de la base (défenseur). */
+  /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
+  bunkerDefense: 0.08,
+  /** Riposte : vaisseaux à quai engagés à 25 %. */
+  riposteHomeFleet: 0.25,
+  /** Délai entre deux changements de posture (h). */
+  postureCooldownHours: 1
 };
-var OBJECTIVE_LABELS = {
-  contract: "Contrats du jour r\xE9cup\xE9r\xE9s",
-  bounty: "Primes Kesh'Vaar remplies",
-  raidRepelled: "Raids de faction repouss\xE9s",
-  victory: "Combats gagn\xE9s",
-  bossAssault: "Assauts sur un boss",
-  mission: "Missions termin\xE9es",
-  spy: "Sondes d'espionnage lanc\xE9es",
-  market: "Offres achet\xE9es au march\xE9",
-  warlordWin: "Seigneurs de guerre pill\xE9s"
-};
-var PASS_TIERS = [
-  [{ kind: "production", hours: 2 }],
-  [{ kind: "amber", amount: 20 }],
-  [{ kind: "capsule", capsule: "assault", level: 3 }],
-  [{ kind: "production", hours: 3 }],
-  [{ kind: "dossier", count: 1 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
-  [{ kind: "capsule", capsule: "armor", level: 3 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
-  [{ kind: "production", hours: 5 }],
-  [{ kind: "capsule", capsule: "decoy", level: 4 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 6 }],
-  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "veil", level: 4 }],
-  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "assault", level: 5 }],
-  [{ kind: "relic", rarity: "rare" }],
-  [{ kind: "production", hours: 8 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "armor", level: 5 }],
-  [{ kind: "production", hours: 9 }],
-  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
-  [{ kind: "production", hours: 10 }],
-  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
-  [{ kind: "capsule", capsule: "decoy", level: 5 }],
-  [{ kind: "production", hours: 12 }],
-  [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }]
-];
-var DEFAULT_PASS = structuredClone({ rules: PASS_RULES, points: PASS_POINTS, tiers: PASS_TIERS });
-function defaultSeasonPassConfig() {
-  return structuredClone(DEFAULT_PASS);
-}
-function setSeasonPass(cfg) {
+function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
-  const d = defaultSeasonPassConfig();
-  Object.assign(PASS_RULES, d.rules, (_a = cfg == null ? void 0 : cfg.rules) != null ? _a : {});
-  Object.assign(PASS_POINTS, d.points, (_b = cfg == null ? void 0 : cfg.points) != null ? _b : {});
-  PASS_POINTS.mission = 0;
-  const tiers2 = Array.isArray(cfg == null ? void 0 : cfg.tiers) && cfg.tiers.length > 0 ? cfg.tiers : d.tiers;
-  PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
-  PASS_RULES.tiers = PASS_TIERS.length;
-}
-var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
-function validateSeasonPass(cfg) {
-  var _a;
-  const errors = [];
-  if (!cfg) return errors;
-  if (cfg.rules && !(cfg.rules.pointsPerTier >= 1)) errors.push("Passe : points par palier \u2265 1.");
-  for (const [k, v] of Object.entries((_a = cfg.points) != null ? _a : {})) if (!(typeof v === "number" && v >= 0)) errors.push(`Passe : points invalides pour \xAB ${k} \xBB.`);
-  if (cfg.tiers) {
-    if (cfg.tiers.length < 1 || cfg.tiers.length > 60) errors.push("Passe : entre 1 et 60 paliers.");
-    cfg.tiers.forEach(
-      (list, i) => (list != null ? list : []).forEach((r) => {
-        if (!REWARD_KINDS.includes(r == null ? void 0 : r.kind)) errors.push(`Passe, palier ${i + 1} : r\xE9compense inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : raret\xE9 inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
-      })
-    );
+  let levels = 0;
+  let extra = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) === "hangar" && b.effect.category === "defense") levels += effectiveBuildingLevel(buildings, b.id);
+    if (((_b = b.effect) == null ? void 0 : _b.type) === "shield") extra += Math.min(b.effect.max, effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel);
   }
-  return errors;
+  return Math.min(COMBAT_RULES.shieldMax + allianceBonus, levels * COMBAT_RULES.shieldPerLevel + allianceBonus) + extra;
 }
-var CAPSULE_AMBER = 15;
-function passTitle(seasonId) {
-  const month2 = seasonLabel(seasonId).toLowerCase();
-  return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
-}
-function passState(player, now) {
+var RARE_RESOURCES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var COMMON_RESOURCES2 = ["scrap", "energy", "nano", "data"];
+function fleetCargoCapacity(units, fleet, techLevels2) {
   var _a, _b, _c;
-  const raw = (_a = player.seasonPass) != null ? _a : {};
-  const seasonId = currentSeasonId(now);
-  const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
-  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
-  const activity = {};
-  for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
-  return __spreadValues({
-    seasonId,
-    points: Math.max(0, Number(raw.points) || 0),
-    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
-    loginDay: String((_c = raw.loginDay) != null ? _c : ""),
-    completed,
-    activity
-  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {});
+  let total2 = 0;
+  for (const [id, qty] of Object.entries(fleet)) {
+    const def3 = findUnit(id);
+    const level3 = (_b = (_a = units[id]) == null ? void 0 : _a.level) != null ? _b : 0;
+    if (!def3 || qty <= 0 || level3 <= 0) continue;
+    total2 += ((_c = def3.stats.cargo) != null ? _c : 0) * level3 * qty;
+  }
+  return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
 }
-function passTierToAnnounce(player, now) {
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+function unitStat(units, techLevels2, unitId, stat) {
+  var _a, _b, _c, _d;
+  const def3 = UNIT_BASE_STATS[unitId];
+  const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
+  const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
+  if (level3 <= 0) return 0;
+  let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
+  if (stat === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  return value2;
+}
+function computeFleetPower(units, techLevels2, fleet, stats) {
+  let total2 = 0;
+  for (const id in fleet) {
+    const qty = fleet[id];
+    if (qty <= 0) continue;
+    let value2 = 0;
+    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
+    total2 += value2 * qty;
+  }
+  return total2;
+}
+function pveAttackFactor(units, techLevels2, fleet) {
   var _a;
-  if (!player.seasonPass) return { tier: 0, claimable: 0 };
-  const st = passState(player, now);
-  const tier = passTier(st.points, st.seasonId);
-  if (tier <= ((_a = st.notifiedTier) != null ? _a : 0)) return { tier: 0, claimable: 0 };
-  st.notifiedTier = tier;
-  player.seasonPass = st;
-  let claimable = 0;
-  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) claimable += 1;
-  return { tier, claimable };
+  const hunters = (_a = fleet[KESH_HUNTER_UNIT.id]) != null ? _a : 0;
+  if (!(hunters > 0)) return 1;
+  const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
+  if (!(all > 0)) return 1;
+  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
 }
-var MONTH_PASSES = /* @__PURE__ */ new Map();
-var SEASON_OVERRIDES = /* @__PURE__ */ new Map();
-function setPassSeasonOverrides(map) {
-  SEASON_OVERRIDES.clear();
-  for (const [k, v] of map) SEASON_OVERRIDES.set(k, v);
-}
-function setMonthPasses(list) {
-  MONTH_PASSES.clear();
-  for (const m of list) if (m.pass && m.pass.pointsPerTier >= 1 && Array.isArray(m.pass.tiers) && m.pass.tiers.length > 0) MONTH_PASSES.set(m.id, m.pass);
-}
-function activePass(seasonId = currentSeasonId()) {
+function pveHomeDefenseFactor(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
   var _a, _b;
-  return (_b = (_a = SEASON_OVERRIDES.get(seasonId)) != null ? _a : MONTH_PASSES.get(seasonId)) != null ? _b : { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+  const hunters = (_b = (_a = units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _a.count) != null ? _b : 0;
+  if (!(hunters > 0)) return 1;
+  const base = homeDefensePower(units, techLevels2, homeFleetFactor, defenseFactor);
+  if (!(base > 0)) return 1;
+  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
+  return 1 + extra / base;
 }
-function tierRequirement(player, tier, now) {
-  var _a, _b, _c;
-  const st = passState(player, now);
-  const req = (_a = activePass(st.seasonId).requirements) == null ? void 0 : _a[String(tier)];
-  if (!req) return null;
-  const done = (_c = (_b = st.activity) == null ? void 0 : _b[req.key]) != null ? _c : 0;
-  return __spreadProps(__spreadValues({}, req), { done, met: done >= req.count });
+function computeFullPower(units, techLevels2, idList, stats) {
+  let total2 = 0;
+  idList.forEach((id) => {
+    var _a, _b;
+    const count2 = (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0;
+    let value2 = 0;
+    stats.forEach((s) => value2 += unitStat(units, techLevels2, id, s));
+    total2 += value2 * count2;
+  });
+  return total2;
 }
-function passTier(points, seasonId = currentSeasonId()) {
-  const pass = activePass(seasonId);
-  return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
+function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
+  return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
 }
-function passMax(seasonId) {
-  const pass = activePass(seasonId);
-  return pass.tiers.length * pass.pointsPerTier;
-}
-function trackActivity(player, key, now, times = 1) {
-  var _a, _b, _c;
-  if (!(times > 0)) return;
-  const st = passState(player, now);
-  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
-  player.seasonPass = st;
-}
-var passHook = null;
-function onPassPoints(hook) {
-  passHook = hook;
-}
-function addPassPoints(player, source, now, times = 1) {
-  passHook == null ? void 0 : passHook(player, source, now, times);
-  trackActivity(player, source, now, times);
-  const st = passState(player, now);
-  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS[source] * Math.max(0, times));
-  player.seasonPass = st;
-}
-function passDailyLogin(player, now) {
-  var _a, _b, _c;
-  const st = passState(player, now);
-  const day = new Date(now).toISOString().slice(0, 10);
-  if (st.loginDay === day) return false;
-  st.loginDay = day;
-  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { dailyLogin: ((_c = (_b = st.activity) == null ? void 0 : _b.dailyLogin) != null ? _c : 0) + 1 });
-  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
-  player.seasonPass = st;
-  return true;
-}
-function describePassReward(r, seasonId) {
-  switch (r.kind) {
-    case "production":
-      return `${r.hours} h de production`;
-    case "amber":
-      return `${r.amount} Ambre`;
-    case "dossier":
-      return r.count > 1 ? `${r.count} Dossiers d'entra\xEEnement` : "Dossier d'entra\xEEnement";
-    case "capsule":
-      return `${CAPSULES[r.capsule].name} N${r.level}`;
-    case "relic":
-      return `Relique ${RARITY_LABELS[r.rarity]}`;
-    case "tokens":
-      return tokensLabel(r.count);
-    case "commander": {
-      const def3 = findCommander(r.id);
-      return def3 ? `Commandant de saison : ${def3.title} ${def3.name}` : "Commandant de saison";
+function resolveCombat(params) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
+  const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
+  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
+  const garrisons = (_d = params.garrisons) != null ? _d : [];
+  const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
+  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
+  const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
+  const defenderPower = ((_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower) * Math.max(0, (_i = params.defenderPowerFactor) != null ? _i : 1);
+  const totalPower = attackerPower + defenderPower;
+  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
+  let outcome;
+  if (attackerPower > defenderPower) outcome = "attacker_win";
+  else if (attackerPower < defenderPower) outcome = "defender_win";
+  else outcome = "draw";
+  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
+  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
+  let attackerLossPct, defenderLossPct;
+  if (outcome === "attacker_win") {
+    attackerLossPct = winnerLossPct;
+    defenderLossPct = loserLossPct;
+  } else if (outcome === "defender_win") {
+    attackerLossPct = loserLossPct;
+    defenderLossPct = winnerLossPct;
+  } else {
+    attackerLossPct = 0.3;
+    defenderLossPct = 0.3;
+  }
+  if (params.attackerLossFactor !== void 0) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
+  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
+  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
+  const attackerLosses = {};
+  const attackerRecovered = {};
+  for (const unitId in fleet) {
+    const sent = fleet[unitId];
+    const rawLost = Math.floor(sent * attackerLossPct);
+    const recovered = Math.floor(rawLost * attackerRepairPct);
+    const effectiveLost = rawLost - recovered;
+    if (rawLost > 0) {
+      attackerLosses[unitId] = effectiveLost;
+      attackerRecovered[unitId] = recovered;
     }
-    case "cosmetic":
-      return seasonId ? `Banni\xE8re et titre \xAB ${passTitle(seasonId)} \xBB` : "Banni\xE8re et titre de la saison";
   }
-}
-var RARITY_LABELS = { common: "commune", rare: "rare", epic: "\xE9pique", legendary: "l\xE9gendaire", mythic: "mythique" };
-function grantPassReward(player, r, seasonId, now, random = Math.random) {
-  var _a, _b, _c;
-  if (r.kind === "production") {
-    for (const [res, n] of Object.entries(productionHours(player, r.hours))) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
-    return describePassReward(r);
-  }
-  if (r.kind === "amber") {
-    const b = bountyState(player);
-    b.amber += r.amount;
-    player.bounties = b;
-    return describePassReward(r);
-  }
-  if (r.kind === "dossier") {
-    addDossiers(player, r.count);
-    return describePassReward(r);
-  }
-  if (r.kind === "capsule") {
-    const syn = synthesisState(player);
-    if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
-      syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
-      player.synthesis = syn;
-      return describePassReward(r);
+  const defenderLosses = {};
+  const defenderRecovered = {};
+  const defenderRebuilt = {};
+  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
+    var _a2, _b2;
+    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
+    const isDefense = DEFENSIVE_UNITS.includes(unitId);
+    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
+    if (rawLost <= 0) return;
+    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
+    defenderLosses[unitId] = rawLost - recovered;
+    defenderRecovered[unitId] = recovered;
+    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
+  });
+  const garrisonLosses = garrisons.map((g) => {
+    const lost = {};
+    for (const [unitId, qty] of Object.entries(g.fleet)) {
+      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
+      if (n > 0) lost[unitId] = Math.min(qty, n);
     }
-    const b = bountyState(player);
-    b.amber += CAPSULE_AMBER;
-    player.bounties = b;
-    return `${CAPSULE_AMBER} Ambre (r\xE9serve de capsules pleine)`;
+    return lost;
+  });
+  const survivors = {};
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_k = params.cargoFactor) != null ? _k : 1));
+  let loot = null;
+  if (outcome === "attacker_win") {
+    const wanted = {};
+    let total2 = 0;
+    for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
+      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
+      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
+      wanted[res] = amount3;
+      total2 += amount3;
+    }
+    const ratio = total2 > cargoCapacity ? cargoCapacity / total2 : 1;
+    loot = {};
+    const entries = Object.entries(wanted);
+    for (const [res, amount3] of entries) loot[res] = Math.floor(amount3 * ratio);
+    let left = Math.min(total2, Math.floor(cargoCapacity)) - entries.reduce((s, [res]) => {
+      var _a2;
+      return s + ((_a2 = loot[res]) != null ? _a2 : 0);
+    }, 0);
+    const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
+    for (const { res } of byRemainder) {
+      if (left <= 0) break;
+      if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
+        loot[res] = ((_p = loot[res]) != null ? _p : 0) + 1;
+        left--;
+      }
+    }
   }
-  if (r.kind === "tokens") {
-    grantTokens(player, r.count);
-    return describePassReward(r);
-  }
-  if (r.kind === "commander") {
-    if (unlockSeasonCommander(player, r.id)) return describePassReward(r);
-    addDossiers(player, 2);
-    return "2 Dossiers d'entra\xEEnement (commandant d\xE9j\xE0 recrut\xE9)";
-  }
-  if (r.kind === "relic") {
-    let first = true;
-    const item = rollRelic("pass", now, () => first ? (first = false, 0) : random(), r.rarity);
-    if (addRelic(player, item)) return `Relique : ${relicLabel(item)}`;
-    const b = bountyState(player);
-    b.amber += 40;
-    player.bounties = b;
-    return "40 Ambre (collection de reliques pleine)";
-  }
-  const title = passTitle(seasonId);
-  if (!((_b = player.titles) != null ? _b : []).some((t) => t.label === title)) player.titles = [...(_c = player.titles) != null ? _c : [], { label: title, seasonId: `pass:${seasonId}`, rank: 1 }];
-  const st = passState(player, now);
-  if (!st.completed.includes(seasonId)) st.completed = [...st.completed, seasonId];
-  player.seasonPass = st;
-  return describePassReward(r, seasonId);
-}
-function claimPassTier(player, tierIn, now, random = Math.random) {
-  const tier = Math.floor(Number(tierIn));
-  const st = passState(player, now);
-  const pass = activePass(st.seasonId);
-  if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
-  if (st.claimed.includes(tier)) throw new GameActionError("Palier d\xE9j\xE0 r\xE9clam\xE9.");
-  if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
-  const req = tierRequirement(player, tier, now);
-  if (req && !req.met) throw new GameActionError(`Palier verrouill\xE9 : ${OBJECTIVE_LABELS[req.key].toLowerCase()} ${req.done} / ${req.count} ce mois-ci.`);
-  const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
-  const after = passState(player, now);
-  after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
-  player.seasonPass = after;
-  return gained;
+  return {
+    outcome,
+    attackerPower,
+    defenderPower,
+    attackerLossPercent: attackerLossPct,
+    defenderLossPercent: defenderLossPct,
+    attackerLosses,
+    attackerRecovered,
+    defenderLosses,
+    defenderRecovered,
+    loot,
+    cargoCapacity,
+    shieldPercent: shield,
+    defenderRebuilt,
+    garrisonLosses,
+    garrisonPower
+  };
 }
 
 // src/game/leviathan.ts
@@ -8846,7 +8998,7 @@ function chestShieldCost(member) {
   var _a, _b;
   const prod = productionHours(member, WAR_CHEST_RULES.shieldCostHours);
   const out = {};
-  for (const r of COMMON_RESOURCES2) if (((_a = prod[r]) != null ? _a : 0) > 0) out[r] = Math.ceil((_b = prod[r]) != null ? _b : 0);
+  for (const r of COMMON_RESOURCES) if (((_a = prod[r]) != null ? _a : 0) > 0) out[r] = Math.ceil((_b = prod[r]) != null ? _b : 0);
   return out;
 }
 function grantChestShield(chest, member, now) {
@@ -9180,8 +9332,8 @@ function priceBounds(giveRes, giveAmount, wantRes) {
   const band = Math.max(1, MARKET_RULES.priceBand);
   return { min: Math.max(1, Math.ceil(reference / band)), max: Math.floor(reference * band), reference: Math.round(reference) };
 }
-function marketTax(wantAmount, sameAlliance) {
-  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct));
+function marketTax(wantAmount, sameAlliance, reduction = 0) {
+  return Math.floor(wantAmount * (sameAlliance ? MARKET_RULES.allianceTaxPct : MARKET_RULES.taxPct) * (1 - Math.min(1, Math.max(0, reduction))));
 }
 function createOffer(seller, input, openOffers, now) {
   var _a, _b, _c;
@@ -9208,7 +9360,7 @@ function acceptOffer(offer, buyer, seller, buysToday, now) {
   if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} achats par jour atteinte.`);
   if (((_a = buyer.resources[offer.wantRes]) != null ? _a : 0) < offer.wantAmount) throw new GameActionError(`Pas assez de ${label(offer.wantRes)} pour cette offre.`);
   const sameAlliance = !!offer.sellerAllianceId && offer.sellerAllianceId === ((_b = buyer.allianceId) != null ? _b : "");
-  const tax = marketTax(offer.wantAmount, sameAlliance);
+  const tax = marketTax(offer.wantAmount, sameAlliance, playerModifiers(seller).tradeTax);
   buyer.resources[offer.wantRes] -= offer.wantAmount;
   buyer.resources[offer.giveRes] = ((_c = buyer.resources[offer.giveRes]) != null ? _c : 0) + offer.giveAmount;
   seller.resources[offer.wantRes] = ((_d = seller.resources[offer.wantRes]) != null ? _d : 0) + offer.wantAmount - tax;
@@ -9220,6 +9372,8 @@ function acceptOffer(offer, buyer, seller, buysToday, now) {
   bumpStat(seller, "marketVolume", offer.wantAmount - tax);
   grantCommanderXp(buyer, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(seller, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(buyer, "diplomat", COMMANDER_XP.marketTrade);
+  grantCommanderXp(seller, "diplomat", COMMANDER_XP.marketTrade);
   return { tax, sameAlliance };
 }
 function buyOrderPaid(order, filled) {
@@ -9242,7 +9396,7 @@ function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
   const payment = buyOrderPaid(order, filled) - buyOrderPaid(order, already);
   if (payment <= 0) throw new GameActionError("Quantit\xE9 trop faible : livre davantage pour \xEAtre pay\xE9.");
   const sameAlliance = !!order.sellerAllianceId && order.sellerAllianceId === ((_c = supplier.allianceId) != null ? _c : "");
-  const tax = marketTax(qty, sameAlliance);
+  const tax = marketTax(qty, sameAlliance, playerModifiers(owner).tradeTax);
   supplier.resources[order.wantRes] -= qty;
   supplier.resources[order.giveRes] = ((_d = supplier.resources[order.giveRes]) != null ? _d : 0) + payment;
   owner.resources[order.wantRes] = ((_e = owner.resources[order.wantRes]) != null ? _e : 0) + qty - tax;
@@ -9254,6 +9408,8 @@ function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
   recordChronicle(supplier, "market", now);
   grantCommanderXp(supplier, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(owner, "steward", COMMANDER_XP.marketTrade);
+  grantCommanderXp(supplier, "diplomat", COMMANDER_XP.marketTrade);
+  grantCommanderXp(owner, "diplomat", COMMANDER_XP.marketTrade);
   return { qty, payment, tax, filled, done: filled >= order.wantAmount };
 }
 function refundOffer(offer, seller) {
@@ -9386,7 +9542,7 @@ function counterEspionage(target) {
   var _a, _b, _c;
   const sentinels = (_c = (_b = (_a = target.units) == null ? void 0 : _a[SPY_RULES.sentinelUnitId]) == null ? void 0 : _b.count) != null ? _c : 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy"));
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy") + playerModifiers(target).counterSpy);
 }
 function spyScore(spyLevel, counter, probes) {
   return spyLevel - counter + Math.log2(Math.max(1, probes));
@@ -9650,7 +9806,7 @@ function launchFleet(input) {
   }
   if (Object.keys(units).length === 0) throw new GameActionError("S\xE9lectionne au moins une unit\xE9 \xE0 envoyer.");
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1e3;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels, attacker)) * 1e3;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   attacker.lastAttackAtMs = now;
   dropShield(attacker, now);
@@ -9852,7 +10008,8 @@ function launchTransport(owner, raw, req, now) {
     for (const [res, n] of Object.entries(cargo)) owner.resources[res] -= n;
   }
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   bumpStat(owner, "transports");
   return {
     attacker: owner,
@@ -9866,7 +10023,8 @@ function launchDelivery(owner, client, raw, contract, now) {
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
   const capacity = playerCargoCapacity(owner, units);
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   checkDelivery(contract, owner.uid, capacity, arriveAtMs);
   if (((_a = owner.resources[contract.wantRes]) != null ? _a : 0) < contract.wantAmount) throw new GameActionError("Ressources insuffisantes pour cette livraison.");
   owner.resources[contract.wantRes] -= contract.wantAmount;
@@ -9932,14 +10090,15 @@ function newFleet(owner, target, mission, units, now, arriveAtMs) {
 function launchSpy(owner, target, raw, now) {
   const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
 }
 function launchRecycle(owner, field, raw, now) {
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de d\xE9bris n'existe plus.");
   const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones r\xE9cup\xE9rateurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   return {
     attacker: owner,
     fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
@@ -9993,7 +10152,8 @@ function launchGarrison(owner, host, raw, hoursIn, garrisonsAtHost, now) {
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = ((_b = owner.resources.energy) != null ? _b : 0) - cost;
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   const power = Math.round(computeFleetPower(owner.units, owner.techLevels, units, ["attack", "defense"]));
   const fleet = __spreadProps(__spreadValues({}, newFleet(owner, host, "garrison", units, now, arriveAtMs)), { durationMs: hours2 * 36e5, stationedUntilMs: null, power });
   return {
@@ -10016,7 +10176,7 @@ function launchLair(owner, target, raw, now) {
   const power = lairPower(faction, owner);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1e3;
+  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1e3;
   return {
     attacker: owner,
     fleet: __spreadProps(__spreadValues({}, newFleet(owner, { uid: lairUid(faction.id), pseudo: faction.lair.name }, "lair", units, now, arriveAtMs)), { power, factionId: faction.id }),
@@ -10424,7 +10584,7 @@ function growWarlord(npc, d, ref, rt, now) {
   }
   const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
   const stock = productionHours(npc, stockHours);
-  for (const res of COMMON_RESOURCES2) {
+  for (const res of COMMON_RESOURCES) {
     const want = (_i = stock[res]) != null ? _i : 0;
     const cur = (_j = npc.resources[res]) != null ? _j : 0;
     if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
@@ -10468,7 +10628,7 @@ function warlordCanTarget(d, npc, t, now) {
   if (d.personality === "opportunist" && !t.reprisal) {
     const beaten = ((_e = p.lastDefeatAtMs) != null ? _e : 0) > 0 && now - ((_f = p.lastDefeatAtMs) != null ? _f : 0) <= WARLORD_RULES.opportunistDefeatHours * 36e5;
     const prod = productionHours(p, WARLORD_RULES.opportunistStockHours);
-    const rich = COMMON_RESOURCES2.some((res) => {
+    const rich = COMMON_RESOURCES.some((res) => {
       var _a2, _b2, _c2, _d2;
       return ((_a2 = prod[res]) != null ? _a2 : 0) > 0 && ((_c2 = (_b2 = p.resources) == null ? void 0 : _b2[res]) != null ? _c2 : 0) >= ((_d2 = prod[res]) != null ? _d2 : 0);
     });
@@ -10714,7 +10874,8 @@ function performAttack(input) {
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_m = def3.units) != null ? _m : {}, (_n = def3.techLevels) != null ? _n : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
-    lootMultiplier: lootFactor(now),
+    // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
+    lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
     garrisons: (_o = input.garrisons) != null ? _o : [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
@@ -10727,7 +10888,7 @@ function performAttack(input) {
     defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_r = def3.resources) != null ? _r : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch))])
+      Object.entries((_r = def3.resources) != null ? _r : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch, def3))])
     )
   }));
   const aegis = combat.outcome === "attacker_win" && Object.values((_s = combat.loot) != null ? _s : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
@@ -10776,11 +10937,15 @@ function performAttack(input) {
   applyXpDelta(owner, defenderXpDelta, now);
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
-  if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+  if (combat.outcome === "attacker_win") {
+    grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+    grantCommanderXp(attacker, "corsair", COMMANDER_XP.attackWin);
+  }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
+  if (combat.outcome === "defender_win") grantCommanderXp(owner, "warden", COMMANDER_XP.defenseWin);
   const outcomeTitle = {
     attacker_win: "Victoire !",
     defender_win: "D\xE9faite\u2026",
@@ -11138,7 +11303,7 @@ function quoteCancel(player, queues, target, now) {
       for (let i = group.start; i < group.start + group.count; i++) {
         const e3 = queue[i];
         if (e3.endTime) {
-          const f = refundFraction(e3.endTime - getUnitBuildTime(unit, player.techLevels) * 1e3, e3.endTime, now);
+          const f = refundFraction(e3.endTime - getUnitBuildTime(unit, player.techLevels, player) * 1e3, e3.endTime, now);
           fraction = Math.min(fraction, f);
           refund = addCost(refund, scaleCost(each, f));
         } else refund = addCost(refund, each);
@@ -11190,7 +11355,7 @@ function performCancel(player, queues, target, now) {
       queue.splice(group.start, group.count);
       if (wasRunning && queue[0] && !queue[0].endTime) {
         const next = findUnit(queue[0].unitId);
-        queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels) : 0) * 1e3;
+        queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels, player) : 0) * 1e3;
       }
       credit(player.resources, quote.refund);
       break;
@@ -11464,7 +11629,7 @@ function applyAction(s, action) {
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
-      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels) * 1e3;
+      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels, player) * 1e3;
       return void 0;
     }
     case "sellUnits": {
@@ -11654,7 +11819,7 @@ function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
 }
 var GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
 function giftDeliveryRate(sender, recipient) {
-  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax;
+  return sender.allianceId && sender.allianceId === recipient.allianceId ? 1 : 1 - GIFT_RULES.outsideAllianceTax * (1 - playerModifiers(sender).tradeTax);
 }
 function giftAgeBlock(p, now) {
   var _a;
@@ -11686,6 +11851,7 @@ function performGift(sender, senderQueues, recipient, recipientQueues, rawResour
   pay(s.player, resources, now, false);
   recordContract(s.player, "gift", 1, now);
   bumpStat(s.player, "giftsSent");
+  grantCommanderXp(s.player, "diplomat", COMMANDER_XP.giftSent);
   const rate = giftDeliveryRate(sender, recipient);
   const delivered = {};
   for (const [res, amt] of Object.entries(resources)) {
@@ -14065,8 +14231,8 @@ var ANOMALY_RULES = {
 var HOUR11 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
-  if (COMMON_RESOURCES2.includes(res)) return 1;
-  return 1 / getTradeRate(COMMON_RESOURCES2[0], res);
+  if (COMMON_RESOURCES.includes(res)) return 1;
+  return 1 / getTradeRate(COMMON_RESOURCES[0], res);
 }
 function stockValue(r) {
   return ALL.reduce((a, res) => {
@@ -14077,7 +14243,7 @@ function stockValue(r) {
 function anomalyThreshold(player, hours2) {
   var _a;
   const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES2.reduce((a, res) => {
+  const perHour = COMMON_RESOURCES.reduce((a, res) => {
     var _a2;
     return a + ((_a2 = rates[res]) != null ? _a2 : 0);
   }, 0) * 3600;

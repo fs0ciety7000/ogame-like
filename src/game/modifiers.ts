@@ -33,13 +33,20 @@ export interface Modifiers {
   cargo: number;
   /** v5.1 : dégâts contre les boss (relique mythique). */
   bossDamage: number;
+  /** v5.14 : rôles rares (Logisticienne, Mécanicien, Corsaire, Gardienne, Diplomate). */
+  fleetSpeed: number;
+  unitTime: number;
+  loot: number;
+  protectedStorage: number;
+  counterSpy: number;
+  tradeTax: number;
 }
 
 type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
 }
 
 /** v5.14 : tous les effets de la couche empire (officiers, reliques, talents,
@@ -81,6 +88,12 @@ export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScop
   m.repair = sum("repair");
   m.cargo = sum("cargo");
   m.bossDamage = sum("bossDamage");
+  m.fleetSpeed = sum("fleetSpeed");
+  m.unitTime = sum("unitTime");
+  m.loot = sum("loot");
+  m.protectedStorage = sum("protectedStorage");
+  m.counterSpy = sum("counterSpy");
+  m.tradeTax = sum("tradeTax");
   for (const g of grants) {
     if (g.layer !== "empire" || g.stat !== "production" || !g.target || m.production[g.target as ResourceId] !== undefined) continue;
     m.production[g.target as ResourceId] = rawEffectTotal(grants, "empire", "production", { target: g.target, scope });
@@ -88,8 +101,8 @@ export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScop
   return m;
 }
 
-export function playerModifiers(player: ModPlayer | null | undefined, now: number = Date.now()): Modifiers {
-  return modifiersFrom(empireEffects(player, now));
+export function playerModifiers(player: ModPlayer | null | undefined, now: number = Date.now(), scope?: EffectScope): Modifiers {
+  return modifiersFrom(empireEffects(player, now), scope);
 }
 
 /** Multiplicateur de production d'une ressource. */

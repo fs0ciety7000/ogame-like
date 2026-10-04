@@ -2548,6 +2548,18 @@ function withLegacyKiller(txApp, game, state, mission) {
   return Object.assign({}, state, { archived: true, legacyChecked: true }, killer ? { killedBy: killer } : {});
 }
 
+/** v5.14 : notification d'un officier rare trouvé sur un boss. */
+function rareOfficerNotif(officer, now) {
+  return {
+    kind: "event",
+    title: `${officer.title} ${officer.name} rejoint ton état-major !`,
+    message: `Trouvé dans l'épave du boss : un officier rare, qui ne se recrute pas. Au niveau 1 : ${officer.bonus(1)}.`,
+    createdAtMs: now,
+    read: false,
+    link: "/game/etat-major",
+  };
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
@@ -2561,6 +2573,9 @@ function distributeLeviathan(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
     const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
+    // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
+    const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
+    if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -2612,6 +2627,7 @@ function leviathanArrival(txApp, game, rec, now) {
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
     owner.rec.set("seasonPass", owner.player.seasonPass || null);
@@ -4057,6 +4073,7 @@ function eliteArrival(txApp, game, rec, now) {
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
     owner.rec.set("seasonPass", owner.player.seasonPass || null);
@@ -6268,6 +6285,9 @@ function distributeSeasonBoss(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
     const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
+    // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
+    const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
+    if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -6311,6 +6331,7 @@ function seasonBossArrival(txApp, game, rec, now) {
   txApp.save(rec);
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
     owner.rec.set("seasonPass", owner.player.seasonPass || null);
@@ -6473,6 +6494,9 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     const out = game.grantAllianceBossReward(state, flushed.player, now);
     const won = state.status === "killed";
     const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
+    // v5.14 : officier rare (rôle hors recrutement), à très faible chance.
+    const officer = won ? game.rollRareOfficer(flushed.player, i < 3 ? game.RARE_OFFICER_RULES.podium : game.RARE_OFFICER_RULES.participant) : null;
+    if (officer) flushed.notifications.push(rareOfficerNotif(officer, now));
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic, tokens });
     notify(txApp, c.uid, flushed.notifications.concat([
@@ -6560,6 +6584,7 @@ function allianceBossArrival(txApp, game, rec, now) {
   txApp.save(rec);
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
+    game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
     owner.rec.set("commanders", owner.player.commanders || null);
     owner.rec.set("seasonPass", owner.player.seasonPass || null);

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
-import { BookOpen, Coins, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
+import { Anchor, BookOpen, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag, StatTile } from "@/components/ui/hud";
@@ -95,6 +95,13 @@ const COMMANDER_TONES: Record<CommanderId, string> = {
   engineer: "var(--color-gold-glow)",
   spy: "var(--color-violet-glow)",
   steward: "var(--color-mint-glow)",
+  logistician: "var(--color-cyan-glow)",
+  mechanic: "var(--color-ember-glow)",
+  governor: "var(--color-mint-glow)",
+  corsair: "var(--color-danger-glow)",
+  warden: "var(--color-gold-glow)",
+  diplomat: "var(--color-violet-glow)",
+  hunter: "var(--color-danger-glow)",
 };
 
 const COMMANDER_ICONS: Record<CommanderId, typeof Swords> = {
@@ -103,6 +110,13 @@ const COMMANDER_ICONS: Record<CommanderId, typeof Swords> = {
   engineer: Wrench,
   spy: Eye,
   steward: Coins,
+  logistician: Truck,
+  mechanic: Cog,
+  governor: Landmark,
+  corsair: Anchor,
+  warden: ShieldCheck,
+  diplomat: Handshake,
+  hunter: Crosshair,
 };
 
 /** Portrait avec repli (initiales sur un dégradé) tant que l'image manque. */
@@ -201,7 +215,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
               <span className="font-mono text-xs text-slate-300">Niv. {level}</span>
             </div>
           ) : (
-            <p className="mt-1 text-xs text-slate-500">{def.season ? "À débloquer" : `Non recruté${free ? " · le premier est offert" : ""}`}</p>
+            <p className="mt-1 text-xs text-slate-500">{def.season || def.rare ? "À débloquer" : `Non recruté${free ? " · le premier est offert" : ""}`}</p>
           )}
         </div>
       </div>
@@ -227,6 +241,8 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
       <div className="mt-auto flex flex-wrap gap-2">
         {!entry && def.season ? (
           <HudTag tone="gold">Dernier palier du passe de {def.season.label}</HudTag>
+        ) : !entry && def.rare ? (
+          <HudTag tone="violet">Palier 30 d'un passe ou butin de boss</HudTag>
         ) : !entry ? (
           free ? (
             <Button size="sm" disabled={busy} onClick={() => void act(() => recruitCommander(def.id, "amber"), `${def.title} ${def.name} rejoint ta flotte !`)}>
@@ -261,7 +277,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
           </>
         )}
       </div>
-      {!entry && !free && <p className="text-[11px] text-slate-500">Production : <CostLine cost={productionHours(player, COMMANDER_RULES.recruitProductionHours)} /></p>}
+      {!entry && !free && !def.rare && !def.season && <p className="text-[11px] text-slate-500">Production : <CostLine cost={productionHours(player, COMMANDER_RULES.recruitProductionHours)} /></p>}
     </Card>
   );
 }
@@ -277,7 +293,13 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
         <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {COMMANDERS.map((def) => (
+        {COMMANDERS.filter((d) => !d.rare).map((def) => (
+          <CommanderCard key={def.id} def={def} player={player} now={now} />
+        ))}
+      </div>
+      <p className="hud-eyebrow text-[10px] text-violet-glow">Officiers rares · ne se recrutent pas : un commandant de saison de ce rôle au palier 30 d'un passe, ou une trouvaille très rare sur un boss</p>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {COMMANDERS.filter((d) => d.rare).map((def) => (
           <CommanderCard key={def.id} def={def} player={player} now={now} />
         ))}
       </div>

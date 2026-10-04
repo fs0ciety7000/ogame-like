@@ -16,12 +16,14 @@ export type EffectStat =
   | "defense"
   | "bossDamage"
   | "repair"
+  | "loot"
   // Économie
   | "productionAll"
   | "production"
   | "storage"
   | "protectedStorage"
   | "buildingDiscount"
+  | "tradeTax"
   // Durées (réductions)
   | "buildTime"
   | "researchTime"
@@ -88,16 +90,18 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   defense: { label: "Défense", unit: "pct", group: "combat" },
   bossDamage: { label: "Dégâts contre les boss", unit: "pct", group: "combat" },
   repair: { label: "Vaisseaux réparés", unit: "pct", group: "combat" },
+  loot: { label: "Butin pillé", unit: "pct", group: "combat" },
   productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
   storage: { label: "Capacité des entrepôts", unit: "pct", group: "economie" },
-  protectedStorage: { label: "Entrepôt à l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  protectedStorage: { label: "Entrepôt à l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
   buildingDiscount: { label: "Coût des bâtiments", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  tradeTax: { label: "Taxe du marché et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
   buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  unitTime: { label: "Temps de production des unités", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  unitTime: { label: "Temps de production des unités", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
-  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacité des hangars", unit: "pct", group: "flottes" },
   spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },

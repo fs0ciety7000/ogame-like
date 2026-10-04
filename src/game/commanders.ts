@@ -1,6 +1,6 @@
 import { GameActionError } from "@/game/errors";
 import { familyIndex, getRankIndex } from "@/game/ranks";
-import type { EffectGrant, EffectStat } from "@/game/effects";
+import type { EffectGrant, EffectScope, EffectStat } from "@/game/effects";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -9,9 +9,25 @@ import type { PlayerState } from "@/types/game";
    donne un bonus tant qu'il est en poste. Le premier est offert.
 ===================================================== */
 
-/** Les cinq rôles (domaines de bonus). */
-export type CommanderId = "admiral" | "strategist" | "engineer" | "spy" | "steward";
-export const COMMANDER_ROLES: CommanderId[] = ["admiral", "strategist", "engineer", "spy", "steward"];
+/** Les douze rôles (domaines de bonus). Les cinq premiers se recrutent ;
+ *  v5.14 : les sept suivants se débloquent au dernier palier d'un passe (commandant
+ *  de saison) ou, très rarement, sur un boss. */
+export type CommanderId =
+  | "admiral"
+  | "strategist"
+  | "engineer"
+  | "spy"
+  | "steward"
+  | "logistician"
+  | "mechanic"
+  | "governor"
+  | "corsair"
+  | "warden"
+  | "diplomat"
+  | "hunter";
+export const RECRUITABLE_ROLES: CommanderId[] = ["admiral", "strategist", "engineer", "spy", "steward"];
+export const RARE_ROLES: CommanderId[] = ["logistician", "mechanic", "governor", "corsair", "warden", "diplomat", "hunter"];
+export const COMMANDER_ROLES: CommanderId[] = [...RECRUITABLE_ROLES, ...RARE_ROLES];
 
 /** v5.13 : un officier est un des cinq de base, ou un commandant de saison (« s-AAAA-MM »). */
 export type OfficerId = string;
@@ -26,6 +42,8 @@ export interface CommanderDef {
   bonus: (level: number) => string;
   /** Rôle principal (pour un officier de base : lui-même). */
   role: CommanderId;
+  /** v5.14 : rôle rare, jamais recruté (palier 30 d'un passe, butin de boss). */
+  rare?: boolean;
   /** v5.13 : commandant de saison — second rôle (à moitié), passe d'origine, histoire. */
   secondary?: CommanderId;
   season?: { seasonId: string; label: string };
@@ -72,6 +90,70 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role">[] = [
     portrait: "/assets/commanders/steward.webp",
     domain: "Missions, contrats du jour, échanges au Comptoir et au marché.",
     bonus: (l) => `+${l} % de production, +${l * 2} % d'entrepôt`,
+  },
+  // v5.14 : rôles rares.
+  {
+    id: "logistician",
+    name: "Tamsin Okoro",
+    title: "Logisticienne",
+    portrait: "/assets/commanders/logistician.webp",
+    domain: "Flottes envoyées : transports, livraisons, colonies, champs de débris.",
+    bonus: (l) => `−${l} % de temps de vol, +${l} % de soute`,
+    rare: true,
+  },
+  {
+    id: "mechanic",
+    name: "Brann Kessel",
+    title: "Mécanicien",
+    portrait: "/assets/commanders/mechanic.webp",
+    domain: "Unités sorties des chantiers (planète mère et colonies).",
+    bonus: (l) => `+${l} % de vaisseaux réparés, −${l} % de temps de production des unités`,
+    rare: true,
+  },
+  {
+    id: "governor",
+    name: "Livia Marchetti",
+    title: "Gouverneure",
+    portrait: "/assets/commanders/governor.webp",
+    domain: "Bâtiments terminés dans les colonies.",
+    bonus: (l) => `+${l * 2} % de production et +${l * 2} % d'entrepôt dans les colonies`,
+    rare: true,
+  },
+  {
+    id: "corsair",
+    name: "Dax Morrow",
+    title: "Corsaire",
+    portrait: "/assets/commanders/corsair.webp",
+    domain: "Attaques gagnées, repaires pris, primes remplies.",
+    bonus: (l) => `+${l} % de butin pillé`,
+    rare: true,
+  },
+  {
+    id: "warden",
+    name: "Ysolde Grey",
+    title: "Gardienne",
+    portrait: "/assets/commanders/warden.webp",
+    domain: "Attaques et raids repoussés.",
+    bonus: (l) => `+${l} % d'entrepôt à l'abri du pillage, +${Math.floor(l * 0.2)} point${l >= 10 ? "s" : ""} de contre-espionnage`,
+    rare: true,
+  },
+  {
+    id: "diplomat",
+    name: "Auren Sol",
+    title: "Diplomate",
+    portrait: "/assets/commanders/diplomat.webp",
+    domain: "Échanges au marché, contrats entre joueurs, cadeaux envoyés.",
+    bonus: (l) => `−${l * 2} % de taxe sur le marché et les cadeaux`,
+    rare: true,
+  },
+  {
+    id: "hunter",
+    name: "Kaelen Voss",
+    title: "Chasseur de colosses",
+    portrait: "/assets/commanders/hunter.webp",
+    domain: "Assauts sur les boss (mondiaux, de saison, d'alliance).",
+    bonus: (l) => `+${(l * 1.5).toFixed(1).replace(".", ",").replace(",0", "")} % de dégâts contre les boss`,
+    rare: true,
   },
 ];
 
@@ -162,6 +244,11 @@ export const COMMANDER_XP = {
   missionDone: 5,
   contractClaimed: 10,
   marketTrade: 5,
+  // v5.14 : rôles rares.
+  fleetDispatched: 5,
+  unitsBuilt: 5,
+  giftSent: 5,
+  playerContract: 10,
 };
 
 /** v5.6 : ce qui fait progresser chaque officier (affiché sur sa fiche). */
@@ -190,6 +277,24 @@ export const COMMANDER_SOURCES: Record<CommanderId, { label: string; xp: number 
     { label: "Contrat du jour récupéré", xp: COMMANDER_XP.contractClaimed },
     { label: "Échange au Comptoir ou au marché", xp: COMMANDER_XP.marketTrade },
   ],
+  logistician: [{ label: "Flotte envoyée (transport, livraison, colonie, débris)", xp: COMMANDER_XP.fleetDispatched }],
+  mechanic: [{ label: "Lot d'unités terminé", xp: COMMANDER_XP.unitsBuilt }],
+  governor: [{ label: "Bâtiment terminé dans une colonie", xp: COMMANDER_XP.buildingDone }],
+  corsair: [
+    { label: "Attaque gagnée", xp: COMMANDER_XP.attackWin },
+    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
+    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin },
+  ],
+  warden: [
+    { label: "Attaque repoussée", xp: COMMANDER_XP.defenseWin },
+    { label: "Raid de faction repoussé", xp: COMMANDER_XP.raidRepelled },
+  ],
+  diplomat: [
+    { label: "Échange au marché", xp: COMMANDER_XP.marketTrade },
+    { label: "Contrat entre joueurs honoré", xp: COMMANDER_XP.playerContract },
+    { label: "Cadeau envoyé", xp: COMMANDER_XP.giftSent },
+  ],
+  hunter: [{ label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault }],
 };
 
 export interface CommanderState {
@@ -239,7 +344,7 @@ export function commanderSlots(player: Pick<PlayerState, "xp">): number {
  *  v5.13 : un commandant de saison compte pour son rôle principal, et à moitié pour le second. */
 export function activeLevels(player: Pick<PlayerState, "commanders">): Record<CommanderId, number> {
   const st = commandersState(player);
-  const out = { admiral: 0, strategist: 0, engineer: 0, spy: 0, steward: 0 } as Record<CommanderId, number>;
+  const out = Object.fromEntries(COMMANDER_ROLES.map((r) => [r, 0])) as Record<CommanderId, number>;
   for (const id of st.active) {
     const def = findCommander(id);
     if (!def) continue;
@@ -255,6 +360,7 @@ export interface RoleEffect {
   stat: EffectStat;
   perLevel: number;
   target?: string;
+  scope?: EffectScope;
 }
 
 export const ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = {
@@ -272,6 +378,25 @@ export const ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = {
     { stat: "productionAll", perLevel: 0.01 },
     { stat: "storage", perLevel: 0.02 },
   ],
+  logistician: [
+    { stat: "fleetSpeed", perLevel: 0.01 },
+    { stat: "cargo", perLevel: 0.01 },
+  ],
+  mechanic: [
+    { stat: "repair", perLevel: 0.01 },
+    { stat: "unitTime", perLevel: 0.01 },
+  ],
+  governor: [
+    { stat: "productionAll", perLevel: 0.02, scope: "colonies" },
+    { stat: "storage", perLevel: 0.02, scope: "colonies" },
+  ],
+  corsair: [{ stat: "loot", perLevel: 0.01 }],
+  warden: [
+    { stat: "protectedStorage", perLevel: 0.01 },
+    { stat: "counterSpy", perLevel: 0.2 },
+  ],
+  diplomat: [{ stat: "tradeTax", perLevel: 0.02 }],
+  hunter: [{ stat: "bossDamage", perLevel: 0.015 }],
 };
 
 /** v5.14 : effets des officiers en poste, un par officier et par effet de rôle
@@ -286,7 +411,7 @@ export function commanderEffects(player: Pick<PlayerState, "commanders">): Effec
     const source = { kind: "officer" as const, id: def.id, label: def.name };
     const roles: [CommanderId, number][] = [[def.role, level]];
     if (def.secondary) roles.push([def.secondary, level * SEASON_SECONDARY_SHARE]);
-    for (const [role, lv] of roles) for (const e of ROLE_EFFECTS[role] ?? []) out.push({ stat: e.stat, target: e.target, value: lv * e.perLevel, layer: "empire", source });
+    for (const [role, lv] of roles) for (const e of ROLE_EFFECTS[role] ?? []) out.push({ stat: e.stat, target: e.target, value: lv * e.perLevel, layer: "empire", scope: e.scope, source });
   }
   return out;
 }
@@ -313,6 +438,33 @@ export function unlockSeasonCommander(player: PlayerState, id: string): boolean 
   return true;
 }
 
+/* ---------- v5.14 : officier rare trouvé sur un boss ---------- */
+
+export const RARE_OFFICER_RULES = {
+  /** Chance par participant à un boss abattu. */
+  participant: 0.002,
+  /** Chance pour les trois premiers en dégâts. */
+  podium: 0.005,
+};
+
+/** Officiers rares que le joueur n'a pas encore. */
+export function missingRareOfficers(player: Pick<PlayerState, "commanders">): CommanderDef[] {
+  const st = commandersState(player);
+  return COMMANDERS.filter((c) => c.rare && !st.roster[c.id]);
+}
+
+/** Tirage d'un officier rare (butin de boss). Rend l'officier débloqué, ou null. */
+export function rollRareOfficer(player: PlayerState, chance: number, random: () => number = Math.random): CommanderDef | null {
+  const pool = missingRareOfficers(player);
+  if (pool.length === 0 || !(random() < chance)) return null;
+  const def = pool[Math.floor(random() * pool.length) % pool.length];
+  const st = commandersState(player);
+  st.roster[def.id] = { xp: 0 };
+  if (st.active.length < commanderSlots(player)) st.active.push(def.id);
+  player.commanders = st;
+  return def;
+}
+
 /** Recrutement : le premier est offert, les suivants coûtent de l'Ambre ou de la production. */
 export function recruitCost(player: Pick<PlayerState, "commanders">): "free" | "paid" {
   return Object.keys(commandersState(player).roster).length === 0 ? "free" : "paid";
@@ -322,6 +474,7 @@ export function recruitCommander(player: PlayerState, id: unknown, pay: (method:
   const def = findCommander(id);
   if (!def) throw new GameActionError("Officier inconnu.");
   if (def.season) throw new GameActionError(`${def.title} ${def.name} se gagne au dernier palier du passe de ${def.season.label}.`);
+  if (def.rare) throw new GameActionError(`${def.title} ${def.name} ne se recrute pas : son rôle se débloque au dernier palier d'un passe, ou très rarement sur un boss.`);
   const st = commandersState(player);
   if (st.roster[def.id]) throw new GameActionError(`${def.title} ${def.name} sert déjà dans ta flotte.`);
   if (recruitCost(player) === "paid") pay(method);

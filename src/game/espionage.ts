@@ -59,7 +59,7 @@ export function espionageLevel(player: Pick<PlayerState, "techLevels"> & Partial
 export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
   const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy"));
+  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy") + playerModifiers(target).counterSpy);
 }
 
 export function spyScore(spyLevel: number, counter: number, probes: number): number {

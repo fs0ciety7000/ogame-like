@@ -432,7 +432,7 @@ export interface AggressionStats {
 /** Ressources communes exposées (hors bunker de l'entrepôt). */
 function exposedStock(player: PlayerState): Partial<Record<ResourceId, number>> {
   const out: Partial<Record<ResourceId, number>> = {};
-  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels, player.allianceResearch));
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels, player.allianceResearch, player));
   return out;
 }
 
@@ -686,7 +686,7 @@ export function resolvePirateRaid(
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
+      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
@@ -713,6 +713,7 @@ export function resolvePirateRaid(
     st.repelled += 1;
     st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
+    grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
@@ -817,6 +818,9 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);
     for (const r of RARE) reward[r] = (reward[r] ?? 0) + faction.lair.rare;
+    // v5.14 : le Corsaire en poste grossit le butin du repaire.
+    const loot = 1 + playerModifiers(player).loot;
+    if (loot !== 1) for (const r of Object.keys(reward) as ResourceId[]) reward[r] = Math.floor((reward[r] ?? 0) * loot);
     for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
     applyXpDelta(player, faction.lair.xp, now);
     const title = faction.lair.title;
@@ -829,6 +833,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     st.notoriety = 0;
     st.lairsTaken += 1;
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(

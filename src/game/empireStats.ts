@@ -228,7 +228,7 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
     resources,
     economy: {
       capacity: eco.capacity,
-      protectedPerResource: protectedAmount(player.buildings, "scrap", tech, player.allianceResearch),
+      protectedPerResource: protectedAmount(player.buildings, "scrap", tech, player.allianceResearch, player),
       upkeepPerHour: Math.round(eco.upkeep * 3600),
       energyNetPerHour: Math.round(((eco.gross.energy ?? 0) - eco.upkeep) * 3600),
       outage: eco.outage,

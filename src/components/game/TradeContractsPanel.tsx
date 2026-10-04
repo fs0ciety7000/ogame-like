@@ -58,7 +58,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
   const capacity = playerCargoCapacity(player, selected);
   const speed = Object.keys(selected).length ? fleetSpeed(player.units, selected) : 0;
-  const trip = speed > 0 ? travelSeconds(distanceBetween(player.uid, contract.clientUid), speed, allianceFlightFactor(player.allianceResearch, player.techLevels)) : 0;
+  const trip = speed > 0 ? travelSeconds(distanceBetween(player.uid, contract.clientUid), speed, allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : 0;
   const late = speed > 0 && Date.now() + trip * 1000 > contract.deadlineMs;
   const stockOk = (player.resources[contract.wantRes] ?? 0) >= contract.wantAmount;
   const send = async () => {
