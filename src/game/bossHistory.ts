@@ -135,3 +135,41 @@ export function bossRecords(list: BossHistoryEntry[]): BossRecords {
   const sort = (m: Map<string, { uid: string; pseudo: string; count: number }>) => [...m.values()].sort((a, b) => b.count - a.count).slice(0, 5);
   return { bestHit, fastest, finishers: sort(fin), champions: sort(champ), kills: list.filter((e) => e.won).length, fights: list.length };
 }
+
+/** v5.10.5 : rang d'un joueur dans un combat archivé (null s'il n'y figure pas). */
+export function entryRank(e: BossHistoryEntry, uid: string): { rank: number; damage: number } | null {
+  const rows = e.ranking && e.ranking.length ? e.ranking : e.top;
+  const i = rows.findIndex((r) => r.uid === uid);
+  return i < 0 ? null : { rank: i + 1, damage: rows[i].damage };
+}
+
+export interface MyBossStats {
+  kind: BossKind;
+  fights: number;
+  wins: number;
+  bestRank: number;
+  bestDamage: number;
+  finishers: number;
+  /** Combat du meilleur rang. */
+  best: { name: string; endedAtMs: number } | null;
+}
+
+/** v5.10.5 : bilan d'un joueur par type de boss (combats où il figure). */
+export function myBossStats(list: BossHistoryEntry[], uid: string): MyBossStats[] {
+  const out = new Map<BossKind, MyBossStats>();
+  for (const e of list) {
+    const me = entryRank(e, uid);
+    if (!me) continue;
+    const s = out.get(e.kind) ?? { kind: e.kind, fights: 0, wins: 0, bestRank: Infinity, bestDamage: 0, finishers: 0, best: null };
+    s.fights++;
+    if (e.won) s.wins++;
+    if (e.killedBy?.uid === uid) s.finishers++;
+    if (me.rank < s.bestRank) {
+      s.bestRank = me.rank;
+      s.best = { name: e.name, endedAtMs: e.endedAtMs };
+    }
+    s.bestDamage = Math.max(s.bestDamage, me.damage);
+    out.set(e.kind, s);
+  }
+  return (Object.keys(BOSS_KIND_LABELS) as BossKind[]).map((k) => out.get(k)).filter((s): s is MyBossStats => !!s);
+}

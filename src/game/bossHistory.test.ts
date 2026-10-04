@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bossHistoryEntry, bossHistoryState, bossRecords, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
+import { bossHistoryEntry, bossHistoryState, bossRecords, entryRank, myBossStats, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
 import { inferKilledBy, LEVIATHAN_RULES, resolveLeviathanAssault, type LeviathanState } from "@/game/leviathan";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
@@ -116,5 +116,19 @@ describe("bossHistoryState (v5.10.3)", () => {
     expect(complete).toBe(false);
     expect(state.status).toBe("failed");
     expect(totals).toMatchObject({ participants: 9, totalDamage: 2000 });
+  });
+});
+
+describe("mes combats (v5.10.5)", () => {
+  it("rang dans un combat et records par type de boss", () => {
+    const a = bossHistoryEntry("leviathan", base(), { name: "Le Léviathan" });
+    const b = bossHistoryEntry("seasonboss", base({ id: "sb-2", killedBy: { uid: "a", pseudo: "Alpha" } }), { name: "Varan" });
+    expect(entryRank(a, "b")).toEqual({ rank: 2, damage: 300 });
+    expect(entryRank(a, "zz")).toBeNull();
+    const stats = myBossStats([a, b], "a");
+    expect(stats.map((s) => [s.kind, s.bestRank, s.fights, s.finishers])).toEqual([
+      ["leviathan", 1, 1, 0],
+      ["seasonboss", 1, 1, 1],
+    ]);
   });
 });
