@@ -1,3 +1,4 @@
+import { applyToAlliance, assertCanJoin, assignRank, deleteRank, dropApplication, hasAlliancePerm, normalizeAllianceProfile, saveRank, setAllianceProfile, type AllianceRank } from "@/game/allianceProfile";
 import { bumpStat, setStat } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -82,6 +83,11 @@ export const MAX_DIPLOMATS = 2;
 /** Peut signer et rompre les pactes, déclarer une guerre ou y répondre. */
 export function canDiplomacy(role: AllianceRole | null): boolean {
   return role === "founder" || role === "officer" || role === "diplomat";
+}
+
+/** v5.10.5 : diplomatie selon le rôle ou le rang personnalisé. */
+export function canDiplomacyIn(alliance: Pick<Alliance, "createdBy" | "members" | "roles"> & { profile?: unknown }, uid: string): boolean {
+  return hasAlliancePerm(alliance, uid, "diplomacy");
 }
 export type AllianceLevels = Record<string, number>;
 
@@ -206,8 +212,9 @@ export function removeMember(alliance: Alliance, uid: string): Alliance | null {
 }
 
 export function kickMember(alliance: Alliance, actorUid: string, targetUid: string): Alliance {
-  if (allianceRole(alliance, actorUid) !== "founder") throw new GameActionError("Seul le fondateur peut exclure un membre.");
+  if (!hasAlliancePerm(alliance, actorUid, "kick")) throw new GameActionError("Il te faut le droit « Exclusion » pour exclure un membre.");
   if (actorUid === targetUid) throw new GameActionError("Tu ne peux pas t'exclure toi-même.");
+  if (targetUid === alliance.createdBy) throw new GameActionError("Le fondateur ne peut pas être exclu.");
   return removeMember(alliance, targetUid)!;
 }
 
@@ -269,8 +276,7 @@ export function distribute(
   amounts: Partial<Record<ResourceId, number>>,
   now: number,
 ): Alliance {
-  const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers peuvent verser le trésor.");
+  if (!hasAlliancePerm(alliance, actorUid, "treasury")) throw new GameActionError("Il te faut le droit « Trésor » pour verser des ressources.");
   if (!alliance.members.includes(targetUid)) throw new GameActionError("Ce joueur n'est pas membre de l'alliance.");
   const day = utcDay(now);
   const count = alliance.distributions?.day === day ? alliance.distributions.count : 0;
@@ -300,8 +306,7 @@ export function allianceResearchSeconds(nextLevel: number): number {
 }
 
 export function startAllianceResearch(alliance: Alliance, actorUid: string, researchId: string, now: number): Alliance {
-  const role = allianceRole(alliance, actorUid);
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers lancent les recherches.");
+  if (!hasAlliancePerm(alliance, actorUid, "research")) throw new GameActionError("Il te faut le droit « Recherches » pour lancer une recherche.");
   const def = findAllianceResearch(researchId);
   if (!def) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est déjà en cours.");
@@ -392,7 +397,7 @@ export function fundAllianceProject(
   if (!def) throw new GameActionError("Projet inconnu.");
   const role = allianceRole(alliance, actor.uid);
   if (!role) throw new GameActionError("Tu n'es pas membre de cette alliance.");
-  if (source === "treasury" && role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers puisent dans le trésor.");
+  if (source === "treasury" && !hasAlliancePerm(alliance, actor.uid, "projects")) throw new GameActionError("Il te faut le droit « Projets » pour puiser dans le trésor.");
   const state = projectState(alliance, def.id);
   if (state.buildEndMs > 0) throw new GameActionError("Ce palier est déjà en construction.");
   const next = state.level + 1;
@@ -492,7 +497,16 @@ export type AllianceAction =
   | { type: "deposit"; resources: Record<string, unknown> }
   | { type: "distribute"; targetUid: string; resources: Record<string, unknown> }
   | { type: "research"; researchId: string }
-  | { type: "project"; projectId: string; source: "treasury" | "self"; resources: Record<string, unknown> };
+  | { type: "project"; projectId: string; source: "treasury" | "self"; resources: Record<string, unknown> }
+  // v5.10.5 : fiche, rangs personnalisés, candidatures.
+  | { type: "profile"; description?: string; recruiting?: string }
+  | { type: "rankSave"; rank: Record<string, unknown> }
+  | { type: "rankDelete"; rankId: string }
+  | { type: "rankAssign"; targetUid: string; rankId: string | null }
+  | { type: "apply"; allianceId: string; message?: string }
+  | { type: "withdraw"; allianceId: string }
+  | { type: "applicationAccept"; targetUid: string }
+  | { type: "applicationDecline"; targetUid: string };
 
 export interface AllianceLogEntry {
   kind: AllianceLog["kind"];
@@ -549,6 +563,7 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
     case "join": {
       if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
       if (actor.allianceId && actor.allianceId !== alliance.id) throw new GameActionError("Quitte d'abord ton alliance actuelle.");
+      assertCanJoin(alliance);
       out.alliance = addMember(alliance, { uid: actor.uid, pseudo: actor.pseudo });
       out.memberships[actor.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
       log({ kind: "join" });
@@ -626,6 +641,66 @@ export function performAllianceAction(input: AllianceActionInput): AllianceActio
           out.notifications[uid] = [note("Projet d'alliance financé", `${def.emoji} ${def.name} niveau ${next} : construction lancée.`, now)];
         }
       }
+      return out;
+    }
+    case "profile": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = setAllianceProfile(alliance, actor.uid, { description: action.description, recruiting: action.recruiting });
+      return out;
+    }
+    case "rankSave": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = saveRank(alliance, actor.uid, action.rank as Partial<AllianceRank>);
+      return out;
+    }
+    case "rankDelete": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = deleteRank(alliance, actor.uid, String(action.rankId ?? ""));
+      return out;
+    }
+    case "rankAssign": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      out.alliance = assignRank(alliance, actor.uid, String(action.targetUid ?? ""), action.rankId ? String(action.rankId) : null);
+      return out;
+    }
+    case "apply": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = applyToAlliance(alliance, actor, action.message, now);
+      // Prévenir ceux qui peuvent recruter.
+      for (const uid of alliance.members) {
+        if (hasAlliancePerm(alliance, uid, "recruit")) out.notifications[uid] = [{ ...note("Nouvelle candidature", `${actor.pseudo} souhaite rejoindre [${alliance.tag}] : réponds depuis l'onglet Fiche de l'alliance.`, now), link: "/game/alliance?onglet=fiche" }];
+      }
+      return out;
+    }
+    case "withdraw": {
+      if (!alliance) throw new GameActionError("Cette alliance n'existe plus.");
+      out.alliance = dropApplication(alliance, actor.uid);
+      return out;
+    }
+    case "applicationAccept":
+    case "applicationDecline": {
+      if (!alliance) throw new GameActionError("Alliance introuvable.");
+      if (!hasAlliancePerm(alliance, actor.uid, "recruit")) throw new GameActionError("Il te faut le droit « Recrutement » pour répondre aux candidatures.");
+      const targetUid = String(action.targetUid ?? "");
+      const app = normalizeAllianceProfile(alliance.profile).applications.find((a) => a.uid === targetUid);
+      if (!app) throw new GameActionError("Candidature introuvable.");
+      const cleaned = dropApplication(alliance, targetUid);
+      if (action.type === "applicationDecline") {
+        out.alliance = cleaned;
+        out.notifications[targetUid] = [note("Candidature refusée", `[${alliance.tag}] ${alliance.name} n'a pas retenu ta candidature cette fois.`, now)];
+        return out;
+      }
+      const target = input.target;
+      if (!target || target.uid !== targetUid) throw new GameActionError("Ce joueur est introuvable.");
+      if (target.allianceId) {
+        out.alliance = cleaned;
+        out.notifications[actor.uid] = [note("Candidature caduque", `${app.pseudo} a déjà rejoint une autre alliance.`, now)];
+        return out;
+      }
+      out.alliance = addMember(cleaned, { uid: target.uid, pseudo: target.pseudo });
+      out.memberships[target.uid] = { allianceId: alliance.id, allianceResearch: research(alliance) };
+      out.notifications[target.uid] = [{ ...note("Candidature acceptée !", `Bienvenue dans [${alliance.tag}] ${alliance.name}.`, now), link: "/game/alliance" }];
+      out.logs.push({ kind: "join", actorUid: target.uid, actorPseudo: target.pseudo, text: `(candidature acceptée par ${actor.pseudo})`, createdAtMs: now });
       return out;
     }
     default:

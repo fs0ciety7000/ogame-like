@@ -100,6 +100,66 @@ export interface Colony {
   biome?: RareResourceId;
   /** v5.10 : niveaux de fondation appliqués (colonies plus anciennes : relevées une fois). */
   foundation?: number;
+  /** v5.11 : spécialisation choisie et date du dernier changement. */
+  spec?: ColonySpecId | null;
+  specChangedAtMs?: number;
+}
+
+/* ---------- v5.11 : spécialisation des colonies ---------- */
+
+export type ColonySpecId = "forge" | "extraction" | "bastion" | "depot";
+
+export interface ColonySpecDef {
+  id: ColonySpecId;
+  name: string;
+  emoji: string;
+  /** Bonus et contrepartie, en une phrase. */
+  summary: string;
+  production?: number;
+  deposit?: number;
+  storage?: number;
+  hangar?: number;
+  defenseTime?: number;
+}
+
+export const COLONY_SPECS: ColonySpecDef[] = [
+  { id: "forge", name: "Forge industrielle", emoji: "🏭", summary: "Ressources communes +25 %, gisement rare −20 %.", production: 1.25, deposit: 0.8 },
+  { id: "extraction", name: "Comptoir minier", emoji: "💎", summary: "Gisement rare +60 %, ressources communes −10 %.", production: 0.9, deposit: 1.6 },
+  { id: "bastion", name: "Bastion", emoji: "🛡️", summary: "Hangar de défense +50 % et défenses 30 % plus rapides, production −10 %.", production: 0.9, hangar: 1.5, defenseTime: 0.7 },
+  { id: "depot", name: "Dépôt logistique", emoji: "📦", summary: "Entrepôt +60 % : la colonie stocke plus longtemps sans perte.", storage: 1.6 },
+];
+
+export const COLONY_SPEC_RULES = {
+  /** Délai entre deux changements (le premier choix est libre). */
+  changeCooldownMs: 7 * 24 * 3600_000,
+};
+
+export function findColonySpec(id: string | null | undefined): ColonySpecDef | undefined {
+  return COLONY_SPECS.find((s) => s.id === id);
+}
+
+/** Multiplicateurs de la spécialisation (1 sans spécialisation). */
+export function colonySpecEffects(colony: Pick<Colony, "spec">) {
+  const s = findColonySpec(colony.spec);
+  return { production: s?.production ?? 1, deposit: s?.deposit ?? 1, storage: s?.storage ?? 1, hangar: s?.hangar ?? 1, defenseTime: s?.defenseTime ?? 1 };
+}
+
+/** Prochain changement possible (0 : tout de suite). */
+export function colonySpecReadyAt(colony: Pick<Colony, "spec" | "specChangedAtMs">): number {
+  return colony.spec && colony.specChangedAtMs ? colony.specChangedAtMs + COLONY_SPEC_RULES.changeCooldownMs : 0;
+}
+
+export function setColonySpec(player: PlayerState, colonyIdIn: string, specIn: string, now: number): Colony {
+  const colony = colonyOf(player, colonyIdIn);
+  if (!colony) throw new GameActionError("Colonie introuvable.");
+  const spec = findColonySpec(specIn);
+  if (!spec) throw new GameActionError("Spécialisation inconnue.");
+  if (colony.spec === spec.id) throw new GameActionError("Cette colonie a déjà cette spécialisation.");
+  const ready = colonySpecReadyAt(colony);
+  if (ready > now) throw new GameActionError(`Changement possible dans ${Math.ceil((ready - now) / 3600_000)} h.`);
+  colony.spec = spec.id;
+  colony.specChangedAtMs = now;
+  return colony;
 }
 
 export interface Colonizing {
@@ -161,6 +221,11 @@ export function depositPerSecond(level: number): number {
 }
 
 /** Nom d'un bâtiment de colonie (le gisement dépend du biome). */
+/** Gisement d'une colonie, spécialisation comprise. */
+export function colonyDepositPerSecond(colony: Pick<Colony, "buildings" | "spec">): number {
+  return depositPerSecond(depositLevel(colony)) * colonySpecEffects(colony).deposit;
+}
+
 export function colonyBuildingName(colony: Pick<Colony, "id" | "foundedAtMs" | "biome">, id: string): string {
   return id === DEPOSIT_ID ? BIOMES[colonyBiome(colony)].deposit : (findBuilding(id)?.name ?? id);
 }
@@ -261,7 +326,8 @@ function economyInput(colony: Colony, player: PlayerState) {
     units: colony.defenses,
     allianceResearch: player.allianceResearch,
     ascensions: player.ascensions,
-    productionFactor: 1 + COLONY_RULES.productionBonus,
+    productionFactor: (1 + COLONY_RULES.productionBonus) * colonySpecEffects(colony).production,
+    storageFactor: colonySpecEffects(colony).storage,
     // v5.3 : bonus de l'empire (Intendant, reliques, talents, secteurs, Gelée de la Reine).
     commanders: player.commanders,
     relics: player.relics,
@@ -273,14 +339,14 @@ function economyInput(colony: Colony, player: PlayerState) {
 
 /** Entrepôt de la colonie (v5.3 : Intendant en poste compris, comme pour la production). */
 export function colonyStorage(colony: Colony, player: Pick<PlayerState, "techLevels" | "commanders">): number {
-  return storageCapacityOf({ buildings: colony.buildings, techLevels: player.techLevels, resources: colony.resources, commanders: player.commanders });
+  return storageCapacityOf({ buildings: colony.buildings, techLevels: player.techLevels, resources: colony.resources, commanders: player.commanders, storageFactor: colonySpecEffects(colony).storage });
 }
 
 /** Production horaire d'une colonie (affichage). */
 export function colonyHourlyRates(colony: Colony, player: PlayerState): Partial<Record<ResourceId, number>> {
   const a = advanceResources({ ...economyInput(colony, player), resources: emptyResources() }, 3600);
   const out: Partial<Record<ResourceId, number>> = Object.fromEntries(COMMON_RESOURCES.map((r) => [r, Math.round(a[r] ?? 0)]));
-  out[colonyBiome(colony)] = Math.round(depositPerSecond(depositLevel(colony)) * 3600);
+  out[colonyBiome(colony)] = Math.round(colonyDepositPerSecond(colony) * 3600);
   return out;
 }
 
@@ -298,7 +364,7 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
       colony.resources = advanceResources(economyInput(colony, player), (until - at) / 1000, at);
       // v5.1 : gisement du biome (ressource rare, non plafonnée).
       const rare = colonyBiome(colony);
-      colony.resources[rare] = (colony.resources[rare] ?? 0) + depositPerSecond(depositLevel(colony)) * ((until - at) / 1000);
+      colony.resources[rare] = (colony.resources[rare] ?? 0) + colonyDepositPerSecond(colony) * ((until - at) / 1000);
       at = until;
     }
     if (next > now) break;
@@ -382,13 +448,13 @@ export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, b
 /** Place occupée et capacité du hangar de défense d'une colonie. */
 export function colonyDefenseHangar(colony: Colony): { used: number; capacity: number } {
   const used = Object.entries(colony.defenses).reduce((a, [id, s]) => a + (findUnit(id)?.hangarSpace ?? 1) * s.count, 0);
-  return { used, capacity: getUnitCapacity(colony.buildings, "defense") };
+  return { used, capacity: Math.floor(getUnitCapacity(colony.buildings, "defense") * colonySpecEffects(colony).hangar) };
 }
 
 /** Durée de construction (secondes) d'un lot de défenses sur une colonie. */
-export function colonyDefenseSeconds(player: Pick<PlayerState, "techLevels">, unitId: string, qty: number): number {
+export function colonyDefenseSeconds(player: Pick<PlayerState, "techLevels">, unitId: string, qty: number, colony?: Pick<Colony, "spec">): number {
   const unit = findUnit(unitId);
-  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) : 0;
+  return unit ? getUnitBuildTime(unit, player.techLevels) * Math.max(0, qty) * (colony ? colonySpecEffects(colony).defenseTime : 1) : 0;
 }
 
 export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unitId: string, qtyIn: number, now: number): ColonyDefenseJob {
@@ -404,7 +470,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   const paid = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
   payFrom(colony.resources, paid, "ces défenses");
-  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty) * 1000, startedAtMs: now, paid };
+  colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty, colony) * 1000, startedAtMs: now, paid };
   return colony.defenseJob;
 }
 

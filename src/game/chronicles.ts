@@ -1,5 +1,5 @@
 import { GameActionError } from "@/game/errors";
-import { parisLocalToUtc, parisOffsetMs, weekendWindow } from "@/game/events";
+import { bossWindows, parisLocalToUtc, parisOffsetMs, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
 import { addPassPoints, grantPassReward, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
@@ -419,7 +419,6 @@ export function validateChronicles(cfg: Partial<ChroniclesConfig> | undefined): 
 /* ---------- calendrier ---------- */
 
 const HOUR = 3600_000;
-const DAY = 24 * HOUR;
 
 /** Date locale de Paris (année, mois 1-12, jour). */
 function parisDate(now: number): { y: number; m: number; d: number } {
@@ -535,30 +534,45 @@ onPassPoints((player, source, now, times) => {
 
 export const SEASON_BOSS_KEY = "season_boss";
 
-export const SEASON_BOSS_RULES = {
+export const SEASON_BOSS_RULES: {
+  /** v5.10.4 : réglable dans l'administration (règles « seasonBoss »). */
+  enabled: boolean;
+  weekend: BossWeekend;
+  /** v5.10.5 : apparitions supplémentaires à date précise. */
+  dates: BossDate[];
+  /** Heure d'apparition le vendredi (heure de Paris). */
+  startHour: number;
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
+  hpFactor: number;
+  minHp: number;
+  /** Vendredi 18 h → dimanche 23 h (heure de Paris) par défaut. */
+  durationHours: number;
+  topRelics: number;
+} = {
+  enabled: true,
+  weekend: "last",
+  dates: [],
+  startHour: 18,
   hpFactor: 3,
   minHp: 100_000,
-  /** Vendredi 18 h → dimanche 23 h (heure de Paris). */
   durationHours: 53,
   topRelics: 3,
 };
 
-/** Fenêtre du dernier week-end du mois, en cours ou à venir (ou null si le mois n'a pas de boss). */
+export function seasonBossSchedule(): BossSchedule {
+  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: SEASON_BOSS_RULES.weekend ?? "last", startHour: SEASON_BOSS_RULES.startHour ?? 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: SEASON_BOSS_RULES.dates ?? [] };
+}
+
+/** Fenêtre du boss de saison, en cours ou à venir (ou null si le mois n'a pas de boss). */
 export function seasonBossWindow(now: number, includeUpcoming = false): { id: string; monthId: string; startMs: number; endMs: number } | null {
-  for (let i = 0; i < 6; i++) {
-    const w = weekendWindow(now, i);
-    const friday = parisDate(w.startMs);
-    const nextWeek = parisDate(w.startMs + 7 * DAY);
-    if (nextWeek.m === friday.m) continue;
-    const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
-    const endMs = w.startMs + SEASON_BOSS_RULES.durationHours * HOUR;
-    if (now >= endMs) continue;
-    if (!config.months.some((m) => m.id === monthId)) return null;
-    if (now < w.startMs && !includeUpcoming) return null;
-    return { id: `boss-${monthId}`, monthId, startMs: w.startMs, endMs };
-  }
-  return null;
+  const [w] = bossWindows(now, seasonBossSchedule(), 1);
+  if (!w) return null;
+  const friday = parisDate(w.startMs);
+  const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
+  if (!config.months.some((m) => m.id === monthId)) return null;
+  if (now < w.startMs && !includeUpcoming) return null;
+  // Date précise : identifiant propre (plusieurs combats possibles dans le même mois).
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 
 export function seasonBossHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {

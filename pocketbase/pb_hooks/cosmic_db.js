@@ -95,6 +95,14 @@ function notify(txApp, uid, notifications) {
   });
 }
 
+/** v5.10.5 : un enregistrement des règles (game_config « rules ») invalide est refusé. */
+function guardRulesConfig(e) {
+  if (e.record.getString("key") !== "rules") return;
+  const game = loadGame();
+  const errors = game.validateRules(toPlain(e.record).data);
+  if (errors.length > 0) throw new BadRequestError(`Règles refusées : ${errors.slice(0, 3).join(" · ")}`);
+}
+
 /** Erreur de jeu (règle non respectée) → 400 avec le message pour le joueur. */
 function asHttpError(game, err) {
   if (err instanceof game.GameActionError) return new BadRequestError(err.message);
@@ -1475,13 +1483,33 @@ function closeSeason(game, now, seasonIdIn) {
       a.set("treasury", treasury);
       txApp.save(a);
     });
+    // v5.10.5 : ligues — montées, descentes et récompense selon la ligue.
+    try {
+      const lrec = configRecord(txApp, game.LEAGUES_KEY);
+      const leagues = game.normalizeLeagues(lrec ? toPlain(lrec).data : null);
+      const everyone = proceduralPlayers(txApp);
+      const closed = game.closeLeagues(leagues, everyone, seasonId, game.currentSeasonId(now));
+      closed.rewards.forEach((r) => {
+        if (!findOrNull(txApp, "players", r.uid)) return;
+        const info = game.leagueInfo(r.tier);
+        const next = game.leagueInfo(r.to);
+        const loaded = loadPlayer(txApp, game, r.uid);
+        const headline = r.move === "up" ? `Ligue : promotion en ${next.label} ${next.emoji} !` : r.move === "down" ? `Ligue : retour en ${next.label}` : `Ligue ${info.label} : ${r.rank}${r.rank === 1 ? "er" : "e"}`;
+        const out = game.performSeasonReward(loaded.player, loaded.queues, { seasonId, rank: r.rank, seasonXp: 0 }, { hours: r.hours, rare: 0, title: "" }, now, headline);
+        savePlayer(txApp, game, loaded, out.player, out.queues);
+        notify(txApp, r.uid, out.notifications.map((n) => (n.kind === "season" && n.title === headline ? Object.assign({}, n, { message: `${info.emoji} Ligue ${info.label}, ${r.rank}${r.rank === 1 ? "er" : "e"} : ${r.hours} h de production versées.`, link: "/game/joueurs?onglet=ligues" }) : n)));
+      });
+      writeConfig(txApp, game.LEAGUES_KEY, closed.state);
+    } catch (err) {
+      console.log(`[cosmic] ligues : ${err}`);
+    }
     summary = { seasonId, closed: true, ranked: standings.length, rewarded: summary.rewarded, alliances: allianceStanding.length, seasonWar: war.length };
   });
   return summary;
 }
 /* ---------- Alliances (v1.9) ---------- */
 
-const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors"];
+const ALLIANCE_FIELDS = ["name", "tag", "createdBy", "createdAtMs", "members", "memberPseudos", "roles", "treasury", "research", "activeResearch", "distributions", "projects", "projectContributors", "profile"];
 
 function allianceFromRecord(rec) {
   const a = toPlain(rec);
@@ -1494,6 +1522,7 @@ function allianceFromRecord(rec) {
   a.distributions = a.distributions || { day: "", count: 0 };
   a.projects = a.projects || {};
   a.projectContributors = a.projectContributors || {};
+  a.profile = a.profile || null;
   return a;
 }
 
@@ -1559,13 +1588,15 @@ function allianceRequest(e) {
     // Alliance disparue ou dont on a été retiré : on repart de zéro.
     const current = actor.player.allianceId ? findOrNull(txApp, "alliances", actor.player.allianceId) : null;
     if (!current || (toPlain(current).members || []).indexOf(uid) < 0) flushed.player.allianceId = "";
-    const allianceId = action.type === "join" ? String(action.allianceId || "") : String(flushed.player.allianceId || "");
+    // v5.10.5 : candidatures (postuler, retirer) visent une autre alliance que la sienne.
+    const external = action.type === "join" || action.type === "apply" || action.type === "withdraw";
+    const allianceId = external ? String(action.allianceId || "") : String(flushed.player.allianceId || "");
     let allianceRec = null;
     if (action.type !== "create" && allianceId) {
       allianceRec = findOrNull(txApp, "alliances", allianceId);
     }
     let target = null;
-    if (action.type === "distribute") {
+    if (action.type === "distribute" || action.type === "applicationAccept") {
       const targetUid = String(action.targetUid || "");
       if (targetUid === uid) target = { loaded: actor, flushed };
       else if (findOrNull(txApp, "players", targetUid)) {
@@ -2159,7 +2190,7 @@ function warRequest(e) {
       out = warJson(rec);
     } else if (req.action === "chestShield") {
       // v5.1 : bouclier de 2 h offert à un membre par le coffre de guerre.
-      if (!game.canDiplomacy(game.allianceRole(own, uid))) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
+      if (!game.canDiplomacyIn(own, uid)) throw new BadRequestError("Seuls le fondateur, les officiers et les diplomates disposent du coffre de guerre.");
       const memberUid = String(req.memberUid || "");
       if ((own.members || []).indexOf(memberUid) < 0) throw new BadRequestError("Ce commandant n'est pas membre de l'alliance.");
       const member = loadFlushed(txApp, game, memberUid);
@@ -2591,6 +2622,44 @@ function leviathanArrival(txApp, game, rec, now) {
   writeLeviathan(txApp, next);
 }
 
+/**
+ * v5.10.5 : rappels des boss mondiaux — la veille de l'apparition, puis N heures
+ * avant la fin s'il tient encore. Chacun n'est envoyé qu'une fois. Retourne l'état
+ * (marqué si le rappel de fin est parti).
+ */
+function bossReminders(txApp, game, kind, state, next, now) {
+  const isLev = kind === "leviathan";
+  const month = !isLev && state ? game.bossMonthOf(state) : null;
+  const link = isLev ? "/game/leviathan" : "/game/boss";
+  const actives = () => txApp.findRecordsByFilter("players", "resourcesUpdatedAtMs >= {:t} && npc = ''", "", 500, 0, { t: now - 7 * 86400000 });
+  const send = (title, message) =>
+    actives().forEach((r) => {
+      try {
+        notify(txApp, r.id, [{ kind: "event", title, message, createdAtMs: now, read: false, link }]);
+      } catch (_) {
+        /* facultatif */
+      }
+    });
+  // La veille.
+  const rec = configRecord(txApp, "boss_reminders");
+  const sent = rec ? toPlain(rec).data || {} : {};
+  if (game.eveReminderDue(next, sent[kind], now)) {
+    const nextMonth = !isLev ? game.bossMonthOf({ id: next.id || "" }) : null;
+    const name = isLev ? game.LEVIATHAN_RULES.name : nextMonth ? nextMonth.boss.name : "Le boss de saison";
+    send(`${name} arrive ${game.parisRelativeLabel(next.startMs, now)}`, `Préparez vos flottes d'attaque : ${isLev ? "tout le serveur" : "tout le secteur"} devra frapper ensemble. Un assaut toutes les ${game.LEVIATHAN_RULES.cooldownHours} h.`);
+    writeConfig(txApp, "boss_reminders", Object.assign({}, sent, { [kind]: next.startMs }));
+  }
+  // Avant la fin, s'il tient encore.
+  if (game.endingReminderDue(state, now)) {
+    const name = isLev ? game.LEVIATHAN_RULES.name : month ? month.boss.name : "Le boss de saison";
+    const pct = Math.max(1, Math.round((state.hp / state.maxHp) * 100));
+    const hours = Math.max(1, Math.round((state.endMs - now) / 3600000));
+    send(`Plus que ${hours} h contre ${name} !`, `Il lui reste ${pct} % de sa structure. Un dernier effort avant ${game.parisWhenLabel(state.endMs)}, sinon il repart et les récompenses sont réduites.`);
+    return Object.assign({}, state, { endingNotified: true });
+  }
+  return state;
+}
+
 /** Tâche planifiée : apparition, échéance, récompenses, fin du titre. */
 function leviathanTick(now) {
   const game = loadGame();
@@ -2632,11 +2701,18 @@ function leviathanTick(now) {
       changed = true;
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: "Un monstre colossal menace la galaxie : unissez vos flottes avant lundi 18 h (page Léviathan).", createdAtMs: now, read: false, link: "/game/leviathan" }]);
+          notify(txApp, p.id, [{ kind: "event", title: "Le Léviathan approche !", message: `Un monstre colossal menace la galaxie : unissez vos flottes avant ${game.parisWhenLabel(state.endMs)} (page Léviathan).`, createdAtMs: now, read: false, link: "/game/leviathan" }]);
         } catch (_) {
           /* facultatif */
         }
       });
+    }
+    // v5.10.5 : rappels (la veille, avant la fin).
+    const upcoming = game.bossWindows(now, game.leviathanSchedule(), 2).filter((w) => w.startMs > now)[0] || null;
+    const reminded = bossReminders(txApp, game, "leviathan", state, upcoming, now);
+    if (reminded !== state) {
+      state = reminded;
+      changed = true;
     }
     if (state) {
       const sampled = game.recordLeviathanTimeline(state, now);
@@ -2651,6 +2727,22 @@ function leviathanTick(now) {
 }
 
 /** POST /api/cosmic/admin/leviathan { action: "start" | "stop" | "resize", maxHp? } */
+/** v5.10.4 : réglage à chaud d'un boss mondial, consigné dans le journal admin. */
+function bossAdminLog(txApp, e, recordId, label, changes, now) {
+  const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
+  log.load({
+    actorId: e.auth ? e.auth.id : "superuser",
+    actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
+    action: "update",
+    targetCollection: "game_config",
+    recordId,
+    recordLabel: label,
+    changes,
+    createdAtMs: now,
+  });
+  txApp.save(log);
+}
+
 function adminLeviathan(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
@@ -2686,6 +2778,15 @@ function adminLeviathan(e) {
         createdAtMs: now,
       });
       txApp.save(log);
+    } else if (action === "reschedule") {
+      // v5.10.4 : prolonger ou écourter le combat en cours.
+      const before = state ? state.endMs : 0;
+      try {
+        state = game.rescheduleBoss(state, Number(body(e).endMs), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      bossAdminLog(txApp, e, "leviathan", "Léviathan : fin du combat déplacée", { endMs: { avant: before, après: state.endMs } }, now);
     } else throw new BadRequestError("Action inconnue.");
     writeLeviathan(txApp, state);
     out = state;
@@ -4469,6 +4570,191 @@ function adminServerPot(e) {
   return e.json(200, out);
 }
 
+/** POST /api/cosmic/admin/broadcast { segment, allianceId?, title, message, link?, dryRun? } — v5.10.5 : messages ciblés. */
+function adminBroadcast(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const msg = { segment: String(req.segment || ""), allianceId: String(req.allianceId || ""), title: String(req.title || "").trim(), message: String(req.message || "").trim(), link: String(req.link || "").trim() };
+  if (!req.dryRun) {
+    const errors = game.validateBroadcast(msg);
+    if (errors.length) throw new BadRequestError(errors.join(" "));
+  }
+  const now = Date.now();
+  let count = 0;
+  $app.runInTransaction((txApp) => {
+    const players = proceduralPlayers(txApp);
+    const targets = game.broadcastTargets(players, msg.segment, now, msg.allianceId || undefined);
+    count = targets.length;
+    if (req.dryRun) return;
+    targets.forEach((p) => {
+      try {
+        notify(txApp, p.uid, [Object.assign({ kind: "event", title: msg.title, message: msg.message, createdAtMs: now, read: false }, msg.link ? { link: msg.link } : {})]);
+      } catch (_) {
+        /* un destinataire en échec n'empêche pas les autres */
+      }
+    });
+    bossAdminLog(txApp, e, "broadcast", `Message ciblé : ${msg.title}`, { groupe: msg.segment, alliance: msg.allianceId || null, destinataires: count }, now);
+  });
+  return e.json(200, { count, sent: !req.dryRun });
+}
+
+/* ---------- v5.10.5 : défi d'alliance de la semaine ---------- */
+
+/** Tâche planifiée (avec les concours) : relevé du classement, et le lundi, prix au podium. */
+function allianceChallengeTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const rec = configRecord(txApp, game.ALLIANCE_CHALLENGE_KEY);
+    const players = proceduralPlayers(txApp);
+    const allianceRecs = txApp.findAllRecords("alliances");
+    const alliances = allianceRecs.map((a) => ({ id: a.id, tag: a.getString("tag"), name: a.getString("name") }));
+    if (!rec) {
+      writeConfig(txApp, game.ALLIANCE_CHALLENGE_KEY, game.startAllianceChallengeWeek(players, now, null));
+      return;
+    }
+    let state = game.normalizeAllianceChallenge(toPlain(rec).data, now);
+    state = game.refreshAllianceChallenge(state, players, alliances, now);
+    if (state.weekId !== game.allianceWeekId(now)) {
+      const challenge = game.findAllianceChallenge(state.challengeId);
+      const results = [];
+      state.standings.slice(0, game.ALLIANCE_CHALLENGE_REWARDS.length).forEach((st, i) => {
+        const aRec = allianceRecs.find((a) => a.id === st.allianceId);
+        if (!aRec) return;
+        const members = players.filter((p) => p.allianceId === st.allianceId);
+        const reward = game.allianceChallengeReward(i + 1, members);
+        const treasury = Object.assign({}, toPlain(aRec).treasury || {});
+        Object.keys(reward).forEach((k) => (treasury[k] = (treasury[k] || 0) + reward[k]));
+        aRec.set("treasury", treasury);
+        txApp.save(aRec);
+        const log = new Record(txApp.findCollectionByNameOrId("alliance_logs"));
+        log.load({ allianceId: aRec.id, kind: "deposit", actorUid: "", actorPseudo: "Défi de la semaine", text: `${challenge.emoji} ${challenge.name} : ${i + 1 === 1 ? "1re" : `${i + 1}e`} place`, resources: reward, createdAtMs: now });
+        txApp.save(log);
+        members.forEach((m) => {
+          try {
+            notify(txApp, m.uid, [{ kind: "alliance", title: `Défi d'alliance : ${i + 1 === 1 ? "victoire" : `${i + 1}e place`} !`, message: `${challenge.emoji} ${challenge.name} : ${game.describeGain(reward)} versés au trésor.`, createdAtMs: now, read: false, link: "/game/alliance?onglet=defi" }]);
+          } catch (_) {
+            /* facultatif */
+          }
+        });
+        results.push(Object.assign({}, st, { rank: i + 1, reward }));
+      });
+      state = game.startAllianceChallengeWeek(players, now, { weekId: state.weekId, challengeId: state.challengeId, results });
+    }
+    writeConfig(txApp, game.ALLIANCE_CHALLENGE_KEY, state);
+  });
+}
+
+/* ---------- v5.10.5 : concours du pot commun ---------- */
+
+function readContests(txApp, game) {
+  const rec = configRecord(txApp, game.CONTESTS_KEY);
+  return game.normalizeContests(rec ? toPlain(rec).data : null);
+}
+
+/** Tâche planifiée : lancement, relevé du classement, versement des prix à la fin. */
+function contestsTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const state = readContests(txApp, game);
+    if (!state.list.some((c) => c.status === "scheduled" || c.status === "running")) return;
+    const players = proceduralPlayers(txApp);
+    let changed = false;
+    const list = state.list.map((c) => {
+      const phase = game.contestPhase(c, now);
+      if (phase === "scheduled" || phase === "done" || phase === "cancelled") return c;
+      changed = true;
+      let next = game.refreshContest(c, players, now);
+      if (c.status === "scheduled") {
+        next = Object.assign({}, next, { status: "running" });
+        players.forEach((p) => {
+          try {
+            notify(txApp, p.uid, [{ kind: "event", title: `Concours : ${c.title}`, message: `C'est parti jusqu'au ${game.parisWhenLabel(c.endMs)} ! Les ${c.places.length} premiers se partagent ${Math.round(c.potShare * 100)} % du pot commun.`, createdAtMs: now, read: false, link: "/game/concours" }]);
+          } catch (_) {
+            /* facultatif */
+          }
+        });
+      }
+      if (phase === "ending") next = finishContest(txApp, game, next, now);
+      return next;
+    });
+    if (changed) writeConfig(txApp, game.CONTESTS_KEY, { list: game.pruneContests(list) });
+  });
+}
+
+/** Fin d'un concours : prix pris dans le pot et versés aux premiers. */
+function finishContest(txApp, game, c, now) {
+  const rec = configRecord(txApp, game.SERVER_POT_KEY);
+  let pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+  const prizes = game.contestPrizes(c, game.contestPurse(c, pot));
+  const results = [];
+  prizes.forEach((prize) => {
+    if (!findOrNull(txApp, "players", prize.uid) || Object.keys(prize.resources).length === 0) return;
+    const before = pot;
+    pot = game.takeFromPot(pot, prize.resources, now, `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`);
+    if (pot === before) return;
+    const last = pot.log[pot.log.length - 1];
+    const given = {};
+    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    const owner = loadPlayer(txApp, game, prize.uid);
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    notify(txApp, prize.uid, flushed.notifications.concat([
+      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${game.describeGain(given)} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given } },
+    ]));
+    results.push(Object.assign({}, prize, { resources: given }));
+  });
+  writeConfig(txApp, game.SERVER_POT_KEY, pot);
+  return Object.assign({}, c, { status: "done", results });
+}
+
+/** POST /api/cosmic/admin/contests { action: "create" | "cancel", contest?, id? } */
+function adminContests(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const state = readContests(txApp, game);
+    let list = state.list;
+    if (req.action === "create") {
+      const c = req.contest || {};
+      const draft = {
+        id: `contest-${now}`,
+        title: String(c.title || "").trim().slice(0, 80),
+        description: String(c.description || "").trim().slice(0, 400),
+        metric: String(c.metric || ""),
+        startMs: Math.max(now, Number(c.startMs) || now),
+        endMs: Number(c.endMs) || 0,
+        potShare: Number(c.potShare) || 0,
+        places: (Array.isArray(c.places) ? c.places : []).map(Number),
+        status: "scheduled",
+        baselines: {},
+        standings: [],
+        updatedAtMs: now,
+        createdBy: e.auth ? e.auth.id : "superuser",
+      };
+      const errors = game.validateContest(draft, now);
+      if (errors.length) throw new BadRequestError(errors.join(" "));
+      list = game.pruneContests([draft].concat(list));
+    } else if (req.action === "cancel") {
+      const c = list.find((x) => x.id === req.id);
+      if (!c || !(c.status === "scheduled" || c.status === "running")) throw new BadRequestError("Concours introuvable ou déjà terminé.");
+      list = list.map((x) => (x.id === req.id ? Object.assign({}, x, { status: "cancelled", updatedAtMs: now }) : x));
+    } else throw new BadRequestError("Action inconnue.");
+    writeConfig(txApp, game.CONTESTS_KEY, { list });
+    bossAdminLog(txApp, e, game.CONTESTS_KEY, req.action === "create" ? `Concours créé : ${String((req.contest || {}).title || "")}` : "Concours annulé", { action: req.action, id: req.id || null }, now);
+    out = { list };
+  });
+  if (req.action === "create") contestsTick(Date.now());
+  return e.json(200, out);
+}
+
 function writeConfig(txApp, key, data) {
   let rec = configRecord(txApp, key);
   if (!rec) {
@@ -6012,7 +6298,7 @@ function seasonBossArrival(txApp, game, rec, now) {
   writeSeasonBoss(txApp, game, next);
 }
 
-/** Tâche planifiée : apparition le dernier vendredi du mois à 18 h, fin dimanche 23 h, récompenses. */
+/** Tâche planifiée : apparition (week-end réglable, dernier du mois par défaut), échéance, récompenses. */
 function seasonBossTick(now) {
   const game = loadGame();
   let changed = false;
@@ -6045,11 +6331,18 @@ function seasonBossTick(now) {
       const month = game.bossMonthOf(state);
       actives.forEach((p) => {
         try {
-          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: "Fin de la chronique du mois : tout le secteur doit frapper avant dimanche 23 h (page Boss de saison).", createdAtMs: now, read: false, link: "/game/boss" }]);
+          notify(txApp, p.id, [{ kind: "event", title: `${month ? month.boss.name : "Le boss de saison"} surgit !`, message: `Fin de la chronique du mois : tout le secteur doit frapper avant ${game.parisWhenLabel(state.endMs)} (page Boss de saison).`, createdAtMs: now, read: false, link: "/game/boss" }]);
         } catch (_) {
           /* facultatif */
         }
       });
+    }
+    // v5.10.5 : rappels (la veille, avant la fin).
+    const coming = game.seasonBossWindow(now, true);
+    const reminded = bossReminders(txApp, game, "seasonboss", state, coming && coming.startMs > now ? coming : null, now);
+    if (reminded !== state) {
+      state = reminded;
+      changed = true;
     }
     if (state) {
       const sampled = game.recordLeviathanTimeline(state, now);
@@ -6084,11 +6377,22 @@ function adminSeasonBoss(e) {
       if (!state || state.status !== "active") throw new BadRequestError("Aucun boss en cours.");
       state = distributeSeasonBoss(txApp, game, Object.assign({}, state, { status: "failed", endedAtMs: now, endMs: now }), now);
     } else if (action === "resize") {
+      const before = state ? state.maxHp : 0;
       try {
         state = game.resizeLeviathan(state, Number(req.maxHp), now);
       } catch (err) {
         throw asHttpError(game, err);
       }
+      bossAdminLog(txApp, e, "season_boss", "Boss de saison : structure ajustée", { maxHp: { avant: before, après: state.maxHp } }, now);
+    } else if (action === "reschedule") {
+      // v5.10.4 : prolonger ou écourter le combat en cours.
+      const before = state ? state.endMs : 0;
+      try {
+        state = game.rescheduleBoss(state, Number(req.endMs), now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      bossAdminLog(txApp, e, "season_boss", "Boss de saison : fin du combat déplacée", { endMs: { avant: before, après: state.endMs } }, now);
     } else throw new BadRequestError("Action inconnue.");
     writeSeasonBoss(txApp, game, state);
     out = state;
@@ -6495,4 +6799,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

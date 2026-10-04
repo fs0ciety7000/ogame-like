@@ -197,7 +197,7 @@ function RankLadder({ xp }: { xp: number }) {
             <div
               key={r.id}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg border p-2 text-center",
+                "hud-cut-sm flex flex-col items-center gap-1 border p-2 text-center",
                 i === current ? "border-cyan-glow/50 bg-cyan-glow/10" : "border-white/5 bg-black/20",
                 i > current && "opacity-45 grayscale",
               )}

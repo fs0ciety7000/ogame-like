@@ -14,6 +14,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { answerPirateUltimatum, GameActionError } from "@/services/playerService";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { factionTone, HudChip } from "@/components/ui/hud";
 
 /** Couleurs d'accent des factions (classes Tailwind complètes). */
 export const FACTION_ACCENT: Record<string, { text: string; border: string; bg: string }> = {
@@ -104,7 +105,7 @@ export function UltimatumDialog() {
             <DialogTitle className="font-display text-xl text-white">{faction.ultimatum.title}</DialogTitle>
             <p className="text-sm italic text-slate-300">« {faction.ultimatum.quote.replace(/\{pseudo\}/g, player.pseudo)} »</p>
             <p className="text-right text-xs text-slate-500">— {faction.ultimatum.signature}</p>
-            <div className={cn("rounded-lg border p-3", a.border, a.bg)}>
+            <div className={cn("hud-callout p-3", `hud-tone-${factionTone(faction.color)}`)}>
               <p className="text-xs text-slate-400">
                 {faction.tribute.basis === "plunder"
                   ? `Prix exigé (${Math.round(faction.tribute.plunderPct * 100)} % de ton butin récent)`
@@ -129,7 +130,7 @@ export function UltimatumDialog() {
             </p>
             <ThreatGauge
               fleet={{ id: "ultimatum", mission: "pirate", factionId: faction.id, units: {}, targetUid: player.uid, power: raidPower(faction, player, pirateState(player, faction.id).notoriety, pirateState(player, faction.id).adapt) } as unknown as Fleet}
-              className="rounded-lg border border-white/10 bg-space-950/40 p-2"
+              className="hud-cut-sm border border-white/10 bg-space-950/40 p-2"
             />
             <div className="mt-1 flex flex-wrap gap-2">
               <Button variant="outline" className="flex-1" disabled={busy || !canPay} onClick={() => void answer("pay")}>
@@ -154,15 +155,11 @@ export function UltimatumBadge() {
   useNowTicker();
   const active = useActiveUltimatum();
   if (!active) return null;
-  const a = accent(active.faction);
   return (
-    <button
-      type="button"
-      onClick={openUltimatum}
-      className={cn("animate-pulse-alert flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold", a.border, a.bg, a.text)}
-      title={`Ultimatum : ${active.faction.name}`}
-    >
-      <Skull className="h-3.5 w-3.5" /> Ultimatum · {formatDuration(Math.max(0, Math.floor((active.ultimatum.expiresAtMs - Date.now()) / 1000)))}
-    </button>
+    <HudChip asChild tone={factionTone(active.faction.color)} alert title={`Ultimatum : ${active.faction.name}`}>
+      <button type="button" onClick={openUltimatum}>
+        <Skull /> Ultimatum · {formatDuration(Math.max(0, Math.floor((active.ultimatum.expiresAtMs - Date.now()) / 1000)))}
+      </button>
+    </HudChip>
   );
 }

@@ -88,7 +88,7 @@ export function MaintenancePanel() {
   const progress = maintenanceProgress(m, now);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_1fr]">
       {/* État actuel */}
       <Card className={cn("relative flex flex-col gap-4 overflow-hidden p-5", m.enabled && "border-gold-glow/40")}>
         {m.enabled && <span aria-hidden className="mt-hazard absolute inset-x-0 top-0 h-1.5" />}
@@ -160,7 +160,7 @@ export function MaintenancePanel() {
             className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-glow/60"
           />
         </Field>
-        <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[10rem_1fr]">
           <Field label="Version annoncée" hint={`Actuelle : v${APP_VERSION}`}>
             <Input value={version} maxLength={20} placeholder="2.5.0" onChange={(e) => setVersion(e.target.value)} />
           </Field>

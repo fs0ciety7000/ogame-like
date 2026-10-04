@@ -898,6 +898,13 @@
         "required": false,
         "maxSize": 20000,
         "presentable": false
+      },
+      {
+        "name": "profile",
+        "type": "json",
+        "required": false,
+        "maxSize": 60000,
+        "presentable": false
       }
     ],
     "indexes": [

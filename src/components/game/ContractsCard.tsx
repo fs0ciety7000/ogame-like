@@ -93,8 +93,8 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
               <motion.div
                 key={c.id}
                 layout
-                className={`flex flex-col gap-1.5 rounded-lg border p-2.5 ${
-                  c.claimed ? "border-mint-glow/30 bg-mint-glow/5" : done ? "border-gold-glow/50 bg-gold-glow/5" : "border-white/5 bg-black/20"
+                className={`flex flex-col gap-1.5 p-2.5 ${
+                  c.claimed ? "hud-callout hud-tone-mint" : done ? "hud-callout hud-tone-gold" : "hud-cut-sm border border-white/5 bg-black/20"
                 }`}
               >
                 <div className="flex items-start gap-2">

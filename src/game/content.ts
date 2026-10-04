@@ -1,4 +1,4 @@
-import { defaultChroniclesConfig, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
+import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
 import { DEFAULT_TITLES, setTitles, validateTitles, type TitleDef } from "@/game/titles";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
@@ -13,7 +13,7 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
 import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
-import { EVENT_RULES } from "@/game/events";
+import { EVENT_RULES, validateBossSchedule } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
@@ -51,6 +51,8 @@ export interface GameRules {
   market: typeof MARKET_RULES;
   expeditions: typeof EXPEDITION_RULES;
   leviathan: typeof LEVIATHAN_RULES;
+  /** v5.10.4 : boss de saison (occurrence, structure, reliques). */
+  seasonBoss: typeof SEASON_BOSS_RULES;
   wars: typeof WAR_RULES;
 }
 
@@ -98,6 +100,7 @@ const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
 const DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
 const DEFAULT_LEVIATHAN_RULES = { ...LEVIATHAN_RULES };
+const DEFAULT_SEASON_BOSS_RULES = { ...SEASON_BOSS_RULES };
 const DEFAULT_WAR_RULES = { ...WAR_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
@@ -116,7 +119,7 @@ export function defaultGameContent(): GameContent {
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, wars: DEFAULT_WAR_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES },
   });
 }
 
@@ -169,6 +172,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         weights: { ...defaults.rules.expeditions.weights, ...(overrides.rules?.expeditions?.weights ?? {}) },
       },
       leviathan: { ...defaults.rules.leviathan, ...(overrides.rules?.leviathan ?? {}) },
+      seasonBoss: { ...defaults.rules.seasonBoss, ...(overrides.rules?.seasonBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
     },
   };
@@ -200,6 +204,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(MARKET_RULES, content.rules.market);
   Object.assign(EXPEDITION_RULES, content.rules.expeditions);
   Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
+  Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
   Object.assign(WAR_RULES, content.rules.wars);
   current = content;
   return content;
@@ -207,12 +212,78 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
 
 /* ---------- validation (interface d'administration) ---------- */
 
+const RULE_GROUP_LABELS: Record<string, string> = {
+  pvp: "Protections",
+  combat: "Combat",
+  economy: "Économie",
+  fleets: "Flottes",
+  spy: "Espionnage",
+  debris: "Débris",
+  patrol: "Patrouilles",
+  events: "Événements",
+  seasons: "Saisons",
+  alliances: "Alliances",
+  pirates: "Pirates",
+  market: "Marché",
+  expeditions: "Expéditions",
+  leviathan: "Léviathan",
+  seasonBoss: "Boss de saison",
+  wars: "Guerres",
+};
+
+/**
+ * v5.10.5 : contrôle des règles avant enregistrement (onglet Règles, et serveur).
+ * Chaque valeur garde le type de sa valeur par défaut ; un nombre est fini, positif
+ * (sauf les malus déjà négatifs par défaut, compris entre −1 et 0) et un pourcentage
+ * (clé en « Pct ») ne dépasse pas 1.
+ */
+export function validateRules(rules: Partial<GameRules> | null | undefined): string[] {
+  const errors: string[] = [];
+  if (!rules || typeof rules !== "object") return ["Règles : contenu illisible."];
+  const defaults = defaultGameContent().rules as unknown as Record<string, Record<string, unknown>>;
+  for (const [group, value] of Object.entries(rules as Record<string, unknown>)) {
+    const def = defaults[group];
+    const label = RULE_GROUP_LABELS[group] ?? group;
+    if (!def) continue;
+    if (!value || typeof value !== "object") {
+      errors.push(`${label} : section illisible.`);
+      continue;
+    }
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      const d = def[key];
+      if (d === undefined || v === undefined) continue;
+      if (typeof d === "number") {
+        if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`${label} : « ${key} » doit être un nombre.`);
+        else if (d >= 0 && v < 0) errors.push(`${label} : « ${key} » ne peut pas être négatif.`);
+        else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label} : « ${key} » doit être entre −1 et 0.`);
+        else if (/Pct$/.test(key) && v > 1) errors.push(`${label} : « ${key} » est une part (0,1 = 10 %), 1 au plus.`);
+      } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label} : « ${key} » doit être oui ou non.`);
+      else if (typeof d === "string" && typeof v !== "string") errors.push(`${label} : « ${key} » doit être un texte.`);
+      else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label} : « ${key} » doit être une liste.`);
+    }
+  }
+  const merged = mergeRulesForCheck(rules);
+  errors.push(...validateBossSchedule("Léviathan", { weekend: merged.events.bossWeekend ?? "first", startHour: merged.leviathan.startHour ?? 18, durationHours: merged.leviathan.durationHours, dates: merged.events.bossDates ?? [] }));
+  errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
+  return errors;
+}
+
+function mergeRulesForCheck(rules: Partial<GameRules>): GameRules {
+  const d = defaultGameContent().rules;
+  const out = { ...d } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(rules)) if (v && typeof v === "object" && !Array.isArray(v)) out[k] = { ...(d as unknown as Record<string, object>)[k], ...v };
+  return out as unknown as GameRules;
+}
+
 const ID_PATTERN = /^[A-Za-z0-9_]+$/;
 
 /** Liste des erreurs bloquantes : identifiants en double, références vers
  *  un élément inexistant, valeurs impossibles. Vide = contenu valide. */
 export function validateGameContent(content: GameContent): string[] {
   const errors: string[] = [];
+  // v5.10.5 : règles (types, bornes, occurrence des boss).
+  errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id as string));
   const techIds = new Set(content.technologies.map((t) => t.id));
   const unitIds = new Set(content.units.map((u) => u.id));

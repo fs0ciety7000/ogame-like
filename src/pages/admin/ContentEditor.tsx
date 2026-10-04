@@ -140,8 +140,8 @@ export function ContentEditor<S extends ListSection>({
         </Card>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[320px_1fr]">
-        <Card className="flex max-h-[70vh] flex-col gap-2 p-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <Card className="flex max-h-[40vh] min-w-0 flex-col gap-2 p-2 lg:max-h-[70vh]">
           <Input placeholder="Filtrer…" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-8" />
           <div className="flex-1 overflow-y-auto">
             {visible.map(({ item, index }) => (
@@ -161,7 +161,7 @@ export function ContentEditor<S extends ListSection>({
           <p className="px-1 text-[11px] text-slate-500">{draft.length} élément(s)</p>
         </Card>
 
-        <Card className="flex flex-col gap-3 p-4">
+        <Card className="flex min-w-0 flex-col gap-3 p-4">
           {current ? (
             <>
               {renderForm(current, update, newIds.has(getId(current)))}

@@ -20,6 +20,6 @@ export function sendSeasonBossAssault(fleet: Record<string, number>, formation: 
   return callGame("fleet/send", { targetUid: "seasonboss", fleet, mission: "seasonboss", formation });
 }
 
-export function adminSeasonBoss(action: "start" | "stop" | "resize", maxHp?: number) {
-  return pb.send<LeviathanState>("/api/cosmic/admin/seasonboss", { method: "POST", body: { action, maxHp } });
+export function adminSeasonBoss(action: "start" | "stop" | "resize" | "reschedule", maxHp?: number, endMs?: number) {
+  return pb.send<LeviathanState>("/api/cosmic/admin/seasonboss", { method: "POST", body: { action, maxHp, endMs } });
 }

@@ -280,7 +280,7 @@ export function BalancePanel() {
       )}
 
       {live && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Section title="Combats (30 jours)">
             <ul className="flex flex-col gap-1 text-sm text-slate-300">
               <li>
@@ -331,7 +331,7 @@ export function BalancePanel() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Extracteurs — amortissement (technologies au maximum)">
           <table className="w-full text-left text-xs">
             <thead className="text-[10px] uppercase tracking-[0.1em] text-slate-500">

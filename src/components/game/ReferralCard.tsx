@@ -91,7 +91,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
       </p>
       {/* v4.7.1 : avancement du filleul vers la récompense. */}
       {st.by && !st.rewarded && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs">
+        <div className="hud-cut-sm border border-white/10 bg-white/[0.02] p-3 text-xs">
           <p className="mb-2 text-slate-300">Pour la récompense de parrainage :</p>
           <ul className="flex flex-col gap-1">
             <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`Bronze I : ${Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp).toLocaleString("fr-FR")} / ${REFERRAL_RULES.rewardXp.toLocaleString("fr-FR")} XP`} />

@@ -164,14 +164,14 @@ export function LoginPage() {
           </div>
 
           {!pbConfigured && (
-            <div className="mb-4 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
+            <div className="hud-callout hud-tone-gold mb-4 px-3 py-2 text-xs text-gold-glow">
               Serveur PocketBase non configuré — copie <code>.env.example</code> en <code>.env.local</code> et renseigne{" "}
               <code>VITE_POCKETBASE_URL</code>.
             </div>
           )}
 
           {sponsorName && mode === "register" && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-gold-glow/30 bg-gold-glow/10 px-3 py-2 text-xs text-gold-glow">
+            <div className="hud-callout hud-tone-gold mb-4 flex items-center gap-2 px-3 py-2 text-xs text-gold-glow">
               <UserPlus className="h-4 w-4 shrink-0" />
               <span>
                 Invité par <strong>{sponsorName}</strong> : crée ton empire, confirme ton e-mail et atteins Bronze I pour recevoir {REFERRAL_RULES.amberRecruit} Ambre (ton parrain aussi).

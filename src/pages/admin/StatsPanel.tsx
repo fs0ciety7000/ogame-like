@@ -84,7 +84,7 @@ export function StatsPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-white">Statistiques</h2>
         <span className="text-[11px] text-slate-500">calculées le {new Date(stats.generatedAt).toLocaleString("fr-FR")}</span>
         <Button variant="outline" size="sm" className="ml-auto" disabled={loading} onClick={() => void load()}>
@@ -98,7 +98,7 @@ export function StatsPanel() {
       {error && <p className="text-xs text-danger-glow">{error}</p>}
       <StatsPrintReport stats={stats} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Tile label="Joueurs" value={players.total} hint={`${players.new7d} nouveau(x) cette semaine`} />
         <Tile label="Actifs 24 h" value={players.active24h} hint={`${Math.round((players.active24h / Math.max(1, players.total)) * 100)} % des joueurs`} />
         <Tile label="Actifs 7 jours" value={players.active7d} />
@@ -121,7 +121,7 @@ export function StatsPanel() {
 
       {stats.retention && <RetentionPanels retention={stats.retention} />}
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Panel title="Répartition des rangs">
           {players.ranks.map((r) => (
             <Bar key={r.label} label={r.label} value={r.count} max={maxRank} display={String(r.count)} color="var(--color-gold-glow)" />
@@ -171,7 +171,7 @@ export function StatsPanel() {
         </Panel>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Panel title="Économie (médiane par joueur)">
           <div className="grid gap-1.5 text-xs">
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 text-[10px] uppercase tracking-wide text-slate-500">
@@ -242,7 +242,7 @@ export function StatsPanel() {
         {stats.endgame && <EndgamePanel endgame={stats.endgame} />}
 
         <Panel title="Missions en cours" className="lg:col-span-2">
-          <div className="grid gap-2 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {missions.map((m) => (
               <Bar key={m.key} label={m.name} value={m.running} max={maxMission} display={String(m.running)} color="var(--color-gold-glow)" />
             ))}
@@ -356,7 +356,7 @@ function EndgamePanel({ endgame }: { endgame: GameStats["endgame"] }) {
   const resName = (id: string | null) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id ?? "";
   return (
     <Panel title={`Fin de partie · ${endgame.players} joueur${endgame.players > 1 ? "s" : ""} engagé${endgame.players > 1 ? "s" : ""}`} className="lg:col-span-2">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <p className="hud-eyebrow text-[10px] text-slate-500">Technologies 21 à 25</p>
           {endgame.techs.map((t) => (
@@ -416,7 +416,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
   const maxActive = Math.max(1, ...daily.map((d) => d.active));
   const dayLabel = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <Panel title="Rétention · joueurs actifs par jour (30 j)" className="lg:col-span-2">
         <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-4">
           {[
@@ -465,6 +465,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
               <th className="py-1 text-right font-normal">Inscrits</th>
               <th className="py-1 text-right font-normal" title="Revenus le lendemain de l'inscription">J+1</th>
               <th className="py-1 text-right font-normal" title="Revenus au moins une fois 7 jours ou plus après l'inscription">J+7</th>
+              <th className="py-1 text-right font-normal" title="Revenus au moins une fois 30 jours ou plus après l'inscription">J+30</th>
               <th className="py-1 text-right font-normal" title="Vus ces 3 derniers jours">Encore là</th>
             </tr>
           </thead>
@@ -475,6 +476,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
                 <td className="py-1 text-right tabular-nums">{c.signups}</td>
                 <td className="py-1 text-right tabular-nums">{c.d1Pct === null ? "—" : `${c.d1Pct} %`}</td>
                 <td className="py-1 text-right tabular-nums">{c.d7Pct === null ? "—" : `${c.d7Pct} %`}</td>
+                <td className="py-1 text-right tabular-nums">{c.d30Pct === null || c.d30Pct === undefined ? "—" : `${c.d30Pct} %`}</td>
                 <td className="py-1 text-right tabular-nums">{c.signups ? `${c.activeNowPct} %` : "—"}</td>
               </tr>
             ))}
@@ -482,6 +484,28 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
         </table>
         <p className="text-[11px] text-slate-500">« — » : pas encore mesurable (suivi trop récent ou cohorte trop jeune).</p>
       </Panel>
+
+      {retention.survival && (
+        <Panel title="Rétention · survie après l'inscription">
+          <div className="flex flex-col gap-1.5">
+            {retention.survival.map((s) => (
+              <Bar key={s.day} label={`Encore actif à J+${s.day}`} value={s.pct ?? 0} max={100} display={s.pct === null ? "—" : `${s.pct} %`} title={`${s.eligible} inscrit(s) assez anciens`} />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">Part des joueurs revenus au moins une fois N jours après leur inscription, parmi ceux inscrits depuis au moins N jours.</p>
+        </Panel>
+      )}
+
+      {retention.churn && (
+        <Panel title="Décrochage · quand les joueurs partent">
+          <div className="flex flex-col gap-1.5">
+            {retention.churn.map((c) => (
+              <Bar key={c.label} label={c.label} value={c.count} max={Math.max(1, ...retention.churn.map((x) => x.count))} display={String(c.count)} color="var(--color-ember-glow)" />
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500">Joueurs sans activité depuis 7 jours, selon leur ancienneté lors de leur dernière visite. Le détail par objectif de prise en main est juste à côté.</p>
+        </Panel>
+      )}
 
       <Panel title={`Prise en main · ${recentPlayers} inscrit${recentPlayers > 1 ? "s" : ""} sur 60 jours`}>
         <div className="flex flex-col gap-1.5">

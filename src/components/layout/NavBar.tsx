@@ -5,8 +5,10 @@ import { bossPhase, isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
-import { Link, NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { HudSwitch } from "@/components/ui/hud";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -116,6 +118,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/messages", label: "Messages", icon: Mail },
       { to: "/game/joueurs", label: "Joueurs", icon: Users },
       { to: "/game/marche", label: "Marché", icon: Store },
+      { to: "/game/concours", label: "Concours", icon: Gift },
       { to: "/game/gazette", label: "Gazette", icon: Newspaper },
     ],
   },
@@ -474,11 +477,36 @@ function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number
         {FOOTER_GROUP.items.map((item) => (
           <CompactLink key={item.to} item={item} badge={badgeOf(item.to)} />
         ))}
+        <CockpitSwitch compact className="mx-auto mt-1" />
         <button type="button" onClick={onExpand} title="Déplier la barre" aria-label="Déplier la barre" className="mx-auto mt-1 grid h-8 w-9 place-items-center text-slate-600 hover:text-cyan-glow">
           <ChevronsRight className="h-4 w-4" />
         </button>
       </div>
     </aside>
+  );
+}
+
+/** Interrupteur « Vue cockpit » : l'accueil devient un poste de commande. */
+function CockpitSwitch({ className, compact }: { className?: string; compact?: boolean }) {
+  const on = useCockpitView((s) => s.enabled);
+  const navigate = useNavigate();
+  const toggle = (next: boolean) => {
+    setCockpitView(next);
+    if (next) navigate("/game");
+  };
+  if (compact) {
+    return (
+      <button type="button" role="switch" aria-checked={on} onClick={() => toggle(!on)} title={on ? "Vue cockpit : activée" : "Vue cockpit : désactivée"} aria-label="Vue cockpit" className={cn("hud-cut-sm grid h-8 w-9 place-items-center border", on ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-500 hover:text-cyan-glow", className)}>
+        <Gauge className="h-4 w-4" />
+      </button>
+    );
+  }
+  return (
+    <label className={cn("flex cursor-pointer items-center gap-2 border-t border-white/5 pt-2", className)}>
+      <Gauge className={cn("h-3.5 w-3.5 shrink-0", on ? "text-cyan-glow" : "text-slate-500")} />
+      <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">Vue cockpit</span>
+      <HudSwitch checked={on} onCheckedChange={toggle} label="Vue cockpit" />
+    </label>
   );
 }
 
@@ -540,6 +568,7 @@ function Sidebar() {
             <ChevronsLeft className="h-4 w-4" />
           </button>
         </div>
+        <CockpitSwitch className="mt-2" />
         {CURRENT_VERSION && (
           <NavLink to="/game/nouveautes" className="mt-1.5 block font-mono text-[10px] tracking-[0.14em] text-slate-600 hover:text-cyan-glow">
             BUILD v{CURRENT_VERSION}
@@ -663,6 +692,9 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
               </div>
             </div>
           ))}
+        </div>
+        <div onClickCapture={onClose}>
+          <CockpitSwitch className="mt-4" />
         </div>
       </DialogContent>
     </Dialog>

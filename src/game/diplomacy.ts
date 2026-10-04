@@ -1,4 +1,4 @@
-import { allianceRole, canDiplomacy } from "@/game/alliances";
+import { canDiplomacyIn } from "@/game/alliances";
 import { GameActionError } from "@/game/errors";
 import type { Alliance } from "@/types/game";
 
@@ -39,7 +39,7 @@ export interface AlliancePact {
 }
 
 type Pact = Omit<AlliancePact, "id">;
-type AllianceInfo = Pick<Alliance, "id" | "tag" | "name" | "createdBy" | "members" | "roles">;
+type AllianceInfo = Pick<Alliance, "id" | "tag" | "name" | "createdBy" | "members" | "roles" | "profile">;
 
 const HOUR = 3_600_000;
 
@@ -71,8 +71,7 @@ export function bindingPactBetween<T extends Pick<AlliancePact, "allianceA" | "a
 }
 
 function assertLeader(alliance: AllianceInfo, uid: string, what: string) {
-  const role = allianceRole(alliance, uid);
-  if (!canDiplomacy(role)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
+  if (!canDiplomacyIn(alliance, uid)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
 }
 
 export function proposePact(input: { actorUid: string; actorPseudo: string; own: AllianceInfo; target: AllianceInfo; pacts: Pact[]; atWar: boolean; now: number }): Pact {

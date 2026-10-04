@@ -100,7 +100,7 @@ export function EmojisPanel() {
         {list.length === 0 ? (
           <p className="text-sm text-slate-500">Aucun emoji personnalisé pour l'instant.</p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((e) => (
               <div key={e.code} className="flex items-center gap-3 border border-white/5 p-2">
                 <img src={e.url} alt={e.code} className="h-8 w-8 object-contain" />

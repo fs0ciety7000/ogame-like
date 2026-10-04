@@ -75,7 +75,7 @@ export function MailPanel() {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[22rem_1fr]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[22rem_1fr]">
       <div className="flex flex-col gap-3">
         <Card className="flex flex-col gap-3 p-4">
           <h3 className="hud-title flex items-center gap-2 text-sm text-white">

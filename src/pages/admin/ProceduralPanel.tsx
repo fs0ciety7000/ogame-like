@@ -58,7 +58,7 @@ function ChapterPreview({ m }: { m: ChronicleMonth }) {
       <p className="text-xs text-slate-400">
         Boss : <span className="text-slate-200">{m.boss.name}</span> · titre des participants : « {m.boss.title} »
       </p>
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {m.episodes.map((e, i) => (
           <div key={i} className="flex flex-col gap-1.5 border border-white/10 p-3">
             <p className="text-sm text-white">
@@ -181,7 +181,7 @@ export function ProceduralPanel() {
       </Card>
 
       <Section title="Réglages">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Toggle label="Génération automatique" hint="Désactivée : rien n'est écrit seul, les boutons ci-dessous restent utilisables." checked={settings.enabled} onChange={(v) => void saveSettings({ enabled: v })} />
           <Toggle label="Chapitres des Chroniques" hint="Scénario, objectifs, boss, récompenses, titre, bannière, Codex." checked={settings.chapters} onChange={(v) => void saveSettings({ chapters: v })} />
           <Toggle label="Passe propre à chaque chapitre" hint="Points par palier ajustés selon la réussite du mois, paliers variés." checked={settings.pass} onChange={(v) => void saveSettings({ pass: v })} />

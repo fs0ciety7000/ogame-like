@@ -149,7 +149,7 @@ export function CombatReplay({
   };
 
   return (
-    <div className="relative mt-3 overflow-hidden rounded-lg border border-white/5 bg-space-900/80">
+    <div className="hud-cut-sm relative mt-3 overflow-hidden border border-white/5 bg-space-900/80">
       <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`Replay du combat : ${banner}`}>
         {/* Tirs */}
         {!still &&

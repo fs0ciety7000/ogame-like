@@ -549,6 +549,24 @@ routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic
 
 // Offres expirées rendues à leur vendeur.
 /* ---------- Défis hebdomadaires (v3.8) ---------- */
+/** v5.10.5 : messages ciblés (notification à un groupe de joueurs). */
+routerAdd("POST", "/api/cosmic/admin/broadcast", (e) => require(`${__hooks}/cosmic_db.js`).adminBroadcast(e), $apis.requireAuth("users", "_superusers"));
+
+/** v5.10.5 : concours du pot commun (lancement, classement, prix). */
+routerAdd("POST", "/api/cosmic/admin/contests", (e) => require(`${__hooks}/cosmic_db.js`).adminContests(e), $apis.requireAuth("users", "_superusers"));
+cronAdd("cosmic_contests", "*/15 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).contestsTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] concours : ${err}`);
+  }
+  try {
+    require(`${__hooks}/cosmic_db.js`).allianceChallengeTick(Date.now());
+  } catch (err) {
+    console.log(`[cosmic] défi d'alliance : ${err}`);
+  }
+});
+
 cronAdd("cosmic_challenge", "*/10 * * * *", () => {
   try {
     require(`${__hooks}/cosmic_db.js`).challengeTick(Date.now());
@@ -668,6 +686,18 @@ routerAdd("POST", "/api/cosmic/admin/reports/github", (e) => require(`${__hooks}
 /** POST /api/cosmic/messages/send { to, text } · /read { with } */
 routerAdd("POST", "/api/cosmic/messages/send", (e) => require(`${__hooks}/cosmic_db.js`).messageSend(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/messages/read", (e) => require(`${__hooks}/cosmic_db.js`).messageRead(e), $apis.requireAuth("users"));
+
+/* ---------- v5.10.5 : règles vérifiées avant enregistrement ---------- */
+
+onRecordCreateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  e.next();
+}, "game_config");
+
+onRecordUpdateRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  e.next();
+}, "game_config");
 
 /* ---------- Journal des actions d'administration ---------- */
 

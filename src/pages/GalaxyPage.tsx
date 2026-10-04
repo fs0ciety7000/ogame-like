@@ -569,7 +569,7 @@ export function GalaxyPage() {
                 </div>
               )}
               {selectedDebris && (
-                <div className="flex items-center gap-2 rounded-lg border border-mint-glow/30 bg-mint-glow/5 px-3 py-2 text-xs text-slate-300">
+                <div className="hud-callout hud-tone-mint flex items-center gap-2 px-3 py-2 text-xs text-slate-300">
                   <span className="flex-1">
                     <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> {formatCompact(selectedDebris.scrap)} · <ResourceIcon id="energy" /> {formatCompact(selectedDebris.energy)}
                   </span>

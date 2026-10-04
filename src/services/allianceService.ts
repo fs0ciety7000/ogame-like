@@ -218,3 +218,43 @@ export async function setMemberRole(targetUid: string, role: "officer" | "diplom
 export function voteAllianceDaily(index: number) {
   return callGame<unknown>("alliance/daily", { vote: index });
 }
+
+/* ---------- v5.10.5 : fiche publique, rangs personnalisés, candidatures, défi de la semaine ---------- */
+
+export async function saveAllianceProfile(patch: { description?: string; recruiting?: string }) {
+  await allianceAction({ type: "profile", ...patch });
+}
+
+export async function saveAllianceRank(rank: { id?: string; name: string; color: string; perms: string[] }) {
+  await allianceAction({ type: "rankSave", rank });
+}
+
+export async function deleteAllianceRank(rankId: string) {
+  await allianceAction({ type: "rankDelete", rankId });
+}
+
+export async function assignAllianceRank(targetUid: string, rankId: string | null) {
+  await allianceAction({ type: "rankAssign", targetUid, rankId });
+}
+
+export async function applyToAlliance(allianceId: string, message: string) {
+  await allianceAction({ type: "apply", allianceId, message });
+}
+
+export async function withdrawApplication(allianceId: string) {
+  await allianceAction({ type: "withdraw", allianceId });
+}
+
+export async function answerApplication(targetUid: string, accept: boolean) {
+  await allianceAction({ type: accept ? "applicationAccept" : "applicationDecline", targetUid });
+}
+
+export async function fetchAllianceChallenge(): Promise<import("@/game/allianceChallenge").AllianceChallengeState | null> {
+  const { ALLIANCE_CHALLENGE_KEY, normalizeAllianceChallenge } = await import("@/game/allianceChallenge");
+  try {
+    const rec = await pb.collection("game_config").getFirstListItem<{ data: unknown }>(pb.filter("key = {:k}", { k: ALLIANCE_CHALLENGE_KEY }));
+    return normalizeAllianceChallenge(rec.data, Date.now());
+  } catch {
+    return null;
+  }
+}

@@ -171,6 +171,8 @@ const AMBIENCE: Record<ThemeId, { notes: number[]; type: OscillatorType; cutoff:
   holo: { notes: [110, 164.8, 220, 329.6], type: "sine", cutoff: 1400, lfo: 0.11 },
   cockpit: { notes: [41.2, 61.7, 82.4], type: "square", cutoff: 220, lfo: 0.05 },
   netrunner: { notes: [73.4, 110, 146.8, 174.6], type: "triangle", cutoff: 900, lfo: 0.16 },
+  // Aurora : accord majeur 7e, doux et chaud (Ré, Fa#, La, Do#).
+  aurora: { notes: [73.4, 92.5, 110, 138.6], type: "sine", cutoff: 1100, lfo: 0.09 },
 };
 
 function buildAmbience(audio: AudioContext, theme: ThemeId): AmbienceGraph {

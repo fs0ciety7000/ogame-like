@@ -21,6 +21,7 @@ import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
 import { usePlayerStore } from "@/store/playerStore";
 import { EmojiText, GameIcon } from "@/components/ui/game-icon";
+import { HudChip } from "@/components/ui/hud";
 
 /** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
 export function isHostile(f: Fleet, uid: string | undefined): boolean {
@@ -155,7 +156,7 @@ export function FleetsPanel({
         return (
           <div
             key={f.id}
-            className="animate-pulse-alert rounded-lg border border-danger-glow/50 bg-danger-glow/10 p-2.5"
+            className="hud-callout hud-tone-danger hud-callout-alert p-2.5"
           >
             <p className="flex items-center gap-1.5 text-xs font-semibold text-danger-glow">
               <AlertTriangle className="h-3.5 w-3.5" /> {f.mission === "pirate" ? "Raid du" : "Attaque de"}{" "}
@@ -211,7 +212,7 @@ export function FleetsPanel({
         return (
           <div
             key={f.id}
-            className="rounded-lg border border-white/5 bg-black/20 p-2.5"
+            className="hud-cut-sm border border-white/5 bg-black/20 p-2.5"
           >
             <div className="flex items-center gap-2 text-xs">
               <span
@@ -289,7 +290,7 @@ export function FleetsPanel({
       })}
 
       {hosted.length > 0 && (
-        <div className="rounded-lg border border-cyan-glow/30 bg-cyan-glow/5 p-2.5 text-xs">
+        <div className="hud-callout hud-tone-accent p-2.5 text-xs">
           <p className="font-semibold text-cyan-glow">
             <GameIcon name="shield" /> Garnisons alliées chez toi
           </p>
@@ -332,25 +333,17 @@ export function HostileFleetAlert() {
   const next = Math.min(...incoming.map((f) => f.arriveAtMs));
   return (
     <div className="flex items-center gap-1">
-      <Link
-        to="/game/galaxie"
-        className="animate-pulse-alert flex items-center gap-1.5 rounded-lg border border-danger-glow/60 bg-danger-glow/15 px-2 py-1 text-[11px] font-semibold text-danger-glow"
-        title="Flottes hostiles en approche"
-      >
-        <AlertTriangle className="h-3.5 w-3.5" />
-        {incoming.length > 1
-          ? `${incoming.length} flottes hostiles`
-          : "Flotte hostile"}{" "}
-        · {formatClock(Math.max(0, Math.floor((next - Date.now()) / 1000)))}
-      </Link>
-      <button
-        type="button"
-        onClick={() => setPatrolOpen(true)}
-        className="flex items-center gap-1 rounded-lg border border-danger-glow/60 px-2 py-1 text-[11px] font-semibold text-danger-glow hover:bg-danger-glow/15"
-        title="Mode fuite : mettre la flotte à l'abri en patrouille"
-      >
-        <Wind className="h-3.5 w-3.5" /> Fuir
-      </button>
+      <HudChip asChild tone="danger" alert title="Flottes hostiles en approche">
+        <Link to="/game/galaxie">
+          <AlertTriangle />
+          {incoming.length > 1 ? `${incoming.length} flottes hostiles` : "Flotte hostile"} · {formatClock(Math.max(0, Math.floor((next - Date.now()) / 1000)))}
+        </Link>
+      </HudChip>
+      <HudChip asChild tone="danger" title="Mode fuite : mettre la flotte à l'abri en patrouille">
+        <button type="button" onClick={() => setPatrolOpen(true)}>
+          <Wind /> Fuir
+        </button>
+      </HudChip>
       <PatrolDialog open={patrolOpen} onClose={() => setPatrolOpen(false)} />
     </div>
   );

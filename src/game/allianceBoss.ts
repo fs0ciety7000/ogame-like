@@ -1,7 +1,9 @@
 import { GameActionError } from "@/game/errors";
+import { hasAlliancePerm } from "@/game/allianceProfile";
+import { parisLocalToUtc } from "@/game/events";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { leviathanRanking, type LeviathanState } from "@/game/leviathan";
+import { FEED_MAX, leviathanRanking, type LeviathanState } from "@/game/leviathan";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
@@ -64,6 +66,11 @@ export function allianceWeekId(now: number): string {
   return new Date(t - ((dow + 6) % 7) * DAY).toISOString().slice(0, 10);
 }
 
+/** v5.10.5 : début de la semaine suivante (lundi 0 h, heure de Paris) : nouvel appel possible. */
+export function allianceNextWeekMs(now: number): number {
+  return parisLocalToUtc(Date.parse(`${allianceWeekId(now)}T00:00:00Z`) + 7 * DAY);
+}
+
 /** Boss de la semaine (rotation de trois). */
 export function allianceBossOfWeek(now: number): AllianceBossDef {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
@@ -97,6 +104,7 @@ export function normalizeAllianceBoss(raw: unknown): AllianceBossState | null {
     cost: r.cost && typeof r.cost === "object" ? r.cost : {},
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
+    ...(Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {}),
   };
 }
 
@@ -115,8 +123,9 @@ export function allianceBossHp(activeMembers: Pick<PlayerState, "units" | "techL
   return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
 }
 
-export function canCallAllianceBoss(alliance: Pick<Alliance, "createdBy" | "roles">, uid: string): boolean {
-  return alliance.createdBy === uid || alliance.roles?.[uid] === "officer";
+export function canCallAllianceBoss(alliance: Pick<Alliance, "createdBy" | "roles" | "members"> & { profile?: unknown }, uid: string): boolean {
+  // v5.10.5 : droit « Boss » (fondateur, officiers, ou rang personnalisé).
+  return hasAlliancePerm({ ...alliance, members: alliance.members ?? [uid] }, uid, "boss");
 }
 
 /** Appel du boss : rôle, une fois par semaine, trésor suffisant. Débite le trésor. */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Award, Clock, Crosshair, Flag, Gem, Medal, PackageOpen, Share2, Sparkles, Swords, Trophy, Users } from "lucide-react";
+import { Award, Clock, Crosshair, Flag, Gem, Medal, PackageOpen, Share2, Skull, Sparkles, Swords, Trophy, Users } from "lucide-react";
 import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
 import { bossCardInput } from "@/lib/shareCards";
 import { usePlayerStore } from "@/store/playerStore";
@@ -54,10 +54,10 @@ function Reveal({ children, index, on }: { children: React.ReactNode; index: num
   );
 }
 
-function RewardPills({ recap, reveal = false, rewarded, legacyNote }: { recap: Recap; reveal?: boolean; rewarded: boolean; legacyNote?: string }) {
+function RewardPills({ recap, reveal = false, rewarded, legacyNote, missingNote }: { recap: Recap; reveal?: boolean; rewarded: boolean; legacyNote?: string; missingNote?: string }) {
   const r = recap.reward;
   if (!r) {
-    if (!recap.mine) return <p className="text-xs text-slate-500">Tu n'as pas participé à ce combat.</p>;
+    if (!recap.mine) return <p className="text-xs text-slate-500">{missingNote ?? "Tu n'as pas participé à ce combat."}</p>;
     if (!rewarded) return <p className="text-xs text-slate-500">Récompenses en cours de distribution…</p>;
     // v5.10 : boss terminé avant l'enregistrement détaillé des récompenses (avant la 5.9.3).
     return (
@@ -128,9 +128,22 @@ function Chest() {
 }
 
 /** Contenu du bilan (carte sur la page ou fenêtre). */
-export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false, legacyNote }: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; reveal?: boolean; legacyNote?: string }) {
+type RecapProps = {
+  state: LeviathanState;
+  uid: string;
+  name: string;
+  image?: string;
+  accent?: string;
+  legacyNote?: string;
+  /** v5.10.3 : chiffres du combat entier (archive du Hall of fame qui ne garde que le podium). */
+  totals?: { totalDamage: number; participants: number; assaults: number };
+  /** Message quand le joueur n'apparaît pas dans les participants gardés. */
+  missingNote?: string;
+};
+
+export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false, legacyNote, totals, missingNote }: RecapProps & { reveal?: boolean }) {
   const reduce = useReducedMotion();
-  const recap = bossRecap(state, uid);
+  const recap = bossRecap(state, uid, 5, totals);
   const item = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.05 * i, duration: 0.3 } });
   const tone = recap.won ? "#5cf2b0" : "#ffb347";
   return (
@@ -150,6 +163,11 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
             <p className="text-xs text-slate-400">
               {recap.won ? "Les commandants ont abattu le colosse." : `Structure entamée à ${Math.round(recap.hpDealtPct * 100)} %. Moitié des récompenses.`}
             </p>
+            {recap.won && state.killedBy && (
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-300">
+                <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-white" />
+              </p>
+            )}
           </div>
         </div>
         <div className="relative h-1.5 bg-white/5">
@@ -194,7 +212,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
             </span>
           </div>
         ) : null}
-        <RewardPills recap={recap} reveal={reveal} rewarded={state.rewarded} legacyNote={legacyNote} />
+        <RewardPills recap={recap} reveal={reveal} rewarded={state.rewarded} legacyNote={legacyNote} missingNote={missingNote} />
       </div>
 
       {recap.top.length > 0 && (
@@ -228,8 +246,8 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
  * Bilan d'un boss terminé : carte sur la page, et fenêtre ouverte une seule
  * fois (par boss) pour un participant dès que ses récompenses sont versées.
  */
-export function BossRecapPanel(props: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; active: boolean; legacyNote?: string }) {
-  const { state, uid, active } = props;
+export function BossRecapPanel({ active, ...props }: RecapProps & { active: boolean }) {
+  const { state, uid } = props;
   const [open, setOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const player = usePlayerStore((s) => s.player);
@@ -288,17 +306,24 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
         fileName="cosmic-empires-boss.jpg"
         onClose={() => setSharing(false)}
       />
-      <Dialog open={open} onOpenChange={close}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogTitle>Bilan du combat</DialogTitle>
-          <div className="mt-3">
-            <BossRecapBody {...props} reveal />
-          </div>
-          <Button className="mt-4 w-full" onClick={() => close(false)}>
-            Fermer
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <BossRecapDialog {...props} open={open} onOpenChange={close} />
     </>
+  );
+}
+
+/** Fenêtre « Bilan du combat » (page du boss, et v5.10.3 : clic sur un combat du Hall of fame). */
+export function BossRecapDialog({ open, onOpenChange, ...props }: RecapProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogTitle>Bilan du combat</DialogTitle>
+        <div className="mt-3">
+          <BossRecapBody {...props} reveal />
+        </div>
+        <Button className="mt-4 w-full" onClick={() => onOpenChange(false)}>
+          Fermer
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -81,3 +81,25 @@ export function notificationLink(n: { kind: NotificationKind; link?: string | nu
   if (n.link && n.link.startsWith("/game")) return n.link;
   return KIND_LINKS[n.kind] ?? null;
 }
+
+/* v5.11 : regroupement dans la cloche — des notifications consécutives de même
+   type et de même titre, à moins de 6 h d'écart, forment un seul groupe dépliable. */
+export const GROUP_WINDOW_MS = 6 * 3600_000;
+
+export interface NotificationGroup<T> {
+  key: string;
+  head: T;
+  /** Les autres notifications du groupe (la plus récente est `head`). */
+  rest: T[];
+}
+
+export function groupNotifications<T extends { id: string; kind: NotificationKind; title: string; createdAtMs: number }>(items: T[], windowMs = GROUP_WINDOW_MS): NotificationGroup<T>[] {
+  const groups: NotificationGroup<T>[] = [];
+  for (const n of items) {
+    const last = groups[groups.length - 1];
+    const prev = last ? (last.rest[last.rest.length - 1] ?? last.head) : null;
+    if (last && prev && last.head.kind === n.kind && last.head.title === n.title && Math.abs(prev.createdAtMs - n.createdAtMs) <= windowMs) last.rest.push(n);
+    else groups.push({ key: n.id, head: n, rest: [] });
+  }
+  return groups;
+}

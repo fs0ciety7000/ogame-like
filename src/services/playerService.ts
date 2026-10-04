@@ -406,6 +406,18 @@ export function startMission(_uid: string, missionKey: string) {
   return act({ type: "mission", missionKey });
 }
 
+export function claimAllRewards() {
+  return act<Partial<Record<import("@/game/claimAll").ClaimAllAction["type"], number>>>({ type: "claimAll" });
+}
+
+export function claimGuide(stepId: string) {
+  return act<{ resources: Partial<Record<import("@/types/game").ResourceId, number>>; amber: number }>({ type: "claimGuide", stepId });
+}
+
+export function hideGuide(hidden: boolean) {
+  return act({ type: "hideGuide", hidden });
+}
+
 export function claimOnboarding(stepId: string) {
   return act<Partial<Record<import("@/types/game").ResourceId, number>>>({ type: "claimOnboarding", stepId });
 }
@@ -659,6 +671,10 @@ export function buildColonyDefense(colonyId: string, unitId: string, qty: number
 
 export function renameColony(colonyId: string, name: string) {
   return act({ type: "colonyRename", colonyId, name });
+}
+
+export function setColonySpec(colonyId: string, spec: string) {
+  return act({ type: "colonySpec", colonyId, spec });
 }
 
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {

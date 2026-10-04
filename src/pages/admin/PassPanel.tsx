@@ -61,7 +61,7 @@ const num = { size: "sm", stepper: false, quick: false, meter: false, className:
 
 function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.02] p-1">
+    <span className="inline-flex max-w-full flex-wrap items-center gap-1 border border-white/10 bg-white/[0.02] p-1">
       <select className={sel} value={value.kind} onChange={(e) => onChange(blank(e.target.value as PassReward["kind"]))}>
         {KINDS.map((k) => (
           <option key={k.value} value={k.value}>
@@ -128,7 +128,7 @@ export function PassPanel() {
         <span className="text-xs text-slate-500">
           {cfg.tiers.length} paliers · <AmberAmount value={amber} /> au total
         </span>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -168,7 +168,7 @@ export function PassPanel() {
             <span className="ml-auto hidden text-[11px] text-slate-500 lg:inline">{list.map((r) => describePassReward(r, "2026-10")).join(" · ")}</span>
           </div>
         ))}
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" onClick={() => setCfg((c) => ({ ...c, tiers: [...c.tiers, [blank("amber")]] }))}>
             <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un palier
           </Button>

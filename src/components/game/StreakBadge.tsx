@@ -9,6 +9,7 @@ import { claimStreak, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn } from "@/lib/utils";
+import { HudChip } from "@/components/ui/hud";
 
 /** v5.3 : pastille de l'en-tête — série de connexion quotidienne. */
 export function StreakBadge() {
@@ -56,18 +57,15 @@ export function StreakBadge() {
     <Tooltip>
       <TooltipTrigger asChild>
         {status.claimed ? (
-          <span className="flex items-center gap-1 rounded-lg border border-ember-glow/40 bg-ember-glow/10 px-2 py-1 text-[11px] font-semibold text-ember-glow">
-            <Flame className="h-3.5 w-3.5" /> {status.current} j
-          </span>
+          <HudChip tone="neutral">
+            <Flame /> Série {status.current} j
+          </HudChip>
         ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void claim()}
-            className="animate-pulse-alert flex items-center gap-1 rounded-lg border border-gold-glow/60 bg-gold-glow/15 px-2 py-1 text-[11px] font-semibold text-gold-glow"
-          >
-            <Flame className="h-3.5 w-3.5" /> Série : jour {status.next} — réclamer
-          </button>
+          <HudChip asChild tone="gold" alert>
+            <button type="button" disabled={busy} onClick={() => void claim()}>
+              <Flame /> Série j{status.next} · réclamer
+            </button>
+          </HudChip>
         )}
       </TooltipTrigger>
       <TooltipContent>

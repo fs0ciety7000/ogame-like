@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bossHistoryEntry, bossRecords, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
+import { bossHistoryEntry, bossHistoryState, bossRecords, entryRank, myBossStats, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
 import { inferKilledBy, LEVIATHAN_RULES, resolveLeviathanAssault, type LeviathanState } from "@/game/leviathan";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
@@ -96,5 +96,39 @@ describe("inferKilledBy (v5.10.2)", () => {
     });
     // GPTIPU-1 a lancé 9 min avant la chute : arrivé trop tard, ce n'est pas lui.
     expect(inferKilledBy(real)).toEqual({ uid: "dkn2paqrn1mou9u", pseudo: "Nicotine" });
+  });
+});
+
+describe("bossHistoryState (v5.10.3)", () => {
+  it("reconstitue le combat archivé pour rouvrir le bilan", () => {
+    const st = base({ rewards: { a: { gain: { metal: 100 } } } });
+    const entry = bossHistoryEntry("leviathan", st, { name: "Le Léviathan" });
+    const { state, complete } = bossHistoryState(entry);
+    expect(complete).toBe(true);
+    expect(state).toMatchObject({ id: "lev-1", status: "killed", hp: 0, rewarded: true, killedBy: { uid: "b" } });
+    expect(state.contributions.b).toMatchObject({ damage: 300, assaults: 2 });
+    expect(state.rewards?.a).toEqual({ gain: { metal: 100 } });
+  });
+
+  it("archive d'avant la 5.10.3 : podium seul, chiffres du combat entier gardés", () => {
+    const old = { ...bossHistoryEntry("seasonboss", base({ status: "failed", hp: 400 }), { name: "Varan" }), ranking: undefined, participants: 9, totalDamage: 2000 };
+    const { state, complete, totals } = bossHistoryState(old);
+    expect(complete).toBe(false);
+    expect(state.status).toBe("failed");
+    expect(totals).toMatchObject({ participants: 9, totalDamage: 2000 });
+  });
+});
+
+describe("mes combats (v5.10.5)", () => {
+  it("rang dans un combat et records par type de boss", () => {
+    const a = bossHistoryEntry("leviathan", base(), { name: "Le Léviathan" });
+    const b = bossHistoryEntry("seasonboss", base({ id: "sb-2", killedBy: { uid: "a", pseudo: "Alpha" } }), { name: "Varan" });
+    expect(entryRank(a, "b")).toEqual({ rank: 2, damage: 300 });
+    expect(entryRank(a, "zz")).toBeNull();
+    const stats = myBossStats([a, b], "a");
+    expect(stats.map((s) => [s.kind, s.bestRank, s.fights, s.finishers])).toEqual([
+      ["leviathan", 1, 1, 0],
+      ["seasonboss", 1, 1, 1],
+    ]);
   });
 });

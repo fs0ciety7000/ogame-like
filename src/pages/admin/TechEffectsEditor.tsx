@@ -69,8 +69,8 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
         const def = TECH_EFFECT_DEFAULTS[e.type] ?? 0;
         const shown = e.type === "unlock_buildings" || e.type === "unlock_hangars" ? { ...e, targets: [...new Set([...linkedBuildings.map((b) => b.id), ...(e.targets ?? [])])] } : e;
         return (
-          <div key={i} className="hud-cut-sm grid gap-2 border border-cyan-glow/15 bg-black/25 p-3 sm:grid-cols-[1fr_auto]">
-            <div className="grid gap-2 sm:grid-cols-2">
+          <div key={i} className="hud-cut-sm grid grid-cols-1 gap-2 border border-cyan-glow/15 bg-black/25 p-3 sm:grid-cols-[1fr_auto]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label className="flex flex-col gap-1 sm:col-span-2">
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Effet {i + 1}</span>
                 <select
