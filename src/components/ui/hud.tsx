@@ -1,20 +1,86 @@
 import { EmojiIcon } from "@/components/ui/game-icon";
+import * as React from "react";
 import type { ReactNode } from "react";
+import { Slot, Slottable } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 import { NumberInput } from "@/components/ui/number-input";
 
 /* Briques visuelles du HUD (v2.4) : étiquette, jauge segmentée, pastille de
    coût, barre de niveau à crans, sélecteur de quantité. */
 
-export function HudTag({ children, tone = "accent", className }: { children: ReactNode; tone?: "accent" | "ember" | "gold" | "mint" | "danger"; className?: string }) {
-  const tones = {
-    accent: "border-cyan-glow/35 bg-cyan-glow/[0.07] text-cyan-glow",
-    ember: "border-ember-glow/40 bg-ember-glow/[0.07] text-ember-glow",
-    gold: "border-gold-glow/40 bg-gold-glow/[0.07] text-gold-glow",
-    mint: "border-mint-glow/40 bg-mint-glow/[0.07] text-mint-glow",
-    danger: "border-danger-glow/45 bg-danger-glow/[0.08] text-danger-glow",
-  }[tone];
-  return <span className={cn("hud-cut-sm inline-flex items-center gap-1 border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em]", tones, className)}>{children}</span>;
+/** Couleurs sémantiques du HUD : accent = interactif, mint = positif,
+ *  ember = attention, danger = danger, gold = prestige, violet = second
+ *  accent, neutral = information sans enjeu. */
+export type HudTone = "accent" | "mint" | "ember" | "danger" | "gold" | "violet" | "neutral";
+
+export const HUD_TONE: Record<HudTone, string> = {
+  accent: "var(--color-cyan-glow)",
+  mint: "var(--color-mint-glow)",
+  ember: "var(--color-ember-glow)",
+  danger: "var(--color-danger-glow)",
+  gold: "var(--color-gold-glow)",
+  violet: "var(--color-violet-glow)",
+  neutral: "var(--color-slate-300)",
+};
+
+/** Couleur de faction (ember, gold, cyan, mint, danger) → ton du HUD. */
+export function factionTone(color: string): HudTone {
+  return color === "cyan" ? "accent" : color in HUD_TONE ? (color as HudTone) : "ember";
+}
+
+type ChipProps = React.HTMLAttributes<HTMLElement> & {
+  tone?: HudTone;
+  /** Alerte en cours : point qui pulse (le mouvement signale un état). */
+  alert?: boolean;
+  /** « md » : pastille d'en-tête, « sm » : étiquette dans une carte. */
+  size?: "sm" | "md";
+  /** Rend l'enfant (Link, button) avec le style de la pastille. */
+  asChild?: boolean;
+};
+
+/** Pastille d'état du HUD : capitales mono, coin coupé, bordure 1px, une
+ *  couleur sémantique. Statique (span) ou action (asChild + Link / button). */
+export const HudChip = React.forwardRef<HTMLElement, ChipProps>(function HudChip({ tone = "accent", alert, size = "md", asChild, className, style, children, ...rest }, ref) {
+  const Comp = (asChild ? Slot : "span") as React.ElementType;
+  return (
+    <Comp
+      ref={ref}
+      className={cn("hud-chip", size === "sm" ? "hud-chip-sm" : "hud-chip-md", (asChild || rest.onClick) && "hud-chip-action", className)}
+      style={{ ["--c" as string]: HUD_TONE[tone], ...style }}
+      {...rest}
+    >
+      {alert && <i aria-hidden className="hud-chip-dot" />}
+      {asChild ? <Slottable>{children}</Slottable> : children}
+    </Comp>
+  );
+});
+
+/** Étiquette statique (rétrocompatible) : HudChip en petite taille. */
+export function HudTag({ children, tone = "accent", className }: { children: ReactNode; tone?: "accent" | "ember" | "gold" | "mint" | "danger" | "violet"; className?: string }) {
+  return (
+    <HudChip size="sm" tone={tone} className={className}>
+      {children}
+    </HudChip>
+  );
+}
+
+/** Encadré dans un panneau (notice, menace, conseil) : coin coupé, liseré
+ *  gauche de la couleur sémantique, fond teinté très léger. */
+export function HudCallout({ tone = "accent", alert, className, children, ...rest }: React.HTMLAttributes<HTMLDivElement> & { tone?: HudTone; alert?: boolean }) {
+  return (
+    <div {...rest} className={cn("hud-callout p-3", alert && "hud-callout-alert", className)} style={{ ["--c" as string]: HUD_TONE[tone], ...rest.style }}>
+      {children}
+    </div>
+  );
+}
+
+/** Interrupteur du HUD : rail rectangulaire à coins coupés, curseur carré. */
+export function HudSwitch({ checked, onCheckedChange, label, className, ...rest }: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> & { checked: boolean; onCheckedChange: (v: boolean) => void; label: string }) {
+  return (
+    <button {...rest} type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onCheckedChange(!checked)} className={cn("hud-switch", className)}>
+      <i aria-hidden />
+    </button>
+  );
 }
 
 /** Statistique avec jauge à 12 segments (`value` rapporté à `max`). */

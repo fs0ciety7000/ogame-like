@@ -98,7 +98,7 @@ export function CodexPage() {
             transition={{ delay: Math.min(i, 15) * 0.025 }}
             whileHover={e.unlocked ? { y: -3 } : undefined}
             className={cn(
-              "group relative flex flex-col overflow-hidden rounded-lg border text-left transition-colors",
+              "hud-cut group relative flex flex-col overflow-hidden border text-left transition-colors",
               e.unlocked ? "border-gold-glow/25 bg-space-900/60 hover:border-gold-glow/60" : "cursor-default border-white/5 bg-space-950/60",
             )}
           >

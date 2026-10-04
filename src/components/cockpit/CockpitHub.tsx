@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudChip } from "@/components/ui/hud";
 import { CockpitViewport, type ViewportFleet } from "@/components/cockpit/CockpitViewport";
 import { useAgenda } from "@/components/game/AgendaCard";
 import { isHostile } from "@/components/game/FleetsPanel";
@@ -179,11 +180,11 @@ export function CockpitHub() {
     ...(economy.outage ? [{ id: "outage", tone: "var(--color-danger-glow)", icon: Zap, title: "Panne d'énergie", sub: "Production à 50 %", to: "/game/batiments" }] : []),
     ...fills
       .filter((f) => f.fill >= 0.85)
-      .map((f) => ({ id: `full:${f.r.id}`, tone: f.fill >= 1 ? "var(--color-ember-glow)" : "var(--color-gold-glow)", icon: Zap, title: f.fill >= 1 ? `${f.r.name} : entrepôt plein` : `${f.r.name} presque plein`, sub: `${Math.round(f.fill * 100)} % de l'entrepôt`, to: "/game/batiments" })),
+      .map((f) => ({ id: `full:${f.r.id}`, tone: f.fill >= 1 ? "var(--color-danger-glow)" : "var(--color-ember-glow)", icon: Zap, title: f.fill >= 1 ? `${f.r.name} : entrepôt plein` : `${f.r.name} presque plein`, sub: `${Math.round(f.fill * 100)} % de l'entrepôt`, to: "/game/batiments" })),
     ...agenda
       .filter((a) => !a.done && (a.endMs ?? a.startMs) > now)
       .slice(0, 3)
-      .map((a) => ({ id: `ag:${a.id}`, tone: "var(--color-gold-glow)", icon: CalendarClock, title: `${a.emoji ? `${a.emoji} ` : ""}${a.title}`, sub: a.startMs > now ? `Dans ${eta(a.startMs, now)}` : a.endMs ? `En cours · fin dans ${eta(a.endMs, now)}` : "Maintenant", to: a.link })),
+      .map((a) => ({ id: `ag:${a.id}`, tone: "var(--color-violet-glow)", icon: CalendarClock, title: `${a.emoji ? `${a.emoji} ` : ""}${a.title}`, sub: a.startMs > now ? `Dans ${eta(a.startMs, now)}` : a.endMs ? `En cours · fin dans ${eta(a.endMs, now)}` : "Maintenant", to: a.link })),
   ];
   const urgentCount = alerts.filter((a) => a.urgent).length;
   const firstHostile = hostile[0];
@@ -212,14 +213,12 @@ export function CockpitHub() {
             </span>
           </Link>
           <div className="relative z-[2] flex flex-wrap items-center gap-2">
-            <span className="ck-tag" style={{ ["--c" as string]: "var(--color-mint-glow)" }}>
-              <i className="ck-dot" /> Liaison stable
-            </span>
-            {vacation && <span className="ck-tag" style={{ ["--c" as string]: "var(--color-gold-glow)" }}>Vacances</span>}
+            <HudChip tone="mint">Liaison stable</HudChip>
+            {vacation && <HudChip tone="ember">Vacances</HudChip>}
             {hostile.length > 0 && (
-              <span className="ck-tag" style={{ ["--c" as string]: "var(--color-danger-glow)" }}>
-                <i className="ck-dot animate-pulse-alert" /> {hostile.length} hostile{hostile.length > 1 ? "s" : ""}
-              </span>
+              <HudChip tone="danger" alert>
+                {hostile.length} hostile{hostile.length > 1 ? "s" : ""}
+              </HudChip>
             )}
             <span className="font-mono text-xs tracking-[0.1em] text-slate-200">{new Date(now).toISOString().slice(11, 19)} UTC</span>
           </div>
@@ -240,12 +239,12 @@ export function CockpitHub() {
             </span>
           </div>
           <div className="ck-hud right-7 top-5 hidden justify-items-end gap-1.5 sm:grid">
-            <span className="ck-tag" style={{ ["--c" as string]: "var(--color-mint-glow)" }}>
-              <Shield className="h-3 w-3" /> Défense {formatCompact(defense)}
-            </span>
-            <span className="ck-tag" style={{ ["--c" as string]: "var(--color-violet-glow)" }}>
-              <Rocket className="h-3 w-3" /> Attaque {formatCompact(attack)}
-            </span>
+            <HudChip tone="neutral">
+              <Shield /> Défense {formatCompact(defense)}
+            </HudChip>
+            <HudChip tone="neutral">
+              <Rocket /> Attaque {formatCompact(attack)}
+            </HudChip>
           </div>
           <div className="ck-target" aria-hidden>
             <i />
@@ -385,7 +384,7 @@ export function CockpitHub() {
                       <span className="ck-item-t">{a.title}</span>
                       <span className="ck-item-s">{a.sub}</span>
                     </span>
-                    {a.urgent ? <span className="ck-tag" style={{ ["--c" as string]: "var(--color-danger-glow)" }}>Urgent</span> : <span />}
+                    {a.urgent ? <HudChip tone="danger" size="sm">Urgent</HudChip> : <span />}
                   </Link>
                 ))
               ))}

@@ -163,7 +163,7 @@ export function LabPage() {
                 const check = checkPrereqs(selected, levels, plans);
                 if (check.list.length > 0) {
                   return (
-                    <div className="mt-3 rounded-lg border-l-2 border-cyan-glow/40 bg-black/20 p-3 text-xs">
+                    <div className="hud-callout hud-tone-accent mt-3 p-3 text-xs">
                       <p className="mb-1 font-semibold uppercase tracking-wide text-cyan-glow">Prérequis</p>
                       {check.list.map((r) => (
                         <p key={r.id} className={r.valide ? "text-mint-glow" : "text-danger-glow"}>

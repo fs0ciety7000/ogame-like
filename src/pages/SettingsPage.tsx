@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { HudSwitch } from "@/components/ui/hud";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
@@ -433,7 +434,7 @@ function AllianceNotifsCard() {
               <span className="block text-slate-200">{n.label}</span>
               <span className="text-xs text-slate-500">{n.hint}</span>
             </span>
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={prefs[n.key] !== false} disabled={busy} onChange={() => void toggle(n.key)} />
+            <HudSwitch checked={prefs[n.key] !== false} disabled={busy} onCheckedChange={() => void toggle(n.key)} label={n.label} />
           </label>
         ))}
       </CardContent>
@@ -545,13 +546,13 @@ function HelpCard() {
       <CardContent className="space-y-3 text-sm">
         <label className="flex items-center justify-between gap-3">
           <span className="text-slate-300">Bulles d'aide sur les pages (débutants)</span>
-          <input
-            type="checkbox"
+          <HudSwitch
             checked={tips}
-            onChange={(e) => {
-              setTipsEnabled(e.target.checked, e.target.checked);
-              setTips(e.target.checked);
-              toast.success(e.target.checked ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
+            label="Bulles d'aide"
+            onCheckedChange={(v) => {
+              setTipsEnabled(v, v);
+              setTips(v);
+              toast.success(v ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
             }}
           />
         </label>
@@ -619,7 +620,7 @@ function ThemeCard() {
             </span>
             <span className="text-xs text-slate-500">L'accueil devient un poste de commande : verrière avec ta planète et les flottes en approche, écran multifonction (flottes, chantiers, alertes) et console d'actions rapides (touches 1 à 6). Aussi disponible en bas de la barre latérale.</span>
           </span>
-          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={cockpit} onChange={(e) => setCockpitView(e.target.checked)} />
+          <HudSwitch checked={cockpit} onCheckedChange={setCockpitView} label="Vue cockpit" />
         </label>
         <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
           <span>
@@ -634,7 +635,7 @@ function ThemeCard() {
                 Aperçu
               </button>
             )}
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={winter} onChange={(e) => setWinter(e.target.checked)} />
+            <HudSwitch checked={winter} onCheckedChange={setWinter} label="Neige d'hiver" />
           </span>
         </label>
         {month && (
@@ -645,7 +646,7 @@ function ThemeCard() {
               </span>
               <span className="text-xs text-slate-500">Halo et nébuleuses aux couleurs de la chronique du mois.</span>
             </span>
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={skin} onChange={(e) => setSeasonSkin(e.target.checked)} />
+            <HudSwitch checked={skin} onCheckedChange={setSeasonSkin} label="Habillage de saison" />
           </label>
         )}
       </CardContent>
@@ -669,7 +670,7 @@ function SoundCard() {
             <span className="text-slate-200">Effets sonores</span>
             <span className="block text-xs text-slate-500">Coupés par défaut sur mobile. Le bouton haut-parleur de l'en-tête fait la même chose.</span>
           </span>
-          <input type="checkbox" className="h-4 w-4 shrink-0 accent-cyan-400" checked={enabled} onChange={(e) => setSfxEnabled(e.target.checked)} />
+          <HudSwitch checked={enabled} onCheckedChange={setSfxEnabled} label="Effets sonores" />
         </label>
         <div className={cn("grid gap-3 border-t border-white/5 pt-3 sm:grid-cols-2", !enabled && "pointer-events-none opacity-40")}>
           {SFX_CATEGORIES.map((c) => (

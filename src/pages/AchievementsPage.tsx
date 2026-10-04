@@ -43,7 +43,7 @@ function AchievementCard({ a, player, rate }: { a: AchievementDef; player: Playe
   const progress = achievementProgress(a, player);
   const style = TIER_STYLE[a.tier];
   return (
-    <div className={cn("flex gap-3 rounded-xl border bg-black/20 p-3", unlocked ? style.border : "border-white/5")}>
+    <div className={cn("hud-cut-sm flex gap-3 border bg-black/20 p-3", unlocked ? style.border : "border-white/5")}>
       <AchievementMedal a={a} unlocked={unlocked} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline justify-between gap-2">

@@ -7,6 +7,7 @@ import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { HudSwitch } from "@/components/ui/hud";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
@@ -489,25 +490,23 @@ function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number
 function CockpitSwitch({ className, compact }: { className?: string; compact?: boolean }) {
   const on = useCockpitView((s) => s.enabled);
   const navigate = useNavigate();
-  const toggle = () => {
-    setCockpitView(!on);
-    if (!on) navigate("/game");
+  const toggle = (next: boolean) => {
+    setCockpitView(next);
+    if (next) navigate("/game");
   };
   if (compact) {
     return (
-      <button type="button" role="switch" aria-checked={on} onClick={toggle} title={on ? "Vue cockpit : activée" : "Vue cockpit : désactivée"} aria-label="Vue cockpit" className={cn("flex h-9 w-9 items-center justify-center border", on ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-500 hover:text-cyan-glow", className)}>
+      <button type="button" role="switch" aria-checked={on} onClick={() => toggle(!on)} title={on ? "Vue cockpit : activée" : "Vue cockpit : désactivée"} aria-label="Vue cockpit" className={cn("hud-cut-sm grid h-8 w-9 place-items-center border", on ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-500 hover:text-cyan-glow", className)}>
         <Gauge className="h-4 w-4" />
       </button>
     );
   }
   return (
-    <button type="button" role="switch" aria-checked={on} onClick={toggle} className={cn("group flex w-full items-center gap-2 border px-2 py-1.5 text-left transition-colors", on ? "border-cyan-glow/40 bg-cyan-glow/[0.06]" : "border-white/10 hover:border-cyan-glow/30", className)}>
+    <label className={cn("flex cursor-pointer items-center gap-2 border-t border-white/5 pt-2", className)}>
       <Gauge className={cn("h-3.5 w-3.5 shrink-0", on ? "text-cyan-glow" : "text-slate-500")} />
       <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">Vue cockpit</span>
-      <span className={cn("relative h-4 w-7 shrink-0 rounded-full border transition-colors", on ? "border-cyan-glow bg-cyan-glow/30" : "border-white/20 bg-white/5")}>
-        <span className={cn("absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full transition-all", on ? "left-[14px] bg-cyan-glow shadow-[0_0_8px_var(--color-cyan-glow)]" : "left-[2px] bg-slate-500")} />
-      </span>
-    </button>
+      <HudSwitch checked={on} onCheckedChange={toggle} label="Vue cockpit" />
+    </label>
   );
 }
 

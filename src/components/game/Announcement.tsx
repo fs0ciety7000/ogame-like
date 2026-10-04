@@ -532,7 +532,7 @@ export function AnnouncementDialog() {
                       navigate(f.to);
                     }}
                     className={cn(
-                      "flex items-start gap-2.5 rounded-lg border bg-space-950/75 p-3 text-left backdrop-blur-sm transition-colors",
+                      "hud-cut-sm flex items-start gap-2.5 border bg-space-950/75 p-3 text-left backdrop-blur-sm transition-colors",
                       gold ? "border-gold-glow/25 hover:border-gold-glow/60" : "border-cyan-glow/25 hover:border-cyan-glow/60",
                     )}
                     initial={{ opacity: 0, y: 12 }}
@@ -554,7 +554,7 @@ export function AnnouncementDialog() {
                 return (
                   <motion.div
                     key={f.id}
-                    className={cn("rounded-lg border bg-space-950/70 p-3 backdrop-blur-sm", a.border)}
+                    className={cn("hud-cut-sm border bg-space-950/70 p-3 backdrop-blur-sm", a.border)}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1 + i * 0.12 }}

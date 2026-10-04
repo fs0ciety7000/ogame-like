@@ -127,7 +127,7 @@ export function JournalPage() {
                       key={c.id}
                       type="button"
                       onClick={() => setTab(c.id)}
-                      className={cn("flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs", style.className)}
+                      className={cn("hud-cut-sm flex items-center gap-1.5 border px-2 py-1 text-xs", style.className)}
                     >
                       <Icon className="h-3.5 w-3.5" />
                       {c.label} : {count}
