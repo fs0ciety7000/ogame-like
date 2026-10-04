@@ -5249,6 +5249,17 @@ function flushState(playerIn, queuesIn, now) {
       }
     }
   }
+  const passTierReady = passTierToAnnounce(player, now);
+  if (passTierReady.tier > 0 && passTierReady.claimable > 0) {
+    notifications.push({
+      kind: "season",
+      title: `Passe de saison : palier ${passTierReady.tier} atteint`,
+      message: passTierReady.claimable > 1 ? `${passTierReady.claimable} paliers t'attendent : r\xE9cup\xE8re leurs r\xE9compenses.` : "Une r\xE9compense t'attend : r\xE9cup\xE8re-la sur la page du passe.",
+      createdAtMs: now,
+      read: false,
+      link: "/game/passe"
+    });
+  }
   for (const t of checkNewTitles(player)) {
     if (!grantTitle(player, t.label, `title:${t.id}`)) continue;
     const style = titleStyle(t.label);
@@ -6216,14 +6227,26 @@ function passState(player, now) {
   if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
   const activity = {};
   for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
-  return {
+  return __spreadValues({
     seasonId,
     points: Math.max(0, Number(raw.points) || 0),
     claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
     loginDay: String((_c = raw.loginDay) != null ? _c : ""),
     completed,
     activity
-  };
+  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {});
+}
+function passTierToAnnounce(player, now) {
+  var _a;
+  if (!player.seasonPass) return { tier: 0, claimable: 0 };
+  const st = passState(player, now);
+  const tier = passTier(st.points, st.seasonId);
+  if (tier <= ((_a = st.notifiedTier) != null ? _a : 0)) return { tier: 0, claimable: 0 };
+  st.notifiedTier = tier;
+  player.seasonPass = st;
+  let claimable = 0;
+  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) claimable += 1;
+  return { tier, claimable };
 }
 var MONTH_PASSES = /* @__PURE__ */ new Map();
 function setMonthPasses(list) {

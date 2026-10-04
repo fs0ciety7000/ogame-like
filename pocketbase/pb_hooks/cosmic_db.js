@@ -79,6 +79,11 @@ function isNpcUid(txApp, uid) {
   return !!rec && rec.getString("npc") !== "";
 }
 
+/** v5.10 : lien vers le rapport pour les notifications de combat (attaque/défense). */
+function withReportLink(notifications, reportId) {
+  return (notifications || []).map((n) => (n.kind === "combat-attacker" || n.kind === "combat-defender") && !n.link ? Object.assign({}, n, { link: `/game/combats?rapport=${reportId}` }) : n);
+}
+
 function notify(txApp, uid, notifications) {
   if (!notifications || notifications.length === 0) return;
   if (isNpcUid(txApp, uid)) return;
@@ -832,10 +837,10 @@ function resolvePirateArrival(txApp, game, rec, now) {
   const patrolling = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && mission = "patrol" && status != "done"', "", 1, 0, { u: fleet.targetUid }).length > 0;
   const out = game.resolvePirateRaid(faction, loaded.player, loaded.queues, rec.getFloat("power"), garrisons, now, { evading: patrolling });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.targetUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.targetUid, withReportLink(out.notifications, report.id));
   garrisonRecs.forEach((g, i) => {
     const losses = (out.combat.garrisonLosses || [])[i] || {};
     const units = Object.assign({}, fleetFromRecord(g).units);
@@ -881,10 +886,10 @@ function resolveLairArrival(txApp, game, rec, now) {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.ownerUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(out.notifications, report.id));
   const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
   rec.set("units", out.survivors);
   rec.set("reportId", report.id);
@@ -1025,12 +1030,12 @@ function resolveAttackArrival(txApp, game, rec, now) {
   game.clearDecoy(result.attacker, rec.id);
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
-  notify(txApp, fleet.ownerUid, result.notifications);
-  notify(txApp, defenderUid, result.defenderNotifications);
-
+  // v5.10 : le rapport d'abord, pour que les notifications de combat y mènent.
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(result.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(result.notifications, report.id));
+  notify(txApp, defenderUid, withReportLink(result.defenderNotifications, report.id));
   // v4.2 : seigneurs de guerre (vendetta, répliques).
   try {
     warlordAfterCombat(txApp, game, attacker, defender, result, now);
@@ -3801,10 +3806,10 @@ function bountyArrival(txApp, game, rec, now) {
     if (out.player.units[id]) out.player.units[id].count = Math.max(0, out.player.units[id].count - fleet.units[id]);
   });
   savePlayer(txApp, game, loaded, out.player, out.queues);
-  notify(txApp, fleet.ownerUid, out.notifications);
   const report = new Record(txApp.findCollectionByNameOrId("battle_reports"));
   report.load(out.report);
   txApp.save(report);
+  notify(txApp, fleet.ownerUid, withReportLink(out.notifications, report.id));
   const anyLeft = Object.keys(out.survivors).some((k) => out.survivors[k] > 0);
   rec.set("units", out.survivors);
   rec.set("reportId", report.id);

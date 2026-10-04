@@ -140,6 +140,8 @@ export interface PassState {
   loginDay: string;
   /** Saisons dont le passe a été terminé (bannière et titre gardés). */
   completed: string[];
+  /** v5.10 : dernier palier signalé par une notification « palier prêt ». */
+  notifiedTier?: number;
 }
 
 export function passTitle(seasonId: string): string {
@@ -162,7 +164,24 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
     loginDay: String(raw.loginDay ?? ""),
     completed,
     activity,
+    ...(Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}),
   };
+}
+
+/**
+ * v5.10 : nouveaux paliers atteints depuis la dernière notification.
+ * Retourne le palier à annoncer (0 = rien) et mémorise qu'il l'est.
+ */
+export function passTierToAnnounce(player: PlayerState, now: number): { tier: number; claimable: number } {
+  if (!player.seasonPass) return { tier: 0, claimable: 0 };
+  const st = passState(player, now);
+  const tier = passTier(st.points, st.seasonId);
+  if (tier <= (st.notifiedTier ?? 0)) return { tier: 0, claimable: 0 };
+  st.notifiedTier = tier;
+  player.seasonPass = st;
+  let claimable = 0;
+  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t)) claimable += 1;
+  return { tier, claimable };
 }
 
 /* ---------- v5.4 : passe propre à un mois (chapitres générés) ---------- */

@@ -15,7 +15,7 @@ import { formatInt } from "@/game/format";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
-import { addPassPoints } from "@/game/seasonPass";
+import { addPassPoints, passTierToAnnounce } from "@/game/seasonPass";
 import { endVacation, VACATION_RULES } from "@/game/vacation";
 import { advanceBuildPlan } from "@/game/buildPlan";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -277,6 +277,19 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         });
       }
     }
+  }
+
+  // --- v5.10 : palier du passe prêt à récupérer ---
+  const passTierReady = passTierToAnnounce(player, now);
+  if (passTierReady.tier > 0 && passTierReady.claimable > 0) {
+    notifications.push({
+      kind: "season",
+      title: `Passe de saison : palier ${passTierReady.tier} atteint`,
+      message: passTierReady.claimable > 1 ? `${passTierReady.claimable} paliers t'attendent : récupère leurs récompenses.` : "Une récompense t'attend : récupère-la sur la page du passe.",
+      createdAtMs: now,
+      read: false,
+      link: "/game/passe",
+    });
   }
 
   // --- v5.10 : titres du catalogue débloqués par une mesure ---
