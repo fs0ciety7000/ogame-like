@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Plus, RefreshCw, Rocket, Save, Sparkles, Undo2 } from "lucide-react";
+import { Copy, Plus, RefreshCw, Rocket, Save, Sparkles, Trash2, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudCallout, HudChip } from "@/components/ui/hud";
 import { currentGameContent } from "@/game/content";
 import { chronicleMonthId } from "@/game/chronicles";
 import { COMMANDER_ROLES, COMMANDERS, seasonCommanderDef, type CommanderId } from "@/game/commanders";
-import { nextMonthId, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
-import { describePassReward, OBJECTIVE_LABELS, type PassReward } from "@/game/seasonPass";
+import { CHALLENGE_KEYS, nextMonthId, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { describePassReward, normalizeTierReqs, OBJECTIVE_LABELS, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { CATALOG_START, catalogEntryFor, THEME_PRIMARY } from "@/game/seasonCatalog";
 import { STORY_SPEAKERS, type Speaker } from "@/game/story";
@@ -325,30 +325,50 @@ function CatalogOverview({ current }: { current: string }) {
 }
 
 function TierRow({ tier, rewards, season, onChange }: { tier: number; rewards: PassReward[]; season: PassSeason; onChange: (patch: Partial<PassSeason>) => void }) {
-  const req = season.requirements[String(tier)];
+  // v5.14.1 : un défi par palier, d'un à quatre prérequis (l'ancien format n'en avait qu'un).
+  const reqs = normalizeTierReqs(season.requirements[String(tier)]);
   const setRewards = (list: PassReward[]) => onChange({ tiers: season.tiers.map((t, j) => (j === tier - 1 ? list : t)) });
-  const setReq = (next: { key: string; count: number } | null) => {
+  const setReqs = (list: PassRequirement[]) => {
     const r = { ...season.requirements };
-    if (next && next.key) r[String(tier)] = { key: next.key as PassSeason["requirements"][string]["key"], count: Math.max(1, next.count) };
+    if (list.length > 0) r[String(tier)] = list;
     else delete r[String(tier)];
     onChange({ requirements: r });
   };
+  const freeKey = CHALLENGE_KEYS.find((k) => !reqs.some((r) => r.key === k));
   return (
     <div className={cn("hud-cut-sm flex flex-col gap-1.5 border p-2", tier % 10 === 0 ? "border-gold-glow/40" : "border-white/10")}>
       <div className="flex flex-wrap items-center gap-2">
         <span className={cn("w-16 font-mono text-xs", tier % 10 === 0 ? "text-gold-glow" : "text-slate-400")}>Palier {tier}</span>
-        <select value={req?.key ?? ""} onChange={(e) => setReq({ key: e.target.value, count: req?.count ?? 3 })} className="h-8 border border-white/15 bg-space-950 px-1.5 text-xs text-slate-200" aria-label="Prérequis">
-          {KEY_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        {req && <input type="number" min={1} value={req.count} onChange={(e) => setReq({ key: req.key, count: Number(e.target.value) || 1 })} className="h-8 w-16 border border-white/15 bg-space-950 px-1.5 font-mono text-xs text-slate-200" aria-label="Nombre" />}
+        {reqs.length === 0 && <span className="text-xs text-slate-500">Aucun prérequis</span>}
+        {reqs.length < 4 && freeKey && (
+          <Button size="sm" variant="ghost" onClick={() => setReqs([...reqs, { key: freeKey, count: 1 }])} title="Ajouter un prérequis">
+            <Plus className="h-3.5 w-3.5" /> Prérequis
+          </Button>
+        )}
         <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setRewards([...rewards, { kind: "amber", amount: 20 }])}>
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
+      {reqs.map((r, i) => (
+        <div key={r.key} className="flex flex-wrap items-center gap-2 pl-2">
+          <select
+            value={r.key}
+            onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, key: e.target.value as PassRequirement["key"] } : x)))}
+            className="h-8 min-w-0 flex-1 border border-white/15 bg-space-950 px-1.5 text-xs text-slate-200"
+            aria-label="Action du défi"
+          >
+            {KEY_OPTIONS.filter((o) => o.value && (o.value === r.key || !reqs.some((x) => x.key === o.value))).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <input type="number" min={1} value={r.count} onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, count: Math.max(1, Number(e.target.value) || 1) } : x)))} className="h-8 w-16 border border-white/15 bg-space-950 px-1.5 font-mono text-xs text-slate-200" aria-label="Nombre" />
+          <Button size="icon" variant="ghost" onClick={() => setReqs(reqs.filter((_, j) => j !== i))} title="Retirer ce prérequis">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
       <div className="flex flex-wrap gap-1">
         {rewards.map((r, k) =>
           r.kind === "commander" ? (
