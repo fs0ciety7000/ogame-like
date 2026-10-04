@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { HudTag, StatTile } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
+import { BossRecapPanel } from "@/components/game/BossRecap";
 import {
   ALLIANCE_BOSS_RULES,
   allianceBossCost,
@@ -133,6 +134,8 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
           )}
         </Card>
       )}
+
+      {state && thisWeek && <BossRecapPanel state={state} uid={player.uid} name={def.name} image={def.image} active={active} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

@@ -6240,7 +6240,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return {
+  return __spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6252,7 +6252,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  };
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
@@ -7183,7 +7183,7 @@ function normalizeAllianceBoss(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return {
+  return __spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -7199,7 +7199,7 @@ function normalizeAllianceBoss(raw) {
     bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
     launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
     cost: r.cost && typeof r.cost === "object" ? r.cost : {}
-  };
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {});
 }
 function allianceBossCost(members) {
   var _a, _b;

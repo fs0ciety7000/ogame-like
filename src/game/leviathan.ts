@@ -64,6 +64,50 @@ export interface LeviathanState {
   titleHolder: { uid: string; untilMs: number } | null;
   /** Relevé horaire des points de structure (suivi admin, v3.3). */
   timeline: { t: number; hp: number }[];
+  /** v5.9 : récompenses remises à chaque participant (bilan affiché après le combat). */
+  rewards?: Record<string, BossReward>;
+}
+
+/** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
+export interface BossReward {
+  gain?: Partial<Record<string, number>>;
+  points?: number;
+  title?: string;
+  relic?: string;
+  mythic?: string;
+}
+
+/** v5.9 : bilan d'un boss terminé (abattu ou retiré) pour un joueur. */
+export interface BossRecap {
+  won: boolean;
+  durationMs: number;
+  totalDamage: number;
+  participants: number;
+  assaults: number;
+  hpDealtPct: number;
+  top: { uid: string; pseudo: string; damage: number; assaults: number; share: number; rank: number }[];
+  mine: { rank: number; damage: number; assaults: number; share: number } | null;
+  reward: BossReward | null;
+}
+
+export function bossRecap(state: LeviathanState, uid: string, topCount = 5): BossRecap {
+  const ranking = leviathanRanking(state);
+  const totalDamage = ranking.reduce((a, c) => a + c.damage, 0);
+  const share = (d: number) => (totalDamage > 0 ? d / totalDamage : 0);
+  const myIndex = ranking.findIndex((c) => c.uid === uid);
+  const me = myIndex >= 0 ? ranking[myIndex] : null;
+  const end = state.endedAtMs || state.endMs;
+  return {
+    won: state.status === "killed",
+    durationMs: Math.max(0, end - state.startMs),
+    totalDamage,
+    participants: ranking.length,
+    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
+    hpDealtPct: state.maxHp > 0 ? Math.min(1, (state.maxHp - state.hp) / state.maxHp) : 0,
+    top: ranking.slice(0, topCount).map((c, i) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults, share: share(c.damage), rank: i + 1 })),
+    mine: me ? { rank: myIndex + 1, damage: me.damage, assaults: me.assaults, share: share(me.damage) } : null,
+    reward: state.rewards?.[uid] ?? null,
+  };
 }
 
 const HOUR = 3600_000;
@@ -84,6 +128,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : [],
+    ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
   };
 }
 

@@ -2400,9 +2400,39 @@ function grantMythicTo(txApp, game, player, source, now) {
   return out.name;
 }
 
+/** v5.9 : récompense d'un participant, gardée dans l'état du boss pour son bilan. */
+function bossRewardEntry(r) {
+  const out = {};
+  const gain = {};
+  Object.keys(r.gain || {}).forEach((k) => {
+    if (Number(r.gain[k]) > 0) gain[k] = Math.floor(Number(r.gain[k]));
+  });
+  if (Object.keys(gain).length) out.gain = gain;
+  if (Number(r.points) > 0) out.points = Number(r.points);
+  if (r.title) out.title = String(r.title);
+  if (r.relic) out.relic = String(r.relic);
+  if (r.mythic) out.mythic = String(r.mythic);
+  return out;
+}
+
+/** v5.9 : détails structurés d'une notification de boss (pastilles). */
+function bossNotifData(gain, relic, mythic) {
+  const resources = {};
+  Object.keys(gain || {}).forEach((k) => {
+    if (Number(gain[k]) > 0) resources[k] = Math.floor(Number(gain[k]));
+  });
+  const relicName = mythic || relic || "";
+  if (!Object.keys(resources).length && !relicName) return null;
+  const data = {};
+  if (Object.keys(resources).length) data.resources = resources;
+  if (relicName) data.relic = relicName;
+  return data;
+}
+
 function distributeLeviathan(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const ranking = game.leviathanRanking(state);
+  const rewards = {};
   ranking.forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -2411,6 +2441,7 @@ function distributeLeviathan(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, title: out.title ? game.LEVIATHAN_RULES.title : "", relic: out.relic, mythic });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
@@ -2418,12 +2449,15 @@ function distributeLeviathan(txApp, game, state, now) {
         message: `Récompense : ${game.describeGain(out.gain)}${out.title ? ` et le titre « ${game.LEVIATHAN_RULES.title} »` : ""}.${out.relic ? ` Relique : ${out.relic} !` : ""}${mythic ? ` Relique MYTHIQUE : ${mythic} !` : ""}`,
         createdAtMs: now,
         read: false,
+        link: "/game/leviathan",
+        data: bossNotifData(out.gain, out.relic, mythic),
       },
     ]));
   });
   const top = ranking[0];
   return Object.assign({}, state, {
     rewarded: true,
+    rewards,
     titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000 } : state.titleHolder,
   });
 }
@@ -5713,6 +5747,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const month = game.bossMonthOf(state);
   const name = month ? month.boss.name : "Le boss de saison";
+  const rewards = {};
   game.leviathanRanking(state).forEach((c, i) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
@@ -5721,6 +5756,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "seasonboss", now) : "";
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ points: out.points, title: out.title, relic: out.relic, mythic });
     notify(txApp, c.uid, flushed.notifications.concat([
       {
         kind: "event",
@@ -5729,10 +5765,11 @@ function distributeSeasonBoss(txApp, game, state, now) {
         createdAtMs: now,
         read: false,
         link: "/game/boss",
+        data: bossNotifData(null, out.relic, mythic),
       },
     ]));
   });
-  return Object.assign({}, state, { rewarded: true });
+  return Object.assign({}, state, { rewarded: true, rewards });
 }
 
 function seasonBossArrival(txApp, game, rec, now) {
@@ -5888,12 +5925,14 @@ function allianceBossLog(txApp, allianceId, uid, pseudo, text, resources) {
 function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
   if (state.rewarded || state.status === "active") return state;
   const name = game.allianceBossDef(state).name;
+  const rewards = {};
   game.leviathanRanking(state).forEach((c) => {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     const out = game.grantAllianceBossReward(state, flushed.player, now);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    rewards[c.uid] = bossRewardEntry({ gain: out.gain, points: out.points, relic: out.relic });
     const won = state.status === "killed";
     notify(txApp, c.uid, flushed.notifications.concat([
       {
@@ -5903,6 +5942,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
         createdAtMs: now,
         read: false,
         link: "/game/alliance",
+        data: bossNotifData(out.gain, out.relic, ""),
       },
     ]));
   });
@@ -5913,7 +5953,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
     allianceRec.set("treasury", treasury);
   }
   allianceBossLog(txApp, allianceRec.id, "", name, state.status === "killed" ? `${name} abattu : la moitié du coût revient au trésor.` : `${name} a survécu.`, Object.keys(refund).length ? refund : null);
-  return Object.assign({}, state, { rewarded: true });
+  return Object.assign({}, state, { rewarded: true, rewards });
 }
 
 /** POST /api/cosmic/allianceboss { action: "call" } */
