@@ -220,7 +220,7 @@ export function validateGameContent(content: GameContent): string[] {
   const errors: string[] = [];
   // v5.10.4 : occurrence des boss mensuels.
   const lev = content.rules.leviathan;
-  errors.push(...validateBossSchedule("Léviathan", { weekend: content.rules.events.bossWeekend ?? "first", startHour: lev.startHour ?? 18, durationHours: lev.durationHours }));
+  errors.push(...validateBossSchedule("Léviathan", { weekend: content.rules.events.bossWeekend ?? "first", startHour: lev.startHour ?? 18, durationHours: lev.durationHours, dates: content.rules.events.bossDates ?? [] }));
   if (content.rules.seasonBoss) errors.push(...validateBossSchedule("Boss de saison", content.rules.seasonBoss));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id as string));
   const techIds = new Set(content.technologies.map((t) => t.id));

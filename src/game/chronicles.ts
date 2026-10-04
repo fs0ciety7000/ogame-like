@@ -1,5 +1,5 @@
 import { GameActionError } from "@/game/errors";
-import { bossWindows, parisLocalToUtc, parisOffsetMs, type BossSchedule, type BossWeekend } from "@/game/events";
+import { bossWindows, parisLocalToUtc, parisOffsetMs, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
 import { addPassPoints, grantPassReward, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
@@ -538,6 +538,8 @@ export const SEASON_BOSS_RULES: {
   /** v5.10.4 : réglable dans l'administration (règles « seasonBoss »). */
   enabled: boolean;
   weekend: BossWeekend;
+  /** v5.10.5 : apparitions supplémentaires à date précise. */
+  dates: BossDate[];
   /** Heure d'apparition le vendredi (heure de Paris). */
   startHour: number;
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
@@ -549,6 +551,7 @@ export const SEASON_BOSS_RULES: {
 } = {
   enabled: true,
   weekend: "last",
+  dates: [],
   startHour: 18,
   hpFactor: 3,
   minHp: 100_000,
@@ -557,7 +560,7 @@ export const SEASON_BOSS_RULES: {
 };
 
 export function seasonBossSchedule(): BossSchedule {
-  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: SEASON_BOSS_RULES.weekend ?? "last", startHour: SEASON_BOSS_RULES.startHour ?? 18, durationHours: SEASON_BOSS_RULES.durationHours };
+  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: SEASON_BOSS_RULES.weekend ?? "last", startHour: SEASON_BOSS_RULES.startHour ?? 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: SEASON_BOSS_RULES.dates ?? [] };
 }
 
 /** Fenêtre du boss de saison, en cours ou à venir (ou null si le mois n'a pas de boss). */
@@ -568,7 +571,8 @@ export function seasonBossWindow(now: number, includeUpcoming = false): { id: st
   const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
-  return { id: `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
+  // Date précise : identifiant propre (plusieurs combats possibles dans le même mois).
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 
 export function seasonBossHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {

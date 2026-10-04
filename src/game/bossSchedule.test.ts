@@ -68,3 +68,32 @@ describe("Léviathan et boss de saison suivent les règles", () => {
     expect(() => rescheduleBoss({ ...st, status: "killed" }, now + 48 * 3600_000, now)).toThrow();
   });
 });
+
+describe("dates précises (v5.10.5)", () => {
+  it("s'ajoutent au rendez-vous mensuel, dans l'ordre, ou le remplacent", () => {
+    const from = paris("2026-10-01T00:00:00+02:00");
+    const d = paris("2026-10-14T20:00:00+02:00");
+    const s = sched({ dates: [{ startMs: d, durationHours: 24 }] });
+    expect(bossWindows(from, s, 3).map((w) => [w.startMs, !!w.fixed])).toEqual([
+      [paris("2026-10-02T18:00:00+02:00"), false],
+      [d, true],
+      [paris("2026-11-06T18:00:00+01:00"), false],
+    ]);
+    const only = sched({ enabled: false, dates: [{ startMs: d, durationHours: 24 }] });
+    expect(bossWindows(from, only, 3)).toEqual([{ startMs: d, endMs: d + 24 * 3600_000, fixed: true }]);
+    expect(describeBossSchedule(only, from)).toBe("à des dates fixées par l'équipe");
+  });
+
+  it("Léviathan à date précise : fenêtre ouverte, événement du week-end remplacé", () => {
+    const d = paris("2026-10-14T20:00:00+02:00");
+    EVENT_RULES.bossDates = [{ startMs: d, durationHours: 24 }];
+    expect(leviathanWindow(d + 3600_000)?.id).toBe(`lev-${d}`);
+    expect(validateBossSchedule("X", { weekend: "first", startHour: 18, durationHours: 72, dates: [{ startMs: d, durationHours: 24 }, { startMs: d + 3600_000, durationHours: 2 }] })).toContain("X : deux dates précises se chevauchent.");
+  });
+
+  it("boss de saison à date précise : identifiant distinct du rendez-vous du mois", () => {
+    const d = paris("2026-10-14T20:00:00+02:00");
+    SEASON_BOSS_RULES.dates = [{ startMs: d, durationHours: 24 }];
+    expect(seasonBossWindow(d + 3600_000)?.id).toBe(`boss-2026-10-d${d}`);
+  });
+});

@@ -10,7 +10,7 @@ import { BossHero, BossNextCard, bossPhase, type BossArt } from "@/components/ga
 import { MythicRelicNotice } from "@/components/game/MythicRelicNotice";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { bossMonthOf, chronicleOf, seasonBossSchedule, seasonBossWindow, SEASON_BOSS_RULES } from "@/game/chronicles";
-import { describeBossSchedule } from "@/game/events";
+import { describeBossSchedule, hasBossSchedule } from "@/game/events";
 import { LEVIATHAN_RULES, leviathanRanking } from "@/game/leviathan";
 import { PASS_POINTS } from "@/game/seasonPass";
 import { sendSeasonBossAssault, useSeasonBoss } from "@/services/seasonBossService";
@@ -67,7 +67,7 @@ export function SeasonBossPage() {
             ? "Le boss de la chronique est tombé : voici le bilan du combat et ce que chacun a gagné."
             : phase === "failed"
               ? "Le boss s'est retiré avant de tomber. Chaque participant garde ses points de passe."
-              : seasonBossSchedule().enabled
+              : hasBossSchedule(seasonBossSchedule())
                 ? `${capitalize(describeBossSchedule(seasonBossSchedule()))}, le boss de la chronique surgit. Tout le serveur frappe ensemble.`
                 : "Aucune apparition du boss de saison n'est programmée pour l'instant."
         }

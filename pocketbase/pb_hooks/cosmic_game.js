@@ -1473,6 +1473,7 @@ var EVENT_RULES = {
   rotationEnabled: true,
   bossMonthly: true,
   bossWeekend: "first",
+  bossDates: [],
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
   types: [
@@ -1556,21 +1557,26 @@ var BOSS_WEEKENDS = [
   { id: "last", label: "Dernier week-end du mois" }
 ];
 var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
+var MAX_BOSS_DATES = 24;
 function onWeekend(w, which) {
   if (which === "last") return w.lastOfMonth;
   return w.nth === NTH[which != null ? which : "first"];
 }
 function bossWindows(now, s, count2 = 1) {
+  var _a;
   const out = [];
-  if (!s.enabled) return out;
-  for (let i = -1; i < 60 && out.length < count2; i++) {
+  for (let i = -1; s.enabled && i < 60 && out.length < count2; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
     const endMs = startMs + s.durationHours * HOUR;
     if (endMs > now) out.push({ startMs, endMs });
   }
-  return out;
+  for (const d of (_a = s.dates) != null ? _a : []) {
+    const endMs = d.startMs + d.durationHours * HOUR;
+    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
 }
 var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 function hourLabel(h) {
@@ -1583,16 +1589,27 @@ function bossEndLabel(s) {
   return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
 }
 function validateBossSchedule(label3, s) {
+  var _a;
   const errors = [];
   if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
   if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
   if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
+  const dates = (_a = s.dates) != null ? _a : [];
+  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
+  dates.forEach((d, i) => {
+    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
+    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
+  });
+  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
   return errors;
 }
 function rotationEvent(window) {
+  var _a;
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
   if (EVENT_RULES.bossMonthly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
+  if (((_a = EVENT_RULES.bossDates) != null ? _a : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
   const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
@@ -6589,8 +6606,8 @@ function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
   return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 function leviathanSchedule() {
-  var _a, _b;
-  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first", startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18, durationHours: LEVIATHAN_RULES.durationHours };
+  var _a, _b, _c;
+  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first", startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18, durationHours: LEVIATHAN_RULES.durationHours, dates: (_c = EVENT_RULES.bossDates) != null ? _c : [] };
 }
 function leviathanWindow(now) {
   const [w] = bossWindows(now, leviathanSchedule(), 1);
@@ -7147,6 +7164,7 @@ var SEASON_BOSS_KEY = "season_boss";
 var SEASON_BOSS_RULES = {
   enabled: true,
   weekend: "last",
+  dates: [],
   startHour: 18,
   hpFactor: 3,
   minHp: 1e5,
@@ -7154,8 +7172,8 @@ var SEASON_BOSS_RULES = {
   topRelics: 3
 };
 function seasonBossSchedule() {
-  var _a, _b;
-  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last", startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18, durationHours: SEASON_BOSS_RULES.durationHours };
+  var _a, _b, _c;
+  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last", startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : [] };
 }
 function seasonBossWindow(now, includeUpcoming = false) {
   const [w] = bossWindows(now, seasonBossSchedule(), 1);
@@ -7164,7 +7182,7 @@ function seasonBossWindow(now, includeUpcoming = false) {
   const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
-  return { id: `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 function seasonBossHp(activePlayers) {
   const power = activePlayers.reduce((a, p) => {
@@ -11315,10 +11333,10 @@ function applyGameContent(overrides) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
   const errors = [];
   const lev = content.rules.leviathan;
-  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_a = content.rules.events.bossWeekend) != null ? _a : "first", startHour: (_b = lev.startHour) != null ? _b : 18, durationHours: lev.durationHours }));
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_a = content.rules.events.bossWeekend) != null ? _a : "first", startHour: (_b = lev.startHour) != null ? _b : 18, durationHours: lev.durationHours, dates: (_c = content.rules.events.bossDates) != null ? _c : [] }));
   if (content.rules.seasonBoss) errors.push(...validateBossSchedule("Boss de saison", content.rules.seasonBoss));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
@@ -11342,19 +11360,19 @@ function validateGameContent(content) {
     const label3 = `B\xE2timent ${b.name || b.id}`;
     if (!(b.maxLevel >= 1)) errors.push(`${label3} : niveau max doit \xEAtre \u2265 1.`);
     checkResources(`${label3} (d\xE9blocage)`, b.unlockCost);
-    checkResources(`${label3} (co\xFBt initial)`, (_c = b.upgrade) == null ? void 0 : _c.baseCost);
-    checkResources(`${label3} (co\xFBt max)`, (_d = b.upgrade) == null ? void 0 : _d.maxCost);
+    checkResources(`${label3} (co\xFBt initial)`, (_d = b.upgrade) == null ? void 0 : _d.baseCost);
+    checkResources(`${label3} (co\xFBt max)`, (_e = b.upgrade) == null ? void 0 : _e.maxCost);
     if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label3} : techno \xAB ${b.unlockedByTech} \xBB inexistante.`);
     if (b.production && !resources.has(b.production.resource)) errors.push(`${label3} : ressource produite inconnue.`);
     if (b.production && b.production.perSecond.length === 0) errors.push(`${label3} : table de production vide.`);
-    const t2 = (_e = b.upgrade) == null ? void 0 : _e.tier2;
+    const t2 = (_f = b.upgrade) == null ? void 0 : _f.tier2;
     if (t2) {
       if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label3} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
       checkResources(`${label3} (second palier, co\xFBt initial)`, t2.baseCost);
       checkResources(`${label3} (second palier, co\xFBt max)`, t2.maxCost);
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
     }
-    if (((_f = b.effect) == null ? void 0 : _f.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
+    if (((_g = b.effect) == null ? void 0 : _g.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
   checkIds("Unit\xE9s", content.units.map((u) => u.id));
@@ -11374,7 +11392,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_g = t.prereq) != null ? _g : {})) {
+    for (const req of Object.keys((_h = t.prereq) != null ? _h : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
     }
@@ -11399,21 +11417,21 @@ function validateGameContent(content) {
   for (const m of content.missions) {
     const label3 = `Mission ${m.name || m.key}`;
     if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_h = m.prereq) != null ? _h : {})) {
+    for (const unitId of Object.keys((_i = m.prereq) != null ? _i : {})) {
       if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
     }
-    const res = __spreadValues({}, (_i = m.reward) != null ? _i : {});
+    const res = __spreadValues({}, (_j = m.reward) != null ? _j : {});
     delete res.xp;
     checkResources(`${label3} (r\xE9compense)`, res);
   }
-  errors.push(...validateFactions((_j = content.factions) != null ? _j : []));
+  errors.push(...validateFactions((_k = content.factions) != null ? _k : []));
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
-  errors.push(...validateRanks((_k = content.ranks) != null ? _k : []));
-  errors.push(...validateAchievements((_l = content.achievements) != null ? _l : []));
-  errors.push(...validateRelics((_m = content.relics) != null ? _m : [], (_n = content.relicSettings) != null ? _n : defaultRelicSettings()));
-  errors.push(...validateTitles((_o = content.titles) != null ? _o : []));
+  errors.push(...validateRanks((_l = content.ranks) != null ? _l : []));
+  errors.push(...validateAchievements((_m = content.achievements) != null ? _m : []));
+  errors.push(...validateRelics((_n = content.relics) != null ? _n : [], (_o = content.relicSettings) != null ? _o : defaultRelicSettings()));
+  errors.push(...validateTitles((_p = content.titles) != null ? _p : []));
   return [...new Set(errors)];
 }
 

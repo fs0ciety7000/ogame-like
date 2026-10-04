@@ -167,7 +167,7 @@ export function inferKilledBy(state: LeviathanState, flightMinutes = LEVIATHAN_R
 
 /** v5.10.4 : occurrence du Léviathan (réglable dans l'administration). */
 export function leviathanSchedule(): BossSchedule {
-  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: EVENT_RULES.bossWeekend ?? "first", startHour: LEVIATHAN_RULES.startHour ?? 18, durationHours: LEVIATHAN_RULES.durationHours };
+  return { enabled: EVENT_RULES.bossMonthly !== false, weekend: EVENT_RULES.bossWeekend ?? "first", startHour: LEVIATHAN_RULES.startHour ?? 18, durationHours: LEVIATHAN_RULES.durationHours, dates: EVENT_RULES.bossDates ?? [] };
 }
 
 /** Fenêtre mensuelle en cours (ou null). */

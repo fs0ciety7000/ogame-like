@@ -456,11 +456,11 @@ export function RulesPanel() {
         <Section title="Léviathan">
           <BossScheduleFields
             label="Léviathan"
-            value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours }}
+            value={{ enabled: rules.events.bossMonthly !== false, weekend: rules.events.bossWeekend ?? "first", startHour: rules.leviathan.startHour ?? 18, durationHours: rules.leviathan.durationHours, dates: rules.events.bossDates ?? [] }}
             onChange={(p) =>
               setRules((r) => ({
                 ...r,
-                events: { ...r.events, ...(p.enabled !== undefined ? { bossMonthly: p.enabled } : {}), ...(p.weekend ? { bossWeekend: p.weekend } : {}) },
+                events: { ...r.events, ...(p.enabled !== undefined ? { bossMonthly: p.enabled } : {}), ...(p.weekend ? { bossWeekend: p.weekend } : {}), ...(p.dates ? { bossDates: p.dates } : {}) },
                 leviathan: { ...r.leviathan, ...(p.startHour !== undefined ? { startHour: p.startHour } : {}), ...(p.durationHours !== undefined ? { durationHours: p.durationHours } : {}) },
               }))
             }
