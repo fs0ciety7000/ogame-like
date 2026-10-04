@@ -9,6 +9,8 @@ import { worldBossForStart } from "@/game/leviathan";
 import { WORLD_BOSS_RULES } from "@/game/worldBosses";
 import { saveContentSection, useContentStore } from "@/services/contentService";
 import { BossScheduleFields } from "@/pages/admin/bossFields";
+import { offerApplyDuration } from "@/pages/admin/applyBossDuration";
+import { adminLeviathan, useLeviathanStore } from "@/services/leviathanService";
 import { NumberField, Section } from "@/pages/admin/fields";
 
 /* 5.15 : réglages communs aux boss mondiaux (calendrier, combat,
@@ -33,9 +35,11 @@ export function WorldBossRulesCard() {
     if (errors.length) return toast.error("Corrige les erreurs avant d'enregistrer.");
     setBusy(true);
     try {
+      const oldHours = currentGameContent().rules.leviathan.durationHours;
       await saveContentSection("rules", rules);
       setDirty(false);
       toast.success("Réglages des boss mondiaux enregistrés.");
+      await offerApplyDuration({ state: useLeviathanStore.getState().state, oldHours, newHours: rules.leviathan.durationHours, name: "Le boss mondial", reschedule: (endMs) => adminLeviathan("reschedule", undefined, endMs) });
     } catch (err) {
       toast.error(`Enregistrement impossible : ${(err as Error).message}`);
     } finally {
