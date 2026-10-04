@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { HudCallout, HudChip } from "@/components/ui/hud";
 import { currentGameContent, validateRules, type GameRules } from "@/game/content";
 import { type ChroniclesConfig } from "@/game/chronicles";
-import { LEVIATHAN_RULES, leviathanSchedule } from "@/game/leviathan";
+import { isActive, LEVIATHAN_RULES, leviathanSchedule } from "@/game/leviathan";
 import { defaultLootTables, type LootTable } from "@/game/loot";
 import { RARITIES, type RelicRarity, type RelicSettings } from "@/game/relics";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { saveContentSection, useContentStore } from "@/services/contentService";
 import { BossScheduleFields } from "@/pages/admin/bossFields";
+import { offerApplyDuration } from "@/pages/admin/applyBossDuration";
+import { adminSeasonBoss, useSeasonBoss, useSeasonBossStore } from "@/services/seasonBossService";
+import { bossWindows } from "@/game/events";
 import { CheckboxField, Field, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
 /* 5.15 : tout le boss de saison au même endroit, comme les boss mondiaux :
@@ -19,6 +22,8 @@ import { CheckboxField, Field, ImageField, NumberField, Section, SelectField, Te
    délai entre assauts, trajet, pertes, faiblesses) et les récompenses
    (reliques du podium, table de butin). Trois sections de contenu sont
    enregistrées : règles (seasonBoss), Chroniques (boss du mois), reliques (butin). */
+
+const formatDateTime = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 
 export function SeasonBossPanel() {
   useContentStore((s) => s.version);
@@ -48,16 +53,23 @@ export function SeasonBossPanel() {
   const weakness = sb.weakness ?? [];
   const errors = useMemo(() => validateRules(rules).filter((e) => e.startsWith("Boss de saison")), [rules]);
   const anyDirty = dirty.rules || dirty.chronicles || dirty.relics;
+  const live = useSeasonBoss();
+  const now = Date.now();
+  // Écart entre deux passages du boss mondial : plafond de la durée en alternance.
+  const [w1, w2] = bossWindows(now, leviathanSchedule(), 3);
+  const gapHours = w1 && w2 ? Math.floor((w2.startMs - w1.endMs) / 3600_000) : null;
 
   const save = async () => {
     if (errors.length) return toast.error("Corrige les erreurs avant d'enregistrer.");
     setBusy(true);
     try {
+      const oldHours = currentGameContent().rules.seasonBoss.durationHours;
       if (dirty.rules) await saveContentSection("rules", rules);
       if (dirty.chronicles) await saveContentSection("chronicles", chronicles);
       if (dirty.relics) await saveContentSection("relicSettings", relics);
       setDirty({ rules: false, chronicles: false, relics: false });
       toast.success("Boss de saison enregistré (appliqué aussi par le serveur).");
+      await offerApplyDuration({ state: useSeasonBossStore.getState().state, oldHours, newHours: sb.durationHours, name: "Le boss de saison", reschedule: (endMs) => adminSeasonBoss("reschedule", undefined, endMs) });
     } catch (err) {
       toast.error(`Enregistrement impossible : ${(err as Error).message}`);
     } finally {
@@ -120,6 +132,16 @@ export function SeasonBossPanel() {
           hint="Une apparition entre deux passages du boss mondial, jamais en même temps. Décoché : un week-end par mois."
         />
         <BossScheduleFields label="Boss de saison" value={sb.alternate !== false ? { ...sb, weekly: { minGapDays: 0, between: leviathanSchedule() } } : sb} onChange={(p) => setSb(p)} />
+        {live && isActive(live, now) && (
+          <HudCallout tone="accent" className="text-xs sm:col-span-2">
+            Combat en cours : fin le <span className="font-mono text-slate-100">{formatDateTime(live.endMs)}</span> ({Math.round((live.endMs - live.startMs) / 3600_000)} h, fixées à son apparition). Une nouvelle durée vaut pour les prochains combats ; à l'enregistrement, tu pourras aussi l'appliquer à celui-ci.
+          </HudCallout>
+        )}
+        {sb.alternate !== false && gapHours !== null && sb.durationHours > gapHours && (
+          <HudCallout tone="danger" className="text-xs sm:col-span-2">
+            {sb.durationHours} h ne tiennent pas entre deux boss mondiaux (<span className="font-mono">{gapHours} h</span> d'écart) : le boss de saison n'apparaîtrait plus. Réduis la durée, ou celle du boss mondial.
+          </HudCallout>
+        )}
       </Section>
 
       <Section title="Combat">
