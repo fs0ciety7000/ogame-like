@@ -41,6 +41,7 @@ import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
 import { ProceduralPanel } from "@/pages/admin/ProceduralPanel";
 import { ServerPotPanel } from "@/pages/admin/ServerPotPanel";
+import { ContestsAdmin } from "@/pages/admin/ContestsAdmin";
 import { newTitle, TitleForm, titleListLabel } from "@/pages/admin/TitleForm";
 import { BuildingForm, MissionForm, newBuilding, newMission, newTech, newUnit, TechForm, UnitForm } from "@/pages/admin/forms";
 import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
@@ -305,7 +306,8 @@ export function AdminPage() {
         <TabsContent value="procedural">
           <ProceduralPanel />
         </TabsContent>
-        <TabsContent value="serverpot">
+        <TabsContent value="serverpot" className="flex flex-col gap-4">
+          <ContestsAdmin />
           <ServerPotPanel />
         </TabsContent>
         <TabsContent value="warlords">

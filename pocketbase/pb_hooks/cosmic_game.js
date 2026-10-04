@@ -81,6 +81,7 @@ __export(hooksEntry_exports, {
   COMMANDER_XP: () => COMMANDER_XP,
   COMMON_RESOURCES: () => COMMON_RESOURCES2,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
+  CONTESTS_KEY: () => CONTESTS_KEY,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
   DIPLOMACY_RULES: () => DIPLOMACY_RULES,
   ELITE_KEY: () => ELITE_KEY,
@@ -208,6 +209,9 @@ __export(hooksEntry_exports, {
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
   consumeJammer: () => consumeJammer,
+  contestPhase: () => contestPhase,
+  contestPrizes: () => contestPrizes,
+  contestPurse: () => contestPurse,
   contractDeposit: () => contractDeposit,
   createOffer: () => createOffer,
   createTradeContract: () => createTradeContract,
@@ -300,6 +304,7 @@ __export(hooksEntry_exports, {
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeBossHistory: () => normalizeBossHistory,
   normalizeChallengeState: () => normalizeChallengeState,
+  normalizeContests: () => normalizeContests,
   normalizeCustomEmojis: () => normalizeCustomEmojis,
   normalizeElite: () => normalizeElite,
   normalizeLeviathan: () => normalizeLeviathan,
@@ -334,6 +339,7 @@ __export(hooksEntry_exports, {
   proposeAchievementTiers: () => proposeAchievementTiers,
   proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
+  pruneContests: () => pruneContests,
   pseudoLogin: () => pseudoLogin,
   publicPosts: () => publicPosts,
   publicShowcase: () => publicShowcase,
@@ -351,6 +357,7 @@ __export(hooksEntry_exports, {
   recordVendettaDamage: () => recordVendettaDamage,
   recyclerCapacity: () => recyclerCapacity,
   referralDue: () => referralDue,
+  refreshContest: () => refreshContest,
   refundOffer: () => refundOffer,
   releaseBounty: () => releaseBounty,
   removeChallengeTitle: () => removeChallengeTitle,
@@ -413,6 +420,7 @@ __export(hooksEntry_exports, {
   unitsAwayOf: () => unitsAwayOf,
   updateDailyProgress: () => updateDailyProgress,
   utcDayStart: () => utcDayStart,
+  validateContest: () => validateContest,
   validateGameContent: () => validateGameContent,
   validateRules: () => validateRules,
   vendettaTitle: () => vendettaTitle,
@@ -14690,8 +14698,8 @@ function _abytes2(value, length, title = "") {
   }
   return value;
 }
-function numberToHexUnpadded(num2) {
-  const hex = num2.toString(16);
+function numberToHexUnpadded(num3) {
+  const hex = num3.toString(16);
   return hex.length & 1 ? "0" + hex : hex;
 }
 function hexToNumber(hex) {
@@ -14989,15 +14997,15 @@ function validateField(field) {
   _validateObject(field, opts);
   return field;
 }
-function FpPow(Fp, num2, power) {
+function FpPow(Fp, num3, power) {
   if (power < _0n2)
     throw new Error("invalid exponent, negatives unsupported");
   if (power === _0n2)
     return Fp.ONE;
   if (power === _1n2)
-    return num2;
+    return num3;
   let p = Fp.ONE;
-  let d = num2;
+  let d = num3;
   while (power > _0n2) {
     if (power & _1n2)
       p = Fp.mul(p, d);
@@ -15008,18 +15016,18 @@ function FpPow(Fp, num2, power) {
 }
 function FpInvertBatch(Fp, nums, passZero = false) {
   const inverted = new Array(nums.length).fill(passZero ? Fp.ZERO : void 0);
-  const multipliedAcc = nums.reduce((acc, num2, i) => {
-    if (Fp.is0(num2))
+  const multipliedAcc = nums.reduce((acc, num3, i) => {
+    if (Fp.is0(num3))
       return acc;
     inverted[i] = acc;
-    return Fp.mul(acc, num2);
+    return Fp.mul(acc, num3);
   }, Fp.ONE);
   const invertedAcc = Fp.inv(multipliedAcc);
-  nums.reduceRight((acc, num2, i) => {
-    if (Fp.is0(num2))
+  nums.reduceRight((acc, num3, i) => {
+    if (Fp.is0(num3))
       return acc;
     inverted[i] = Fp.mul(acc, inverted[i]);
-    return Fp.mul(acc, num2);
+    return Fp.mul(acc, num3);
   }, invertedAcc);
   return inverted;
 }
@@ -15079,36 +15087,36 @@ function Field(ORDER, bitLenOrOpts, isLE = false, opts = {}) {
     ZERO: _0n2,
     ONE: _1n2,
     allowedLengths,
-    create: (num2) => mod(num2, ORDER),
-    isValid: (num2) => {
-      if (typeof num2 !== "bigint")
-        throw new Error("invalid field element: expected bigint, got " + typeof num2);
-      return _0n2 <= num2 && num2 < ORDER;
+    create: (num3) => mod(num3, ORDER),
+    isValid: (num3) => {
+      if (typeof num3 !== "bigint")
+        throw new Error("invalid field element: expected bigint, got " + typeof num3);
+      return _0n2 <= num3 && num3 < ORDER;
     },
-    is0: (num2) => num2 === _0n2,
+    is0: (num3) => num3 === _0n2,
     // is valid and invertible
-    isValidNot0: (num2) => !f.is0(num2) && f.isValid(num2),
-    isOdd: (num2) => (num2 & _1n2) === _1n2,
-    neg: (num2) => mod(-num2, ORDER),
+    isValidNot0: (num3) => !f.is0(num3) && f.isValid(num3),
+    isOdd: (num3) => (num3 & _1n2) === _1n2,
+    neg: (num3) => mod(-num3, ORDER),
     eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num2) => mod(num2 * num2, ORDER),
+    sqr: (num3) => mod(num3 * num3, ORDER),
     add: (lhs, rhs) => mod(lhs + rhs, ORDER),
     sub: (lhs, rhs) => mod(lhs - rhs, ORDER),
     mul: (lhs, rhs) => mod(lhs * rhs, ORDER),
-    pow: (num2, power) => FpPow(f, num2, power),
+    pow: (num3, power) => FpPow(f, num3, power),
     div: (lhs, rhs) => mod(lhs * invert(rhs, ORDER), ORDER),
     // Same as above, but doesn't normalize
-    sqrN: (num2) => num2 * num2,
+    sqrN: (num3) => num3 * num3,
     addN: (lhs, rhs) => lhs + rhs,
     subN: (lhs, rhs) => lhs - rhs,
     mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num2) => invert(num2, ORDER),
+    inv: (num3) => invert(num3, ORDER),
     sqrt: _sqrt || ((n) => {
       if (!sqrtP)
         sqrtP = FpSqrt(ORDER);
       return sqrtP(f, n);
     }),
-    toBytes: (num2) => isLE ? numberToBytesLE(num2, BYTES) : numberToBytesBE(num2, BYTES),
+    toBytes: (num3) => isLE ? numberToBytesLE(num3, BYTES) : numberToBytesBE(num3, BYTES),
     fromBytes: (bytes, skipValidation = true) => {
       if (allowedLengths) {
         if (!allowedLengths.includes(bytes.length) || bytes.length > BYTES) {
@@ -15153,8 +15161,8 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   const minLen = getMinHashLength(fieldOrder);
   if (len < 16 || len < minLen || len > 1024)
     throw new Error("expected " + minLen + "-1024 bytes of input, got " + len);
-  const num2 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
-  const reduced = mod(num2, fieldOrder - _1n2) + _1n2;
+  const num3 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
+  const reduced = mod(num3, fieldOrder - _1n2) + _1n2;
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
@@ -16056,7 +16064,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
 }
 
 // node_modules/@noble/curves/esm/abstract/weierstrass.js
-var divNearest = (num2, den) => (num2 + (num2 >= 0 ? den : -den) / _2n2) / den;
+var divNearest = (num3, den) => (num3 + (num3 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
   const c1 = divNearest(b2 * k, n);
@@ -16156,11 +16164,11 @@ var DER = {
   // - add zero byte if exists
   // - if next byte doesn't have a flag, leading zero is not allowed (minimal encoding)
   _int: {
-    encode(num2) {
+    encode(num3) {
       const { Err: E } = DER;
-      if (num2 < _0n4)
+      if (num3 < _0n4)
         throw new E("integer: negative integers are not allowed");
-      let hex = numberToHexUnpadded(num2);
+      let hex = numberToHexUnpadded(num3);
       if (Number.parseInt(hex[0], 16) & 8)
         hex = "00" + hex;
       if (hex.length & 1)
@@ -16203,20 +16211,20 @@ var _3n2 = BigInt(3);
 var _4n2 = BigInt(4);
 function _normFnElement(Fn, key) {
   const { BYTES: expected } = Fn;
-  let num2;
+  let num3;
   if (typeof key === "bigint") {
-    num2 = key;
+    num3 = key;
   } else {
     let bytes = ensureBytes("private key", key);
     try {
-      num2 = Fn.fromBytes(bytes);
+      num3 = Fn.fromBytes(bytes);
     } catch (error) {
       throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
     }
   }
-  if (!Fn.isValidNot0(num2))
+  if (!Fn.isValidNot0(num3))
     throw new Error("invalid private key: out of range [1..N-1]");
-  return num2;
+  return num3;
 }
 function weierstrassN(params, extraOpts = {}) {
   const validated = _createCurveFields("weierstrass", params, extraOpts);
@@ -16770,10 +16778,10 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
     const HALF = CURVE_ORDER >> _1n4;
     return number > HALF;
   }
-  function validateRS(title, num2) {
-    if (!Fn.isValidNot0(num2))
+  function validateRS(title, num3) {
+    if (!Fn.isValidNot0(num3))
       throw new Error(`invalid signature ${title}: out of range 1..Point.Fn.ORDER`);
-    return num2;
+    return num3;
   }
   function validateSigLength(bytes, format) {
     validateSigFormat(format);
@@ -16883,17 +16891,17 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
   const bits2int = ecdsaOpts.bits2int || function bits2int_def(bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
-    const num2 = bytesToNumberBE(bytes);
+    const num3 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - fnBits;
-    return delta > 0 ? num2 >> BigInt(delta) : num2;
+    return delta > 0 ? num3 >> BigInt(delta) : num3;
   };
   const bits2int_modN = ecdsaOpts.bits2int_modN || function bits2int_modN_def(bytes) {
     return Fn.create(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(fnBits);
-  function int2octets(num2) {
-    aInRange("num < 2^" + fnBits, num2, _0n4, ORDER_MASK);
-    return Fn.toBytes(num2);
+  function int2octets(num3) {
+    aInRange("num < 2^" + fnBits, num3, _0n4, ORDER_MASK);
+    return Fn.toBytes(num3);
   }
   function validateMsgAndHash(message, prehash) {
     _abytes2(message, void 0, "message");
@@ -17456,6 +17464,97 @@ function cleanPasskeyName(raw) {
 function challengeFromBytes(bytes) {
   if (bytes.length < 16) throw new PasskeyError("D\xE9fi trop court.");
   return b64urlEncode(bytes);
+}
+
+// src/game/contests.ts
+var CONTESTS_KEY = "contests";
+var CONTEST_RULES = {
+  /** Concours gardés (les plus anciens terminés sont oubliés). */
+  maxKept: 20,
+  /** Places affichées au classement. */
+  standingsSize: 20,
+  /** Part du pot qu'un concours peut engager, au plus. */
+  maxPotShare: 0.8
+};
+var num2 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+function normalizeContests(raw) {
+  const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
+  return {
+    list: list.filter((c) => !!c && typeof c === "object" && typeof c.id === "string" && c.metric in METRICS).map((c) => {
+      var _a, _b;
+      return __spreadValues(__spreadValues({
+        id: c.id,
+        title: String((_a = c.title) != null ? _a : "").slice(0, 80),
+        description: String((_b = c.description) != null ? _b : "").slice(0, 400),
+        metric: c.metric,
+        startMs: num2(c.startMs),
+        endMs: num2(c.endMs),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num2(c.potShare))),
+        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num2(p))).slice(0, 10),
+        status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
+        baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
+        standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
+        updatedAtMs: num2(c.updatedAtMs)
+      }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
+    })
+  };
+}
+function validateContest(c, now) {
+  var _a;
+  const errors = [];
+  if (!((_a = c.title) == null ? void 0 : _a.trim())) errors.push("Donne un titre au concours.");
+  if (!(c.metric in METRICS)) errors.push("Crit\xE8re inconnu.");
+  if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le d\xE9but.");
+  if (!(c.endMs > now)) errors.push("La fin doit \xEAtre dans le futur.");
+  if (c.endMs - c.startMs > 60 * 24 * 36e5) errors.push("Un concours dure 60 jours au plus.");
+  if (!(c.potShare > 0 && c.potShare <= CONTEST_RULES.maxPotShare)) errors.push(`Part du pot entre 1 % et ${Math.round(CONTEST_RULES.maxPotShare * 100)} %.`);
+  const sum3 = c.places.reduce((a, b) => a + b, 0);
+  if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place r\xE9compens\xE9e.");
+  if (sum3 > 1.0001) errors.push("La r\xE9partition des places d\xE9passe 100 %.");
+  return errors;
+}
+function contestPhase(c, now) {
+  if (c.status === "done" || c.status === "cancelled") return c.status;
+  if (now < c.startMs) return "scheduled";
+  return now < c.endMs ? "running" : "ending";
+}
+function metricValue(c, player) {
+  const m = METRICS[c.metric];
+  return m ? Math.max(0, Number(m.value(player)) || 0) : 0;
+}
+function contestScore(c, player) {
+  const base = c.baselines[player.uid];
+  return base === void 0 ? 0 : Math.max(0, metricValue(c, player) - base);
+}
+function refreshContest(c, players, now) {
+  const baselines = __spreadValues({}, c.baselines);
+  for (const p of players) if (baselines[p.uid] === void 0) baselines[p.uid] = metricValue(c, p);
+  const next = __spreadProps(__spreadValues({}, c), { baselines });
+  const standings = players.map((p) => ({ uid: p.uid, pseudo: p.pseudo, score: contestScore(next, p) })).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, CONTEST_RULES.standingsSize);
+  return __spreadProps(__spreadValues({}, next), { standings, updatedAtMs: now });
+}
+function contestPurse(c, pot) {
+  const out = {};
+  for (const [k, v] of Object.entries(pot.resources)) {
+    const n = Math.floor((v != null ? v : 0) * c.potShare);
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+function contestPrizes(c, purse) {
+  return c.standings.slice(0, c.places.length).map((s, i) => {
+    const resources = {};
+    for (const [k, v] of Object.entries(purse)) {
+      const n = Math.floor(v * c.places[i]);
+      if (n > 0) resources[k] = n;
+    }
+    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources };
+  });
+}
+function pruneContests(list) {
+  const open = list.filter((c) => c.status === "scheduled" || c.status === "running");
+  const closed = list.filter((c) => !(c.status === "scheduled" || c.status === "running")).sort((a, b) => b.endMs - a.endMs);
+  return [...open, ...closed].slice(0, CONTEST_RULES.maxKept);
 }
 
 // src/server/hooksEntry.ts

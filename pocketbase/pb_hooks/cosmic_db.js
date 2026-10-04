@@ -4547,6 +4547,115 @@ function adminServerPot(e) {
   return e.json(200, out);
 }
 
+/* ---------- v5.10.5 : concours du pot commun ---------- */
+
+function readContests(txApp, game) {
+  const rec = configRecord(txApp, game.CONTESTS_KEY);
+  return game.normalizeContests(rec ? toPlain(rec).data : null);
+}
+
+/** Tâche planifiée : lancement, relevé du classement, versement des prix à la fin. */
+function contestsTick(now) {
+  const game = loadGame();
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const state = readContests(txApp, game);
+    if (!state.list.some((c) => c.status === "scheduled" || c.status === "running")) return;
+    const players = proceduralPlayers(txApp);
+    let changed = false;
+    const list = state.list.map((c) => {
+      const phase = game.contestPhase(c, now);
+      if (phase === "scheduled" || phase === "done" || phase === "cancelled") return c;
+      changed = true;
+      let next = game.refreshContest(c, players, now);
+      if (c.status === "scheduled") {
+        next = Object.assign({}, next, { status: "running" });
+        players.forEach((p) => {
+          try {
+            notify(txApp, p.uid, [{ kind: "event", title: `Concours : ${c.title}`, message: `C'est parti jusqu'au ${game.parisWhenLabel(c.endMs)} ! Les ${c.places.length} premiers se partagent ${Math.round(c.potShare * 100)} % du pot commun.`, createdAtMs: now, read: false, link: "/game/concours" }]);
+          } catch (_) {
+            /* facultatif */
+          }
+        });
+      }
+      if (phase === "ending") next = finishContest(txApp, game, next, now);
+      return next;
+    });
+    if (changed) writeConfig(txApp, game.CONTESTS_KEY, { list: game.pruneContests(list) });
+  });
+}
+
+/** Fin d'un concours : prix pris dans le pot et versés aux premiers. */
+function finishContest(txApp, game, c, now) {
+  const rec = configRecord(txApp, game.SERVER_POT_KEY);
+  let pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
+  const prizes = game.contestPrizes(c, game.contestPurse(c, pot));
+  const results = [];
+  prizes.forEach((prize) => {
+    if (!findOrNull(txApp, "players", prize.uid) || Object.keys(prize.resources).length === 0) return;
+    const before = pot;
+    pot = game.takeFromPot(pot, prize.resources, now, `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`);
+    if (pot === before) return;
+    const last = pot.log[pot.log.length - 1];
+    const given = {};
+    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    const owner = loadPlayer(txApp, game, prize.uid);
+    const flushed = game.flushPlayer(owner.player, owner.queues, now);
+    Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    notify(txApp, prize.uid, flushed.notifications.concat([
+      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${game.describeGain(given)} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given } },
+    ]));
+    results.push(Object.assign({}, prize, { resources: given }));
+  });
+  writeConfig(txApp, game.SERVER_POT_KEY, pot);
+  return Object.assign({}, c, { status: "done", results });
+}
+
+/** POST /api/cosmic/admin/contests { action: "create" | "cancel", contest?, id? } */
+function adminContests(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    const state = readContests(txApp, game);
+    let list = state.list;
+    if (req.action === "create") {
+      const c = req.contest || {};
+      const draft = {
+        id: `contest-${now}`,
+        title: String(c.title || "").trim().slice(0, 80),
+        description: String(c.description || "").trim().slice(0, 400),
+        metric: String(c.metric || ""),
+        startMs: Math.max(now, Number(c.startMs) || now),
+        endMs: Number(c.endMs) || 0,
+        potShare: Number(c.potShare) || 0,
+        places: (Array.isArray(c.places) ? c.places : []).map(Number),
+        status: "scheduled",
+        baselines: {},
+        standings: [],
+        updatedAtMs: now,
+        createdBy: e.auth ? e.auth.id : "superuser",
+      };
+      const errors = game.validateContest(draft, now);
+      if (errors.length) throw new BadRequestError(errors.join(" "));
+      list = game.pruneContests([draft].concat(list));
+    } else if (req.action === "cancel") {
+      const c = list.find((x) => x.id === req.id);
+      if (!c || !(c.status === "scheduled" || c.status === "running")) throw new BadRequestError("Concours introuvable ou déjà terminé.");
+      list = list.map((x) => (x.id === req.id ? Object.assign({}, x, { status: "cancelled", updatedAtMs: now }) : x));
+    } else throw new BadRequestError("Action inconnue.");
+    writeConfig(txApp, game.CONTESTS_KEY, { list });
+    bossAdminLog(txApp, e, game.CONTESTS_KEY, req.action === "create" ? `Concours créé : ${String((req.contest || {}).title || "")}` : "Concours annulé", { action: req.action, id: req.id || null }, now);
+    out = { list };
+  });
+  if (req.action === "create") contestsTick(Date.now());
+  return e.json(200, out);
+}
+
 function writeConfig(txApp, key, data) {
   let rec = configRecord(txApp, key);
   if (!rec) {
@@ -6591,4 +6700,4 @@ function adminGazette(e) {
   return e.json(200, out);
 }
 
-module.exports = { guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, marketMakerTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

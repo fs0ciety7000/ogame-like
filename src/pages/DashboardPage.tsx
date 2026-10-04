@@ -28,6 +28,7 @@ import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
 import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
+import { RunningContestCard } from "@/components/game/RunningContestCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { useFleetStore } from "@/store/fleetStore";
@@ -102,6 +103,7 @@ export function DashboardPage() {
     challenge: (
       <div className="flex flex-col gap-3">
         <WeeklyRecapCard />
+        <RunningContestCard />
         <ChallengeCard />
       </div>
     ),
