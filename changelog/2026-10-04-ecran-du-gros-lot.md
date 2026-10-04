@@ -7,7 +7,7 @@ title: L'écran du gros lot et la Main d'or illustrés
 Le 7-7-7 a enfin la mise en scène qu'il mérite, et la Main d'or ses illustrations.
 
 ## Gros lot
-- Nouvel **écran du gros lot** : la salle du casino en fond, rayons dorés, flash et onde de choc, le **sceau de la Main d'or** qui s'imprime et les gains qui défilent jusqu'à leur montant.
+- Nouvel **écran du gros lot** : la salle du casino en fond, un panneau aux couleurs du HUD balayé d'or à l'ouverture, le **sceau de la Main d'or** qui s'imprime et chaque gain qui défile jusqu'à son montant.
 - Les mouvements sont coupés si ton appareil demande moins d'animations.
 - Administrateurs : un bouton **Aperçu de l'écran du gros lot** sur la page du casino (rien n'est versé).
 

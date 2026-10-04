@@ -15,9 +15,9 @@ cover: /assets/casino/banniere-777.webp
 Aligner trois 7, c'est une chance sur deux cents par jeton. Ça méritait mieux qu'une simple fenêtre. Le gros lot ouvre maintenant un **écran plein** :
 
 - la salle du casino en fond, qui avance doucement ;
-- un flash et une onde de choc à l'ouverture, puis des rayons dorés qui tournent ;
-- le **sceau de la Main d'or** qui s'imprime au-dessus des trois 7 ;
-- vos gains qui défilent jusqu'à leur montant, sous une pluie de jetons.
+- un panneau du HUD, balayé d'or à l'ouverture ;
+- le **sceau de la Main d'or** qui s'imprime à côté des trois 7 ;
+- chacun de vos gains dans sa case, qui défile jusqu'à son montant, sous une pluie de jetons.
 
 Si votre appareil demande moins d'animations, la scène reste fixe.
 

@@ -5,7 +5,7 @@ import { Crown, History } from "lucide-react";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { assetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card } from "@/components/ui/card";
+import { Card, HudBrackets } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { HudCallout, HudChip, EmptyState } from "@/components/ui/hud";
@@ -21,7 +21,7 @@ import { Navigate } from "react-router-dom";
 import { usePlayerStore } from "@/store/playerStore";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { playJackpot, playSlotPull, playSlotStop, playSlotWin } from "@/lib/sfx";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
 
 /* v5.12 : Casino orbital — machine à sous « 777 » alimentée par le pot commun. */
@@ -52,53 +52,72 @@ const PAYTABLE: { combo: SlotSymbol[]; outcome: SpinOutcome }[] = [
 
 function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseudo: string; onClose: () => void }) {
   const reduce = useReducedMotion();
-  const coins = useMemo(() => Array.from({ length: reduce ? 0 : 46 }, (_, i) => ({ id: i, x: Math.random() * 100, delay: 0.6 + Math.random() * 1.6, dur: 1.8 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 720 })), [reduce]);
+  const coins = useMemo(() => Array.from({ length: reduce ? 0 : 24 }, (_, i) => ({ id: i, x: Math.random() * 100, delay: 0.8 + Math.random() * 1.6, dur: 2.2 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 540 })), [reduce]);
   const gains = (Object.entries(result.resources) as [ResourceId, number][]).filter(([, n]) => n > 0);
   return (
-    <motion.div className="jackpot-scene fixed inset-0 z-[80] grid place-items-center overflow-hidden p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal aria-label="Gros lot">
-      {/* 5.14.3 : la salle du casino en fond, qui avance lentement vers le joueur. */}
+    <motion.div className="jackpot-scene fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal aria-label="Gros lot">
+      {/* 5.14.4 : la salle du casino en fond (docs/DESIGN.md : un lieu, le texte reste prioritaire). */}
       <img src={assetUrl("/assets/casino/banniere-777.webp")} alt="" aria-hidden className="jackpot-scene-bg" />
       <div className="jackpot-scene-veil" aria-hidden />
-      {!reduce && <div className="jackpot-rays" aria-hidden />}
-      {!reduce && <div className="jackpot-flash" aria-hidden />}
-      {!reduce && <div className="jackpot-shockwave" aria-hidden />}
       {coins.map((c) => (
         <motion.span key={c.id} className="slot-coin" style={{ left: `${c.x}%` }} initial={{ y: -60, rotate: 0 }} animate={{ y: "110vh", rotate: c.rot }} transition={{ duration: c.dur, delay: c.delay, repeat: Infinity, ease: "easeIn" }}>
-          <TokenIcon size={30} variant="art" />
+          <TokenIcon size={26} variant="art" />
         </motion.span>
       ))}
-      <motion.div className="relative z-10 grid justify-items-center gap-3 text-center" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.15 }}>
-        <motion.img
-          src={assetUrl("/assets/casino/sceau-777.webp")}
-          alt=""
-          aria-hidden
-          className="jackpot-seal h-24 w-24 object-contain sm:h-28 sm:w-28"
-          initial={reduce ? false : { scale: 2.4, opacity: 0, rotate: -25 }}
-          animate={{ scale: 1, opacity: 1, rotate: 0 }}
-          transition={{ delay: 1.1, type: "spring", stiffness: 260, damping: 13 }}
-        />
-        <div className="flex gap-2">
-          {[0, 1, 2].map((i) => (
-            <motion.span key={i} initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 + i * 0.15, type: "spring", stiffness: 300 }}>
-              <SlotSymbolView symbol="seven" size={96} />
-            </motion.span>
+      <motion.div
+        className="glass-panel hud-cut jackpot-panel relative z-10 grid w-full max-w-[560px] justify-items-center gap-4 p-6 text-center"
+        initial={reduce ? false : { scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 240, damping: 20, delay: 0.1 }}
+      >
+        <HudBrackets className="border-gold-glow/80" />
+        {!reduce && <span className="jackpot-sweep" aria-hidden />}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <HudChip tone="gold" size="md" alert>
+            Gros lot · 7-7-7
+          </HudChip>
+          <HudChip tone="neutral" size="md">
+            Casino orbital
+          </HudChip>
+        </div>
+        <div className="flex items-center gap-3">
+          <motion.img
+            src={assetUrl("/assets/casino/sceau-777.webp")}
+            alt=""
+            aria-hidden
+            className="jackpot-seal h-20 w-20 object-contain sm:h-24 sm:w-24"
+            initial={reduce ? false : { scale: 1.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.7, type: "spring", stiffness: 260, damping: 16 }}
+          />
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <motion.span key={i} initial={reduce ? false : { y: -24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 + i * 0.12, type: "spring", stiffness: 300 }}>
+                <SlotSymbolView symbol="seven" size={64} />
+              </motion.span>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-1">
+          <p className="slot-title" style={{ fontSize: "clamp(28px, 7vw, 44px)" }}>
+            Gros lot
+          </p>
+          <p className="text-sm text-slate-300">
+            <b className="text-slate-100">{pseudo}</b>, le Casino orbital te verse :
+          </p>
+        </div>
+        <div className={cn("grid w-full gap-2", gains.length > 2 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2")}>
+          {gains.map(([res, n]) => (
+            <div key={res} className="hud-cut-sm flex items-center gap-2 border border-gold-glow/25 bg-space-900/60 px-3 py-2 text-left">
+              <ResourceIcon id={res} className="h-6 w-6" />
+              <span className="min-w-0 font-mono text-lg font-bold tabular-nums text-gold-glow">{reduce ? formatCompact(n) : <AnimatedNumber value={n} countUp format={formatCompact} />}</span>
+            </div>
           ))}
         </div>
-        <p className="slot-title" style={{ fontSize: "clamp(32px, 8vw, 64px)" }}>
-          Gros lot !
-        </p>
-        <p className="text-lg text-slate-200">
-          Bravo <b className="text-gold-glow">{pseudo}</b>, le Casino orbital te verse :
-        </p>
-        <span className="flex flex-wrap items-center justify-center gap-4 font-mono text-2xl font-bold tabular-nums text-white">
-          {gains.map(([res, n]) => (
-            <span key={res} className="inline-flex items-center gap-1">
-              <ResourceIcon id={res} className="h-5 w-5" /> {reduce ? formatCompact(n) : <AnimatedNumber value={n} countUp format={formatCompact} />}
-            </span>
-          ))}
-        </span>
-        <p className="text-xs text-slate-400">{result.fromPot ? "Pris dans le pot commun du serveur. Tout le monde est prévenu !" : "Le pot commun était vide : 12 h de production à la place."}</p>
-        <Button size="lg" className="mt-2" onClick={onClose}>
+        <HudCallout tone="gold" className="w-full text-left text-xs">
+          {result.fromPot ? "Pris dans le pot commun du serveur. Tout le monde est prévenu !" : "Le pot commun était vide : 12 h de production à la place."}
+        </HudCallout>
+        <Button size="lg" onClick={onClose}>
           Encaisser
         </Button>
       </motion.div>
