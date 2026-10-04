@@ -26,4 +26,4 @@ Variante plus « céleste » si la première est trop militaire :
 2. Déposer le fichier à `public/assets/ascension/insigne.webp`.
 3. Dans `src/game/ascension.ts`, remplacer `ASCENSION_INSIGNIA = null` par `"/assets/ascension/insigne.webp"`.
 
-Tant que l'insigne n'est pas là, le jeu affiche une icône vectorielle (étincelles) à sa place.
+5.15 : insigne livré (V ailé, détouré, 256 × 256). Pour le remplacer : même chemin, puis augmenter `ASSET_VERSION`.

@@ -21,7 +21,7 @@ export function AscensionStars({ count, full, className }: { count?: number; ful
   const slots = full ? ASCENSION_RULES.maxAscensions : n;
   return (
     <span className={cn("inline-flex items-center gap-1 text-gold-glow", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
-      {ASCENSION_INSIGNIA ? <img src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={full ? "h-6 w-6 object-contain" : "h-4 w-4 object-contain"} /> : <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />}
+      {ASCENSION_INSIGNIA ? <img src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={full ? "h-7 w-7 object-contain" : "h-5 w-5 object-contain"} /> : <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />}
       <span className="inline-flex items-center gap-px">
         {Array.from({ length: slots }, (_, i) => (
           <Star key={i} className={cn(full ? "h-3.5 w-3.5" : "h-3 w-3", i < n ? "fill-current" : "text-slate-600")} />
