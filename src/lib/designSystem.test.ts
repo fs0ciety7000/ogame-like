@@ -27,4 +27,20 @@ describe("design system", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  it("aucune couleur hex écrite dans un composant (jetons du thème)", () => {
+    // Scènes dessinées (planète, boss, nébuleuse, étoiles, vue cockpit), rapport imprimé,
+    // logo Google et aperçu d'e-mail : couleurs d'illustration ou de marque, hors thème.
+    const allowed = /(HomePlanet|BossStage|Nebula|ParallaxStars|CockpitViewport|StatsPrintReport|AltSignIn|MailPanel)\.tsx$/;
+    const offenders: string[] = [];
+    for (const file of files("src")) {
+      if (allowed.test(file) || file.includes(".test.")) continue;
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?=["'`;,) \]])/.test(line)) offenders.push(`${file}:${i + 1}`);
+        });
+    }
+    expect(offenders).toEqual([]);
+  });
 });

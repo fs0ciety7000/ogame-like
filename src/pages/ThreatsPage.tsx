@@ -36,7 +36,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = computeFleetPower(player.units, player.techLevels, selected, ["attack"]);
   const lair = lairPower(faction, player);
-  const flight = Object.keys(selected).length > 0 ? travelSeconds(LAIR_DISTANCE, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels)) : null;
+  const flight = Object.keys(selected).length > 0 ? travelSeconds(LAIR_DISTANCE, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {
     setBusy(true);

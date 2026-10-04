@@ -1,6 +1,7 @@
 import { GameActionError } from "@/game/errors";
+import { leviathanSchedule } from "@/game/leviathan";
 import { bossWindows, parisLocalToUtc, parisOffsetMs, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
-import { addPassPoints, grantPassReward, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
+import { addPassPoints, grantPassReward, OBJECTIVE_LABELS, onPassPoints, PASS_POINTS, setMonthPasses, trackActivity, validateSeasonPass, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -19,17 +20,8 @@ import type { PlayerState } from "@/types/game";
 
 export type ChronicleObjective = "contract" | "bounty" | "raidRepelled" | "victory" | "bossAssault" | "mission" | "spy" | "market" | "warlordWin";
 
-export const OBJECTIVE_LABELS: Record<ChronicleObjective, string> = {
-  contract: "Contrats du jour récupérés",
-  bounty: "Primes Kesh'Vaar remplies",
-  raidRepelled: "Raids de faction repoussés",
-  victory: "Combats gagnés",
-  bossAssault: "Assauts sur un boss",
-  mission: "Missions terminées",
-  spy: "Sondes d'espionnage lancées",
-  market: "Offres achetées au marché",
-  warlordWin: "Seigneurs de guerre pillés",
-};
+/** v5.13 : libellés rangés dans seasonPass.ts (prérequis des paliers), ré-exportés ici. */
+export { OBJECTIVE_LABELS };
 
 export interface ChronicleEpisode {
   title: string;
@@ -545,9 +537,11 @@ export const SEASON_BOSS_RULES: {
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
   hpFactor: number;
   minHp: number;
-  /** Vendredi 18 h → dimanche 23 h (heure de Paris) par défaut. */
+  /** Durée de présence (h). v5.14.2 : 48 h, pour tenir entre deux boss mondiaux. */
   durationHours: number;
   topRelics: number;
+  /** v5.14.2 : chaque semaine, en alternance avec le boss mondial (sinon : un week-end par mois). */
+  alternate?: boolean;
 } = {
   enabled: true,
   weekend: "last",
@@ -555,12 +549,21 @@ export const SEASON_BOSS_RULES: {
   startHour: 18,
   hpFactor: 3,
   minHp: 100_000,
-  durationHours: 53,
+  durationHours: 48,
   topRelics: 3,
+  alternate: true,
 };
 
 export function seasonBossSchedule(): BossSchedule {
-  return { enabled: SEASON_BOSS_RULES.enabled !== false, weekend: SEASON_BOSS_RULES.weekend ?? "last", startHour: SEASON_BOSS_RULES.startHour ?? 18, durationHours: SEASON_BOSS_RULES.durationHours, dates: SEASON_BOSS_RULES.dates ?? [] };
+  return {
+    enabled: SEASON_BOSS_RULES.enabled !== false,
+    weekend: SEASON_BOSS_RULES.weekend ?? "last",
+    startHour: SEASON_BOSS_RULES.startHour ?? 18,
+    durationHours: SEASON_BOSS_RULES.durationHours,
+    dates: SEASON_BOSS_RULES.dates ?? [],
+    // v5.14.2 : une fois par semaine, entre deux passages du boss mondial (repli mensuel sans rotation hebdomadaire).
+    ...(SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {}),
+  };
 }
 
 /** Fenêtre du boss de saison, en cours ou à venir (ou null si le mois n'a pas de boss). */
@@ -572,7 +575,9 @@ export function seasonBossWindow(now: number, includeUpcoming = false): { id: st
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
   // Date précise : identifiant propre (plusieurs combats possibles dans le même mois).
-  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
+  // v5.14.2 : rythme hebdomadaire : un combat par apparition.
+  const weekly = !w.fixed && !!seasonBossSchedule().weekly?.between?.weekly;
+  return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : weekly ? `boss-${monthId}-w${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 
 export function seasonBossHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {

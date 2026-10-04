@@ -53,7 +53,7 @@ import {
   ResearchTab,
   TreasuryTab,
 } from "@/components/game/AllianceTabs";
-import { timeAgo, cn } from "@/lib/utils";
+import { timeAgo, cn, alpha } from "@/lib/utils";
 import type { Alliance, AllianceMessage } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 
@@ -389,7 +389,7 @@ function AllianceRoom({
                       {(() => {
                         const rank = memberRankLabel(alliance, m);
                         return rank ? (
-                          <span className="shrink-0 border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${rank.color}66` }}>
+                          <span className="shrink-0 border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
                             {rank.name}
                           </span>
                         ) : null;

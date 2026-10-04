@@ -44,7 +44,7 @@ const MAX_ZOOM = 8;
 
 /** Couleur stable d'une alliance (teinte dérivée de son identifiant). */
 function allianceColor(id: string | undefined): string {
-  if (!id) return "#7dd3fc";
+  if (!id) return "var(--color-cyan-glow)";
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
   return `hsl(${h} 85% 65%)`;
@@ -208,7 +208,7 @@ export function GalaxyPage() {
     );
     if (speeds.length === 0) return { distance: distanceBetween(uid, selected.uid), fast: null, slow: null };
     const distance = distanceBetween(uid, selected.uid);
-    const f = allianceFlightFactor(me.allianceResearch, me.techLevels);
+    const f = allianceFlightFactor(me.allianceResearch, me.techLevels, me);
     return { distance, fast: attackTravelSeconds(distance, Math.max(...speeds), f), slow: attackTravelSeconds(distance, Math.max(1, Math.min(...speeds)), f) };
   }, [uid, me, selected, selectedIsMine]);
 
@@ -267,8 +267,8 @@ export function GalaxyPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-        <div ref={cardRef} className="glass-panel tactical-grid relative aspect-square max-h-[75vh] w-full overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div ref={cardRef} className="glass-panel tactical-grid relative aspect-square max-h-[75vh] w-full min-w-0 overflow-hidden p-0 xl:aspect-auto xl:h-[680px]">
           <ParallaxStars pan={{ x: view.x * 6, y: view.y * 6 }} />
           <svg
             ref={svgRef}
@@ -423,7 +423,7 @@ export function GalaxyPage() {
                       {isSelected && <circle r={1.8 / k} fill="none" stroke="white" strokeOpacity={0.9} strokeWidth={0.3 / k} />}
                       <rect x={-0.7 / k} y={-0.7 / k} width={1.4 / k} height={1.4 / k} fill={color} transform="rotate(45)" />
                       {(k >= 2.4 || isSelected) && (
-                        <text y={-1.9 / k} textAnchor="middle" fontSize={1.5 / k} fill="#94a3b8">
+                        <text y={-1.9 / k} textAnchor="middle" fontSize={1.5 / k} fill="var(--color-slate-400)">
                           {c.colonyName}
                         </text>
                       )}
@@ -458,7 +458,7 @@ export function GalaxyPage() {
                       <circle r={(isSelf ? 1.3 : 1) / k} fill={color} style={{ filter: `drop-shadow(0 0 ${1.5 / k}px ${color})` }} />
                     )}
                     {showLabel && (
-                      <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "#cbd5e1"}>
+                      <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "var(--color-slate-300)"}>
                         {tag ? `[${tag}] ` : ""}
                         {b.pseudo}
                       </text>
@@ -499,7 +499,7 @@ export function GalaxyPage() {
           {blips.length === 0 && (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
-          <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400">
+          <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400 sm:right-auto">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-gold-glow" /> Toi
             </span>
@@ -524,7 +524,7 @@ export function GalaxyPage() {
               <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
             </span>
           </div>
-          <p className="pointer-events-none absolute right-2 top-2 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500">
+          <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500 sm:block">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
         </div>

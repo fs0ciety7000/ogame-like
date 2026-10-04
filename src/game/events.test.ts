@@ -21,10 +21,12 @@ describe("weekend events", () => {
   beforeEach(() => {
     EVENT_RULES.rotationEnabled = true;
     EVENT_RULES.bossMonthly = false;
+    EVENT_RULES.bossWeekly = true;
   });
 
-  it("leaves the first weekend of the month to the Leviathan", () => {
+  it("leaves the first weekend of the month to the Leviathan (monthly mode)", () => {
     EVENT_RULES.bossMonthly = true;
+    EVENT_RULES.bossWeekly = false;
     // 2 octobre 2026 : premier vendredi du mois → pas d'événement de rotation.
     expect(eventAt(FRI_OCT + 20 * H)).toBeNull();
     // 9 octobre : la rotation reprend.

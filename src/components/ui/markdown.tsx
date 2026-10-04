@@ -1,3 +1,4 @@
+import { alpha } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { splitBadge, type ChangelogBadge } from "@/lib/changelogBadges";
 
@@ -36,7 +37,7 @@ export function ChangelogBadgePill({ badge, className = "" }: { badge: Changelog
   return (
     <span
       className={`mr-1.5 inline-flex items-center border px-1.5 py-px align-[1px] font-mono text-[10px] font-semibold uppercase tracking-wider ${className}`}
-      style={{ color: badge.color, borderColor: `${badge.color}66`, background: `${badge.color}14` }}
+      style={{ color: badge.color, borderColor: `${alpha(badge.color, 40)}`, background: `${alpha(badge.color, 8)}` }}
     >
       {badge.label}
     </span>

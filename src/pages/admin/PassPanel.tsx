@@ -21,7 +21,6 @@ const POINT_LABELS: Record<string, string> = {
   victory: "Combat gagné",
   bossAssault: "Assaut sur un boss",
   dailyLogin: "Connexion du jour",
-  mission: "Mission terminée",
   vendetta: "Vendetta gagnée",
   chronicle: "Épisode des Chroniques",
   seasonBoss: "Participation au boss de saison",
@@ -36,6 +35,7 @@ const KINDS: { value: PassReward["kind"]; label: string }[] = [
   { value: "dossier", label: "Dossiers" },
   { value: "capsule", label: "Capsule" },
   { value: "relic", label: "Relique" },
+  { value: "tokens", label: "Jetons du casino" },
   { value: "cosmetic", label: "Bannière + titre" },
 ];
 
@@ -51,6 +51,8 @@ function blank(kind: PassReward["kind"]): PassReward {
       return { kind, capsule: "assault", level: 3 };
     case "relic":
       return { kind, rarity: "rare" };
+    case "tokens":
+      return { kind, count: 1 };
     default:
       return { kind: "cosmetic" };
   }
@@ -59,7 +61,7 @@ function blank(kind: PassReward["kind"]): PassReward {
 const sel = "h-8 border border-white/15 bg-space-950 px-1.5 text-xs text-slate-200";
 const num = { size: "sm", stepper: false, quick: false, meter: false, className: "w-20" } as const;
 
-function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
+export function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChange: (r: PassReward) => void; onRemove: () => void }) {
   return (
     <span className="inline-flex max-w-full flex-wrap items-center gap-1 border border-white/10 bg-white/[0.02] p-1">
       <select className={sel} value={value.kind} onChange={(e) => onChange(blank(e.target.value as PassReward["kind"]))}>
@@ -72,6 +74,7 @@ function RewardEditor({ value, onChange, onRemove }: { value: PassReward; onChan
       {value.kind === "production" && <NumberInput {...num} min={1} value={value.hours} suffix="h" aria-label="Heures" onChange={(v) => onChange({ ...value, hours: v })} />}
       {value.kind === "amber" && <NumberInput {...num} min={1} value={value.amount} aria-label="Ambre" onChange={(v) => onChange({ ...value, amount: v })} />}
       {value.kind === "dossier" && <NumberInput {...num} min={1} value={value.count} aria-label="Dossiers" onChange={(v) => onChange({ ...value, count: v })} />}
+      {value.kind === "tokens" && <NumberInput {...num} min={1} max={20} value={value.count} aria-label="Jetons" onChange={(v) => onChange({ ...value, count: v })} />}
       {value.kind === "capsule" && (
         <>
           <select className={sel} value={value.capsule} onChange={(e) => onChange({ ...value, capsule: e.target.value as CapsuleType })}>
@@ -119,14 +122,17 @@ export function PassPanel() {
   };
 
   const amber = cfg.tiers.flat().reduce((a, r) => a + (r.kind === "amber" ? r.amount : 0), 0);
+  const tokens = cfg.tiers.flat().reduce((a, r) => a + (r.kind === "tokens" ? r.count : 0), 0);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Passe de saison</h2>
+        <h2 className="font-display text-base text-white">Passe par défaut</h2>
+        {/* v5.14.2 : ne pas le confondre avec les passes de saison (bloc du dessus). */}
+        <span className="w-full text-xs text-slate-400 sm:order-last">Sert seulement les mois sans passe de saison publié (ni chapitre qui apporte le sien) : paliers et points, sans thème ni défis.</span>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <span className="text-xs text-slate-500">
-          {cfg.tiers.length} paliers · <AmberAmount value={amber} /> au total
+          {cfg.tiers.length} paliers · <AmberAmount value={amber} /> et {tokens} jeton{tokens > 1 ? "s" : ""} du casino au total
         </span>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
@@ -149,7 +155,7 @@ export function PassPanel() {
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Points">
           <NumberField label="Points par palier" value={cfg.rules.pointsPerTier} min={1} onChange={(v) => setCfg((c) => ({ ...c, rules: { ...c.rules, pointsPerTier: v ?? 40 } }))} />
-          {Object.keys(cfg.points).map((k) => (
+          {Object.keys(cfg.points).filter((k) => k !== "mission").map((k) => (
             <NumberField key={k} label={POINT_LABELS[k] ?? k} value={cfg.points[k as keyof typeof cfg.points]} min={0} onChange={(v) => setCfg((c) => ({ ...c, points: { ...c.points, [k]: v ?? 0 } }))} />
           ))}
         </Section>

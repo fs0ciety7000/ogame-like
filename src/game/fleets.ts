@@ -233,7 +233,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
   if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
 
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels)) * 1000;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels, attacker)) * 1000;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   // Attaquer lève sa propre protection débutant, dès le décollage (et le Voile de chitine).
   attacker.lastAttackAtMs = now;
@@ -424,11 +424,11 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     const e = launchExpedition(owner, req.fleet, req.expeditionHours, req.expeditionsActive ?? 0, req.expeditionsToday ?? 0, now, req.formation);
     out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
   } else if (mission === "leviathan") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le Léviathan.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer un boss mondial.");
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     out = {
       attacker: owner,
-      fleet: newFleet(owner, { uid: "leviathan", pseudo: LEVIATHAN_RULES.name }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
+      fleet: newFleet(owner, { uid: "leviathan", pseudo: "Boss mondial" }, "leviathan", units, now, now + LEVIATHAN_RULES.flightMinutes * 60_000),
       defenderNotifications: [],
     };
   }
@@ -511,7 +511,8 @@ export function launchTransport(owner: PlayerState, raw: Record<string, unknown>
     for (const [res, n] of Object.entries(cargo) as [ResourceId, number][]) owner.resources[res] -= n;
   }
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   bumpStat(owner, "transports");
   return {
     attacker: owner,
@@ -532,7 +533,8 @@ export function launchDelivery(
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
   const capacity = playerCargoCapacity(owner, units);
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   checkDelivery(contract, owner.uid, capacity, arriveAtMs);
   if ((owner.resources[contract.wantRes] ?? 0) < contract.wantAmount) throw new GameActionError("Ressources insuffisantes pour cette livraison.");
   owner.resources[contract.wantRes] -= contract.wantAmount;
@@ -610,7 +612,7 @@ function newFleet(owner: PlayerState, target: { uid: string; pseudo: string }, m
 export function launchSpy(owner: PlayerState, target: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
   const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
 }
 
@@ -619,7 +621,8 @@ export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de débris n'existe plus.");
   const units = takeUnits(owner, raw, (id) => id === DEBRIS_RULES.recyclerUnitId, "Seuls les Drones récupérateurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   return {
     attacker: owner,
     fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
@@ -679,7 +682,8 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, host.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   // v5.3 : puissance brute (attaque + défense) affichée à l'hôte dans le comparatif des menaces.
   const power = Math.round(computeFleetPower(owner.units, owner.techLevels, units, ["attack", "defense"]));
   const fleet = { ...newFleet(owner, host, "garrison", units, now, arriveAtMs), durationMs: hours * 3600_000, stationedUntilMs: null, power };
@@ -705,7 +709,7 @@ export function launchLair(owner: PlayerState, target: string, raw: Record<strin
   const power = lairPower(faction!, owner);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unités d'attaque peuvent être envoyées.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels)) * 1000;
+  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   return {
     attacker: owner,
     fleet: { ...newFleet(owner, { uid: lairUid(faction!.id), pseudo: faction!.lair.name }, "lair", units, now, arriveAtMs), power, factionId: faction!.id },

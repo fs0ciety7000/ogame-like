@@ -1,3 +1,4 @@
+import { describeLoot, rollLoot } from "@/game/loot";
 import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
@@ -162,7 +163,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor(def.units ?? {}, def.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
-    lootMultiplier: lootFactor(now),
+    // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
+    lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
     garrisons: input.garrisons ?? [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
@@ -175,7 +177,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch))]),
+      Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch, def))]),
     ),
   });
 
@@ -233,11 +235,17 @@ export function performAttack(input: AttackInput): AttackOutput {
   applyXpDelta(owner, defenderXpDelta, now);
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
-  if (combat.outcome === "attacker_win") grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+  if (combat.outcome === "attacker_win") {
+    grantCommanderXp(attacker, "admiral", COMMANDER_XP.attackWin);
+    grantCommanderXp(attacker, "corsair", COMMANDER_XP.attackWin);
+  }
   if (combat.outcome === "attacker_win") addPassPoints(attacker, "victory", now);
+  // v5.14 : table de butin (joueur : très rare ; seigneur de guerre : un peu plus).
+  const extraLoot = combat.outcome === "attacker_win" ? describeLoot(rollLoot(attacker, owner.npc ? "warlord" : "pvp", now)) : "";
   if (combat.outcome === "attacker_win" && owner.npc) recordChronicle(attacker, "warlordWin", now);
   if (combat.outcome === "defender_win") addPassPoints(owner, "victory", now);
   grantCommanderXp(owner, "strategist", combat.outcome === "defender_win" ? COMMANDER_XP.defenseWin : COMMANDER_XP.defenseLost);
+  if (combat.outcome === "defender_win") grantCommanderXp(owner, "warden", COMMANDER_XP.defenseWin);
 
   const outcomeTitle: Record<string, string> = {
     attacker_win: "Victoire !",
@@ -249,7 +257,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     {
       kind: "combat-attacker",
       title: outcomeTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}`,
+      message: `Attaque contre ${def.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}${extraLoot}`,
       createdAtMs: now,
       read: false,
       data: { resources: combat.loot ?? undefined, xp: xp.attackerXp > 0 ? xp.attackerXp : undefined, toUid: def.uid, toPseudo: def.pseudo },

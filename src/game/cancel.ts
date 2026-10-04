@@ -126,7 +126,7 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
         const e = queue[i];
         if (e.endTime) {
           // Unité en cours : au prorata de son propre temps de fabrication.
-          const f = refundFraction(e.endTime - getUnitBuildTime(unit, player.techLevels) * 1000, e.endTime, now);
+          const f = refundFraction(e.endTime - getUnitBuildTime(unit, player.techLevels, player) * 1000, e.endTime, now);
           fraction = Math.min(fraction, f);
           refund = addCost(refund, scaleCost(each, f));
         } else refund = addCost(refund, each);
@@ -180,7 +180,7 @@ export function performCancel(player: PlayerState, queues: QueuesState, target: 
       // La file reprend aussitôt avec le lot suivant.
       if (wasRunning && queue[0] && !queue[0].endTime) {
         const next = findUnit(queue[0].unitId);
-        queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels) : 0) * 1000;
+        queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels, player) : 0) * 1000;
       }
       credit(player.resources, quote.refund);
       break;

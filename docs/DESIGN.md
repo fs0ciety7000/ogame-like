@@ -8,7 +8,11 @@ Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
 Tout passe par les variables `--th-*` de `src/index.css`, redéfinies par `html[data-theme]`
 (Tactique, Holo, Cockpit, Netrunner, Aurora). En Tailwind : `cyan-glow` (accent), `mint-glow`,
 `ember-glow`, `danger-glow`, `gold-glow`, `violet-glow`, `space-*`, `slate-*`, `font-display`, `font-mono`.
-Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait plus la changer.
+Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait plus la changer
+(un test échoue sur toute couleur hex dans un `.tsx`, scènes dessinées exceptées).
+Médailles : `--th-medal-gold|silver|bronze`. Raretés : `--th-rarity-common|rare|epic|legendary|mythic`.
+Transparence d'une couleur (hex ou jeton) : `alpha(couleur, 30)` de `@/lib/utils` (jamais `${couleur}55`).
+Les couleurs choisies et enregistrées par les joueurs (rangs d'alliance…) restent des données hex, rangées dans `src/game`.
 
 ## Couleurs = sens
 
@@ -37,8 +41,10 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   de la couleur sémantique, titre en capitales, action en pastille). `toast.success/error/warning` prennent mint / danger /
   ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind).tone`).
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
-- **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`StatTile`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
+- **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
+- **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
+  (fondue vers la gauche et le bas, opacité réduite) : à réserver aux pages « lieu » (Casino…), le texte reste prioritaire.
 - Panneaux : `Card` / classe `glass-panel` ; formes : `hud-cut` (12 px) et `hud-cut-sm` (5 px).
 
 ## À faire / à éviter

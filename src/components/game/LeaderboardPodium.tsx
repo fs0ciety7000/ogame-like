@@ -15,8 +15,8 @@ export interface PodiumEntry {
 
 const PLACES = [
   { ring: "border-2 border-gold-glow/80", text: "text-gold-glow", glow: "var(--color-gold-glow)", label: "1er", height: "pb-4 pt-5 sm:pb-8 sm:pt-6" },
-  { ring: "border-2 border-slate-300/70", text: "text-slate-200", glow: "#cbd5e1", label: "2e", height: "py-3 sm:py-4" },
-  { ring: "border-2 border-[#e19b6d]/70", text: "text-[#e19b6d]", glow: "#e19b6d", label: "3e", height: "py-3 sm:py-4" },
+  { ring: "border-2 border-slate-300/70", text: "text-slate-200", glow: "var(--color-slate-300)", label: "2e", height: "py-3 sm:py-4" },
+  { ring: "border-2 border-[var(--th-medal-bronze)]/70", text: "text-[var(--th-medal-bronze)]", glow: "var(--th-medal-bronze)", label: "3e", height: "py-3 sm:py-4" },
 ] as const;
 
 

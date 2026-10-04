@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { FastForward, FlaskConical, Gift, Timer } from "lucide-react";
+import { FastForward, FlaskConical, Gift, Sparkles, Timer } from "lucide-react";
+import { allCommanders, COMMANDERS } from "@/game/commanders";
+import { RARITIES, RELICS } from "@/game/relics";
+import { CAPSULE_TYPES, CAPSULES } from "@/game/synthesis";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -84,7 +87,75 @@ export function PlayerToolsCard({ player, onDone }: { player: AdminPlayer; onDon
           </Button>
         </div>
       </details>
+      <GiftItems player={player} busy={busy} run={run} />
     </div>
+  );
+}
+
+/** v5.14 : offrir un officier (rare ou de saison compris), une relique ou une capsule. */
+function GiftItems({ player, busy, run }: { player: AdminPlayer; busy: boolean; run: (label: string, task: () => Promise<Record<string, unknown>>) => Promise<void> }) {
+  const [officerId, setOfficerId] = useState(COMMANDERS.find((c) => c.rare)?.id ?? "");
+  const [template, setTemplate] = useState(RELICS.find((t) => !t.disabled)?.id ?? "");
+  const [rarity, setRarity] = useState<string>("epic");
+  const [capsule, setCapsule] = useState<string>(CAPSULE_TYPES[0]);
+  const [level, setLevel] = useState(5);
+  const [reason, setReason] = useState("");
+  const ok = reason.trim().length >= 5 && !busy;
+  const select = "h-8 border border-white/10 bg-black/30 px-2 text-sm text-slate-100";
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-slate-300">
+        <Sparkles className="mr-1 inline h-3.5 w-3.5 text-violet-glow" /> Offrir un officier, une relique ou une capsule
+      </summary>
+      <div className="mt-2 flex flex-col gap-2">
+        <Input value={reason} maxLength={300} placeholder="Motif (obligatoire, consigné au journal et montré au joueur)" className="h-8" onChange={(e) => setReason(e.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <select className={select} value={officerId} onChange={(e) => setOfficerId(e.target.value)} aria-label="Officier">
+            {allCommanders().map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title} {c.name}
+                {c.rare ? " (rare)" : c.season ? ` (saison ${c.season.label})` : ""}
+              </option>
+            ))}
+          </select>
+          <Button size="sm" variant="secondary" disabled={!ok || !officerId} onClick={() => void run("Officier offert", () => adminPlayerAction(player.id, { action: "officer", officerId, reason: reason.trim() }))}>
+            Offrir l'officier
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select className={select} value={template} onChange={(e) => setTemplate(e.target.value)} aria-label="Relique">
+            {RELICS.filter((t) => !t.disabled).map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select className={select} value={rarity} onChange={(e) => setRarity(e.target.value)} aria-label="Rareté">
+            {RARITIES.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          <Button size="sm" variant="secondary" disabled={!ok || !template} onClick={() => void run("Relique offerte", () => adminPlayerAction(player.id, { action: "relic", template, rarity, reason: reason.trim() }))}>
+            Offrir la relique
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select className={select} value={capsule} onChange={(e) => setCapsule(e.target.value)} aria-label="Capsule">
+            {CAPSULE_TYPES.map((c) => (
+              <option key={c} value={c}>
+                {CAPSULES[c].name}
+              </option>
+            ))}
+          </select>
+          <NumberInput size="sm" step={1} min={1} max={10} value={level} onChange={(v) => setLevel(Math.max(1, Math.min(10, v)))} aria-label="Niveau" className="w-20" />
+          <Button size="sm" variant="secondary" disabled={!ok} onClick={() => void run("Capsule offerte", () => adminPlayerAction(player.id, { action: "capsule", capsule, level, reason: reason.trim() }))}>
+            Offrir la capsule
+          </Button>
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -95,5 +166,6 @@ function summarize(out: Record<string, unknown>): string {
     return `${r.buildings} bâtiment(s), ${r.researches} recherche(s), ${r.units} unité(s), ${r.missions} mission(s), ${r.officers} délai(s) d'officier`;
   }
   if ("officers" in out) return `${out.officers} officier(s) libéré(s)`;
+  for (const k of ["officier", "relique", "capsule"]) if (k in out) return String(out[k]);
   return "";
 }

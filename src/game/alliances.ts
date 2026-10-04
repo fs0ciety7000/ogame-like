@@ -1,3 +1,4 @@
+import { playerModifiers } from "@/game/modifiers";
 import { applyToAlliance, assertCanJoin, assignRank, deleteRank, dropApplication, hasAlliancePerm, normalizeAllianceProfile, saveRank, setAllianceProfile, type AllianceRank } from "@/game/allianceProfile";
 import { bumpStat, setStat } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
@@ -112,9 +113,11 @@ function level(levels: AllianceLevels | undefined | null, id: string): number {
 /* ---------- bonus des recherches (appliqués aux membres) ---------- */
 
 /** Multiplicateur du temps de vol (0,75 = −25 %). */
-export function allianceFlightFactor(levels: AllianceLevels | undefined | null, techLevels?: Record<string, number>): number {
+export function allianceFlightFactor(levels: AllianceLevels | undefined | null, techLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
   // v2.6 : la techno « vitesse des flottes » se cumule à la logistique d'alliance.
-  return Math.max(0.1, (1 - level(levels, "logistique") * (findAllianceResearch("logistique")?.perLevel ?? 0)) * techReductionFactor(techLevels, "fleet_speed"));
+  // v5.14 : et la Logisticienne en poste (couche empire du circuit d'effets).
+  const empire = player ? playerModifiers(player).fleetSpeed : 0;
+  return Math.max(0.1, (1 - level(levels, "logistique") * (findAllianceResearch("logistique")?.perLevel ?? 0)) * techReductionFactor(techLevels, "fleet_speed") * (1 - empire));
 }
 
 /** Multiplicateur de production (1,15 = +15 %). */

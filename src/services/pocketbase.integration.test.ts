@@ -93,6 +93,17 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+  /** v5.14.2 : sans passe de saison publié (ses défis par palier verrouilleraient les paliers testés). */
+  const withoutPassSeasons = async (fn: () => Promise<void>) => {
+    const rec = await admin.collection("game_config").getFirstListItem('key="passSeasons"').catch(() => null);
+    if (rec) await admin.collection("game_config").update(rec.id, { data: { seasons: [] } });
+    try {
+      await fn();
+    } finally {
+      if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+    }
+  };
+
   /** Fiche complète d'un joueur, lue par le superuser (les joueurs ne
    *  voient plus que leur propre fiche depuis la v1.7). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- enregistrement brut pour les assertions
@@ -233,13 +244,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("gifts are transferred immediately by the server", async () => {
-    await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 } });
+    // v5.10 : comptes de plus de 3 jours ; hors alliance, 20 % de taxe de transport.
+    await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 5000 }, createdAtMs: MONTH_AGO() });
+    await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO() });
     const before = (await snap(aId))!.resources.scrap;
     await ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 1000 } });
     const b = (await snap(bId))!;
     expect(b.resources.scrap).toBeLessThan(5000 - 999 + 100); // débité (hors production des dernières secondes)
     const after = (await snap(aId))!.resources.scrap;
-    expect(after - before).toBeGreaterThanOrEqual(1000);
+    expect(after - before).toBeGreaterThanOrEqual(800);
     await expect(
       ps.sendResourceGift({ fromUid: bId, fromPseudo: B.pseudo, toUid: aId, toPseudo: A.pseudo, resources: { scrap: 10_000_000 } }),
     ).rejects.toThrow(/insuffisantes/);
@@ -408,6 +421,16 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(pb.send("/api/cosmic/admin/stats", { method: "GET" })).rejects.toMatchObject({ status: 403 });
   });
 
+  it("v5.14.2 : l'administration alimente le pot commun (motif obligatoire, réservé aux admins)", async () => {
+    const before = await admin.send("/api/cosmic/admin/serverpot", { method: "GET" });
+    await expect(admin.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000 }, note: "" } })).rejects.toMatchObject({ status: 400 });
+    await expect(pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000 }, note: "triche" } })).rejects.toMatchObject({ status: 403 });
+    const after = await admin.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources: { scrap: 1000, inconnu: 5 }, note: "Test d'intégration" } });
+    expect((after.resources.scrap ?? 0) - (before.resources.scrap ?? 0)).toBe(1000);
+    expect(after.resources.inconnu).toBeUndefined();
+    expect(after.log[after.log.length - 1]).toMatchObject({ source: "admin", note: "Test d'intégration", resources: { scrap: 1000 } });
+  });
+
   it("leaderboard lists players without private fields", async () => {
     const list = await ps.listAllPlayers();
     expect(list.some((p) => p.uid === aId)).toBe(true);
@@ -521,7 +544,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(aAfter.activeTitle).toBe("Champion de Décembre 1999");
       // A reçoit sa récompense individuelle et celle de son alliance championne.
       const notif = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="season"` });
-      expect(notif.length).toBe(2);
+      // Individuelle, alliance championne et, v5.10.5, ligue.
+      expect(notif.length).toBe(3);
       expect(aAfter.titles.map((t: { label: string }) => t.label)).toContain("Allié champion de Décembre 1999");
       expect((await pb.collection("season_results").getFullList({ filter: `seasonId="${SEASON}" && kind="alliance"` }))[0]?.allianceId).toBe(allianceId);
 
@@ -576,7 +600,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { resources: RICH });
       await al.depositToTreasury({ scrap: 1000 });
       expect(((await pb.collection("alliances").getOne(allianceId)).treasury as Record<string, number>).scrap).toBe(1000);
-      await expect(al.distributeTreasury(bId, { scrap: 10 })).rejects.toThrow(/officiers/);
+      // v5.10.5 : droits par rôle (« Trésor »).
+      await expect(al.distributeTreasury(bId, { scrap: 10 })).rejects.toThrow(/Trésor/);
       await expect(asA({ type: "distribute", targetUid: bId, resources: { scrap: 201 } })).rejects.toMatchObject({ status: 400 });
       const before = (await snap(bId)).resources.scrap;
       await asA({ type: "distribute", targetUid: bId, resources: { scrap: 200 } });
@@ -936,7 +961,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(filled.buyerId).toBe(bId);
       expect((await snap(bId))!.resources.scrap).toBeGreaterThanOrEqual(bScrap + 100_000);
       const aAfter = (await snap(aId))!.resources.energy;
-      expect(aAfter - aEnergy).toBeGreaterThanOrEqual(100_000 - filled.tax);
+      // Marge : l'entretien de la flotte consomme un peu d'énergie entre les deux relevés.
+      expect(aAfter - aEnergy).toBeGreaterThanOrEqual(100_000 - filled.tax - 50);
       expect(aAfter - aEnergy).toBeLessThan(100_000);
       await expect(pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: offer.id } })).rejects.toMatchObject({ status: 400 });
       // Annulation : marchandise rendue.
@@ -1429,6 +1455,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("game_config").update(rec.id, { data: { ...state, current: { ...state.current, endMs: Date.now() - 1 } } });
       state = await admin.send("/api/cosmic/admin/challenge", { method: "POST", body: {} });
       expect(state.previous).toMatchObject({ id: "wk-test", status: "done", success: true });
+      // v5.10 : la récompense se réclame (connecté en B).
+      await pb.send("/api/cosmic/challenge/claim", { method: "POST" });
       expect((await snap(bId)).resources.aiFragment).toBe(aiBefore + 600);
       expect(state.titleHolder.uid).toBe(bId);
       expect((await snap(bId)).activeTitle).toBe("Pilier de la semaine");
@@ -1654,6 +1682,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.1 season pass, referral, scripted Varan raid and shareable victory card", async () => {
+    await withoutPassSeasons(async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
     try {
@@ -1722,6 +1751,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { units: bBefore.units, bounties: bBefore.bounties, seasonPass: null, referral: null, onboarding: bBefore.onboarding ?? null, xp: bBefore.xp, createdAtMs: bBefore.createdAtMs });
       await admin.collection("players").update(aId, { bounties: aBefore.bounties, referral: null });
     }
+    });
   });
 
   it("v4.2 warlords: hourly tick, raid on a lord, vendetta, lord attack, replies and vacation", async () => {
@@ -1824,6 +1854,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.3 chronicles: episode claimed, season boss assault, rewards on stop, admin pass", async () => {
+    await withoutPassSeasons(async () => {
     const bBefore = await snap(bId);
     const bossRec = async () => admin.collection("game_config").getFirstListItem('key="season_boss"').catch(() => null);
     try {
@@ -1869,6 +1900,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
       await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, chronicle: null, bounties: bBefore.bounties, relics: null, titles: bBefore.titles ?? null });
     }
+    });
   });
 
   it("v4.6 social: presence, alliance boss called and killed, typing signal, gazette", async () => {
@@ -1894,6 +1926,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Boss d'alliance : un simple membre ne peut pas l'appeler, le fondateur si.
       await admin.collection("alliances").update(allianceBossId, { boss: null, treasury: { scrap: 1e12, energy: 1e12, nano: 1e12, data: 1e12 } });
       await expect(al.callAllianceBoss()).rejects.toThrow(/fondateur et les officiers/);
+      // v5.14.2 : pas d'appel pendant le boss mondial (en alternance) : on le renvoie s'il est là.
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
       await aClient.send("/api/cosmic/allianceboss", { method: "POST", body: { action: "call" } });
       let alliance = await admin.collection("alliances").getOne(allianceBossId);
       expect(alliance.boss.status).toBe("active");
@@ -2234,18 +2268,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(saga.sagas.length).toBeGreaterThan(0);
       expect(saga.standing.rows).toBeDefined();
 
-      const made = await admin.send("/api/cosmic/admin/market-maker", { method: "POST" });
-      expect(made.created).toBeGreaterThanOrEqual(0);
-      const makerOffer = (await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker" && status = "open" && kind = "sell" && giveRes = "nano"' }))[0];
-      expect(makerOffer).toBeTruthy();
-      await loginPlayer(B.email, B.pw);
-      const bBefore = await snap(bId);
-      await admin.collection("players").update(bId, { resources: { ...bBefore.resources, [makerOffer.wantRes]: makerOffer.wantAmount + 10 } });
-      await pb.send("/api/cosmic/market/accept", { method: "POST", body: { id: makerOffer.id } });
-      expect((await snap(bId)).resources.nano).toBeGreaterThanOrEqual(makerOffer.giveAmount);
-      await admin.collection("players").update(bId, { resources: bBefore.resources });
     } finally {
-      for (const r of await admin.collection("market_offers").getFullList({ filter: 'sellerId = "market_maker"' })) await admin.collection("market_offers").delete(r.id);
       for (const [key, rec] of [["balance_history", keep.history], ["alliance_saga", keep.saga]] as const) {
         const now = await cfg(key);
         if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });

@@ -1,3 +1,4 @@
+import { playerModifiers } from "@/game/modifiers";
 import type { UnitCategory } from "@/types/game";
 import { BLUEPRINT_UNITS, techReductionFactor } from "@/game/technologies";
 
@@ -273,9 +274,11 @@ export function findUnit(id: string): UnitDef | undefined {
   return UNITS.find((u) => u.id === id);
 }
 
-export function getUnitBuildTime(unit: UnitDef, techLevels?: Record<string, number>): number {
+export function getUnitBuildTime(unit: UnitDef, techLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
   const total = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
   const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total / 100));
-  // v2.6 : réduction des technos « temps de construction des unités ».
-  return techLevels ? Math.max(1, Math.round(base * techReductionFactor(techLevels, "unit_time"))) : base;
+  // v2.6 : réduction des technos « temps de construction des unités » ;
+  // v5.14 : puis le Mécanicien en poste (couche empire du circuit d'effets).
+  const empire = player ? 1 - playerModifiers(player).unitTime : 1;
+  return techLevels || empire !== 1 ? Math.max(1, Math.round(base * techReductionFactor(techLevels, "unit_time") * empire)) : base;
 }

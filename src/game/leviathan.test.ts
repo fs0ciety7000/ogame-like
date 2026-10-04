@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { addRelic, RELIC_RULES, rollRelic } from "@/game/relics";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { EVENT_RULES } from "@/game/events";
 import {
@@ -35,6 +36,14 @@ function player(uid: string, chasseurs = 100): PlayerState {
 }
 
 describe("leviathan", () => {
+  // Rendez-vous mensuel et Léviathan seul (la rotation hebdomadaire a ses propres tests).
+  beforeEach(() => {
+    EVENT_RULES.bossWeekly = false;
+  });
+  afterEach(() => {
+    EVENT_RULES.bossWeekly = true;
+  });
+
   it("appears on the first weekend of the month for 72 h", () => {
     EVENT_RULES.bossMonthly = true;
     expect(leviathanWindow(START - 1)).toBeNull();
@@ -62,7 +71,7 @@ describe("leviathan", () => {
     expect(r1.lost.chasseur).toBe(80);
     expect(r1.killed).toBe(true);
     st = r1.state;
-    expect(rewardHours(st, "a")).toBe(LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours);
+    expect(rewardHours(st, "a")).toBe(LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours + LEVIATHAN_RULES.podiumHours[0]);
     expect(rewardHours(st, "b")).toBe(0);
     const out = grantLeviathanReward(st, a);
     expect(out.title).toBe(true);
@@ -81,8 +90,28 @@ describe("leviathan", () => {
     st = closeLeviathan(st, START + 73 * H);
     expect(st.status).toBe("failed");
     expect(rewardHours(st, "b")).toBe((LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours) * LEVIATHAN_RULES.failedRewardFactor);
-    expect(rewardHours(st, "a")).toBeCloseTo((LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours / 2) * LEVIATHAN_RULES.failedRewardFactor);
+    expect(rewardHours(st, "a")).toBeCloseTo((LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * Math.SQRT1_2) * LEVIATHAN_RULES.failedRewardFactor);
     expect(grantLeviathanReward(st, b).title).toBe(false);
+  });
+
+  it("v5.13 : les gros participants suivent le premier (racine, podium, reliques épiques du top 3)", () => {
+    const ps = ["a", "b", "c", "d"].map((u) => player(u, 1000));
+    let st = { ...spawnLeviathan({ id: "y", startMs: START, endMs: START + 72 * H }, ps, null), maxHp: 10_000_000, hp: 10_000_000 };
+    [1000, 400, 300, 100].forEach((n, i) => (st = resolveLeviathanAssault(st, ps[i], { chasseur: n }, undefined, START + H).state));
+    st = { ...st, status: "killed" };
+    const h = ["a", "b", "c", "d"].map((u) => rewardHours(st, u));
+    // 2e avec 40 % des dégâts du premier : plus de 60 % de ses heures (avant : 6 h contre 12 h).
+    expect(h[1] / h[0]).toBeGreaterThan(0.6);
+    expect(h[1] - h[2]).toBeGreaterThan(LEVIATHAN_RULES.podiumHours[1] - LEVIATHAN_RULES.podiumHours[2] - 0.01);
+    expect(h[3]).toBeGreaterThan(LEVIATHAN_RULES.baseRewardHours);
+    const epic = ps.map((p) => grantLeviathanReward(st, p, () => 0.5).relic);
+    expect(epic.every(Boolean)).toBe(true);
+    // Collection pleine : de l'Ambre à la place.
+    const full = player("b", 1000);
+    for (let i = 0; i < RELIC_RULES.maxItems; i++) addRelic(full, rollRelic("test", START + i, () => 0.5, "common"));
+    const out = grantLeviathanReward(st, full, () => 0.5);
+    expect(out.relic).toBeUndefined();
+    expect(out.amber).toBe(LEVIATHAN_RULES.relicAmber.epic);
   });
 });
 

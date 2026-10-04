@@ -5,7 +5,7 @@ import { Check, ExternalLink, Plus, Save, Trash2, UserCheck, UserX } from "lucid
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ALLIANCE_PERMS, ALLIANCE_PROFILE_RULES, hasAlliancePerm, normalizeAllianceProfile, RECRUITING_LABELS, type AlliancePerm, type AllianceRank, type Recruiting } from "@/game/allianceProfile";
+import { ALLIANCE_PERMS, ALLIANCE_PROFILE_RULES, hasAlliancePerm, normalizeAllianceProfile, RECRUITING_LABELS, type AlliancePerm, type AllianceRank, type Recruiting, RANK_COLORS } from "@/game/allianceProfile";
 import { allianceRole } from "@/game/alliances";
 import { AllianceError, answerApplication, assignAllianceRank, deleteAllianceRank, saveAllianceProfile, saveAllianceRank } from "@/services/allianceService";
 import { cn, timeAgo } from "@/lib/utils";
@@ -14,7 +14,7 @@ import type { Alliance } from "@/types/game";
 /* v5.10.5 : onglet « Fiche » de l'alliance — présentation et recrutement,
    candidatures, rangs personnalisés (fondateur). */
 
-const COLORS = ["#ffd86b", "#4be8ff", "#5cf2b0", "#a78bfa", "#ff8a4c", "#ff5c7a", "#94a3b8"];
+const COLORS = RANK_COLORS;
 
 const fail = (err: unknown, fallback: string) => toast.error(err instanceof AllianceError ? err.message : fallback);
 

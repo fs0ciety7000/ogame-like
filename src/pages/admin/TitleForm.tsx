@@ -1,3 +1,4 @@
+import { alpha } from "@/lib/utils";
 import { METRICS, type AchievementMetric } from "@/game/achievements";
 import { TITLE_RARITIES, titleRarity, type TitleDef, type TitleRarity } from "@/game/titles";
 import { CheckboxField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
@@ -51,7 +52,7 @@ export function TitleForm({ value: t, onChange, isNew }: { value: TitleDef; onCh
       </Section>
       <Section title="Aperçu">
         <div className="sm:col-span-2">
-          <span className="inline-flex items-center gap-1.5 border px-2 py-0.5 text-xs" style={{ color: r.color, borderColor: `${r.color}66`, background: `${r.color}12` }}>
+          <span className="inline-flex items-center gap-1.5 border px-2 py-0.5 text-xs" style={{ color: r.color, borderColor: `${alpha(r.color, 40)}`, background: `${alpha(r.color, 7)}` }}>
             {t.icon} {t.label || "—"}
           </span>
           <span className="ml-2 text-xs text-slate-500">{r.label}</span>

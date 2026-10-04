@@ -1,3 +1,4 @@
+import { describeLoot, rollLoot } from "@/game/loot";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -268,10 +269,12 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
     const item = rollRelic("expedition", now, random);
     if (addRelic(player, item)) relic = ` Relique trouvée : ${relicLabel(item)} !`;
   }
+  // v5.14 : table de butin « expédition » (en plus de la relique ci-dessus).
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random));
   return {
     kind: "fleet",
     title: relic ? "Expédition terminée : relique !" : "Expédition terminée",
-    message: `Ta flotte est rentrée : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}`,
+    message: `Ta flotte est rentrée : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false,
   };

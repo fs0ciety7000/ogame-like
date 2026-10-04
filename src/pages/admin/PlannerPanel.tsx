@@ -190,7 +190,7 @@ export function PlannerPanel() {
                 {adding === d && (
                   <div className="absolute left-1 top-6 z-10 flex w-48 flex-col gap-0.5 border border-cyan-glow/30 bg-space-900 p-1 text-xs shadow-xl">
                     <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "levDate")}>
-                      🐋 Léviathan (date précise)
+                      🐋 Boss mondial (date précise)
                     </button>
                     <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "sbDate")}>
                       ⚔️ Boss de saison (date précise)

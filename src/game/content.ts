@@ -1,7 +1,11 @@
+import { DEFAULT_WORLD_BOSSES, setWorldBosses, validateWorldBosses, type WorldBossDef } from "@/game/worldBosses";
+import { defaultOfficersConfig, setOfficers, validateOfficers, type OfficersConfig } from "@/game/commanders";
 import { defaultChroniclesConfig, SEASON_BOSS_RULES, setChronicles, validateChronicles, type ChroniclesConfig } from "@/game/chronicles";
-import { DEFAULT_TITLES, setTitles, validateTitles, type TitleDef } from "@/game/titles";
+import { DEFAULT_TITLES, setTitles, validateTitles, withLateDefaults, type TitleDef } from "@/game/titles";
+import { setLootTables, validateLootTables } from "@/game/loot";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
+import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
@@ -70,15 +74,21 @@ export interface GameContent {
   /** v4.3 : passe de saison (paliers et points) et chroniques mensuelles. */
   seasonPass: SeasonPassConfig;
   chronicles: ChroniclesConfig;
+  /** v5.13 : passes de saison générés (brouillons et publiés). */
+  passSeasons: PassSeasonsConfig;
   /** v5.9 : reliques (modèles, effets, images) et leurs réglages (raretés, emplacements, fusion). */
   relics: RelicTemplate[];
   relicSettings: RelicSettings;
   /** v5.10 : catalogue des titres (libellé, rareté, icône, déblocage). */
   titles: TitleDef[];
+  /** v5.14 : boss mondiaux (catalogue de la rotation hebdomadaire). */
+  worldBosses: WorldBossDef[];
+  /** v5.14 : officiers (noms, effets par niveau, recrutement, officiers rares). */
+  officers: OfficersConfig;
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "relics", "relicSettings", "titles"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -116,8 +126,11 @@ export function defaultGameContent(): GameContent {
     warlords: defaultWarlordsConfig(),
     seasonPass: defaultSeasonPassConfig(),
     chronicles: defaultChroniclesConfig(),
+    passSeasons: defaultPassSeasonsConfig(),
     relics: DEFAULT_RELICS,
     relicSettings: defaultRelicSettings(),
+    worldBosses: DEFAULT_WORLD_BOSSES,
+    officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
     rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, wars: DEFAULT_WAR_RULES },
   });
@@ -144,8 +157,11 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     warlords: overrides.warlords ?? defaults.warlords,
     seasonPass: overrides.seasonPass ?? defaults.seasonPass,
     chronicles: overrides.chronicles ?? defaults.chronicles,
+    passSeasons: overrides.passSeasons && Array.isArray(overrides.passSeasons.seasons) ? overrides.passSeasons : defaults.passSeasons,
     relics: overrides.relics ?? defaults.relics,
     titles: overrides.titles ?? defaults.titles,
+    worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
+    officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
     relicSettings: {
       ...defaults.relicSettings,
       ...(overrides.relicSettings ?? {}),
@@ -184,12 +200,18 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
+  // v5.14 : officiers et boss mondiaux d'abord (succès et titres dérivés en dépendent).
+  setOfficers(content.officers);
+  setWorldBosses(content.worldBosses);
   setAchievements(content.achievements);
   setWarlords(content.warlords);
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
+  // Après les chapitres : un passe de saison publié remplace le passe du chapitre.
+  setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setTitles(content.titles ?? DEFAULT_TITLES);
+  setLootTables(content.relicSettings?.loot as Parameters<typeof setLootTables>[0]);
+  setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
@@ -379,10 +401,14 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
+  errors.push(...validatePassSeasons(content.passSeasons));
   errors.push(...validateRanks(content.ranks ?? []));
   errors.push(...validateAchievements(content.achievements ?? []));
   errors.push(...validateRelics(content.relics ?? [], content.relicSettings ?? defaultRelicSettings()));
+  errors.push(...validateLootTables(content.relicSettings?.loot as Parameters<typeof validateLootTables>[0]));
   errors.push(...validateTitles(content.titles ?? []));
+  errors.push(...validateWorldBosses(content.worldBosses));
+  errors.push(...validateOfficers(content.officers));
 
   return [...new Set(errors)];
 }

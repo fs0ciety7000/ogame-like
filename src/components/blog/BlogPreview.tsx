@@ -21,7 +21,7 @@ export function BlogPreview({ title, excerpt, body, category, cover, author, pub
     <div className="blog-preview min-w-0">
       <style>{STYLE}</style>
       <div className="relative overflow-hidden border border-cyan-glow/20">
-        {cover && <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url('${cover}')`, maskImage: "linear-gradient(180deg,#000 30%,transparent)" }} />}
+        {cover && <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url('${cover}')`, maskImage: "linear-gradient(180deg,black 30%,transparent)" }} />}
         <div className="relative px-6 pb-6 pt-10">
           <span className="inline-flex items-center gap-1.5 border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: cat.color, borderColor: cat.color }}>
             <BlogCategoryIcon category={cat.id} /> {cat.label}

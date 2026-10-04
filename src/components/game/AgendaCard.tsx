@@ -1,3 +1,4 @@
+import { useIsAdmin } from "@/services/adminService";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { useSeasonBoss } from "@/services/seasonBossService";
 import { isActive } from "@/game/leviathan";
 import { bossCountdown } from "@/components/game/BossStage";
-import { cn } from "@/lib/utils";
+import { cn, alpha } from "@/lib/utils";
 
 /* v5.10.5 : frise des 30 prochains jours sur l'accueil (boss, événements,
    Chroniques, concours, fin de saison). */
@@ -22,9 +23,11 @@ const when = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "sh
 
 export function useAgenda(now: number, days = DAYS): AgendaItem[] {
   const contests = useContests();
+  // v5.13 : les concours ne sont montrés qu'aux administrateurs.
+  const admin = useIsAdmin();
   const leviathan = useLeviathan();
   const seasonBoss = useSeasonBoss();
-  const extra: AgendaItem[] = (contests?.list ?? [])
+  const extra: AgendaItem[] = (admin ? (contests?.list ?? []) : [])
     .filter((c) => ["scheduled", "running"].includes(contestPhase(c, now)))
     .map((c) => ({ id: c.id, kind: "contest", title: `Concours : ${c.title}`, startMs: c.startMs, endMs: c.endMs, link: "/game/concours", emoji: "🎁" }));
   // Un boss déjà abattu (ou retiré) dans sa fenêtre en cours n'est plus « en cours ».
@@ -84,7 +87,7 @@ export function AgendaCard({ now }: { now: number }) {
                               <Link
                                 to={i.link}
                                 className={cn("absolute top-0.5 h-4 transition-transform hover:scale-y-125", !i.endMs && "w-2.5 -translate-x-1/2 rotate-45 scale-75")}
-                                style={{ left: `${left}%`, width: i.endMs ? `${width}%` : undefined, background: AGENDA_COLORS[k], boxShadow: i.done ? undefined : `0 0 8px ${AGENDA_COLORS[k]}88`, opacity: i.done ? 0.3 : 1 }}
+                                style={{ left: `${left}%`, width: i.endMs ? `${width}%` : undefined, background: AGENDA_COLORS[k], boxShadow: i.done ? undefined : `0 0 8px ${alpha(AGENDA_COLORS[k], 53)}`, opacity: i.done ? 0.3 : 1 }}
                               />
                             </TooltipTrigger>
                             <TooltipContent>
@@ -105,12 +108,13 @@ export function AgendaCard({ now }: { now: number }) {
               const live = i.startMs <= now;
               return (
                 <li key={i.id}>
-                  <Link to={i.link} className="flex items-center gap-2 text-sm hover:text-white">
+                  {/* v5.14 : sur téléphone, la date passe sous le titre (il était coupé à 5 lettres). */}
+                  <Link to={i.link} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm hover:text-white sm:flex-nowrap">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: AGENDA_COLORS[i.kind] }} />
                     <span className="min-w-0 flex-1 truncate text-slate-200">
                       {i.emoji} {i.title}
                     </span>
-                    <span className="shrink-0 font-mono text-[11px] text-slate-400">{live ? `en cours · fin dans ${bossCountdown((i.endMs ?? now) - now)}` : `${when(i.startMs)} · dans ${bossCountdown(i.startMs - now)}`}</span>
+                    <span className="w-full pl-4 font-mono text-[11px] text-slate-400 sm:w-auto sm:shrink-0 sm:pl-0">{live ? `en cours · fin dans ${bossCountdown((i.endMs ?? now) - now)}` : `${when(i.startMs)} · dans ${bossCountdown(i.startMs - now)}`}</span>
                   </Link>
                 </li>
               );

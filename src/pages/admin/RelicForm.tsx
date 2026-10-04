@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/assets";
 import { currentGameContent } from "@/game/content";
 import { describeRelic, RARITIES, RELIC_EFFECT_LABELS, validateRelics, type RelicEffect, type RelicRarity, type RelicSettings, type RelicTemplate } from "@/game/relics";
+import { defaultLootTables, LOOT_SOURCE_LABELS, LOOT_SOURCES, validateLootTables, type LootSource, type LootTable, type LootTables } from "@/game/loot";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
@@ -52,7 +53,7 @@ export function RelicForm({ value: t, onChange, isNew }: { value: RelicTemplate;
             { value: "mythic", label: "Mythique (une par saison)" },
           ]}
           onChange={setReserved}
-          hint="Mythique : remise au n° 1 du Léviathan ou du boss de saison, en rotation avec les autres mythiques."
+          hint="Mythique : remise au n° 1 d'un boss mondial ou du boss de saison, en rotation avec les autres mythiques."
         />
         <div className="sm:col-span-2">
           <TextAreaField label="Texte d'ambiance" value={t.lore} rows={2} onChange={(lore) => set({ lore })} />
@@ -89,7 +90,7 @@ export function RelicSettingsCard() {
   const customized = useContentStore((s) => s.customized.includes("relicSettings"));
   const [settings, setSettings] = useState<RelicSettings>(() => currentGameContent().relicSettings);
   const [busy, setBusy] = useState(false);
-  const errors = validateRelics(currentGameContent().relics, settings).filter((e) => !e.startsWith("Relique "));
+  const errors = [...validateRelics(currentGameContent().relics, settings).filter((e) => !e.startsWith("Relique ")), ...validateLootTables(settings.loot as Partial<LootTables> | undefined)];
   const set = (patch: Partial<RelicSettings>) => setSettings((s) => ({ ...s, ...patch }));
   const setRarity = (id: RelicRarity, patch: Partial<RelicSettings["rarities"][RelicRarity]>) =>
     setSettings((s) => ({ ...s, rarities: { ...s.rarities, [id]: { ...s.rarities[id], ...patch } } }));
@@ -180,7 +181,7 @@ export function RelicSettingsCard() {
           </tbody>
         </table>
         <p className="mt-1 text-[11px] text-slate-500">
-          Le poids donne la chance de chaque rareté lors d'un tirage. Une source « rare au moins » (Léviathan, proie d'élite…) ne tire que parmi les raretés égales ou supérieures.
+          Le poids donne la chance de chaque rareté lors d'un tirage. Une source « rare au moins » (boss mondiaux, proie d'élite…) ne tire que parmi les raretés égales ou supérieures.
         </p>
       </div>
 
@@ -212,7 +213,72 @@ export function RelicSettingsCard() {
         />
         <NumberField label="Chance maximale en expédition (0,15 = 15 %)" value={settings.expeditionMax} min={0} step={0.01} onChange={(v) => set({ expeditionMax: v ?? 0 })} />
       </Section>
+
+      <LootTablesEditor value={settings.loot as Partial<LootTables> | undefined} onChange={(loot) => set({ loot: loot as RelicSettings["loot"] })} />
     </Card>
+  );
+}
+
+/** v5.14 : tables de butin des combats (en plus des récompenses habituelles). */
+function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | undefined; onChange: (v: Partial<LootTables>) => void }) {
+  const d = defaultLootTables();
+  const row = (src: LootSource): LootTable => ({ ...d[src], ...(value?.[src] ?? {}) });
+  const setRow = (src: LootSource, patch: Partial<LootTable>) => onChange({ ...(value ?? {}), [src]: { ...row(src), ...patch } });
+  const rarityOptions = RARITIES.filter((r) => r.id !== "mythic").map((r) => ({ value: r.id, label: r.label }));
+  return (
+    <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+      <h4 className="font-display text-sm text-white">Tables de butin des combats</h4>
+      <p className="text-[11px] text-slate-500">En plus des récompenses habituelles. Chances en fraction (0,25 = 25 %). Sur un boss, le podium multiplie ses chances par le bonus indiqué.</p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
+              <th className="py-1 pr-2 font-normal">Source</th>
+              <th className="py-1 pr-2 font-normal">Relique</th>
+              <th className="py-1 pr-2 font-normal">Rareté min.</th>
+              <th className="py-1 pr-2 font-normal">Capsule</th>
+              <th className="py-1 pr-2 font-normal">Niv. min</th>
+              <th className="py-1 pr-2 font-normal">Niv. max</th>
+              <th className="py-1 pr-2 font-normal">Podium ×</th>
+            </tr>
+          </thead>
+          <tbody>
+            {LOOT_SOURCES.map((src) => {
+              const t = row(src);
+              return (
+                <tr key={src} className="border-t border-white/5">
+                  <td className="py-1.5 pr-2 text-slate-300">{LOOT_SOURCE_LABELS[src]}</td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.relicChance} step={0.01} onChange={(relicChance) => setRow(src, { relicChance })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <select value={t.relicMinRarity} onChange={(e) => setRow(src, { relicMinRarity: e.target.value as RelicRarity })} className="h-8 border border-white/10 bg-black/30 px-2 text-sm text-slate-100">
+                      {rarityOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.capsuleChance} step={0.01} onChange={(capsuleChance) => setRow(src, { capsuleChance })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.capsuleMin} step={1} onChange={(capsuleMin) => setRow(src, { capsuleMin: Math.round(capsuleMin) })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.capsuleMax} step={1} onChange={(capsuleMax) => setRow(src, { capsuleMax: Math.round(capsuleMax) })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.podiumMult} step={0.1} onChange={(podiumMult) => setRow(src, { podiumMult })} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 

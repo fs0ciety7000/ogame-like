@@ -57,3 +57,45 @@ export async function blockPlayer(uid: string, blockedUid: string, blockedPseudo
 export async function unblock(id: string) {
   await pb.collection("message_blocks").delete(id);
 }
+
+/* ---------- v5.14.2 : « … écrit » (comme le chat d'alliance) ---------- */
+
+let lastTyping = { to: "", at: 0 };
+
+/** Signale à l'autre qu'on lui écrit (au plus une fois toutes les 3 s). */
+export function sendMessageTyping(to: string) {
+  const now = Date.now();
+  if (!to || (lastTyping.to === to && now - lastTyping.at < 3000)) return;
+  lastTyping = { to, at: now };
+  void pb.send("/api/cosmic/messages/typing", { method: "POST", body: { to } }).catch(() => undefined);
+}
+
+/** Joueurs en train de m'écrire (signal éphémère, oublié après 5 s) : uid → instant. */
+export function subscribeMessageTyping(selfUid: string, cb: (typing: Record<string, number>) => void): () => void {
+  const typing: Record<string, number> = {};
+  const emit = () => {
+    const now = Date.now();
+    for (const [uid, at] of Object.entries(typing)) if (now - at > 5000) delete typing[uid];
+    cb({ ...typing });
+  };
+  let unsubscribe: (() => Promise<void>) | null = null;
+  let cancelled = false;
+  pb.realtime
+    .subscribe(`dmtyping_${selfUid}`, (e: { uid?: string }) => {
+      if (!e?.uid || e.uid === selfUid) return;
+      typing[e.uid] = Date.now();
+      emit();
+    })
+    .then((fn) => {
+      if (cancelled) void fn();
+      else unsubscribe = fn;
+    })
+    .catch(() => undefined);
+  const timer = setInterval(emit, 1500);
+  return () => {
+    cancelled = true;
+    clearInterval(timer);
+    void unsubscribe?.();
+  };
+}
+

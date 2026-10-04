@@ -23,13 +23,20 @@ const TIER_STYLE: Record<AchievementTier, { text: string; border: string }> = {
   argent: { text: "text-slate-200", border: "border-slate-300/30" },
   or: { text: "text-gold-glow", border: "border-gold-glow/40" },
   legendaire: { text: "text-cyan-glow", border: "border-cyan-glow/50" },
+  mythique: { text: "text-[var(--th-rarity-mythic)]", border: "border-[var(--th-rarity-mythic)]/60" },
 };
 
 /** Médaille du palier, avec l'emoji du succès au centre. */
 export function AchievementMedal({ a, unlocked, size = 72 }: { a: AchievementDef; unlocked: boolean; size?: number }) {
   return (
     <div className={cn("relative shrink-0", !unlocked && "opacity-40 grayscale")} style={{ width: size, height: size }}>
-      <img src={assetUrl(`/assets/achievements/${a.tier}.webp`)} alt="" className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
+      {/* v5.14.2 : médaille mythique — celle du légendaire, auréolée, en attendant son illustration. */}
+      <img
+        src={assetUrl(`/assets/achievements/${a.tier === "mythique" ? "legendaire" : a.tier}.webp`)}
+        alt=""
+        className={cn("absolute inset-0 h-full w-full object-contain", a.tier === "mythique" && "drop-shadow-[0_0_10px_var(--th-rarity-mythic)] hue-rotate-[200deg]")}
+        loading="lazy"
+      />
       <span className="absolute inset-0 flex items-center justify-center" style={{ fontSize: size * 0.32 }}>
         {unlocked || !a.secret ? a.emoji : <Lock className="h-1/3 w-1/3 text-slate-400" />}
       </span>

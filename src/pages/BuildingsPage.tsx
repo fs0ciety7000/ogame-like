@@ -156,7 +156,7 @@ export function BuildingsPage() {
                   </div>
                   <div className="min-w-0">
                     <span className="flex flex-wrap gap-1.5">
-                      <HudTag tone={productionResource ? "ember" : "accent"}>{categoryLabel(building)}</HudTag>
+                      <HudTag tone={productionResource ? "ember" : "accent"} className="max-w-full whitespace-normal">{categoryLabel(building)}</HudTag>
                       {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
                     </span>
                     <h3 className="hud-title mt-2 text-[17px] text-white [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
@@ -346,14 +346,14 @@ function categoryLabel(building: (typeof BUILDINGS)[number]): string {
 
 const TIER_FRAME: Record<number, string> = {
   0: "",
-  5: "!border-[#cd7f32]/70",
+  5: "!border-[var(--th-medal-bronze)]/70",
   10: "!border-slate-200/70",
   15: "!border-gold-glow/80",
   20: "!border-cyan-glow tier-neon",
 };
 
 const TIER_LABEL: Record<number, { label: string; className: string }> = {
-  5: { label: "Bronze", className: "bg-[#cd7f32]/90 text-space-950" },
+  5: { label: "Bronze", className: "bg-[var(--th-medal-bronze)]/90 text-space-950" },
   10: { label: "Argent", className: "bg-slate-200/90 text-space-950" },
   15: { label: "Or", className: "hud-holo" },
   20: { label: "Néon", className: "bg-cyan-glow text-space-950" },

@@ -24,6 +24,7 @@ import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
+import { CasinoBanner } from "@/components/casino/CasinoBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
@@ -127,7 +128,12 @@ export function DashboardPage() {
         <ChallengeCard />
       </div>
     ),
-    event: <EventCard />,
+    event: (
+      <>
+        <EventCard />
+        <CasinoBanner player={player} />
+      </>
+    ),
     contracts: (
       <div id="contrats" className="scroll-mt-24">
         <ContractsCard />
@@ -167,10 +173,10 @@ export function DashboardPage() {
     ),
     power: (
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatTile label="Puissance d'attaque" value={formatCompact(attackPower)} tone="var(--color-mint-glow)" />
-        <StatTile label="Puissance défensive" value={formatCompact(defensePower)} tone="var(--color-cyan-glow)" />
-        <StatTile label="Victoires" value={player.victories} tone="var(--color-gold-glow)" />
-        <StatTile label="Défaites" value={player.defeats} tone="var(--color-danger-glow)" />
+        <StatTile label="Puissance d'attaque" value={formatCompact(attackPower)} tone="mint" />
+        <StatTile label="Puissance défensive" value={formatCompact(defensePower)} tone="accent" />
+        <StatTile label="Victoires" value={player.victories} tone="gold" />
+        <StatTile label="Défaites" value={player.defeats} tone="danger" />
       </div>
     ),
     log: <SystemLogPanel />,

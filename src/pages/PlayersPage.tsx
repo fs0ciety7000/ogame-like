@@ -47,6 +47,8 @@ import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
 import { LeaguePanel } from "@/components/game/LeaguePanel";
 
 type LeaderboardMode = "total" | "season" | "alliances" | "ligues";
+/** v5.14.2 : ligues en pause — onglet masqué (le code et les données restent en place). */
+const LEAGUES_PAUSED = true;
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
@@ -89,8 +91,8 @@ export function PlayersPage() {
   useEffect(() => {
     const fiche = params.get("fiche");
     const wanted = params.get("mode");
-    if (wanted === "alliances" || wanted === "season" || wanted === "total" || wanted === "ligues") setMode(wanted);
-    if (params.get("onglet") === "ligues") setMode("ligues");
+    if (wanted === "alliances" || wanted === "season" || wanted === "total" || (wanted === "ligues" && !LEAGUES_PAUSED)) setMode(wanted);
+    if (params.get("onglet") === "ligues" && !LEAGUES_PAUSED) setMode("ligues");
     if (fiche) {
       const p = players.find((x) => x.uid === fiche);
       setSheetTarget({ uid: fiche, pseudo: p?.pseudo ?? "" });
@@ -172,12 +174,12 @@ export function PlayersPage() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={mode} onValueChange={(v) => setMode(v as LeaderboardMode)}>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as LeaderboardMode)} className="min-w-0 max-w-full">
           <TabsList>
             <TabsTrigger value="total">Total</TabsTrigger>
             <TabsTrigger value="season">Saison en cours</TabsTrigger>
             <TabsTrigger value="alliances">Alliances</TabsTrigger>
-            <TabsTrigger value="ligues">Ligues</TabsTrigger>
+            {!LEAGUES_PAUSED && <TabsTrigger value="ligues">Ligues</TabsTrigger>}
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
@@ -230,7 +232,7 @@ export function PlayersPage() {
               transition={{ duration: 0.25, delay: reduced ? 0 : Math.min(i, 15) * 0.035 }}
               className="flex items-center gap-3 p-3"
             >
-              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[#e19b6d]" : "text-slate-600")}>
+              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600")}>
                 {String(a.rank).padStart(2, "0")}
               </span>
               <Flag className="h-4 w-4 shrink-0 text-gold-glow" />
@@ -321,7 +323,7 @@ export function PlayersPage() {
                 <span
                   className={cn(
                     "hud-title text-center text-2xl tabular-nums max-sm:text-xl",
-                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[#e19b6d]" : "text-slate-600",
+                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600",
                   )}
                 >
                   {String(p.rank).padStart(2, "0")}

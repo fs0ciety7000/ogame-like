@@ -1,3 +1,4 @@
+import { describeLoot, rollLoot } from "@/game/loot";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -432,7 +433,7 @@ export interface AggressionStats {
 /** Ressources communes exposées (hors bunker de l'entrepôt). */
 function exposedStock(player: PlayerState): Partial<Record<ResourceId, number>> {
   const out: Partial<Record<ResourceId, number>> = {};
-  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels, player.allianceResearch));
+  for (const res of COMMON_RESOURCES) out[res] = Math.max(0, (player.resources?.[res] ?? 0) - protectedAmount(player.buildings ?? {}, res, player.techLevels, player.allianceResearch, player));
   return out;
 }
 
@@ -686,7 +687,7 @@ export function resolvePirateRaid(
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch));
+      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;
@@ -713,16 +714,19 @@ export function resolvePirateRaid(
     st.repelled += 1;
     st.adapt = Math.min(PIRATE_RULES.adaptMax, st.adapt + PIRATE_RULES.adaptUp);
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
+    grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
+    // v5.14 : table de butin « menaces ».
+    const raidLoot = describeLoot(rollLoot(player, "threat", now));
     notifications.push(
       note(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
-        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.`,
+        `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.${raidLoot}`,
         now,
         { resources: bounty, xp: faction.bounty.xp || undefined },
       ),
@@ -817,6 +821,9 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);
     for (const r of RARE) reward[r] = (reward[r] ?? 0) + faction.lair.rare;
+    // v5.14 : le Corsaire en poste grossit le butin du repaire.
+    const loot = 1 + playerModifiers(player).loot;
+    if (loot !== 1) for (const r of Object.keys(reward) as ResourceId[]) reward[r] = Math.floor((reward[r] ?? 0) * loot);
     for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
     applyXpDelta(player, faction.lair.xp, now);
     const title = faction.lair.title;
@@ -829,13 +836,15 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     st.notoriety = 0;
     st.lairsTaken += 1;
     grantCommanderXp(player, "admiral", COMMANDER_XP.lairWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
+    const lairLoot = describeLoot(rollLoot(player, "threat", now));
     player.victories = (player.victories ?? 0) + 1;
     notifications.push(
       note(
         "combat-attacker",
         `${faction.lair.name} est tombé !`,
-        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.`,
+        `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre « ${title} »` : ""}. ${faction.leader} s'est enfui… la traque continue.${lairLoot}`,
         now,
       ),
     );

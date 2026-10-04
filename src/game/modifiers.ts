@@ -1,7 +1,10 @@
-import { activeLevels } from "@/game/commanders";
-import { equippedRelics, findTemplate, PRODUCTION_EFFECT, relicBonus } from "@/game/relics";
-import { territoryBonus } from "@/game/territories";
-import { talentBonuses } from "@/game/talents";
+import { commanderEffects } from "@/game/commanders";
+import { relicEffects } from "@/game/relics";
+import { territoryEffects } from "@/game/territories";
+import { talentEffects } from "@/game/talents";
+import { synthesisEffects } from "@/game/synthesis";
+import { techEffectGrants } from "@/game/technologies";
+import { effectSheet, effectTotal, rawEffectTotal, type EffectGrant, type EffectScope, type EffectSheetLine } from "@/game/effects";
 import { fleetCargoCapacity } from "@/game/combat";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -9,6 +12,9 @@ import type { PlayerState, ResourceId } from "@/types/game";
    Bonus du joueur (v4.0) : officiers en poste et reliques équipées, en
    un seul calcul pour le serveur et l'affichage. Toutes les valeurs sont
    des fractions (0,05 = 5 %).
+
+   v5.14 : lu dans le circuit d'effets (effects.ts). Chaque système déclare
+   ses effets ; on ne fait ici que les rassembler.
 ===================================================== */
 
 export interface Modifiers {
@@ -27,55 +33,76 @@ export interface Modifiers {
   cargo: number;
   /** v5.1 : dégâts contre les boss (relique mythique). */
   bossDamage: number;
+  /** v5.14 : rôles rares (Logisticienne, Mécanicien, Corsaire, Gardienne, Diplomate). */
+  fleetSpeed: number;
+  unitTime: number;
+  loot: number;
+  protectedStorage: number;
+  counterSpy: number;
+  tradeTax: number;
 }
 
 type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents">>;
+type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
 }
 
-export function playerModifiers(player: ModPlayer | null | undefined): Modifiers {
+/** v5.14 : tous les effets de la couche empire (officiers, reliques, talents,
+ *  territoire). Une nouvelle source se branche ici, et nulle part ailleurs. */
+export function empireEffects(player: ModPlayer | null | undefined, now: number = Date.now()): EffectGrant[] {
+  if (!player) return [];
+  return [
+    ...commanderEffects(player as Pick<PlayerState, "commanders">),
+    ...relicEffects(player as Pick<PlayerState, "relics" | "ascensions">),
+    ...talentEffects(player as Pick<PlayerState, "talents">),
+    ...territoryEffects(player.territory, now),
+  ];
+}
+
+/** v5.14 : tous les effets du joueur, technologies et capsules comprises. */
+export function allEffects(player: SheetPlayer | null | undefined, now: number = Date.now()): EffectGrant[] {
+  if (!player) return [];
+  return [...techEffectGrants(player.techLevels), ...empireEffects(player, now), ...synthesisEffects(player as Pick<PlayerState, "synthesis">, now)];
+}
+
+/** v5.14 : fiche d'effets (chaque grandeur, son total et ses sources). */
+export function playerEffectSheet(player: SheetPlayer | null | undefined, now: number = Date.now()): EffectSheetLine[] {
+  return effectSheet(allEffects(player, now));
+}
+
+/** Bonus de la couche empire, au format historique. `scope` : « colonies »
+ *  ajoute les effets propres aux colonies, « home » ceux de la planète mère. */
+export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScope): Modifiers {
   const m = emptyModifiers();
-  if (!player) return m;
-  const lv = activeLevels(player as Pick<PlayerState, "commanders">);
-  m.attack += lv.admiral * 0.01;
-  m.defense += lv.strategist * 0.01;
-  m.buildTime += lv.engineer * 0.01;
-  m.researchTime += lv.engineer * 0.01;
-  m.spyLevel += lv.spy * 0.2;
-  m.detection += lv.spy * 0.01;
-  m.productionAll += lv.steward * 0.01;
-  // v5.1 : territoires d'alliance (valable jusqu'au prochain recalcul du serveur).
-  m.productionAll += territoryBonus(player.territory, Date.now());
-  m.storage += lv.steward * 0.02;
-  for (const item of equippedRelics(player as Pick<PlayerState, "relics" | "ascensions">)) {
-    const effect = findTemplate(item.template)?.effect;
-    const b = relicBonus(item);
-    if (effect === "attack") m.attack += b;
-    else if (effect === "defense") m.defense += b;
-    else if (effect === "build_time") m.buildTime += b;
-    else if (effect === "research_time") m.researchTime += b;
-    else if (effect === "repair") m.repair += b;
-    else if (effect === "cargo") m.cargo += b;
-    else if (effect === "spy") m.spyLevel += b * 10;
-    else if (effect === "production_all") m.productionAll += b;
-    else if (effect === "boss_damage") m.bossDamage += b;
-    else if (effect && PRODUCTION_EFFECT[effect]) {
-      const res = PRODUCTION_EFFECT[effect]!;
-      m.production[res] = (m.production[res] ?? 0) + b;
-    }
+  const sum = (stat: Parameters<typeof effectTotal>[2]) => effectTotal(grants, "empire", stat, { scope });
+  m.attack = sum("attack");
+  m.defense = sum("defense");
+  m.buildTime = sum("buildTime");
+  m.researchTime = sum("researchTime");
+  m.productionAll = sum("productionAll");
+  m.storage = sum("storage");
+  m.spyLevel = sum("spyLevel");
+  m.detection = sum("detection");
+  m.repair = sum("repair");
+  m.cargo = sum("cargo");
+  m.bossDamage = sum("bossDamage");
+  m.fleetSpeed = sum("fleetSpeed");
+  m.unitTime = sum("unitTime");
+  m.loot = sum("loot");
+  m.protectedStorage = sum("protectedStorage");
+  m.counterSpy = sum("counterSpy");
+  m.tradeTax = sum("tradeTax");
+  for (const g of grants) {
+    if (g.layer !== "empire" || g.stat !== "production" || !g.target || m.production[g.target as ResourceId] !== undefined) continue;
+    m.production[g.target as ResourceId] = rawEffectTotal(grants, "empire", "production", { target: g.target, scope });
   }
-  // v5.1 : talents d'Ascension.
-  for (const { def, value } of talentBonuses(player as Pick<PlayerState, "talents">)) {
-    const e = def.effect;
-    if (e.kind === "production") m.production[e.res] = (m.production[e.res] ?? 0) + value;
-    else m[e.kind] += value;
-  }
-  // Durées : jamais en dessous de 50 % de la normale par ce biais.
-  m.buildTime = Math.min(0.5, m.buildTime);
-  m.researchTime = Math.min(0.5, m.researchTime);
   return m;
+}
+
+export function playerModifiers(player: ModPlayer | null | undefined, now: number = Date.now(), scope?: EffectScope): Modifiers {
+  return modifiersFrom(empireEffects(player, now), scope);
 }
 
 /** Multiplicateur de production d'une ressource. */

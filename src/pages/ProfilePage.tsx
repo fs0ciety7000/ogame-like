@@ -91,9 +91,9 @@ export function ProfilePage() {
       <SeasonHistoryCard uid={player.uid} currentXp={player.seasonXp ?? 0} />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Victoires" value={formatNumber(player.victories)} tone="var(--color-mint-glow)" sub={`${player.victories + player.defeats > 0 ? Math.round((player.victories / (player.victories + player.defeats)) * 100) : 0} % de réussite`} />
-        <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="var(--color-danger-glow)" />
-        <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="var(--color-cyan-glow)" />
+        <StatTile label="Victoires" value={formatNumber(player.victories)} tone="mint" sub={`${player.victories + player.defeats > 0 ? Math.round((player.victories / (player.victories + player.defeats)) * 100) : 0} % de réussite`} />
+        <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="danger" />
+        <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="accent" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

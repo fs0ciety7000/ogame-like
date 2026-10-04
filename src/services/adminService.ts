@@ -332,6 +332,16 @@ export function adminProceduralGenerate(monthId: string, variant: number, confir
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId, variant, confirmStarted } });
 }
 
+/** v5.13 : (ré)écrit le brouillon du passe de saison d'un mois. */
+export function adminPassSeasonGenerate(monthId: string, variant: number, confirmPublished = false): Promise<{ season: import("@/game/passSeasons").PassSeason }> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeason", monthId, variant, confirmPublished } });
+}
+
+/** v5.14.2 : réécrit seulement les défis d'un passe (thème, récompenses, points inchangés). */
+export function adminPassSeasonChallenges(monthId: string, variant: number): Promise<{ season: import("@/game/passSeasons").PassSeason }> {
+  return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passChallenges", monthId, variant } });
+}
+
 export function adminProceduralAchievements(): Promise<ProceduralResult> {
   return pb.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
 }
@@ -342,7 +352,10 @@ export type AdminPlayerAction =
   | { action: "testMode"; on: boolean }
   | { action: "finishAll" }
   | { action: "officers" }
-  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string };
+  | { action: "grant"; resources: Partial<Record<string, number>>; reason: string }
+  | { action: "officer"; officerId: string; reason: string }
+  | { action: "relic"; template: string; rarity: string; reason: string }
+  | { action: "capsule"; capsule: string; level: number; reason: string };
 
 export function adminPlayerAction(uid: string, payload: AdminPlayerAction): Promise<Record<string, unknown>> {
   return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid, ...payload } });

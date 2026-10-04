@@ -1,7 +1,10 @@
+import { WORLD_BOSSES } from "@/game/worldBosses";
+import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
+import { PASS_THEMES } from "@/game/passSeasons";
 import { bossEmblems, chroniclesConfig } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { bountyState, KESH } from "@/game/bounties";
-import { commanderLevel, commandersState, type CommanderId } from "@/game/commanders";
+import { commanderLevel, commandersState, type OfficerId } from "@/game/commanders";
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { equippedRelics, type RelicRarity } from "@/game/relics";
 import { seasonLabel } from "@/game/seasons";
@@ -34,7 +37,7 @@ export interface CosmeticOption {
 
 export const PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 
-type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle" | "unlockedAchievements">>;
+type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle" | "unlockedAchievements" | "casino">>;
 
 const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [
   { id: "nebula", label: "Nébuleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
@@ -45,6 +48,11 @@ const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [
 
 function leviathanKills(p: StylePlayer): number {
   return Number((p.stats as Record<string, unknown> | undefined)?.leviathanKills) || 0;
+}
+
+/** v5.14.2 : gros lots remportés au casino. */
+function jackpots(p: Partial<Pick<PlayerState, "casino">>): number {
+  return Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0));
 }
 
 export function bannerOptions(p: StylePlayer): CosmeticOption[] {
@@ -60,12 +68,23 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
     })),
     { id: "kesh", label: "Essaim Kesh'Vaar", image: KESH.banner, hint: "Remplir une prime Kesh'Vaar", unlocked: kesh.completed > 0 },
     { id: "leviathan", label: "Léviathan", image: "/assets/leviathan/leviathan.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : le gros lot du casino (bannière mythique, illustration dédiée à venir : docs/prompts-casino.md).
+    { id: "main_or", label: "Main d'or", image: "/assets/casino/salle-777.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
+    // v5.14 : une bannière par boss mondial, tirée du catalogue.
+    ...WORLD_BOSSES.filter((b) => b.id !== "leviathan").map((b) => ({
+      id: `wb:${b.id}`,
+      label: b.name,
+      gradient: `linear-gradient(120deg,#05070f 0%,${b.accent}33 45%,${b.accent}aa 100%)`,
+      hint: `Abattre ${b.name}`,
+      unlocked: ((p.stats as { worldBossKilled?: string[] } | undefined)?.worldBossKilled ?? []).includes(b.id),
+    })),
     // v4.1 : parrainage et passes de saison terminés.
     { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'à Bronze I", unlocked: (p.referral?.recruits ?? 0) > 0 },
     ...(p.seasonPass?.completed ?? []).map((seasonId, i) => ({
       id: `pass:${seasonId}`,
-      label: `Passe ${seasonLabel(seasonId)}`,
-      gradient: PASS_GRADIENTS[i % PASS_GRADIENTS.length],
+      // v5.14 : nom et couleur du thème du catalogue pour les passes générés.
+      label: seasonId >= CATALOG_START ? `Passe « ${catalogEntryFor(seasonId).name} »` : `Passe ${seasonLabel(seasonId)}`,
+      gradient: seasonId >= CATALOG_START ? passThemeGradient(catalogEntryFor(seasonId).theme) : PASS_GRADIENTS[i % PASS_GRADIENTS.length],
       hint: "Terminer le passe de saison",
       unlocked: true,
     })),
@@ -80,6 +99,11 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
         unlocked: ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).includes(m.id),
       })),
   ];
+}
+
+function passThemeGradient(themeId: string): string {
+  const accent = PASS_THEMES.find((t) => t.id === themeId)?.accent ?? "#4be8ff";
+  return `linear-gradient(120deg,#05070f 0%,${accent}44 45%,${accent} 100%)`;
 }
 
 const PASS_GRADIENTS = [
@@ -101,6 +125,8 @@ export function emblemOptions(p: StylePlayer): CosmeticOption[] {
     })),
     { id: "kesh", label: "Emblème de l'Essaim", image: KESH.emblem, hint: "Comptoir de la Ruche", unlocked: kesh.owned.includes("emblem") },
     { id: "leviathan", label: "Marque du Léviathan", image: "/assets/leviathan/leviathan-emblem.webp", hint: "Abattre un Léviathan", unlocked: leviathanKills(p) > 0 },
+    // v5.14.2 : sceau du 7-7-7 (illustration dédiée à venir).
+    { id: "main_or", label: "Sceau de la Main d'or", image: "/assets/casino/jeton.webp", hint: "Aligner trois 7 au Casino orbital", unlocked: jackpots(p) > 0 },
     // v4.3 : sceaux des boss de saison (uniques, jamais redonnés).
     ...bossEmblems(p).map((b) => ({ ...b, hint: "Participer à la chute du boss de saison" })),
   ];
@@ -158,7 +184,7 @@ export interface PublicShowcase {
   motto: string;
   /** v4.9.3 : succès épinglés (id seulement ; le client retrouve nom, emoji et rang). */
   achievements?: string[];
-  commanders: { id: CommanderId; level: number }[];
+  commanders: { id: OfficerId; level: number }[];
   relics: { template: string; rarity: RelicRarity }[];
 }
 

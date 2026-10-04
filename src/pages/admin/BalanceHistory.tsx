@@ -107,13 +107,13 @@ function LineChart({ s, days }: { s: Series; days: string[] }) {
   return (
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[120px] w-full touch-none" onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label={`${s.title} : dernière valeur ${last === null ? "—" : fmt(last, s.unit)}`}>
-        {s.band && <rect x={PAD.l} width={W - PAD.l - PAD.r} y={y(s.band[1])} height={Math.max(0, y(s.band[0]) - y(s.band[1]))} fill="rgba(94,242,176,0.08)" />}
+        {s.band && <rect x={PAD.l} width={W - PAD.l - PAD.r} y={y(s.band[1])} height={Math.max(0, y(s.band[0]) - y(s.band[1]))} fill="color-mix(in srgb, var(--color-mint-glow) 8%, transparent)" />}
         <line x1={PAD.l} x2={W - PAD.r} y1={H - PAD.b} y2={H - PAD.b} stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-        {s.ref !== undefined && <line x1={PAD.l} x2={W - PAD.r} y1={y(s.ref)} y2={y(s.ref)} stroke="rgba(255,190,90,0.6)" strokeWidth={1} strokeDasharray="3 3" />}
+        {s.ref !== undefined && <line x1={PAD.l} x2={W - PAD.r} y1={y(s.ref)} y2={y(s.ref)} stroke="color-mix(in srgb, var(--color-ember-glow) 60%, transparent)" strokeWidth={1} strokeDasharray="3 3" />}
         {segments.map((d, k) => (
-          <path key={k} d={d} fill="none" stroke="var(--color-cyan-glow, #4be8ff)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          <path key={k} d={d} fill="none" stroke="var(--color-cyan-glow)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         ))}
-        {s.points.map((v, i) => (v !== null && (days.length <= 31 || i === s.points.length - 1) ? <circle key={i} cx={x(i)} cy={y(v)} r={hover === i ? 4 : 2.5} fill="var(--color-cyan-glow, #4be8ff)" stroke="#05070f" strokeWidth={2} /> : null))}
+        {s.points.map((v, i) => (v !== null && (days.length <= 31 || i === s.points.length - 1) ? <circle key={i} cx={x(i)} cy={y(v)} r={hover === i ? 4 : 2.5} fill="var(--color-cyan-glow)" stroke="var(--color-space-950)" strokeWidth={2} /> : null))}
         {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="rgba(255,255,255,0.35)" strokeWidth={1} />}
         <text x={PAD.l} y={H - 4} fontSize={9} fill="rgba(148,163,184,0.9)">
           {shortDay(days[0])}

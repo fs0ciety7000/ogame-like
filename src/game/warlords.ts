@@ -93,9 +93,6 @@ export const WARLORD_RULES = {
   /** Part de la puissance en vaisseaux d'attaque (le reste en défenses). */
   offenseShare: { aggressive: 0.8, opportunist: 0.7, builder: 0.3, merchant: 0.4 } as Record<WarlordPersonality, number>,
   /** Marchands : 3 offres par jour environ, à ±10 % du taux du comptoir. */
-  marketOffersPerDay: 3,
-  marketSpread: 0.1,
-  marketOfferHours: 4,
   /** Messages : un par jour au plus, par seigneur et par joueur. */
   messageEveryHours: 24,
   /** Vendetta. */
@@ -581,25 +578,6 @@ export function capLoot(loot: Partial<Record<ResourceId, number>>, cap: number):
   if (!(cap >= 0) || total <= cap || total <= 0) return loot;
   const k = cap / total;
   return Object.fromEntries(Object.entries(loot).map(([r, n]) => [r, Math.floor((n ?? 0) * k)]));
-}
-
-/* ---------- marchands ---------- */
-
-/** Offre d'un marchand : il vend une ressource dont il a du stock, à ±10 % du taux du comptoir. */
-export function warlordOffer(npc: PlayerState, random: () => number = Math.random): { giveRes: ResourceId; giveAmount: number; wantRes: ResourceId; wantAmount: number } | null {
-  const stocked = COMMON_RESOURCES.filter((r) => (npc.resources?.[r] ?? 0) > 1000);
-  if (stocked.length === 0) return null;
-  const giveRes = stocked[Math.floor(random() * stocked.length)];
-  const others = COMMON_RESOURCES.filter((r) => r !== giveRes);
-  const wantRes = others[Math.floor(random() * others.length)];
-  const giveAmount = Math.max(500, Math.floor((npc.resources[giveRes] ?? 0) * (0.1 + 0.15 * random())));
-  const rate = getTradeRate(giveRes, wantRes);
-  const wantAmount = Math.max(1, Math.round(giveAmount * rate * (1 + (random() * 2 - 1) * WARLORD_RULES.marketSpread)));
-  return { giveRes, giveAmount, wantRes, wantAmount };
-}
-
-export function nextMarketDelayMs(random: () => number = Math.random): number {
-  return Math.round((24 / WARLORD_RULES.marketOffersPerDay) * (0.6 + 0.8 * random()) * 3600_000);
 }
 
 /* ---------- répliques ---------- */

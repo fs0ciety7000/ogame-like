@@ -1,3 +1,5 @@
+import { Navigate } from "react-router-dom";
+import { useAdminStatus } from "@/services/adminService";
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/hud";
@@ -18,7 +20,10 @@ export function ContestsPage() {
   const player = usePlayerStore((s) => s.player);
   const state = useContests();
   const pot = useServerPot();
-  if (!player) return null;
+  // v5.13 : page réservée aux administrateurs (les concours ne sont plus montrés aux joueurs).
+  const admin = useAdminStatus();
+  if (admin === false) return <Navigate to="/game" replace />;
+  if (!player || admin === null) return null;
   const list = state ? visibleContests(state, now) : [];
   return (
     <div className="flex flex-col gap-4">

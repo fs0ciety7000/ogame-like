@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import type { EffectGrant, EffectStat } from "@/game/effects";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -88,6 +89,8 @@ export interface RelicSettings {
   expeditionPerHour: number;
   expeditionMax: number;
   rarities: Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
+  /** v5.14 : tables de butin des combats (loot.ts), par source. */
+  loot?: Partial<Record<string, Record<string, unknown>>>;
 }
 
 export function defaultRelicSettings(): RelicSettings {
@@ -109,7 +112,8 @@ export function setRelics(defs: RelicTemplate[], settings: RelicSettings): void 
   const byId = new Map<string, RelicTemplate>(DEFAULT_RELICS.map((t) => [t.id, { ...t, disabled: true }]));
   for (const t of defs) byId.set(t.id, { ...t });
   RELICS.splice(0, RELICS.length, ...byId.values());
-  const { rarities, ...rules } = settings;
+  const { rarities, loot: _loot, ...rules } = settings;
+  void _loot;
   Object.assign(RELIC_RULES, rules);
   for (const r of RARITIES) {
     const v = rarities?.[r.id];
@@ -299,6 +303,36 @@ export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): str
   }
 }
 
+/** v5.14 : grandeur du circuit d'effets de chaque effet de relique (échelle :
+ *  bonus de rareté × scale). « aegis » reste un effet spécial (pas de grandeur). */
+export const RELIC_EFFECT_STAT: Partial<Record<RelicEffect, { stat: EffectStat; target?: ResourceId; scale?: number }>> = {
+  attack: { stat: "attack" },
+  defense: { stat: "defense" },
+  build_time: { stat: "buildTime" },
+  research_time: { stat: "researchTime" },
+  repair: { stat: "repair" },
+  cargo: { stat: "cargo" },
+  spy: { stat: "spyLevel", scale: 10 },
+  production_all: { stat: "productionAll" },
+  boss_damage: { stat: "bossDamage" },
+  production_scrap: { stat: "production", target: "scrap" },
+  production_energy: { stat: "production", target: "energy" },
+  production_nano: { stat: "production", target: "nano" },
+  production_data: { stat: "production", target: "data" },
+};
+
+/** v5.14 : effets des reliques équipées. */
+export function relicEffects(player: Pick<PlayerState, "relics" | "ascensions">): EffectGrant[] {
+  const out: EffectGrant[] = [];
+  for (const item of equippedRelics(player)) {
+    const t = findTemplate(item.template);
+    const m = t ? RELIC_EFFECT_STAT[t.effect] : undefined;
+    if (!m) continue;
+    out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * (m.scale ?? 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
+  }
+  return out;
+}
+
 export const PRODUCTION_EFFECT: Partial<Record<RelicEffect, ResourceId>> = {
   production_scrap: "scrap",
   production_energy: "energy",
@@ -331,6 +365,13 @@ export function rollRelic(source: string, now: number, random: () => number = Ma
 }
 
 /** Ajoute une relique (refusée si l'inventaire est plein). */
+/** v5.14 : relique précise (administration : compensation, test). */
+export function makeRelic(templateId: string, rarity: RelicRarity, now: number, source = "admin", random: () => number = Math.random): RelicItem {
+  if (!findTemplate(templateId)) throw new GameActionError("Relique inconnue.");
+  if (!RARITIES.some((r) => r.id === rarity)) throw new GameActionError("Rareté inconnue.");
+  return { id: newId(now, random), template: templateId, rarity, foundAtMs: now, source };
+}
+
 export function addRelic(player: PlayerState, item: RelicItem): boolean {
   const st = relicsState(player);
   if (st.items.length >= RELIC_RULES.maxItems) return false;

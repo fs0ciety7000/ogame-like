@@ -34,6 +34,16 @@ interface Tone {
 }
 
 function play(category: SfxCategory, tones: Tone[]) {
+  // v5.14.2 : un son ne doit jamais casser une action (contexte audio fermé ou
+  // refusé sur certains téléphones : le casino restait bloqué en « tirage »).
+  try {
+    playTones(category, tones);
+  } catch {
+    /* pas de son, tant pis */
+  }
+}
+
+function playTones(category: SfxCategory, tones: Tone[]) {
   const master = sfxVolume(category);
   if (master <= 0) return;
   const audio = getCtx();

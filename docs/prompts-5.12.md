@@ -6,6 +6,11 @@ Illustrations du Casino orbital : l'icône du jeton (pour l'interface) et des vi
 Même ambiance que le reste du jeu : espace sombre, néons cyan `#4be8ff` et or `#ffd86b`, interfaces holographiques.
 Aucun texte dans l'image : Midjourney écrit mal, et les titres sont ajoutés par l'article.
 
+**Images reçues** : jeton (trois-quarts → `jeton.webp`, détouré), jeton de face (→ `jeton-icone.webp`, icône), pile de jetons,
+couverture (salle aux machines bleu nuit), salle de jeu (`salle-de-jeu.webp`), gros lot (`gros-lot.webp`, section
+« Et quand quelqu'un gagne ») et grande salle aux trois 7 (`public/assets/casino/salle-777.webp`, fond de l'en-tête de la
+page Casino via `PageHeader backdrop`).
+
 Le jeton suit le design system (`docs/DESIGN.md`) : **coins coupés** (octogone ou carré biseauté, pas de pièce ronde),
 **or = récompense**, liseré cyan discret pour le côté instrument. On évite les casinos « Las Vegas » (velours rouge,
 dés en ivoire, néons roses) : c'est une salle de jeu à bord d'une station militaire.
@@ -49,4 +54,22 @@ Section « Trois 7 et tout le serveur le sait ». Fichier suggéré : `gros-lot.
 
 ```
 /imagine prompt: cinematic sci-fi illustration, the moment of a jackpot in a space station casino, three glowing golden #ffd86b sevens aligned on dark reel screens, a cascade of octagonal tokens with cut corners bursting out of the machine, gold light flooding the room, crowds of officers turning their heads, holographic broadcast panels relaying the news across the station, cyan #4be8ff accents, dramatic motion, painterly concept art, highly detailed, no text, no numbers, no letters --ar 3:2 --v 7 --s 250
+```
+
+## Fonds d'en-tête des pages « lieu » (`PageHeader backdrop`)
+
+Format 21:9 (une bande large), exporté en 1600 × 680, WebP qualité 82, dans `public/assets/headers/`. Le sujet
+doit être **à droite** : le titre de la page s'affiche à gauche, sur la partie fondue de l'image. Déjà en place :
+Casino (salle aux trois 7), État-major (poste de commandement), Palmarès (podium d'or), Hall of fame des boss.
+
+### Marché (`public/assets/headers/marche.webp`)
+
+```
+/imagine prompt: wide cinematic sci-fi illustration, a bustling orbital trading hall seen from a high gallery, rows of cargo containers and holographic price boards on the right side of the frame, traders and drones moving between stalls, cyan #4be8ff price charts and gold #ffd86b crates of ore, a docked freighter visible through a huge window, left third of the image dark and empty for a title, deep navy palette, volumetric light, painterly concept art, highly detailed, no text, no numbers, no letters --ar 21:9 --v 7 --s 200
+```
+
+### Laboratoire (`public/assets/headers/labo.webp`)
+
+```
+/imagine prompt: wide cinematic sci-fi illustration, a quiet research laboratory aboard a starship, glowing containment cylinders and floating holographic molecules on the right side of the frame, a scientist silhouette examining a violet #a78bfa energy sample, cyan #4be8ff interface light, clean metal benches, left third of the image dark and empty for a title, deep navy palette, soft volumetric light, painterly concept art, highly detailed, no text, no letters --ar 21:9 --v 7 --s 200
 ```

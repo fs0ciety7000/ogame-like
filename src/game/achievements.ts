@@ -1,3 +1,6 @@
+import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/game/commanders";
+import { SEASON_CATALOG } from "@/game/seasonCatalog";
+import { WORLD_BOSSES } from "@/game/worldBosses";
 import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
@@ -14,7 +17,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    de production et éventuellement un titre.
 ===================================================== */
 
-export type AchievementTier = "bronze" | "argent" | "or" | "legendaire";
+export type AchievementTier = "bronze" | "argent" | "or" | "legendaire" | "mythique";
 export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "alliance" | "menaces" | "prestige";
 
 export interface AchievementDef {
@@ -40,12 +43,14 @@ export interface AchievementDef {
   auto?: boolean;
 }
 
-export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire" };
+export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire", mythique: "Mythique" };
 export const TIER_REWARDS: Record<AchievementTier, { xp: number; hours: number }> = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
   or: { xp: 60, hours: 2 },
   legendaire: { xp: 150, hours: 6 },
+  // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
+  mythique: { xp: 400, hours: 12 },
 };
 export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji: string }> = {
   combat: { label: "Combat", emoji: "⚔️" },
@@ -136,6 +141,12 @@ export const METRICS = {
   bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },
   passesCompleted: { label: "Passes de saison terminés", value: (p: PlayerState) => ((p.seasonPass as { completed?: string[] } | undefined)?.completed ?? []).length },
   playtimeHours: { label: "Heures de jeu", value: (p: PlayerState) => Math.floor((p.playtimeSeconds ?? 0) / 3600) },
+  // v5.14 : collections tirées des catalogues (officiers rares, commandants de saison, boss mondiaux).
+  rareOfficers: { label: "Officiers rares dans l'état-major", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => findCommander(id)?.rare).length },
+  seasonCommanders: { label: "Commandants de saison gagnés", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => isSeasonOfficer(id)).length },
+  worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
+  // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
+  casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -248,8 +259,28 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
 
 /** Registre courant (remplacé par applyGameContent). */
 export const ACHIEVEMENTS: AchievementDef[] = [];
+/** v5.14 : succès dérivés des catalogues. Leurs paliers suivent la taille des
+ *  catalogues (rôles rares, saisons, boss mondiaux) : en ajouter met les succès à jour. */
+export function derivedAchievements(): AchievementDef[] {
+  const rare = RARE_ROLES.length;
+  const bosses = WORLD_BOSSES.length;
+  return [
+    def("officier_rare_1", "prestige", "or", "rareOfficers", 1, "Recrue d'exception", "Accueillir un officier rare dans l'état-major.", "🎖️", { auto: true }),
+    def("officier_rare_all", "prestige", "legendaire", "rareOfficers", rare, "État-major complet", `Réunir les ${rare} officiers rares.`, "🏅", { auto: true, secret: true }),
+    def("commandant_saison_1", "prestige", "argent", "seasonCommanders", 1, "Fin de saison", "Gagner un commandant de saison au dernier palier d'un passe.", "🎟️", { auto: true }),
+    def("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une année de passes", "Gagner douze commandants de saison.", "📅", { auto: true }),
+    def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "🗓️", { auto: true, secret: true }),
+    def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
+    def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
+    // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
+  ];
+}
+
 export function setAchievements(defs: AchievementDef[]) {
-  ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs);
+  // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
+  const have = new Set(defs.map((d) => d.id));
+  ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 
