@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { Crown, History } from "lucide-react";
+import { Coins, Crown, History, ListOrdered, Percent } from "lucide-react";
+import { CasinoPanel } from "@/components/casino/CasinoPanel";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { assetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, HudBrackets } from "@/components/ui/card";
+import { HudBrackets } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { HudCallout, HudChip, EmptyState } from "@/components/ui/hud";
@@ -234,8 +235,10 @@ export function CasinoPage() {
     <div className="flex flex-col gap-4">
       <PageHeader backdrop="/assets/casino/salle-777.webp" eyebrow="Cosmic Empires / Social" title="Casino orbital" description={`Le pot commun du serveur est le gros lot. Un jeton, un tirage : aligne trois 7 pour rafler ${Math.round((settings?.jackpotShare ?? 0.9) * 100)} % du pot.`} />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex flex-col gap-3">
+      {/* 5.15.8 : trois colonnes. À gauche ce qui te concerne (jetons, semaine, tournoi),
+          au centre la machine, à droite le gros lot et les gains. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
+        <div className="flex flex-col gap-3 lg:col-start-1 xl:col-start-2 xl:row-start-1">
           <SlotMachine
             reels={reels}
             spinKey={spinKey}
@@ -305,49 +308,58 @@ export function CasinoPage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
-          {/* v5.14.2 : le gros lot en jeu, en entier (ce que rafle le prochain 7-7-7). */}
-          <HudCallout tone="gold" className="flex flex-col gap-2">
-            <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-gold-glow">
-              <Crown className="h-3.5 w-3.5" /> Gros lot en jeu · {Math.round((settings?.jackpotShare ?? 0.9) * 100)} % du pot commun
-            </span>
-            {Object.keys(jackpot).length > 0 ? (
-              <span className="flex flex-wrap gap-x-3 gap-y-1">
-                {(Object.entries(jackpot) as [ResourceId, number][]).map(([res, n]) => (
-                  <span key={res} className="inline-flex items-center gap-1 font-mono text-sm tabular-nums text-slate-100">
-                    <ResourceIcon id={res} className="h-4 w-4" /> {formatNumber(n)}
-                  </span>
-                ))}
+        <div className="grid content-start gap-3 lg:col-span-2 lg:grid-cols-2 xl:col-span-1 xl:col-start-1 xl:row-start-1 xl:grid-cols-1">
+          <CasinoPanel
+            icon={<TokenIcon size={14} />}
+            title="Mes jetons"
+            tone="gold"
+            accent={daily}
+            aside={
+              <span className="font-mono text-lg font-bold tabular-nums text-slate-100">
+                {formatNumber(tokens)}
+                <span className="text-xs font-normal text-slate-500"> / {formatNumber(settings?.maxTokens ?? 0)}</span>
               </span>
-            ) : (
-              <span className="text-xs text-slate-400">Pot vide pour l'instant : le 7-7-7 rapporte {settings?.jackpotFallbackHours ?? 12} h de production.</span>
-            )}
-            <span className="text-xs text-slate-400">Le pot grossit avec les taxes du marché et des cadeaux, et les dépôts de l'équipe.</span>
-          </HudCallout>
-
-          <HudCallout tone={daily ? "gold" : "neutral"} className="flex items-center gap-3">
-            <img src={assetUrl("/assets/casino/jetons-pile.webp")} alt="" aria-hidden className="hud-cut-sm h-12 w-12 shrink-0 object-cover" />
-            <span className="min-w-0 flex-1 text-sm">
-              <b className="block text-slate-100">Jeton du jour</b>
-              <span className="text-xs text-slate-400">
-                {daily ? `${settings?.dailyTokens ?? 1} jeton offert chaque jour. L'équipe en distribue aussi lors des évènements.` : "Déjà récupéré aujourd'hui. Revenez demain !"}
+            }
+          >
+            <div className="flex items-center gap-3">
+              <img src={assetUrl("/assets/casino/jetons-pile.webp")} alt="" aria-hidden className="hud-cut-sm h-12 w-12 shrink-0 object-cover" />
+              <span className="min-w-0 flex-1 text-xs text-slate-400">
+                <b className="block text-sm text-slate-100">Jeton du jour</b>
+                {daily ? `${settings?.dailyTokens ?? 1} jeton${(settings?.dailyTokens ?? 1) > 1 ? "s" : ""} offert${(settings?.dailyTokens ?? 1) > 1 ? "s" : ""} chaque jour.` : "Déjà récupéré aujourd'hui. Reviens demain !"}
               </span>
-            </span>
-            {daily && (
-              <Button size="sm" onClick={() => void takeDaily()}>
-                Récupérer
-              </Button>
-            )}
-          </HudCallout>
-
-          {settings && <TokenSourcesCard settings={settings} />}
+              {daily && (
+                <Button size="sm" onClick={() => void takeDaily()}>
+                  Récupérer
+                </Button>
+              )}
+            </div>
+          </CasinoPanel>
 
           <WeekRecap player={player} />
 
           {casino && <TournamentCard casino={casino} uid={player.uid} />}
 
-          <Card className="p-4">
-            <p className="hud-eyebrow mb-2 text-[10px] text-slate-500">Table des gains</p>
+          {settings && <TokenSourcesCard settings={settings} />}
+        </div>
+
+        <div className="flex flex-col gap-3 lg:col-start-2 lg:row-start-1 xl:col-start-3">
+          {/* v5.14.2 : le gros lot en jeu, en entier (ce que rafle le prochain 7-7-7). */}
+          <CasinoPanel icon={<Crown />} title={`Gros lot en jeu · ${Math.round((settings?.jackpotShare ?? 0.9) * 100)} % du pot`} tone="gold" accent>
+            {Object.keys(jackpot).length > 0 ? (
+              <div className="grid grid-cols-2 gap-1.5">
+                {(Object.entries(jackpot) as [ResourceId, number][]).map(([res, n]) => (
+                  <span key={res} className="hud-cut-sm flex min-w-0 items-center gap-1.5 border border-gold-glow/15 bg-gold-glow/[0.04] px-2 py-1 font-mono text-xs tabular-nums text-slate-100">
+                    <ResourceIcon id={res} className="h-4 w-4 shrink-0" /> <span className="truncate">{formatCompact(n)}</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-xs text-slate-400">Pot vide pour l'instant : le 7-7-7 rapporte {settings?.jackpotFallbackHours ?? 12} h de production.</span>
+            )}
+            <span className="text-[11px] text-slate-500">Le pot grossit avec les taxes du marché et des cadeaux, et les dépôts de l'équipe.</span>
+          </CasinoPanel>
+
+          <CasinoPanel icon={<ListOrdered />} title="Table des gains">
             <ul className="grid gap-1.5">
               {PAYTABLE.map((row) => (
                 <li key={row.outcome} className="flex items-center gap-3 text-xs">
@@ -362,10 +374,10 @@ export function CasinoPage() {
                     {OUTCOME_LABELS[row.outcome]}
                     {/* v5.14.2 : chance de chaque gain, par tirage. */}
                     {settings && row.outcome in settings.odds && (
-                      <span className="block font-mono text-[10px] text-slate-500">{chanceLabel(settings.odds[row.outcome as keyof typeof settings.odds])}</span>
+                      <span className="block whitespace-nowrap font-mono text-[10px] text-slate-500">{chanceLabel(settings.odds[row.outcome as keyof typeof settings.odds])}</span>
                     )}
                   </span>
-                  <span className="shrink-0 font-mono text-slate-100">
+                  <span className="shrink-0 text-right font-mono text-[11px] text-slate-100">
                     {row.outcome === "jackpot"
                       ? `${Math.round((settings?.jackpotShare ?? 0.5) * 100)} % du pot`
                       : row.outcome === "cherry"
@@ -375,14 +387,11 @@ export function CasinoPage() {
                 </li>
               ))}
             </ul>
-          </Card>
+          </CasinoPanel>
 
           {settings && <JackpotOddsCard odds={jackpotOdds(settings)} />}
 
-          <Card className="p-4">
-            <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-gold-glow">
-              <Crown className="h-3.5 w-3.5" /> Gros lots
-            </p>
+          <CasinoPanel icon={<Crown />} title="Gros lots" tone="gold">
             {(casino?.jackpots.length ?? 0) === 0 ? (
               <p className="text-xs text-slate-500">Personne n'a encore aligné trois 7. Le premier entrera dans la légende.</p>
             ) : (
@@ -398,12 +407,9 @@ export function CasinoPage() {
                 ))}
               </ul>
             )}
-          </Card>
+          </CasinoPanel>
 
-          <Card className="p-4">
-            <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-slate-500">
-              <History className="h-3.5 w-3.5" /> Derniers gains
-            </p>
+          <CasinoPanel icon={<History />} title="Derniers gains">
             {(casino?.recent.length ?? 0) === 0 ? (
               <EmptyState icon="🎰" className="p-0">Aucun gain pour l'instant.</EmptyState>
             ) : (
@@ -422,7 +428,7 @@ export function CasinoPage() {
                 ))}
               </ul>
             )}
-          </Card>
+          </CasinoPanel>
         </div>
       </div>
 
@@ -448,20 +454,17 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
     ["Tournoi du week-end", r.tournament.join(", ") + " pour le podium"],
   ];
   return (
-    <Card className="p-4">
-      <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-gold-glow">
-        <TokenIcon size={12} /> Gagner des jetons
-      </p>
+    <CasinoPanel icon={<Coins />} title="Gagner des jetons" tone="gold">
       <ul className="grid gap-1 text-xs">
         {rows.map(([label, value]) => (
-          <li key={label} className="flex items-baseline justify-between gap-3 border-b border-white/5 pb-1 last:border-0">
-            <span className="text-slate-300">{label}</span>
-            <span className="text-right font-mono tabular-nums text-slate-100">{value}</span>
+          <li key={label} className="flex flex-col gap-0.5 border-b border-white/5 pb-1 last:border-0">
+            <span className="text-slate-400">{label}</span>
+            <span className="font-mono tabular-nums text-slate-100">{value}</span>
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[11px] text-slate-500">Les chances de butin augmentent face à un adversaire plus fort que toi (jusqu'à ×2).</p>
-    </Card>
+      <p className="text-[11px] text-slate-500">Les chances de butin augmentent face à un adversaire plus fort que toi (jusqu'à ×2).</p>
+    </CasinoPanel>
   );
 }
 
@@ -476,8 +479,7 @@ function chanceLabel(p: number): string {
 function JackpotOddsCard({ odds }: { odds: ReturnType<typeof jackpotOdds> }) {
   const steps = [10, 50, 100, 200, 500];
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <p className="hud-eyebrow text-[10px] text-slate-500">Tes chances au 7-7-7</p>
+    <CasinoPanel icon={<Percent />} title="Tes chances au 7-7-7">
       <div className="grid grid-cols-2 gap-2">
         <div className="hud-cut-sm border border-white/10 p-2">
           <p className="font-mono text-lg tabular-nums text-slate-100">≈ {formatNumber(Math.round(odds.meanTokens))}</p>
@@ -503,6 +505,6 @@ function JackpotOddsCard({ odds }: { odds: ReturnType<typeof jackpotOdds> }) {
         })}
       </ul>
       <p className="text-[11px] text-slate-500">Calculé sur les réglages du casino. Chaque tirage est indépendant : la machine n'a pas de mémoire.</p>
-    </Card>
+    </CasinoPanel>
   );
 }

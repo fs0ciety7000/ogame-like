@@ -1,3 +1,5 @@
+import { CalendarDays } from "lucide-react";
+import { CasinoPanel } from "@/components/casino/CasinoPanel";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { casinoWeek, playerCasino } from "@/game/casino";
 import { formatCompact } from "@/lib/utils";
@@ -14,8 +16,7 @@ export function WeekRecap({ player }: { player: Pick<PlayerState, "casino"> }) {
     ["Points", w.points],
   ];
   return (
-    <div className="hud-cut-sm border border-white/10 bg-white/[0.02] p-3">
-      <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">Ma semaine au casino</p>
+    <CasinoPanel icon={<CalendarDays />} title="Ma semaine au casino">
       <div className="grid grid-cols-3 gap-2 text-center">
         {tiles.map(([k, v]) => (
           <div key={k}>
@@ -25,7 +26,7 @@ export function WeekRecap({ player }: { player: Pick<PlayerState, "casino"> }) {
         ))}
       </div>
       {res.length > 0 && (
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/5 pt-2 font-mono text-xs text-slate-200">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/5 pt-2 font-mono text-xs text-slate-200">
           {res.slice(0, 4).map(([id, n]) => (
             <span key={id} className="inline-flex items-center gap-1">
               <ResourceIcon id={id} className="h-3.5 w-3.5" /> +{formatCompact(n)}
@@ -33,9 +34,9 @@ export function WeekRecap({ player }: { player: Pick<PlayerState, "casino"> }) {
           ))}
         </p>
       )}
-      <p className="mt-2 text-[11px] text-slate-500">
+      <p className="text-[11px] text-slate-500">
         Depuis le début : {all.spins} tirage{all.spins > 1 ? "s" : ""}, {all.wins} gain{all.wins > 1 ? "s" : ""}, {all.jackpots} gros lot{all.jackpots > 1 ? "s" : ""}.
       </p>
-    </div>
+    </CasinoPanel>
   );
 }
