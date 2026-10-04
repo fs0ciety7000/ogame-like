@@ -261,7 +261,7 @@ export function CasinoPage() {
             <ul className="grid gap-1.5">
               {PAYTABLE.map((row) => (
                 <li key={row.outcome} className="flex items-center gap-3 text-xs">
-                  <span className="flex shrink-0 gap-0.5 rounded-none bg-[#f2ecdf] px-1 py-0.5">
+                  <span className="hud-cut-sm flex shrink-0 gap-0.5 border border-white/10 bg-space-950 px-1 py-0.5">
                     {row.combo.map((s, i) => (
                       <span key={i} className="grid h-6 w-6 place-items-center">
                         <SlotSymbolView symbol={s} size={22} />

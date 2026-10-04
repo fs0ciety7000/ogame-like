@@ -7,7 +7,7 @@ title: Le Casino orbital ouvre ses portes
 Le pot commun du serveur devient un gros lot : une machine à sous « 777 » où chaque jeton peut rapporter la moitié du pot.
 
 ## Casino orbital
-- [Nouveau] **Machine à sous 777** (Social → Casino) : trois rouleaux qui s'arrêtent l'un après l'autre, levier, lumières, sons. **Trois 7** remportent une part du **pot commun** (50 % par défaut) ; les autres combinaisons rapportent de 1 à 6 heures de production, et une cerise rend le jeton.
+- [Nouveau] **Machine à sous 777** (Social → Casino) : trois rouleaux qui s'arrêtent l'un après l'autre, levier, rampe lumineuse, sons. La machine prend les couleurs de votre thème, et sa ligne de paiement passe au vert sur un gain. **Trois 7** remportent une part du **pot commun** (50 % par défaut) ; les autres combinaisons rapportent de 1 à 6 heures de production, et une cerise rend le jeton.
 - [Nouveau] **Jetons** : un jeton offert chaque jour d'ouverture, et des jetons distribués par l'équipe lors des évènements. Touche **Espace** pour tirer.
 - [Nouveau] **Annonce du gagnant** : écran de gros lot avec pluie de pièces, notification à tous les joueurs, palmarès des **gros lots** et fil des **derniers gains** sur la page.
 - [Nouveau] **Ouvert à certaines heures** : le casino n'apparaît dans le menu que lorsqu'il est ouvert (chaque week-end par défaut, ou selon les créneaux choisis par l'équipe). Tous les joueurs sont prévenus à chaque ouverture.

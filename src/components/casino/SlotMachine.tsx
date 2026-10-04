@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Cherry, Skull, Star } from "lucide-react";
 import { SLOT_SYMBOLS, type SlotSymbol } from "@/game/casino";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /* =====================================================
@@ -36,14 +37,14 @@ export function SlotSymbolView({ symbol, size = 64 }: { symbol: SlotSymbol; size
         <svg viewBox="0 0 64 64" className="slot-planet" style={{ width: size * 0.82, height: size * 0.82 }} aria-hidden>
           <defs>
             <radialGradient id="slot-planet-g" cx="38%" cy="35%" r="70%">
-              <stop offset="0%" stopColor="#f5e9ff" />
-              <stop offset="45%" stopColor="var(--color-violet-glow)" />
-              <stop offset="100%" stopColor="#1a0d33" />
+              <stop offset="0%" stopColor="color-mix(in srgb, var(--th-accent2) 35%, var(--th-text-100))" />
+              <stop offset="50%" stopColor="var(--th-accent2)" />
+              <stop offset="100%" stopColor="var(--th-space-950)" />
             </radialGradient>
           </defs>
-          <ellipse cx="32" cy="34" rx="29" ry="8" fill="none" stroke="var(--color-gold-glow)" strokeWidth="3" opacity="0.55" transform="rotate(-18 32 34)" />
+          <ellipse cx="32" cy="34" rx="29" ry="8" fill="none" stroke="var(--th-gold)" strokeWidth="2.5" opacity="0.5" transform="rotate(-18 32 34)" />
           <circle cx="32" cy="32" r="17" fill="url(#slot-planet-g)" />
-          <path d="M5 39 Q32 50 59 29" fill="none" stroke="var(--color-gold-glow)" strokeWidth="3" transform="rotate(-6 32 34)" />
+          <path d="M5 39 Q32 50 59 29" fill="none" stroke="var(--th-gold)" strokeWidth="2.5" transform="rotate(-6 32 34)" />
         </svg>
       );
   }
@@ -116,7 +117,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
   const columns = useMemo(() => reels.map((c) => [randomSymbol(), c, randomSymbol()]), [reels]);
 
   return (
-    <div className={cn("slot-cabinet", win === "jackpot" && "slot-cabinet-jackpot", win === "small" && "slot-cabinet-win")}>
+    <div className={cn("slot-cabinet", spinning && "slot-cabinet-spinning", win === "jackpot" && "slot-cabinet-jackpot", win === "small" && "slot-cabinet-win")}>
       <div className="slot-lights" aria-hidden>
         {Array.from({ length: 22 }, (_, i) => (
           <i key={i} style={{ animationDelay: `${(i % 2) * 0.35}s` }} />
@@ -125,7 +126,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
       <div className="slot-marquee">
         <p className="slot-title">Casino orbital</p>
         <div className="slot-jackpot">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-gold-glow/80">Gros lot 7 · 7 · 7</span>
+          <span className="hud-eyebrow text-[10px] text-slate-400">Gros lot 7 · 7 · 7</span>
           <span className="slot-led">{jackpotLabel}</span>
         </div>
       </div>
@@ -148,13 +149,13 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
 
       <div className="slot-console">
         <div className="slot-credits">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-400">Jetons</span>
+          <span className="hud-eyebrow text-[10px] text-slate-400">Jetons</span>
           <span className="slot-led">{String(tokens).padStart(2, "0")}</span>
         </div>
-        <button type="button" className="slot-spin" onClick={onPull} disabled={disabled}>
+        <Button size="lg" className="slot-spin" onClick={onPull} disabled={disabled}>
           {spinning ? "Ça tourne…" : "Tirer"}
           <small>1 jeton · Espace</small>
-        </button>
+        </Button>
       </div>
       <div className="slot-lights slot-lights-bottom" aria-hidden>
         {Array.from({ length: 22 }, (_, i) => (

@@ -1018,151 +1018,155 @@ body {
   .ck-boot, .ck-boot p { animation-duration: 0.01ms; animation-delay: 0s !important; }
 }
 
-/* ---------- v5.12 : Casino orbital (machine à sous) ---------- */
+/* ---------- v5.12 : Casino orbital (machine à sous) ----------
+   Instrument du HUD : panneau à coins coupés, jetons du thème uniquement.
+   Couleurs = sens : or (récompense) pour la machine, accent pour l'action (levier, bouton),
+   mint sur un gain, lueur forte réservée au gros lot. */
 .slot-cabinet {
-  --gold: var(--th-gold);
+  --c: var(--th-gold);
+  --cut: var(--th-cut, 14px);
   position: relative;
   width: min(100%, 560px);
   margin-inline: auto;
-  padding: 14px 18px;
+  padding: 12px 16px 14px;
   background:
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--gold) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, var(--th-space-700), var(--th-space-950));
-  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
-  box-shadow: 0 0 40px color-mix(in srgb, var(--gold) 14%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6);
-  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--c) 10%, transparent), transparent 55%),
+    var(--th-panel);
+  border: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  border-top: 2px solid color-mix(in srgb, var(--c) 75%, transparent);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  transition: border-color 0.3s;
 }
 :root[data-theme="holo"] .slot-cabinet { clip-path: none; }
-.slot-cabinet-win { box-shadow: 0 0 46px color-mix(in srgb, var(--th-ok) 35%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
-.slot-cabinet-jackpot { animation: slot-jackpot-glow 0.5s ease-in-out infinite alternate; }
+.slot-cabinet-win { --c: var(--th-ok); }
+.slot-cabinet-jackpot { animation: slot-jackpot-glow 0.6s ease-in-out infinite alternate; }
 @keyframes slot-jackpot-glow {
-  from { box-shadow: 0 0 30px color-mix(in srgb, var(--gold) 40%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
-  to { box-shadow: 0 0 80px color-mix(in srgb, var(--gold) 80%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.6); }
+  from { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 10%, transparent); }
+  to { box-shadow: inset 0 0 0 1px var(--c), inset 0 0 60px color-mix(in srgb, var(--c) 28%, transparent); }
 }
-.slot-lights { display: flex; justify-content: space-between; padding: 0 6px; }
-.slot-lights > i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); animation: slot-light 0.7s steps(1) infinite; }
-.slot-lights-bottom { margin-top: 10px; }
-.slot-cabinet-jackpot .slot-lights > i { animation-duration: 0.18s; }
-@keyframes slot-light { 50% { opacity: 0.2; box-shadow: none; } }
-.slot-marquee { display: grid; justify-items: center; gap: 6px; margin: 8px 0 12px; text-align: center; }
+/* Rampe de segments (au lieu d'ampoules rondes) : éteinte au repos, elle court pendant un tirage. */
+.slot-lights { display: grid; grid-template-columns: repeat(22, 1fr); gap: 3px; }
+.slot-lights > i { height: 3px; background: color-mix(in srgb, var(--c) 22%, transparent); }
+.slot-lights-bottom { margin-top: 12px; }
+.slot-cabinet-spinning .slot-lights > i,
+.slot-cabinet-win .slot-lights > i,
+.slot-cabinet-jackpot .slot-lights > i { animation: slot-light 0.7s steps(1) infinite; }
+.slot-cabinet-jackpot .slot-lights > i { animation-duration: 0.2s; }
+@keyframes slot-light { 50% { background: var(--c); } }
+.slot-marquee { display: grid; justify-items: center; gap: 6px; margin: 10px 0 12px; text-align: center; }
 .slot-title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 5vw, 32px);
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  letter-spacing: var(--th-title-track, 0.14em);
   text-transform: uppercase;
-  background: linear-gradient(180deg, #fff6d0, var(--gold) 55%, var(--th-ember));
+  line-height: 1.1;
+  background: linear-gradient(180deg, var(--th-text-100), var(--th-gold) 70%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 50%, transparent));
 }
-.slot-jackpot { display: grid; justify-items: center; gap: 2px; }
+.slot-jackpot { display: grid; justify-items: center; gap: 4px; }
+/* Afficheur : chiffres mono tabulaires sur écran sombre. */
 .slot-led {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 20px;
-  color: var(--gold);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--gold) 70%, transparent);
-  background: #0a0603;
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
-  padding: 2px 10px;
+  font-size: 18px;
+  color: var(--th-gold);
+  background: var(--th-space-950);
+  border: 1px solid color-mix(in srgb, var(--th-gold) 30%, transparent);
+  padding: 3px 10px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
 }
+:root[data-theme="holo"] .slot-led { clip-path: none; }
 .slot-body { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .slot-window {
   position: relative;
   display: flex;
-  gap: 6px;
-  padding: 6px;
-  background: #05030a;
-  border: 2px solid color-mix(in srgb, var(--gold) 45%, transparent);
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.9);
+  gap: 4px;
+  padding: 4px;
+  background: var(--th-space-950);
+  border: 1px solid var(--th-edge);
 }
+/* Rouleau = écran du HUD : fond sombre, balayage léger, fondu en haut et en bas. */
 .slot-reel {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #1a1426, #f2ecdf 22%, #fffaf0 50%, #f2ecdf 78%, #1a1426);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, var(--th-scan, 0.02)) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--th-space-950), var(--th-space-800) 50%, var(--th-space-950));
+  border: 1px solid color-mix(in srgb, var(--th-text-500) 18%, transparent);
 }
 .slot-reel::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.75));
+  background: linear-gradient(180deg, var(--th-space-950), transparent 30%, transparent 70%, var(--th-space-950));
 }
-.slot-payline { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--th-danger); box-shadow: 0 0 10px var(--th-danger); opacity: 0.75; pointer-events: none; }
-.slot-cabinet-win .slot-payline, .slot-cabinet-jackpot .slot-payline { background: var(--th-ok); box-shadow: 0 0 16px var(--th-ok); opacity: 1; }
-.slot-arrow { position: absolute; top: 50%; width: 0; height: 0; margin-top: -7px; border: 7px solid transparent; }
-.slot-arrow-left { left: -9px; border-left-color: var(--th-danger); }
-.slot-arrow-right { right: -9px; border-right-color: var(--th-danger); }
+/* Ligne de paiement : accent (visée) au repos, couleur du gain ensuite. */
+.slot-payline { --p: var(--th-accent); position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: var(--p); opacity: 0.6; pointer-events: none; z-index: 1; }
+.slot-cabinet-win .slot-payline, .slot-cabinet-jackpot .slot-payline { --p: var(--c); opacity: 1; height: 2px; margin-top: -1px; box-shadow: 0 0 10px var(--p); }
+.slot-arrow { --p: var(--th-accent); position: absolute; top: 50%; width: 0; height: 0; margin-top: -6px; border: 6px solid transparent; }
+.slot-cabinet-win .slot-arrow, .slot-cabinet-jackpot .slot-arrow { --p: var(--c); }
+.slot-arrow-left { left: -7px; border-left-color: var(--p); }
+.slot-arrow-right { right: -7px; border-right-color: var(--p); }
+/* Symboles : chacun garde un sens (7 et étoile = récompense, cerise = mise rendue, crâne = perte neutre). */
 .slot-seven {
-  background: linear-gradient(180deg, #ffe680 0%, #ff9a1f 45%, #e0202f 100%);
+  background: linear-gradient(180deg, var(--th-text-100) 0%, var(--th-gold) 45%, var(--th-ember) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  -webkit-text-stroke: 2px #6b0710;
-  filter: drop-shadow(0 2px 0 #3a0207);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--th-gold) 35%, transparent));
 }
-.slot-bar { background: #111; color: #ffd84a; border: 2px solid #ffd84a; box-shadow: 0 2px 0 #6b4d00; }
-.slot-star { color: #f5b300; fill: #ffd84a; filter: drop-shadow(0 2px 0 #8a5a00); }
-.slot-cherry { color: #b3001b; fill: #e5202f; filter: drop-shadow(0 2px 0 #5a000c); }
-.slot-skull { color: #3b3348; }
-.slot-planet { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
+.slot-bar {
+  color: var(--th-gold);
+  background: color-mix(in srgb, var(--th-gold) 10%, var(--th-space-950));
+  border: 1px solid color-mix(in srgb, var(--th-gold) 60%, transparent);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+.slot-star { color: var(--th-gold); fill: color-mix(in srgb, var(--th-gold) 35%, transparent); }
+.slot-cherry { color: var(--th-danger); fill: color-mix(in srgb, var(--th-danger) 30%, transparent); }
+.slot-skull { color: var(--th-text-500); }
+.slot-planet { --p: var(--th-accent2); }
+/* Levier : pièce d'action, donc accent ; poignée à coins coupés. */
 .slot-lever { position: relative; width: 26px; height: 150px; flex: none; background: none; border: 0; cursor: pointer; }
-.slot-lever:disabled { cursor: not-allowed; opacity: 0.6; }
-.slot-lever-stick { position: absolute; left: 50%; bottom: 10px; width: 6px; height: 110px; margin-left: -3px; background: linear-gradient(90deg, #6d6d78, #e6e6ef, #6d6d78); transform-origin: 50% 100%; transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
-.slot-lever-ball { position: absolute; left: 50%; top: 4px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9aa4, var(--th-danger) 55%, #5a0010); box-shadow: 0 0 12px color-mix(in srgb, var(--th-danger) 60%, transparent); transform-origin: 50% 132px; transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
-.slot-lever::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 22px; height: 14px; margin-left: -11px; background: var(--th-space-600); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); }
+.slot-lever:disabled { cursor: not-allowed; opacity: 0.45; }
+.slot-lever:focus-visible { outline: 2px solid var(--th-accent); outline-offset: 2px; }
+.slot-lever-stick { position: absolute; left: 50%; bottom: 10px; width: 4px; height: 110px; margin-left: -2px; background: linear-gradient(90deg, var(--th-text-600), var(--th-text-300), var(--th-text-600)); transform-origin: 50% 100%; transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
+.slot-lever-ball { position: absolute; left: 50%; top: 4px; width: 22px; height: 22px; margin-left: -11px; background: linear-gradient(180deg, color-mix(in srgb, var(--th-accent) 70%, white), var(--th-accent)); box-shadow: 0 0 10px color-mix(in srgb, var(--th-accent) 45%, transparent); clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px); transition: transform 0.25s cubic-bezier(0.7, 0, 0.3, 1); }
+.slot-lever::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 20px; height: 12px; margin-left: -10px; background: var(--th-space-700); border: 1px solid var(--th-edge); }
 .slot-lever-pulled .slot-lever-stick { transform: scaleY(0.25); }
 .slot-lever-pulled .slot-lever-ball { transform: translateY(96px); }
-.slot-lever:hover:not(:disabled) .slot-lever-ball { filter: brightness(1.2); }
+.slot-lever:hover:not(:disabled) .slot-lever-ball { filter: brightness(1.15); }
 .slot-console { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-.slot-credits { display: grid; gap: 2px; }
-.slot-spin {
-  flex: 1;
-  min-width: 160px;
-  display: grid;
-  gap: 1px;
-  justify-items: center;
-  padding: 10px 18px;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #2a0a00;
-  background: linear-gradient(180deg, #ffe680, var(--gold) 40%, var(--th-ember));
-  border: 0;
-  box-shadow: 0 4px 0 #7a3a00, 0 0 22px color-mix(in srgb, var(--gold) 45%, transparent);
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-  cursor: pointer;
-  transition: transform 0.08s, filter 0.15s;
-}
-.slot-spin small { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.14em; font-weight: 600; opacity: 0.75; }
-.slot-spin:hover:not(:disabled) { filter: brightness(1.1); }
-.slot-spin:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #7a3a00; }
-.slot-spin:disabled { cursor: not-allowed; filter: grayscale(0.7) brightness(0.7); }
+.slot-credits { display: grid; gap: 4px; }
+.slot-spin { flex: 1; min-width: 160px; height: auto !important; padding-block: 8px !important; flex-direction: column; gap: 1px !important; }
+.slot-spin small { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em; font-weight: 600; opacity: 0.75; }
+/* Pièces du gros lot : jetons à coins coupés, couleur récompense. */
 .slot-coin {
   position: absolute;
   top: -40px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff6c0, var(--th-gold) 50%, #a86b00);
-  box-shadow: inset 0 0 0 3px rgba(122, 74, 0, 0.6), 0 0 10px color-mix(in srgb, var(--th-gold) 50%, transparent);
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 900;
+  font-family: var(--font-mono);
+  font-weight: 700;
   font-size: 12px;
-  color: #7a4a00;
+  color: var(--th-gold);
+  background: color-mix(in srgb, var(--th-gold) 16%, var(--th-space-950));
+  border: 1px solid var(--th-gold);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
 @media (prefers-reduced-motion: reduce) {
-  .slot-lights > i, .slot-cabinet-jackpot { animation: none; }
+  .slot-lights > i, .slot-cabinet-spinning .slot-lights > i, .slot-cabinet-win .slot-lights > i, .slot-cabinet-jackpot .slot-lights > i, .slot-cabinet-jackpot { animation: none; }
+  .slot-lever-stick, .slot-lever-ball { transition: none; }
 }
 
 /* ---------- Toasts du HUD (sonner, voir hud-toast.tsx) ---------- */
