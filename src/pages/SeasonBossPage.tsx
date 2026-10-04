@@ -61,6 +61,18 @@ export function SeasonBossPage() {
         title={boss?.name ?? "Boss de saison"}
         description="Le dernier week-end de chaque mois, du vendredi 18 h au dimanche 23 h, le boss de la chronique surgit. Tout le serveur frappe ensemble."
       />
+      {/* v5.10 : combat terminé — le bilan passe en tête de page. */}
+      {shown && !active && (
+        <BossRecapPanel
+          state={shown}
+          uid={player.uid}
+          name={boss?.name ?? "Le boss de saison"}
+          image={boss?.image}
+          accent={month?.theme.accent}
+          active={active}
+          legacyNote={shown.rewards ? undefined : `${PASS_POINTS.seasonBoss} points de passe`}
+        />
+      )}
       <MythicRelicNotice source="seasonboss" />
 
       {boss && (
@@ -124,7 +136,6 @@ export function SeasonBossPage() {
         </Card>
       )}
 
-      {shown && <BossRecapPanel state={shown} uid={player.uid} name={boss?.name ?? "Le boss de saison"} image={boss?.image} accent={month?.theme.accent} active={active} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

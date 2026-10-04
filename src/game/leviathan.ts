@@ -68,6 +68,8 @@ export interface LeviathanState {
   rewards?: Record<string, BossReward>;
   /** v5.10 : auteur du coup de grâce. */
   killedBy?: { uid: string; pseudo: string };
+  /** v5.10 : combat archivé dans le Hall of fame. */
+  archived?: boolean;
 }
 
 /** v5.9 : ce qu'un participant a reçu à la fin d'un boss. */
@@ -132,6 +134,7 @@ export function normalizeLeviathan(raw: unknown): LeviathanState | null {
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : [],
     ...(r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}),
     ...(r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String(r.killedBy.pseudo ?? "") } } : {}),
+    ...(r.archived === true ? { archived: true } : {}),
   };
 }
 

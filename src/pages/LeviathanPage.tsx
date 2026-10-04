@@ -154,6 +154,19 @@ export function LeviathanPage() {
         </div>
       </div>
 
+      {/* v5.10 : combat terminé — le bilan passe en tête de page. */}
+      {state && !active && (
+        <BossRecapPanel
+          state={state}
+          uid={player.uid}
+          name={LEVIATHAN_RULES.name}
+          image="/assets/leviathan/leviathan.webp"
+          accent="#ff5c7a"
+          active={active}
+          legacyNote={state.rewards ? undefined : `${String(Math.round(rewardHours(state, player.uid) * 10) / 10).replace(".", ",")} h de ta production${leviathanRanking(state)[0]?.uid === player.uid && state.status === "killed" ? ` et le titre « ${LEVIATHAN_RULES.title} »` : ""}`}
+        />
+      )}
+
       <MythicRelicNotice source="leviathan" />
 
       {state ? (
@@ -162,7 +175,9 @@ export function LeviathanPage() {
             <Skull className={cn("h-6 w-6", active ? "text-danger-glow" : "text-slate-500")} />
             <HudTag tone={active ? "danger" : state.status === "killed" ? "mint" : "gold"}>{active ? "En approche" : state.status === "killed" ? "Abattu" : "Retiré"}</HudTag>
             <span className="ml-auto font-mono text-xs text-slate-400">
-              {active ? `repart dans ${formatDuration(Math.max(0, Math.floor((state.endMs - now) / 1000)))}` : `terminé ${new Date(state.endedAtMs || state.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`}
+              {active
+                ? `repart dans ${formatDuration(Math.max(0, Math.floor((state.endMs - now) / 1000)))}`
+                : `terminé ${new Date(state.endedAtMs || state.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}${next ? ` · retour ${new Date(next).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}` : ""}`}
             </span>
           </div>
           <div>
@@ -178,7 +193,12 @@ export function LeviathanPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile label="Tes dégâts" value={formatCompact(mine?.damage ?? 0)} sub={`${mine?.assaults ?? 0} assaut(s)`} tone="var(--color-ember-glow)" />
-            <StatTile label="Récompense prévue" value={`${Math.round(rewardHours({ ...state, status: active ? "killed" : state.status }, player.uid) * 10) / 10} h`} sub="de ta production" tone="var(--color-mint-glow)" />
+            <StatTile
+              label={active ? "Récompense prévue" : state.rewarded ? "Récompense versée" : "Récompense"}
+              value={`${String(Math.round(rewardHours({ ...state, status: active ? "killed" : state.status }, player.uid) * 10) / 10).replace(".", ",")} h`}
+              sub="de ta production"
+              tone="var(--color-mint-glow)"
+            />
             <StatTile label="Participants" value={leviathanRanking(state).length} tone="var(--color-cyan-glow)" />
           </div>
           {active && (
@@ -198,7 +218,6 @@ export function LeviathanPage() {
         </Card>
       )}
 
-      {state && <BossRecapPanel state={state} uid={player.uid} name={LEVIATHAN_RULES.name} image="/assets/leviathan/leviathan.webp" accent="#ff5c7a" active={active} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

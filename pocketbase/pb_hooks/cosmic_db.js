@@ -2515,6 +2515,7 @@ function distributeLeviathan(txApp, game, state, now) {
   archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
   return Object.assign({}, state, {
     rewarded: true,
+    archived: true,
     rewards,
     titleHolder: state.status === "killed" && top ? { uid: top.uid, untilMs: now + game.LEVIATHAN_RULES.titleDays * 86400000 } : state.titleHolder,
   });
@@ -2590,6 +2591,12 @@ function leviathanTick(now) {
       }
       if (state.status !== "active" && !state.rewarded) {
         state = distributeLeviathan(txApp, game, state, now);
+        changed = true;
+      }
+      // v5.10 : combat terminé avant le Hall of fame → archivé une fois.
+      if (state.status !== "active" && state.rewarded && !state.archived) {
+        archiveBoss(txApp, game, "leviathan", state, { name: game.LEVIATHAN_RULES.name, image: "/assets/leviathan/leviathan.webp" });
+        state = Object.assign({}, state, { archived: true });
         changed = true;
       }
     }
@@ -5932,7 +5939,7 @@ function distributeSeasonBoss(txApp, game, state, now) {
     ]));
   });
   archiveBoss(txApp, game, "seasonboss", state, { name, image: month ? month.boss.image : undefined });
-  return Object.assign({}, state, { rewarded: true, rewards });
+  return Object.assign({}, state, { rewarded: true, archived: true, rewards });
 }
 
 function seasonBossArrival(txApp, game, rec, now) {
@@ -5995,6 +6002,13 @@ function seasonBossTick(now) {
       }
       if (state.status !== "active" && !state.rewarded) {
         state = distributeSeasonBoss(txApp, game, state, now);
+        changed = true;
+      }
+      // v5.10 : combat terminé avant le Hall of fame → archivé une fois.
+      if (state.status !== "active" && state.rewarded && !state.archived) {
+        const month = game.bossMonthOf(state);
+        archiveBoss(txApp, game, "seasonboss", state, { name: month ? month.boss.name : "Le boss de saison", image: month ? month.boss.image : undefined });
+        state = Object.assign({}, state, { archived: true });
         changed = true;
       }
     }
@@ -6117,7 +6131,7 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
   }
   allianceBossLog(txApp, allianceRec.id, "", name, state.status === "killed" ? `${name} abattu : la moitié du coût revient au trésor.` : `${name} a survécu.`, Object.keys(refund).length ? refund : null);
   archiveBoss(txApp, game, "allianceboss", state, { name, image: game.allianceBossDef(state).image, allianceId: allianceRec.id, allianceName: allianceRec.getString("name") });
-  return Object.assign({}, state, { rewarded: true, rewards });
+  return Object.assign({}, state, { rewarded: true, archived: true, rewards });
 }
 
 /** POST /api/cosmic/allianceboss { action: "call" } */

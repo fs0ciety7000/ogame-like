@@ -54,9 +54,18 @@ function Reveal({ children, index, on }: { children: React.ReactNode; index: num
   );
 }
 
-function RewardPills({ recap, reveal = false }: { recap: Recap; reveal?: boolean }) {
+function RewardPills({ recap, reveal = false, rewarded, legacyNote }: { recap: Recap; reveal?: boolean; rewarded: boolean; legacyNote?: string }) {
   const r = recap.reward;
-  if (!r) return <p className="text-xs text-slate-500">{recap.mine ? "Récompenses en cours de distribution…" : "Tu n'as pas participé à ce combat."}</p>;
+  if (!r) {
+    if (!recap.mine) return <p className="text-xs text-slate-500">Tu n'as pas participé à ce combat.</p>;
+    if (!rewarded) return <p className="text-xs text-slate-500">Récompenses en cours de distribution…</p>;
+    // v5.10 : boss terminé avant l'enregistrement détaillé des récompenses (avant la 5.9.3).
+    return (
+      <p className="text-xs text-slate-300">
+        Récompenses déjà versées{legacyNote ? ` : ${legacyNote}` : ""}. Le détail exact est dans ta notification de fin de combat (Journal).
+      </p>
+    );
+  }
   const order = RESOURCE_LIST.map((x) => x.id as string);
   const gain = Object.entries(r.gain ?? {})
     .filter(([, v]) => (v ?? 0) > 0)
@@ -119,7 +128,7 @@ function Chest() {
 }
 
 /** Contenu du bilan (carte sur la page ou fenêtre). */
-export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false }: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; reveal?: boolean }) {
+export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", reveal = false, legacyNote }: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; reveal?: boolean; legacyNote?: string }) {
   const reduce = useReducedMotion();
   const recap = bossRecap(state, uid);
   const item = (i: number) => (reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.05 * i, duration: 0.3 } });
@@ -185,7 +194,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
             </span>
           </div>
         ) : null}
-        <RewardPills recap={recap} reveal={reveal} />
+        <RewardPills recap={recap} reveal={reveal} rewarded={state.rewarded} legacyNote={legacyNote} />
       </div>
 
       {recap.top.length > 0 && (
@@ -219,7 +228,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "#ff8a4c", rev
  * Bilan d'un boss terminé : carte sur la page, et fenêtre ouverte une seule
  * fois (par boss) pour un participant dès que ses récompenses sont versées.
  */
-export function BossRecapPanel(props: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; active: boolean }) {
+export function BossRecapPanel(props: { state: LeviathanState; uid: string; name: string; image?: string; accent?: string; active: boolean; legacyNote?: string }) {
   const { state, uid, active } = props;
   const [open, setOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -227,16 +236,30 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
   const tag = useAllianceTag(player?.uid, player?.allianceId) ?? undefined;
   const ended = !active && state.status !== "active";
   const participated = !!state.contributions[uid];
+  // Ouverture automatique tant que le joueur ne l'a pas fermée lui-même (v5.10 : marquée
+  // « vue » à la fermeture, pas à l'ouverture — elle pouvait s'ouvrir sous une autre fenêtre).
   useEffect(() => {
     if (!ended || !state.rewarded || !participated) return;
+    let seen = false;
     try {
-      if (localStorage.getItem(seenKey(state.id))) return;
-      localStorage.setItem(seenKey(state.id), "1");
+      seen = !!localStorage.getItem(seenKey(state.id));
     } catch {
       return;
     }
-    setOpen(true);
+    if (seen) return;
+    const t = setTimeout(() => setOpen(true), 900);
+    return () => clearTimeout(t);
   }, [ended, state.rewarded, state.id, participated]);
+  const close = (o: boolean) => {
+    setOpen(o);
+    if (!o) {
+      try {
+        localStorage.setItem(seenKey(state.id), "1");
+      } catch {
+        /* stockage indisponible : la fenêtre se rouvrira à la prochaine visite */
+      }
+    }
+  };
   if (!ended) return null;
   return (
     <>
@@ -245,11 +268,16 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> Bilan du combat
           </h2>
-          {participated && player && (
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSharing(true)}>
-              <Share2 className="mr-1 h-3.5 w-3.5" /> Partager ma carte
+          <span className="ml-auto flex gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+              <PackageOpen className="mr-1 h-3.5 w-3.5" /> Voir le bilan
             </Button>
-          )}
+            {participated && player && (
+              <Button variant="ghost" size="sm" onClick={() => setSharing(true)}>
+                <Share2 className="mr-1 h-3.5 w-3.5" /> Partager ma carte
+              </Button>
+            )}
+          </span>
         </div>
         <BossRecapBody {...props} />
       </Card>
@@ -260,13 +288,13 @@ export function BossRecapPanel(props: { state: LeviathanState; uid: string; name
         fileName="cosmic-empires-boss.jpg"
         onClose={() => setSharing(false)}
       />
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={close}>
         <DialogContent className="sm:max-w-xl">
           <DialogTitle>Bilan du combat</DialogTitle>
           <div className="mt-3">
             <BossRecapBody {...props} reveal />
           </div>
-          <Button className="mt-4 w-full" onClick={() => setOpen(false)}>
+          <Button className="mt-4 w-full" onClick={() => close(false)}>
             Fermer
           </Button>
         </DialogContent>

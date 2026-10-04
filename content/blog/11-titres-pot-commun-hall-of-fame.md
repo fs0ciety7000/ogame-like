@@ -1,7 +1,7 @@
 ---
 slug: titres-pot-commun-hall-of-fame
 title: "La 5.10 : des titres qui se méritent, un pot pour le serveur et une mémoire pour les colosses"
-excerpt: "Un vrai catalogue de titres, un pot commun nourri par les taxes, un Hall of fame des boss, des cadeaux mieux encadrés et des récompenses qu'on prend le temps de récupérer."
+excerpt: "Un vrai catalogue de titres, un pot commun nourri par les taxes, un Hall of fame des boss, des colonies enfin rentables, des cadeaux mieux encadrés et des récompenses qu'on prend le temps de récupérer."
 category: mises-a-jour
 tags: [titres, pot-commun, boss, hall-of-fame, cadeaux, defis]
 version: "5.10"
@@ -84,8 +84,22 @@ Le bilan de fin de combat, arrivé en 5.9, gagne aussi deux choses. Vos récompe
 
 **Les rapports de combat** sont à un clic : la notification d'une attaque, d'un raid, d'un repaire ou d'une prime ouvre directement le rapport.
 
+## Les colonies rapportent enfin
+
+Vous avez été plusieurs à nous le dire, et les chiffres vous donnent raison : une colonie ne rapportait presque rien. Elle démarrait avec des extracteurs au **niveau 1** (environ 7 000 ressources par heure) au moment où votre planète mère en produit plusieurs **millions**. Ses bâtiments coûtaient en plus **50 % plus cher**, et elle plafonnait au niveau 15. Fonder une colonie coûtait 50 millions de chaque ressource pour un rendement quasi nul pendant des semaines.
+
+On a revu la formule :
+
+- **Une fondation digne de ce nom.** Les extracteurs et l'entrepôt d'une nouvelle colonie démarrent à la **moitié du niveau** de ceux de votre planète mère (niveau 8 au plus). Les colons arrivent avec du matériel, pas avec des pelles.
+- **Des terres neuves.** Les colonies produisent **50 % de plus** que la même mine sur la planète mère. À niveau égal, une colonie bien développée rapporte davantage que la mère.
+- **Des chantiers au prix normal**, au lieu de × 1,5, jusqu'au **niveau 18** au lieu de 15.
+- **Un vrai stock de départ** : 5 millions de chaque ressource commune au lieu d'un million.
+
+Et si vous avez déjà une colonie ? Elle est **modernisée** automatiquement à votre prochaine connexion : ses extracteurs et son entrepôt remontent au niveau de fondation s'ils étaient plus bas, et une notification vous le signale.
+
 ## Les corrections
 
+- Le **bilan d'un boss terminé** passe en tête de sa page, avec un bouton « Voir le bilan ». Pour le Léviathan de ce week-end, abattu avant l'arrivée du bilan détaillé, la récompense est reconstituée et le combat rejoint le Hall of fame.
 - Un **raid de faction perdu** compte maintenant comme une défaite, comme un raid repoussé comptait déjà comme une victoire. Votre ratio et le succès *Persévérant* sont enfin justes.
 - Les **notifications** ne peuvent plus être créées que par le serveur. Impossible désormais de fabriquer de faux « Succès débloqué ».
 - La **prime** d'un raid repoussé s'affiche en pastilles, comme le reste.

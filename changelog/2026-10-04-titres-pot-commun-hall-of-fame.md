@@ -26,7 +26,15 @@ Une version pour tout ce qui se gagne et se partage : un vrai catalogue de titre
 - [Nouveau] Le **coup de grâce** est enregistré : on sait enfin qui a abattu le colosse.
 - [Amélioration] Dans le bilan, les récompenses sortent d'un **coffre**, une à une.
 - [Nouveau] **Partager ma carte** depuis le bilan : une image du combat avec ton rang et tes dégâts.
+- [Fix] Boss terminé : le **bilan passe en tête de page** (avec « Voir le bilan »), la tuile indique « Récompense versée » et la date du retour. La fenêtre du bilan n'est marquée vue que lorsqu'on la ferme : elle ne se perd plus sous une autre fenêtre.
+- [Fix] Boss abattu avant le bilan détaillé : la récompense est reconstituée (heures de production, titre) au lieu de « en cours de distribution », et le combat rejoint le Hall of fame.
 - [Admin] Pages Léviathan et Boss de saison : tableau des récompenses versées par joueur, et relance d'une distribution bloquée. Une distribution ne peut jamais être relancée deux fois.
+
+## Colonies
+- [Équilibrage] Les colonies **rapportent enfin** : extracteurs et entrepôt fondés à la **moitié du niveau** de ceux de la planète mère (niveau 8 au plus) au lieu du niveau 1.
+- [Équilibrage] **+50 % de production** sur les colonies (terres neuves).
+- [Équilibrage] Bâtiments des colonies au **même coût** que sur la planète mère (au lieu de × 1,5), **niveau 18** au plus (au lieu de 15), **5 M** de chaque ressource au départ (au lieu de 1 M).
+- [Amélioration] Les colonies déjà fondées sont **modernisées** une fois : extracteurs et entrepôt relevés au niveau de fondation, avec une notification.
 
 ## Récompenses et notifications
 - [Nouveau] **Défi de la semaine** : la récompense se **récupère** sur l'accueil. Non récupérée, elle est versée d'office à la fin du défi suivant. Le titre du meilleur contributeur reste remis tout de suite.

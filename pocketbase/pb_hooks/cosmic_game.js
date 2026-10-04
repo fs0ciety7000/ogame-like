@@ -6508,7 +6508,7 @@ function normalizeLeviathan(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
   if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues({
     id: String(r.id),
     startMs: Number(r.startMs) || 0,
     endMs: Number(r.endMs) || 0,
@@ -6520,7 +6520,7 @@ function normalizeLeviathan(raw) {
     rewarded: r.rewarded === true,
     titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
     timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {});
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {});
 }
 function leviathanWindow(now) {
   if (!EVENT_RULES.bossMonthly) return null;
