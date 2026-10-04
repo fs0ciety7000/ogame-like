@@ -5,7 +5,7 @@ import { TokenIcon } from "@/components/casino/TokenIcon";
 import { bossCountdown } from "@/components/game/BossStage";
 import { LEAGUE_RULES, LEAGUE_TIERS, LEAGUES_KEY, leagueInfo, leagueStandings, leagueTier, leagueWeekEnd, leagueWeekLabel, normalizeLeagues, weeklyScore, type LeagueEntry, type LeagueRow, type LeagueState, type LeagueTier } from "@/game/leagues";
 import { pb } from "@/lib/pocketbase";
-import { formatNumber } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 /* 5.15 : divisions du classement de saison (docs/DESIGN.md : StatTile pour
    sa division, HudChip pour choisir une division et pour les zones). */
@@ -31,6 +31,35 @@ export type DivisionView = LeagueTier | "general";
 const ordinal = (n: number) => `${n}${n === 1 ? "er" : "e"}`;
 
 /** En-tête : ta division, ton rang, ton XP de la semaine, la fin de semaine ; puis le choix de la division. */
+/** 5.15.7 : tes dernières semaines de division (gardées par le serveur). */
+function DivisionHistory({ state, uid }: { state: LeagueState; uid: string }) {
+  const list = state.history?.[uid] ?? [];
+  if (list.length === 0) return null;
+  return (
+    <div className="glass-panel hud-cut-sm flex flex-col gap-2 p-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tes {list.length} dernière{list.length > 1 ? "s" : ""} semaine{list.length > 1 ? "s" : ""}</p>
+      <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
+        {list.map((h) => {
+          const t = leagueInfo(h.tier);
+          const Move = h.move === "up" ? ArrowUp : h.move === "down" ? ArrowDown : Minus;
+          return (
+            <li key={h.weekId} className="hud-cut-sm flex flex-col gap-0.5 border-l-2 bg-white/[0.02] px-2 py-1.5" style={{ borderColor: t.color }} title={`${leagueWeekLabel(h.weekId)} : ${t.label}, ${ordinal(h.rank)}, ${formatNumber(h.score)} XP`}>
+              <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-500">{leagueWeekLabel(h.weekId)}</span>
+              <span className="flex items-center gap-1 text-xs" style={{ color: t.color }}>
+                {t.label}
+                <Move aria-label={h.move === "up" ? "montée" : h.move === "down" ? "descente" : "maintien"} className={cn("h-3 w-3", h.move === "up" ? "text-mint-glow" : h.move === "down" ? "text-ember-glow" : "text-slate-500")} />
+              </span>
+              <span className="font-mono text-[11px] tabular-nums text-slate-300">
+                {ordinal(h.rank)} · {formatNumber(h.score)} XP
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 export function DivisionPanel({ state, entries, uid, view, onView, generalRank }: { state: LeagueState; entries: LeagueEntry[]; uid: string; view: DivisionView; onView: (v: DivisionView) => void; generalRank: number | null }) {
   const now = Date.now();
   const mine = leagueTier(state, uid, entries);
@@ -50,6 +79,7 @@ export function DivisionPanel({ state, entries, uid, view, onView, generalRank }
         <StatTile tone="accent" label="XP de la semaine" value={formatNumber(meEntry ? weeklyScore(state, meEntry) : 0)} sub={generalRank ? `Saison : ${ordinal(generalRank)} au général` : undefined} />
         <StatTile tone="neutral" label="Fin de semaine" value={bossCountdown(leagueWeekEnd(now) - now)} sub={started ? leagueWeekLabel(state.weekId) : undefined} />
       </div>
+      <DivisionHistory state={state} uid={uid} />
       <p className="text-xs text-slate-400">
         Chaque lundi, les {Math.round(LEAGUE_RULES.promotePct * 100)} % premiers de chaque division montent, les {Math.round(LEAGUE_RULES.relegatePct * 100)} % derniers (et ceux qui n'ont rien gagné) descendent. Chaque joueur actif reçoit des jetons du casino selon sa division (<TokenIcon size={12} /> {info.tokens} en {info.label}, jusqu'à {LEAGUE_TIERS[LEAGUE_TIERS.length - 1].tokens} en Mythique) ; le premier gagne le titre « Champion {info.label} ».
       </p>
