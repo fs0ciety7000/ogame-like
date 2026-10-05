@@ -10,15 +10,11 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## 1. Ce qui manque aujourd'hui
 
-Le jeu affiche un repli tant que ces fichiers n'existent pas : une icône du rôle, l'image de faction ou un dégradé. Les prompts sont déjà rédigés.
+Les 5 boss mondiaux, les 7 officiers rares, l'en-tête du passe et le sceau « chapitre terminé » sont en place. Les chroniques générées sont complètes aussi.
 
-| Fichiers | Nombre | Repli actuel | Prompts |
-|:--|--:|:--|:--|
-| `public/assets/bosses/{matriarche,titan,spectre,cometophage,abyssal}.webp` | 5 | dégradé à la couleur du boss | `docs/prompts-5.14.md`, « Les six boss mondiaux » |
-| `public/assets/commanders/{logistician,mechanic,governor,corsair,warden,diplomat,hunter}.webp` | 7 | icône du rôle sur dégradé | `docs/prompts-5.14.md`, « Les sept officiers rares » |
-| `public/assets/chronicles/auto/<archétype>-boss.webp` et `-sceau.webp` (confrerie, cartel, choeur, gravhorn, culte, inquisition, meute) | 14 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » et « Sceaux » |
+Rien : les 7 boss et les 7 sceaux des chapitres générés sont en place.
 
-Pour les chroniques générées, il faut aussi ajouter l'identifiant de l'archétype dans `AUTO_ART` (`src/game/procedural.ts`) une fois ses deux images déposées.
+Une fois une image déposée, ajouter l'identifiant de l'archétype dans `AUTO_ART` (boss) ou `AUTO_SEALS` (sceau), dans `src/game/procedural.ts`. Un test vérifie que chaque identifiant déclaré a bien son fichier.
 
 Tout le reste est présent : les 195 images des données du moteur, les rangs, les capsules, les succès, les catégories du blog et les 40 avatars prédéfinis.
 

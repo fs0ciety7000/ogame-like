@@ -244,8 +244,10 @@ export interface Archetype {
   lore: string[];
 }
 
-/** Archétypes dont l'illustration générée existe (public/assets/chronicles/auto/<id>-boss.webp et -sceau.webp). */
-export const AUTO_ART: string[] = [];
+/** Archétypes dont l'illustration du boss existe (public/assets/chronicles/auto/<id>-boss.webp). */
+export const AUTO_ART: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
+/** 5.16 : archétypes dont le sceau existe (public/assets/chronicles/auto/<id>-sceau.webp), indépendamment du boss. */
+export const AUTO_SEALS: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 
 export const ARCHETYPES: Archetype[] = [
   {
@@ -560,10 +562,11 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   });
   reasons.push(...types.map((t, i) => `Épisode ${i + 1} : ${OBJECTIVE_LABELS[t].toLowerCase()} × ${episodes[i].objective.count} (médiane ${d.weeklyMedian[t] ?? 0} par semaine, base ${BASE_COUNTS[t]}).`));
   const art = AUTO_ART.includes(arch.id);
+  const seal = AUTO_SEALS.includes(arch.id);
   const label = seasonLabel(d.monthId);
   const codex: ChronicleCodexEntry[] = [
     { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} · ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
-    { id: "archives", name: `Archives : ${label}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label), image: art ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem },
+    { id: "archives", name: `Archives : ${label}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem },
   ];
   const auto: ChapterAuto = { generatedAtMs: o.now, sourceMonth: d.monthId, archetype: arch.id, difficulty, activePlayers: d.activePlayers, reasons };
   const month: ChronicleMonth = {
@@ -574,7 +577,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
       name: bossName,
       title: `Pourfendeur ${ofName(bossName)}`,
       image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image,
-      emblem: art ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
+      emblem: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
       fallbackImage: arch.fallbackImage,
       lore: pick(rng, arch.lore),
     },
