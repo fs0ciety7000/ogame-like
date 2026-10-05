@@ -12757,6 +12757,7 @@ function objectiveCount(type, d, difficulty) {
   return Math.max(1, Math.round(raw));
 }
 var AUTO_ART = [];
+var AUTO_SEALS = ["meute", "inquisition", "culte"];
 var ARCHETYPES = [
   {
     id: "confrerie",
@@ -13056,10 +13057,11 @@ function generateChapter(o) {
     return `\xC9pisode ${i + 1} : ${OBJECTIVE_LABELS[t].toLowerCase()} \xD7 ${episodes[i].objective.count} (m\xE9diane ${(_a2 = d.weeklyMedian[t]) != null ? _a2 : 0} par semaine, base ${BASE_COUNTS[t]}).`;
   }));
   const art = AUTO_ART.includes(arch.id);
+  const seal = AUTO_SEALS.includes(arch.id);
   const label3 = seasonLabel(d.monthId);
   const codex = [
     { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} \xB7 ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
-    { id: "archives", name: `Archives : ${label3}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label3), image: art ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem }
+    { id: "archives", name: `Archives : ${label3}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label3), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem }
   ];
   const auto = { generatedAtMs: o.now, sourceMonth: d.monthId, archetype: arch.id, difficulty, activePlayers: d.activePlayers, reasons };
   const month2 = {
@@ -13070,7 +13072,7 @@ function generateChapter(o) {
       name: bossName,
       title: `Pourfendeur ${ofName(bossName)}`,
       image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image,
-      emblem: art ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
+      emblem: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
       fallbackImage: arch.fallbackImage,
       lore: pick2(rng, arch.lore)
     },

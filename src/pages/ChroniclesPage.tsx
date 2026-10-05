@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { assetUrl } from "@/lib/assets";
+import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { BookOpen, Flame, ScrollText, Trophy } from "lucide-react";
@@ -101,7 +103,11 @@ export function ChroniclesPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <HudPanel icon={<Trophy />} title="Fin du chapitre" tone="gold" accent={chapterDone} aside={chapterDone ? <HudChip size="sm" tone="mint">Terminé</HudChip> : undefined}>
-          <p className="text-sm text-slate-300">{chapterDone ? "Tu as terminé les quatre épisodes de ce chapitre." : "Termine les quatre épisodes pour recevoir :"}</p>
+          <div className="flex items-center gap-3">
+            {/* 5.16 : sceau « chapitre terminé », en couleur une fois le chapitre bouclé. */}
+            <img src={assetUrl("/assets/pass/chapter-complete.webp")} alt="" aria-hidden className={cn("h-14 w-14 shrink-0 object-contain", !chapterDone && "opacity-40 grayscale")} />
+            <p className="text-sm text-slate-300">{chapterDone ? "Tu as terminé les quatre épisodes de ce chapitre." : "Termine les quatre épisodes pour recevoir :"}</p>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {month.completion?.title && (
               <HudChip size="sm" tone="gold" className="normal-case tracking-normal">

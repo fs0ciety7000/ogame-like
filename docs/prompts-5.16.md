@@ -10,13 +10,16 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## 1. Ce qui manque aujourd'hui
 
-Les 5 boss mondiaux et les 7 officiers rares ont reçu leur illustration avec la 5.16. Reste une seule famille, que le jeu remplace par un repli tant que les fichiers manquent :
+Les 5 boss mondiaux, les 7 officiers rares, l'en-tête du passe et le sceau « chapitre terminé » sont en place. Il reste des images pour les chroniques générées : le jeu les remplace par un repli tant qu'elles manquent.
 
-| Fichiers | Nombre | Repli actuel | Prompts |
+| Fichiers manquants | Nombre | Repli actuel | Prompts |
 |:--|--:|:--|:--|
-| `public/assets/chronicles/auto/<archétype>-boss.webp` et `-sceau.webp` (confrerie, cartel, choeur, gravhorn, culte, inquisition, meute) | 14 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » et « Sceaux » |
+| `public/assets/chronicles/auto/<archétype>-boss.webp` pour confrerie, cartel, choeur, gravhorn, culte, inquisition, meute | 7 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » |
+| `public/assets/chronicles/auto/<archétype>-sceau.webp` pour confrerie, cartel, choeur, gravhorn | 4 | sceaux des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Sceaux » |
 
-Pour les chroniques générées, il faut aussi ajouter l'identifiant de l'archétype dans `AUTO_ART` (`src/game/procedural.ts`) une fois ses deux images déposées.
+Les sceaux de la meute, de l'inquisition et du culte sont faits.
+
+Une fois une image déposée, ajouter l'identifiant de l'archétype dans `AUTO_ART` (boss) ou `AUTO_SEALS` (sceau), dans `src/game/procedural.ts`. Un test vérifie que chaque identifiant déclaré a bien son fichier.
 
 Tout le reste est présent : les 195 images des données du moteur, les rangs, les capsules, les succès, les catégories du blog et les 40 avatars prédéfinis.
 

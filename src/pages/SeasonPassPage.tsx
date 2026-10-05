@@ -103,7 +103,7 @@ export function SeasonPassPage() {
       <PageHeader
         eyebrow={season ? `Passe de ${seasonLabel(st.seasonId)}` : "Saison"}
         title={season ? season.theme.name : `Passe de ${seasonLabel(st.seasonId)}`}
-        backdrop={season?.theme.image}
+        backdrop={season?.theme.image || "/assets/pass/pass-header.webp"}
         description={season ? `${season.theme.tagline} Gratuit pour tous : ${tiers} paliers, remise à zéro au début du mois.` : `Gratuit pour tous : ton activité de chaque jour remplit ${tiers} paliers de récompenses. Remise à zéro au début de chaque mois.`}
         right={
           claimable.length > 0 ? (
