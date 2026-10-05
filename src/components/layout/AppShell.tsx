@@ -1,5 +1,6 @@
 import { FleetReturnFx } from "@/components/game/FleetReturnFx";
 import { useDirectorySync } from "@/store/directoryStore";
+import { useRemindersWatcher } from "@/lib/reminders";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
@@ -121,6 +122,7 @@ export function AppShell() {
 
   useGameSync(user?.uid ?? null);
   useDirectorySync(!!user);
+  useRemindersWatcher(!!user);
   useRankCelebration(player);
   useAmbience();
   const tierUid = user?.uid;

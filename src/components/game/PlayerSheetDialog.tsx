@@ -1,3 +1,4 @@
+import { usePlayerStore } from "@/store/playerStore";
 import { toast } from "sonner";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { relicImage } from "@/game/relics";
@@ -13,6 +14,7 @@ import { KESH, rankName } from "@/game/bounties";
 import { assetUrl } from "@/lib/assets";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { FollowOnlineButton } from "@/components/game/RemindersCard";
 import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
 import { useDirectoryStore } from "@/store/directoryStore";
 import { PlayerName } from "@/components/ui/player-name";
@@ -115,6 +117,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
               {(entry?.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={entry!.vacationUntilMs!} />}
             </DialogTitle>
             {entry && !entry.npc && <PresenceLine uid={entry.uid} />}
+            {entry && !entry.npc && entry.uid !== usePlayerStore.getState().player?.uid && <FollowOnlineButton uid={entry.uid} pseudo={entry.pseudo} />}
             <AscensionStars count={entry?.ascensions} full className="mt-1" />
             {entry && (
               <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow">

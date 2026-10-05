@@ -17,6 +17,8 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.
+- Rappels personnels (Réglages → Rappels, ou bouton « Me prévenir quand il se connecte » sur la fiche d'un joueur) : alerte quand l'entrepôt atteint 75, 90 ou 100 %, ou quand un joueur suivi se connecte. Une seule alerte tant que la condition dure, avec notification du navigateur si elle est autorisée.
+- Comparateur au survol de « Améliorer » : production, entrepôt, réparation ou hangar avant et après, durée, coût total, et temps pour que le gain de production rembourse l'amélioration.
 
 ## Équilibre
 - Rattrapage des petits empires : chaque nuit, le serveur compare le développement de chaque joueur actif (niveaux de bâtiments et de technologies cumulés) à la médiane des joueurs actifs. Sous 10 % de la médiane, la production gagne +25 %. Le bonus baisse ensuite en ligne droite et disparaît à 50 %. Il est figé pour la journée et apparaît dans le détail de la production. Tout se règle dans Règles → Rattrapage.

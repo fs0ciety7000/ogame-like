@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RemindersCard } from "@/components/game/RemindersCard";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { HudSwitch } from "@/components/ui/hud";
@@ -778,6 +779,7 @@ export function SettingsPage() {
       <SoundCard />
       <HelpCard />
       <BrowserNotificationsCard />
+      <RemindersCard />
       <VacationCard />
       <AllianceNotifsCard />
       <EmailNewsCard />
