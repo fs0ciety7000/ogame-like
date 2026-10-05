@@ -374,6 +374,41 @@ export interface BossFeedEntry {
   killed?: boolean;
   /** Entrée de changement de phase. */
   phase?: BossFightPhase;
+  /** 5.16 : réactions des spectateurs (emoji → joueurs), une par joueur. */
+  reactions?: Record<string, string[]>;
+}
+
+/** 5.16 : réactions possibles sur le fil du combat. */
+export const BOSS_REACTIONS = ["🔥", "💥", "👏", "😱", "🫡"] as const;
+const REACTORS_MAX = 200;
+
+/** Identifiant stable d'une entrée du fil (un assaut, ou un passage de phase). */
+export function bossFeedKey(f: Pick<BossFeedEntry, "t" | "uid" | "phase">): string {
+  return `${f.t}:${f.uid ?? `p${f.phase ?? 0}`}`;
+}
+
+/**
+ * Réagit à une entrée du fil : une réaction par joueur et par entrée.
+ * Même emoji = on retire, autre emoji = on remplace. On ne réagit pas
+ * à son propre assaut (on encourage les autres).
+ */
+export function reactToBossFeed(state: LeviathanState, key: string, uid: string, emoji: string): LeviathanState {
+  if (!(BOSS_REACTIONS as readonly string[]).includes(emoji)) throw new GameActionError("Réaction inconnue.");
+  const feed = state.feed ?? [];
+  const i = feed.findIndex((f) => bossFeedKey(f) === key);
+  if (i < 0) throw new GameActionError("Cette ligne du fil a disparu.");
+  const entry = feed[i];
+  if (entry.uid === uid) throw new GameActionError("On ne s'applaudit pas soi-même.");
+  const had = Object.entries(entry.reactions ?? {}).find(([, who]) => who.includes(uid))?.[0];
+  const reactions: Record<string, string[]> = {};
+  for (const [e, who] of Object.entries(entry.reactions ?? {})) {
+    const rest = who.filter((u) => u !== uid);
+    if (rest.length) reactions[e] = rest;
+  }
+  if (had !== emoji) reactions[emoji] = [...(reactions[emoji] ?? []), uid].slice(-REACTORS_MAX);
+  const next = [...feed];
+  next[i] = { ...entry, reactions };
+  return { ...state, feed: next };
 }
 
 

@@ -32,6 +32,10 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - Elle est tirée automatiquement, jamais deux mois de suite la même, et annoncée sur l'accueil et dans les Chroniques avec l'aperçu du mois suivant. Elle apparaît dans la fiche des effets (source « Mutateur de saison »).
 - Administration (Règles) : imposer un mutateur pour un mois, n'en mettre aucun, ou tout désactiver.
 
+## Spectateur de boss
+- Le fil du combat (boss mondial, boss de saison, boss d'alliance) devient un fil de spectateur : réagis aux assauts des autres avec 🔥 💥 👏 😱 🫡. Une seule réaction par ligne : clique à nouveau pour la retirer, ou choisis-en une autre pour la remplacer. On ne réagit pas à son propre assaut.
+- Les assauts de ton alliance sont soulignés d'un trait violet, et le bouton « Mon alliance » ne garde que les assauts de tes alliés.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.

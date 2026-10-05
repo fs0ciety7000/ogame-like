@@ -407,6 +407,7 @@ __export(hooksEntry_exports, {
   publishPassSeason: () => publishPassSeason,
   pushBossHistory: () => pushBossHistory,
   pushSnapshot: () => pushSnapshot,
+  reactToBossFeed: () => reactToBossFeed,
   readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
@@ -8988,6 +8989,31 @@ function bossAssaultEstimate(state, player, fleet, formation) {
   const lossMult = bossTuning(state).lossMult;
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
   return { power, lossPct, phase };
+}
+var BOSS_REACTIONS = ["\u{1F525}", "\u{1F4A5}", "\u{1F44F}", "\u{1F631}", "\u{1FAE1}"];
+var REACTORS_MAX = 200;
+function bossFeedKey(f) {
+  var _a, _b;
+  return `${f.t}:${(_b = f.uid) != null ? _b : `p${(_a = f.phase) != null ? _a : 0}`}`;
+}
+function reactToBossFeed(state, key, uid, emoji) {
+  var _a, _b, _c, _d, _e;
+  if (!BOSS_REACTIONS.includes(emoji)) throw new GameActionError("R\xE9action inconnue.");
+  const feed = (_a = state.feed) != null ? _a : [];
+  const i = feed.findIndex((f) => bossFeedKey(f) === key);
+  if (i < 0) throw new GameActionError("Cette ligne du fil a disparu.");
+  const entry = feed[i];
+  if (entry.uid === uid) throw new GameActionError("On ne s'applaudit pas soi-m\xEAme.");
+  const had = (_c = Object.entries((_b = entry.reactions) != null ? _b : {}).find(([, who]) => who.includes(uid))) == null ? void 0 : _c[0];
+  const reactions = {};
+  for (const [e3, who] of Object.entries((_d = entry.reactions) != null ? _d : {})) {
+    const rest = who.filter((u) => u !== uid);
+    if (rest.length) reactions[e3] = rest;
+  }
+  if (had !== emoji) reactions[emoji] = [...(_e = reactions[emoji]) != null ? _e : [], uid].slice(-REACTORS_MAX);
+  const next = [...feed];
+  next[i] = __spreadProps(__spreadValues({}, entry), { reactions });
+  return __spreadProps(__spreadValues({}, state), { feed: next });
 }
 function resolveLeviathanAssault(state, player, fleet, formation, now) {
   var _a, _b;

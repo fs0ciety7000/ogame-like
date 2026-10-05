@@ -132,7 +132,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
         </Card>
       )}
 
-      {shown && <BossFeed state={shown} uid={player.uid} now={now} />}
+      {shown && <BossFeed state={shown} uid={player.uid} now={now} boss="alliance" />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-4">

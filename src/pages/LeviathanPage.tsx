@@ -250,7 +250,7 @@ export function LeviathanPage() {
         </Card>
       )}
 
-      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} />}
+      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} boss="leviathan" />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {state && phase !== "dormant" && (

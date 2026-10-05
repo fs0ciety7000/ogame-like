@@ -120,7 +120,7 @@ export function SeasonBossPage() {
         </Card>
       )}
 
-      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} />}
+      {state && phase !== "dormant" && <BossFeed state={state} uid={player.uid} now={now} boss="season" />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {state && phase !== "dormant" && (

@@ -1896,6 +1896,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         await ps.syncPlayer("");
         const state = (await bossRec())!.data;
         expect(state.contributions[bId].damage).toBeGreaterThan(0);
+        // 5.16 : réactions des spectateurs (pas sur son propre assaut).
+        const line = state.feed.find((f: { uid?: string }) => f.uid === bId);
+        await expect(pb.send("/api/cosmic/boss/react", { method: "POST", body: { boss: "season", key: `${line.t}:${bId}`, emoji: "🔥" } })).rejects.toMatchObject({ status: 400 });
+        await expect(pb.send("/api/cosmic/boss/react", { method: "POST", body: { boss: "nope", key: "x", emoji: "🔥" } })).rejects.toMatchObject({ status: 400 });
         await admin.send("/api/cosmic/admin/seasonboss", { method: "POST", body: { action: "stop" } });
         const after = await snap(bId);
         expect(after.seasonPass.points).toBeGreaterThanOrEqual(60);
