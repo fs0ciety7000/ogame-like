@@ -483,7 +483,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
     await expect(pb.collection("debris_fields").update(aId, { scrap: 1 })).rejects.toBeTruthy();
 
-    // Champ connu pour un ramassage déterministe : 2 drones niv. 1 = 500.
+    // Champ connu pour un ramassage déterministe. 5.16 : capacité = CAP du drone (10 × niv. 1) × 2 drones = 20.
     if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500 });
     else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
     await expect(ps.sendFleet(aId, { chasseur: 1 }, "recycle")).rejects.toThrow(/Drones|assez/);
@@ -491,14 +491,14 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await wait(Math.max(0, sent.arriveAtMs - Date.now()) + 400);
     await ps.syncPlayer("");
     const landed = await pb.collection("fleets").getOne(sent.id);
-    expect(landed.loot).toEqual({ scrap: 333, energy: 167 });
+    expect(landed.loot).toEqual({ scrap: 13, energy: 7 });
     const left = await admin.collection("debris_fields").getOne(aId);
-    expect([left.scrap, left.energy]).toEqual([667, 333]);
+    expect([left.scrap, left.energy]).toEqual([987, 493]);
     const before = (await snap(bId)).resources.scrap;
     await wait(Math.max(0, landed.returnAtMs - Date.now()) + 400);
     await ps.syncPlayer("");
     const back = await snap(bId);
-    expect(back.resources.scrap).toBeGreaterThanOrEqual(before + 333);
+    expect(back.resources.scrap).toBeGreaterThanOrEqual(before + 13);
     expect(back.units.drone_recuperateur.count).toBe(3);
     await admin.collection("debris_fields").delete(aId);
   }, 30_000);
