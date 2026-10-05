@@ -15,7 +15,7 @@ const MAX_RANKED = 150;
 export type BossKind = "leviathan" | "seasonboss" | "allianceboss";
 
 export const BOSS_KIND_LABELS: Record<BossKind, string> = {
-  leviathan: "Léviathan",
+  leviathan: "Boss mondial",
   seasonboss: "Boss de saison",
   allianceboss: "Boss d'alliance",
 };

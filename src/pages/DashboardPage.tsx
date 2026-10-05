@@ -31,6 +31,7 @@ import { ChallengeCard } from "@/components/game/ChallengeCard";
 import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
 import { PassProgressCard } from "@/components/game/PassProgressCard";
 import { MonthRecapCard } from "@/components/game/MonthRecapCard";
+import { ChronicleHomeCard } from "@/components/game/ChronicleHomeCard";
 import { RunningContestCard } from "@/components/game/RunningContestCard";
 import { AgendaCard } from "@/components/game/AgendaCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
@@ -126,9 +127,10 @@ export function DashboardPage() {
       <div className="flex flex-col gap-3">
         <WeeklyRecapCard />
         {/* 5.15.7 : passe et mois en cours sur l'accueil. */}
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           <PassProgressCard now={now} />
           <MonthRecapCard now={now} />
+          <ChronicleHomeCard now={now} />
         </div>
         <RunningContestCard />
         <AgendaCard now={now} />

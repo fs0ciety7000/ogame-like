@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { currentGameContent } from "@/game/content";
-import { chronicleMonthId, normalizeChronicleBonus, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { chronicleMonthId, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
+import { CODEX_CATEGORIES } from "@/game/codex";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
@@ -95,6 +96,7 @@ export function ChroniclesPanel() {
       </div>
 
       <ChronicleBonusSection bonus={normalizeChronicleBonus(cfg.bonus)} onChange={(bonus) => setCfg((c) => ({ ...c, bonus }))} />
+      <CodexRewardsSection table={normalizeCodexRewards(cfg.codexRewards)} onChange={(codexRewards) => setCfg((c) => ({ ...c, codexRewards }))} />
       <NextMonthPreview cfg={cfg} onCreate={addMonth} />
 
       <div className="flex flex-wrap gap-1.5">
@@ -224,6 +226,23 @@ function NextMonthPreview({ cfg, onCreate }: { cfg: ChroniclesConfig; onCreate: 
           </div>
         )}
       </div>
+    </Section>
+  );
+}
+
+/** 5.15.12 : récompense de chaque catégorie du Codex complète (une fois par joueur). */
+function CodexRewardsSection({ table, onChange }: { table: CodexRewardTable; onChange: (t: CodexRewardTable) => void }) {
+  const set = (k: string, f: "tokens" | "amber", v: number | undefined) => onChange({ ...table, [k]: { ...table[k], [f]: Math.max(0, Math.floor(v ?? 0)) } });
+  return (
+    <Section title="Récompenses du Codex (catégorie complète)">
+      {CODEX_CATEGORIES.map((c) => (
+        <div key={c.id} className="grid grid-cols-[minmax(0,7rem)_1fr_1fr] items-end gap-2">
+          <span className="pb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-400">{c.label}</span>
+          <NumberField label="Jetons" value={table[c.id]?.tokens ?? 0} min={0} step={1} onChange={(v) => set(c.id, "tokens", v)} />
+          <NumberField label="Ambre" value={table[c.id]?.amber ?? 0} min={0} step={5} onChange={(v) => set(c.id, "amber", v)} />
+        </div>
+      ))}
+      <p className="text-[11px] text-slate-500 sm:col-span-2">0 et 0 : la catégorie ne rapporte rien (cas des Chroniques, toujours ouvertes).</p>
     </Section>
   );
 }

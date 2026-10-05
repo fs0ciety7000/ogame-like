@@ -1,4 +1,6 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
+import { ShowMoreButton } from "@/components/ui/panel";
+import { useShowMore } from "@/hooks/useShowMore";
 import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
 import { useSearchParams } from "react-router-dom";
 import { PlayerName } from "@/components/ui/player-name";
@@ -70,6 +72,8 @@ export function MarketPage() {
     () => data.open.filter((o) => o.sellerId !== uid && (!filter || o.giveRes === filter || o.wantRes === filter)),
     [data.open, uid, filter],
   );
+  // 5.15.12 : 20 offres à la fois.
+  const { shown: shownOffers, more: moreOffers, showMore: showMoreOffers } = useShowMore(others, 20, filter);
 
   if (!player) return null;
   const have = (res: string) => player.resources[res as ResourceId] ?? 0;
@@ -215,7 +219,7 @@ export function MarketPage() {
             <EmptyState icon={<Store className="h-5 w-5" />} title="Aucune offre">Publie la première !</EmptyState>
           ) : (
             <div className="flex flex-col divide-y divide-white/5">
-              {others.map((o) => {
+              {shownOffers.map((o) => {
                 const affordable = have(o.wantRes) >= o.wantAmount;
                 const ally = !!o.sellerAllianceId && o.sellerAllianceId === player.allianceId;
                 const flag = priceFlag(o, trades, now);
@@ -271,6 +275,7 @@ export function MarketPage() {
                   </div>
                 );
               })}
+              <ShowMoreButton more={moreOffers} step={20} onClick={showMoreOffers} />
             </div>
           )}
           <p className="text-[11px] text-slate-500">{MARKET_RULES.maxBuysPerDay} achats au plus par jour.</p>

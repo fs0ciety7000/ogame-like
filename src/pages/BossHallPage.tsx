@@ -138,7 +138,7 @@ export function BossHallPage() {
   const filters: [Filter, string][] = [
     ["all", "Tous"],
     ["mine", "Mes combats"],
-    ["leviathan", "Léviathan"],
+    ["leviathan", "Boss mondiaux"],
     ["seasonboss", "Boss de saison"],
     ["allianceboss", "Mon alliance"],
   ];

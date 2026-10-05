@@ -64,3 +64,13 @@ export function EmptyAction({ to, children }: { to: string; children: ReactNode 
     </Button>
   );
 }
+
+/** 5.15.12 : bouton « Afficher plus » en bas d'une liste par tranches. */
+export function ShowMoreButton({ more, step, onClick }: { more: number; step: number; onClick: () => void }) {
+  if (more <= 0) return null;
+  return (
+    <Button variant="ghost" size="sm" className="self-center" onClick={onClick}>
+      Afficher {Math.min(more, step)} de plus <span className="font-mono text-[10px] text-slate-500">({more} restant{more > 1 ? "s" : ""})</span>
+    </Button>
+  );
+}
