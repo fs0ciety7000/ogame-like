@@ -10,12 +10,10 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## 1. Ce qui manque aujourd'hui
 
-Le jeu affiche un repli tant que ces fichiers n'existent pas : une icône du rôle, l'image de faction ou un dégradé. Les prompts sont déjà rédigés.
+Les 5 boss mondiaux et les 7 officiers rares ont reçu leur illustration avec la 5.16. Reste une seule famille, que le jeu remplace par un repli tant que les fichiers manquent :
 
 | Fichiers | Nombre | Repli actuel | Prompts |
 |:--|--:|:--|:--|
-| `public/assets/bosses/{matriarche,titan,spectre,cometophage,abyssal}.webp` | 5 | dégradé à la couleur du boss | `docs/prompts-5.14.md`, « Les six boss mondiaux » |
-| `public/assets/commanders/{logistician,mechanic,governor,corsair,warden,diplomat,hunter}.webp` | 7 | icône du rôle sur dégradé | `docs/prompts-5.14.md`, « Les sept officiers rares » |
 | `public/assets/chronicles/auto/<archétype>-boss.webp` et `-sceau.webp` (confrerie, cartel, choeur, gravhorn, culte, inquisition, meute) | 14 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » et « Sceaux » |
 
 Pour les chroniques générées, il faut aussi ajouter l'identifiant de l'archétype dans `AUTO_ART` (`src/game/procedural.ts`) une fois ses deux images déposées.
