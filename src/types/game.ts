@@ -233,6 +233,30 @@ export interface BattleReport {
 export interface CombatLog {
   rounds: { attackerHp: number; defenderHp: number; attackerDamage: number; defenderDamage: number }[];
   retreated: boolean;
+  /** 5.21.1 : chaque type d'unité engagé, tour par tour (absent des rapports plus anciens). */
+  units?: CombatLogUnit[];
+  /** Bouclier du défenseur (0 → 1) et cible prioritaire de l'attaquant. */
+  shield?: number;
+  targetPriority?: "defenses" | "ships";
+  /** Dégâts gagnés (ou perdus) par chaque camp grâce aux classes. */
+  classBonus?: { attacker: number; defender: number };
+}
+
+export interface CombatLogUnit {
+  /** "" : forces PNJ, sans unités réelles. */
+  id: string;
+  side: "attacker" | "defender";
+  /** Flotte de l'attaquant, défenses, vaisseaux à quai ou garnison alliée. */
+  group: "fleet" | "defense" | "home" | "garrison";
+  cls?: "light" | "medium" | "heavy";
+  /** Unités valides engagées au départ, puis restantes à la fin de chaque tour (1 décimale). */
+  start: number;
+  left: number[];
+  /** Dégâts infligés pendant tout le combat. */
+  dealt: number;
+  /** État moyen de la coque (1 = intacte) avant et après le combat. */
+  hullBefore?: number;
+  hullAfter?: number;
 }
 
 export interface SpyReport {

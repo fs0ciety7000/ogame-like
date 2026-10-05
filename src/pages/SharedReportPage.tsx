@@ -1,4 +1,5 @@
 import type { CombatLog } from "@/types/game";
+import { CombatReportDetail } from "@/components/game/CombatReportDetail";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Eye, Loader2, Swords } from "lucide-react";
@@ -62,6 +63,7 @@ function BattleView({ report }: { report: BattleReport }) {
           <p className="tabular-mono text-sm text-slate-100">{Math.round(report.defenderLossPercent * 100)} %</p>
         </div>
       </div>
+      <CombatReportDetail log={(report as { combatLog?: CombatLog }).combatLog} perspective="attacker" opponentName={report.defenderPseudo} />
       {loot.length > 0 && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-mint-glow">
           Butin :
