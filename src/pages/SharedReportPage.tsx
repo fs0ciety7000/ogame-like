@@ -6,7 +6,7 @@ import { Eye, Loader2, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { CombatReplay } from "@/components/game/CombatReplay";
+import { CombatReplayAuto } from "@/components/game/CombatReplayAuto";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { fetchSharedReport, type SharedReport } from "@/services/sharedReportService";
@@ -36,7 +36,7 @@ function BattleView({ report }: { report: BattleReport }) {
           "égalité"
         )}
       </p>
-      <CombatReplay
+      <CombatReplayAuto
         myPower={report.attackerPower}
         opponentPower={report.defenderPower}
         myLossPercent={report.attackerLossPercent}

@@ -698,14 +698,21 @@ body {
   pointer-events: none;
 }
 
+/* 5.22 : dégradé radial au lieu d'un filtre blur(90px) sur un calque de 45vw. Le filtre coûtait
+   cher en mémoire graphique : le navigateur abandonnait parfois le calque et le fond virait au noir
+   avant de revenir. La couleur passe par --blob, animable grâce à @property. */
+@property --blob {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
 .nebula-blob {
   position: absolute;
-  border-radius: 999px;
-  filter: blur(90px);
-  opacity: 0.2;
+  background: radial-gradient(closest-side, var(--blob) 0%, color-mix(in srgb, var(--blob) 45%, transparent) 45%, transparent 100%);
+  opacity: 0.26;
   animation: var(--animate-drift);
   /* Fondu de teinte quand on change de page. */
-  transition: background-color 1.6s ease;
+  transition: --blob 1.6s ease;
 }
 
 /* Quadrillage façon plan technique, très discret, derrière les nébuleuses. */

@@ -2342,6 +2342,29 @@ function autoEndMaintenance(now) {
 
 /* ---------- Administrateurs et équipe du jeu (v2.5) ---------- */
 
+/**
+ * 5.22.1 : comptes écartés des références d'équilibrage (puissance des seigneurs, outil
+ * d'équilibrage) : l'équipe du jeu (admins, développeurs…) et les comptes en mode test.
+ * Leurs empires sont souvent gonflés pour les essais et faussaient toute la courbe.
+ */
+function balanceExcludedUids(txApp, game) {
+  const out = {};
+  const rec = readStaffRecord(txApp, game);
+  const roles = rec ? game.normalizeStaff(toPlain(rec).data).roles : {};
+  Object.keys(roles || {}).forEach((uid) => (out[uid] = true));
+  try {
+    txApp.findAllRecords("admins").forEach((a) => (out[a.id] = true));
+  } catch (_) {
+    /* collection absente */
+  }
+  return out;
+}
+
+/** Ce joueur sert-il de référence d'équilibrage ? */
+function countsForBalance(p, excluded, game) {
+  return !excluded[p.uid] && !p.testMode && (game.BALANCE_EXCLUDED_PSEUDOS || []).indexOf(p.pseudo) < 0;
+}
+
 function readStaffRecord(txApp, game) {
   try {
     return txApp.findFirstRecordByData("game_config", "key", game.STAFF_KEY);
@@ -5097,7 +5120,9 @@ function liveBalance(now, withHistory) {
   const game = loadGame();
   applyContent($app, game);
   const plain = (r) => Object.assign(toPlain(r), { uid: r.id });
-  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map(plain);
+  // 5.22.1 : équipe du jeu et comptes de test écartés de l'outil d'équilibrage.
+  const excluded = balanceExcludedUids($app, game);
+  const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map(plain).filter((p) => countsForBalance(p, excluded, game));
   const warlords = $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).map(plain);
   const reports = $app
     .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
@@ -7052,7 +7077,10 @@ function warlordTick(now, opts) {
     const humans = txApp
       .findRecordsByFilter("players", "npc = '' && resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - game.WARLORD_RULES.activeDays * 86400000 })
       .map(humanPlain);
-    const ref = game.warlordReference(humans);
+    // 5.22.1 : l'équipe du jeu et les comptes de test ne fixent pas la puissance des seigneurs
+    // (ils restent des cibles possibles).
+    const excluded = balanceExcludedUids(txApp, game);
+    const ref = game.warlordReference(humans.filter((h) => countsForBalance(h, excluded, game)));
 
     // Vendettas échues : perdues, riposte programmée.
     game.settleVendettas(state, now).forEach((v) => {

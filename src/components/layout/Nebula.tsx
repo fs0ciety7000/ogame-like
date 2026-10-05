@@ -36,14 +36,14 @@ export function Nebula() {
 
   return (
     <div className="nebula-field" aria-hidden>
-      <div className="nebula-blob" style={{ top: "-10%", left: "-5%", width: "45vw", height: "45vw", backgroundColor: palette[0] }} />
+      <div className="nebula-blob" style={{ top: "-10%", left: "-5%", width: "60vw", height: "60vw", ["--blob" as string]: palette[0] }} />
       <div
         className="nebula-blob"
-        style={{ bottom: "-15%", right: "-10%", width: "42vw", height: "42vw", backgroundColor: palette[1], animationDelay: "-8s" }}
+        style={{ bottom: "-15%", right: "-10%", width: "56vw", height: "56vw", ["--blob" as string]: palette[1], animationDelay: "-8s" }}
       />
       <div
         className="nebula-blob"
-        style={{ top: "35%", right: "20%", width: "28vw", height: "28vw", backgroundColor: palette[2], opacity: 0.16, animationDelay: "-15s" }}
+        style={{ top: "35%", right: "20%", width: "38vw", height: "38vw", ["--blob" as string]: palette[2], opacity: 0.16, animationDelay: "-15s" }}
       />
     </div>
   );

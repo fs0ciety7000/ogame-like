@@ -8,7 +8,7 @@ import { FACTIONS } from "@/game/pirates";
 import { usePlayerStore } from "@/store/playerStore";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
-import { CombatReplay } from "@/components/game/CombatReplay";
+import { CombatReplayAuto } from "@/components/game/CombatReplayAuto";
 import { CombatLossTable, CombatReportDetail } from "@/components/game/CombatReportDetail";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
@@ -109,7 +109,7 @@ export function CombatResultModal() {
             Ta puissance : {formatNumber(current.myPower)} — Puissance adverse : {formatNumber(current.opponentPower)}
           </p>
 
-          <CombatReplay
+          <CombatReplayAuto
             myPower={current.myPower}
             opponentPower={current.opponentPower}
             myLossPercent={current.myLossPercent}
