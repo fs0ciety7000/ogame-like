@@ -5627,7 +5627,7 @@ var pct2 = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
 var FORMATIONS = [
   { id: "balanced", name: "\xC9quilibr\xE9e", description: () => "Aucun bonus ni malus." },
   { id: "assault", name: "Assaut", description: () => `Attaque ${pct2(COMBAT_RULES.assaultAttack)}, pertes subies ${pct2(COMBAT_RULES.assaultLosses)}.` },
-  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct2(COMBAT_RULES.cautiousAttack)}, pertes subies ${pct2(COMBAT_RULES.cautiousLosses)}.` },
+  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct2(COMBAT_RULES.cautiousAttack)}, d\xE9g\xE2ts subis ${pct2(COMBAT_RULES.cautiousLosses)}, retraite d\xE8s ${Math.round(COMBAT_RULES.cautiousRetreatAt * 100)} % de pertes.` },
   { id: "raid", name: "Raid", description: () => `Attaque ${pct2(COMBAT_RULES.raidAttack)}, cargaison ${pct2(COMBAT_RULES.raidCargo)}.` }
 ];
 var POSTURES = [
@@ -5642,15 +5642,16 @@ function isPosture(v) {
   return POSTURES.some((p) => p.id === v);
 }
 function formationEffects(id) {
+  const retreatAt = COMBAT_RULES.retreatAt;
   switch (id) {
     case "assault":
-      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1 };
+      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1, retreatAt };
     case "cautious":
-      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1 };
+      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1, retreatAt: COMBAT_RULES.cautiousRetreatAt };
     case "raid":
-      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo };
+      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo, retreatAt };
     default:
-      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1 };
+      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1, retreatAt };
   }
 }
 function postureEffects(id, fleetOnly = false) {
@@ -5930,6 +5931,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,
@@ -7207,6 +7209,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: {},
     attackerRecovered: {},
@@ -7310,6 +7313,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,
@@ -8738,14 +8742,14 @@ var DEFAULT_UNITS = [
     maxLevel: 10,
     description: "Arme ultime. Capacit\xE9 de destruction massive.",
     cost: { scrap: 5e4, energy: 3e4 },
-    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1e3 },
+    // 5.18 : 500 → 4 000 au niveau 1 (elle valait moins qu'un Croiseur Nova), +900 par niveau
+    // au lieu de +1 700 (12 100 au niveau 10 au lieu de 15 800) : au niveau des meilleures unités par place.
+    stats: { attaque: 4e3, defense: 4e3, vitesse: 1, cargo: 1e3 },
     category: "attack",
     unlockTech: "tech19",
-    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    // v5.4 : 200 → 80 places.
     hangarSpace: 80,
-    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
-    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
-    levelBonus: 1700
+    levelBonus: 900
   },
   // v3.6 : unités de fin de partie.
   {
@@ -8782,7 +8786,8 @@ var DEFAULT_UNITS = [
     maxLevel: 10,
     description: "Arme simple mais efficace pour saturer une zone.",
     cost: { scrap: 200, energy: 100 },
-    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
+    // 5.18 : 60/0 → 25/3 : 200 d'attaque par 1 000 ressources, quatre fois les autres défenses.
+    stats: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech14",
     hangarSpace: 1
@@ -8884,10 +8889,9 @@ var COMBAT_RULES = {
   shieldPerLevel: 75e-4,
   /** …plafonnée à cette valeur. */
   shieldMax: 0.15,
-  /** Vaisseaux à quai : ils soutiennent la défense avec cette part de leur
-   *  puissance, et subissent la même part des pertes. Réglé pour viser
-   *  55–60 % de victoires attaquantes (simulation sur les combats réels). */
-  homeFleetDefenseFactor: 0.1,
+  /** Vaisseaux à quai : part engagée en défense (et exposée aux tirs).
+   *  5.18 : 50 % par défaut (Riposte 100 %, Bunker 0 %). */
+  homeFleetDefenseFactor: 0.5,
   /** Part des défenses détruites reconstruites gratuitement après le combat. */
   defenseRebuildPct: 0.6,
   /* v3.0 — formations d'attaque (choisies au lancement). */
@@ -8903,10 +8907,25 @@ var COMBAT_RULES = {
   /* v3.0 — postures de la base (défenseur). */
   /** Bunker : défenses +8 %, vaisseaux à quai hors combat. */
   bunkerDefense: 0.08,
-  /** Riposte : vaisseaux à quai engagés à 25 %. */
-  riposteHomeFleet: 0.25,
+  /** Riposte : vaisseaux à quai engagés à 100 %. */
+  riposteHomeFleet: 1,
   /** Délai entre deux changements de posture (h). */
-  postureCooldownHours: 1
+  postureCooldownHours: 1,
+  /* 5.18 — combat en tours. */
+  /** Points de vie d'une unité = résistance × ce facteur. */
+  hpPerResistance: 30,
+  /** Nombre de tours au plus. */
+  maxRounds: 8,
+  /** L'attaquant décroche quand il a perdu cette part de ses points de vie… */
+  retreatAt: 0.5,
+  /** …ou celle-ci en formation Prudente. */
+  cautiousRetreatAt: 0.3,
+  /** L'attaquant l'emporte quand il reste au défenseur moins de cette part de ses points de vie. */
+  attackerWinBelow: 0.2,
+  /** Au dernier tour, l'attaquant l'emporte s'il garde au moins cette part de points de vie de plus que le défenseur. */
+  timeoutWinMargin: 0.3,
+  /** Ennemis PNJ (sans unités réelles) : points de vie relatifs à une flotte de même puissance. */
+  pveHpFactor: 0.8
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
@@ -8987,71 +9006,148 @@ function computeFullPower(units, techLevels2, idList, stats) {
 function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
   return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
 }
+var poolOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.hp, 0);
+var fireOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.att, 0);
+function hit(stacks, damage) {
+  const pool = poolOf(stacks);
+  if (!(pool > 0) || !(damage > 0)) return;
+  for (const t of stacks) {
+    if (t.count <= 0) continue;
+    const share = t.count * t.hp / pool;
+    t.count = Math.max(0, t.count - damage * share / t.hp);
+  }
+}
+function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor) {
+  const out = [];
+  for (const [id, qty] of Object.entries(fleet)) {
+    if (!(qty > 0) || !(engaged > 0)) continue;
+    const att = unitStat(units, techLevels2, id, "attack") * factor;
+    const res = unitStat(units, techLevels2, id, "defense");
+    if (!(att > 0) && !(res > 0)) continue;
+    out.push({ id, owner, count: qty * engaged, realCount: qty, att, hp: Math.max(1, res) * COMBAT_RULES.hpPerResistance * hpFactor });
+  }
+  return out;
+}
+function virtualStacks(power, mirror, owner, mirrorAttackFactor = 1) {
+  if (!(power > 0)) return [];
+  const att = fireOf(mirror) / Math.max(0.01, mirrorAttackFactor);
+  const hpPerAtt = att > 0 ? poolOf(mirror) / att : COMBAT_RULES.hpPerResistance / 4;
+  return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor) }];
+}
+function combatLogOf(result) {
+  var _a;
+  return {
+    rounds: ((_a = result.rounds) != null ? _a : []).map((r) => ({
+      attackerHp: Math.round(r.attackerHp * 1e3) / 1e3,
+      defenderHp: Math.round(r.defenderHp * 1e3) / 1e3,
+      attackerDamage: Math.round(r.attackerDamage),
+      defenderDamage: Math.round(r.defenderDamage)
+    })),
+    retreated: !!result.retreated
+  };
+}
 function resolveCombat(params) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
+  const R = COMBAT_RULES;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
-  const attackerPower = ((_b = params.attackerPowerOverride) != null ? _b : computeFleetPower(attackerUnits, attackerTechLevels, fleet, ["attack"])) * ((_c = params.attackFactor) != null ? _c : 1) * (1 - shield);
-  const garrisons = (_d = params.garrisons) != null ? _d : [];
-  const garrisonFactor = (_e = params.garrisonFactor) != null ? _e : 0.5;
-  const garrisonPower = garrisons.reduce((sum3, g) => sum3 + computeFleetPower(g.units, g.techLevels, g.fleet, ["attack", "defense"]) * garrisonFactor, 0);
-  const homeFactor = (_f = params.homeFleetFactor) != null ? _f : COMBAT_RULES.homeFleetDefenseFactor;
-  const defenderPower = ((_h = params.defenderPowerOverride) != null ? _h : homeDefensePower(defenderUnits, defenderTechLevels, homeFactor, (_g = params.defenseFactor) != null ? _g : 1) + garrisonPower) * Math.max(0, (_i = params.defenderPowerFactor) != null ? _i : 1);
-  const totalPower = attackerPower + defenderPower;
-  const diffRatio = totalPower > 0 ? Math.abs(attackerPower - defenderPower) / totalPower : 0;
-  let outcome;
-  if (attackerPower > defenderPower) outcome = "attacker_win";
-  else if (attackerPower < defenderPower) outcome = "defender_win";
-  else outcome = "draw";
-  const winnerLossPct = clamp(0.3 * (1 - diffRatio), 0.05, 0.3);
-  const loserLossPct = clamp(0.3 + 0.4 * diffRatio, 0.3, 0.7);
-  let attackerLossPct, defenderLossPct;
-  if (outcome === "attacker_win") {
-    attackerLossPct = winnerLossPct;
-    defenderLossPct = loserLossPct;
-  } else if (outcome === "defender_win") {
-    attackerLossPct = loserLossPct;
-    defenderLossPct = winnerLossPct;
-  } else {
-    attackerLossPct = 0.3;
-    defenderLossPct = 0.3;
+  const attackFactor = Math.max(0, (_b = params.attackFactor) != null ? _b : 1);
+  const lossFactor = Math.max(0, (_c = params.attackerLossFactor) != null ? _c : 1);
+  const defFactor = Math.max(0, (_d = params.defenderPowerFactor) != null ? _d : 1);
+  const homeFactor = (_e = params.homeFleetFactor) != null ? _e : R.homeFleetDefenseFactor;
+  const garrisons = (_f = params.garrisons) != null ? _f : [];
+  const garrisonFactor = (_g = params.garrisonFactor) != null ? _g : 0.5;
+  const retreatAt = Math.max(0.05, Math.min(1, (_h = params.retreatAt) != null ? _h : R.retreatAt));
+  let attacker = params.attackerPowerOverride === void 0 ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1) : [];
+  const home = 1 + R.homeDefenseBonus;
+  let defender = [];
+  if (params.defenderPowerOverride === void 0) {
+    const defenses = Object.fromEntries(DEFENSIVE_UNITS.map((id) => {
+      var _a2, _b2;
+      return [id, (_b2 = (_a2 = defenderUnits[id]) == null ? void 0 : _a2.count) != null ? _b2 : 0];
+    }));
+    const ships = Object.fromEntries(OFFENSIVE_UNITS.map((id) => {
+      var _a2, _b2;
+      return [id, (_b2 = (_a2 = defenderUnits[id]) == null ? void 0 : _a2.count) != null ? _b2 : 0];
+    }));
+    defender = [
+      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * ((_i = params.defenseFactor) != null ? _i : 1) * defFactor),
+      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor),
+      ...garrisons.flatMap((g, i) => realStacks(g.units, g.techLevels, g.fleet, i, garrisonFactor, defFactor))
+    ];
   }
-  if (params.attackerLossFactor !== void 0) attackerLossPct = Math.min(1, attackerLossPct * Math.max(0, params.attackerLossFactor));
-  if (attackerPower > 0) attackerLossPct = Math.min(attackerLossPct, defenderPower / attackerPower);
-  if (defenderPower > 0) defenderLossPct = Math.min(defenderLossPct, attackerPower / defenderPower);
-  const attackerLosses = {};
-  const attackerRecovered = {};
-  for (const unitId in fleet) {
-    const sent = fleet[unitId];
-    const rawLost = Math.floor(sent * attackerLossPct);
-    const recovered = Math.floor(rawLost * attackerRepairPct);
-    const effectiveLost = rawLost - recovered;
-    if (rawLost > 0) {
-      attackerLosses[unitId] = effectiveLost;
-      attackerRecovered[unitId] = recovered;
+  if (params.attackerPowerOverride !== void 0) attacker = virtualStacks(params.attackerPowerOverride * attackFactor, defender, "attacker");
+  if (params.defenderPowerOverride !== void 0) defender = virtualStacks(params.defenderPowerOverride * defFactor, attacker, "defense", attackFactor);
+  const attackerStart = attacker.map((t) => t.count);
+  const defenderStart = defender.map((t) => t.count);
+  const a0 = poolOf(attacker);
+  const d0 = poolOf(defender);
+  const powerOf = (stacks) => stacks.reduce((s, t) => s + t.count * (t.att + t.hp / R.hpPerResistance), 0);
+  const attackerPower = params.attackerPowerOverride !== void 0 ? params.attackerPowerOverride * attackFactor : powerOf(attacker);
+  const defenderPower = params.defenderPowerOverride !== void 0 ? params.defenderPowerOverride * defFactor : powerOf(defender);
+  const garrisonPower = defender.filter((t) => typeof t.owner === "number").reduce((s, t) => s + t.count * (t.att + t.hp / R.hpPerResistance), 0);
+  const rounds = [];
+  let retreated = false;
+  if (a0 > 0 && d0 > 0) {
+    for (let r = 0; r < R.maxRounds; r++) {
+      const dmgByAttacker = fireOf(attacker) * (1 - shield);
+      const dmgByDefender = fireOf(defender);
+      hit(defender, dmgByAttacker);
+      hit(attacker, dmgByDefender);
+      const aLeft2 = poolOf(attacker) / a0;
+      const dLeft2 = poolOf(defender) / d0;
+      rounds.push({ attackerHp: aLeft2, defenderHp: dLeft2, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });
+      if (aLeft2 <= 1e-3 || dLeft2 <= 1e-3) break;
+      if (dLeft2 < R.attackerWinBelow) break;
+      if (1 - aLeft2 >= retreatAt) {
+        retreated = true;
+        break;
+      }
     }
   }
+  const aLeft = a0 > 0 ? poolOf(attacker) / a0 : 0;
+  const dLeft = d0 > 0 ? poolOf(defender) / d0 : 0;
+  let outcome;
+  if (!(a0 > 0)) outcome = d0 > 0 ? "defender_win" : "draw";
+  else if (!(d0 > 0)) outcome = "attacker_win";
+  else if (retreated || aLeft <= 1e-3) outcome = "defender_win";
+  else if (dLeft < R.attackerWinBelow) outcome = "attacker_win";
+  else if (aLeft - dLeft >= R.timeoutWinMargin) outcome = "attacker_win";
+  else if (aLeft < dLeft) outcome = "defender_win";
+  else outcome = "draw";
+  const lostOf = (stack, start) => {
+    const engagedLost = Math.max(0, start - stack.count);
+    return Math.min(stack.realCount, Math.round(engagedLost));
+  };
+  const attackerLosses = {};
+  const attackerRecovered = {};
+  attacker.forEach((t, i) => {
+    var _a2;
+    if (!t.id) return;
+    const rawLost = Math.min((_a2 = fleet[t.id]) != null ? _a2 : 0, Math.round(lostOf(t, attackerStart[i]) * lossFactor));
+    if (rawLost <= 0) return;
+    const recovered = Math.floor(rawLost * attackerRepairPct);
+    attackerLosses[t.id] = rawLost - recovered;
+    attackerRecovered[t.id] = recovered;
+  });
   const defenderLosses = {};
   const defenderRecovered = {};
   const defenderRebuilt = {};
-  [...DEFENSIVE_UNITS, ...OFFENSIVE_UNITS].forEach((unitId) => {
-    var _a2, _b2;
-    const count2 = (_b2 = (_a2 = defenderUnits[unitId]) == null ? void 0 : _a2.count) != null ? _b2 : 0;
-    const isDefense = DEFENSIVE_UNITS.includes(unitId);
-    const rawLost = Math.floor(count2 * defenderLossPct * (isDefense ? 1 : homeFactor));
+  const garrisonLosses = garrisons.map(() => ({}));
+  defender.forEach((t, i) => {
+    var _a2;
+    if (!t.id) return;
+    const rawLost = lostOf(t, defenderStart[i]);
     if (rawLost <= 0) return;
-    const recovered = Math.floor(rawLost * (isDefense ? COMBAT_RULES.defenseRebuildPct : defenderRepairPct));
-    defenderLosses[unitId] = rawLost - recovered;
-    defenderRecovered[unitId] = recovered;
-    if (isDefense && recovered > 0) defenderRebuilt[unitId] = recovered;
-  });
-  const garrisonLosses = garrisons.map((g) => {
-    const lost = {};
-    for (const [unitId, qty] of Object.entries(g.fleet)) {
-      const n = Math.floor(qty * defenderLossPct * garrisonFactor);
-      if (n > 0) lost[unitId] = Math.min(qty, n);
+    if (typeof t.owner === "number") {
+      garrisonLosses[t.owner][t.id] = Math.min((_a2 = garrisons[t.owner].fleet[t.id]) != null ? _a2 : 0, rawLost);
+      return;
     }
-    return lost;
+    const isDefense = t.owner === "defense";
+    const recovered = Math.floor(rawLost * (isDefense ? R.defenseRebuildPct : defenderRepairPct));
+    defenderLosses[t.id] = rawLost - recovered;
+    defenderRecovered[t.id] = recovered;
+    if (isDefense && recovered > 0) defenderRebuilt[t.id] = recovered;
   });
   const survivors = {};
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
@@ -9061,7 +9157,7 @@ function resolveCombat(params) {
     const wanted = {};
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
-      const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
+      const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
       const pct6 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
       const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct6);
       wanted[res] = amount3;
@@ -9088,8 +9184,8 @@ function resolveCombat(params) {
     outcome,
     attackerPower,
     defenderPower,
-    attackerLossPercent: attackerLossPct,
-    defenderLossPercent: defenderLossPct,
+    attackerLossPercent: a0 > 0 ? clamp((1 - aLeft) * lossFactor, 0, 1) : 0,
+    defenderLossPercent: d0 > 0 ? clamp(1 - dLeft, 0, 1) : 0,
     attackerLosses,
     attackerRecovered,
     defenderLosses,
@@ -9099,7 +9195,9 @@ function resolveCombat(params) {
     shieldPercent: shield,
     defenderRebuilt,
     garrisonLosses,
-    garrisonPower
+    garrisonPower,
+    rounds,
+    retreated
   };
 }
 
@@ -12007,12 +12105,13 @@ function desiredArmy(d, targetPower2) {
   const out = {};
   const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
   const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
+  const unitPower = (id) => computeFullPower({ [id]: { level: 1, count: 1 } }, {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
   ships.forEach((id) => {
-    const per = computeFullPower({ [id]: { level: 1, count: 1 } }, {}, [id], ["attack"]);
+    const per = unitPower(id);
     if (per > 0) out[id] = Math.ceil(targetPower2 * share / ships.length / per);
   });
   defenses.forEach((id) => {
-    const per = homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
+    const per = unitPower(id);
     if (per > 0) out[id] = Math.ceil(targetPower2 * (1 - share) / defenses.length / per);
   });
   return out;
@@ -12021,29 +12120,40 @@ function emptyRuntime() {
   return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0 };
 }
 function growWarlord(npc, d, ref, rt, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const out = __spreadValues({}, rt);
   const target = warlordTargetPower(d, ref);
   const desired = desiredArmy(d, target);
   const hours2 = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 36e5)) : 1;
   const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours2 / 24)) : 1;
+  let grew = false;
+  let lagging = null;
   for (const [id, want] of Object.entries(desired)) {
     const state = (_a = npc.units[id]) != null ? _a : { level: 1, count: 0 };
     const count2 = (_b = state.count) != null ? _b : 0;
-    if (count2 < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count2 + Math.ceil(want * step)) };
+    if (count2 >= want) continue;
+    const add2 = Math.floor(want * step);
+    if (add2 > 0) {
+      npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count2 + add2) };
+      grew = true;
+    } else if (!lagging || count2 / want < lagging.ratio) lagging = { id, ratio: count2 / want };
+  }
+  if (!grew && lagging) {
+    const state = (_c = npc.units[lagging.id]) != null ? _c : { level: 1, count: 0 };
+    npc.units[lagging.id] = { level: Math.max(1, state.level || 1), count: ((_d = state.count) != null ? _d : 0) + 1 };
   }
   if (rt.seeded && empirePower(npc) > target * 1.1) {
     for (const [id, state] of Object.entries(npc.units)) {
-      const want = (_c = desired[id]) != null ? _c : 0;
-      const count2 = (_d = state == null ? void 0 : state.count) != null ? _d : 0;
+      const want = (_e = desired[id]) != null ? _e : 0;
+      const count2 = (_f = state == null ? void 0 : state.count) != null ? _f : 0;
       if (count2 > want) npc.units[id] = __spreadProps(__spreadValues({}, state), { count: Math.max(want, count2 - Math.ceil((count2 - want) * step)) });
     }
   }
   const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 36e5;
   if (buildStep) {
     for (const b of BUILDINGS) {
-      const want = Math.min(b.maxLevel, Math.round(((_e = ref.buildings[b.id]) != null ? _e : 0) * ((_f = WARLORD_RULES.buildingFactor[d.tier]) != null ? _f : 1)));
-      const cur = (_h = (_g = npc.buildings[b.id]) == null ? void 0 : _g.level) != null ? _h : 0;
+      const want = Math.min(b.maxLevel, Math.round(((_g = ref.buildings[b.id]) != null ? _g : 0) * ((_h = WARLORD_RULES.buildingFactor[d.tier]) != null ? _h : 1)));
+      const cur = (_j = (_i = npc.buildings[b.id]) == null ? void 0 : _i.level) != null ? _j : 0;
       if (want > cur) npc.buildings[b.id] = { level: rt.seeded ? cur + 1 : want, unlocked: true };
     }
     out.lastBuildingAtMs = now;
@@ -12051,16 +12161,16 @@ function growWarlord(npc, d, ref, rt, now) {
   const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
   const stock = productionHours(npc, stockHours);
   for (const res of COMMON_RESOURCES) {
-    const want = (_i = stock[res]) != null ? _i : 0;
-    const cur = (_j = npc.resources[res]) != null ? _j : 0;
+    const want = (_k = stock[res]) != null ? _k : 0;
+    const cur = (_l = npc.resources[res]) != null ? _l : 0;
     if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
   }
   const xpTarget = warlordTargetXp(d, ref);
-  const xp = (_k = npc.xp) != null ? _k : 0;
+  const xp = (_m = npc.xp) != null ? _m : 0;
   const xpStep = Math.ceil(xpTarget * WARLORD_RULES.xpGrowthPerHour * hours2);
   npc.xp = xp < xpTarget ? rt.seeded ? Math.min(xpTarget, xp + xpStep) : xpTarget : xp;
   const seasonTarget = Math.round((ref.medianSeasonXp || 0) * tierFactor(d));
-  npc.seasonXp = Math.max((_l = npc.seasonXp) != null ? _l : 0, rt.seeded ? Math.min(seasonTarget, ((_m = npc.seasonXp) != null ? _m : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
+  npc.seasonXp = Math.max((_n = npc.seasonXp) != null ? _n : 0, rt.seeded ? Math.min(seasonTarget, ((_o = npc.seasonXp) != null ? _o : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;
@@ -12455,6 +12565,7 @@ function performAttack(input) {
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,
@@ -15463,6 +15574,13 @@ function validateRules(rules) {
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
+  const cb = merged.combat;
+  if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par r\xE9sistance > 0.");
+  if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
+  for (const [k, label3] of [["retreatAt", "retraite"], ["cautiousRetreatAt", "retraite prudente"], ["attackerWinBelow", "seuil de victoire"], ["timeoutWinMargin", "avance au dernier tour"], ["homeFleetDefenseFactor", "vaisseaux \xE0 quai"], ["riposteHomeFleet", "riposte"]]) {
+    if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label3} entre 0 et 1.`);
+  }
+  if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");

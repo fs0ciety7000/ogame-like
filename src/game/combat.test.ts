@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeFleetPower, getShieldPercent, resolveCombat, unitStat } from "@/game/combat";
+import { COMBAT_RULES, computeFleetPower, getShieldPercent, resolveCombat, unitStat } from "@/game/combat";
 import { defaultBuildings } from "@/game/buildings";
 import { UNIT_BASE_STATS } from "@/game/units";
 import type { TechLevels, Units } from "@/types/game";
@@ -21,10 +21,10 @@ describe("unitStat", () => {
     expect(unitStat(units, noTech, "chasseur", "attack")).toBeCloseTo(UNIT_BASE_STATS.chasseur.attack + 10);
   });
 
-  it("uses the unit's own gain per level (Étoile Noire : +1 700)", () => {
+  it("uses the unit's own gain per level (Étoile Noire : +900)", () => {
     const units = unitsWith({ etoile_noire: { level: 10, count: 1 }, sentinelle: { level: 10, count: 1 } });
-    expect(unitStat(units, noTech, "etoile_noire", "attack")).toBe(500 + 9 * 1700);
-    expect(unitStat(units, noTech, "etoile_noire", "defense")).toBe(500 + 9 * 1700);
+    expect(unitStat(units, noTech, "etoile_noire", "attack")).toBe(4000 + 9 * 900);
+    expect(unitStat(units, noTech, "etoile_noire", "defense")).toBe(4000 + 9 * 900);
     expect(unitStat(units, noTech, "sentinelle", "attack")).toBe(120 + 9 * 5);
   });
 
@@ -147,36 +147,42 @@ describe("resolveCombat", () => {
 });
 
 describe("v1.6 combat balance", () => {
-  it("adds the home bonus and lets ships at home support the defense", () => {
+  it("adds the home bonus and lets half of the ships at home support the defense", () => {
     const params = baseCombatParams();
     params.defenderUnits = unitsWith({ roquette: { level: 1, count: 10 } });
     const without = resolveCombat(params);
     params.defenderUnits = unitsWith({ roquette: { level: 1, count: 10 }, chasseur: { level: 1, count: 100 } });
     const withShips = resolveCombat(params);
-    expect(without.defenderPower).toBeCloseTo(10 * 60 * 1.15);
-    expect(withShips.defenderPower).toBeCloseTo((10 * 60 + 100 * 255 * 0.1) * 1.15);
+    // Puissance affichée : attaque + résistance, bonus à domicile compris.
+    const roq = UNIT_BASE_STATS.roquette;
+    const ch = UNIT_BASE_STATS.chasseur;
+    expect(without.defenderPower).toBeCloseTo(10 * (roq.attack + roq.defense) * 1.15);
+    expect(withShips.defenderPower).toBeCloseTo((10 * (roq.attack + roq.defense) + 100 * 0.5 * (ch.attack + ch.defense)) * 1.15);
   });
 
-  it("shield absorbs part of the attack", () => {
-    const params = baseCombatParams();
+  it("shield reduces the damage the defense takes", () => {
+    const params = { ...baseCombatParams(), fleet: { chasseur: 40 }, attackerUnits: unitsWith({ chasseur: { level: 1, count: 40 } }), defenderUnits: unitsWith({ canon_plasma: { level: 1, count: 300 } }) };
     const plain = resolveCombat(params);
     const shielded = resolveCombat({ ...params, defenderShieldPct: 0.15 });
-    expect(shielded.attackerPower).toBeCloseTo(plain.attackerPower * 0.85);
+    expect(shielded.rounds?.[0].attackerDamage).toBeCloseTo((plain.rounds?.[0].attackerDamage ?? 0) * 0.85);
+    expect(shielded.rounds?.[0].defenderHp).toBeGreaterThan(plain.rounds?.[0].defenderHp ?? 1);
     expect(shielded.shieldPercent).toBe(0.15);
   });
 
   it("rebuilds 60 % of destroyed defenses; ships at home only use the workshop", () => {
     const params = baseCombatParams();
-    params.fleet = { chasseur: 100 };
-    params.attackerUnits = unitsWith({ chasseur: { level: 1, count: 100 } });
-    params.defenderUnits = unitsWith({ roquette: { level: 1, count: 100 }, fregate: { level: 1, count: 1000 } });
+    params.fleet = { chasseur: 400 };
+    params.attackerUnits = unitsWith({ chasseur: { level: 1, count: 400 } });
+    params.defenderUnits = unitsWith({ roquette: { level: 1, count: 100 }, fregate: { level: 1, count: 300 } });
     const r = resolveCombat(params);
     expect(r.outcome).toBe("attacker_win");
     const rawRoquette = (r.defenderLosses.roquette ?? 0) + (r.defenderRecovered.roquette ?? 0);
+    expect(rawRoquette).toBeGreaterThan(0);
     expect(r.defenderRebuilt?.roquette).toBe(Math.floor(rawRoquette * 0.6));
-    // Frégates à quai : 10 % du taux de pertes, pas de reconstruction.
+    // Frégates à quai : engagées à moitié (la moitié au plus est touchée), pas de reconstruction.
     const rawFregate = (r.defenderLosses.fregate ?? 0) + (r.defenderRecovered.fregate ?? 0);
-    expect(rawFregate).toBe(Math.floor(1000 * r.defenderLossPercent * 0.1));
+    expect(rawFregate).toBeGreaterThan(0);
+    expect(rawFregate).toBeLessThanOrEqual(150);
     expect(r.defenderRebuilt?.fregate).toBeUndefined();
   });
 
@@ -186,5 +192,72 @@ describe("v1.6 combat balance", () => {
     expect(getShieldPercent(b)).toBeCloseTo(0.075);
     b.hangar_defense.level = 40;
     expect(getShieldPercent(b)).toBe(0.15);
+  });
+});
+
+describe("5.18 combat en tours", () => {
+  const duel = (attackers: number, defenders: number, extra: Partial<Parameters<typeof resolveCombat>[0]> = {}) =>
+    resolveCombat({
+      ...baseCombatParams(),
+      attackerUnits: unitsWith({ chasseur: { level: 1, count: attackers } }),
+      fleet: { chasseur: attackers },
+      defenderUnits: unitsWith({ canon_plasma: { level: 1, count: defenders } }),
+      ...extra,
+    });
+
+  it("plays rounds, at most maxRounds, and reports the remaining hit points", () => {
+    const r = duel(100, 120);
+    expect(r.rounds?.length).toBeGreaterThan(0);
+    expect(r.rounds!.length).toBeLessThanOrEqual(COMBAT_RULES.maxRounds);
+    const last = r.rounds![r.rounds!.length - 1];
+    expect(r.attackerLossPercent).toBeCloseTo(1 - last.attackerHp);
+    expect(r.defenderLossPercent).toBeCloseTo(1 - last.defenderHp);
+  });
+
+  it("the attacker retreats once half of its hit points are gone (30 % in cautious formation)", () => {
+    const fortress = { defenderUnits: unitsWith({ lance_gravitationnelle: { level: 1, count: 6 } }) };
+    const r = duel(40, 0, fortress);
+    expect(r.outcome).toBe("defender_win");
+    expect(r.retreated).toBe(true);
+    expect(r.attackerLossPercent).toBeGreaterThanOrEqual(COMBAT_RULES.retreatAt);
+    expect(r.attackerLossPercent).toBeLessThan(1);
+    const cautious = duel(40, 0, { ...fortress, retreatAt: COMBAT_RULES.cautiousRetreatAt });
+    expect(cautious.retreated).toBe(true);
+    expect(cautious.attackerLossPercent).toBeLessThan(r.attackerLossPercent);
+  });
+
+  it("a clearly stronger attacker wins in few rounds with light losses", () => {
+    const r = duel(400, 50);
+    expect(r.outcome).toBe("attacker_win");
+    expect(r.rounds!.length).toBeLessThanOrEqual(2);
+    expect(r.attackerLossPercent).toBeLessThan(0.15);
+  });
+
+  it("ships at home fight back: none in Bunker, all of them in Riposte", () => {
+    const params = { ...baseCombatParams(), fleet: { chasseur: 200 }, attackerUnits: unitsWith({ chasseur: { level: 1, count: 200 } }), defenderUnits: unitsWith({ canon_plasma: { level: 1, count: 50 }, fregate: { level: 1, count: 400 } }) };
+    const bunker = resolveCombat({ ...params, homeFleetFactor: 0 });
+    const standard = resolveCombat(params);
+    const riposte = resolveCombat({ ...params, homeFleetFactor: COMBAT_RULES.riposteHomeFleet });
+    expect(bunker.defenderLosses.fregate ?? 0).toBe(0);
+    expect(bunker.attackerLossPercent).toBeLessThan(standard.attackerLossPercent);
+    expect(standard.attackerLossPercent).toBeLessThan(riposte.attackerLossPercent);
+  });
+
+  it("the loss factor of a formation applies to the attacker's losses after the battle", () => {
+    const plain = duel(150, 100);
+    const assault = duel(150, 100, { attackerLossFactor: 1.15 });
+    expect(assault.outcome).toBe(plain.outcome);
+    expect(assault.attackerLossPercent).toBeCloseTo(Math.min(1, plain.attackerLossPercent * 1.15));
+  });
+
+  it("NPC forces (power only) fight as a mirrored fleet of that power", () => {
+    const params = { ...baseCombatParams(), fleet: { chasseur: 200 }, attackerUnits: unitsWith({ chasseur: { level: 1, count: 200 } }), defenderUnits: {} };
+    const fleetAttack = computeFleetPower(params.attackerUnits, noTech, params.fleet, ["attack"]);
+    expect(resolveCombat({ ...params, defenderPowerOverride: fleetAttack * 0.5 }).outcome).toBe("attacker_win");
+    expect(resolveCombat({ ...params, defenderPowerOverride: fleetAttack * 1.5 }).outcome).toBe("defender_win");
+    // Raid PNJ contre une base : même logique dans l'autre sens.
+    const base = { ...baseCombatParams(), fleet: {}, defenderUnits: unitsWith({ canon_plasma: { level: 1, count: 200 } }) };
+    expect(resolveCombat({ ...base, attackerPowerOverride: 100 }).outcome).toBe("defender_win");
+    expect(resolveCombat({ ...base, attackerPowerOverride: 200 * 105 * 1.15 * 2 }).outcome).toBe("attacker_win");
   });
 });

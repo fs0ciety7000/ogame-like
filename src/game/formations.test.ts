@@ -14,11 +14,14 @@ describe("formations", () => {
     const assault = resolveCombat({ ...base, ...formationEffects("assault") });
     const cautious = resolveCombat({ ...base, ...formationEffects("cautious") });
     const raid = resolveCombat({ ...base, ...formationEffects("raid") });
-    expect(assault.attackerPower).toBeCloseTo(neutral.attackerPower * 1.1);
-    expect(cautious.attackerPower).toBeCloseTo(neutral.attackerPower * 0.9);
-    expect(raid.attackerPower).toBeCloseTo(neutral.attackerPower * 0.85);
+    // 5.18 : le bonus d'attaque joue sur les dégâts infligés à chaque tour.
+    const firstHit = (r: typeof neutral) => r.rounds?.[0]?.attackerDamage ?? 0;
+    expect(firstHit(assault)).toBeCloseTo(firstHit(neutral) * 1.1);
+    expect(firstHit(cautious)).toBeCloseTo(firstHit(neutral) * 0.9);
+    expect(firstHit(raid)).toBeCloseTo(firstHit(neutral) * 0.85);
     expect(cautious.attackerLossPercent).toBeLessThan(assault.attackerLossPercent);
-    expect(raid.cargoCapacity).toBeGreaterThan(neutral.cargoCapacity * 1.2);
+    // +30 % de cale, un peu rognés par des pertes plus lourdes (attaque −15 %).
+    expect(raid.cargoCapacity).toBeGreaterThan(neutral.cargoCapacity * 1.1);
   });
 
   it("bunker shields the docked ships and boosts defenses; riposte engages more ships", () => {

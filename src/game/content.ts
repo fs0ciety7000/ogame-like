@@ -372,6 +372,14 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
+  // 5.18 : combat en tours.
+  const cb = merged.combat;
+  if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par résistance > 0.");
+  if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
+  for (const [k, label] of [["retreatAt", "retraite"], ["cautiousRetreatAt", "retraite prudente"], ["attackerWinBelow", "seuil de victoire"], ["timeoutWinMargin", "avance au dernier tour"], ["homeFleetDefenseFactor", "vaisseaux à quai"], ["riposteHomeFleet", "riposte"]] as const) {
+    if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label} entre 0 et 1.`);
+  }
+  if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;

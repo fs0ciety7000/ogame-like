@@ -19,7 +19,7 @@ export type SpecStat = keyof UnitSpecValues;
 
 export const SPEC_STATS: { id: SpecStat; label: string; short: string }[] = [
   { id: "attack", label: "Attaque", short: "ATK" },
-  { id: "defense", label: "Défense", short: "DEF" },
+  { id: "defense", label: "Résistance", short: "RÉS" },
   { id: "speed", label: "Vitesse", short: "VIT" },
   { id: "cargo", label: "Soute", short: "CAP" },
 ];

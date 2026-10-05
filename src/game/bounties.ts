@@ -4,7 +4,7 @@ import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
-import { computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
+import { combatLogOf, computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
 import { KESH_BOOST_PCT } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
@@ -396,6 +396,7 @@ export function resolveBountyHunt(
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,

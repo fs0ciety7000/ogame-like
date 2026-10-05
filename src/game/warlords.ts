@@ -399,12 +399,14 @@ export function desiredArmy(d: Pick<WarlordDef, "tier" | "personality">, targetP
   const out: Record<string, number> = {};
   const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
   const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
+  // Puissance d'une unité telle que la compte empirePower (vaisseaux : attaque + part à quai).
+  const unitPower = (id: string) => computeFullPower({ [id]: { level: 1, count: 1 } }, {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
   ships.forEach((id) => {
-    const per = computeFullPower({ [id]: { level: 1, count: 1 } }, {}, [id], ["attack"]);
+    const per = unitPower(id);
     if (per > 0) out[id] = Math.ceil((targetPower * share) / ships.length / per);
   });
   defenses.forEach((id) => {
-    const per = homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
+    const per = unitPower(id);
     if (per > 0) out[id] = Math.ceil((targetPower * (1 - share)) / defenses.length / per);
   });
   return out;
@@ -430,10 +432,23 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
   const desired = desiredArmy(d, target);
   const hours = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 3600_000)) : 1;
   const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours / 24)) : 1;
+  // 5.18 : arrondi à l'unité inférieure ; si rien ne pousse, une seule unité (la plus en retard) —
+  // l'arrondi supérieur ajoutait une unité de chaque type et dépassait le rythme visé sur les petites armées.
+  let grew = false;
+  let lagging: { id: string; ratio: number } | null = null;
   for (const [id, want] of Object.entries(desired)) {
     const state = npc.units[id] ?? { level: 1, count: 0 };
     const count = state.count ?? 0;
-    if (count < want) npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count + Math.ceil(want * step)) };
+    if (count >= want) continue;
+    const add = Math.floor(want * step);
+    if (add > 0) {
+      npc.units[id] = { level: Math.max(1, state.level || 1), count: Math.min(want, count + add) };
+      grew = true;
+    } else if (!lagging || count / want < lagging.ratio) lagging = { id, ratio: count / want };
+  }
+  if (!grew && lagging) {
+    const state = npc.units[lagging.id] ?? { level: 1, count: 0 };
+    npc.units[lagging.id] = { level: Math.max(1, state.level || 1), count: (state.count ?? 0) + 1 };
   }
   // v5.5 : armée trop forte (plafond relevé ou joueurs partis) : elle fond d'une part de l'excédent.
   if (rt.seeded && empirePower(npc) > target * 1.1) {

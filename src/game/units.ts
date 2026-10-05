@@ -138,14 +138,14 @@ export const DEFAULT_UNITS: UnitDef[] = [
     maxLevel: 10,
     description: "Arme ultime. Capacité de destruction massive.",
     cost: { scrap: 50000, energy: 30000 },
-    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
+    // 5.18 : 500 → 4 000 au niveau 1 (elle valait moins qu'un Croiseur Nova), +900 par niveau
+    // au lieu de +1 700 (12 100 au niveau 10 au lieu de 15 800) : au niveau des meilleures unités par place.
+    stats: { attaque: 4000, defense: 4000, vitesse: 1, cargo: 1000 },
     category: "attack",
     unlockTech: "tech19",
-    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    // v5.4 : 200 → 80 places.
     hangarSpace: 80,
-    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
-    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
-    levelBonus: 1700,
+    levelBonus: 900,
   },
   // v3.6 : unités de fin de partie.
   {
@@ -182,7 +182,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     maxLevel: 10,
     description: "Arme simple mais efficace pour saturer une zone.",
     cost: { scrap: 200, energy: 100 },
-    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
+    // 5.18 : 60/0 → 25/3 : 200 d'attaque par 1 000 ressources, quatre fois les autres défenses.
+    stats: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech14",
     hangarSpace: 1,

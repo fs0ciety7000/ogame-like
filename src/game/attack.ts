@@ -7,7 +7,7 @@ import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
 import { addSeasonPower } from "@/game/seasonWars";
 import { bumpStat, setStat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { combatLogOf, computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -292,6 +292,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,

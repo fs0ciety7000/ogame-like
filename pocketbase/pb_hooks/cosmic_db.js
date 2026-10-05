@@ -4811,6 +4811,38 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 5.18 : combat en tours — Étoile noire et Roquette recalées (si encore aux anciennes valeurs).
+  {
+    id: "combat-units-5.18",
+    key: "units",
+    patches: [
+      { id: "etoile_noire", field: "stats", from: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 }, to: { attaque: 4000, defense: 4000, vitesse: 1, cargo: 1000 } },
+      { id: "etoile_noire", field: "levelBonus", from: 1700, to: 900 },
+      { id: "roquette", field: "stats", from: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 }, to: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 } },
+    ],
+  },
+  // 5.18 : vaisseaux à quai engagés à 50 % (Riposte 100 %), si les règles enregistrées ont encore les anciennes valeurs.
+  {
+    id: "combat-rules-5.18",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      const c = data && data.combat;
+      if (!c || typeof c !== "object") return false;
+      let touched = false;
+      if (c.homeFleetDefenseFactor === 0.1) {
+        c.homeFleetDefenseFactor = 0.5;
+        touched = true;
+        changes.push("combat : vaisseaux à quai engagés à 50 %");
+      }
+      if (c.riposteHomeFleet === 0.25) {
+        c.riposteHomeFleet = 1;
+        touched = true;
+        changes.push("combat : Riposte à 100 %");
+      }
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

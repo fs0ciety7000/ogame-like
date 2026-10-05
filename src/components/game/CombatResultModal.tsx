@@ -13,7 +13,7 @@ import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
-import type { CombatOutcome } from "@/types/game";
+import type { CombatLog, CombatOutcome } from "@/types/game";
 import { ResourceIcon } from "@/components/ui/game-icon";
 
 /** Réplique animée du choc des deux flottes : deux barres de puissance
@@ -49,6 +49,41 @@ function CombatClash({ myPower, opponentPower }: { myPower: number; opponentPowe
         <span>{formatNumber(myPower)}</span>
         <span>{formatNumber(opponentPower)}</span>
       </div>
+    </div>
+  );
+}
+
+/** 5.18 : points de vie restants de chaque camp, tour par tour. */
+function CombatRounds({ log, perspective }: { log: CombatLog; perspective: "attacker" | "defender" }) {
+  if (!log.rounds.length) return null;
+  const mine = (r: CombatLog["rounds"][number]) => (perspective === "attacker" ? r.attackerHp : r.defenderHp);
+  const theirs = (r: CombatLog["rounds"][number]) => (perspective === "attacker" ? r.defenderHp : r.attackerHp);
+  const pct = (v: number) => `${Math.round(Math.max(0, Math.min(1, v)) * 100)} %`;
+  return (
+    <div className="mt-4">
+      <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">
+        Déroulé · {log.rounds.length} tour{log.rounds.length > 1 ? "s" : ""}
+      </h4>
+      <ul className="space-y-1">
+        {log.rounds.map((r, i) => (
+          <li key={i} className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-[11px]">
+            <span className="font-mono text-slate-500">T{i + 1}</span>
+            <div className="relative h-3 overflow-hidden rounded bg-space-800/80" title={`Tes forces : ${pct(mine(r))}`}>
+              <motion.div className="absolute inset-y-0 left-0 bg-cyan-glow/70" initial={{ width: 0 }} animate={{ width: pct(mine(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
+              <span className="absolute inset-0 flex items-center px-1 font-mono text-slate-100/90">{pct(mine(r))}</span>
+            </div>
+            <div className="relative h-3 overflow-hidden rounded bg-space-800/80" title={`Forces adverses : ${pct(theirs(r))}`}>
+              <motion.div className="absolute inset-y-0 right-0 bg-danger-glow/70" initial={{ width: 0 }} animate={{ width: pct(theirs(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
+              <span className="absolute inset-0 flex items-center justify-end px-1 font-mono text-slate-100/90">{pct(theirs(r))}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {log.retreated && (
+        <p className="mt-1 text-xs text-gold-glow">
+          {perspective === "attacker" ? "Ta flotte a décroché après de lourdes pertes." : "L'assaillant a battu en retraite."}
+        </p>
+      )}
     </div>
   );
 }
@@ -139,6 +174,7 @@ export function CombatResultModal() {
             perspective={current.perspective}
           />
           <CombatClash myPower={current.myPower} opponentPower={current.opponentPower} />
+          {current.combatLog && <CombatRounds log={current.combatLog} perspective={current.perspective} />}
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>

@@ -316,6 +316,12 @@ export function AttackModal({
                         <p className="text-slate-400">
                           Tes pertes ≈ <strong className="text-slate-200">{Math.round(c.attackerLossPercent * 100)} %</strong> · pertes adverses ≈{" "}
                           <strong className="text-slate-200">{Math.round(c.defenderLossPercent * 100)} %</strong>
+                          {(c.rounds?.length ?? 0) > 0 && (
+                            <>
+                              {" "}· <span className="font-mono">{c.rounds?.length}</span> tour{(c.rounds?.length ?? 0) > 1 ? "s" : ""}
+                              {c.retreated ? ", retraite" : ""}
+                            </>
+                          )}
                           {!win && Number.isFinite(estimate.winFactor) && estimate.winFactor > 1 && (
                             <> · il te faudrait environ ×{estimate.winFactor.toFixed(1)} de puissance</>
                           )}

@@ -22,7 +22,7 @@ import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
-import { unitStat } from "@/game/combat";
+import { COMBAT_RULES, unitStat } from "@/game/combat";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -253,17 +253,18 @@ export function UnitsPage() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="cursor-help">
-                                  <StatBar label="DEF" value={def} max={statMax.defense} color="var(--color-cyan-glow)" display={formatNumber(def)} />
+                                  <StatBar label="RÉS" value={def} max={statMax.defense} color="var(--color-cyan-glow)" display={formatNumber(def)} />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <TooltipCard
-                                  title="Défense"
+                                  title="Résistance"
                                   rows={[
                                     { label: "Base", value: formatNumber(unit.stats.defense) },
                                     { label: `Niveau ${data.level}`, value: `+${formatNumber((data.level - 1) * unitLevelBonus(unit))}` },
                                     ...(defenseTechBonus > 0 ? [{ label: "Blindage avancé (tech)", value: `+${defenseTechBonus} %`, tone: "mint" as const }] : []),
                                     { label: "Total", value: formatNumber(def), tone: "accent" },
+                                    { label: "Points de vie au combat", value: formatNumber(def * COMBAT_RULES.hpPerResistance) },
                                   ]}
                                 />
                               </TooltipContent>

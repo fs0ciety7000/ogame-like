@@ -166,7 +166,7 @@ function CombatCalculator({ attack, defense, shield }: { attack: number; defense
         {input("Bouclier du défenseur (%)", s, (v) => setS(Math.min(95, v)), 95)}
       </div>
       <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-        <Row label="Attaque après bouclier" value={n(out.r.attackerPower)} />
+        <Row label="Tours" value={`${out.r.rounds?.length ?? 0}${out.r.retreated ? " (retraite)" : ""}`} />
         <Row label="Issue" value={outcome} />
         <Row label="Pertes de l'attaquant" value={pct(out.r.attackerLossPercent, 1)} />
         <Row label="Pertes du défenseur" value={pct(out.r.defenderLossPercent, 1)} hint={`dont ${pct(COMBAT_RULES.defenseRebuildPct)} des défenses reconstruites`} />
@@ -274,11 +274,12 @@ après une ascension : entretien offert pendant ${ASCENSION_RULES.upkeepFreeDays
         <Formula>
           {`stat d'une unité = (base + (niveau − 1) × gain par niveau) × (1 + technologies)
 attaque d'une flotte = Σ ATK × nombre
-défense de la base = (Σ (ATK + DEF) des défenses + Σ (ATK + DEF) des vaisseaux à quai × ${pct(COMBAT_RULES.homeFleetDefenseFactor)})
+points de vie d'une unité = RÉS × ${COMBAT_RULES.hpPerResistance}
+défense de la base = (Σ (ATK + RÉS) des défenses + Σ (ATK + RÉS) des vaisseaux à quai × ${pct(COMBAT_RULES.homeFleetDefenseFactor)})
                      × (1 + ${pct(COMBAT_RULES.homeDefenseBonus)} à domicile) × (1 + bonus de défense)
-garnisons alliées : (ATK + DEF) × 50 % en plus`}
+garnisons alliées : (ATK + RÉS) × 50 % en plus`}
         </Formula>
-        <Table head={["Unité", "Type", "ATK", "DEF", "Par niveau", "Places", "Entretien / h"]} rows={unitRows} />
+        <Table head={["Unité", "Type", "ATK", "RÉS", "Par niveau", "Places", "Entretien / h"]} rows={unitRows} />
         {p && (
           <Mine>
             <Row label="Attaque de toute ta flotte" value={n(attack * (1 + mods.attack))} hint={mods.attack ? `bonus d'attaque +${pct(mods.attack, 1)} compris` : undefined} />
@@ -289,13 +290,13 @@ garnisons alliées : (ATK + DEF) × 50 % en plus`}
         )}
       </Block>
 
-      <Block id="combat" title="Combat" icon={Crosshair} intro="Un seul échange : la puissance la plus forte gagne. L'écart entre les deux décide des pertes.">
+      <Block id="combat" title="Combat" icon={Crosshair} intro="Le combat se joue en tours. À chaque tour, les deux camps tirent en même temps : les dégâts retirent des points de vie, répartis entre les types d'unités.">
         <Formula>
-          {`attaque engagée = attaque de la flotte × formation × (1 + bonus d'attaque) × (1 − bouclier adverse)
-écart = |attaque − défense| ÷ (attaque + défense)
-pertes du vainqueur = 30 % × (1 − écart), entre 5 % et 30 %
-pertes du vaincu    = 30 % + 40 % × écart, entre 30 % et 70 %
-plafond : un camp ne détruit pas plus que sa propre puissance
+          {`dégâts par tour = Σ ATK × nombre d'unités encore debout × formation × (1 + bonus d'attaque)
+dégâts reçus par la défense × (1 − bouclier) · vaisseaux à quai engagés à ${pct(COMBAT_RULES.homeFleetDefenseFactor)} (riposte ${pct(COMBAT_RULES.riposteHomeFleet)}, bunker 0 %)
+${COMBAT_RULES.maxRounds} tours au plus · l'attaquant décroche après ${pct(COMBAT_RULES.retreatAt)} de ses points de vie perdus (${pct(COMBAT_RULES.cautiousRetreatAt)} en formation prudente)
+victoire de l'attaquant : défenseur sous ${pct(COMBAT_RULES.attackerWinBelow)} de ses points de vie, ou ${pct(COMBAT_RULES.timeoutWinMargin)} d'avance au dernier tour
+pertes = unités détruites (points de vie perdus) · ennemis PNJ : une flotte de même composition à la puissance annoncée
 défenses détruites : ${pct(COMBAT_RULES.defenseRebuildPct)} reconstruites gratuitement · vaisseaux : Atelier de réparation`}
         </Formula>
         <Formula>

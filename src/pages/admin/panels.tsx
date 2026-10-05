@@ -132,7 +132,7 @@ export function RulesPanel() {
             value={rules.combat.homeFleetDefenseFactor}
             min={0}
             step={0.05}
-            hint="Ils subissent la même part des pertes. 0 = seules les défenses combattent."
+            hint="Part engagée (et exposée aux tirs). 0 = seules les défenses combattent."
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, homeFleetDefenseFactor: v ?? 0 } }))}
           />
           <NumberField
@@ -155,6 +155,59 @@ export function RulesPanel() {
             min={0}
             step={0.05}
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, defenseRebuildPct: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Combat en tours (5.18)">
+          <NumberField
+            label="Points de vie par point de résistance"
+            value={rules.combat.hpPerResistance}
+            min={0}
+            step={1}
+            hint="PV d'une unité = RÉS × cette valeur."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, hpPerResistance: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Nombre de tours au plus"
+            value={rules.combat.maxRounds}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, maxRounds: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Retraite de l'attaquant (0,5 = après 50 % de PV perdus)"
+            value={rules.combat.retreatAt}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, retreatAt: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Retraite en formation prudente (0,3 = 30 %)"
+            value={rules.combat.cautiousRetreatAt}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, cautiousRetreatAt: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Victoire de l'attaquant : défenseur sous (0,2 = 20 % de PV)"
+            value={rules.combat.attackerWinBelow}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, attackerWinBelow: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Dernier tour : avance de PV suffisante pour l'attaquant (0,3 = 30 points)"
+            value={rules.combat.timeoutWinMargin}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, timeoutWinMargin: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Ennemis PNJ : PV relatifs à une flotte de même puissance"
+            value={rules.combat.pveHpFactor}
+            min={0}
+            step={0.05}
+            hint="Primes, repaires, raids, embuscades."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, pveHpFactor: v ?? 0 } }))}
           />
         </Section>
         <Section title="Formations et postures">

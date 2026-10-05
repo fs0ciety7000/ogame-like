@@ -8,7 +8,7 @@ import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings, BUILDINGS, effectiveBuildingLevel, getRepairPercent, getStorageCapacity } from "@/game/buildings";
 import { bumpStat, recordThreat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, homeDefensePower, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { combatLogOf, computeFullPower, getShieldPercent, homeDefensePower, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { COMMON_RESOURCES, protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
 import { applyXpDelta } from "@/game/seasons";
@@ -818,6 +818,7 @@ export function resolvePirateRaid(
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: {},
     attackerRecovered: {},
@@ -935,6 +936,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,
