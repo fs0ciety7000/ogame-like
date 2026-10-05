@@ -20527,7 +20527,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.15.13" : "dev";
+var LOGIC_VERSION = true ? "5.15.14" : "dev";
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {
