@@ -1,4 +1,6 @@
 import { getShieldPercent, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { workshopState } from "@/game/workshop";
 import { getRepairPercent } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
@@ -86,7 +88,7 @@ function buildingsFromReport(levels: Record<string, number> | undefined): Buildi
 
 /** Contre un joueur, d'après le dernier rapport d'espionnage. */
 export function simulateAgainstReport(
-  attacker: Pick<PlayerState, "units" | "techLevels" | "buildings">,
+  attacker: Pick<PlayerState, "units" | "techLevels" | "buildings" | "workshop">,
   fleet: Record<string, number>,
   report: Pick<SpyReport, "tier" | "data">,
   lootMultiplier = 1,
@@ -126,6 +128,8 @@ export function simulateAgainstReport(
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
     attackerUnits: attacker.units,
+    // 5.20 : coques abîmées de ta flotte.
+    attackerHull: workshopState(attacker).hull,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: getRepairPercent(attacker.buildings),
     fleet: cleanFleet(fleet),
@@ -141,22 +145,32 @@ export function simulateAgainstReport(
   return outcome(combat, notes);
 }
 
-/** Assaut d'un repaire de faction (puissance du repaire calculée comme le serveur). */
-export function simulateLair(player: PlayerState, fleet: Record<string, number>, faction: FactionDef, formation?: string): SimOutcome {
+/**
+ * 5.20 : combat contre un ennemi PNJ (prime, repaire) joué comme le serveur le jouera : formation,
+ * Batterie de siège, Traqueurs Kesh, bonus d'attaque, Atelier et coques abîmées compris.
+ */
+export function simulatePveFight(player: PlayerState, fleetIn: Record<string, number>, enemyPower: number, formation?: string): CombatResult {
+  const fleet = cleanFleet(fleetIn);
   const fx = formationEffects(formation);
-  const combat = resolveCombat({
+  return resolveCombat({
     ...fx,
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch),
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
-    attackerRepairPct: getRepairPercent(player.buildings),
-    fleet: cleanFleet(fleet),
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
+    fleet,
     defenderUnits: {},
     defenderTechLevels: {},
     defenderRepairPct: 0,
     defenderResources: {},
-    defenderPowerOverride: lairPower(faction, player),
+    defenderPowerOverride: Math.max(1, enemyPower),
   });
+}
+
+/** Assaut d'un repaire de faction (puissance du repaire calculée comme le serveur). */
+export function simulateLair(player: PlayerState, fleet: Record<string, number>, faction: FactionDef, formation?: string): SimOutcome {
+  const combat = simulatePveFight(player, fleet, lairPower(faction, player), formation);
   const res = outcome(combat, [], false);
   res.attackerXp = combat.outcome === "attacker_win" ? faction.lair.xp : 0;
   return res;

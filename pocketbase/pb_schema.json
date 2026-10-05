@@ -372,6 +372,13 @@
         "required": false,
         "maxSize": 20000,
         "presentable": false
+      },
+      {
+        "name": "workshop",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000,
+        "presentable": false
       }
     ],
     "indexes": [

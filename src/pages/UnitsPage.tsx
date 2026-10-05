@@ -17,7 +17,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
-import { hangarUsed } from "@/game/actions";
+import { hangarUsed, withWorkshop } from "@/game/actions";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
@@ -55,8 +55,9 @@ export function UnitsPage() {
   // Places occupées dans le hangar : unités construites + unités en file
   // (déjà réservées, même calcul que enqueueUnitBuild côté service).
   // v3.9.1 : les vaisseaux en mission comptent aussi (ils reviendront).
-  const built = (category: "attack" | "defense") => hangarUsed(player.units, away, category);
+  const built = (category: "attack" | "defense") => hangarUsed(player.units, withWorkshop(away, player), category);
   const awaySpace = (category: "attack" | "defense") => hangarUsed({}, away, category);
+  const repairSpace = (category: "attack" | "defense") => hangarUsed({}, withWorkshop({}, player), category);
   const reserved = (category: "attack" | "defense") =>
     queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
 
@@ -125,6 +126,7 @@ export function UnitsPage() {
                   {formatNumber(b + r)} / {formatNumber(cap)} places
                   {r > 0 && <span className="text-mint-glow"> (dont {formatNumber(r)} en file)</span>}
                   {awaySpace(cat) > 0 && <span className="text-gold-glow"> (dont {formatNumber(awaySpace(cat))} en vol)</span>}
+                  {repairSpace(cat) > 0 && <span className="text-ember-glow"> (dont {formatNumber(repairSpace(cat))} à l'Atelier)</span>}
                 </p>
               </div>
             </Card>
