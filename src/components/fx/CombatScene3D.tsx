@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { publishSceneRound, useReplaySync } from "@/store/replaySyncStore";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import gsap from "gsap";
 import { RotateCcw } from "lucide-react";
 import { findUnit } from "@/game/units";
-import { assetUrl } from "@/lib/assets";
+import { loadModels, themeColor, type ModelId } from "@/components/fx/scene3d";
 import { unitClasses } from "@/game/unitClasses";
 import { cn } from "@/lib/utils";
 import type { CombatLog, CombatOutcome } from "@/types/game";
@@ -33,19 +34,6 @@ export interface CombatScene3DProps {
   log?: CombatLog;
   /** WebGL indisponible : l'appelant affiche le replay 2D. */
   onUnsupported?: () => void;
-}
-
-/** Couleur d'un jeton CSS du thème (oklch, color-mix…) ramenée en RVB via un pixel de canvas. */
-function themeColor(token: string, fallback: string): THREE.Color {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(token).trim() || fallback;
-  const c = document.createElement("canvas");
-  c.width = c.height = 1;
-  const ctx = c.getContext("2d");
-  if (!ctx) return new THREE.Color(0.4, 0.8, 1);
-  ctx.fillStyle = raw;
-  ctx.fillRect(0, 0, 1, 1);
-  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-  return new THREE.Color(r / 255, g / 255, b / 255);
 }
 
 /* ---------- géométries low-poly (pointe vers +x) ---------- */
@@ -137,7 +125,6 @@ const SCALE: Record<Kind, number> = { light: 0.75, medium: 0.9, heavy: 1, statio
 
 /* ---------- modèles low-poly (poly.pizza, voir public/assets/models/ships/CREDITS.md) ---------- */
 
-type ModelId = "quaternius" | "mastjie";
 /** Modèle par silhouette et longueur à l'écran (la tourelle procédurale ne sert que si le modèle manque). */
 const MODEL_OF: Partial<Record<Kind, { id: ModelId; length: number }>> = {
   light: { id: "quaternius", length: 2.2 },
@@ -146,82 +133,6 @@ const MODEL_OF: Partial<Record<Kind, { id: ModelId; length: number }>> = {
   // Défenses : mêmes modèles des deux côtés (déjà en position, sans arrivée en distorsion).
   station: { id: "mastjie", length: 2.4 },
 };
-/** Axe avant connu du modèle ; « auto » : détection (axe le plus long, extrémité la plus étroite).
- *  mastjie est un chasseur à cockpit sphérique et ailes hexagonales : son axe le plus long est la
- *  hauteur des ailes, le hublot regarde vers +z. */
-const MODEL_FORWARD: Record<ModelId, "auto" | "+z"> = { quaternius: "auto", mastjie: "+z" };
-
-let modelsPromise: Promise<Partial<Record<ModelId, THREE.Object3D>>> | null = null;
-
-/** Charge les deux modèles une fois (4 s au plus chacun) ; un modèle absent laisse la silhouette procédurale. */
-function loadModels(): Promise<Partial<Record<ModelId, THREE.Object3D>>> {
-  modelsPromise ??= (async () => {
-    const out: Partial<Record<ModelId, THREE.Object3D>> = {};
-    try {
-      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
-      const within = <T,>(p: Promise<T>) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), 4000))]).catch(() => null);
-      const [m, q] = await Promise.all([
-        within(new GLTFLoader().loadAsync(assetUrl("/assets/models/ships/mastjie.glb")).then((g) => g.scene)),
-        within(new GLTFLoader().loadAsync(assetUrl("/assets/models/ships/quaternius.glb")).then((g) => g.scene)),
-      ]);
-      if (m) out.mastjie = normalizeModel(m, MODEL_FORWARD.mastjie);
-      if (q) out.quaternius = normalizeModel(q, MODEL_FORWARD.quaternius);
-    } catch {
-      /* modèles indisponibles : silhouettes procédurales */
-    }
-    return out;
-  })();
-  return modelsPromise;
-}
-
-/**
- * Centre le modèle, oriente la proue vers +x et ramène sa longueur à 1.
- * La proue est cherchée sans connaître le modèle : axe le plus long, et l'extrémité la plus
- * étroite des deux (les réacteurs et les ailes élargissent la poupe).
- */
-function normalizeModel(src: THREE.Object3D, forward: "auto" | "+z" = "auto"): THREE.Object3D {
-  const inner = src.clone(true);
-  inner.updateMatrixWorld(true);
-  const pts: THREE.Vector3[] = [];
-  inner.traverse((n) => {
-    const m = n as THREE.Mesh;
-    const pos = m.isMesh ? (m.geometry.getAttribute("position") as THREE.BufferAttribute | undefined) : undefined;
-    if (!pos) return;
-    const step = Math.max(1, Math.floor(pos.count / 2000));
-    for (let i = 0; i < pos.count; i += step) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld));
-  });
-  const box = new THREE.Box3().setFromPoints(pts.length ? pts : [new THREE.Vector3()]);
-  const size = box.getSize(new THREE.Vector3());
-  const axes = ["x", "y", "z"] as const;
-  const a = axes.reduce((best, k) => (size[k] > size[best] ? k : best), "x" as (typeof axes)[number]);
-  const others = axes.filter((k) => k !== a);
-  const spread = (lo: number, hi: number) => {
-    const slab = pts.filter((p) => p[a] >= lo && p[a] <= hi);
-    if (!slab.length) return 0;
-    return others.reduce((sum, k) => sum + Math.max(...slab.map((p) => p[k])) - Math.min(...slab.map((p) => p[k])), 0);
-  };
-  const len = forward === "+z" ? Math.max(size.x, size.y, size.z) : size[a];
-  const nearMax = spread(box.max[a] - len * 0.2, box.max[a]);
-  const nearMin = spread(box.min[a], box.min[a] + len * 0.2);
-  const nose = new THREE.Vector3();
-  if (forward === "+z") nose.set(0, 0, 1);
-  else nose[a] = nearMax <= nearMin ? 1 : -1;
-  // Rotation autour de y quand c'est possible (le haut du modèle reste en haut).
-  const q = nose.x === 0 && nose.y === 0 ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), nose.z > 0 ? Math.PI / 2 : -Math.PI / 2) : new THREE.Quaternion().setFromUnitVectors(nose, new THREE.Vector3(1, 0, 0));
-  const pivot = new THREE.Group();
-  pivot.add(inner);
-  pivot.quaternion.copy(q);
-  pivot.updateMatrixWorld(true);
-  const centered = new THREE.Box3().setFromObject(pivot);
-  const center = centered.getCenter(new THREE.Vector3());
-  const wrap = new THREE.Group();
-  wrap.add(pivot);
-  pivot.position.sub(center);
-  wrap.scale.setScalar(1 / Math.max(len, 1e-6));
-  const root = new THREE.Group();
-  root.add(wrap);
-  return root;
-}
 
 interface Ship {
   mesh: THREE.Object3D;
@@ -234,6 +145,14 @@ interface Ship {
 export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentLossPercent, outcome, perspective, log, onUnsupported }: CombatScene3DProps) {
   const host = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(0);
+  // 5.23 : tour demandé depuis le rapport : la scène est rejouée jusqu'à ce tour.
+  const seekRound = useRef(0);
+  const reportTick = useReplaySync((st) => (st.from === "report" && st.log === log ? st.tick : 0));
+  useEffect(() => {
+    if (!reportTick) return;
+    seekRound.current = useReplaySync.getState().round;
+    setRun((n) => n + 1);
+  }, [reportTick]);
   const [hp, setHp] = useState<[number, number]>([1, 1]);
   const [ended, setEnded] = useState(false);
   const iAttack = perspective === "attacker";
@@ -508,7 +427,9 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
       while (myDone < Math.min(myKilled[k], myOrder.length)) explode(myOrder[myDone++], end + rand() * 0.25);
       while (theirDone < Math.min(theirKilled[k], theirOrder.length)) explode(theirOrder[theirDone++], end + rand() * 0.25);
       tl.call(() => setHp([myHp[k], theirHp[k]]), undefined, end + 0.2);
+      tl.call(() => publishSceneRound(log, k + 1), undefined, end + 0.2);
     });
+    tl.call(() => publishSceneRound(log, 0), undefined, 0);
     const finish = START + rounds.length * ROUND + 0.4;
     // Retraite : les survivants de l'attaquant font demi-tour et filent.
     if (log?.retreated) {
@@ -522,6 +443,12 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
         });
     }
     tl.call(() => setEnded(true), undefined, finish + (log?.retreated ? 1.6 : 0.3));
+    // 5.23 : reprise au tour choisi dans le rapport (les tours précédents sont joués instantanément).
+    if (seekRound.current > 0) {
+      const k = Math.min(rounds.length, seekRound.current);
+      seekRound.current = 0;
+      tl.seek(START + (k - 1) * ROUND + ROUND * 0.7 + 0.3, false);
+    }
 
     // Rendu : léger roulis des coques, caméra en orbite lente.
     let raf = 0;
@@ -578,7 +505,10 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
       <span className="pointer-events-none absolute left-3 top-2 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-glow">Toi</span>
       <span className="pointer-events-none absolute right-3 top-2 font-mono text-[10px] uppercase tracking-[0.2em] text-danger-glow">Adversaire</span>
       {ended && <p className={cn("hud-title pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-3xl tracking-[0.3em]", bannerTone)}>{banner}</p>}
-      <button type="button" onClick={() => setRun((n) => n + 1)} className="absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em] text-slate-400 hover:text-cyan-glow">
+      <button type="button" onClick={() => {
+          seekRound.current = 0;
+          setRun((n) => n + 1);
+        }} className="absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em] text-slate-400 hover:text-cyan-glow">
         <RotateCcw className="h-3 w-3" /> Rejouer
       </button>
       <div className="grid grid-cols-2 gap-3 px-3 pb-1">

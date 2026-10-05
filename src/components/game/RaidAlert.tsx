@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, Orbit, Wind, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
@@ -25,6 +25,22 @@ function readDismissed(): string[] {
   } catch {
     return [];
   }
+}
+
+/* 5.23 : mini-scène 3D de la flotte en approche (chargée à la demande, absente sans WebGL ou animations réduites). */
+const IncomingThreat3D = lazy(() => import("@/components/fx/IncomingThreat3D"));
+
+function Incoming3D({ ships, arriveAtMs }: { ships: number; arriveAtMs: number }) {
+  const still = useReducedMotion() ?? false;
+  const [off, setOff] = useState(false);
+  if (still || off) return null;
+  return (
+    <Suspense fallback={<div className="mt-4 h-36 animate-pulse border border-danger-glow/15 bg-space-950/60" />}>
+      <div className="mt-4">
+        <IncomingThreat3D ships={Math.log2(1 + ships) * 3} arriveAtMs={arriveAtMs} windowMs={RAID_ALERT_MS} onUnsupported={() => setOff(true)} />
+      </div>
+    </Suspense>
+  );
 }
 
 export function RaidAlert() {
@@ -79,6 +95,7 @@ export function RaidAlert() {
               </p>
               <p className="hud-title mt-3 font-mono text-6xl tabular-nums text-danger-glow drop-shadow-[0_0_18px_var(--color-danger-glow)]">{formatClock(left)}</p>
               {imminent.length > 1 && <p className="mt-1 text-xs text-slate-400">+ {imminent.length - 1} autre{imminent.length > 2 ? "s" : ""} flotte{imminent.length > 2 ? "s" : ""} dans les 5 minutes</p>}
+              <Incoming3D ships={Object.values(next.units ?? {}).reduce((a, b) => a + (b ?? 0), 0) || 6} arriveAtMs={next.arriveAtMs} />
               <ThreatGauge fleet={next} className="mt-4" />
               <p className="mt-3 text-xs text-slate-400">Mets ta flotte à l'abri en patrouille, ou prépare tes défenses.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">

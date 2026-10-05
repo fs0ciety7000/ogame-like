@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { requestRound, useReplaySync } from "@/store/replaySyncStore";
 import { motion, useReducedMotion } from "framer-motion";
 import { Crosshair, Pause, Play, RotateCcw, Shield, Skull, Sparkles, Swords, Wrench } from "lucide-react";
 import { HUD_TONE, HudCallout } from "@/components/ui/hud";
@@ -164,6 +165,13 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
   const n = log?.rounds.length ?? 0;
   const [round, setRound] = useState(still ? n : 0);
   const [playing, setPlaying] = useState(!still && n > 0);
+  // 5.23 : le replay 3D mène le curseur ; un tour choisi ici fait rejoindre la scène.
+  const sceneRound = useReplaySync((st) => (st.from === "scene" && st.log === log && log ? st.round : null));
+  useEffect(() => {
+    if (sceneRound === null) return;
+    setPlaying(false);
+    setRound(sceneRound);
+  }, [sceneRound]);
 
   useEffect(() => {
     if (!playing) return;
@@ -205,6 +213,7 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
               if (round >= n) {
                 setRound(0);
                 setPlaying(true);
+                requestRound(log, 0);
               } else setPlaying((p) => !p);
             }}
           >
@@ -220,6 +229,7 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
                 onClick={() => {
                   setPlaying(false);
                   setRound(k);
+                  requestRound(log, k);
                 }}
                 className={cn(
                   "h-7 min-w-0 flex-1 border font-mono text-[10px] transition-colors",
