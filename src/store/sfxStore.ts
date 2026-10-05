@@ -8,16 +8,20 @@ import { create } from "zustand";
 const STORAGE_KEY = "cosmic-empires:sfx-enabled";
 const VOLUMES_KEY = "cosmic-empires:sfx-volumes";
 
-export type SfxCategory = "ui" | "events" | "alerts" | "ambience";
+export type SfxCategory = "ui" | "events" | "combat" | "casino" | "notifications" | "alerts" | "ambience";
 
 export const SFX_CATEGORIES: { id: SfxCategory; label: string; description: string }[] = [
   { id: "ui", label: "Interface", description: "Clics, confirmations." },
-  { id: "events", label: "Évènements", description: "Fin de construction, victoire, défaite, palier, succès." },
+  { id: "events", label: "Évènements", description: "Fin de construction, palier, succès, saut de flotte." },
+  // 5.15.9 : catégories séparées pour pouvoir couper le casino ou les combats seuls.
+  { id: "combat", label: "Combats", description: "Victoire, défaite." },
+  { id: "casino", label: "Casino", description: "Levier, rouleaux, gains, gros lot." },
+  { id: "notifications", label: "Notifications", description: "Message reçu, notification de jeu." },
   { id: "alerts", label: "Alertes", description: "Attaque en approche, espion repéré, flotte hostile." },
   { id: "ambience", label: "Ambiance", description: "Nappe sonore continue, propre à chaque thème." },
 ];
 
-export const DEFAULT_VOLUMES: Record<SfxCategory, number> = { ui: 0.6, events: 0.8, alerts: 0.9, ambience: 0 };
+export const DEFAULT_VOLUMES: Record<SfxCategory, number> = { ui: 0.6, events: 0.8, combat: 0.8, casino: 0.7, notifications: 0.7, alerts: 0.9, ambience: 0 };
 
 function isTouchDevice(): boolean {
   try {

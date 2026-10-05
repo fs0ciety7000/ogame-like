@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
+import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { CoalitionCard } from "@/components/game/CoalitionCard";
 import type { Coalition } from "@/game/coalition";
 import { useNavigate } from "react-router-dom";
@@ -122,7 +124,11 @@ export function WarlordsPage() {
           <Loader2 className="h-4 w-4 animate-spin" /> Recherche des seigneurs…
         </p>
       ) : list.length === 0 ? (
-        <Card className="p-6 text-sm text-slate-400">Aucun seigneur de guerre dans le secteur pour l'instant.</Card>
+        <Card>
+          <EmptyState icon="👑" title="Secteur calme" action={<EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction>}>
+            Aucun seigneur de guerre dans le secteur pour l'instant.
+          </EmptyState>
+        </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {list.map((w, i) => {
@@ -190,8 +196,7 @@ export function WarlordsPage() {
       )}
 
       {history.length > 0 && (
-        <Card className="p-4">
-          <h2 className="hud-title mb-2 text-sm text-white">Dernières vendettas</h2>
+        <HudPanel icon={<Swords />} title="Dernières vendettas" tone="danger">
           <ul className="space-y-1 text-xs text-slate-400">
             {history
               .slice()
@@ -206,7 +211,7 @@ export function WarlordsPage() {
                 );
               })}
           </ul>
-        </Card>
+        </HudPanel>
       )}
 
       <Dialog open={!!vendetta} onOpenChange={(o) => !o && setVendetta(null)}>

@@ -36,6 +36,7 @@ const EmpireStatsPage = lazyPage(() => import("@/pages/EmpireStatsPage"), "Empir
 const FormulasPage = lazyPage(() => import("@/pages/FormulasPage"), "FormulasPage");
 const PublicFormulasPage = lazyPage(() => import("@/pages/PublicFormulasPage"), "PublicFormulasPage");
 const CodexPage = lazyPage(() => import("@/pages/CodexPage"), "CodexPage");
+const ChroniclesPage = lazyPage(() => import("@/pages/ChroniclesPage"), "ChroniclesPage");
 const AnnouncementsPage = lazyPage(() => import("@/pages/AnnouncementsPage"), "AnnouncementsPage");
 const ChangelogPage = lazyPage(() => import("@/pages/ChangelogPage"), "ChangelogPage");
 const AdminPage = lazyPage(() => import("@/pages/AdminPage"), "AdminPage");
@@ -132,6 +133,7 @@ export default function App() {
                 <Route path="nouveautes" element={<ChangelogPage />} />
                 <Route path="annonces" element={<AnnouncementsPage />} />
                 <Route path="codex" element={<CodexPage />} />
+                <Route path="chroniques" element={<ChroniclesPage />} />
                 <Route path="formules" element={<FormulasPage />} />
                 <Route path="signalements" element={<ReportsPage />} />
               </Route>

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ignoreShortcut } from "@/lib/shortcuts";
-import { HudChip } from "@/components/ui/hud";
+import { HudChip, EmptyState } from "@/components/ui/hud";
 import { CockpitViewport, type ViewportFleet } from "@/components/cockpit/CockpitViewport";
 import { useAgenda } from "@/components/game/AgendaCard";
 import { isHostile } from "@/components/game/FleetsPanel";
@@ -306,7 +307,7 @@ export function CockpitHub() {
           <div className="ck-pane" role="tabpanel" key={tab}>
             {tab === "fleets" &&
               (mine.length === 0 ? (
-                <p className="text-sm text-slate-400">Aucune flotte en vol.</p>
+                <EmptyState size="sm" icon="🛸" title="Aucune flotte en vol" action={<EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction>} />
               ) : (
                 mine.slice(0, 6).map((f) => {
                   const back = f.status === "returning";

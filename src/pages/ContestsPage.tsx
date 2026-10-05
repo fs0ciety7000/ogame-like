@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { SkeletonCards } from "@/components/ui/skeleton";
 import { useAdminStatus } from "@/services/adminService";
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export function ContestsPage() {
       <PageHeader eyebrow="Social" title="Concours" description="Le pot commun du serveur se gagne ici : progresse sur le critère du concours pendant sa durée, et les premiers se partagent la cagnotte." />
       <ServerPotCard />
       {state === null ? (
-        <p className="text-sm text-slate-500">Chargement…</p>
+        <SkeletonCards count={2} />
       ) : list.length === 0 ? (
         <Card>
           <EmptyState icon={<Trophy className="h-10 w-10 text-gold-glow" />} title="Aucun concours pour l'instant">

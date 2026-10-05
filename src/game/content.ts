@@ -20,6 +20,7 @@ import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES, validateBossSchedule } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
+import { STREAK_RULES } from "@/game/streak";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -61,6 +62,8 @@ export interface GameRules {
   /** 5.15 : boss d'alliance (structure, rythme, coût, récompenses, catalogue). */
   allianceBoss: typeof ALLIANCE_BOSS_RULES & { bosses: AllianceBossDef[] };
   wars: typeof WAR_RULES;
+  /** 5.15.9 : série de connexion (heures, jetons, Ambre du 6e jour, coffre du 7e). */
+  streak: typeof STREAK_RULES;
 }
 
 export interface GameContent {
@@ -108,6 +111,7 @@ const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
 const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+const DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
@@ -136,7 +140,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES },
   });
 }
 
@@ -203,6 +207,12 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       seasonBoss: { ...defaults.rules.seasonBoss, ...(overrides.rules?.seasonBoss ?? {}) },
       allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
+      streak: (() => {
+        const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
+        const d = defaults.rules.streak;
+        const hours = Array.isArray(o.hours) && o.hours.length === d.hours.length && o.hours.every((h) => Number.isFinite(h) && h >= 0) ? [...o.hours] : [...d.hours];
+        return { ...d, ...o, hours, chest: { ...d.chest, ...(o.chest ?? {}) } };
+      })(),
     },
   };
   setBuildings(content.buildings);
@@ -251,6 +261,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
+  Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   current = content;
   return content;
 }
@@ -275,6 +286,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   seasonBoss: "Boss de saison",
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
+  streak: "Série de connexion",
 };
 
 /**
@@ -317,6 +329,15 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (sbr.flightMinutes !== undefined && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
+  // 5.15.9 : série de connexion (7 jours, bornes du coffre dans l'ordre).
+  const st = merged.streak;
+  if (st) {
+    if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("Série de connexion : 7 durées de production positives (jours 1 à 7).");
+    for (const [key, label] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]] as const) {
+      const r = st.chest?.[key];
+      if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`Série de connexion : coffre, ${label} : minimum ≤ maximum, positifs.`);
+    }
+  }
   return errors;
 }
 

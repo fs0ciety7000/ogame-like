@@ -7,6 +7,8 @@ import type { PlayerState } from "@/types/game";
 ===================================================== */
 
 export interface PlayerStats {
+  /** 5.15.11 : catégories du Codex dont la récompense a été reçue. */
+  codexClaimed?: string[];
   missions?: number;
   /** Plus grand nombre de missions terminées en une journée. */
   bestMissionDay?: number;

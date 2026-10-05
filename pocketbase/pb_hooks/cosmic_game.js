@@ -178,6 +178,7 @@ __export(hooksEntry_exports, {
   bossMonthOf: () => bossMonthOf,
   bossTokens: () => bossTokens,
   bossWindows: () => bossWindows,
+  bossesFoughtBy: () => bossesFoughtBy,
   bountyIdOf: () => bountyIdOf,
   breakPact: () => breakPact,
   broadcastTargets: () => broadcastTargets,
@@ -209,6 +210,7 @@ __export(hooksEntry_exports, {
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   claimChallengeReward: () => claimChallengeReward,
+  claimCodexCategory: () => claimCodexCategory,
   claimDailyTokens: () => claimDailyTokens,
   cleanNewPseudo: () => cleanNewPseudo,
   cleanPasskeyName: () => cleanPasskeyName,
@@ -8818,6 +8820,7 @@ function endingReminderDue(state, now) {
 }
 
 // src/game/chronicles.ts
+var DEFAULT_CHRONICLE_BONUS = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
 var L = (speaker, text) => ({ speaker, text });
 var DEFAULT_CHRONICLES = {
   months: [
@@ -9105,16 +9108,38 @@ var DEFAULT_CHRONICLES = {
     }
   ]
 };
-var config = structuredClone(DEFAULT_CHRONICLES);
+var config = __spreadProps(__spreadValues({}, structuredClone(DEFAULT_CHRONICLES)), { bonus: structuredClone(DEFAULT_CHRONICLE_BONUS) });
+var num3 = (v, d) => Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : d;
+function normalizeChronicleBonus(b) {
+  var _a, _b, _c, _d;
+  const d = DEFAULT_CHRONICLE_BONUS;
+  return {
+    episode: { tokens: num3((_a = b == null ? void 0 : b.episode) == null ? void 0 : _a.tokens, d.episode.tokens), amber: num3((_b = b == null ? void 0 : b.episode) == null ? void 0 : _b.amber, d.episode.amber) },
+    chapter: { tokens: num3((_c = b == null ? void 0 : b.chapter) == null ? void 0 : _c.tokens, d.chapter.tokens), amber: num3((_d = b == null ? void 0 : b.chapter) == null ? void 0 : _d.amber, d.chapter.amber) }
+  };
+}
 function setChronicles(next) {
-  config = { months: Array.isArray(next == null ? void 0 : next.months) && next.months.length > 0 ? structuredClone(next.months) : structuredClone(DEFAULT_CHRONICLES.months) };
+  config = {
+    months: Array.isArray(next == null ? void 0 : next.months) && next.months.length > 0 ? structuredClone(next.months) : structuredClone(DEFAULT_CHRONICLES.months),
+    bonus: normalizeChronicleBonus(next == null ? void 0 : next.bonus)
+  };
   setMonthPasses(config.months);
+}
+function chronicleBonus() {
+  var _a;
+  return (_a = config.bonus) != null ? _a : normalizeChronicleBonus(null);
+}
+function bonusRewards(b) {
+  const out = [];
+  if (b.tokens > 0) out.push({ kind: "tokens", count: b.tokens });
+  if (b.amber > 0) out.push({ kind: "amber", amount: b.amber });
+  return out;
 }
 function chroniclesConfig() {
   return config;
 }
 function defaultChroniclesConfig() {
-  return structuredClone(DEFAULT_CHRONICLES);
+  return __spreadProps(__spreadValues({}, structuredClone(DEFAULT_CHRONICLES)), { bonus: structuredClone(DEFAULT_CHRONICLE_BONUS) });
 }
 function validateChronicles(cfg) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -9208,8 +9233,10 @@ function claimChronicle(player, episode, now, random = Math.random) {
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
   addPassPoints(player, "chronicle", now);
-  const gained = ((_a = e3.reward) != null ? _a : []).map((r) => grantPassReward(player, r, month2.id, now, random));
+  const bonus = chronicleBonus();
+  const gained = [...bonusRewards(bonus.episode), ...(_a = e3.reward) != null ? _a : []].map((r) => grantPassReward(player, r, month2.id, now, random));
   const chapter = month2.episodes.every((_, k) => st.claimed.includes(k));
+  if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month2.id, now, random)));
   if (chapter && month2.completion) {
     const after = chronicleState(player, now);
     if (!after.chapters.includes(month2.id)) after.chapters = [...after.chapters, month2.id];
@@ -14253,6 +14280,7 @@ var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
 var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14279,7 +14307,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14340,7 +14368,14 @@ function applyGameContent(overrides) {
       leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_P = (_O = overrides.rules) == null ? void 0 : _O.leviathan) != null ? _P : {}),
       seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {})
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
+      streak: (() => {
+        var _a2, _b2, _c2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
+        const d = defaults.rules.streak;
+        const hours2 = Array.isArray(o.hours) && o.hours.length === d.hours.length && o.hours.every((h) => Number.isFinite(h) && h >= 0) ? [...o.hours] : [...d.hours];
+        return __spreadProps(__spreadValues(__spreadValues({}, d), o), { hours: hours2, chest: __spreadValues(__spreadValues({}, d.chest), (_c2 = o.chest) != null ? _c2 : {}) });
+      })()
     }
   };
   setBuildings(content.buildings);
@@ -14384,6 +14419,7 @@ function applyGameContent(overrides) {
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
+  Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   current = content;
   return content;
 }
@@ -14404,10 +14440,11 @@ var RULE_GROUP_LABELS = {
   leviathan: "L\xE9viathan",
   seasonBoss: "Boss de saison",
   allianceBoss: "Boss d'alliance",
-  wars: "Guerres"
+  wars: "Guerres",
+  streak: "S\xE9rie de connexion"
 };
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e;
+  var _a, _b, _c, _d, _e, _f;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -14440,6 +14477,14 @@ function validateRules(rules) {
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  const st = merged.streak;
+  if (st) {
+    if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
+    for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
+      const r = (_f = st.chest) == null ? void 0 : _f[key];
+      if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
+    }
+  }
   return errors;
 }
 function mergeRulesForCheck(rules) {
@@ -15494,27 +15539,85 @@ function publishGazette(state, issue, players) {
 
 // src/game/codex.ts
 var CODEX_TITLE = "Archiviste";
-function codexEntries(player, fought, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+var CODEX_CATEGORIES = [
+  { id: "factions", label: "Factions", hint: "D\xE9bloqu\xE9e au premier ultimatum re\xE7u." },
+  { id: "warlords", label: "Seigneurs", hint: "D\xE9bloqu\xE9 au premier combat contre lui." },
+  { id: "bosses", label: "Boss", hint: "Abattu avec toi, ou archiv\xE9 \xE0 la fin de son mois." },
+  { id: "units", label: "Unit\xE9s", hint: "D\xE9bloqu\xE9e une fois construite." },
+  { id: "chronicles", label: "Chroniques", hint: "D\xE9bloqu\xE9 \xE0 sa parution." },
+  // v5.14.2 : exploits rarissimes.
+  { id: "legends", label: "L\xE9gendes", hint: "D\xE9bloqu\xE9e par un exploit rarissime." }
+];
+function bossesFoughtBy(history, uid) {
+  var _a, _b;
+  const out = /* @__PURE__ */ new Set();
+  for (const e3 of history) if (((_b = (_a = e3.ranking) != null ? _a : e3.top) != null ? _b : []).some((r) => r.uid === uid)) out.add(e3.name);
+  return out;
+}
+var unitName = (id) => {
+  var _a, _b;
+  return (_b = (_a = UNITS.find((u) => u.id === id)) == null ? void 0 : _a.name) != null ? _b : id;
+};
+function codexEntries(player, fought, now, extra = {}) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  const bossesFought = (_a = extra.bossesFought) != null ? _a : /* @__PURE__ */ new Set();
   const out = [];
-  const threatened = new Set((_b = (_a = player.stats) == null ? void 0 : _a.threatenedBy) != null ? _b : []);
+  const threatened = new Set((_c = (_b = player.stats) == null ? void 0 : _b.threatenedBy) != null ? _c : []);
   for (const f of FACTIONS.filter((x) => x.enabled)) {
-    out.push({ id: `faction:${f.id}`, category: "factions", name: f.name, subtitle: `${f.leader} \xB7 ${f.enforcer}`, image: (_c = f.emblem) != null ? _c : f.art, text: f.story, unlocked: threatened.has(f.id), color: f.color });
+    out.push({
+      id: `faction:${f.id}`,
+      category: "factions",
+      name: f.name,
+      subtitle: `${f.leader} \xB7 ${f.enforcer}`,
+      image: (_d = f.emblem) != null ? _d : f.art,
+      text: f.story,
+      unlocked: threatened.has(f.id),
+      color: f.color,
+      facts: [
+        { label: "Chef", value: f.leader },
+        { label: "Bras arm\xE9", value: f.enforcer }
+      ]
+    });
   }
   for (const d of warlordsConfig().defs.filter((x) => x.enabled)) {
-    out.push({ id: `warlord:${d.id}`, category: "warlords", name: d.name, subtitle: "Seigneur de guerre", image: d.portrait, text: d.bio, unlocked: fought.has(d.id) });
+    out.push({
+      id: `warlord:${d.id}`,
+      category: "warlords",
+      name: d.name,
+      subtitle: "Seigneur de guerre",
+      image: d.portrait,
+      text: d.bio,
+      unlocked: fought.has(d.id),
+      facts: [
+        { label: "Temp\xE9rament", value: (_e = PERSONALITY_LABELS[d.personality]) != null ? _e : d.personality },
+        { label: "Puissance", value: (_f = TIER_LABELS2[d.tier]) != null ? _f : d.tier }
+      ]
+    });
   }
-  out.push({
-    id: "boss:leviathan",
-    category: "bosses",
-    name: "Le L\xE9viathan",
-    subtitle: "Boss mondial",
-    image: "/assets/leviathan/leviathan-portrait.webp",
-    text: "Une b\xEAte de la taille d'une lune qui remonte des abysses du secteur un week-end par mois. Tout le serveur frappe ensemble ; ceux qui frappent le plus fort repartent avec ses reliques.",
-    unlocked: ((_e = (_d = player.stats) == null ? void 0 : _d.leviathanKills) != null ? _e : 0) > 0
-  });
+  for (const b of WORLD_BOSSES.filter((x) => x.enabled !== false)) {
+    const leviathan = b.id === "leviathan";
+    out.push({
+      id: leviathan ? "boss:leviathan" : `worldboss:${b.id}`,
+      category: "bosses",
+      name: b.name,
+      subtitle: `Boss mondial \xB7 ${b.epithet}`,
+      image: leviathan ? "/assets/leviathan/leviathan-portrait.webp" : b.image,
+      text: b.story,
+      unlocked: bossesFought.has(b.name) || leviathan && ((_h = (_g = player.stats) == null ? void 0 : _g.leviathanKills) != null ? _h : 0) > 0,
+      color: b.accent,
+      facts: [
+        { label: "Phases", value: b.phases.map((p) => p.name).join(" \u2192 ") },
+        { label: "Structure", value: `\xD7${b.hpMult} (L\xE9viathan = \xD71)` },
+        { label: "Faiblesse en phase 3", value: b.weakness.map(unitName).join(", ") },
+        { label: "Titre du premier", value: b.title }
+      ]
+    });
+  }
+  for (const b of ALLIANCE_BOSSES) {
+    out.push({ id: `allianceboss:${b.id}`, category: "bosses", name: b.name, subtitle: "Boss d'alliance", image: b.image, text: b.lore, unlocked: bossesFought.has(b.name), facts: [{ label: "Affront\xE9", value: "en alliance, chaque semaine de boss" }] });
+  }
   const currentMonth = chronicleMonthId(now);
-  const emblems = new Set((_g = (_f = player.chronicle) == null ? void 0 : _f.emblems) != null ? _g : []);
+  const emblems = new Set((_j = (_i = player.chronicle) == null ? void 0 : _i.emblems) != null ? _j : []);
   for (const m of chroniclesConfig().months) {
     if (episodeUnlockMs(m.id, 0) > now) continue;
     out.push({ id: `boss:${m.id}`, category: "bosses", name: m.boss.name, subtitle: `Boss de la chronique \xAB ${m.title} \xBB`, image: m.boss.image, text: m.boss.lore, unlocked: emblems.has(m.id) || m.id < currentMonth });
@@ -15522,7 +15625,7 @@ function codexEntries(player, fought, now) {
       if (episodeUnlockMs(m.id, i) > now) return;
       out.push({ id: `chronicle:${m.id}:${i}`, category: "chronicles", name: e3.title, subtitle: `${m.title} \xB7 \xE9pisode ${i + 1}`, image: m.boss.emblem, text: e3.lines.map((l) => l.text).join("\n\n"), unlocked: true });
     });
-    for (const c of (_h = m.codex) != null ? _h : []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
+    for (const c of (_k = m.codex) != null ? _k : []) out.push({ id: `lore:${m.id}:${c.id}`, category: "chronicles", name: c.name, subtitle: c.subtitle, image: c.image, text: c.text, unlocked: true });
   }
   out.push({
     id: "legend:main_or",
@@ -15531,10 +15634,23 @@ function codexEntries(player, fought, now) {
     subtitle: "Casino orbital \xB7 gros lot 7-7-7",
     image: "/assets/casino/main-or.webp",
     text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
-    unlocked: Math.floor(Number((_i = player.casino) == null ? void 0 : _i.jackpots) || 0) > 0
+    unlocked: Math.floor(Number((_l = player.casino) == null ? void 0 : _l.jackpots) || 0) > 0
   });
   for (const u of UNITS) {
-    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte", image: u.image, text: u.description, unlocked: !!((_j = player.units) == null ? void 0 : _j[u.id]) });
+    out.push({
+      id: `unit:${u.id}`,
+      category: "units",
+      name: u.name,
+      subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte",
+      image: u.image,
+      text: u.description,
+      unlocked: !!((_m = player.units) == null ? void 0 : _m[u.id]),
+      facts: [
+        { label: "Attaque", value: String(u.stats.attaque) },
+        { label: "D\xE9fense", value: String(u.stats.defense) },
+        ...u.category === "defense" ? [] : [{ label: "Vitesse", value: String(u.stats.vitesse) }, { label: "Soute", value: String(u.stats.cargo) }]
+      ]
+    });
   }
   return out;
 }
@@ -15553,6 +15669,37 @@ function grantCodexTitle(player, entries) {
   if (((_a = player.titles) != null ? _a : []).some((t) => t.label === CODEX_TITLE)) return false;
   player.titles = [...(_b = player.titles) != null ? _b : [], { label: CODEX_TITLE, seasonId: "codex", rank: 1 }];
   return true;
+}
+var CODEX_CATEGORY_REWARDS = {
+  factions: { tokens: 5, amber: 25 },
+  warlords: { tokens: 8, amber: 40 },
+  bosses: { tokens: 10, amber: 50 },
+  units: { tokens: 5, amber: 25 },
+  chronicles: { tokens: 0, amber: 0 },
+  legends: { tokens: 10, amber: 60 }
+};
+function codexClaimedCategories(player) {
+  var _a;
+  const raw = (_a = player.stats) == null ? void 0 : _a.codexClaimed;
+  return Array.isArray(raw) ? raw.map(String) : [];
+}
+function codexCategoryState(player, entries, category) {
+  const list = entries.filter((e3) => e3.category === category);
+  const unlocked = list.filter((e3) => e3.unlocked).length;
+  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: CODEX_CATEGORY_REWARDS[category] };
+}
+function claimCodexCategory(player, entries, category, now) {
+  var _a;
+  const id = String(category);
+  if (!CODEX_CATEGORIES.some((c) => c.id === id)) throw new GameActionError("Cat\xE9gorie inconnue.");
+  const st = codexCategoryState(player, entries, id);
+  if (st.reward.tokens <= 0 && st.reward.amber <= 0) throw new GameActionError("Pas de r\xE9compense pour cette cat\xE9gorie.");
+  if (st.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!st.complete) throw new GameActionError(`Cat\xE9gorie incompl\xE8te (${st.unlocked} / ${st.total}).`);
+  if (st.reward.tokens > 0) grantPassReward(player, { kind: "tokens", count: st.reward.tokens }, "codex", now);
+  if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now);
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { codexClaimed: [...codexClaimedCategories(player), id] });
+  return st.reward;
 }
 
 // src/game/allianceDaily.ts
@@ -17108,8 +17255,8 @@ function _abytes2(value2, length, title = "") {
   }
   return value2;
 }
-function numberToHexUnpadded(num4) {
-  const hex = num4.toString(16);
+function numberToHexUnpadded(num5) {
+  const hex = num5.toString(16);
   return hex.length & 1 ? "0" + hex : hex;
 }
 function hexToNumber(hex) {
@@ -17407,15 +17554,15 @@ function validateField(field) {
   _validateObject(field, opts);
   return field;
 }
-function FpPow(Fp, num4, power) {
+function FpPow(Fp, num5, power) {
   if (power < _0n2)
     throw new Error("invalid exponent, negatives unsupported");
   if (power === _0n2)
     return Fp.ONE;
   if (power === _1n2)
-    return num4;
+    return num5;
   let p = Fp.ONE;
-  let d = num4;
+  let d = num5;
   while (power > _0n2) {
     if (power & _1n2)
       p = Fp.mul(p, d);
@@ -17426,18 +17573,18 @@ function FpPow(Fp, num4, power) {
 }
 function FpInvertBatch(Fp, nums, passZero = false) {
   const inverted = new Array(nums.length).fill(passZero ? Fp.ZERO : void 0);
-  const multipliedAcc = nums.reduce((acc, num4, i) => {
-    if (Fp.is0(num4))
+  const multipliedAcc = nums.reduce((acc, num5, i) => {
+    if (Fp.is0(num5))
       return acc;
     inverted[i] = acc;
-    return Fp.mul(acc, num4);
+    return Fp.mul(acc, num5);
   }, Fp.ONE);
   const invertedAcc = Fp.inv(multipliedAcc);
-  nums.reduceRight((acc, num4, i) => {
-    if (Fp.is0(num4))
+  nums.reduceRight((acc, num5, i) => {
+    if (Fp.is0(num5))
       return acc;
     inverted[i] = Fp.mul(acc, inverted[i]);
-    return Fp.mul(acc, num4);
+    return Fp.mul(acc, num5);
   }, invertedAcc);
   return inverted;
 }
@@ -17497,36 +17644,36 @@ function Field(ORDER, bitLenOrOpts, isLE = false, opts = {}) {
     ZERO: _0n2,
     ONE: _1n2,
     allowedLengths,
-    create: (num4) => mod(num4, ORDER),
-    isValid: (num4) => {
-      if (typeof num4 !== "bigint")
-        throw new Error("invalid field element: expected bigint, got " + typeof num4);
-      return _0n2 <= num4 && num4 < ORDER;
+    create: (num5) => mod(num5, ORDER),
+    isValid: (num5) => {
+      if (typeof num5 !== "bigint")
+        throw new Error("invalid field element: expected bigint, got " + typeof num5);
+      return _0n2 <= num5 && num5 < ORDER;
     },
-    is0: (num4) => num4 === _0n2,
+    is0: (num5) => num5 === _0n2,
     // is valid and invertible
-    isValidNot0: (num4) => !f.is0(num4) && f.isValid(num4),
-    isOdd: (num4) => (num4 & _1n2) === _1n2,
-    neg: (num4) => mod(-num4, ORDER),
+    isValidNot0: (num5) => !f.is0(num5) && f.isValid(num5),
+    isOdd: (num5) => (num5 & _1n2) === _1n2,
+    neg: (num5) => mod(-num5, ORDER),
     eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num4) => mod(num4 * num4, ORDER),
+    sqr: (num5) => mod(num5 * num5, ORDER),
     add: (lhs, rhs) => mod(lhs + rhs, ORDER),
     sub: (lhs, rhs) => mod(lhs - rhs, ORDER),
     mul: (lhs, rhs) => mod(lhs * rhs, ORDER),
-    pow: (num4, power) => FpPow(f, num4, power),
+    pow: (num5, power) => FpPow(f, num5, power),
     div: (lhs, rhs) => mod(lhs * invert(rhs, ORDER), ORDER),
     // Same as above, but doesn't normalize
-    sqrN: (num4) => num4 * num4,
+    sqrN: (num5) => num5 * num5,
     addN: (lhs, rhs) => lhs + rhs,
     subN: (lhs, rhs) => lhs - rhs,
     mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num4) => invert(num4, ORDER),
+    inv: (num5) => invert(num5, ORDER),
     sqrt: _sqrt || ((n) => {
       if (!sqrtP)
         sqrtP = FpSqrt(ORDER);
       return sqrtP(f, n);
     }),
-    toBytes: (num4) => isLE ? numberToBytesLE(num4, BYTES) : numberToBytesBE(num4, BYTES),
+    toBytes: (num5) => isLE ? numberToBytesLE(num5, BYTES) : numberToBytesBE(num5, BYTES),
     fromBytes: (bytes, skipValidation = true) => {
       if (allowedLengths) {
         if (!allowedLengths.includes(bytes.length) || bytes.length > BYTES) {
@@ -17571,8 +17718,8 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   const minLen = getMinHashLength(fieldOrder);
   if (len < 16 || len < minLen || len > 1024)
     throw new Error("expected " + minLen + "-1024 bytes of input, got " + len);
-  const num4 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
-  const reduced = mod(num4, fieldOrder - _1n2) + _1n2;
+  const num5 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
+  const reduced = mod(num5, fieldOrder - _1n2) + _1n2;
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
@@ -18474,7 +18621,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
 }
 
 // node_modules/@noble/curves/esm/abstract/weierstrass.js
-var divNearest = (num4, den) => (num4 + (num4 >= 0 ? den : -den) / _2n2) / den;
+var divNearest = (num5, den) => (num5 + (num5 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
   const c1 = divNearest(b2 * k, n);
@@ -18574,11 +18721,11 @@ var DER = {
   // - add zero byte if exists
   // - if next byte doesn't have a flag, leading zero is not allowed (minimal encoding)
   _int: {
-    encode(num4) {
+    encode(num5) {
       const { Err: E2 } = DER;
-      if (num4 < _0n4)
+      if (num5 < _0n4)
         throw new E2("integer: negative integers are not allowed");
-      let hex = numberToHexUnpadded(num4);
+      let hex = numberToHexUnpadded(num5);
       if (Number.parseInt(hex[0], 16) & 8)
         hex = "00" + hex;
       if (hex.length & 1)
@@ -18621,20 +18768,20 @@ var _3n2 = BigInt(3);
 var _4n2 = BigInt(4);
 function _normFnElement(Fn, key) {
   const { BYTES: expected } = Fn;
-  let num4;
+  let num5;
   if (typeof key === "bigint") {
-    num4 = key;
+    num5 = key;
   } else {
     let bytes = ensureBytes("private key", key);
     try {
-      num4 = Fn.fromBytes(bytes);
+      num5 = Fn.fromBytes(bytes);
     } catch (error) {
       throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
     }
   }
-  if (!Fn.isValidNot0(num4))
+  if (!Fn.isValidNot0(num5))
     throw new Error("invalid private key: out of range [1..N-1]");
-  return num4;
+  return num5;
 }
 function weierstrassN(params, extraOpts = {}) {
   const validated = _createCurveFields("weierstrass", params, extraOpts);
@@ -19188,10 +19335,10 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
     const HALF = CURVE_ORDER >> _1n4;
     return number > HALF;
   }
-  function validateRS(title, num4) {
-    if (!Fn.isValidNot0(num4))
+  function validateRS(title, num5) {
+    if (!Fn.isValidNot0(num5))
       throw new Error(`invalid signature ${title}: out of range 1..Point.Fn.ORDER`);
-    return num4;
+    return num5;
   }
   function validateSigLength(bytes, format) {
     validateSigFormat(format);
@@ -19301,17 +19448,17 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
   const bits2int = ecdsaOpts.bits2int || function bits2int_def(bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
-    const num4 = bytesToNumberBE(bytes);
+    const num5 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - fnBits;
-    return delta > 0 ? num4 >> BigInt(delta) : num4;
+    return delta > 0 ? num5 >> BigInt(delta) : num5;
   };
   const bits2int_modN = ecdsaOpts.bits2int_modN || function bits2int_modN_def(bytes) {
     return Fn.create(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(fnBits);
-  function int2octets(num4) {
-    aInRange("num < 2^" + fnBits, num4, _0n4, ORDER_MASK);
-    return Fn.toBytes(num4);
+  function int2octets(num5) {
+    aInRange("num < 2^" + fnBits, num5, _0n4, ORDER_MASK);
+    return Fn.toBytes(num5);
   }
   function validateMsgAndHash(message, prehash) {
     _abytes2(message, void 0, "message");
@@ -19886,7 +20033,7 @@ var CONTEST_RULES = {
   /** Part du pot qu'un concours peut engager, au plus. */
   maxPotShare: 0.8
 };
-var num3 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+var num4 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeContests(raw) {
   const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
   return {
@@ -19897,14 +20044,14 @@ function normalizeContests(raw) {
         title: String((_a = c.title) != null ? _a : "").slice(0, 80),
         description: String((_b = c.description) != null ? _b : "").slice(0, 400),
         metric: c.metric,
-        startMs: num3(c.startMs),
-        endMs: num3(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num3(c.potShare))),
-        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num3(p))).slice(0, 10),
+        startMs: num4(c.startMs),
+        endMs: num4(c.endMs),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num4(c.potShare))),
+        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num4(p))).slice(0, 10),
         status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
         standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
-        updatedAtMs: num3(c.updatedAtMs)
+        updatedAtMs: num4(c.updatedAtMs)
       }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
     })
   };

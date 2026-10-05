@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { NotificationCard } from "@/components/game/NotificationCard";
 import { Building2, Gift, Loader2, ScrollText, Shield, Swords } from "lucide-react";
@@ -180,9 +181,7 @@ export function JournalPage() {
       ))}
 
       {loading && (
-        <p className="flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
-        </p>
+        <SkeletonList rows={6} />
       )}
       {!loading && page > 0 && page < totalPages && (
         <Button variant="outline" className="self-center" onClick={() => void loadPage(page + 1)}>

@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
+import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { CostPill, HudTag, StatTile } from "@/components/ui/hud";
+import { CostPill, HudTag, StatTile, EmptyState } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconSelect } from "@/components/ui/icon-select";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -131,7 +132,11 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
         <DialogTitle>{target.title}</DialogTitle>
         <p className="text-sm text-slate-400">{target.intro}</p>
         <div className="mt-3 flex flex-col gap-1.5">
-          {ids.length === 0 && <p className="text-sm text-slate-500">Aucun vaisseau de combat à quai.</p>}
+          {ids.length === 0 && (
+            <EmptyState size="sm" icon="⚔️" title="Aucun vaisseau de combat à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>}>
+              Rappelle ta flotte ou arme de nouveaux chasseurs.
+            </EmptyState>
+          )}
           {ids.map((id) => {
             const owned = player.units[id]?.count ?? 0;
             return (
@@ -322,8 +327,10 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
   const now = Date.now();
   if (!elite) {
     return (
-      <Card className="p-6 text-center text-sm text-slate-400">
-        <p>Aucune proie d'élite pour l'instant. L'Essaim en désigne une chaque lundi.</p>
+      <Card>
+        <EmptyState icon="🎯" title="Pas de proie d'élite" action={<EmptyAction to="/game/primes">Voir le tableau des primes</EmptyAction>}>
+          L'Essaim en désigne une chaque lundi.
+        </EmptyState>
       </Card>
     );
   }
@@ -402,10 +409,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
           </p>
         </div>
       </Card>
-      <Card className="flex flex-col gap-3 p-4">
-        <h2 className="hud-title flex items-center gap-2 text-sm">
-          <Trophy className="h-4 w-4 text-gold-glow" /> Meute de chasse
-        </h2>
+      <HudPanel icon={<Trophy />} title="Meute de chasse" tone="gold">
         {ranking.length === 0 && <p className="text-xs text-slate-500">Personne n'a encore frappé.</p>}
         <ol className="flex flex-col gap-1.5">
           {ranking.slice(0, 15).map((c, i) => (
@@ -421,7 +425,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
             </li>
           ))}
         </ol>
-      </Card>
+      </HudPanel>
     </div>
   );
 }
@@ -554,10 +558,9 @@ function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) 
     }
   };
   return (
-    <Card className="flex flex-col gap-3 p-4">
+    <HudPanel icon={<ArrowLeftRight />} title="Échange d'Ambre" tone="gold">
       <div>
-        <h3 className="hud-title text-sm text-white">Échange d'Ambre</h3>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="text-xs text-slate-400">
           1 <Amber /> = {BOUNTY_RULES.exchange.rarePerAmber} de chaque ressource rare. {BOUNTY_RULES.exchange.weeklyCap} Ambre par semaine au plus ; l'Ambre ne s'achète pas.
         </p>
       </div>
@@ -578,7 +581,7 @@ function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) 
         </Button>
         <span className="text-[11px] text-slate-500">Encore {left} cette semaine</span>
       </div>
-    </Card>
+    </HudPanel>
   );
 }
 

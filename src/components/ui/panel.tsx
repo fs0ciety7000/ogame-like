@@ -1,0 +1,66 @@
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import type { HudTone } from "@/components/ui/hud";
+import { cn } from "@/lib/utils";
+
+/* 5.15.9 : cadre de carte commun (docs/DESIGN.md) : titre en capitales mono
+   avec son icône, information clé à droite, contenu dessous. Né au casino,
+   utilisé aussi par Primes, Seigneurs, Hall of fame, Palmarès et Alliance. */
+
+const TITLE_TONE: Record<HudTone | "muted", string> = {
+  muted: "text-slate-500",
+  neutral: "text-slate-400",
+  accent: "text-cyan-glow",
+  mint: "text-mint-glow",
+  ember: "text-ember-glow",
+  danger: "text-danger-glow",
+  gold: "text-gold-glow",
+  violet: "text-violet-glow",
+};
+
+export function HudPanel({
+  icon,
+  title,
+  tone = "muted",
+  aside,
+  accent,
+  className,
+  children,
+}: {
+  icon?: ReactNode;
+  title: ReactNode;
+  tone?: HudTone | "muted";
+  /** Information clé ou actions, alignées à droite du titre. */
+  aside?: ReactNode;
+  /** Liseré doré en haut (carte mise en avant). */
+  accent?: boolean;
+  className?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Card className={cn("flex flex-col gap-3 p-4", accent && "border-t-2 border-t-gold-glow", className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className={cn("hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
+          {icon}
+          <span className="min-w-0">{title}</span>
+        </h2>
+        {aside && <div className="ml-auto flex flex-wrap items-center gap-2">{aside}</div>}
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+/** 5.15.9 : bouton d'action d'un état vide (une page où aller pour en sortir). */
+export function EmptyAction({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Button asChild size="sm" variant="ghost">
+      <Link to={to}>
+        {children} <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </Button>
+  );
+}

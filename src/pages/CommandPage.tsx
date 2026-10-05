@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { Anchor, BookOpen, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HudTag, StatTile } from "@/components/ui/hud";
+import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -480,7 +481,11 @@ function RelicsTab({ player }: { player: PlayerState }) {
             {st.items.length} / {RELIC_RULES.maxItems} · expéditions, proie d'élite, Léviathan
           </p>
         </div>
-        {sorted.length === 0 && <p className="text-sm text-slate-500">Aucune relique pour l'instant. Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.</p>}
+        {sorted.length === 0 && (
+          <EmptyState icon="🏺" title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
+            Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.
+          </EmptyState>
+        )}
         <div className="grid gap-2 md:grid-cols-2">
           {sorted.map((item) => {
             const t = findTemplate(item.template);

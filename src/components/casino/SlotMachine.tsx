@@ -121,12 +121,13 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
   }, []);
   // Dessus et dessous de la ligne : tirés au hasard à chaque tirage.
   const columns = useMemo(() => reels.map((c) => [randomSymbol(), c, randomSymbol()]), [reels]);
+  const tense = spinning && reels[0] === "seven" && reels[1] === "seven";
 
   return (
-    <div className={cn("slot-cabinet", spinning && "slot-cabinet-spinning", win === "jackpot" && "slot-cabinet-jackpot", win === "small" && "slot-cabinet-win")}>
+    <div className={cn("slot-cabinet", spinning && "slot-cabinet-spinning", tense && "slot-cabinet-tense", win === "jackpot" && "slot-cabinet-jackpot", win === "small" && "slot-cabinet-win")}>
       <div className="slot-lights" aria-hidden>
         {Array.from({ length: 22 }, (_, i) => (
-          <i key={i} style={{ animationDelay: `${(i % 2) * 0.35}s` }} />
+          <i key={i} style={{ animationDelay: `${(i % 2) * 0.35}s`, ["--i" as string]: i % 8 }} />
         ))}
       </div>
       <div className="slot-marquee">
@@ -168,7 +169,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
       </div>
       <div className="slot-lights slot-lights-bottom" aria-hidden>
         {Array.from({ length: 22 }, (_, i) => (
-          <i key={i} style={{ animationDelay: `${((i + 1) % 2) * 0.35}s` }} />
+          <i key={i} style={{ animationDelay: `${((i + 1) % 2) * 0.35}s`, ["--i" as string]: 7 - (i % 8) }} />
         ))}
       </div>
     </div>

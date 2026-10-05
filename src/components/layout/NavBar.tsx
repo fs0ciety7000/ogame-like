@@ -10,7 +10,7 @@ import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -132,6 +132,7 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "var(--color-gold-glow)",
     items: [
       { to: "/game/passe", label: "Passe", icon: Ticket },
+      { to: "/game/chroniques", label: "Chroniques", icon: Scroll },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
       { to: "/game/journal", label: "Journal", icon: ScrollText },
@@ -219,6 +220,12 @@ function useBadge(to: string): number {
   return useBadges()(to);
 }
 
+/** 5.15.9 : pastille en colonne, à droite du libellé (toutes alignées). */
+function InlineBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return <span className="grid h-4 min-w-4 shrink-0 place-items-center bg-danger-glow px-1 font-mono text-[9.5px] font-bold tabular-nums text-space-950">{count > 99 ? "99+" : count}</span>;
+}
+
 function Badge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
@@ -295,10 +302,10 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
       item={item}
       className={({ isActive }) =>
         cn(
-          "group relative flex items-center gap-2.5 py-1.5 pl-3 pr-2 font-display text-[12.5px] font-semibold uppercase tracking-[0.09em] transition-all duration-200",
+          "group relative flex items-center gap-2.5 py-2 pl-3 pr-2.5 font-display text-[12.5px] font-semibold uppercase tracking-[0.09em] transition-all duration-200",
           "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:bg-[var(--nav-accent)] before:shadow-[0_0_12px_var(--nav-accent)] before:transition-transform before:duration-200",
           isActive
-            ? "bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_16%,transparent)] via-[color-mix(in_srgb,var(--nav-accent)_4%,transparent)] to-transparent text-white before:scale-y-100"
+            ? "bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_24%,transparent)] via-[color-mix(in_srgb,var(--nav-accent)_7%,transparent)] to-transparent text-white shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--nav-accent)_22%,transparent)] before:scale-y-100"
             : "text-slate-400 before:scale-y-0 hover:translate-x-0.5 hover:bg-white/[0.03] hover:text-slate-100",
         )
       }
@@ -317,12 +324,12 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
             >
               <item.icon className={cn("h-3.5 w-3.5", bossIconClass(phase))} />
             </span>
-            <Badge count={badge} />
-            {!badge && <BossDot phase={phase} />}
+            <BossDot phase={phase} />
           </span>
-          <span className={cn("flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
+          <span className={cn("min-w-0 flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
           {phase && <BossChip phase={phase} />}
-          {isActive && <span className="h-1.5 w-1.5 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
+          <InlineBadge count={badge} />
+          {isActive && !badge && <span className="h-1.5 w-1.5 shrink-0 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
       )}
     </ItemLink>
@@ -347,12 +354,12 @@ function SideGroup({ group, collapsed, onToggle, badgeOf }: { group: NavGroup; c
   const open = !collapsed || here;
   const total = group.items.reduce((sum, i) => sum + badgeOf(i.to), 0);
   return (
-    <div className="mb-1.5" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
+    <div className="mb-3" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="group/h flex w-full items-center gap-2 px-3 pb-1 pt-2 text-left"
+        className="group/h flex w-full items-center gap-2 px-3 pb-1.5 pt-2.5 text-left"
       >
         <span className="grid h-4 w-4 place-items-center text-[var(--nav-accent)] opacity-80">
           <group.icon className="h-3 w-3" />
@@ -360,12 +367,12 @@ function SideGroup({ group, collapsed, onToggle, badgeOf }: { group: NavGroup; c
         <span className="hud-eyebrow text-[10px] text-slate-500 transition-colors group-hover/h:text-slate-300">{group.label}</span>
         <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] to-transparent" />
         {!open && total > 0 && (
-          <span className="bg-danger-glow px-1 font-mono text-[9px] font-bold leading-[14px] text-space-950">{total > 9 ? "9+" : total}</span>
+          <InlineBadge count={total} />
         )}
         <ChevronDown className={cn("h-3 w-3 text-slate-600 transition-transform duration-200 group-hover/h:text-slate-300", !open && "-rotate-90")} />
       </button>
       <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
-        <div className="flex flex-col gap-px overflow-hidden">
+        <div className="flex flex-col gap-0.5 overflow-hidden">
           {group.items.map((item) => (
             <SideLink key={item.to} item={item} badge={badgeOf(item.to)} />
           ))}

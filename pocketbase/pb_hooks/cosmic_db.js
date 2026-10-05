@@ -5338,15 +5338,30 @@ function npcOpponents(app, uid) {
   return Object.keys(uids);
 }
 
-/** POST /api/cosmic/codex/claim : titre « Archiviste » à 100 % du Codex. */
+/** POST /api/cosmic/codex/claim : titre « Archiviste » à 100 % du Codex,
+ *  ou (5.15.11, `category`) récompense d'une catégorie complète. */
 function codexClaim(e) {
   const game = loadGame();
   const uid = e.auth.id;
+  const data = body(e);
   let out = null;
   $app.runInTransaction((txApp) => {
     applyContent(txApp, game);
     const loaded = loadPlayer(txApp, game, uid);
-    const entries = game.codexEntries(loaded.player, game.foughtWarlords(npcOpponents(txApp, uid)), Date.now());
+    const history = configRecord(txApp, game.BOSS_HISTORY_KEY);
+    const bossesFought = game.bossesFoughtBy(game.normalizeBossHistory(history ? toPlain(history).data : null), uid);
+    const entries = game.codexEntries(loaded.player, game.foughtWarlords(npcOpponents(txApp, uid)), Date.now(), { bossesFought });
+    if (data.category) {
+      let reward;
+      try {
+        reward = game.claimCodexCategory(loaded.player, entries, data.category, Date.now());
+      } catch (err) {
+        throw new BadRequestError(String((err && err.message) || err));
+      }
+      savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+      out = { category: String(data.category), tokens: reward.tokens, amber: reward.amber };
+      return;
+    }
     const progress = game.codexProgress(entries);
     if (progress.pct < 100) throw new BadRequestError(`Codex complété à ${progress.pct} % : il faut 100 %.`);
     if (!game.grantCodexTitle(loaded.player, entries)) throw new BadRequestError("Titre déjà reçu.");

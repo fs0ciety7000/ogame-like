@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, Snowflake, Gauge } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ import { chronicleOf } from "@/game/chronicles";
 import { setSeasonSkin, useSeasonSkinStore } from "@/lib/seasonSkin";
 import { isWinter, previewWinter, setWinter, useWinterStore } from "@/lib/winter";
 import { SFX_SAMPLES } from "@/lib/sfx";
-import { SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
+import { DEFAULT_VOLUMES, SFX_CATEGORIES, setSfxEnabled, setSfxVolume, useSfxStore } from "@/store/sfxStore";
 import { GoogleMark } from "@/components/auth/AltSignIn";
 import { defaultPasskeyName, deletePasskey, listPasskeys, passkeyErrorMessage, passkeysSupported, registerPasskey, renamePasskey, type PasskeyInfo } from "@/services/passkeyService";
 import { enabledOAuthProviders, linkProvider, listLinkedAccounts, oauthErrorMessage, unlinkAccount, OAUTH_PROVIDERS, type LinkedAccount, type OAuthProviderId } from "@/services/oauthService";
@@ -167,7 +168,7 @@ function SignInMethodsCard() {
           </p>
           {!supported && <p className="text-xs text-gold-glow">Ce navigateur ne gère pas les passkeys.</p>}
           {keys === null ? (
-            <p className="text-xs text-slate-500">Chargement…</p>
+            <SkeletonList rows={1} />
           ) : keys.length === 0 ? (
             <p className="text-xs text-slate-500">Aucune passkey pour l'instant.</p>
           ) : (
@@ -695,6 +696,16 @@ function SoundCard() {
                 <span className="text-slate-200">{c.label}</span>
                 <span className="flex items-center gap-2">
                   <span className="w-9 text-right font-mono text-xs text-slate-400">{Math.round(volumes[c.id] * 100)} %</span>
+                  {/* 5.15.9 : couper / remettre une catégorie d'un clic. */}
+                  <button
+                    type="button"
+                    title={volumes[c.id] > 0 ? `Couper : ${c.label}` : `Remettre : ${c.label}`}
+                    aria-pressed={volumes[c.id] === 0}
+                    className={cn("hover:text-cyan-glow", volumes[c.id] > 0 ? "text-slate-500" : "text-ember-glow")}
+                    onClick={() => setSfxVolume(c.id, volumes[c.id] > 0 ? 0 : DEFAULT_VOLUMES[c.id] || 0.6)}
+                  >
+                    {volumes[c.id] > 0 ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                  </button>
                   {c.id !== "ambience" && (
                     <button type="button" title="Écouter" className="text-slate-500 hover:text-cyan-glow" onClick={() => SFX_SAMPLES[c.id]()}>
                       <Play className="h-3.5 w-3.5" />

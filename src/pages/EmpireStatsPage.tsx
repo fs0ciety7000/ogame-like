@@ -1,9 +1,10 @@
 import { useMemo, type ReactNode } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { Link } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
 import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HudTag } from "@/components/ui/hud";
+import { HudTag, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { RadialGauge } from "@/components/ui/radial-gauge";
@@ -387,7 +388,7 @@ export function EmpireStatsPage() {
           </div>
 
           {m.units.length === 0 ? (
-            <p className="text-sm text-slate-400">Aucune unité pour l'instant.</p>
+            <EmptyState size="sm" icon="🚀" title="Aucune unité" action={<EmptyAction to="/game/unites">Construire une flotte</EmptyAction>} />
           ) : (
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-xs">
@@ -510,7 +511,7 @@ export function EmpireStatsPage() {
                 ))}
               </div>
               {st.command.active.length === 0 ? (
-                <p className="text-sm text-slate-400">Aucun officier en poste.</p>
+                <EmptyState size="sm" icon="🎖️" title="Aucun officier en poste" action={<EmptyAction to="/game/etat-major">Nommer un officier</EmptyAction>} />
               ) : (
                 st.command.active.map((c) => (
                   <motion.div key={c.id} whileHover={{ x: 3 }} className="flex items-center gap-3 border border-gold-glow/15 bg-gold-glow/[0.04] px-3 py-2">
@@ -542,7 +543,7 @@ export function EmpireStatsPage() {
                 Reliques équipées ({st.command.relicsEquipped.length}) · {st.command.relicsOwned} en collection
               </p>
               {st.command.relicsEquipped.length === 0 ? (
-                <p className="text-sm text-slate-400">Aucune relique équipée.</p>
+                <EmptyState size="sm" icon="🏺" title="Aucune relique équipée" action={<EmptyAction to="/game/etat-major">Équiper une relique</EmptyAction>} />
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {st.command.relicsEquipped.map((r, i) => (

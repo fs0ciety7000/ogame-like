@@ -1,4 +1,5 @@
 import { alpha } from "@/lib/utils";
+import { SkeletonCards } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -32,7 +33,7 @@ export function AlliancePublicPage() {
     void fetchAllianceChallenge().then(setChallenge);
   }, []);
   if (!player) return null;
-  if (alliance === undefined) return <p className="text-sm text-slate-500">Chargement…</p>;
+  if (alliance === undefined) return <SkeletonCards count={3} />;
   if (alliance === null)
     return (
       <Card>

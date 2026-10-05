@@ -81,17 +81,17 @@ export function playConfirm() {
 
 /** Levier tiré : cliquetis montant. */
 export function playSlotPull() {
-  play("ui", Array.from({ length: 6 }, (_, i) => ({ freq: 300 + i * 90, duration: 0.04, type: "square" as OscillatorType, volume: 0.03, at: i * 0.05 })));
+  play("casino", Array.from({ length: 6 }, (_, i) => ({ freq: 300 + i * 90, duration: 0.04, type: "square" as OscillatorType, volume: 0.03, at: i * 0.05 })));
 }
 
 /** Arrêt d'un rouleau. */
 export function playSlotStop(index: number) {
-  play("ui", [{ freq: 180 + index * 40, to: 120, duration: 0.09, type: "triangle", volume: 0.08 }]);
+  play("casino", [{ freq: 180 + index * 40, to: 120, duration: 0.09, type: "triangle", volume: 0.08 }]);
 }
 
 /** Petit gain. */
 export function playSlotWin() {
-  play("events", [
+  play("casino", [
     { freq: 784, duration: 0.09, type: "triangle", volume: 0.07 },
     { freq: 988, duration: 0.09, type: "triangle", volume: 0.07, at: 0.08 },
     { freq: 1319, duration: 0.2, type: "triangle", volume: 0.07, at: 0.16 },
@@ -101,7 +101,7 @@ export function playSlotWin() {
 /** Gros lot : fanfare et pluie de pièces. */
 export function playJackpot() {
   const notes = [523, 659, 784, 1047, 784, 1047, 1319];
-  play("events", [
+  play("casino", [
     ...notes.map((f, i) => ({ freq: f, duration: 0.16, type: "triangle" as OscillatorType, volume: 0.09, at: i * 0.11 })),
     ...Array.from({ length: 14 }, (_, i) => ({ freq: 1800 + (i % 4) * 220, duration: 0.05, type: "sine" as OscillatorType, volume: 0.03, at: 0.8 + i * 0.07 })),
   ]);
@@ -125,7 +125,7 @@ export function playUnlock() {
 }
 
 export function playVictory() {
-  play("events", [
+  play("combat", [
     { freq: 392, duration: 0.14, type: "triangle", volume: 0.08 },
     { freq: 523, duration: 0.14, type: "triangle", volume: 0.08, at: 0.12 },
     { freq: 659, duration: 0.14, type: "triangle", volume: 0.08, at: 0.24 },
@@ -136,7 +136,7 @@ export function playVictory() {
 }
 
 export function playDefeat() {
-  play("events", [
+  play("combat", [
     { freq: 392, duration: 0.2, type: "triangle", volume: 0.07 },
     { freq: 330, duration: 0.2, type: "triangle", volume: 0.07, at: 0.18 },
     { freq: 262, duration: 0.6, type: "triangle", volume: 0.07, to: 220, at: 0.36 },
@@ -159,7 +159,7 @@ export function playWarp() {
 }
 
 export function playMessage() {
-  play("events", [
+  play("notifications", [
     { freq: 988, duration: 0.07, volume: 0.05 },
     { freq: 1319, duration: 0.1, volume: 0.05, at: 0.07 },
   ]);
@@ -190,7 +190,10 @@ export function playSpyAlert() {
 /** Échantillons pour la page Réglages. */
 export const SFX_SAMPLES: Record<SfxCategory, () => void> = {
   ui: playConfirm,
-  events: playVictory,
+  events: playBuildDone,
+  combat: playVictory,
+  casino: playSlotWin,
+  notifications: playMessage,
   alerts: playAttackAlert,
   ambience: () => undefined,
 };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { toast } from "sonner";
@@ -84,7 +85,11 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
           La cargaison ({formatNumber(contract.wantAmount)} {resName(contract.wantRes)}) part avec la flotte et doit arriver avant l'échéance, dans {formatDuration(Math.max(0, Math.floor((contract.deadlineMs - Date.now()) / 1000)))}.
         </DialogDescription>
         <div className="mt-2 flex flex-col gap-1.5">
-          {ids.length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau avec une soute à la base.</p>}
+          {ids.length === 0 && (
+            <EmptyState size="sm" icon="📦" title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
+              Il faut un vaisseau avec une soute pour livrer.
+            </EmptyState>
+          )}
           {ids.map((id) => {
             const owned = player.units[id]?.count ?? 0;
             return (

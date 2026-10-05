@@ -1,4 +1,7 @@
 import { LinkifiedText } from "@/components/ui/linkified-text";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { EmptyAction } from "@/components/ui/panel";
+import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Ban, Check, CheckCheck, Loader2, Mail, Search, Send } from "lucide-react";
@@ -136,11 +139,13 @@ export function MessagesPage() {
             </div>
           )}
           {!loaded && (
-            <p className="flex items-center gap-2 px-1 py-3 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
-            </p>
+            <SkeletonList rows={4} className="px-1 py-3" />
           )}
-          {loaded && conversations.length === 0 && <p className="px-1 py-3 text-sm text-slate-500">Aucune conversation. Cherche un joueur pour lui écrire.</p>}
+          {loaded && conversations.length === 0 && (
+            <EmptyState size="sm" icon="✉️" title="Aucune conversation" action={<EmptyAction to="/game/joueurs">Trouver un joueur</EmptyAction>} className="px-1 py-3">
+              Cherche un joueur pour lui écrire.
+            </EmptyState>
+          )}
           <div className="flex flex-col">
             {conversations.map((c) => (
               <button

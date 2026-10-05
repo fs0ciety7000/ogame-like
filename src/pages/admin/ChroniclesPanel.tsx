@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { currentGameContent } from "@/game/content";
-import { OBJECTIVE_LABELS, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { chronicleMonthId, normalizeChronicleBonus, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
@@ -46,7 +47,7 @@ export function ChroniclesPanel() {
   const [selected, setSelected] = useState(0);
   const [busy, setBusy] = useState(false);
   const month = cfg.months[selected];
-  const setMonth = (patch: Partial<ChronicleMonth>) => setCfg((c) => ({ months: c.months.map((m, i) => (i === selected ? { ...m, ...patch } : m)) }));
+  const setMonth = (patch: Partial<ChronicleMonth>) => setCfg((c) => ({ ...c, months: c.months.map((m, i) => (i === selected ? { ...m, ...patch } : m)) }));
 
   const save = async () => {
     setBusy(true);
@@ -64,7 +65,7 @@ export function ChroniclesPanel() {
     const last = cfg.months[cfg.months.length - 1];
     const id = nextMonthId(last.id);
     const copy: ChronicleMonth = { ...structuredClone(last), id, title: "Nouvel arc", boss: { ...last.boss, image: `/assets/chronicles/${id}-boss.webp`, emblem: `/assets/chronicles/${id}-sceau.webp` } };
-    setCfg((c) => ({ months: [...c.months, copy] }));
+    setCfg((c) => ({ ...c, months: [...c.months, copy] }));
     setSelected(cfg.months.length);
   };
 
@@ -92,6 +93,9 @@ export function ChroniclesPanel() {
           </Button>
         </div>
       </div>
+
+      <ChronicleBonusSection bonus={normalizeChronicleBonus(cfg.bonus)} onChange={(bonus) => setCfg((c) => ({ ...c, bonus }))} />
+      <NextMonthPreview cfg={cfg} onCreate={addMonth} />
 
       <div className="flex flex-wrap gap-1.5">
         {cfg.months.map((m, i) => (
@@ -143,7 +147,7 @@ export function ChroniclesPanel() {
                 disabled={cfg.months.length <= 1}
                 onClick={async () => {
                   if (!(await askConfirm({ title: `Supprimer la chronique ${month.id} ?`, confirmLabel: "Supprimer", tone: "danger" }))) return;
-                  setCfg((c) => ({ months: c.months.filter((_, i) => i !== selected) }));
+                  setCfg((c) => ({ ...c, months: c.months.filter((_, i) => i !== selected) }));
                   setSelected(0);
                 }}
               >
@@ -176,5 +180,50 @@ export function ChroniclesPanel() {
         </>
       )}
     </div>
+  );
+}
+
+/** 5.15.11 : bonus versé à chaque épisode et à la fin de chaque chapitre (tous les mois). */
+function ChronicleBonusSection({ bonus, onChange }: { bonus: ChronicleBonus; onChange: (b: ChronicleBonus) => void }) {
+  const set = (k: keyof ChronicleBonus, f: "tokens" | "amber", v: number | undefined) => onChange({ ...bonus, [k]: { ...bonus[k], [f]: Math.max(0, Math.floor(v ?? 0)) } });
+  return (
+    <Section title="Récompenses des Chroniques (tous les mois)">
+      <NumberField label="Épisode terminé : jetons du casino" value={bonus.episode.tokens} min={0} step={1} onChange={(v) => set("episode", "tokens", v)} />
+      <NumberField label="Épisode terminé : Ambre" value={bonus.episode.amber} min={0} step={5} onChange={(v) => set("episode", "amber", v)} />
+      <NumberField label="Chapitre terminé : jetons du casino" value={bonus.chapter.tokens} min={0} step={1} onChange={(v) => set("chapter", "tokens", v)} />
+      <NumberField label="Chapitre terminé : Ambre" value={bonus.chapter.amber} min={0} step={5} onChange={(v) => set("chapter", "amber", v)} />
+      <p className="text-[11px] text-slate-500 sm:col-span-2">
+        En plus des points de passe et de la récompense propre à chaque épisode. Sur un mois complet : {bonus.episode.tokens * 4 + bonus.chapter.tokens} jetons et {bonus.episode.amber * 4 + bonus.chapter.amber} Ambre par joueur.
+      </p>
+    </Section>
+  );
+}
+
+/** 5.15.11 : le mois suivant tel que les joueurs le verront (ou l'alerte s'il manque). */
+function NextMonthPreview({ cfg, onCreate }: { cfg: ChroniclesConfig; onCreate: () => void }) {
+  const now = Date.now();
+  const id = nextMonthId(chronicleMonthId(now));
+  const month = cfg.months.find((m) => m.id === id);
+  return (
+    <Section title={`Aperçu du mois suivant · ${id}`}>
+      <div className="sm:col-span-2">
+        {month ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-slate-200">
+              <span className="font-display text-white">{month.title}</span> · boss : {month.boss.name}
+              {month.auto ? " · chapitre généré" : ""}
+            </p>
+            <ChronicleTimeline month={month} bonus={normalizeChronicleBonus(cfg.bonus)} now={now} open={0} />
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 border border-ember-glow/30 bg-ember-glow/[0.05] p-3 text-xs text-slate-300">
+            <span className="flex-1">Aucun chapitre pour {id} : sans chapitre, la page Chroniques sera vide ce mois-là. Le générateur procédural peut l'écrire, ou crée-le ici.</span>
+            <Button size="sm" variant="outline" onClick={onCreate}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Créer {id}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }

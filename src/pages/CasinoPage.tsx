@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Coins, Crown, History, ListOrdered, Percent } from "lucide-react";
-import { CasinoPanel } from "@/components/casino/CasinoPanel";
+import { HudPanel } from "@/components/ui/panel";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { assetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -212,6 +212,24 @@ export function CasinoPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // 5.15.9 : le gros lot pulse quand le pot grossit (taxes, cadeaux, dépôts).
+  const potTotal = pot && settings ? Object.values(jackpotAmounts(pot, settings.jackpotShare)).reduce<number>((a, n) => a + (n ?? 0), 0) : 0;
+  const prevPot = useRef(potTotal);
+  const [potBump, setPotBump] = useState(0);
+  useEffect(() => {
+    if (potTotal > prevPot.current && prevPot.current > 0) setPotBump((k) => k + 1);
+    prevPot.current = potTotal;
+  }, [potTotal]);
+  const reduceMotion = useReducedMotion();
+  const bump = (node: React.ReactNode) =>
+    reduceMotion || potBump === 0 ? (
+      node
+    ) : (
+      <motion.span key={potBump} className="inline-flex flex-wrap items-center gap-[inherit]" initial={{ scale: 1.14, filter: "brightness(1.8)" }} animate={{ scale: 1, filter: "brightness(1)" }} transition={{ duration: 0.7, ease: "easeOut" }}>
+        {node}
+      </motion.span>
+    );
+
   if (!player) return null;
   // Fermé : la page n'existe pas pour les joueurs (les administrateurs la voient toujours).
   if (casino && !open && adminStatus === false) return <Navigate to="/game" replace />;
@@ -248,7 +266,7 @@ export function CasinoPage() {
             disabled={!canSpin}
             onPull={() => void pull()}
             onReelStop={onReelStop}
-            jackpotLabel={
+            jackpotLabel={bump(
               jackpotList.length > 0 ? (
                 jackpotList.map(([res, n]) => (
                   <span key={res} className="inline-flex items-center gap-1">
@@ -257,8 +275,8 @@ export function CasinoPage() {
                 ))
               ) : (
                 <span>{settings?.jackpotFallbackHours ?? 12} h de production</span>
-              )
-            }
+              ),
+            )}
           />
           <div className="mx-auto min-h-[44px] w-full max-w-[560px] text-center" aria-live="polite">
             <AnimatePresence mode="wait">
@@ -309,7 +327,7 @@ export function CasinoPage() {
         </div>
 
         <div className="grid content-start gap-3 lg:col-span-2 lg:grid-cols-2 xl:col-span-1 xl:col-start-1 xl:row-start-1 xl:grid-cols-1">
-          <CasinoPanel
+          <HudPanel
             icon={<TokenIcon size={14} />}
             title="Mes jetons"
             tone="gold"
@@ -333,7 +351,7 @@ export function CasinoPage() {
                 </Button>
               )}
             </div>
-          </CasinoPanel>
+          </HudPanel>
 
           <WeekRecap player={player} />
 
@@ -344,7 +362,7 @@ export function CasinoPage() {
 
         <div className="flex flex-col gap-3 lg:col-start-2 lg:row-start-1 xl:col-start-3">
           {/* v5.14.2 : le gros lot en jeu, en entier (ce que rafle le prochain 7-7-7). */}
-          <CasinoPanel icon={<Crown />} title={`Gros lot en jeu · ${Math.round((settings?.jackpotShare ?? 0.9) * 100)} % du pot`} tone="gold" accent>
+          <HudPanel key={`pot-${potBump}`} className={potBump > 0 && !reduceMotion ? "casino-pot-bump" : undefined} icon={<Crown />} title={`Gros lot en jeu · ${Math.round((settings?.jackpotShare ?? 0.9) * 100)} % du pot`} tone="gold" accent>
             {Object.keys(jackpot).length > 0 ? (
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.entries(jackpot) as [ResourceId, number][]).map(([res, n]) => (
@@ -357,9 +375,9 @@ export function CasinoPage() {
               <span className="text-xs text-slate-400">Pot vide pour l'instant : le 7-7-7 rapporte {settings?.jackpotFallbackHours ?? 12} h de production.</span>
             )}
             <span className="text-[11px] text-slate-500">Le pot grossit avec les taxes du marché et des cadeaux, et les dépôts de l'équipe.</span>
-          </CasinoPanel>
+          </HudPanel>
 
-          <CasinoPanel icon={<ListOrdered />} title="Table des gains">
+          <HudPanel icon={<ListOrdered />} title="Table des gains">
             <ul className="grid gap-1.5">
               {PAYTABLE.map((row) => (
                 <li key={row.outcome} className="flex items-center gap-3 text-xs">
@@ -387,13 +405,13 @@ export function CasinoPage() {
                 </li>
               ))}
             </ul>
-          </CasinoPanel>
+          </HudPanel>
 
           {settings && <JackpotOddsCard odds={jackpotOdds(settings)} />}
 
-          <CasinoPanel icon={<Crown />} title="Gros lots" tone="gold">
+          <HudPanel icon={<Crown />} title="Gros lots" tone="gold">
             {(casino?.jackpots.length ?? 0) === 0 ? (
-              <p className="text-xs text-slate-500">Personne n'a encore aligné trois 7. Le premier entrera dans la légende.</p>
+              <EmptyState size="sm" icon="👑" title="Aucun gros lot">Personne n'a encore aligné trois 7. Le premier entrera dans la légende.</EmptyState>
             ) : (
               <ul className="grid gap-2">
                 {casino!.jackpots.slice(0, 5).map((w) => (
@@ -407,11 +425,11 @@ export function CasinoPage() {
                 ))}
               </ul>
             )}
-          </CasinoPanel>
+          </HudPanel>
 
-          <CasinoPanel icon={<History />} title="Derniers gains">
+          <HudPanel icon={<History />} title="Derniers gains">
             {(casino?.recent.length ?? 0) === 0 ? (
-              <EmptyState icon="🎰" className="p-0">Aucun gain pour l'instant.</EmptyState>
+              <EmptyState size="sm" icon="🎰" title="Aucun gain">Le premier gain s'affichera ici.</EmptyState>
             ) : (
               <ul className="grid gap-1">
                 {casino!.recent.slice(0, 10).map((w) => (
@@ -428,7 +446,7 @@ export function CasinoPage() {
                 ))}
               </ul>
             )}
-          </CasinoPanel>
+          </HudPanel>
         </div>
       </div>
 
@@ -454,7 +472,7 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
     ["Tournoi du week-end", r.tournament.join(", ") + " pour le podium"],
   ];
   return (
-    <CasinoPanel icon={<Coins />} title="Gagner des jetons" tone="gold">
+    <HudPanel icon={<Coins />} title="Gagner des jetons" tone="gold">
       <ul className="grid gap-1 text-xs">
         {rows.map(([label, value]) => (
           <li key={label} className="flex flex-col gap-0.5 border-b border-white/5 pb-1 last:border-0">
@@ -464,7 +482,7 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
         ))}
       </ul>
       <p className="text-[11px] text-slate-500">Les chances de butin augmentent face à un adversaire plus fort que toi (jusqu'à ×2).</p>
-    </CasinoPanel>
+    </HudPanel>
   );
 }
 
@@ -479,7 +497,7 @@ function chanceLabel(p: number): string {
 function JackpotOddsCard({ odds }: { odds: ReturnType<typeof jackpotOdds> }) {
   const steps = [10, 50, 100, 200, 500];
   return (
-    <CasinoPanel icon={<Percent />} title="Tes chances au 7-7-7">
+    <HudPanel icon={<Percent />} title="Tes chances au 7-7-7">
       <div className="grid grid-cols-2 gap-2">
         <div className="hud-cut-sm border border-white/10 p-2">
           <p className="font-mono text-lg tabular-nums text-slate-100">≈ {formatNumber(Math.round(odds.meanTokens))}</p>
@@ -505,6 +523,6 @@ function JackpotOddsCard({ odds }: { odds: ReturnType<typeof jackpotOdds> }) {
         })}
       </ul>
       <p className="text-[11px] text-slate-500">Calculé sur les réglages du casino. Chaque tirage est indépendant : la machine n'a pas de mémoire.</p>
-    </CasinoPanel>
+    </HudPanel>
   );
 }

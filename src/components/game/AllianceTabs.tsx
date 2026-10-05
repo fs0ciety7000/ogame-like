@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { HudPanel } from "@/components/ui/panel";
 import { toast } from "sonner";
-import { Building2, Eye, FlaskConical, Landmark, ShieldAlert, Swords } from "lucide-react";
+import { Building2, Eye, FlaskConical, Hammer, ScrollText, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
-import { HudChip } from "@/components/ui/hud";
+import { HudChip, EmptyState } from "@/components/ui/hud";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
@@ -123,10 +125,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-      <Card className="flex flex-col gap-4 p-4">
-        <h3 className="hud-title flex items-center gap-2 text-sm text-white">
-          <Landmark className="h-4 w-4 text-gold-glow" /> Trésor de l'alliance
-        </h3>
+      <HudPanel icon={<Landmark />} title="Trésor de l'alliance" tone="gold" className="gap-4">
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {RESOURCE_LIST.map((r) => (
             <p key={r.id} title={`${r.name} : ${formatNumber(treasury[r.id] ?? 0)}`} className="hud-cut-sm flex items-center gap-2 border border-white/5 bg-white/[0.02] px-2 py-1.5">
@@ -206,11 +205,10 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
             </Button>
           </div>
         </div>
-      </Card>
+      </HudPanel>
 
-      <Card className="flex flex-col gap-2 p-4">
-        <h3 className="hud-title text-sm text-white">Journal du trésor</h3>
-        {logs.length === 0 && <p className="text-xs text-slate-500">Rien pour l'instant.</p>}
+      <HudPanel icon={<ScrollText />} title="Journal du trésor">
+        {logs.length === 0 && <EmptyState size="sm" icon="📜" title="Journal vide">Les dépôts et versements apparaîtront ici.</EmptyState>}
         <ul className="max-h-[36rem] divide-y divide-white/5 overflow-y-auto text-xs">
           {logs.map((l) => (
             <li key={l.id} className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 py-1.5">
@@ -228,7 +226,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
             </li>
           ))}
         </ul>
-      </Card>
+      </HudPanel>
     </div>
   );
 }
@@ -428,9 +426,8 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
           peut contribuer depuis ses stocks ; seuls le fondateur et les officiers puisent dans le trésor.
         </p>
       </div>
-      <Card className="flex h-fit flex-col gap-2 p-4">
-        <h3 className="font-display text-sm text-white">Bâtisseurs</h3>
-        {contributors.length === 0 && <p className="text-xs text-slate-500">Aucune contribution personnelle pour l'instant.</p>}
+      <HudPanel icon={<Hammer />} title="Bâtisseurs" tone="accent" className="h-fit">
+        {contributors.length === 0 && <EmptyState size="sm" icon="🏗️" title="Aucun bâtisseur">Sois le premier à contribuer à un projet.</EmptyState>}
         <ol className="space-y-1 text-sm">
           {contributors.map(([uid, value], i) => (
             <li key={uid} className="flex justify-between gap-2">
@@ -442,7 +439,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
           ))}
         </ol>
         <p className="text-[11px] text-slate-500">Valeur versée (une ressource rare compte pour 100).</p>
-      </Card>
+      </HudPanel>
     </div>
   );
 }
@@ -456,7 +453,7 @@ export function IntelTab() {
       .then(setItems)
       .catch(() => setItems([]));
   }, []);
-  if (items === null) return <p className="text-sm text-slate-500">Chargement…</p>;
+  if (items === null) return <SkeletonList rows={4} />;
   return (
     <Card className="divide-y divide-white/5">
       {items.length === 0 && (

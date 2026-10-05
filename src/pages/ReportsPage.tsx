@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -267,7 +268,7 @@ export function ReportsPage() {
         <div className="flex flex-col gap-3">
           <h2 className="hud-eyebrow text-[10px] text-slate-500">Mes signalements</h2>
           {reports === null ? (
-            <p className="text-sm text-slate-500">Chargement…</p>
+            <SkeletonList rows={3} />
           ) : reports.length === 0 ? (
             <Card>
               <EmptyState icon="🔧" title="Aucun signalement">Tout fonctionne ? Parfait. Sinon, décris le problème à gauche.</EmptyState>
