@@ -298,6 +298,9 @@ function showcaseOf(player) {
       ascensions: player.getInt("ascensions"),
       referral: parseJsonField(player, "referral", null),
       seasonPass: parseJsonField(player, "seasonPass", null),
+      // 5.16.1 : bannières de chapitre et sceaux de boss (Chroniques), Main d'or (casino).
+      chronicle: parseJsonField(player, "chronicle", null),
+      casino: parseJsonField(player, "casino", null),
     });
   } catch (err) {
     console.log(`[cosmic] vitrine du profil : ${err}`);
