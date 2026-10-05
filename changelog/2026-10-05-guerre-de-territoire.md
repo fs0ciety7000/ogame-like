@@ -6,6 +6,23 @@ title: Guerre de territoire, suivi de l'équilibrage et couleurs de thème parto
 ---
 Un nouvel événement d'alliance, un tableau de bord pour régler les nouveautés de la 5.16, et un dernier passage sur les couleurs.
 
+## Guerre de territoire
+- Un week-end sur deux, du vendredi 18 h au dimanche 22 h (heure de Paris), les alliances se disputent les 24 secteurs de la galaxie.
+- Chaque secteur a son propre tableau de points :
+  - victoire en attaque contre un joueur : +10 ;
+  - seigneur de guerre pillé : +4 ;
+  - défense tenue : +6 ;
+  - contrôle du secteur (territoires), chaque heure : +5.
+- Les points vont au secteur de la planète visée. Entre deux mêmes joueurs, seuls les 3 premiers combats comptent.
+- À la fin, chaque secteur revient à l'alliance en tête (égalité parfaite : personne). Chaque membre reçoit 3 jetons du casino par secteur remporté (15 au plus). L'alliance qui en remporte le plus gagne 10 jetons de plus et le titre « Conquérant des secteurs ».
+- Nouvelle page « Guerre de territoire » (menu Social) :
+  - carte en direct des 24 secteurs : meneur, points, écart avec le poursuivant, ta propre part ;
+  - classement des alliances et récompenses prévues ;
+  - fil des combats ;
+  - compte à rebours jusqu'à la fin ou jusqu'à la prochaine guerre.
+- Notifications au début de la guerre et à la fin, avec tes gains.
+- Administration (Règles → Événements) : calendrier, points, plafond par paire de joueurs et récompenses réglables, plus des boutons pour ouvrir une guerre à la main (1 à 72 h) ou la clore tout de suite.
+
 ## Design
 - Le texte clair suit désormais le thème partout : ivoire en Voyageur, os en Constellation, blanc ailleurs. Avant, près de 300 textes restaient en blanc pur quel que soit le thème.
 - Les halos, ombres et voiles colorés (une soixantaine) reprennent les couleurs du thème au lieu de couleurs fixes.

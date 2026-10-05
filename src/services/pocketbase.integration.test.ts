@@ -7,6 +7,7 @@
 // scénarios (donner des ressources, vieillir un compte) : les joueurs ne
 // peuvent plus modifier eux-mêmes ces champs.
 import { findUnit } from "@/game/units";
+import { sectorLabel, sectorOf } from "@/game/territories";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
@@ -1282,6 +1283,52 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("alliances").delete(Y.id);
       await admin.collection("players").update(aId, { allianceId: aBefore!.allianceId ?? "", units: aBefore!.units, resources: aBefore!.resources, xp: aBefore!.xp, titles: aBefore!.titles, activeTitle: aBefore!.activeTitle ?? "", lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0 });
       await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId ?? "", units: bBefore!.units, resources: bBefore!.resources, titles: bBefore!.titles, activeTitle: bBefore!.activeTitle ?? "" });
+    }
+  }, 60_000);
+
+  it("5.17 territory war: opened by the staff, combat points in the target's sector, close and rewards", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const old = await admin.collection("game_config").getFirstListItem(`key="territory_war"`).catch(() => null);
+    if (old) await admin.collection("game_config").delete(old.id);
+    const X = await admin.collection("alliances").create({ name: `Terra ${suffix}`, tag: "TRX", createdBy: bId, members: [bId], memberPseudos: {}, treasury: {} });
+    const Y = await admin.collection("alliances").create({ name: `Ursa ${suffix}`, tag: "URS", createdBy: aId, members: [aId], memberPseudos: {}, treasury: {} });
+    try {
+      await admin.collection("players").update(bId, { allianceId: X.id, units: { chasseur: { level: 5, count: 100 }, cargo: { level: 5, count: 50 } }, createdAtMs: MONTH_AGO(), titles: [], activeTitle: "" });
+      await admin.collection("players").update(aId, { allianceId: Y.id, units: {}, createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, lastAttackAtMs: 0, xp: bBefore!.xp, resources: RICH });
+      // Un joueur ne peut pas ouvrir la guerre.
+      await expect(pb.send("/api/cosmic/admin/territory-war", { method: "POST", body: { action: "start", hours: 2 } })).rejects.toMatchObject({ status: 403 });
+      const opened = await admin.send("/api/cosmic/admin/territory-war", { method: "POST", body: { action: "start", hours: 2 } });
+      expect(opened).toMatchObject({ status: "active", manual: true });
+      await expect(admin.send("/api/cosmic/admin/territory-war", { method: "POST", body: { action: "start", hours: 2 } })).rejects.toMatchObject({ status: 400 });
+      // Délai entre deux attaques sur la même cible : on recule les combats des tests précédents.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}"` })) await admin.collection("battle_reports").update(r.id, { timestamp: r.timestamp - 3 * 3600_000 });
+      const { report } = await attackAndResolve(aId, { chasseur: 50, cargo: 10 });
+      expect(report.outcome).toBe("attacker_win");
+      // Lisible par tous : carte en direct.
+      const live = (await pb.collection("game_config").getFirstListItem(`key="territory_war"`)).data;
+      const sector = String(sectorOf(aId));
+      expect(live.points[sector][X.id]).toBe(10);
+      expect(live.tags[X.id]).toBe("TRX");
+      expect(live.feed.at(-1).text).toContain(sectorLabel(Number(sector)));
+      const tokens0 = (await snap(bId)).casino?.tokens ?? 0;
+      const closed = await admin.send("/api/cosmic/admin/territory-war", { method: "POST", body: { action: "close" } });
+      expect(closed).toMatchObject({ status: "closed", rewarded: true });
+      expect(closed.results[0]).toMatchObject({ allianceId: X.id, sectors: [Number(sector)], points: 10 });
+      const bAfter = await snap(bId);
+      expect((bAfter.casino?.tokens ?? 0) - tokens0).toBe(3 + 10);
+      expect(bAfter.titles.some((t: { label: string }) => t.label === "Conquérant des secteurs")).toBe(true);
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Guerre de territoire terminée"` });
+      expect(notes.length).toBe(1);
+      await expect(admin.send("/api/cosmic/admin/territory-war", { method: "POST", body: { action: "close" } })).rejects.toMatchObject({ status: 400 });
+    } finally {
+      const cfg = await admin.collection("game_config").getFirstListItem(`key="territory_war"`).catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("alliances").delete(X.id);
+      await admin.collection("alliances").delete(Y.id);
+      await admin.collection("players").update(aId, { allianceId: aBefore!.allianceId ?? "", units: aBefore!.units, resources: aBefore!.resources, xp: aBefore!.xp, titles: aBefore!.titles, activeTitle: aBefore!.activeTitle ?? "", lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0 });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId ?? "", units: bBefore!.units, resources: bBefore!.resources, titles: bBefore!.titles, activeTitle: bBefore!.activeTitle ?? "", casino: bBefore!.casino ?? null });
     }
   }, 60_000);
 

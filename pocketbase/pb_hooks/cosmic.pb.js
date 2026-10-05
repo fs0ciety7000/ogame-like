@@ -679,6 +679,16 @@ routerAdd(
   $apis.requireAuth("users", "_superusers"),
 );
 
+/** 5.17 : guerre de territoire (ouverture/clôture toutes les 10 min ; points de contrôle avec les territoires). */
+cronAdd("cosmic_territory_war", "*/10 * * * *", () => {
+  try {
+    require(`${__hooks}/cosmic_db.js`).territoryWarTick(Date.now(), null);
+  } catch (err) {
+    console.log(`[cosmic] guerre de territoire : ${err}`);
+  }
+});
+routerAdd("POST", "/api/cosmic/admin/territory-war", (e) => require(`${__hooks}/cosmic_db.js`).adminTerritoryWar(e), $apis.requireAuth("users", "_superusers"));
+
 /** v5.1 : contrats entre joueurs (« livre-moi X contre Y »). */
 routerAdd("POST", "/api/cosmic/rename", (e) => require(`${__hooks}/cosmic_db.js`).renameRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/trade-contract", (e) => require(`${__hooks}/cosmic_db.js`).tradeContractRequest(e), $apis.requireAuth("users"));

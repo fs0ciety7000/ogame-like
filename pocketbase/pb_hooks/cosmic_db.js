@@ -619,7 +619,164 @@ function territoriesTick(now) {
       txApp.save(rec);
     });
   });
+  try {
+    territoryWarTick(now, sectors);
+  } catch (err) {
+    console.log(`[cosmic] guerre de territoire : ${err}`);
+  }
   return { sectors: sectors.filter((s) => s.allianceId).length };
+}
+
+/* ---------- 5.17 : guerre de territoire (un week-end sur deux) ---------- */
+
+const TERRITORY_WAR_LINK = "/game/guerre-territoire";
+
+function readTerritoryWar(txApp, game) {
+  const rec = configRecord(txApp, game.TERRITORY_WAR_KEY);
+  return rec ? game.normalizeTerritoryWar(toPlain(rec).data) : null;
+}
+
+/** Notification à tous les membres d'une alliance, avec lien vers la carte (réglage « événements d'alliance »). */
+function notifyTerritoryWar(txApp, allianceId, title, message, now, data) {
+  const rec = findOrNull(txApp, "alliances", allianceId);
+  if (!rec) return;
+  (allianceFromRecord(rec).members || []).forEach((uid) => {
+    if (mutedNotif(txApp, uid, "allianceEvents")) return;
+    try {
+      notify(txApp, uid, [{ kind: "alliance", title, message, createdAtMs: now, read: false, link: TERRITORY_WAR_LINK, data: data || undefined }]);
+    } catch (_) {
+      /* facultatif */
+    }
+  });
+}
+
+function allianceTagOf(txApp, allianceId) {
+  const rec = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+  return rec ? rec.getString("tag") : "";
+}
+
+/** Clôture : classement figé, jetons et titre pour chaque membre des alliances qui remportent au moins un secteur. */
+function finishTerritoryWar(txApp, game, state, now) {
+  let next = state.status === "closed" ? state : game.closeTerritoryWar(state, now);
+  if (next.rewarded) return next;
+  const rules = game.TERRITORY_WAR_RULES;
+  const rewards = game.territoryWarRewards(next.results || [], rules);
+  (next.results || []).forEach((r) => {
+    const rw = rewards[r.allianceId];
+    const al = findOrNull(txApp, "alliances", r.allianceId);
+    if (!al) return;
+    (allianceFromRecord(al).members || []).forEach((uid) => {
+      if (!findOrNull(txApp, "players", uid)) return;
+      let tokens = 0;
+      if (rw) {
+        const loaded = loadPlayer(txApp, game, uid);
+        tokens = game.grantTokens(loaded.player, rw.tokens);
+        if (rw.title) game.giveTitle(loaded.player, rw.title, `territory:${next.id}`, false);
+        savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
+      }
+      const message = rw
+        ? `[${r.tag}] termine ${rw.rank === 1 ? "première" : `${rw.rank}e`} avec ${rw.sectors} secteur${rw.sectors > 1 ? "s" : ""} : ${game.tokensLabel(tokens)} pour toi${rw.title ? `, et le titre « ${rw.title} »` : ""}.`
+        : `[${r.tag}] marque ${game.formatInt(r.points)} points mais ne remporte aucun secteur.`;
+      try {
+        notify(txApp, uid, [{ kind: "alliance", title: "Guerre de territoire terminée", message, createdAtMs: now, read: false, link: TERRITORY_WAR_LINK, data: tokenNotifData(null, tokens) }]);
+      } catch (_) {
+        /* facultatif */
+      }
+    });
+  });
+  next = Object.assign({}, next, { rewarded: true });
+  return next;
+}
+
+/**
+ * Cycle de vie : ouverture au début du week-end de guerre, points de contrôle
+ * (si la carte des territoires vient d'être calculée), clôture à l'échéance.
+ */
+function territoryWarTick(now, sectors) {
+  const game = loadGame();
+  let out = { status: "idle" };
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    let state = readTerritoryWar(txApp, game);
+    if (state && state.status === "active" && now >= state.endMs) {
+      state = finishTerritoryWar(txApp, game, state, now);
+      writeConfig(txApp, game.TERRITORY_WAR_KEY, state);
+      out = { status: "closed", id: state.id };
+      return;
+    }
+    if (!state || state.status !== "active") {
+      const win = game.territoryWarWindow(now, game.TERRITORY_WAR_RULES);
+      if (!win || (state && state.id === win.id)) return;
+      state = game.openTerritoryWar(win, false);
+      writeConfig(txApp, game.TERRITORY_WAR_KEY, state);
+      txApp.findRecordsByFilter("alliances", "id != ''", "", 500, 0).forEach((a) =>
+        notifyTerritoryWar(txApp, a.id, "La guerre de territoire commence !", "Tout le week-end, chaque secteur a son tableau de points : attaques, défenses et contrôle horaire. Le secteur revient à l'alliance en tête à la fin.", now),
+      );
+      out = { status: "opened", id: state.id };
+    }
+    if (sectors && game.isTerritoryWarActive(state, now)) {
+      const before = state.lastHoldMs || 0;
+      state = game.scoreHoldHour(state, sectors, now, game.TERRITORY_WAR_RULES);
+      if (state.lastHoldMs !== before) writeConfig(txApp, game.TERRITORY_WAR_KEY, state);
+      out = { status: "active", id: state.id };
+    }
+  });
+  return out;
+}
+
+/** Points d'un combat dans le secteur de la planète visée (appelé à l'arrivée d'une attaque). */
+function scoreTerritoryWarBattle(txApp, game, targetPlanetId, attacker, defender, outcome, now) {
+  const state = readTerritoryWar(txApp, game);
+  if (!game.isTerritoryWarActive(state, now)) return;
+  const pts = game.TERRITORY_WAR_RULES.points;
+  const sector = game.sectorOf(String(targetPlanetId || defender.rec.id));
+  const label = game.sectorLabel(sector);
+  const aAlly = attacker.player.npc ? "" : attacker.rec.getString("allianceId");
+  const dAlly = defender.player.npc ? "" : defender.rec.getString("allianceId");
+  if (aAlly && aAlly === dAlly) return;
+  const pair = `${attacker.rec.id}>${defender.rec.id}`;
+  let ev = null;
+  if (outcome === "attacker_win" && aAlly) {
+    const tag = allianceTagOf(txApp, aAlly);
+    ev = defender.player.npc
+      ? { allianceId: aAlly, tag, pts: pts.warlordWin, text: `[${tag}] ${attacker.player.pseudo} pille le seigneur ${defender.player.pseudo} en ${label}` }
+      : { allianceId: aAlly, tag, pts: pts.pvpWin, text: `[${tag}] ${attacker.player.pseudo} l'emporte sur ${defender.player.pseudo} en ${label}` };
+  } else if (outcome === "defender_win" && dAlly) {
+    const tag = allianceTagOf(txApp, dAlly);
+    ev = { allianceId: dAlly, tag, pts: pts.defenseWin, text: `[${tag}] ${defender.player.pseudo} repousse ${attacker.player.pseudo} en ${label}` };
+  }
+  if (!ev) return;
+  const next = game.scoreTerritoryWar(state, Object.assign({ sector, pair }, ev), now, game.TERRITORY_WAR_RULES);
+  if (next !== state) writeConfig(txApp, game.TERRITORY_WAR_KEY, next);
+}
+
+/** POST /api/cosmic/admin/territory-war { action: "start", hours } | { action: "close" } */
+function adminTerritoryWar(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    let state = readTerritoryWar(txApp, game);
+    if (req.action === "start") {
+      if (game.isTerritoryWarActive(state, now)) throw new BadRequestError("Une guerre de territoire est déjà en cours.");
+      const hours = Math.max(1, Math.min(72, Math.round(Number(req.hours) || 48)));
+      state = game.openTerritoryWar({ id: `tw-manual-${now}`, startMs: now, endMs: now + hours * 3600000 }, true);
+      txApp.findRecordsByFilter("alliances", "id != ''", "", 500, 0).forEach((a) =>
+        notifyTerritoryWar(txApp, a.id, "La guerre de territoire commence !", `Ouverte par l'équipe pour ${hours} h : attaques, défenses et contrôle horaire rapportent des points dans chaque secteur.`, now),
+      );
+      bossAdminLog(txApp, e, game.TERRITORY_WAR_KEY, `Guerre de territoire ouverte (${hours} h)`, { hours }, now);
+    } else if (req.action === "close") {
+      if (!state || state.status !== "active") throw new BadRequestError("Aucune guerre de territoire en cours.");
+      state = finishTerritoryWar(txApp, game, Object.assign({}, state, { endMs: Math.min(state.endMs, now) }), now);
+      bossAdminLog(txApp, e, game.TERRITORY_WAR_KEY, "Guerre de territoire close", { id: state.id }, now);
+    } else throw new BadRequestError("Action inconnue.");
+    writeConfig(txApp, game.TERRITORY_WAR_KEY, state);
+    out = state;
+  });
+  return e.json(200, out);
 }
 
 /* ---------- Contrats entre joueurs (v5.1) ---------- */
@@ -1082,6 +1239,12 @@ function resolveAttackArrival(txApp, game, rec, now) {
   }
   // v3.2 : points de guerre si les deux alliances sont en guerre.
   scoreWarBattle(txApp, game, attacker.rec.getString("allianceId"), defender.rec.getString("allianceId"), attacker.player.pseudo, defender.player.pseudo, result.combat.outcome, result.loot, now);
+  // 5.17 : points de la guerre de territoire dans le secteur de la cible.
+  try {
+    scoreTerritoryWarBattle(txApp, game, fleet.targetUid, attacker, defender, result.combat.outcome, now);
+  } catch (err) {
+    console.log(`[cosmic] guerre de territoire (combat) : ${err}`);
+  }
 
   garrisonRecs.forEach((g, i) => {
     const losses = (result.combat.garrisonLosses || [])[i] || {};
@@ -7533,4 +7696,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

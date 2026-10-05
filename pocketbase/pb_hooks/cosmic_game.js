@@ -131,6 +131,8 @@ __export(hooksEntry_exports, {
   SERVER_POT_KEY: () => SERVER_POT_KEY,
   STAFF_KEY: () => STAFF_KEY,
   TERRITORY_RULES: () => TERRITORY_RULES,
+  TERRITORY_WAR_KEY: () => TERRITORY_WAR_KEY,
+  TERRITORY_WAR_RULES: () => TERRITORY_WAR_RULES,
   TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
   VACATION_RULES: () => VACATION_RULES,
@@ -226,6 +228,7 @@ __export(hooksEntry_exports, {
   clientChallenge: () => clientChallenge,
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
+  closeTerritoryWar: () => closeTerritoryWar,
   coalitionRanking: () => coalitionRanking,
   codexEntries: () => codexEntries,
   codexProgress: () => codexProgress,
@@ -332,6 +335,7 @@ __export(hooksEntry_exports, {
   isLeviathanWeek: () => isLeviathanWeek,
   isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
+  isTerritoryWarActive: () => isTerritoryWarActive,
   isWarlordUid: () => isWarlordUid,
   jackpotAmounts: () => jackpotAmounts,
   leagueInfo: () => leagueInfo,
@@ -369,9 +373,11 @@ __export(hooksEntry_exports, {
   normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
+  normalizeTerritoryWar: () => normalizeTerritoryWar,
   offerDeeper: () => offerDeeper,
   offerReserved: () => offerReserved,
   onVacation: () => onVacation,
+  openTerritoryWar: () => openTerritoryWar,
   openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
   parisDay: () => parisDay,
@@ -466,7 +472,9 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scheduleState: () => scheduleState,
   scoreBattle: () => scoreBattle,
+  scoreHoldHour: () => scoreHoldHour,
   scoreSpin: () => scoreSpin,
+  scoreTerritoryWar: () => scoreTerritoryWar,
   seasonBossFlightMinutes: () => seasonBossFlightMinutes,
   seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
@@ -476,6 +484,7 @@ __export(hooksEntry_exports, {
   seasonWarPoints: () => seasonWarPoints,
   seasonWarStandings: () => seasonWarStandings,
   seasonXpFor: () => seasonXpFor,
+  sectorLabel: () => sectorLabel,
   sectorOf: () => sectorOf,
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
@@ -493,6 +502,8 @@ __export(hooksEntry_exports, {
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   takeFromPot: () => takeFromPot,
+  territoryWarRewards: () => territoryWarRewards,
+  territoryWarWindow: () => territoryWarWindow,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
   trackCampaign: () => trackCampaign,
@@ -1524,6 +1535,9 @@ function sectorOf(planetId) {
   const col = Math.min(TERRITORY_RULES.cols - 1, Math.floor(c.x * TERRITORY_RULES.cols));
   const row = Math.min(TERRITORY_RULES.rows - 1, Math.floor(c.y * TERRITORY_RULES.rows));
   return row * TERRITORY_RULES.cols + col;
+}
+function sectorLabel(id) {
+  return `${String.fromCharCode(65 + id % TERRITORY_RULES.cols)}${Math.floor(id / TERRITORY_RULES.cols) + 1}`;
 }
 function levelsOf(b) {
   return Object.values(b != null ? b : {}).reduce((a, s) => {
@@ -10719,7 +10733,7 @@ function detectionChance(spyLevel, counter) {
 function spyTravelSeconds(distance, speed, factor = 1) {
   return Math.round(factor * (SPY_RULES.baseMinutes + distance * SPY_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
 }
-function sectorLabel(uid) {
+function sectorLabel2(uid) {
   const c = galaxyCoords(uid);
   return `${Math.round(c.x * 100)}\xB7${Math.round(c.y * 100)}`;
 }
@@ -10823,7 +10837,7 @@ function resolveSpyArrival(input) {
     {
       kind: "spy-detected",
       title: "Espionnage d\xE9tect\xE9 !",
-      message: `${spy.pseudo} (secteur ${sectorLabel(spy.uid)}) t'a envoy\xE9 ${formatInt(probes)} sonde${probes > 1 ? "s" : ""} : abattue${probes > 1 ? "s" : ""}.`,
+      message: `${spy.pseudo} (secteur ${sectorLabel2(spy.uid)}) t'a envoy\xE9 ${formatInt(probes)} sonde${probes > 1 ? "s" : ""} : abattue${probes > 1 ? "s" : ""}.`,
       createdAtMs: now,
       read: false
     }
@@ -14801,6 +14815,120 @@ var GAME_FIELDS = [
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
+// src/game/territoryWar.ts
+var TERRITORY_WAR_KEY = "territory_war";
+var TERRITORY_WAR_RULES = {
+  enabled: true,
+  /** Un week-end sur N (numéro de semaine modulo N = décalage). */
+  everyWeeks: 2,
+  weekOffset: 0,
+  /** Fin le dimanche, heures avant minuit (2 → 22 h). */
+  endHoursBeforeMidnight: 2,
+  /** Combats comptés au plus entre deux mêmes joueurs (contre l'entente entre alliances). */
+  maxPerPair: 3,
+  points: { pvpWin: 10, warlordWin: 4, defenseWin: 6, holdPerHour: 5 },
+  rewards: { tokensPerSector: 3, maxTokens: 15, winnerTokens: 10, winnerTitle: "Conqu\xE9rant des secteurs" }
+};
+var FEED_MAX2 = 40;
+function territoryWarWindow(now, rules = TERRITORY_WAR_RULES) {
+  if (!rules.enabled) return null;
+  const w = weekendWindow(now);
+  const endMs = w.endMs - rules.endHoursBeforeMidnight * 36e5;
+  if (now < w.startMs || now >= endMs) return null;
+  if ((w.week % rules.everyWeeks + rules.everyWeeks) % rules.everyWeeks !== rules.weekOffset % rules.everyWeeks) return null;
+  return { id: `tw-${w.week}`, startMs: w.startMs, endMs };
+}
+function openTerritoryWar(win, manual = false) {
+  return __spreadValues({ id: win.id, startMs: win.startMs, endMs: win.endMs, status: "active", points: {}, tags: {}, feed: [] }, manual ? { manual: true } : {});
+}
+function isTerritoryWarActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs;
+}
+function scoreTerritoryWar(state, ev, now, rules = TERRITORY_WAR_RULES) {
+  var _a, _b, _c, _d, _e;
+  if (!isTerritoryWarActive(state, now) || !ev.allianceId || !(ev.pts > 0) || ev.sector < 0 || ev.sector >= SECTOR_COUNT) return state;
+  const used = ev.pair ? (_b = (_a = state.pairs) == null ? void 0 : _a[ev.pair]) != null ? _b : 0 : 0;
+  if (ev.pair && used >= rules.maxPerPair) return state;
+  const key = String(ev.sector);
+  const sector = __spreadValues({}, (_c = state.points[key]) != null ? _c : {});
+  sector[ev.allianceId] = ((_d = sector[ev.allianceId]) != null ? _d : 0) + Math.round(ev.pts);
+  return __spreadValues(__spreadProps(__spreadValues({}, state), {
+    points: __spreadProps(__spreadValues({}, state.points), { [key]: sector }),
+    tags: ev.tag ? __spreadProps(__spreadValues({}, state.tags), { [ev.allianceId]: ev.tag }) : state.tags,
+    feed: [...state.feed, { t: now, sector: ev.sector, allianceId: ev.allianceId, tag: ev.tag, pts: Math.round(ev.pts), text: ev.text }].slice(-FEED_MAX2)
+  }), ev.pair ? { pairs: __spreadProps(__spreadValues({}, (_e = state.pairs) != null ? _e : {}), { [ev.pair]: used + 1 }) } : {});
+}
+function scoreHoldHour(state, sectors, now, rules = TERRITORY_WAR_RULES) {
+  var _a, _b;
+  if (!isTerritoryWarActive(state, now) || state.lastHoldMs && now - state.lastHoldMs < 50 * 6e4) return state;
+  let s = state;
+  for (const sec of sectors) {
+    if (!sec.allianceId) continue;
+    s = scoreTerritoryWar(s, { sector: sec.id, allianceId: sec.allianceId, tag: (_a = sec.tag) != null ? _a : "", pts: rules.points.holdPerHour, text: `[${(_b = sec.tag) != null ? _b : "?"}] tient ${sectorLabel(sec.id)}` }, now, rules);
+  }
+  return __spreadProps(__spreadValues({}, s), { lastHoldMs: now });
+}
+function sectorLeaders(state) {
+  return Array.from({ length: SECTOR_COUNT }, (_, sector) => {
+    var _a, _b, _c, _d;
+    const entries = Object.entries((_a = state.points[String(sector)]) != null ? _a : {}).sort((a, b) => b[1] - a[1]);
+    const [first, second] = entries;
+    const tie = !!first && !!second && first[1] === second[1];
+    const allianceId = first && !tie ? first[0] : null;
+    return { sector, allianceId, tag: allianceId ? (_b = state.tags[allianceId]) != null ? _b : "" : "", points: (_c = first == null ? void 0 : first[1]) != null ? _c : 0, runnerUp: (_d = second == null ? void 0 : second[1]) != null ? _d : 0 };
+  });
+}
+function territoryWarStandings(state) {
+  const by = /* @__PURE__ */ new Map();
+  const row = (id) => {
+    var _a;
+    if (!by.has(id)) by.set(id, { allianceId: id, tag: (_a = state.tags[id]) != null ? _a : "", sectors: [], points: 0 });
+    return by.get(id);
+  };
+  for (const sec of Object.values(state.points)) for (const [id, pts] of Object.entries(sec)) row(id).points += pts;
+  for (const l of sectorLeaders(state)) if (l.allianceId) row(l.allianceId).sectors.push(l.sector);
+  return [...by.values()].sort((a, b) => b.sectors.length - a.sectors.length || b.points - a.points);
+}
+function closeTerritoryWar(state, now) {
+  return __spreadProps(__spreadValues({}, state), { status: "closed", closedAtMs: now, results: territoryWarStandings(state) });
+}
+function territoryWarRewards(results, rules = TERRITORY_WAR_RULES) {
+  const out = {};
+  results.forEach((r, i) => {
+    if (r.sectors.length === 0) return;
+    const winner = i === 0;
+    const tokens = Math.min(rules.rewards.maxTokens, r.sectors.length * rules.rewards.tokensPerSector) + (winner ? rules.rewards.winnerTokens : 0);
+    out[r.allianceId] = { tokens, title: winner && rules.rewards.winnerTitle ? rules.rewards.winnerTitle : null, sectors: r.sectors.length, rank: i + 1 };
+  });
+  return out;
+}
+function normalizeTerritoryWar(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.endMs) > 0)) return null;
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues({
+    id: String(r.id),
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs),
+    status: r.status === "closed" ? "closed" : "active",
+    points: r.points && typeof r.points === "object" ? r.points : {},
+    tags: r.tags && typeof r.tags === "object" ? r.tags : {},
+    feed: Array.isArray(r.feed) ? r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX2) : []
+  }, r.pairs && typeof r.pairs === "object" ? { pairs: r.pairs } : {}), r.lastHoldMs ? { lastHoldMs: Number(r.lastHoldMs) } : {}), r.closedAtMs ? { closedAtMs: Number(r.closedAtMs) } : {}), Array.isArray(r.results) ? { results: r.results } : {}), r.rewarded ? { rewarded: true } : {}), r.manual ? { manual: true } : {});
+}
+function validateTerritoryWarRules(r) {
+  var _a, _b;
+  if (!r) return [];
+  const errors = [];
+  if (r.everyWeeks !== void 0 && !(Number.isInteger(r.everyWeeks) && r.everyWeeks >= 1 && r.everyWeeks <= 8)) errors.push("Guerre de territoire : un week-end sur 1 \xE0 8.");
+  if (r.weekOffset !== void 0 && !(Number.isInteger(r.weekOffset) && r.weekOffset >= 0)) errors.push("Guerre de territoire : d\xE9calage entier positif.");
+  if (r.maxPerPair !== void 0 && !(Number.isInteger(r.maxPerPair) && r.maxPerPair >= 1)) errors.push("Guerre de territoire : au moins un combat compt\xE9 par paire de joueurs.");
+  if (r.endHoursBeforeMidnight !== void 0 && !(r.endHoursBeforeMidnight >= 0 && r.endHoursBeforeMidnight <= 12)) errors.push("Guerre de territoire : fin entre 12 h et minuit le dimanche.");
+  for (const [k, v] of Object.entries((_a = r.points) != null ? _a : {})) if (!(Number(v) >= 0)) errors.push(`Guerre de territoire : points \xAB ${k} \xBB positifs.`);
+  for (const [k, v] of Object.entries((_b = r.rewards) != null ? _b : {})) if (k !== "winnerTitle" && !(Number(v) >= 0)) errors.push(`Guerre de territoire : r\xE9compense \xAB ${k} \xBB positive.`);
+  return errors;
+}
+
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 function withFixedUnits(units) {
@@ -14818,6 +14946,7 @@ var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
+var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14844,7 +14973,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14852,7 +14981,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14908,6 +15037,10 @@ function applyGameContent(overrides) {
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
       catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
       mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.mutators) != null ? _Z : {}), { overrides: __spreadValues({}, (_aa = (_$ = (__ = overrides.rules) == null ? void 0 : __.mutators) == null ? void 0 : _$.overrides) != null ? _aa : {}) }),
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ca = (_ba = overrides.rules) == null ? void 0 : _ba.territoryWar) != null ? _ca : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_fa = (_ea = (_da = overrides.rules) == null ? void 0 : _da.territoryWar) == null ? void 0 : _ea.points) != null ? _fa : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ia = (_ha = (_ga = overrides.rules) == null ? void 0 : _ga.territoryWar) == null ? void 0 : _ha.rewards) != null ? _ia : {})
+      }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14932,7 +15065,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_ba = content.relicSettings) == null ? void 0 : _ba.loot, (_ca = content.relicSettings) == null ? void 0 : _ca.lootTokenCap);
+  setLootTables((_ja = content.relicSettings) == null ? void 0 : _ja.loot, (_ka = content.relicSettings) == null ? void 0 : _ka.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14954,7 +15087,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _da = content.rules.allianceBoss, { bosses: allianceBosses } = _da, allianceBossRules = __objRest(_da, ["bosses"]);
+  const _la = content.rules.allianceBoss, { bosses: allianceBosses } = _la, allianceBossRules = __objRest(_la, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -14962,6 +15095,7 @@ function applyGameContent(overrides) {
   Object.assign(CATCHUP_RULES, content.rules.catchup);
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
+  Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   current = content;
   return content;
 }
@@ -14985,7 +15119,8 @@ var RULE_GROUP_LABELS = {
   wars: "Guerres",
   streak: "S\xE9rie de connexion",
   catchup: "Rattrapage",
-  mutators: "Mutateur de saison"
+  mutators: "Mutateur de saison",
+  territoryWar: "Guerre de territoire"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -15023,6 +15158,7 @@ function validateRules(rules) {
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
   errors.push(...validateMutatorRules(merged.mutators));
+  errors.push(...validateTerritoryWarRules(merged.territoryWar));
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
