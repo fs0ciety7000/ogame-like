@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -87,7 +88,7 @@ export function NotificationBell() {
           })}
         </div>
         <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
-          {shown.length === 0 && <p className="px-3 py-4 text-sm text-slate-500">Rien dans cette catégorie pour l'instant.</p>}
+          {shown.length === 0 && <EmptyState size="sm" icon="🔔" title="Rien ici" className="px-3 py-4">Rien dans cette catégorie pour l'instant.</EmptyState>}
           {groupNotifications(shown).map((g) => {
             const open = expanded.has(g.key);
             const list = open ? [g.head, ...g.rest] : [g.head];

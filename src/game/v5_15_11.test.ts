@@ -77,3 +77,15 @@ describe("Codex procédural", () => {
     expect(() => claimCodexCategory(p, entries, "chronicles", OCT13)).toThrow(/Pas de récompense/);
   });
 });
+
+import { amberMonth, defaultAmberProfiles, shopOneTimeCost } from "@/game/amberBudget";
+
+describe("5.15.12 : budget d'Ambre", () => {
+  it("croît avec l'activité et compte chaque source", () => {
+    const [casual, median, active] = defaultAmberProfiles().map((p) => amberMonth(p));
+    expect(casual.total).toBeLessThan(median.total);
+    expect(median.total).toBeLessThan(active.total);
+    expect(median.lines.find((l) => l.label === "Chroniques")?.amount).toBe(4 * 15 + 50);
+    expect(shopOneTimeCost()).toBeGreaterThan(600);
+  });
+});

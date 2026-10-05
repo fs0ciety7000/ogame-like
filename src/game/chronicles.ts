@@ -87,9 +87,24 @@ export interface ChronicleBonus {
 
 export const DEFAULT_CHRONICLE_BONUS: ChronicleBonus = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
 
+/** 5.15.12 : récompense (jetons, Ambre) d'une catégorie du Codex complète, réglable dans l'admin. */
+export type CodexRewardTable = Record<string, { tokens: number; amber: number }>;
+
+export const DEFAULT_CODEX_REWARDS: CodexRewardTable = {
+  factions: { tokens: 5, amber: 25 },
+  warlords: { tokens: 8, amber: 40 },
+  bosses: { tokens: 10, amber: 50 },
+  units: { tokens: 5, amber: 25 },
+  relics: { tokens: 8, amber: 40 },
+  officers: { tokens: 5, amber: 25 },
+  chronicles: { tokens: 0, amber: 0 },
+  legends: { tokens: 10, amber: 60 },
+};
+
 export interface ChroniclesConfig {
   months: ChronicleMonth[];
   bonus?: ChronicleBonus;
+  codexRewards?: CodexRewardTable;
 }
 
 const L = (speaker: StoryLine["speaker"], text: string): StoryLine => ({ speaker, text });
@@ -394,12 +409,25 @@ export function normalizeChronicleBonus(b: Partial<ChronicleBonus> | null | unde
   };
 }
 
+/** Table du Codex fusionnée avec les valeurs par défaut (entiers positifs). */
+export function normalizeCodexRewards(t: Partial<CodexRewardTable> | null | undefined): CodexRewardTable {
+  const out: CodexRewardTable = {};
+  for (const [k, d] of Object.entries(DEFAULT_CODEX_REWARDS)) out[k] = { tokens: num(t?.[k]?.tokens, d.tokens), amber: num(t?.[k]?.amber, d.amber) };
+  return out;
+}
+
 export function setChronicles(next: Partial<ChroniclesConfig> | null | undefined): void {
   config = {
     months: Array.isArray(next?.months) && next!.months.length > 0 ? structuredClone(next!.months) : structuredClone(DEFAULT_CHRONICLES.months),
     bonus: normalizeChronicleBonus(next?.bonus),
+    codexRewards: normalizeCodexRewards(next?.codexRewards),
   };
   setMonthPasses(config.months);
+}
+
+/** Récompenses du Codex en vigueur. */
+export function codexRewards(): CodexRewardTable {
+  return config.codexRewards ?? normalizeCodexRewards(null);
 }
 
 /** Bonus en vigueur (épisode et chapitre). */
@@ -676,4 +704,13 @@ export function grantSeasonBossReward(state: LeviathanState, player: PlayerState
 export function bossEmblems(player: Pick<PlayerState, "chronicle">): { id: string; label: string; image: string; unlocked: boolean }[] {
   const owned = new Set(((player.chronicle as ChronicleState | undefined)?.emblems ?? []).map(String));
   return config.months.map((m) => ({ id: `boss:${m.id}`, label: `Sceau : ${m.boss.name}`, image: m.boss.emblem, unlocked: owned.has(m.id) }));
+}
+
+/** 5.15.12 : épisodes ouverts dont l'objectif est atteint mais pas encore terminés (pastille du menu). */
+export function chronicleReadyCount(player: Pick<PlayerState, "chronicle">, now: number): number {
+  const month = chronicleOf(now);
+  if (!month) return 0;
+  const st = chronicleState(player, now);
+  const open = unlockedEpisodes(now);
+  return month.episodes.filter((e, i) => i < open && !st.claimed.includes(i) && (st.progress[i] ?? 0) >= e.objective.count).length;
 }

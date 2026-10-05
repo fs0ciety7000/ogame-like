@@ -124,7 +124,17 @@ export interface PlayerCasino {
   jackpots: number;
   /** v5.12 : bilan de la semaine en cours (lundi → dimanche, UTC). */
   week: CasinoWeek;
+  /** 5.15.12 : derniers tirages (le plus récent d'abord, 20 au plus). */
+  history?: CasinoHistoryEntry[];
 }
+
+export interface CasinoHistoryEntry {
+  atMs: number;
+  outcome: SpinOutcome;
+  resources: Partial<Record<ResourceId, number>>;
+}
+
+export const CASINO_HISTORY_MAX = 20;
 
 export interface CasinoWeek {
   id: string;
@@ -443,7 +453,10 @@ export function playerCasino(p: Pick<PlayerState, "casino">): PlayerCasino {
   const resources: CasinoWeek["resources"] = {};
   for (const [k, v] of Object.entries(w.resources ?? {})) if (Number(v) > 0) resources[k as ResourceId] = Math.floor(Number(v));
   const week: CasinoWeek = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
+  const history = (Array.isArray(c.history) ? c.history : [])
+    .filter((h): h is CasinoHistoryEntry => !!h && typeof h === "object" && Number.isFinite(Number(h.atMs)) && typeof h.outcome === "string" && h.outcome in OUTCOME_POINTS)
+    .slice(0, CASINO_HISTORY_MAX);
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week, history };
 }
 
 /** Lundi 00 h (UTC) de la semaine : identifiant du bilan hebdomadaire. */
@@ -473,6 +486,7 @@ export function applySpin(p: PlayerState, outcome: SpinOutcome, gained: Partial<
     wins: c.wins + (won ? 1 : 0),
     jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
     week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources },
+    history: [{ atMs: now, outcome, resources: Object.fromEntries(Object.entries(gained).filter(([, v]) => Number(v) > 0).map(([k, v]) => [k, Math.floor(Number(v))])) }, ...(c.history ?? [])].slice(0, CASINO_HISTORY_MAX),
   };
   p.casino = next;
   return next;

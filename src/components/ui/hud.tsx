@@ -138,7 +138,7 @@ export function HudMeter({ percent, className, tone }: { percent: number; classN
   return (
     <div className={cn("relative h-1 overflow-hidden bg-white/[0.06]", className)}>
       <i
-        className="hud-sheen absolute inset-y-0 left-0 block"
+        className="hud-sheen meter-fill absolute inset-y-0 left-0 block"
         style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: tone ?? "linear-gradient(90deg, var(--color-cyan-glow), var(--color-mint-glow))" }}
       />
     </div>

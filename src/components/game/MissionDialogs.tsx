@@ -1,4 +1,7 @@
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { EmptyAction } from "@/components/ui/panel";
+import { EmptyState } from "@/components/ui/hud";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Clock, Recycle, ShieldPlus, Wind } from "lucide-react";
@@ -68,11 +71,11 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
           <DialogTitle>Mode fuite : patrouille</DialogTitle>
           <p className="text-sm text-slate-400">Tes vaisseaux quittent la base : une attaque ne pourra pas les détruire, mais ils ne défendront pas non plus.</p>
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
+            submitting ? <RadarScan label="Décollage…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
               <div className="space-y-2">
-                {Object.keys(all).length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau à quai.</p>}
+                {Object.keys(all).length === 0 && <EmptyState size="sm" icon="🚀" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
                 {Object.entries(all).map(([unitId, owned]) => (
                   <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                     <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
@@ -161,7 +164,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
             Champ de débris de <strong className="text-slate-200">{field.locationPseudo}</strong> : <ResourceIcon id="scrap" /> {formatNumber(field.scrap)} · <ResourceIcon id="energy" /> {formatNumber(field.energy)}
           </p>
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
+            submitting ? <RadarScan label="Décollage…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
@@ -245,10 +248,10 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
             {` ${ALLIANCE_RULES.maxGarrisonsPerHost} garnisons au plus par joueur.`}
           </p>
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Décollage…" : "Chargement…"} />
+            submitting ? <RadarScan label="Décollage…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
-              {Object.keys(available).length === 0 && <p className="text-xs text-slate-500">Aucun vaisseau à quai.</p>}
+              {Object.keys(available).length === 0 && <EmptyState size="sm" icon="🚀" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
               {Object.entries(available).map(([unitId, owned]) => (
                 <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                   <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>

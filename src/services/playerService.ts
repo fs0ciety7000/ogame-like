@@ -745,6 +745,11 @@ export function claimChronicleEpisode(episode: number) {
   return act<{ points: number; gained?: string[]; chapter?: boolean }>({ type: "chronicleClaim", episode });
 }
 
+/** 5.15.12 : réclame une mission du jour. */
+export function claimDailyMissionAction(index: number) {
+  return act<{ tokens: number; bonus: boolean }>({ type: "dailyClaim", index });
+}
+
 export function claimPassTier(tier: number) {
   return act<{ gained: string[] }>({ type: "passClaim", tier });
 }
@@ -759,4 +764,13 @@ export async function renamePlayer(pseudo: string): Promise<{ pseudo: string }> 
   const out = await callGame<{ pseudo: string }>("rename", { pseudo });
   await pb.collection("users").authRefresh().catch(() => undefined);
   return out;
+}
+
+/** 5.15.12 : mon classement d'une saison close (rapport de fin de saison). */
+export async function fetchMySeasonResult(uid: string, seasonId: string): Promise<SeasonResult | null> {
+  try {
+    return await pb.collection("season_results").getFirstListItem<SeasonResult>(pb.filter('uid = {:uid} && seasonId = {:s} && kind != "alliance"', { uid, s: seasonId }));
+  } catch {
+    return null;
+  }
 }

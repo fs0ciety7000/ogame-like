@@ -457,7 +457,7 @@ export function IntelTab() {
   return (
     <Card className="divide-y divide-white/5">
       {items.length === 0 && (
-        <p className="p-4 text-sm text-slate-500">Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</p>
+        <EmptyState icon="🛰️" title="Aucun rapport récent">Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</EmptyState>
       )}
       {items.map((it) =>
         it.type === "spy" ? (

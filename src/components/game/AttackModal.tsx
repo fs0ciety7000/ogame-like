@@ -1,4 +1,5 @@
 import { allianceFlightFactor } from "@/game/alliances";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { useEffect, useMemo, useState } from "react";
@@ -122,7 +123,7 @@ export function AttackModal({
           </p>
 
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Décollage de la flotte…" : "Chargement…"} />
+            submitting ? <RadarScan label="Décollage de la flotte…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <>
               {/* v3.8 : compositions enregistrées */}

@@ -1155,6 +1155,10 @@ function setRelics(defs, settings) {
     r.recycle = Math.max(0, Math.round(Number(v.recycle) || 0));
   }
 }
+function relicImage(templateId) {
+  var _a;
+  return ((_a = findTemplate(templateId)) == null ? void 0 : _a.image) || `/assets/relics/${templateId}.webp`;
+}
 function mythicTemplates() {
   const active = RELICS.filter((t) => t.mythicOnly && !t.disabled);
   return active.length > 0 ? active : DEFAULT_RELICS.filter((t) => t.mythicOnly);
@@ -1166,6 +1170,22 @@ function mythicFor(seasonId) {
   return { template: pool[index2 % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
 var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
+var RELIC_EFFECT_LABELS = {
+  attack: "Attaque",
+  defense: "D\xE9fense",
+  build_time: "Temps de construction",
+  research_time: "Temps de recherche",
+  repair: "R\xE9paration apr\xE8s combat",
+  cargo: "Soute (butin, transports, livraisons)",
+  spy: "Niveau d'espionnage",
+  production_scrap: "Production de ferraille",
+  production_energy: "Production d'\xE9nergie",
+  production_nano: "Production de nanocomposants",
+  production_data: "Production de donn\xE9es anciennes",
+  production_all: "Toute la production",
+  aegis: "\xC9gide (1re d\xE9faite de la semaine non pill\xE9e)",
+  boss_damage: "D\xE9g\xE2ts contre les boss"
+};
 function validateRelics(defs, settings) {
   var _a, _b, _c;
   const errors = [];
@@ -4738,6 +4758,7 @@ var OUTCOME_LABELS = {
   cherry: "Une cerise : jeton rendu",
   lose: "Perdu"
 };
+var CASINO_HISTORY_MAX = 20;
 var num = (v, def3, min = 0, max = Number.MAX_SAFE_INTEGER) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def3;
@@ -4920,7 +4941,8 @@ function playerCasino(p) {
   const resources = {};
   for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
   const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week };
+  const history = (Array.isArray(c.history) ? c.history : []).filter((h) => !!h && typeof h === "object" && Number.isFinite(Number(h.atMs)) && typeof h.outcome === "string" && h.outcome in OUTCOME_POINTS).slice(0, CASINO_HISTORY_MAX);
+  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week, history };
 }
 function casinoWeekId(now) {
   const day = new Date(now).getUTCDay();
@@ -4932,7 +4954,7 @@ function casinoWeek(p, now) {
   return w.id === casinoWeekId(now) ? w : { id: casinoWeekId(now), spins: 0, wins: 0, points: 0, resources: {} };
 }
 function applySpin(p, outcome, gained, now) {
-  var _a;
+  var _a, _b;
   const c = playerCasino(p);
   const won = outcome !== "lose";
   const w = casinoWeek(p, now);
@@ -4943,7 +4965,8 @@ function applySpin(p, outcome, gained, now) {
     spins: c.spins + 1,
     wins: c.wins + (won ? 1 : 0),
     jackpots: c.jackpots + (outcome === "jackpot" ? 1 : 0),
-    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources }
+    week: { id: w.id, spins: w.spins + 1, wins: w.wins + (won ? 1 : 0), points: w.points + OUTCOME_POINTS[outcome], resources },
+    history: [{ atMs: now, outcome, resources: Object.fromEntries(Object.entries(gained).filter(([, v]) => Number(v) > 0).map(([k, v]) => [k, Math.floor(Number(v))])) }, ...(_b = c.history) != null ? _b : []].slice(0, CASINO_HISTORY_MAX)
   });
   p.casino = next;
   return next;
@@ -5880,14 +5903,20 @@ function passState(player, now) {
   const challenge = {};
   for (const [k, v] of Object.entries((_c = raw.challenge) != null ? _c : {})) if (Number(v) > 0) challenge[k] = Number(v);
   const cleared = (Array.isArray(raw.cleared) ? raw.cleared : []).map(Number).filter((n) => n >= 1);
-  return __spreadValues(__spreadValues(__spreadValues({
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues({
     seasonId,
     points: Math.max(0, Number(raw.points) || 0),
     claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
     loginDay: String((_d = raw.loginDay) != null ? _d : ""),
     completed,
     activity
-  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}), cleared.length ? { cleared } : {}), Object.keys(challenge).length ? { challenge } : {});
+  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}), cleared.length ? { cleared } : {}), Object.keys(challenge).length ? { challenge } : {}), raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {});
+}
+function normalizeDaily(d) {
+  var _a;
+  const counts = {};
+  for (const [k, v] of Object.entries((_a = d.counts) != null ? _a : {})) if (Number(v) > 0) counts[k] = Number(v);
+  return { day: d.day, counts, claimed: (Array.isArray(d.claimed) ? d.claimed : []).map(Number).filter((n) => n >= 0 && n < 10) };
 }
 function passTierToAnnounce(player, now) {
   var _a, _b;
@@ -5974,10 +6003,13 @@ function passMax(seasonId) {
   return pass.tiers.length * pass.pointsPerTier;
 }
 function trackActivity(player, key, now, times = 1) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e, _f, _g, _h;
   if (!(times > 0)) return;
   const st = passState(player, now);
   st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
+  const day = parisDay(now);
+  const daily = st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
+  st.daily = __spreadProps(__spreadValues({}, daily), { counts: __spreadProps(__spreadValues({}, daily.counts), { [key]: ((_d = daily.counts[key]) != null ? _d : 0) + times }) });
   if (isCumulativePass(st.seasonId)) {
     player.seasonPass = st;
     return;
@@ -5986,12 +6018,12 @@ function trackActivity(player, key, now, times = 1) {
   const reqs = t ? passTierReqs(st.seasonId, t) : [];
   const req = reqs.find((r) => r.key === key);
   if (req) {
-    const challenge = __spreadProps(__spreadValues({}, (_d = st.challenge) != null ? _d : {}), { [key]: Math.min(req.count, ((_f = (_e = st.challenge) == null ? void 0 : _e[key]) != null ? _f : 0) + times) });
+    const challenge = __spreadProps(__spreadValues({}, (_e = st.challenge) != null ? _e : {}), { [key]: Math.min(req.count, ((_g = (_f = st.challenge) == null ? void 0 : _f[key]) != null ? _g : 0) + times) });
     if (reqs.every((r) => {
       var _a2;
       return ((_a2 = challenge[r.key]) != null ? _a2 : 0) >= r.count;
     })) {
-      st.cleared = [...(_g = st.cleared) != null ? _g : [], t].sort((a, b) => a - b);
+      st.cleared = [...(_h = st.cleared) != null ? _h : [], t].sort((a, b) => a - b);
       delete st.challenge;
     } else st.challenge = challenge;
   }
@@ -8821,6 +8853,16 @@ function endingReminderDue(state, now) {
 
 // src/game/chronicles.ts
 var DEFAULT_CHRONICLE_BONUS = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
+var DEFAULT_CODEX_REWARDS = {
+  factions: { tokens: 5, amber: 25 },
+  warlords: { tokens: 8, amber: 40 },
+  bosses: { tokens: 10, amber: 50 },
+  units: { tokens: 5, amber: 25 },
+  relics: { tokens: 8, amber: 40 },
+  officers: { tokens: 5, amber: 25 },
+  chronicles: { tokens: 0, amber: 0 },
+  legends: { tokens: 10, amber: 60 }
+};
 var L = (speaker, text) => ({ speaker, text });
 var DEFAULT_CHRONICLES = {
   months: [
@@ -9118,12 +9160,23 @@ function normalizeChronicleBonus(b) {
     chapter: { tokens: num3((_c = b == null ? void 0 : b.chapter) == null ? void 0 : _c.tokens, d.chapter.tokens), amber: num3((_d = b == null ? void 0 : b.chapter) == null ? void 0 : _d.amber, d.chapter.amber) }
   };
 }
+function normalizeCodexRewards(t) {
+  var _a, _b;
+  const out = {};
+  for (const [k, d] of Object.entries(DEFAULT_CODEX_REWARDS)) out[k] = { tokens: num3((_a = t == null ? void 0 : t[k]) == null ? void 0 : _a.tokens, d.tokens), amber: num3((_b = t == null ? void 0 : t[k]) == null ? void 0 : _b.amber, d.amber) };
+  return out;
+}
 function setChronicles(next) {
   config = {
     months: Array.isArray(next == null ? void 0 : next.months) && next.months.length > 0 ? structuredClone(next.months) : structuredClone(DEFAULT_CHRONICLES.months),
-    bonus: normalizeChronicleBonus(next == null ? void 0 : next.bonus)
+    bonus: normalizeChronicleBonus(next == null ? void 0 : next.bonus),
+    codexRewards: normalizeCodexRewards(next == null ? void 0 : next.codexRewards)
   };
   setMonthPasses(config.months);
+}
+function codexRewards() {
+  var _a;
+  return (_a = config.codexRewards) != null ? _a : normalizeCodexRewards(null);
 }
 function chronicleBonus() {
   var _a;
@@ -11796,6 +11849,61 @@ function lostPower(losses, units, techLevels2) {
   return computeFullPower(lost, techLevels2 != null ? techLevels2 : {}, Object.keys(lost), ["attack", "defense"]);
 }
 
+// src/game/dailyMissions.ts
+var DAILY_RULES = { tasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
+var POOL = [
+  { key: "mission", count: 2 },
+  { key: "spy", count: 2 },
+  { key: "victory", count: 1 },
+  { key: "contract", count: 1 },
+  { key: "market", count: 1 }
+];
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return h;
+}
+function dailyTasksFor(day) {
+  const pool = [...POOL];
+  const out = [];
+  let seed = hash(day);
+  while (out.length < DAILY_RULES.tasks && pool.length > 0) {
+    const i = seed % pool.length;
+    out.push(pool.splice(i, 1)[0]);
+    seed = hash(`${day}:${seed}`);
+  }
+  return out;
+}
+function todayState(st, day) {
+  return st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
+}
+function dailyMissions(player, now) {
+  const day = parisDay(now);
+  const daily = todayState(passState(player, now), day);
+  const tasks = dailyTasksFor(day).map((t, i) => {
+    var _a;
+    const progress = Math.min(t.count, (_a = daily.counts[t.key]) != null ? _a : 0);
+    return { key: t.key, label: OBJECTIVE_LABELS[t.key], count: t.count, progress, done: progress >= t.count, claimed: daily.claimed.includes(i) };
+  });
+  return { day, tasks, allClaimed: tasks.every((t) => t.claimed) };
+}
+function claimDailyMission(player, index2, now) {
+  const i = Math.floor(Number(index2));
+  const view = dailyMissions(player, now);
+  const task = view.tasks[i];
+  if (!task) throw new GameActionError("Mission inconnue.");
+  if (task.claimed) throw new GameActionError("Mission d\xE9j\xE0 r\xE9clam\xE9e.");
+  if (!task.done) throw new GameActionError(`Pas encore faite (${task.progress} / ${task.count}).`);
+  const st = passState(player, now);
+  const daily = todayState(st, view.day);
+  st.daily = __spreadProps(__spreadValues({}, daily), { claimed: [...daily.claimed, i] });
+  player.seasonPass = st;
+  const bonus = st.daily.claimed.length >= view.tasks.length;
+  const tokens = DAILY_RULES.tokensPerTask + (bonus ? DAILY_RULES.allBonusTokens : 0);
+  grantTokens(player, tokens);
+  return { tokens, bonus };
+}
+
 // src/game/streak.ts
 var STREAK_RULES = {
   /** Heures de production des ressources communes, jours 1 à 7. */
@@ -13612,6 +13720,8 @@ function applyAction(s, action) {
       return { gained: claimPassTier(player, action.tier, now) };
     case "chronicleClaim":
       return claimChronicle(player, action.episode, now);
+    case "dailyClaim":
+      return claimDailyMission(player, action.index, now);
     case "cancel":
       if (!isCancelTarget(action.target)) throw new GameActionError("Chantier inconnu.");
       return performCancel(player, queues, action.target, now);
@@ -15039,7 +15149,7 @@ var BOSS_HISTORY_KEY = "boss_history";
 var MAX_ENTRIES = 120;
 var MAX_RANKED = 150;
 var BOSS_KIND_LABELS = {
-  leviathan: "L\xE9viathan",
+  leviathan: "Boss mondial",
   seasonboss: "Boss de saison",
   allianceboss: "Boss d'alliance"
 };
@@ -15544,6 +15654,9 @@ var CODEX_CATEGORIES = [
   { id: "warlords", label: "Seigneurs", hint: "D\xE9bloqu\xE9 au premier combat contre lui." },
   { id: "bosses", label: "Boss", hint: "Abattu avec toi, ou archiv\xE9 \xE0 la fin de son mois." },
   { id: "units", label: "Unit\xE9s", hint: "D\xE9bloqu\xE9e une fois construite." },
+  // 5.15.12 : reliques possédées et officiers recrutés.
+  { id: "relics", label: "Reliques", hint: "D\xE9bloqu\xE9e en poss\xE9dant cette relique." },
+  { id: "officers", label: "Officiers", hint: "D\xE9bloqu\xE9 en recrutant cet officier." },
   { id: "chronicles", label: "Chroniques", hint: "D\xE9bloqu\xE9 \xE0 sa parution." },
   // v5.14.2 : exploits rarissimes.
   { id: "legends", label: "L\xE9gendes", hint: "D\xE9bloqu\xE9e par un exploit rarissime." }
@@ -15559,7 +15672,7 @@ var unitName = (id) => {
   return (_b = (_a = UNITS.find((u) => u.id === id)) == null ? void 0 : _a.name) != null ? _b : id;
 };
 function codexEntries(player, fought, now, extra = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const bossesFought = (_a = extra.bossesFought) != null ? _a : /* @__PURE__ */ new Set();
   const out = [];
   const threatened = new Set((_c = (_b = player.stats) == null ? void 0 : _b.threatenedBy) != null ? _c : []);
@@ -15636,6 +15749,36 @@ function codexEntries(player, fought, now, extra = {}) {
     text: "Au fond de la salle des machines, une colonne de sept dor\xE9s s'illumine une fois tous les mille tirages, \xE0 peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est grav\xE9 sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent \xAB la Main d'or \xBB. Ils disent qu'elle ne revient jamais deux fois au m\xEAme pilote. Ils mentent.",
     unlocked: Math.floor(Number((_l = player.casino) == null ? void 0 : _l.jackpots) || 0) > 0
   });
+  const owned = new Set(relicsState({ relics: player.relics }).items.map((r) => r.template));
+  for (const t of RELICS.filter((x) => !x.disabled)) {
+    out.push({
+      id: `relic:${t.id}`,
+      category: "relics",
+      name: t.name,
+      subtitle: t.mythicOnly ? "Relique mythique" : t.legendaryOnly ? "Relique l\xE9gendaire" : "Relique",
+      image: (_m = t.image) != null ? _m : relicImage(t.id),
+      text: t.lore,
+      unlocked: owned.has(t.id),
+      facts: [{ label: "Effet", value: (_n = RELIC_EFFECT_LABELS[t.effect]) != null ? _n : t.effect }]
+    });
+  }
+  const roster = commandersState({ commanders: player.commanders }).roster;
+  for (const c of COMMANDERS) {
+    out.push({
+      id: `officer:${c.id}`,
+      category: "officers",
+      name: c.name,
+      subtitle: c.title,
+      image: c.portrait,
+      text: `${c.name}, ${c.title.toLowerCase()} de l'\xE9tat-major.`,
+      unlocked: !!roster[c.id],
+      facts: [
+        { label: "Au niveau 1", value: c.bonus(1) },
+        { label: "Gagne de l'exp\xE9rience", value: c.domain },
+        ...c.rare ? [{ label: "Raret\xE9", value: "jamais recrut\xE9 : passe ou butin de boss" }] : []
+      ]
+    });
+  }
   for (const u of UNITS) {
     out.push({
       id: `unit:${u.id}`,
@@ -15644,7 +15787,7 @@ function codexEntries(player, fought, now, extra = {}) {
       subtitle: u.category === "defense" ? "D\xE9fense" : "Flotte",
       image: u.image,
       text: u.description,
-      unlocked: !!((_m = player.units) == null ? void 0 : _m[u.id]),
+      unlocked: !!((_o = player.units) == null ? void 0 : _o[u.id]),
       facts: [
         { label: "Attaque", value: String(u.stats.attaque) },
         { label: "D\xE9fense", value: String(u.stats.defense) },
@@ -15670,14 +15813,10 @@ function grantCodexTitle(player, entries) {
   player.titles = [...(_b = player.titles) != null ? _b : [], { label: CODEX_TITLE, seasonId: "codex", rank: 1 }];
   return true;
 }
-var CODEX_CATEGORY_REWARDS = {
-  factions: { tokens: 5, amber: 25 },
-  warlords: { tokens: 8, amber: 40 },
-  bosses: { tokens: 10, amber: 50 },
-  units: { tokens: 5, amber: 25 },
-  chronicles: { tokens: 0, amber: 0 },
-  legends: { tokens: 10, amber: 60 }
-};
+function codexCategoryReward(category) {
+  var _a;
+  return (_a = codexRewards()[category]) != null ? _a : { tokens: 0, amber: 0 };
+}
 function codexClaimedCategories(player) {
   var _a;
   const raw = (_a = player.stats) == null ? void 0 : _a.codexClaimed;
@@ -15686,7 +15825,7 @@ function codexClaimedCategories(player) {
 function codexCategoryState(player, entries, category) {
   const list = entries.filter((e3) => e3.category === category);
   const unlocked = list.filter((e3) => e3.unlocked).length;
-  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: CODEX_CATEGORY_REWARDS[category] };
+  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: codexCategoryReward(category) };
 }
 function claimCodexCategory(player, entries, category, now) {
   var _a;
@@ -15723,7 +15862,7 @@ function dailyPhase(now) {
   if (h < ALLIANCE_DAILY_RULES.proposeHour) return "before";
   return h < ALLIANCE_DAILY_RULES.voteEndHour ? "voting" : "active";
 }
-function hash(text) {
+function hash2(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
   return h >>> 0;
@@ -15744,7 +15883,7 @@ function proposeDaily(allianceId, day, members, now) {
     power: Math.max(500, Math.round(fleet * R.powerPct)),
     research: R.researchPerMember * active
   };
-  const skip = hash(`${allianceId}:${day}`) % DAILY_KINDS.length;
+  const skip = hash2(`${allianceId}:${day}`) % DAILY_KINDS.length;
   const proposals = DAILY_KINDS.filter((_, i) => i !== skip).map((kind) => ({ kind, target: targets[kind] }));
   return { day, proposals, votes: {}, status: "voting", chosen: null, baseline: {}, progress: 0, contributions: {}, resourceBase, updatedAtMs: now };
 }
@@ -18276,24 +18415,24 @@ var sha384 = /* @__PURE__ */ createHasher(() => new SHA384());
 
 // node_modules/@noble/hashes/esm/hmac.js
 var HMAC = class extends Hash {
-  constructor(hash2, _key) {
+  constructor(hash3, _key) {
     super();
     this.finished = false;
     this.destroyed = false;
-    ahash(hash2);
+    ahash(hash3);
     const key = toBytes(_key);
-    this.iHash = hash2.create();
+    this.iHash = hash3.create();
     if (typeof this.iHash.update !== "function")
       throw new Error("Expected instance of class which extends utils.Hash");
     this.blockLen = this.iHash.blockLen;
     this.outputLen = this.iHash.outputLen;
     const blockLen = this.blockLen;
     const pad = new Uint8Array(blockLen);
-    pad.set(key.length > blockLen ? hash2.create().update(key).digest() : key);
+    pad.set(key.length > blockLen ? hash3.create().update(key).digest() : key);
     for (let i = 0; i < pad.length; i++)
       pad[i] ^= 54;
     this.iHash.update(pad);
-    this.oHash = hash2.create();
+    this.oHash = hash3.create();
     for (let i = 0; i < pad.length; i++)
       pad[i] ^= 54 ^ 92;
     this.oHash.update(pad);
@@ -18339,8 +18478,8 @@ var HMAC = class extends Hash {
     this.iHash.destroy();
   }
 };
-var hmac = (hash2, key, message) => new HMAC(hash2, key).update(message).digest();
-hmac.create = (hash2, key) => new HMAC(hash2, key);
+var hmac = (hash3, key, message) => new HMAC(hash3, key).update(message).digest();
+hmac.create = (hash3, key) => new HMAC(hash3, key);
 
 // node_modules/@noble/curves/esm/abstract/curve.js
 var _0n3 = BigInt(0);
@@ -19309,8 +19448,8 @@ function ecdh(Point, ecdhOpts = {}) {
   };
   return Object.freeze({ getPublicKey, getSharedSecret, keygen, Point, utils, lengths });
 }
-function ecdsa(Point, hash2, ecdsaOpts = {}) {
-  ahash(hash2);
+function ecdsa(Point, hash3, ecdsaOpts = {}) {
+  ahash(hash3);
   _validateObject(ecdsaOpts, {}, {
     hmac: "function",
     lowS: "boolean",
@@ -19319,7 +19458,7 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
     bits2int_modN: "function"
   });
   const randomBytes2 = ecdsaOpts.randomBytes || randomBytes;
-  const hmac2 = ecdsaOpts.hmac || ((key, ...msgs) => hmac(hash2, key, concatBytes(...msgs)));
+  const hmac2 = ecdsaOpts.hmac || ((key, ...msgs) => hmac(hash3, key, concatBytes(...msgs)));
   const { Fp, Fn } = Point;
   const { ORDER: CURVE_ORDER, BITS: fnBits } = Fn;
   const { keygen, getPublicKey, getSharedSecret, utils, lengths } = ecdh(Point, ecdsaOpts);
@@ -19462,7 +19601,7 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
   }
   function validateMsgAndHash(message, prehash) {
     _abytes2(message, void 0, "message");
-    return prehash ? _abytes2(hash2(message), void 0, "prehashed message") : message;
+    return prehash ? _abytes2(hash3(message), void 0, "prehashed message") : message;
   }
   function prepSig(message, privateKey, opts) {
     if (["recovered", "canonical"].some((k) => k in opts))
@@ -19503,7 +19642,7 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
   function sign(message, secretKey, opts = {}) {
     message = ensureBytes("message", message);
     const { seed, k2sig } = prepSig(message, secretKey, opts);
-    const drbg = createHmacDrbg(hash2.outputLen, Fn.BYTES, hmac2);
+    const drbg = createHmacDrbg(hash3.outputLen, Fn.BYTES, hmac2);
     const sig = drbg(seed, k2sig);
     return sig;
   }
@@ -19577,7 +19716,7 @@ function ecdsa(Point, hash2, ecdsaOpts = {}) {
     verify,
     recoverPublicKey,
     Signature,
-    hash: hash2
+    hash: hash3
   });
 }
 function _weierstrass_legacy_opts_to_new(c) {
@@ -19628,15 +19767,15 @@ function _ecdsa_new_output_to_legacy(c, _ecdsa) {
   });
 }
 function weierstrass(c) {
-  const { CURVE, curveOpts, hash: hash2, ecdsaOpts } = _ecdsa_legacy_opts_to_new(c);
+  const { CURVE, curveOpts, hash: hash3, ecdsaOpts } = _ecdsa_legacy_opts_to_new(c);
   const Point = weierstrassN(CURVE, curveOpts);
-  const signs = ecdsa(Point, hash2, ecdsaOpts);
+  const signs = ecdsa(Point, hash3, ecdsaOpts);
   return _ecdsa_new_output_to_legacy(c, signs);
 }
 
 // node_modules/@noble/curves/esm/_shortw_utils.js
 function createCurve(curveDef, defHash) {
-  const create = (hash2) => weierstrass(__spreadProps(__spreadValues({}, curveDef), { hash: hash2 }));
+  const create = (hash3) => weierstrass(__spreadProps(__spreadValues({}, curveDef), { hash: hash3 }));
   return __spreadProps(__spreadValues({}, create(defHash)), { create });
 }
 

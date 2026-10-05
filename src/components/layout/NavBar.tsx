@@ -23,6 +23,9 @@ import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 import { passState, passTier } from "@/game/seasonPass";
+import { chronicleReadyCount } from "@/game/chronicles";
+import { codexClaimableCount } from "@/game/codex";
+import { dailyReadyCount } from "@/game/dailyMissions";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -203,11 +206,18 @@ function useBadges(): (to: string) => number {
     const st = passState(s.player, Date.now());
     return Math.max(0, passTier(st.points, st.seasonId) - st.claimed.length);
   });
+  // 5.15.12 : épisodes à terminer (objectif atteint) et catégories du Codex à réclamer.
+  const chroniclesReady = usePlayerStore((s) => (s.player ? chronicleReadyCount(s.player, Date.now()) : 0));
+  const codexReady = usePlayerStore((s) => (s.player ? codexClaimableCount(s.player, Date.now()) : 0));
+  const dailyReady = usePlayerStore((s) => (s.player ? dailyReadyCount(s.player, Date.now()) : 0));
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
   return (to) =>
     ({
+      "/game": dailyReady,
       "/game/passe": passClaimable,
+      "/game/chroniques": chroniclesReady,
+      "/game/codex": codexReady,
       "/game/messages": messagesUnread,
       "/game/uber": leviathanNew,
       "/game/alliance": allianceUnread,

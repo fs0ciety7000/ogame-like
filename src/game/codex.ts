@@ -1,4 +1,4 @@
-import { chroniclesConfig, chronicleMonthId, episodeUnlockMs } from "@/game/chronicles";
+import { chroniclesConfig, chronicleMonthId, codexRewards, episodeUnlockMs } from "@/game/chronicles";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import type { BossHistoryEntry } from "@/game/bossHistory";
 import { GameActionError } from "@/game/errors";
@@ -7,6 +7,8 @@ import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
 import { WORLD_BOSSES } from "@/game/worldBosses";
 import { FACTIONS } from "@/game/pirates";
 import { UNITS } from "@/game/units";
+import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
+import { COMMANDERS, commandersState } from "@/game/commanders";
 import { warlordUid, warlordsConfig } from "@/game/warlords";
 import type { PlayerState } from "@/types/game";
 
@@ -24,13 +26,16 @@ import type { PlayerState } from "@/types/game";
 
 export const CODEX_TITLE = "Archiviste";
 
-export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "chronicles" | "legends";
+export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "relics" | "officers" | "chronicles" | "legends";
 
 export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string }[] = [
   { id: "factions", label: "Factions", hint: "Débloquée au premier ultimatum reçu." },
   { id: "warlords", label: "Seigneurs", hint: "Débloqué au premier combat contre lui." },
   { id: "bosses", label: "Boss", hint: "Abattu avec toi, ou archivé à la fin de son mois." },
   { id: "units", label: "Unités", hint: "Débloquée une fois construite." },
+  // 5.15.12 : reliques possédées et officiers recrutés.
+  { id: "relics", label: "Reliques", hint: "Débloquée en possédant cette relique." },
+  { id: "officers", label: "Officiers", hint: "Débloqué en recrutant cet officier." },
   { id: "chronicles", label: "Chroniques", hint: "Débloqué à sa parution." },
   // v5.14.2 : exploits rarissimes.
   { id: "legends", label: "Légendes", hint: "Débloquée par un exploit rarissime." },
@@ -71,7 +76,7 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -155,6 +160,37 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     text: "Au fond de la salle des machines, une colonne de sept dorés s'illumine une fois tous les mille tirages, à peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est gravé sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent « la Main d'or ». Ils disent qu'elle ne revient jamais deux fois au même pilote. Ils mentent.",
     unlocked: Math.floor(Number((player.casino as { jackpots?: number } | undefined)?.jackpots) || 0) > 0,
   });
+  // 5.15.12 : reliques (hors retirées) et officiers de base.
+  const owned = new Set(relicsState({ relics: player.relics }).items.map((r) => r.template));
+  for (const t of RELICS.filter((x) => !x.disabled)) {
+    out.push({
+      id: `relic:${t.id}`,
+      category: "relics",
+      name: t.name,
+      subtitle: t.mythicOnly ? "Relique mythique" : t.legendaryOnly ? "Relique légendaire" : "Relique",
+      image: t.image ?? relicImage(t.id),
+      text: t.lore,
+      unlocked: owned.has(t.id),
+      facts: [{ label: "Effet", value: RELIC_EFFECT_LABELS[t.effect] ?? t.effect }],
+    });
+  }
+  const roster = commandersState({ commanders: player.commanders }).roster;
+  for (const c of COMMANDERS) {
+    out.push({
+      id: `officer:${c.id}`,
+      category: "officers",
+      name: c.name,
+      subtitle: c.title,
+      image: c.portrait,
+      text: `${c.name}, ${c.title.toLowerCase()} de l'état-major.`,
+      unlocked: !!roster[c.id],
+      facts: [
+        { label: "Au niveau 1", value: c.bonus(1) },
+        { label: "Gagne de l'expérience", value: c.domain },
+        ...(c.rare ? [{ label: "Rareté", value: "jamais recruté : passe ou butin de boss" }] : []),
+      ],
+    });
+  }
   for (const u of UNITS) {
     out.push({
       id: `unit:${u.id}`,
@@ -196,15 +232,11 @@ export function grantCodexTitle(player: PlayerState, entries: CodexEntry[]): boo
 
 /* ---------- 5.15.11 : récompense par catégorie complète ---------- */
 
-/** Jetons et Ambre d'une catégorie terminée (une fois). Les Chroniques, toujours ouvertes, ne paient pas. */
-export const CODEX_CATEGORY_REWARDS: Record<CodexCategory, { tokens: number; amber: number }> = {
-  factions: { tokens: 5, amber: 25 },
-  warlords: { tokens: 8, amber: 40 },
-  bosses: { tokens: 10, amber: 50 },
-  units: { tokens: 5, amber: 25 },
-  chronicles: { tokens: 0, amber: 0 },
-  legends: { tokens: 10, amber: 60 },
-};
+/** Jetons et Ambre d'une catégorie terminée (une fois), réglables dans l'admin (onglet Chroniques).
+ *  Les Chroniques, toujours ouvertes, ne paient pas par défaut. */
+export function codexCategoryReward(category: CodexCategory): { tokens: number; amber: number } {
+  return codexRewards()[category] ?? { tokens: 0, amber: 0 };
+}
 
 export function codexClaimedCategories(player: Pick<PlayerState, "stats">): string[] {
   const raw = (player.stats as { codexClaimed?: unknown } | undefined)?.codexClaimed;
@@ -215,7 +247,7 @@ export function codexClaimedCategories(player: Pick<PlayerState, "stats">): stri
 export function codexCategoryState(player: Pick<PlayerState, "stats">, entries: CodexEntry[], category: CodexCategory): { unlocked: number; total: number; complete: boolean; claimed: boolean; reward: { tokens: number; amber: number } } {
   const list = entries.filter((e) => e.category === category);
   const unlocked = list.filter((e) => e.unlocked).length;
-  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: CODEX_CATEGORY_REWARDS[category] };
+  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: codexCategoryReward(category) };
 }
 
 /** Réclame la récompense d'une catégorie complète (serveur). */
@@ -230,4 +262,14 @@ export function claimCodexCategory(player: PlayerState, entries: CodexEntry[], c
   if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now);
   player.stats = { ...(player.stats ?? {}), codexClaimed: [...codexClaimedCategories(player), id] } as PlayerState["stats"];
   return st.reward;
+}
+
+/** 5.15.12 : catégories complètes dont la récompense attend (pastille du menu). Sans les
+ *  données du serveur (seigneurs, boss affrontés), seules les catégories sûres comptent. */
+export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): number {
+  const entries = codexEntries(player, new Set(), now);
+  return CODEX_CATEGORIES.filter((c) => {
+    const st = codexCategoryState(player, entries, c.id);
+    return st.complete && !st.claimed && (st.reward.tokens > 0 || st.reward.amber > 0);
+  }).length;
 }

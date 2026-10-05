@@ -32,5 +32,6 @@ export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof
 }
 
 export function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("focus:outline-none", className)} {...props} />;
+  // 5.15.12 : glissement court à l'ouverture d'un onglet (coupé si « réduire les animations »).
+  return <TabsPrimitive.Content className={cn("tab-enter focus:outline-none", className)} {...props} />;
 }

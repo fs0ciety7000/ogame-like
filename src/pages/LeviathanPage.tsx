@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { HudTag, StatTile } from "@/components/ui/hud";
+import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import { LeviathanAdminPanel } from "@/components/game/LeviathanAdminPanel";
@@ -115,7 +115,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
 
 export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) {
   const ranking = leviathanRanking(state);
-  if (ranking.length === 0) return <p className="text-xs text-slate-500">Personne n'a encore frappé.</p>;
+  if (ranking.length === 0) return <EmptyState size="sm" icon="⚔️" title="Personne n'a encore frappé">Le premier assaut ouvrira le classement.</EmptyState>;
   const top = ranking[0].damage;
   return (
     <ol className="flex flex-col gap-1.5">

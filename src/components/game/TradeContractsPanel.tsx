@@ -262,7 +262,7 @@ export function TradeContractsPanel() {
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="hud-title text-sm">Mes contrats</h2>
           {data.mine.length === 0 ? (
-            <p className="text-sm text-slate-500">Aucun contrat pour l'instant.</p>
+            <EmptyState size="sm" icon="🤝" title="Aucun contrat">Propose un contrat de livraison à un autre joueur.</EmptyState>
           ) : (
             <div className="flex flex-col divide-y divide-white/5">
               {data.mine.map((c) => {

@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { EmptyState } from "@/components/ui/hud";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -25,7 +26,7 @@ export function ChangelogPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description={CURRENT_VERSION ? `Les dernières mises à jour du jeu — version actuelle : v${CURRENT_VERSION}.` : "Les dernières mises à jour du jeu."} />
-      {CHANGELOG.length === 0 && <p className="text-sm text-slate-500">Aucune mise à jour publiée pour l'instant.</p>}
+      {CHANGELOG.length === 0 && <EmptyState icon="📰" title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
       <div className="flex flex-col gap-3">
         {CHANGELOG.map((entry, i) => (
           <motion.div

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ export function TradeModal({
           {player && <GiftRules player={player} target={target} />}
 
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Envoi en cours…" : "Chargement…"} />
+            submitting ? <RadarScan label="Envoi en cours…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <>
               <div className="mt-4 space-y-2">

@@ -1,4 +1,6 @@
 import { subscribePacts, usePactStore } from "@/services/diplomacyService";
+import { ShowMoreButton } from "@/components/ui/panel";
+import { useShowMore } from "@/hooks/useShowMore";
 import { EmptyState } from "@/components/ui/hud";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { bindingPactBetween } from "@/game/diplomacy";
@@ -187,6 +189,8 @@ export function PlayersPage() {
     if (!q) return ranked;
     return ranked.filter((p) => p.pseudo.toLowerCase().includes(q));
   }, [ranked, search]);
+  // 5.15.12 : 50 joueurs à la fois.
+  const { shown: shownPlayers, more: morePlayers, showMore: showMorePlayers } = useShowMore(filtered, 50, `${mode}|${search}`);
 
   return (
     <div className="flex flex-col gap-4">
@@ -294,7 +298,7 @@ export function PlayersPage() {
               Aucun joueur ne correspond à « {search} ».
             </p>
           )}
-          {filtered.map((p, i) => {
+          {shownPlayers.map((p, i) => {
             const isSelf = p.uid === uid;
             const me = players.find((x) => x.uid === uid);
             const attackCheck = isSelf
@@ -444,6 +448,7 @@ export function PlayersPage() {
               </motion.div>
             );
           })}
+          <ShowMoreButton more={morePlayers} step={50} onClick={showMorePlayers} />
         </Card>
         </>
       )}

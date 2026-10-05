@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarRange } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { OBJECTIVE_LABELS, activePass, passState, passTier } from "@/game/seasonPass";
 import { currentSeasonId, seasonEndMs, seasonLabel } from "@/game/seasons";
 import { streakStatus } from "@/game/streak";
@@ -13,7 +14,7 @@ import type { ChronicleObjective } from "@/game/chronicles";
 
 const KEYS: ChronicleObjective[] = ["victory", "contract", "bounty", "spy", "market"];
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
   return (
     <div className="flex min-w-0 flex-col">
       <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">{label}</span>
@@ -45,7 +46,7 @@ export function MonthRecapCard({ now }: { now: number }) {
         </Link>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="XP de saison" value={formatCompact(seasonXp)} sub={player.lastSeasonId && player.lastSeasonXp ? `${seasonLabel(player.lastSeasonId)} : ${formatCompact(player.lastSeasonXp)}` : undefined} />
+        <Stat label="XP de saison" value={<AnimatedNumber value={seasonXp} countUp format={formatCompact} />} sub={player.lastSeasonId && player.lastSeasonXp ? `${seasonLabel(player.lastSeasonId)} : ${formatCompact(player.lastSeasonXp)}` : undefined} />
         <Stat label="Passe" value={`${passTier(st.points, st.seasonId)}/${tiers}`} sub={`${st.claimed.length} réclamé${st.claimed.length > 1 ? "s" : ""}`} />
         <Stat label="Série" value={`${streak.current} j`} sub={streak.claimed ? "jour reçu" : "à réclamer"} />
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Crosshair, Radio, Skull, Trophy } from "lucide-react";
@@ -196,7 +197,7 @@ export function BossFeed({ state, uid, now, max = 12 }: { state: LeviathanState;
         <Radio className="h-4 w-4 text-danger-glow" /> Fil du combat
       </h2>
       {feed.length === 0 ? (
-        <p className="text-xs text-slate-500">Aucun assaut pour l'instant. Le premier à frapper ouvrira le fil.</p>
+        <EmptyState size="sm" icon="⚔️" title="Aucun assaut">Le premier à frapper ouvrira le fil.</EmptyState>
       ) : (
         <ol className="flex flex-col gap-1">
           <AnimatePresence initial={false}>

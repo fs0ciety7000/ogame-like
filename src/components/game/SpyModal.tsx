@@ -1,4 +1,5 @@
 import { allianceFlightFactor } from "@/game/alliances";
+import { EmptyState } from "@/components/ui/hud";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -214,7 +215,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
           </p>
 
           {!player || submitting ? (
-            <RadarScan label={submitting ? "Lancement des sondes…" : "Chargement…"} />
+            submitting ? <RadarScan label="Lancement des sondes…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
@@ -270,7 +271,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
             ) : report ? (
               <SpyReportView report={report} />
             ) : (
-              <p className="text-xs text-slate-500">Aucun rapport sur ce joueur pour l'instant.</p>
+              <EmptyState size="sm" icon="🛰️" title="Aucun rapport">Lance des sondes pour connaître ses forces.</EmptyState>
             )}
           </div>
         </DialogContent>

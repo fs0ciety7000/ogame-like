@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AmberBudgetCard } from "@/pages/admin/AmberBudgetCard";
 import { NumberInput } from "@/components/ui/number-input";
 import { useSearchParams } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 } from "lucide-react";
@@ -185,6 +186,8 @@ export function BalancePanel() {
           <RefreshCw className={cn("h-3.5 w-3.5", busy && "animate-spin")} /> Actualiser
         </Button>
       </Card>
+
+      <AmberBudgetCard />
 
       <Section title="Propositions">
         {proposals.length === 0 ? <p className="text-sm text-mint-glow">Aucun déséquilibre détecté.</p> : proposals.map((p) => <ProposalCard key={p.id} p={p} />)}

@@ -373,7 +373,7 @@ export function CockpitHub() {
               ))}
             {tab === "alerts" &&
               (alerts.length === 0 ? (
-                <p className="text-sm text-slate-400">Rien à signaler, commandant.</p>
+                <EmptyState size="sm" icon="✅" title="Rien à signaler, commandant" />
               ) : (
                 alerts.slice(0, 7).map((a) => (
                   <Link key={a.id} to={a.to} className={cn("ck-item", a.urgent && "ck-item-hostile")}>

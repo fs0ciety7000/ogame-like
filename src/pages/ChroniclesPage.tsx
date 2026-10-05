@@ -11,6 +11,7 @@ import { AmberAmount } from "@/components/ui/amber";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
 import { SceneDialog } from "@/components/game/StoryDialog";
+import { RewardReveal } from "@/components/game/RewardReveal";
 import { chronicleBonus, chronicleOf, chroniclesConfig, chronicleState, seasonBossWindow, unlockedEpisodes } from "@/game/chronicles";
 import { describePassReward, PASS_POINTS } from "@/game/seasonPass";
 import { claimChronicleEpisode, GameActionError } from "@/services/playerService";
@@ -30,6 +31,7 @@ export function ChroniclesPage() {
   const player = usePlayerStore((s) => s.player);
   const [busy, setBusy] = useState<number | null>(null);
   const [replay, setReplay] = useState<number | null>(null);
+  const [chapterGains, setChapterGains] = useState<string[] | null>(null);
   if (!player) return null;
   const now = Date.now();
   const month = chronicleOf(now);
@@ -59,7 +61,9 @@ export function ChroniclesPage() {
     try {
       const out = await claimChronicleEpisode(i);
       const extra = out.gained?.length ? ` · ${out.gained.join(" · ")}` : "";
-      toast.success(out.chapter ? `Chapitre « ${month.title} » terminé !` : `Épisode ${i + 1} terminé`, { description: `+${PASS_POINTS.chronicle} points de passe${extra}` });
+      // 5.15.12 : la fin du chapitre a droit à la révélation des récompenses.
+      if (out.chapter) setChapterGains([`+${PASS_POINTS.chronicle} points de passe`, ...(out.gained ?? [])]);
+      else toast.success(`Épisode ${i + 1} terminé`, { description: `+${PASS_POINTS.chronicle} points de passe${extra}` });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Réclamation impossible.");
     } finally {
@@ -158,6 +162,14 @@ export function ChroniclesPage() {
         )}
       </HudPanel>
 
+      <RewardReveal
+        open={chapterGains !== null}
+        onClose={() => setChapterGains(null)}
+        icon={<Trophy />}
+        title={`Chapitre « ${month.title} » terminé`}
+        description="Les quatre épisodes du mois sont bouclés."
+        items={(chapterGains ?? []).map((g, k) => ({ key: String(k), node: <span className="text-xs text-slate-100">{g}</span> }))}
+      />
       {replay !== null && (
         <SceneDialog title={`Chroniques · ${month.title} · Épisode ${replay + 1} : ${month.episodes[replay].title}`} lines={month.episodes[replay].lines} pseudo={player.pseudo} onClose={() => setReplay(null)} />
       )}

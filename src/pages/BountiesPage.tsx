@@ -410,7 +410,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
         </div>
       </Card>
       <HudPanel icon={<Trophy />} title="Meute de chasse" tone="gold">
-        {ranking.length === 0 && <p className="text-xs text-slate-500">Personne n'a encore frappé.</p>}
+        {ranking.length === 0 && <EmptyState size="sm" icon="🎯" title="Personne n'a encore frappé">Lance la traque pour ouvrir le classement.</EmptyState>}
         <ol className="flex flex-col gap-1.5">
           {ranking.slice(0, 15).map((c, i) => (
             <li key={c.uid} className={cn("grid grid-cols-[2rem_1fr_auto] items-center gap-2 text-sm", c.uid === player.uid && "text-cyan-glow")}>
