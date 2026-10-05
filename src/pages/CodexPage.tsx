@@ -63,7 +63,9 @@ export function CodexPage() {
       const out = await claimCodexCategoryReward(c);
       setRevealed({ label: CODEX_CATEGORIES.find((x) => x.id === c)?.label ?? c, tokens: out.tokens, amber: out.amber });
     } catch (err) {
-      toast.error(err instanceof GameActionError ? err.message : "Impossible pour le moment.");
+      // 5.15.13 : un serveur aux hooks anciens ignore la catégorie et répond sur le titre.
+      const msg = err instanceof GameActionError ? err.message : "Impossible pour le moment.";
+      toast.error(/^Codex complété/.test(msg) ? "Le serveur n'est pas encore à jour : réessaie dans quelques minutes." : msg);
     } finally {
       setClaiming(null);
     }

@@ -56,6 +56,10 @@ export const EVENT_RULES: {
   bossWeekend: BossWeekend;
   /** v5.10.5 : apparitions du Léviathan à date précise (en plus du rendez-vous mensuel). */
   bossDates: BossDate[];
+  /** 5.15.14 : apparitions régulières du boss mondial annulées (début exact), depuis le planificateur. */
+  bossSkips?: number[];
+  /** 5.15.14 : week-ends de la rotation annulés (début exact de la fenêtre). */
+  rotationSkips?: number[];
   /** v5.14 : boss mondiaux en rotation hebdomadaire (remplace le rendez-vous mensuel). */
   bossWeekly?: boolean;
   /** Heure de début le vendredi (heure de Paris). */
@@ -68,6 +72,8 @@ export const EVENT_RULES: {
   bossMonthly: true,
   bossWeekend: "first",
   bossDates: [],
+  bossSkips: [],
+  rotationSkips: [],
   bossWeekly: true,
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
@@ -189,6 +195,8 @@ export interface BossSchedule {
   durationHours: number;
   /** v5.10.5 : apparitions supplémentaires à date précise. */
   dates?: BossDate[];
+  /** 5.15.14 : apparitions régulières annulées (début exact) ; les dates précises ne sont pas concernées. */
+  skips?: number[];
   /** v5.14 : rendez-vous hebdomadaire (boss mondiaux) au lieu du week-end du mois.
    *  v5.14.2 : `between` — en alternance avec un autre boss hebdomadaire : une apparition
    *  dans chaque intervalle entre deux de ses passages, sans jamais le chevaucher. */
@@ -205,18 +213,19 @@ export function onWeekend(w: { nth: number; lastOfMonth: boolean }, which: BossW
 /** Prochaines fenêtres (en cours comprise) d'un boss mensuel, dans l'ordre. */
 export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs: number; endMs: number; fixed?: boolean }[] {
   const out: { startMs: number; endMs: number; fixed?: boolean }[] = [];
+  const skipped = new Set(s.skips ?? []);
   // v5.14.2 : en alternance avec un boss hebdomadaire (le boss mondial).
   const alternating = !!(s.weekly?.between?.enabled && s.weekly.between.weekly);
   if (s.enabled && alternating) {
-    for (const win of alternateWindows(now, s, s.weekly!.between!, count)) out.push(win);
+    for (const win of alternateWindows(now, s, s.weekly!.between!, count + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
   } else if (s.enabled && s.weekly && !s.weekly.between) {
     // v5.14 : boss mondiaux, un par semaine, un jour différent à chaque fois.
     const w0 = weekOfLocal(now + parisOffsetMs(now));
-    for (let w = w0 - 1; w <= w0 + count + 1; w++) {
+    for (let w = w0 - 1; w <= w0 + count + skipped.size + 1; w++) {
       const d = worldBossDay(w, s.weekly.minGapDays);
       const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY + d * DAY + s.startHour * HOUR);
       const endMs = startMs + s.durationHours * HOUR;
-      if (endMs > now) out.push({ startMs, endMs });
+      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
     }
   }
   // Repli mensuel : pas de rythme hebdomadaire, ou alternance sans boss mondial hebdomadaire.
@@ -226,7 +235,7 @@ export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs:
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
     const endMs = startMs + s.durationHours * HOUR;
-    if (endMs > now) out.push({ startMs, endMs });
+    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
   }
   // v5.10.5 : dates précises, mêlées au rendez-vous mensuel.
   for (const d of s.dates ?? []) {
@@ -342,6 +351,8 @@ export function validateBossSchedule(label: string, s: Partial<BossSchedule>): s
 function rotationEvent(window: { startMs: number; endMs: number; week: number; nth: number; lastOfMonth: boolean }): GameEvent | null {
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  // 5.15.14 : week-end annulé (ou déplacé) depuis le planificateur.
+  if ((EVENT_RULES.rotationSkips ?? []).includes(window.startMs)) return null;
   // Week-end du Léviathan : pas d'événement de la rotation (v5.14 : sauf en rotation hebdomadaire,
   // où les boss mondiaux et les événements se côtoient).
   if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;

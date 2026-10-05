@@ -101,6 +101,7 @@ __export(hooksEntry_exports, {
   LEAGUES_KEY: () => LEAGUES_KEY,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
+  LOGIC_VERSION: () => LOGIC_VERSION,
   LOOT_TABLES: () => LOOT_TABLES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
@@ -3151,6 +3152,8 @@ var EVENT_RULES = {
   bossMonthly: true,
   bossWeekend: "first",
   bossDates: [],
+  bossSkips: [],
+  rotationSkips: [],
   bossWeekly: true,
   startHour: 18,
   rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
@@ -3241,18 +3244,19 @@ function onWeekend(w, which) {
   return w.nth === NTH[which != null ? which : "first"];
 }
 function bossWindows(now, s, count2 = 1) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const out = [];
-  const alternating = !!(((_b = (_a = s.weekly) == null ? void 0 : _a.between) == null ? void 0 : _b.enabled) && s.weekly.between.weekly);
+  const skipped = new Set((_a = s.skips) != null ? _a : []);
+  const alternating = !!(((_c = (_b = s.weekly) == null ? void 0 : _b.between) == null ? void 0 : _c.enabled) && s.weekly.between.weekly);
   if (s.enabled && alternating) {
-    for (const win of alternateWindows(now, s, s.weekly.between, count2)) out.push(win);
+    for (const win of alternateWindows(now, s, s.weekly.between, count2 + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
   } else if (s.enabled && s.weekly && !s.weekly.between) {
     const w0 = weekOfLocal(now + parisOffsetMs(now));
-    for (let w = w0 - 1; w <= w0 + count2 + 1; w++) {
+    for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
       const d = worldBossDay(w, s.weekly.minGapDays);
       const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR);
       const endMs = startMs + s.durationHours * HOUR;
-      if (endMs > now) out.push({ startMs, endMs });
+      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
     }
   }
   const monthly = !s.weekly || !!s.weekly.between && !alternating;
@@ -3261,9 +3265,9 @@ function bossWindows(now, s, count2 = 1) {
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
     const endMs = startMs + s.durationHours * HOUR;
-    if (endMs > now) out.push({ startMs, endMs });
+    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
   }
-  for (const d of (_c = s.dates) != null ? _c : []) {
+  for (const d of (_d = s.dates) != null ? _d : []) {
     const endMs = d.startMs + d.durationHours * HOUR;
     if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
   }
@@ -3340,11 +3344,12 @@ function validateBossSchedule(label3, s) {
   return errors;
 }
 function rotationEvent(window) {
-  var _a;
+  var _a, _b;
   const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
   if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
-  if (((_a = EVENT_RULES.bossDates) != null ? _a : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
+  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
   const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
@@ -8613,7 +8618,7 @@ function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
   return best ? { uid: best.uid, pseudo: best.pseudo } : null;
 }
 function leviathanSchedule() {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const weekly = EVENT_RULES.bossWeekly !== false;
   const minGapDays = Math.min(6, Math.max(WORLD_BOSS_RULES.minGapDays, Math.ceil(LEVIATHAN_RULES.durationHours / 24)));
   return __spreadValues({
@@ -8621,7 +8626,8 @@ function leviathanSchedule() {
     weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first",
     startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18,
     durationHours: LEVIATHAN_RULES.durationHours,
-    dates: (_c = EVENT_RULES.bossDates) != null ? _c : []
+    dates: (_c = EVENT_RULES.bossDates) != null ? _c : [],
+    skips: (_d = EVENT_RULES.bossSkips) != null ? _d : []
   }, weekly ? { weekly: { minGapDays } } : {});
 }
 function worldBossForStart(startMs) {
@@ -9316,6 +9322,7 @@ var SEASON_BOSS_RULES = {
   enabled: true,
   weekend: "last",
   dates: [],
+  skips: [],
   startHour: 18,
   hpFactor: 3,
   minHp: 1e5,
@@ -9324,13 +9331,14 @@ var SEASON_BOSS_RULES = {
   alternate: true
 };
 function seasonBossSchedule() {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   return __spreadValues({
     enabled: SEASON_BOSS_RULES.enabled !== false,
     weekend: (_a = SEASON_BOSS_RULES.weekend) != null ? _a : "last",
     startHour: (_b = SEASON_BOSS_RULES.startHour) != null ? _b : 18,
     durationHours: SEASON_BOSS_RULES.durationHours,
-    dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : []
+    dates: (_c = SEASON_BOSS_RULES.dates) != null ? _c : [],
+    skips: (_d = SEASON_BOSS_RULES.skips) != null ? _d : []
   }, SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {});
 }
 function seasonBossWindow(now, includeUpcoming = false) {
@@ -20524,6 +20532,9 @@ function grantLeagueTitle(player, title, rank2, now) {
   player.titles = [...((_a = player.titles) != null ? _a : []).filter((t) => t.label !== title), entry];
   if (!player.activeTitle) player.activeTitle = title;
 }
+
+// src/game/logicVersion.ts
+var LOGIC_VERSION = true ? "5.15.14" : "dev";
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {

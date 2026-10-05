@@ -599,6 +599,8 @@ export const SEASON_BOSS_RULES: {
   weekend: BossWeekend;
   /** v5.10.5 : apparitions supplémentaires à date précise. */
   dates: BossDate[];
+  /** 5.15.14 : apparitions régulières annulées (début exact), depuis le planificateur. */
+  skips?: number[];
   /** Heure d'apparition le vendredi (heure de Paris). */
   startHour: number;
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
@@ -621,6 +623,7 @@ export const SEASON_BOSS_RULES: {
   enabled: true,
   weekend: "last",
   dates: [],
+  skips: [],
   startHour: 18,
   hpFactor: 3,
   minHp: 100_000,
@@ -636,6 +639,7 @@ export function seasonBossSchedule(): BossSchedule {
     startHour: SEASON_BOSS_RULES.startHour ?? 18,
     durationHours: SEASON_BOSS_RULES.durationHours,
     dates: SEASON_BOSS_RULES.dates ?? [],
+    skips: SEASON_BOSS_RULES.skips ?? [],
     // v5.14.2 : une fois par semaine, entre deux passages du boss mondial (repli mensuel sans rotation hebdomadaire).
     ...(SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {}),
   };

@@ -25,4 +25,20 @@ describe("frise des prochains rendez-vous (v5.10.5)", () => {
     expect(items.find((i) => i.kind === "leviathan" && i.fixed)?.source).toEqual({ type: "levDate", startMs: d });
     expect(items.find((i) => i.kind === "event" && i.fixed)?.source).toEqual({ type: "scheduled", id: "x1" });
   });
+
+  it("5.15.14 : une apparition régulière ou un week-end de la rotation peuvent être annulés", () => {
+    EVENT_RULES.rotationEnabled = true;
+    const items = upcomingAgenda(now, 30);
+    const lev = items.find((i) => i.kind === "leviathan" && !i.fixed)!;
+    const ev = items.find((i) => i.kind === "event" && !i.fixed)!;
+    expect(lev.source).toEqual({ type: "levGen", startMs: lev.startMs });
+    expect(ev.source).toMatchObject({ type: "rotation", startMs: ev.startMs });
+    EVENT_RULES.bossSkips = [lev.startMs];
+    EVENT_RULES.rotationSkips = [ev.startMs];
+    const after = upcomingAgenda(now, 30);
+    expect(after.some((i) => i.id === lev.id)).toBe(false);
+    expect(after.some((i) => i.id === ev.id)).toBe(false);
+    // Les autres apparitions restent en place.
+    expect(after.filter((i) => i.kind === "leviathan").length).toBe(items.filter((i) => i.kind === "leviathan").length - 1);
+  });
 });

@@ -37,13 +37,18 @@ export function PlannerPanel() {
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<number | null>(null);
   const now = Date.now();
   const month = new Date();
   month.setDate(1);
   month.setHours(0, 0, 0, 0);
   month.setMonth(month.getMonth() + offset);
-  const first = dayStart(month.getTime() - ((month.getDay() + 6) % 7) * DAY);
-  const days = Array.from({ length: 42 }, (_, i) => first + i * DAY);
+  // Jours construits sur le calendrier (et non par pas de 24 h) : le passage à l'heure d'hiver ne double plus un jour.
+  const lead = (month.getDay() + 6) % 7;
+  const days = Array.from({ length: 42 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), 1 - lead + i).getTime());
+  const first = days[0];
+  const last = days[41];
   const liveContests = useAgenda(now, 120).filter((i) => i.kind === "contest");
 
   // Frise calculée sur les règles en cours d'édition (aperçu avant enregistrement).
@@ -53,26 +58,44 @@ export function PlannerPanel() {
     Object.assign(SEASON_BOSS_RULES, { dates: rules.seasonBoss.dates });
     try {
       const from = Math.min(now, first);
-      return upcomingAgenda(from, Math.ceil((first + 42 * DAY - from) / DAY), liveContests);
+      return upcomingAgenda(from, Math.ceil((last + DAY - from) / DAY) + 1, liveContests);
     } finally {
       Object.assign(EVENT_RULES, saved.ev);
       Object.assign(SEASON_BOSS_RULES, saved.sb);
     }
-  }, [rules, first, now, liveContests]);
+  }, [rules, first, last, now, liveContests]);
 
   const update = (fn: (r: GameRules) => GameRules) => {
     setRules((r) => fn(r));
     setDirty(true);
   };
 
+  /** Même heure de la journée, un autre jour (calendrier local : le changement d'heure ne décale rien). */
+  const sameTimeOn = (ms: number, toDay: number) => {
+    const from = new Date(ms);
+    const to = new Date(toDay);
+    to.setHours(from.getHours(), from.getMinutes(), 0, 0);
+    return to.getTime();
+  };
+  const addSkip = (list: number[] | undefined, at: number) => [...new Set([...(list ?? []), at])];
+
   const move = (item: AgendaItem, toDay: number) => {
     const src = item.source;
-    if (!src) return;
-    const delta = toDay - dayStart(item.startMs);
-    if (delta === 0) return;
-    if (src.type === "levDate") update((r) => ({ ...r, events: { ...r.events, bossDates: (r.events.bossDates ?? []).map((d) => (d.startMs === src.startMs ? { ...d, startMs: d.startMs + delta } : d)) } }));
-    if (src.type === "sbDate") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, dates: (r.seasonBoss.dates ?? []).map((d) => (d.startMs === src.startMs ? { ...d, startMs: d.startMs + delta } : d)) } }));
-    if (src.type === "scheduled") update((r) => ({ ...r, events: { ...r.events, scheduled: r.events.scheduled.map((e) => (e.id === src.id ? { ...e, startMs: e.startMs + delta, endMs: e.endMs + delta } : e)) } }));
+    if (!src || toDay === dayStart(item.startMs)) return;
+    const at = sameTimeOn(item.startMs, toDay);
+    const shift = at - item.startMs;
+    const hours = Math.round(((item.endMs ?? item.startMs) - item.startMs) / 3600_000);
+    if (src.type === "levDate") update((r) => ({ ...r, events: { ...r.events, bossDates: (r.events.bossDates ?? []).map((d) => (d.startMs === src.startMs ? { ...d, startMs: at } : d)) } }));
+    if (src.type === "sbDate") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, dates: (r.seasonBoss.dates ?? []).map((d) => (d.startMs === src.startMs ? { ...d, startMs: at } : d)) } }));
+    if (src.type === "scheduled") update((r) => ({ ...r, events: { ...r.events, scheduled: r.events.scheduled.map((e) => (e.id === src.id ? { ...e, startMs: e.startMs + shift, endMs: e.endMs + shift } : e)) } }));
+    // 5.15.14 : une apparition régulière déplacée = annulée à sa place + date précise le jour choisi.
+    if (src.type === "levGen") update((r) => ({ ...r, events: { ...r.events, bossSkips: addSkip(r.events.bossSkips, src.startMs), bossDates: [...(r.events.bossDates ?? []), { startMs: at, durationHours: hours }] } }));
+    if (src.type === "sbGen") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, skips: addSkip(r.seasonBoss.skips, src.startMs), dates: [...(r.seasonBoss.dates ?? []), { startMs: at, durationHours: hours }] } }));
+    if (src.type === "rotation")
+      update((r) => ({
+        ...r,
+        events: { ...r.events, rotationSkips: addSkip(r.events.rotationSkips, src.startMs), scheduled: [...r.events.scheduled, { id: `plan${Date.now().toString(36)}`, type: src.eventType, startMs: at, endMs: at + hours * 3600_000 }] },
+      }));
   };
 
   const remove = (item: AgendaItem) => {
@@ -81,7 +104,15 @@ export function PlannerPanel() {
     if (src.type === "levDate") update((r) => ({ ...r, events: { ...r.events, bossDates: (r.events.bossDates ?? []).filter((d) => d.startMs !== src.startMs) } }));
     if (src.type === "sbDate") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, dates: (r.seasonBoss.dates ?? []).filter((d) => d.startMs !== src.startMs) } }));
     if (src.type === "scheduled") update((r) => ({ ...r, events: { ...r.events, scheduled: r.events.scheduled.filter((e) => e.id !== src.id) } }));
+    if (src.type === "levGen") update((r) => ({ ...r, events: { ...r.events, bossSkips: addSkip(r.events.bossSkips, src.startMs) } }));
+    if (src.type === "sbGen") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, skips: addSkip(r.seasonBoss.skips, src.startMs) } }));
+    if (src.type === "rotation") update((r) => ({ ...r, events: { ...r.events, rotationSkips: addSkip(r.events.rotationSkips, src.startMs) } }));
   };
+
+  // Apparitions régulières annulées (encore à venir), qu'on peut rétablir d'un clic.
+  const skipped = [...(rules.events.bossSkips ?? []), ...(rules.seasonBoss.skips ?? []), ...(rules.events.rotationSkips ?? [])].filter((t) => t > now).length;
+  const restore = () =>
+    update((r) => ({ ...r, events: { ...r.events, bossSkips: (r.events.bossSkips ?? []).filter((t) => t <= now), rotationSkips: (r.events.rotationSkips ?? []).filter((t) => t <= now) }, seasonBoss: { ...r.seasonBoss, skips: (r.seasonBoss.skips ?? []).filter((t) => t <= now) } }));
 
   const add = (day: number, kind: AddKind, eventType?: string) => {
     const at = day + 18 * 3600_000;
@@ -96,7 +127,10 @@ export function PlannerPanel() {
     if (errors.length) return void toast.error(errors.slice(0, 3).join(" · "));
     setBusy(true);
     try {
-      await saveContentSection("rules", rules);
+      // Les annulations passées ne servent plus : on les retire avant d'enregistrer.
+      const old = now - 7 * DAY;
+      const keep = (l?: number[]) => (l ?? []).filter((t) => t > old);
+      await saveContentSection("rules", { ...rules, events: { ...rules.events, bossSkips: keep(rules.events.bossSkips), rotationSkips: keep(rules.events.rotationSkips) }, seasonBoss: { ...rules.seasonBoss, skips: keep(rules.seasonBoss.skips) } });
       setDirty(false);
       toast.success("Planning enregistré.");
     } catch (err) {
@@ -126,8 +160,16 @@ export function PlannerPanel() {
         </div>
       </div>
       <p className="text-xs text-slate-400">
-        Glisse une date précise (boss) ou un événement programmé sur un autre jour, ou survole-le pour le retirer. « + » ajoute une apparition le jour choisi à 18 h. Les rendez-vous mensuels (week-end du Léviathan, du boss de saison, rotation) se règlent dans l'onglet Règles.
+        Glisse un boss ou un événement du week-end sur un autre jour (même heure), ou survole-le pour le retirer. « + » ajoute une apparition le jour choisi à 18 h. Les épisodes des Chroniques, la fin de saison et les concours ont des dates fixes. Le rythme régulier (rotation, boss hebdomadaires) se règle dans l'onglet Règles.
       </p>
+      {skipped > 0 && (
+        <p className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span className="font-mono tabular-nums text-gold-glow">{skipped}</span> apparition{skipped > 1 ? "s" : ""} régulière{skipped > 1 ? "s" : ""} annulée{skipped > 1 ? "s" : ""} ou déplacée{skipped > 1 ? "s" : ""}.
+          <Button size="sm" variant="ghost" onClick={restore}>
+            Rétablir le rythme régulier
+          </Button>
+        </p>
+      )}
       {errors.length > 0 && <p className="text-xs text-danger-glow">{errors.slice(0, 3).join(" · ")}</p>}
       <div className="flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400">
         {(Object.keys(AGENDA_LABELS) as (keyof typeof AGENDA_LABELS)[]).map((k) => (
@@ -150,14 +192,28 @@ export function PlannerPanel() {
             return (
               <div
                 key={d}
-                onDragOver={(e) => e.preventDefault()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (over !== d) setOver(d);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver((o) => (o === d ? null : o));
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  const id = e.dataTransfer.getData("text/plain");
+                  const id = e.dataTransfer.getData("text/plain") || dragging;
                   const item = items.find((i) => i.id === id);
                   if (item) move(item, d);
+                  setDragging(null);
+                  setOver(null);
                 }}
-                className={cn("relative flex min-h-24 flex-col gap-0.5 bg-space-950 p-1", !inMonth && "opacity-40", today && "ring-1 ring-inset ring-cyan-glow/60")}
+                className={cn(
+                  "relative flex min-h-24 flex-col gap-0.5 bg-space-950 p-1",
+                  !inMonth && "opacity-40",
+                  today && "ring-1 ring-inset ring-cyan-glow/60",
+                  dragging && over === d && "bg-cyan-glow/10 ring-1 ring-inset ring-cyan-glow",
+                )}
               >
                 <div className="flex items-center justify-between">
                   <span className={cn("font-mono text-[11px]", today ? "text-cyan-glow" : "text-slate-500")}>{new Date(d).getDate()}</span>
@@ -171,9 +227,17 @@ export function PlannerPanel() {
                   <div
                     key={i.id}
                     draggable={!!i.source}
-                    onDragStart={(e) => e.dataTransfer.setData("text/plain", i.id)}
-                    title={`${i.title}${i.endMs ? ` (${Math.round((i.endMs - i.startMs) / 3600_000)} h)` : ""}${i.source ? " — glisser pour déplacer" : ""}`}
-                    className={cn("group flex items-center gap-0.5 truncate px-1 py-0.5 text-[10px] text-space-950", i.source ? "cursor-grab" : "opacity-80")}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", i.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      setDragging(i.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setOver(null);
+                    }}
+                    title={`${i.title}${i.endMs ? ` (${Math.round((i.endMs - i.startMs) / 3600_000)} h)` : ""}${i.source ? " · glisser pour déplacer" : " · date fixe"}`}
+                    className={cn("group flex items-center gap-0.5 truncate px-1 py-0.5 text-[10px] text-space-950", i.source ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-80", dragging === i.id && "opacity-40")}
                     style={{ background: AGENDA_COLORS[i.kind] }}
                   >
                     {i.source && <GripVertical className="h-3 w-3 shrink-0" />}

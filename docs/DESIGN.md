@@ -6,7 +6,7 @@ Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
 ## Jetons
 
 Tout passe par les variables `--th-*` de `src/index.css`, redéfinies par `html[data-theme]`
-(Tactique, Holo, Cockpit, Netrunner, Aurora). En Tailwind : `cyan-glow` (accent), `mint-glow`,
+(Tactique, Holo, Cockpit, Netrunner, Aurora, Signal). En Tailwind : `cyan-glow` (accent), `mint-glow`,
 `ember-glow`, `danger-glow`, `gold-glow`, `violet-glow`, `space-*`, `slate-*`, `font-display`, `font-mono`.
 Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait plus la changer
 (un test échoue sur toute couleur hex dans un `.tsx`, scènes dessinées exceptées).

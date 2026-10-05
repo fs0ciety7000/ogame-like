@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Sparkles, Star } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,20 +12,25 @@ import { ascendEmpire, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatDuration } from "@/lib/utils";
 
-/** Insigne d'ascension (v3.4, 5.15) : l'insigne et une étoile par ascension.
- *  `full` montre les cinq emplacements (étoiles vides comprises) et « Ascension III ». */
+/** Insigne d'ascension (v3.4, 5.15) ; 5.15.13 : l'insigne généré répété une fois par
+ *  ascension (Ascension II = 2 insignes, jusqu'à 5), sans étoile en doublon.
+ *  `full` montre les cinq emplacements (ceux à venir en grisé) et « Ascension III ». */
 export function AscensionStars({ count, full, className }: { count?: number; full?: boolean; className?: string }) {
   const n = ascensionCount({ ascensions: count });
   if (n <= 0) return null;
   const label = ascensionLabel(n);
   const slots = full ? ASCENSION_RULES.maxAscensions : n;
+  const size = full ? "h-7 w-7" : "h-5 w-5";
   return (
-    <span className={cn("inline-flex items-center gap-1 text-gold-glow", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
-      {ASCENSION_INSIGNIA ? <img src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={full ? "h-7 w-7 object-contain" : "h-5 w-5 object-contain"} /> : <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />}
-      <span className="inline-flex items-center gap-px">
-        {Array.from({ length: slots }, (_, i) => (
-          <Star key={i} className={cn(full ? "h-3.5 w-3.5" : "h-3 w-3", i < n ? "fill-current" : "text-slate-600")} />
-        ))}
+    <span className={cn("inline-flex items-center gap-1.5 text-gold-glow", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
+      <span className={cn("inline-flex items-center", full ? "gap-0.5" : "-space-x-1.5")}>
+        {Array.from({ length: slots }, (_, i) =>
+          ASCENSION_INSIGNIA ? (
+            <img key={i} src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={cn(size, "object-contain", i >= n && "opacity-25 grayscale")} />
+          ) : (
+            <Sparkles key={i} className={cn(full ? "h-4 w-4" : "h-3.5 w-3.5", i >= n && "text-slate-600")} />
+          ),
+        )}
       </span>
       {full && <span className="font-mono text-[10px] uppercase tracking-[0.16em]">{label}</span>}
     </span>

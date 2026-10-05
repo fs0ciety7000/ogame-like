@@ -254,6 +254,40 @@
   --th-scan: 0.012;
 }
 
+/* Signal — esprit Marathon (Bungie) : design graphique brut, vert acide et
+   magenta sur graphite, aplats francs, aucun halo, trame de grille fine. */
+:root[data-theme="signal"] {
+  --th-font-title: "Space Grotesk", sans-serif;
+  --th-font-body: "Space Grotesk", sans-serif;
+  --th-title-track: 0.02em;
+  --th-cut: 10px;
+  --th-accent: #c6ff2e;
+  --th-accent2: #ff2e88;
+  --th-ok: #2ee6ff;
+  --th-danger: #ff3b3b;
+  --th-gold: #ffd23f;
+  --th-ember: #ff8a2e;
+  --th-space-950: #08090b;
+  --th-space-900: #0d0f12;
+  --th-space-800: #121418;
+  --th-space-700: #16181c;
+  --th-space-600: #20232a;
+  --th-space-500: #2e323a;
+  --th-text-100: #f4f6f0;
+  --th-text-200: #e3e6dd;
+  --th-text-300: #c4c8bd;
+  --th-text-400: #969b90;
+  --th-text-500: #6d7168;
+  --th-text-600: #4a4d47;
+  --th-ink: #eef1e8;
+  --th-body-glow: #12160a;
+  --th-panel: linear-gradient(180deg, rgba(22, 24, 28, 0.97), rgba(13, 15, 18, 0.98));
+  --th-edge: color-mix(in srgb, var(--th-text-100) 12%, transparent);
+  --th-edge-strong: var(--th-accent);
+  --th-btn-ink: #0b0d02;
+  --th-scan: 0;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -696,6 +730,47 @@ body {
   :root[data-theme="netrunner"] .glass-panel:hover .hud-title {
     animation: none;
   }
+}
+
+/* ---------- Signal (esprit Marathon) ---------- */
+/* Trame de grille sur le fond, panneaux en aplat avec barre d'accent à gauche,
+   titres serrés en capitales, boutons pleins sans lueur, sélection magenta. */
+:root[data-theme="signal"] body {
+  background:
+    linear-gradient(color-mix(in srgb, var(--th-text-100) 3.5%, transparent) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 3.5%, transparent) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(ellipse 100% 60% at 85% -10%, color-mix(in srgb, var(--th-accent) 9%, transparent) 0%, transparent 60%),
+    var(--color-space-950);
+}
+:root[data-theme="signal"] .glass-panel {
+  backdrop-filter: none;
+  box-shadow: inset 3px 0 0 var(--th-accent);
+}
+:root[data-theme="signal"] .glass-panel::before {
+  background:
+    linear-gradient(90deg, var(--th-accent) 0 56px, var(--th-accent2) 56px 72px, transparent 72px) top left / 100% 2px no-repeat,
+    linear-gradient(to bottom right, transparent calc(50% - 0.75px), var(--th-edge-strong) calc(50% - 0.75px), var(--th-edge-strong) calc(50% + 0.75px), transparent calc(50% + 0.75px)) bottom right / var(--th-cut) var(--th-cut) no-repeat;
+}
+:root[data-theme="signal"] .hud-title {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+:root[data-theme="signal"] h1.hud-title {
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+:root[data-theme="signal"] .hud-btn-primary {
+  box-shadow: none;
+  font-weight: 700;
+}
+:root[data-theme="signal"] .hud-btn-primary:hover {
+  background: var(--th-accent2);
+  color: var(--th-text-100);
+}
+:root[data-theme="signal"] ::selection {
+  background: var(--th-accent2);
+  color: var(--th-text-100);
 }
 
 /* ---------- Aurora (coucher de soleil orbital) ---------- */

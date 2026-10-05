@@ -338,6 +338,9 @@ routerAdd("POST", "/api/cosmic/admin/pirates", (e) => {
 });
 
 /** GET /api/cosmic/achievements — part des joueurs ayant obtenu chaque succès. */
+// 5.15.13 : version de la logique des hooks (le site signale des hooks en retard).
+routerAdd("GET", "/api/cosmic/version", (e) => e.json(200, { version: require(`${__hooks}/cosmic_game.js`).LOGIC_VERSION || "inconnue" }));
+
 routerAdd("GET", "/api/cosmic/achievements", (e) => {
   const counts = {};
   const players = $app.findRecordsByFilter("players", "npc = ''", "", 0, 0);
