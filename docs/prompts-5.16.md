@@ -10,13 +10,9 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## 1. Ce qui manque aujourd'hui
 
-Les 5 boss mondiaux, les 7 officiers rares, l'en-tête du passe et le sceau « chapitre terminé » sont en place. Il reste des images pour les chroniques générées : le jeu les remplace par un repli tant qu'elles manquent.
+Les 5 boss mondiaux, les 7 officiers rares, l'en-tête du passe et le sceau « chapitre terminé » sont en place. Les chroniques générées sont complètes aussi.
 
-| Fichiers manquants | Nombre | Repli actuel | Prompts |
-|:--|--:|:--|:--|
-| `public/assets/chronicles/auto/inquisition-boss.webp` | 1 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » |
-
-Les 7 sceaux et 6 boss sur 7 sont faits.
+Rien : les 7 boss et les 7 sceaux des chapitres générés sont en place.
 
 Une fois une image déposée, ajouter l'identifiant de l'archétype dans `AUTO_ART` (boss) ou `AUTO_SEALS` (sceau), dans `src/game/procedural.ts`. Un test vérifie que chaque identifiant déclaré a bien son fichier.
 

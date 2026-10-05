@@ -11,4 +11,4 @@ Toutes les illustrations qui manquaient au jeu sont arrivées.
 - Les sept officiers rares ont leur portrait : la Logisticienne, le Mécanicien, la Gouverneure, le Corsaire, la Gardienne, la Diplomate et le Chasseur de colosses.
 - Le passe de saison a un en-tête illustré, utilisé quand le mois n'a pas d'image propre.
 - Le panneau « Fin du chapitre » des Chroniques affiche un sceau, en couleur une fois les quatre épisodes terminés.
-- Les chapitres générés ont leur propre sceau pour les sept factions (Codex, archives, emblème). Six vaisseaux amiraux ont aussi leur illustration : Confrérie, Cartel, Chœur, Gravhorn, Culte et Meute. L'Inquisition garde l'image de repli en attendant la sienne.
+- Les chapitres générés ont leur propre sceau pour les sept factions (Codex, archives, emblème). Les sept vaisseaux amiraux ont aussi leur illustration : Confrérie, Cartel, Chœur, Gravhorn, Culte, Inquisition et Meute.
