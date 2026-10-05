@@ -404,7 +404,7 @@ function PlayerAuditView({ q, onBack }: { q: string; onBack: () => void }) {
         <div className="grid gap-3 md:grid-cols-3">
           {AUDIT_WINDOWS.map((w) => {
             const x = a.windows[w.id];
-            const shown = x.ledger.total !== 0 ? x.ledger : x.rebuilt;
+            const shown = x.best ?? (x.ledger.total !== 0 ? x.ledger : x.rebuilt);
             const mission = shown.bySource.mission ?? 0;
             return (
               <div key={w.id} className="flex flex-col gap-1.5 border border-slate-800 p-2.5">
@@ -418,7 +418,7 @@ function PlayerAuditView({ q, onBack }: { q: string; onBack: () => void }) {
                   missions {formatNumber(mission)} / plafond {formatNumber(x.missionCeiling)}
                 </span>
                 <span className="font-mono text-[9px] text-slate-600">
-                  registre {signed(x.ledger.total)} · notifications {signed(x.rebuilt.total)}
+                  {x.bestSource === "ledger" ? "registre" : "reconstitué"} · registre {signed(x.ledger.total)} · notifications {signed(x.rebuilt.total)}
                 </span>
               </div>
             );
@@ -667,7 +667,7 @@ function PlayerCompareView({ pair, onBack, onOpen }: { pair: [string, string]; o
       </div>
     );
   }
-  const shown = (a: PlayerAudit) => (a.windows[win].ledger.total !== 0 ? a.windows[win].ledger : a.windows[win].rebuilt);
+  const shown = (a: PlayerAudit) => a.windows[win].best ?? (a.windows[win].ledger.total !== 0 ? a.windows[win].ledger : a.windows[win].rebuilt);
   const days = (a: PlayerAudit) => Math.max(1, (a.now - a.player.createdAtMs) / 86_400_000);
   const rows: { label: string; get: (a: PlayerAudit) => number; fmt?: (n: number) => string }[] = [
     { label: "XP totale", get: (a) => a.player.xp },

@@ -57,7 +57,7 @@ export interface PlayerAudit {
   };
   stats: Record<string, unknown>;
   ledgerSinceMs: number | null;
-  windows: Record<AuditWindow, { ledger: XpTotals; rebuilt: XpTotals; missionCeiling: number }>;
+  windows: Record<AuditWindow, { ledger: XpTotals; rebuilt: XpTotals; best?: XpTotals; bestSource?: "ledger" | "notifications"; missionCeiling: number }>;
   activity: { activeHours24h: number; longestStreak7d: number; byHour24: number[]; xpByHour7d: number[] };
   comparison: { median24h: number; p90_24h: number; activePlayers: number };
   flags: AuditFlag[];
