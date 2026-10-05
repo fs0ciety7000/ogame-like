@@ -1,5 +1,5 @@
 import { playerModifiers } from "@/game/modifiers";
-import { workshopUnits } from "@/game/workshop";
+import { rushWorkshop, workshopUnits } from "@/game/workshop";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
@@ -57,6 +57,8 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 
 export type GameAction =
   | { type: "vacationEnd" }
+  | { type: "workshopRush"; jobId?: string }
+  | { type: "workshopRush"; jobId?: string }
   | { type: "chronicleClaim"; episode: number }
   | { type: "dailyClaim"; index: number }
   | { type: "cancel"; target: CancelTarget }
@@ -454,6 +456,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       // v4.7 : annulation au prorata (100 % la première minute ou si rien n'a commencé).
       if (!isCancelTarget(action.target)) throw new GameActionError("Chantier inconnu.");
       return performCancel(player, queues, action.target, now);
+
+    case "workshopRush":
+      // 5.21 : terminer un lot de réparation (ou toute la file) contre de l'Ambre.
+      return rushWorkshop(player, typeof action.jobId === "string" && action.jobId ? action.jobId : undefined, now, bountyState, (p, w) => (p.bounties = w));
 
     case "vacationEnd":
       endVacation(player, queues, now, true);

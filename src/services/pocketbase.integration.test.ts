@@ -1117,17 +1117,21 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(jobs.every((j) => j.source === "boss")).toBe(true);
       expect(survivors + saved).toBeLessThan(100);
       expect(after.workshop.hull.chasseur).toBeGreaterThan(0);
-      // Une heure plus tard, l'Atelier a tout rendu : les unités sauvées reviennent au hangar.
-      await admin.collection("players").update(bId, { workshop: { ...after.workshop, updatedAtMs: Date.now() - 3600_000 } });
-      await ps.syncPlayer("");
+      // 5.21 : sans Ambre, impossible de terminer tout de suite ; avec, les unités rentrent.
+      await admin.collection("players").update(bId, { bounties: { ...(after.bounties ?? {}), amber: 0 } });
+      await expect(ps.rushWorkshop()).rejects.toThrow(/Ambre/);
+      await admin.collection("players").update(bId, { bounties: { ...(after.bounties ?? {}), amber: 500 } });
+      const rushed = await ps.rushWorkshop();
+      expect(rushed.units.chasseur).toBe(saved);
       const repaired = await snap(bId);
       expect(repaired.workshop?.jobs ?? []).toHaveLength(0);
       expect(repaired.units.chasseur.count).toBe(after.units.chasseur.count + saved);
+      expect(repaired.bounties.amber).toBe(500 - rushed.amber);
     } finally {
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
       const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
       if (cfg) await admin.collection("game_config").delete(cfg.id);
-      await admin.collection("players").update(bId, { units: before!.units, buildings: before!.buildings, resources: before!.resources, workshop: null, testMode: before!.testMode ?? false });
+      await admin.collection("players").update(bId, { units: before!.units, buildings: before!.buildings, resources: before!.resources, bounties: before!.bounties ?? null, workshop: null, testMode: before!.testMode ?? false });
     }
   }, 60_000);
 

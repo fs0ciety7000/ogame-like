@@ -82,7 +82,7 @@ export function unitMetrics(unit: UnitDef, level: number, techLevels: TechLevels
 }
 
 /** Unités de combat comparables (hors sonde, drone utilitaire et unité de faction). */
-export const SUPPORT_UNITS = ["sonde_espionnage", "drone_recuperateur", "traqueur_kesh"];
+export const SUPPORT_UNITS = ["sonde_espionnage", "drone_recuperateur", "traqueur_kesh", "vaisseau_atelier"];
 
 export function combatUnits(): UnitDef[] {
   return UNITS.filter((u) => !SUPPORT_UNITS.includes(u.id));

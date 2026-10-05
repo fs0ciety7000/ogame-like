@@ -1,7 +1,7 @@
 import { allianceFlightFactor } from "@/game/alliances";
 import { HullWarning } from "@/components/game/HullWarning";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { FormationPicker } from "@/components/game/FormationPicker";
+import { FormationPicker, TargetPriorityPicker, type TargetPriorityChoice } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { useEffect, useMemo, useState } from "react";
 import { simulateAgainstReport } from "@/game/simulator";
@@ -47,6 +47,7 @@ export function AttackModal({
   const [fleet, setFleet] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formation, setFormation] = useState<FormationId>("balanced");
+  const [priority, setPriority] = useState<TargetPriorityChoice>("");
   // v4.0 : capsules du Labo de synthèse (niveau choisi, 0 = aucune).
   const [assault, setAssault] = useState(0);
   const [decoy, setDecoy] = useState(0);
@@ -83,9 +84,9 @@ export function AttackModal({
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
   const estimate = useMemo(
-    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid)) : null),
+    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid), priority || undefined) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
-    [player, fleet, spy, formation, assault, target?.uid],
+    [player, fleet, spy, formation, assault, target?.uid, priority],
   );
 
   const handleConfirm = async () => {
@@ -97,7 +98,7 @@ export function AttackModal({
     setSubmitting(true);
     try {
       const capsules = { ...(assault ? { assault } : {}), ...(decoy ? { decoy } : {}) };
-      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(assault || decoy ? { capsules } : {}) });
+      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(priority ? { targetPriority: priority } : {}), ...(assault || decoy ? { capsules } : {}) });
       setAssault(0);
       setDecoy(0);
       setFleet({});
@@ -256,6 +257,7 @@ export function AttackModal({
               )}
 
               <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
+              <TargetPriorityPicker value={priority} onChange={setPriority} className="mt-3" />
               {player && <HullWarning player={player} fleet={selected} />}
 
               {/* v4.0 : capsules du Labo de synthèse */}

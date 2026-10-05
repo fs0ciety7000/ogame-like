@@ -351,6 +351,7 @@ const RELIC_ICONS: Record<RelicEffect, typeof Swords> = {
   production_all: Sparkles,
   aegis: ShieldHalf,
   boss_damage: Swords,
+  repair_speed: Wrench,
 };
 
 function RelicBadge({ item, className }: { item: Pick<RelicItem, "template" | "rarity">; className?: string }) {

@@ -100,7 +100,7 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role" | "bonus">[] = [
     name: "Brann Kessel",
     title: "Mécanicien",
     portrait: "/assets/commanders/mechanic.webp",
-    domain: "Unités sorties des chantiers (planète mère et colonies).",
+    domain: "Unités sorties des chantiers (planète mère et colonies) et Atelier de réparation.",
     rare: true,
   },
   {
@@ -381,6 +381,8 @@ export const ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = {
   mechanic: [
     { stat: "repair", perLevel: 0.01 },
     { stat: "unitTime", perLevel: 0.01 },
+    // 5.21 : le Mécanicien fait aussi tourner l'Atelier plus vite.
+    { stat: "repairSpeed", perLevel: 0.03 },
   ],
   governor: [
     { stat: "productionAll", perLevel: 0.02, scope: "colonies" },

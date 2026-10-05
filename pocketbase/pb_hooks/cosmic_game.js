@@ -697,6 +697,7 @@ var EFFECT_STATS = {
   defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
   bossDamage: { label: "D\xE9g\xE2ts contre les boss", unit: "pct", group: "combat" },
   repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
+  repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },
   loot: { label: "Butin pill\xE9", unit: "pct", group: "combat" },
   productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
@@ -805,7 +806,7 @@ var BASE_COMMANDERS = [
     name: "Brann Kessel",
     title: "M\xE9canicien",
     portrait: "/assets/commanders/mechanic.webp",
-    domain: "Unit\xE9s sorties des chantiers (plan\xE8te m\xE8re et colonies).",
+    domain: "Unit\xE9s sorties des chantiers (plan\xE8te m\xE8re et colonies) et Atelier de r\xE9paration.",
     rare: true
   },
   {
@@ -1020,7 +1021,9 @@ var ROLE_EFFECTS = {
   ],
   mechanic: [
     { stat: "repair", perLevel: 0.01 },
-    { stat: "unitTime", perLevel: 0.01 }
+    { stat: "unitTime", perLevel: 0.01 },
+    // 5.21 : le Mécanicien fait aussi tourner l'Atelier plus vite.
+    { stat: "repairSpeed", perLevel: 0.03 }
   ],
   governor: [
     { stat: "productionAll", perLevel: 0.02, scope: "colonies" },
@@ -1226,6 +1229,8 @@ var DEFAULT_RELICS = [
   { id: "noyau_forge", name: "Noyau de forge", effect: "build_time", lore: "Il chauffe sans jamais s'\xE9teindre." },
   { id: "codex_aube", name: "Codex de l'Aube", effect: "research_time", lore: "Des \xE9quations interdites, recopi\xE9es \xE0 la main." },
   { id: "matrice_reparation", name: "Matrice de r\xE9paration", effect: "repair", lore: "Des nanites qui referment les coques d\xE9chir\xE9es." },
+  // 5.21 : cadence de l'Atelier (bonus de rareté × 3 : +9 % en commune, +45 % en légendaire).
+  { id: "cle_soudure", name: "Cl\xE9 de soudure", effect: "repair_speed", lore: "L'outil f\xE9tiche d'un chef d'atelier disparu. Elle chante quand elle travaille." },
   { id: "soute_pliee", name: "Soute pli\xE9e", effect: "cargo", lore: "Plus grande dedans que dehors." },
   { id: "oeil_vesper", name: "\u0152il de Vesper", effect: "spy", lore: "Une lentille du Ch\u0153ur qui voit \xE0 travers les blindages." },
   { id: "racine_ferraille", name: "Racine de ferraille", effect: "production_scrap", lore: "Un organisme qui dig\xE8re le m\xE9tal et en recrache le double." },
@@ -1285,7 +1290,7 @@ function mythicFor(seasonId) {
   const pool = mythicTemplates();
   return { template: pool[index2 % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
-var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
+var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed"];
 var RELIC_EFFECT_LABELS = {
   attack: "Attaque",
   defense: "D\xE9fense",
@@ -1300,7 +1305,8 @@ var RELIC_EFFECT_LABELS = {
   production_data: "Production de donn\xE9es anciennes",
   production_all: "Toute la production",
   aegis: "\xC9gide (1re d\xE9faite de la semaine non pill\xE9e)",
-  boss_damage: "D\xE9g\xE2ts contre les boss"
+  boss_damage: "D\xE9g\xE2ts contre les boss",
+  repair_speed: "Cadence de l'Atelier de r\xE9paration"
 };
 function validateRelics(defs, settings) {
   var _a, _b, _c;
@@ -1391,6 +1397,7 @@ var RELIC_EFFECT_STAT = {
   spy: { stat: "spyLevel", scale: 10 },
   production_all: { stat: "productionAll" },
   boss_damage: { stat: "bossDamage" },
+  repair_speed: { stat: "repairSpeed", scale: 3 },
   production_scrap: { stat: "production", target: "scrap" },
   production_energy: { stat: "production", target: "energy" },
   production_nano: { stat: "production", target: "nano" },
@@ -2785,7 +2792,8 @@ var TECH_EFFECT_DEFAULTS = {
   research_time: 0.05,
   fleet_upkeep: 0.05,
   counter_spy: 1,
-  hangar_capacity: 0.05
+  hangar_capacity: 0.05,
+  repair_speed: 0.1
 };
 var TECH_EFFECT_LABELS = {
   unlock_recipe: "D\xE9bloque des recettes (niveau = nombre de recettes)",
@@ -2808,7 +2816,8 @@ var TECH_EFFECT_LABELS = {
   research_time: "Temps de recherche (\u2212% par niveau)",
   fleet_upkeep: "Entretien de la flotte (\u2212% par niveau)",
   counter_spy: "Contre-espionnage (points par niveau)",
-  hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)"
+  hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)",
+  repair_speed: "Cadence de l'Atelier de r\xE9paration (% par niveau)"
 };
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
 var DEFAULT_TECHNOLOGIES = [
@@ -2839,6 +2848,11 @@ var DEFAULT_TECHNOLOGIES = [
   { id: "tech25", nom: "Lance gravitationnelle", desc: "D\xE9bloque la Lance gravitationnelle, puis l'am\xE9liore : +150 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { nano: 4e5, data: 3e5, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
   // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
   { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de d\xE9fense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 15e4, nano: 8e4, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
+  // 5.21 : cadence de l'Atelier de réparation.
+  { id: "tech27", nom: "Nanor\xE9paration", desc: "Essaims de nanites soudeuses : +10 % de cadence de l'Atelier de r\xE9paration par niveau (le double au niveau 10).", maxLevel: 10, baseCost: { scrap: 2e3, energy: 1e3, syntheticNanites: 80 }, baseTime: 120, costGrowth: 1.9, effects: [{ type: "repair_speed", value: 0.1 }], prereq: { tech1: 6, tech2: 3 } },
+  { id: "tech28", nom: "Bastion", desc: "D\xE9bloque le Bastion (forteresse volante, classe Fort), puis l'am\xE9liore : +120 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 8e3, energy: 4e3, reinforcedSteel: 150, cyberModule: 100 }, baseTime: 300, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "bastion" }], prereq: { tech2: 5, tech10: 5, tech1: 12 } },
+  { id: "tech29", nom: "Batterie anti-essaim", desc: "D\xE9bloque la Batterie anti-essaim (d\xE9fense, double avantage contre la classe Faible), puis l'am\xE9liore : +5 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 1500, nano: 800, syntheticNanites: 200 }, baseTime: 120, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "batterie_essaim" }], prereq: { tech17: 3, tech14: 5 } },
+  { id: "tech30", nom: "Vaisseau-atelier", desc: "D\xE9bloque le Vaisseau-atelier (15 PV/s de r\xE9paration par vaisseau \xE0 quai), puis l'am\xE9liore : +5 attaque et d\xE9fense par niveau.", maxLevel: 10, baseCost: { scrap: 3e3, energy: 1500, syntheticNanites: 150, cyberModule: 50 }, baseTime: 180, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "vaisseau_atelier" }], prereq: { tech27: 2, tech11: 3 } },
   { id: "tech19", nom: "\xC9toile noire", desc: "D\xE9bloque l'\xC9toile noire, puis l'am\xE9liore : +1 700 attaque et +1 700 d\xE9fense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1e3, syntheticNanites: 1e3, cyberModule: 1e3, aiFragment: 1e3 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } }
 ];
 var TECHNOLOGIES = [...DEFAULT_TECHNOLOGIES];
@@ -2870,7 +2884,8 @@ var TECH_EFFECT_STAT = {
   research_time: "researchTime",
   fleet_upkeep: "fleetUpkeep",
   counter_spy: "counterSpy",
-  hangar_capacity: "hangarCapacity"
+  hangar_capacity: "hangarCapacity",
+  repair_speed: "repairSpeed"
 };
 function techEffectGrants(techLevels2) {
   var _a;
@@ -3394,11 +3409,24 @@ function atelierLevel(player) {
   })) != null ? _a : BUILDINGS.find((b) => b.id === ATELIER_ID);
   return def3 ? effectiveBuildingLevel((_b = player.buildings) != null ? _b : {}, def3.id) : 0;
 }
+function workshopSpeedBonus(player) {
+  const grants = allEffects(player);
+  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed");
+}
+function repairShipRate(player) {
+  var _a, _b, _c, _d;
+  let out = 0;
+  for (const [id, u] of Object.entries((_a = player.units) != null ? _a : {})) {
+    const per = (_c = (_b = findUnit(id)) == null ? void 0 : _b.workshopHpPerSec) != null ? _c : 0;
+    if (per > 0 && ((_d = u == null ? void 0 : u.count) != null ? _d : 0) > 0) out += per * u.count;
+  }
+  return out;
+}
 function workshopRate(player) {
   const R = COMBAT_RULES;
   const level3 = atelierLevel(player);
-  if (level3 <= 0) return R.workshopHpPerSec * R.workshopBaseFactor;
-  return R.workshopHpPerSec * (1 + R.workshopLevelGain * (level3 - 1));
+  const base = level3 <= 0 ? R.workshopHpPerSec * R.workshopBaseFactor : R.workshopHpPerSec * (1 + R.workshopLevelGain * (level3 - 1));
+  return (base + repairShipRate(player)) * (1 + Math.max(0, workshopSpeedBonus(player)));
 }
 function workshopUnits(player) {
   var _a;
@@ -3548,6 +3576,35 @@ function withFleet(units, fleet) {
     out[id] = __spreadProps(__spreadValues({}, u), { count: ((_b = u.count) != null ? _b : 0) + n });
   }
   return out;
+}
+function workshopRushCost(player, jobId) {
+  const st = workshopState(player);
+  const jobs = jobId ? st.jobs.filter((j) => j.id === jobId) : st.jobs;
+  const hp = jobs.reduce((a, j) => a + Math.max(0, j.hpLeft), 0);
+  const seconds = Math.ceil(hp / Math.max(0.01, workshopRate(player)));
+  const amber = jobs.length ? Math.max(1, Math.ceil(seconds / Math.max(1, COMBAT_RULES.workshopRushSecondsPerAmber))) : 0;
+  return { amber, seconds, jobs };
+}
+function rushWorkshop(player, jobId, now, walletOf, saveWallet) {
+  var _a, _b, _c;
+  const { amber, jobs } = workshopRushCost(player, jobId);
+  if (!jobs.length) throw new GameActionError(jobId ? "Ce lot n'est plus \xE0 l'Atelier." : "Aucune unit\xE9 \xE0 l'Atelier.");
+  const wallet = walletOf(player);
+  if (wallet.amber < amber) throw new GameActionError(`Il faut ${amber} Ambre de Ruche pour terminer ces r\xE9parations.`);
+  wallet.amber -= amber;
+  saveWallet(player, wallet);
+  const st = workshopState(player);
+  const ids = new Set(jobs.map((j) => j.id));
+  const units = {};
+  for (const job of jobs) {
+    const unit = (_a = player.units[job.unitId]) != null ? _a : { level: 1, count: 0 };
+    player.units[job.unitId] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_b = unit.count) != null ? _b : 0) + job.count });
+    units[job.unitId] = ((_c = units[job.unitId]) != null ? _c : 0) + job.count;
+  }
+  st.jobs = st.jobs.filter((j) => !ids.has(j.id));
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  return { amber, units };
 }
 
 // src/game/allianceProfile.ts
@@ -5211,6 +5268,11 @@ var SYNTH_RULES = {
   baseMinutes: 30,
   minutesPerLevel: 77
 };
+function synthesisEffects(player, now) {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now || !(st.armor.pct > 0)) return [];
+  return [{ stat: "defense", value: st.armor.pct / 100, layer: "empire", scope: "pvp", source: { kind: "capsule", id: "armor", label: CAPSULES.armor.name } }];
+}
 function addCapsule(player, type, level3) {
   if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
   const st = synthesisState(player);
@@ -8778,7 +8840,7 @@ function talentEffects(player) {
 
 // src/game/modifiers.ts
 function emptyModifiers() {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
 }
 function empireEffects(player, now = Date.now()) {
   if (!player) return [];
@@ -8790,6 +8852,10 @@ function empireEffects(player, now = Date.now()) {
     // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
     ...mutatorEffects(now)
   ];
+}
+function allEffects(player, now = Date.now()) {
+  if (!player) return [];
+  return [...techEffectGrants(player.techLevels), ...empireEffects(player, now), ...synthesisEffects(player, now)];
 }
 function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
@@ -8803,6 +8869,7 @@ function modifiersFrom(grants, scope) {
   m.spyLevel = sum3("spyLevel");
   m.detection = sum3("detection");
   m.repair = sum3("repair");
+  m.repairSpeed = sum3("repairSpeed");
   m.cargo = sum3("cargo");
   m.bossDamage = sum3("bossDamage");
   m.fleetSpeed = sum3("fleetSpeed");
@@ -9031,6 +9098,48 @@ var DEFAULT_UNITS = [
     // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
     hangarSpace: 2
   },
+  // 5.21 : trois rôles qui manquaient au combat en tours.
+  {
+    id: "bastion",
+    name: "Bastion",
+    image: "/assets/units/bastion.webp",
+    maxLevel: 10,
+    description: "Forteresse volante au blindage d\xE9mesur\xE9. Elle tire peu mais encaisse pour toute la flotte : ses PV \xE9normes absorbent une grosse part des tirs. Classe Fort.",
+    cost: { scrap: 9e3, energy: 5e3 },
+    stats: { attaque: 150, defense: 1400, vitesse: 2, cargo: 100 },
+    category: "attack",
+    unlockTech: "tech28",
+    hangarSpace: 12,
+    levelBonus: 120,
+    combatClass: "heavy"
+  },
+  {
+    id: "batterie_essaim",
+    name: "Batterie anti-essaim",
+    image: "/assets/units/batterie_essaim.webp",
+    maxLevel: 10,
+    description: "Tourelles \xE0 fragmentation qui hachent les nu\xE9es de petits vaisseaux : avantage doubl\xE9 contre les unit\xE9s de classe Faible (essaims de chasseurs, drones, roquettes).",
+    cost: { scrap: 1e3, energy: 500 },
+    stats: { attaque: 45, defense: 12, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech29",
+    hangarSpace: 1,
+    combatClass: "medium",
+    classEdge: 0.4
+  },
+  {
+    id: "vaisseau_atelier",
+    name: "Vaisseau-atelier",
+    image: "/assets/units/vaisseau_atelier.webp",
+    maxLevel: 10,
+    description: "Cale de r\xE9paration mobile. \xC0 quai, chaque Vaisseau-atelier ajoute 15 PV/s \xE0 l'Atelier de r\xE9paration (avant les bonus de cadence). Ne combat pas.",
+    cost: { scrap: 4e3, energy: 2500 },
+    stats: { attaque: 0, defense: 300, vitesse: 3, cargo: 200 },
+    category: "attack",
+    unlockTech: "tech30",
+    hangarSpace: 4,
+    workshopHpPerSec: 15
+  },
   KESH_HUNTER_UNIT
 ];
 var UNITS = [];
@@ -9063,6 +9172,27 @@ function getUnitBuildTime(unit, techLevels2, player) {
   const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
   const empire = player ? 1 - playerModifiers(player).unitTime : 1;
   return techLevels2 || empire !== 1 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time") * empire)) : base;
+}
+
+// src/game/unitClasses.ts
+function combatValue(unit, level3 = 1) {
+  const grow = (Math.max(1, level3) - 1) * unitLevelBonus(unit);
+  const att = Math.max(0, unit.stats.attaque + grow);
+  const res = Math.max(1, unit.stats.defense + grow);
+  return Math.sqrt(att * res * COMBAT_RULES.hpPerResistance);
+}
+function unitClasses(all = UNITS) {
+  const out = {};
+  for (const category of ["attack", "defense"]) {
+    const fighters = all.filter((u) => u.category === category && u.stats.attaque > 0).sort((a, b) => combatValue(a) - combatValue(b));
+    all.filter((u) => u.category === category && !(u.stats.attaque > 0)).forEach((u) => out[u.id] = "support");
+    fighters.forEach((u, i) => {
+      var _a;
+      const third = fighters.length > 0 ? i / fighters.length : 0;
+      out[u.id] = (_a = u.combatClass) != null ? _a : third < 1 / 3 ? "light" : third < 2 / 3 ? "medium" : "heavy";
+    });
+  }
+  return out;
 }
 
 // src/game/combat.ts
@@ -9124,7 +9254,13 @@ var COMBAT_RULES = {
   workshopLevelGain: 0.25,
   workshopBaseFactor: 0.2,
   /** 5.21 : seigneurs de guerre : part de leurs PV réparée par heure (0,08 : ≈ 12 h pour une coque à 0 %). */
-  warlordHullRepairPerHour: 0.08
+  warlordHullRepairPerHour: 0.08,
+  /** 5.21 : avantage de classe (Fort > Moyen > Faible > Fort) : dégâts +classEdge contre la classe battue, −classEdge contre celle qui bat. */
+  classEdge: 0.2,
+  /** 5.21 : cible prioritaire choisie au lancement : poids de la catégorie visée dans la répartition des tirs. */
+  targetPriorityWeight: 3,
+  /** 5.21 : Ambre pour terminer une réparation : 1 Ambre par tranche de ce nombre de secondes restantes. */
+  workshopRushSecondsPerAmber: 600
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
@@ -9205,23 +9341,44 @@ function computeFullPower(units, techLevels2, idList, stats) {
 function homeDefensePower(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
   return (computeFullPower(units, techLevels2, DEFENSIVE_UNITS, ["attack", "defense"]) * defenseFactor + computeFullPower(units, techLevels2, OFFENSIVE_UNITS, ["attack", "defense"]) * homeFleetFactor) * (1 + COMBAT_RULES.homeDefenseBonus);
 }
+var CLASS_BEATS = { heavy: "medium", medium: "light", light: "heavy" };
+function classFactor(s, t) {
+  var _a;
+  if (!s.cls || !t.cls) return 1;
+  if (CLASS_BEATS[s.cls] === t.cls) return 1 + ((_a = s.edge) != null ? _a : COMBAT_RULES.classEdge);
+  if (CLASS_BEATS[t.cls] === s.cls) return Math.max(0, 1 - COMBAT_RULES.classEdge);
+  return 1;
+}
 var poolOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.hp, 0);
 var fireOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.att, 0);
-function hit(stacks, damage) {
-  const pool = poolOf(stacks);
-  if (!(pool > 0) || !(damage > 0)) return;
-  for (const t of stacks) {
-    if (t.count <= 0) continue;
-    const share = t.count * t.hp / pool;
-    t.count = Math.max(0, t.count - damage * share / t.hp);
+function volley(shooters, targets, factor, weight = () => 1) {
+  const w = targets.map((t) => t.count > 0 ? t.count * t.hp * weight(t) : 0);
+  const total2 = w.reduce((a, b) => a + b, 0);
+  const dmg = targets.map(() => 0);
+  if (!(total2 > 0) || !(factor > 0)) return dmg;
+  for (const s of shooters) {
+    const fire = s.count * s.att * factor;
+    if (!(fire > 0)) continue;
+    for (let j = 0; j < targets.length; j++) if (w[j] > 0) dmg[j] += fire * (w[j] / total2) * classFactor(s, targets[j]);
   }
+  return dmg;
+}
+function applyDamage(targets, dmg) {
+  let dealt = 0;
+  targets.forEach((t, j) => {
+    if (!(dmg[j] > 0) || t.count <= 0) return;
+    dealt += dmg[j];
+    t.count = Math.max(0, t.count - dmg[j] / t.hp);
+  });
+  return dealt;
 }
 function unitBaseHp(units, techLevels2, id) {
   return Math.max(1, unitStat(units, techLevels2, id, "defense")) * COMBAT_RULES.hpPerResistance;
 }
 function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor, hull) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const out = [];
+  const classes = unitClasses();
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
     const att = unitStat(units, techLevels2, id, "attack") * factor;
@@ -9231,7 +9388,8 @@ function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, h
     const owned = Math.max(qty, (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0);
     const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, ((_c = hull == null ? void 0 : hull[id]) != null ? _c : 0) / baseHp));
     const n = qty * engaged;
-    out.push({ id, owner, count: Math.max(0, n - damaged * n / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp });
+    const cls = classes[id];
+    out.push(__spreadValues({ id, owner, count: Math.max(0, n - damaged * n / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp }, cls && cls !== "support" ? { cls, edge: (_d = findUnit(id)) == null ? void 0 : _d.classEdge } : {}));
   }
   return out;
 }
@@ -9293,14 +9451,16 @@ function resolveCombat(params) {
   const attackerPower = params.attackerPowerOverride !== void 0 ? params.attackerPowerOverride * attackFactor : powerOf(attacker);
   const defenderPower = params.defenderPowerOverride !== void 0 ? params.defenderPowerOverride * defFactor : powerOf(defender);
   const garrisonPower = defender.filter((t) => typeof t.owner === "number").reduce((s, t) => s + t.count * (t.att + t.hp / R.hpPerResistance), 0);
+  const prio = params.targetPriority;
+  const priorityWeight = (t) => !prio ? 1 : prio === "defenses" === (t.owner === "defense") ? Math.max(1, R.targetPriorityWeight) : 1;
   const rounds = [];
   let retreated = false;
   if (a0 > 0 && d0 > 0) {
     for (let r = 0; r < R.maxRounds; r++) {
-      const dmgByAttacker = fireOf(attacker) * (1 - shield);
-      const dmgByDefender = fireOf(defender);
-      hit(defender, dmgByAttacker);
-      hit(attacker, dmgByDefender);
+      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight);
+      const onAttacker = volley(defender, attacker, 1);
+      const dmgByAttacker = applyDamage(defender, onDefender);
+      const dmgByDefender = applyDamage(attacker, onAttacker);
       const aLeft2 = poolOf(attacker) / a0;
       const dLeft2 = poolOf(defender) / d0;
       rounds.push({ attackerHp: aLeft2, defenderHp: dLeft2, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });
@@ -12683,6 +12843,7 @@ function performAttack(input) {
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_m = def3.units) != null ? _m : {}, (_n = def3.techLevels) != null ? _n : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
+    targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : void 0,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
     lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
     garrisons: (_o = input.garrisons) != null ? _o : [],
@@ -14824,6 +14985,8 @@ function applyAction(s, action) {
     case "cancel":
       if (!isCancelTarget(action.target)) throw new GameActionError("Chantier inconnu.");
       return performCancel(player, queues, action.target, now);
+    case "workshopRush":
+      return rushWorkshop(player, typeof action.jobId === "string" && action.jobId ? action.jobId : void 0, now, bountyState, (p, w) => p.bounties = w);
     case "vacationEnd":
       endVacation(player, queues, now, true);
       return true;
@@ -15840,6 +16003,9 @@ function validateRules(rules) {
   if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
   if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
   if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
+  if (!(cb.classEdge >= 0 && cb.classEdge <= 0.9)) errors.push("Combat : avantage de classe entre 0 et 0,9.");
+  if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
+  if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;

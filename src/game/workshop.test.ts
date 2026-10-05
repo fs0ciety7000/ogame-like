@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMBAT_RULES, resolveCombat, unitBaseHp } from "@/game/combat";
 import { defaultPlayerState } from "@/game/defaults";
-import { advanceWorkshop, applyBossWear, applyHull, bossAssaultLosses, hullPercent, sendToWorkshop, workshopEta, workshopRate, workshopState, workshopUnits } from "@/game/workshop";
+import { advanceWorkshop, applyBossWear, applyHull, bossAssaultLosses, hullPercent, rushWorkshop, sendToWorkshop, workshopEta, workshopRate, workshopRushCost, workshopState, workshopUnits } from "@/game/workshop";
 import { withWorkshop, hangarUsed } from "@/game/actions";
 import type { PlayerState, Units } from "@/types/game";
 
@@ -148,5 +148,32 @@ describe("5.21 seigneurs de guerre et boss", () => {
     expect(workshopState(p).hull.chasseur).toBe(hull.chasseur);
     // Boss parti : ni pertes ni usure.
     expect(bossAssaultLosses(p, { chasseur: 100 }, 0.1, 0.5, false)).toMatchObject({ lost: {}, recovered: {}, hull: {}, survivors: { chasseur: 100 } });
+  });
+});
+
+describe("5.21 cadence et réparation accélérée", () => {
+  it("Nanoréparation, Mécanicien et Vaisseaux-ateliers accélèrent l'Atelier", () => {
+    const p = player(5);
+    const base = workshopRate(p);
+    p.techLevels = { ...p.techLevels, tech27: 5 };
+    expect(workshopRate(p)).toBeCloseTo(base * 1.5, 5);
+    p.units.vaisseau_atelier = { level: 1, count: 2 };
+    expect(workshopRate(p)).toBeCloseTo((base + 30) * 1.5, 5);
+  });
+
+  it("l'Ambre termine un lot tout de suite, au prix du temps restant", () => {
+    const p = player(1);
+    p.bounties = { ...(p.bounties ?? {}), amber: 50 } as never;
+    sendToWorkshop(p, { chasseur: 40 }, NOW, "attack", true);
+    const job = workshopState(p).jobs[0];
+    const { amber, seconds } = workshopRushCost(p, job.id);
+    expect(amber).toBe(Math.max(1, Math.ceil(seconds / COMBAT_RULES.workshopRushSecondsPerAmber)));
+    const before = p.units.chasseur.count;
+    const out = rushWorkshop(p, job.id, NOW, (x) => ({ amber: (x.bounties as { amber: number }).amber }), (x, w) => ((x.bounties as { amber: number }).amber = w.amber));
+    expect(out.units.chasseur).toBe(40);
+    expect(p.units.chasseur.count).toBe(before + 40);
+    expect(workshopState(p).jobs).toHaveLength(0);
+    expect((p.bounties as { amber: number }).amber).toBe(50 - amber);
+    expect(() => rushWorkshop(p, job.id, NOW, () => ({ amber: 99 }), () => undefined)).toThrow(/plus à l'Atelier/);
   });
 });

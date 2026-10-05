@@ -46,6 +46,11 @@ export const TECH_GRID: Record<string, { col: number; row: number }> = {
   tech22: { col: 6, row: 1 },
   tech24: { col: 6, row: 4 },
   tech19: { col: 7, row: 4.5 },
+  // 5.21 : Atelier (Nanoréparation, Vaisseau-atelier) et nouvelles unités.
+  tech27: { col: 3, row: 3 },
+  tech30: { col: 4, row: 1 },
+  tech29: { col: 4, row: 2 },
+  tech28: { col: 4, row: 4 },
 };
 
 export interface TechLane {

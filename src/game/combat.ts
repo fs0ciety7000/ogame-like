@@ -1,6 +1,7 @@
 import { DEFENSIVE_UNITS, findUnit, KESH_HUNTER_UNIT, KESH_PVE_BONUS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { techBonus } from "@/game/technologies";
+import { unitClasses } from "@/game/unitClasses";
 import type { Buildings, CombatLog, CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
 
 /** Règles de combat réglables depuis l'administration. */
@@ -63,6 +64,12 @@ export const COMBAT_RULES = {
   workshopBaseFactor: 0.2,
   /** 5.21 : seigneurs de guerre : part de leurs PV réparée par heure (0,08 : ≈ 12 h pour une coque à 0 %). */
   warlordHullRepairPerHour: 0.08,
+  /** 5.21 : avantage de classe (Fort > Moyen > Faible > Fort) : dégâts +classEdge contre la classe battue, −classEdge contre celle qui bat. */
+  classEdge: 0.2,
+  /** 5.21 : cible prioritaire choisie au lancement : poids de la catégorie visée dans la répartition des tirs. */
+  targetPriorityWeight: 3,
+  /** 5.21 : Ambre pour terminer une réparation : 1 Ambre par tranche de ce nombre de secondes restantes. */
+  workshopRushSecondsPerAmber: 600,
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
@@ -236,7 +243,23 @@ interface Stack {
   owned: number;
   damaged: number;
   baseHp: number;
+  /** 5.21 : classe de combat et avantage propre (unités fictives : aucune classe). */
+  cls?: "light" | "medium" | "heavy";
+  edge?: number;
 }
+
+/** 5.21 : Fort bat Moyen, Moyen bat Faible, Faible bat Fort (un essaim submerge un mastodonte). */
+export const CLASS_BEATS: Record<"light" | "medium" | "heavy", "light" | "medium" | "heavy"> = { heavy: "medium", medium: "light", light: "heavy" };
+
+/** Multiplicateur des dégâts d'une unité `s` sur une unité `t`. */
+export function classFactor(s: Pick<Stack, "cls" | "edge">, t: Pick<Stack, "cls">): number {
+  if (!s.cls || !t.cls) return 1;
+  if (CLASS_BEATS[s.cls] === t.cls) return 1 + (s.edge ?? COMBAT_RULES.classEdge);
+  if (CLASS_BEATS[t.cls] === s.cls) return Math.max(0, 1 - COMBAT_RULES.classEdge);
+  return 1;
+}
+
+export type TargetPriority = "defenses" | "ships";
 
 export interface CombatRound {
   /** Points de vie restants (part 0 → 1) à la fin du tour. */
@@ -250,14 +273,32 @@ export interface CombatRound {
 const poolOf = (stacks: Stack[]) => stacks.reduce((s, t) => s + t.count * t.hp, 0);
 const fireOf = (stacks: Stack[]) => stacks.reduce((s, t) => s + t.count * t.att, 0);
 
-function hit(stacks: Stack[], damage: number) {
-  const pool = poolOf(stacks);
-  if (!(pool > 0) || !(damage > 0)) return;
-  for (const t of stacks) {
-    if (t.count <= 0) continue;
-    const share = (t.count * t.hp) / pool;
-    t.count = Math.max(0, t.count - (damage * share) / t.hp);
+/**
+ * 5.21 : une salve. Chaque unité répartit ses tirs sur les cibles au prorata de leurs PV
+ * (pondérés par la cible prioritaire), avec l'avantage de classe. Rend les dégâts par cible
+ * (appliqués ensuite, pour que les deux camps tirent en même temps).
+ */
+function volley(shooters: Stack[], targets: Stack[], factor: number, weight: (t: Stack) => number = () => 1): number[] {
+  const w = targets.map((t) => (t.count > 0 ? t.count * t.hp * weight(t) : 0));
+  const total = w.reduce((a, b) => a + b, 0);
+  const dmg = targets.map(() => 0);
+  if (!(total > 0) || !(factor > 0)) return dmg;
+  for (const s of shooters) {
+    const fire = s.count * s.att * factor;
+    if (!(fire > 0)) continue;
+    for (let j = 0; j < targets.length; j++) if (w[j] > 0) dmg[j] += fire * (w[j] / total) * classFactor(s, targets[j]);
   }
+  return dmg;
+}
+
+function applyDamage(targets: Stack[], dmg: number[]): number {
+  let dealt = 0;
+  targets.forEach((t, j) => {
+    if (!(dmg[j] > 0) || t.count <= 0) return;
+    dealt += dmg[j];
+    t.count = Math.max(0, t.count - dmg[j] / t.hp);
+  });
+  return dealt;
 }
 
 /** PV d'une unité, sans bonus de combat (base des dégâts conservés). */
@@ -271,6 +312,7 @@ export function unitBaseHp(units: Units, techLevels: TechLevels, id: string): nu
  */
 function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, number>, owner: Stack["owner"], engaged = 1, factor = 1, hpFactor = factor, hull?: Record<string, number>): Stack[] {
   const out: Stack[] = [];
+  const classes = unitClasses();
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
     const att = unitStat(units, techLevels, id, "attack") * factor;
@@ -280,7 +322,8 @@ function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, 
     const owned = Math.max(qty, units[id]?.count ?? 0);
     const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, (hull?.[id] ?? 0) / baseHp));
     const n = qty * engaged;
-    out.push({ id, owner, count: Math.max(0, n - (damaged * n) / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp });
+    const cls = classes[id];
+    out.push({ id, owner, count: Math.max(0, n - (damaged * n) / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp, ...(cls && cls !== "support" ? { cls, edge: findUnit(id)?.classEdge } : {}) });
   }
   return out;
 }
@@ -340,6 +383,8 @@ export function resolveCombat(params: {
   /** 5.20 : PV manquants par type d'unité (stock entier) avant le combat. */
   attackerHull?: Record<string, number>;
   defenderHull?: Record<string, number>;
+  /** 5.21 : cible prioritaire de l'attaquant (défenses ou vaisseaux à quai et garnisons). */
+  targetPriority?: TargetPriority;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
@@ -379,14 +424,16 @@ export function resolveCombat(params: {
   const garrisonPower = defender.filter((t) => typeof t.owner === "number").reduce((s, t) => s + t.count * (t.att + t.hp / R.hpPerResistance), 0);
 
   // --- Tours ---
+  const prio = params.targetPriority;
+  const priorityWeight = (t: Stack) => (!prio ? 1 : (prio === "defenses") === (t.owner === "defense") ? Math.max(1, R.targetPriorityWeight) : 1);
   const rounds: CombatRound[] = [];
   let retreated = false;
   if (a0 > 0 && d0 > 0) {
     for (let r = 0; r < R.maxRounds; r++) {
-      const dmgByAttacker = fireOf(attacker) * (1 - shield);
-      const dmgByDefender = fireOf(defender);
-      hit(defender, dmgByAttacker);
-      hit(attacker, dmgByDefender);
+      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight);
+      const onAttacker = volley(defender, attacker, 1);
+      const dmgByAttacker = applyDamage(defender, onDefender);
+      const dmgByDefender = applyDamage(attacker, onAttacker);
       const aLeft = poolOf(attacker) / a0;
       const dLeft = poolOf(defender) / d0;
       rounds.push({ attackerHp: aLeft, defenderHp: dLeft, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });

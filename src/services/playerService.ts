@@ -545,7 +545,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number; hours?: number; formation?: string; capsules?: { assault?: number | true; decoy?: number | true } } = {},
+  options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true } } = {},
 ): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }
@@ -723,6 +723,11 @@ export function recycleRelic(relicId: string) {
 /** v5.1 : talents d'Ascension. */
 export function learnTalent(talentId: string) {
   return act({ type: "talentLearn", talentId });
+}
+
+/** 5.21 : termine un lot de réparation (ou toute la file) contre de l'Ambre. */
+export function rushWorkshop(jobId?: string) {
+  return act<{ amber: number; units: Record<string, number> }>({ type: "workshopRush", ...(jobId ? { jobId } : {}) });
 }
 
 export function resetTalents() {

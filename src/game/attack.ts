@@ -54,6 +54,8 @@ export interface AttackInput {
   inFlight?: boolean;
   /** v3.0 : formation de l'attaquant (la posture du défenseur est lue sur son profil). */
   formation?: string;
+  /** 5.21 : cible prioritaire choisie au lancement. */
+  targetPriority?: "defenses" | "ships";
   /** v3.5 : colonie visée (sinon la planète mère). */
   colonyId?: string;
   /** Garnisons alliées stationnées chez le défenseur (v1.9). */
@@ -164,6 +166,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor(def.units ?? {}, def.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor,
     homeFleetFactor: posture.homeFleetFactor,
+    targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : undefined,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
     lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
     garrisons: input.garrisons ?? [],

@@ -28,6 +28,12 @@ export interface UnitDef {
   levelBonus?: number;
   /** v3.9 : débloquée par un plan du Comptoir Kesh'Vaar (pas de techno). */
   blueprint?: boolean;
+  /** 5.21 : classe de combat imposée (sinon, tiers de valeur de combat dans sa catégorie). */
+  combatClass?: "light" | "medium" | "heavy";
+  /** 5.21 : avantage de classe propre à l'unité (sinon COMBAT_RULES.classEdge). */
+  classEdge?: number;
+  /** 5.21 : PV par seconde ajoutés à l'Atelier par unité à quai (vaisseau-atelier). */
+  workshopHpPerSec?: number;
 }
 
 /** v3.9 : vaisseau des Kesh'Vaar, plan acheté au Comptoir de la Ruche.
@@ -240,6 +246,48 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech18",
     // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
     hangarSpace: 2,
+  },
+  // 5.21 : trois rôles qui manquaient au combat en tours.
+  {
+    id: "bastion",
+    name: "Bastion",
+    image: "/assets/units/bastion.webp",
+    maxLevel: 10,
+    description: "Forteresse volante au blindage démesuré. Elle tire peu mais encaisse pour toute la flotte : ses PV énormes absorbent une grosse part des tirs. Classe Fort.",
+    cost: { scrap: 9000, energy: 5000 },
+    stats: { attaque: 150, defense: 1400, vitesse: 2, cargo: 100 },
+    category: "attack",
+    unlockTech: "tech28",
+    hangarSpace: 12,
+    levelBonus: 120,
+    combatClass: "heavy",
+  },
+  {
+    id: "batterie_essaim",
+    name: "Batterie anti-essaim",
+    image: "/assets/units/batterie_essaim.webp",
+    maxLevel: 10,
+    description: "Tourelles à fragmentation qui hachent les nuées de petits vaisseaux : avantage doublé contre les unités de classe Faible (essaims de chasseurs, drones, roquettes).",
+    cost: { scrap: 1000, energy: 500 },
+    stats: { attaque: 45, defense: 12, vitesse: 0, cargo: 0 },
+    category: "defense",
+    unlockTech: "tech29",
+    hangarSpace: 1,
+    combatClass: "medium",
+    classEdge: 0.4,
+  },
+  {
+    id: "vaisseau_atelier",
+    name: "Vaisseau-atelier",
+    image: "/assets/units/vaisseau_atelier.webp",
+    maxLevel: 10,
+    description: "Cale de réparation mobile. À quai, chaque Vaisseau-atelier ajoute 15 PV/s à l'Atelier de réparation (avant les bonus de cadence). Ne combat pas.",
+    cost: { scrap: 4000, energy: 2500 },
+    stats: { attaque: 0, defense: 300, vitesse: 3, cargo: 200 },
+    category: "attack",
+    unlockTech: "tech30",
+    hangarSpace: 4,
+    workshopHpPerSec: 15,
   },
   KESH_HUNTER_UNIT,
 ];

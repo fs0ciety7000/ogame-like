@@ -25,7 +25,8 @@ export type TechEffectType =
   | "research_time"
   | "fleet_upkeep"
   | "counter_spy"
-  | "hangar_capacity";
+  | "hangar_capacity"
+  | "repair_speed";
 
 /** Un effet octroyé par une technologie, multiplié par son niveau. */
 export interface TechEffectDef {
@@ -79,6 +80,7 @@ export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
   fleet_upkeep: 0.05,
   counter_spy: 1,
   hangar_capacity: 0.05,
+  repair_speed: 0.1,
 };
 
 /** Plafond des réductions cumulées (temps, coûts, entretien) et de la part à l'abri. */
@@ -107,6 +109,7 @@ export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
   fleet_upkeep: "Entretien de la flotte (−% par niveau)",
   counter_spy: "Contre-espionnage (points par niveau)",
   hangar_capacity: "Capacité des hangars d'attaque ou de défense (% par niveau)",
+  repair_speed: "Cadence de l'Atelier de réparation (% par niveau)",
 };
 
 /** Effets chiffrés (une valeur par niveau) ; les autres débloquent. */
@@ -142,6 +145,11 @@ export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech25", nom: "Lance gravitationnelle", desc: "Débloque la Lance gravitationnelle, puis l'améliore : +150 attaque et défense par niveau.", maxLevel: 10, baseCost: { nano: 400_000, data: 300_000, reinforcedSteel: 500, aiFragment: 300 }, baseTime: 600, costGrowth: 2.4, effects: [{ type: "unlock_next_level", target: "lance_gravitationnelle" }], prereq: { tech1: 17, tech16: 6, tech23: 3 } },
   // v5.5 : demandée par les joueurs, hangars pleins en fin de partie.
   { id: "tech26", nom: "Extension des hangars", desc: "Modules d'amarrage repliables : +5 % de places dans les hangars d'attaque et de défense par niveau (+50 % au niveau 10).", maxLevel: 10, baseCost: { scrap: 150_000, nano: 80_000, reinforcedSteel: 200, cyberModule: 200 }, baseTime: 600, costGrowth: 2.2, effects: [{ type: "hangar_capacity", value: 0.05, target: "attack" }, { type: "hangar_capacity", value: 0.05, target: "defense" }], prereq: { tech6: 1, tech1: 12 } },
+  // 5.21 : cadence de l'Atelier de réparation.
+  { id: "tech27", nom: "Nanoréparation", desc: "Essaims de nanites soudeuses : +10 % de cadence de l'Atelier de réparation par niveau (le double au niveau 10).", maxLevel: 10, baseCost: { scrap: 2000, energy: 1000, syntheticNanites: 80 }, baseTime: 120, costGrowth: 1.9, effects: [{ type: "repair_speed", value: 0.1 }], prereq: { tech1: 6, tech2: 3 } },
+  { id: "tech28", nom: "Bastion", desc: "Débloque le Bastion (forteresse volante, classe Fort), puis l'améliore : +120 attaque et défense par niveau.", maxLevel: 10, baseCost: { scrap: 8000, energy: 4000, reinforcedSteel: 150, cyberModule: 100 }, baseTime: 300, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "bastion" }], prereq: { tech2: 5, tech10: 5, tech1: 12 } },
+  { id: "tech29", nom: "Batterie anti-essaim", desc: "Débloque la Batterie anti-essaim (défense, double avantage contre la classe Faible), puis l'améliore : +5 attaque et défense par niveau.", maxLevel: 10, baseCost: { scrap: 1500, nano: 800, syntheticNanites: 200 }, baseTime: 120, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "batterie_essaim" }], prereq: { tech17: 3, tech14: 5 } },
+  { id: "tech30", nom: "Vaisseau-atelier", desc: "Débloque le Vaisseau-atelier (15 PV/s de réparation par vaisseau à quai), puis l'améliore : +5 attaque et défense par niveau.", maxLevel: 10, baseCost: { scrap: 3000, energy: 1500, syntheticNanites: 150, cyberModule: 50 }, baseTime: 180, costGrowth: 1.9, effects: [{ type: "unlock_next_level", target: "vaisseau_atelier" }], prereq: { tech27: 2, tech11: 3 } },
   { id: "tech19", nom: "Étoile noire", desc: "Débloque l'Étoile noire, puis l'améliore : +1 700 attaque et +1 700 défense par niveau.", maxLevel: 10, baseCost: { reinforcedSteel: 1000, syntheticNanites: 1000, cyberModule: 1000, aiFragment: 1000 }, baseTime: 70, effect: "unlock_next_level", prereq: { tech18: 5, tech16: 5, tech1: 18 } },
 ];
 
@@ -183,6 +191,7 @@ export const TECH_EFFECT_STAT: Partial<Record<TechEffectType, EffectStat>> = {
   fleet_upkeep: "fleetUpkeep",
   counter_spy: "counterSpy",
   hangar_capacity: "hangarCapacity",
+  repair_speed: "repairSpeed",
 };
 
 /** v5.14 : effets déclarés par les technologies du joueur (couche « tech »).
@@ -362,6 +371,8 @@ export function describeTechEffect(e: TechEffectDef, level: number, names: { res
       return `+${Math.floor(v)} point(s) de contre-espionnage`;
     case "hangar_capacity":
       return `+${pct(v)} de capacité des hangars ${e.target === "defense" ? "de défense" : "d'attaque"}`;
+    case "repair_speed":
+      return `+${pct(v)} de cadence de l'Atelier`;
     case "unlock_recipe":
       return `${level} recette(s) débloquée(s)`;
     case "unlock_buildings":

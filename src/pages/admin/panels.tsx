@@ -203,6 +203,32 @@ export function RulesPanel() {
             hint="Ils n'ont pas d'Atelier : à 0,08, une coque très abîmée est réparée en ≈ 12 h."
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, warlordHullRepairPerHour: v ?? 0 } }))}
           />
+          <NumberField
+            label="Ambre pour terminer une réparation : 1 Ambre par tranche de (s)"
+            value={rules.combat.workshopRushSecondsPerAmber}
+            min={1}
+            step={60}
+            hint="600 : 1 Ambre par 10 min de réparation restante (1 au minimum)."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopRushSecondsPerAmber: v ?? 600 } }))}
+          />
+        </Section>
+        <Section title="Rôles par classe et cible prioritaire (5.21)">
+          <NumberField
+            label="Avantage de classe (0,2 = ±20 %)"
+            value={rules.combat.classEdge}
+            min={0}
+            step={0.05}
+            hint="Fort > Moyen > Faible > Fort : +X % de dégâts contre la classe battue, −X % contre celle qui bat."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, classEdge: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Cible prioritaire : poids de la catégorie visée (×)"
+            value={rules.combat.targetPriorityWeight}
+            min={1}
+            step={0.5}
+            hint="3 : la catégorie visée reçoit trois fois plus de tirs, à points de vie égaux."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, targetPriorityWeight: v ?? 1 } }))}
+          />
         </Section>
         <Section title="Combat en tours (5.18)">
           <NumberField

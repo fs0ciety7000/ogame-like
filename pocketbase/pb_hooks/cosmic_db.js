@@ -1441,6 +1441,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         inFlight: true,
         garrisons,
         formation: rec.getString("formation"),
+        targetPriority: rec.getString("targetPriority") || undefined,
         boosts: fleet.boosts || undefined,
         // v4.2 : butin d'un seigneur plafonné à 6 h de production de sa cible.
         lootCap: attacker.player.npc ? game.warlordLootCap(defender.player) : undefined,
@@ -1761,6 +1762,8 @@ function launchFleetRequest(e) {
     if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
     if (["attack", "lair", "expedition", "leviathan", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    // 5.21 : cible prioritaire (défenses ou vaisseaux), attaques seulement.
+    if (mission === "attack" && (body.targetPriority === "defenses" || body.targetPriority === "ships")) rec.set("targetPriority", body.targetPriority);
     // v4.0 : capsules (champs cachés) ; le leurre montre une fausse composition.
     const caps = out.capsules;
     const boosted = !!caps && Object.keys(caps.boosts).length > 0;
@@ -4866,6 +4869,25 @@ const CONTENT_MIGRATIONS = [
       }
       return touched;
     },
+  },
+  // 5.21 : Nanoréparation, Bastion, Batterie anti-essaim et Vaisseau-atelier ajoutés au contenu personnalisé.
+  {
+    id: "atelier-5.21-technologies",
+    key: "technologies",
+    patches: [],
+    appendFromDefaults: ["tech27", "tech28", "tech29", "tech30"],
+  },
+  {
+    id: "atelier-5.21-units",
+    key: "units",
+    patches: [],
+    appendFromDefaults: ["bastion", "batterie_essaim", "vaisseau_atelier"],
+  },
+  {
+    id: "atelier-5.21-relics",
+    key: "relics",
+    patches: [],
+    appendFromDefaults: ["cle_soudure"],
   },
 ];
 

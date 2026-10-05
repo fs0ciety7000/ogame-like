@@ -1253,6 +1253,13 @@
         "presentable": false
       },
       {
+        "name": "targetPriority",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
         "name": "expedition",
         "type": "json",
         "required": false,
