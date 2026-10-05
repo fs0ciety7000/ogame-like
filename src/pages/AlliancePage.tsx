@@ -20,6 +20,7 @@ import { AllianceWeekTab } from "@/components/game/AllianceWeekTab";
 import { normalizeAllianceBoss } from "@/game/allianceBoss";
 import { isOnline } from "@/game/retention";
 import { useDirectoryStore } from "@/store/directoryStore";
+import { OnlineDot } from "@/components/ui/online-dot";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
@@ -412,10 +413,11 @@ function AllianceRoom({
                 return (
                   <li key={m} className="flex flex-col gap-1 border-b border-white/5 pb-1.5 last:border-0">
                     <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={cn("h-2 w-2 shrink-0 rounded-full", online(m) ? "bg-mint-glow shadow-[0_0_6px_var(--color-mint-glow)]" : "bg-slate-600")}
-                        title={online(m) ? "En ligne" : lastActiveOf[m] ? `Vu ${timeAgo(lastActiveOf[m])}` : "Hors ligne"}
-                      />
+                      {online(m) ? (
+                        <OnlineDot uid={m} />
+                      ) : (
+                        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-slate-600" title={lastActiveOf[m] ? `Vu ${timeAgo(lastActiveOf[m])}` : "Hors ligne"} />
+                      )}
                       <span className="truncate">{alliance.memberPseudos[m] ?? "?"}</span>
                       <StaffBadge uid={m} compact />
                       {role === "founder" && <Crown className="h-3.5 w-3.5 shrink-0 text-gold-glow" aria-label="Fondateur" />}

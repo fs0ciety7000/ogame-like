@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
+import { OnlineDot } from "@/components/ui/online-dot";
+import { PlayerName } from "@/components/ui/player-name";
 import { cn, formatNumber } from "@/lib/utils";
 
 /* v5.9 : podium du classement et insigne de rang mis en avant. */
@@ -71,10 +73,13 @@ export function LeaderboardPodium({ top, onOpen, suffix = "" }: { top: PodiumEnt
 
               <div className="relative shrink-0">
                 <PlayerAvatar uid={p.uid} pseudo={p.pseudo} file={p.avatar} className={cn(place === 0 ? "h-14 w-14 sm:h-20 sm:w-20" : "h-12 w-12 sm:h-16 sm:w-16", s.ring)} />
+                <OnlineDot uid={p.uid} size="md" className="absolute -right-1 -top-1" />
               </div>
 
               <div className="relative w-full min-w-0">
-                <p className="hud-title truncate text-sm normal-case tracking-[0.03em] text-white group-hover:text-cyan-glow sm:text-lg">{p.pseudo}</p>
+                <p className="hud-title truncate text-sm normal-case tracking-[0.03em] text-white group-hover:text-cyan-glow sm:text-lg">
+                  <PlayerName uid={p.uid} pseudo={p.pseudo} presence={false} />
+                </p>
                 <AscensionStars count={p.ascensions} className="mt-0.5 justify-center" />
                 <div className="mt-1 flex flex-col items-center gap-1 sm:mt-2">
                   <motion.img

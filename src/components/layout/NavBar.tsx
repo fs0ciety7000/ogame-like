@@ -431,7 +431,7 @@ function CommanderCard() {
         <div className="min-w-0 flex-1">
           {/* 5.15.4 : le pseudo a toute la largeur (retour à la ligne plutôt que « Nico… ») ; badge d'équipe avec le rang. */}
           <p className="flex flex-wrap items-center gap-x-1.5 font-display text-[15px] font-bold leading-tight tracking-[0.02em] text-white">
-            <PlayerName uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="min-w-0 [overflow-wrap:anywhere]" />
+            <PlayerName presence={false} uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="min-w-0 [overflow-wrap:anywhere]" />
             <AscensionStars count={player.ascensions} />
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
