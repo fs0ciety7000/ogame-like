@@ -31,7 +31,7 @@ describe("design system", () => {
   it("aucune couleur hex écrite dans un composant (jetons du thème)", () => {
     // Scènes dessinées (planète, boss, nébuleuse, étoiles, vue cockpit), rapport imprimé,
     // logo Google et aperçu d'e-mail : couleurs d'illustration ou de marque, hors thème.
-    const allowed = /(HomePlanet|BossStage|Nebula|ParallaxStars|CockpitViewport|StatsPrintReport|AltSignIn|MailPanel)\.tsx$/;
+    const allowed = /(HomePlanet|BossStage|ParallaxStars|CockpitViewport|StatsPrintReport|AltSignIn|MailPanel)\.tsx$/;
     const offenders: string[] = [];
     for (const file of files("src")) {
       if (allowed.test(file) || file.includes(".test.")) continue;
@@ -70,6 +70,11 @@ describe("design system", () => {
     }
     return offenders;
   }
+
+  it("5.16 : aucune couleur Tailwind hors thème (red-400, violet-300…) : jetons du thème", () => {
+    const palette = /\b(?:bg|text|border|from|to|via|ring|fill|stroke|outline|accent|decoration)-(?:red|amber|emerald|green|blue|sky|indigo|purple|pink|orange|yellow|teal|rose|zinc|gray|neutral|stone|lime|fuchsia|violet|cyan)-\d{2,3}\b/;
+    expect(scan((l) => palette.test(l))).toEqual([]);
+  });
 
   it("5.15 : ni gros arrondis ni ombres lourdes (coins coupés : hud-cut)", () => {
     expect(scan((l) => /\brounded-(?:2xl|3xl)\b/.test(l))).toEqual([]);

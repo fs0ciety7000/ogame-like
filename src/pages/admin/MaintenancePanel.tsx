@@ -192,7 +192,7 @@ export function MaintenancePanel() {
           {plannedEnd ? `Réouverture affichée vers ${new Date(plannedEnd).toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" })}.` : "Sans heure de fin : les joueurs voient le temps écoulé."}
         </p>
         <label className={cn("flex items-start gap-2 text-sm text-slate-200", !plannedEnd && "opacity-50")}>
-          <input type="checkbox" checked={autoEnd} disabled={!plannedEnd} onChange={(e) => setAutoEnd(e.target.checked)} className="mt-1 accent-cyan-400" />
+          <input type="checkbox" checked={autoEnd} disabled={!plannedEnd} onChange={(e) => setAutoEnd(e.target.checked)} className="mt-1 accent-cyan-glow" />
           <span>
             Rouvrir automatiquement à l'heure prévue
             <span className="block text-[11px] text-slate-500">Sinon, la page affiche « finalisation en cours » jusqu'à ce qu'un administrateur termine la maintenance.</span>

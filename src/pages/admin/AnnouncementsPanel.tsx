@@ -130,7 +130,7 @@ export function AnnouncementsPanel() {
                     <Input type="datetime-local" value={toLocalInput(sched.endsAtMs)} onChange={(e) => setSchedule(a.id, { endsAtMs: fromLocalInput(e.target.value) })} />
                   </label>
                   <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-300">
-                    <input type="checkbox" className="accent-cyan-400" checked={!sched.disabled} onChange={(e) => setSchedule(a.id, { disabled: !e.target.checked })} />
+                    <input type="checkbox" className="accent-cyan-glow" checked={!sched.disabled} onChange={(e) => setSchedule(a.id, { disabled: !e.target.checked })} />
                     Diffuser
                   </label>
                 </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarRange, ChevronLeft, ChevronRight, GripVertical, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, CopyPlus, GripVertical, Plus, Repeat, Trash2 } from "lucide-react";
+import { sameWeekdayNextMonth } from "@/lib/calendarShift";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AGENDA_COLORS, AGENDA_LABELS, upcomingAgenda, type AgendaItem } from "@/game/agenda";
@@ -38,6 +39,8 @@ export function PlannerPanel() {
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState<number | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
+  // 5.16 : récurrence choisie pour les événements ajoutés (semaines, occurrences).
+  const [repeat, setRepeat] = useState<{ weeks: number; count: number } | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const now = Date.now();
   const month = new Date();
@@ -118,8 +121,47 @@ export function PlannerPanel() {
     const at = day + 18 * 3600_000;
     if (kind === "levDate") update((r) => ({ ...r, events: { ...r.events, bossDates: [...(r.events.bossDates ?? []), { startMs: at, durationHours: r.leviathan.durationHours }] } }));
     if (kind === "sbDate") update((r) => ({ ...r, seasonBoss: { ...r.seasonBoss, dates: [...(r.seasonBoss.dates ?? []), { startMs: at, durationHours: r.seasonBoss.durationHours }] } }));
-    if (kind === "scheduled" && eventType) update((r) => ({ ...r, events: { ...r.events, scheduled: [...r.events.scheduled, { id: `plan${Date.now().toString(36)}`, type: eventType, startMs: at, endMs: at + 48 * 3600_000 }] } }));
+    if (kind === "scheduled" && eventType)
+      update((r) => ({
+        ...r,
+        events: {
+          ...r.events,
+          scheduled: [...r.events.scheduled, { id: `plan${Date.now().toString(36)}`, type: eventType, startMs: at, endMs: at + 48 * 3600_000, ...(repeat ? { repeatWeeks: repeat.weeks, repeatCount: repeat.count } : {}) }],
+        },
+      }));
     setAdding(null);
+  };
+
+  // 5.16 : copie des dates précises et des événements programmés du mois affiché vers le mois suivant
+  // (même jour de la semaine, même rang : « 2e samedi » → « 2e samedi »).
+  const monthStart = month.getTime();
+  const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 1).getTime();
+  const inShownMonth = (ms: number) => ms >= monthStart && ms < monthEnd;
+  const copyCount =
+    (rules.events.bossDates ?? []).filter((d) => inShownMonth(d.startMs)).length +
+    (rules.seasonBoss.dates ?? []).filter((d) => inShownMonth(d.startMs)).length +
+    rules.events.scheduled.filter((e) => !e.repeatWeeks && inShownMonth(e.startMs)).length;
+  const copyToNextMonth = () => {
+    const stamp = Date.now().toString(36);
+    update((r) => ({
+      ...r,
+      events: {
+        ...r.events,
+        bossDates: [...(r.events.bossDates ?? []), ...(r.events.bossDates ?? []).filter((d) => inShownMonth(d.startMs)).map((d) => ({ ...d, startMs: sameWeekdayNextMonth(d.startMs) }))],
+        scheduled: [
+          ...r.events.scheduled,
+          ...r.events.scheduled
+            .filter((e) => !e.repeatWeeks && inShownMonth(e.startMs))
+            .map((e, i) => {
+              const startMs = sameWeekdayNextMonth(e.startMs);
+              return { ...e, id: `copy${stamp}${i}`, startMs, endMs: startMs + (e.endMs - e.startMs) };
+            }),
+        ],
+      },
+      seasonBoss: { ...r.seasonBoss, dates: [...(r.seasonBoss.dates ?? []), ...(r.seasonBoss.dates ?? []).filter((d) => inShownMonth(d.startMs)).map((d) => ({ ...d, startMs: sameWeekdayNextMonth(d.startMs) }))] },
+    }));
+    setOffset((o) => o + 1);
+    toast.success(`${copyCount} rendez-vous copiés vers le mois suivant (à enregistrer).`);
   };
 
   const errors = validateRules(rules);
@@ -170,6 +212,14 @@ export function PlannerPanel() {
           </Button>
         </p>
       )}
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+        <Button size="sm" variant="secondary" disabled={copyCount === 0} onClick={copyToNextMonth}>
+          <CopyPlus className="h-3.5 w-3.5" /> Copier ce mois vers le suivant
+        </Button>
+        <span>
+          {copyCount > 0 ? `${copyCount} date${copyCount > 1 ? "s" : ""} précise${copyCount > 1 ? "s" : ""} et événement${copyCount > 1 ? "s" : ""} programmé${copyCount > 1 ? "s" : ""}, même jour de la semaine et même rang (« 2e samedi »).` : "Rien à copier : aucune date précise ni événement programmé ce mois-ci."}
+        </span>
+      </div>
       {errors.length > 0 && <p className="text-xs text-danger-glow">{errors.slice(0, 3).join(" · ")}</p>}
       <div className="flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-[0.12em] text-slate-400">
         {(Object.keys(AGENDA_LABELS) as (keyof typeof AGENDA_LABELS)[]).map((k) => (
@@ -252,7 +302,23 @@ export function PlannerPanel() {
                   </div>
                 ))}
                 {adding === d && (
-                  <div className="absolute left-1 top-6 z-10 flex w-48 flex-col gap-0.5 border border-cyan-glow/30 bg-space-900 p-1 text-xs">
+                  <div className="absolute left-1 top-6 z-10 flex w-52 flex-col gap-0.5 border border-cyan-glow/30 bg-space-900 p-1 text-xs">
+                    <label className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-slate-400">
+                      <Repeat className="h-3 w-3" /> Événement :
+                      <select
+                        value={repeat ? `${repeat.weeks}x${repeat.count}` : ""}
+                        onChange={(e) => {
+                          const [w, c] = e.target.value.split("x").map(Number);
+                          setRepeat(e.target.value ? { weeks: w, count: c } : null);
+                        }}
+                        className="min-w-0 flex-1 border border-white/10 bg-space-950 px-1 py-0.5 text-slate-200"
+                      >
+                        <option value="">une fois</option>
+                        <option value="1x4">chaque semaine ×4</option>
+                        <option value="2x4">toutes les 2 semaines ×4</option>
+                        <option value="4x6">toutes les 4 semaines ×6</option>
+                      </select>
+                    </label>
                     <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "levDate")}>
                       🐋 Boss mondial (date précise)
                     </button>
@@ -261,7 +327,7 @@ export function PlannerPanel() {
                     </button>
                     {rules.events.types.map((t) => (
                       <button key={t.id} type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "scheduled", t.id)}>
-                        {t.emoji} {t.name} (48 h)
+                        {t.emoji} {t.name} (48 h{repeat ? `, ×${repeat.count}` : ""})
                       </button>
                     ))}
                   </div>

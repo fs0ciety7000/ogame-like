@@ -562,7 +562,7 @@ body {
   position: absolute;
   border-radius: 999px;
   filter: blur(90px);
-  opacity: 0.26;
+  opacity: 0.2;
   animation: var(--animate-drift);
   /* Fondu de teinte quand on change de page. */
   transition: background-color 1.6s ease;
@@ -1659,13 +1659,42 @@ body {
 }
 :root[data-theme="holo"] .hud-dialog-icon { clip-path: none; }
 
+/* 5.16 : présence en ligne : point vert du thème + écho qui s'élargit (couche components : `absolute` reste possible). */
+@layer components {
+.online-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  border-radius: 999px;
+  background: var(--color-mint-glow);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-mint-glow) 70%, transparent);
+}
+.online-dot-md { width: 9px; height: 9px; }
+.online-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-mint-glow);
+  animation: online-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+}
+@keyframes online-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(2.6); opacity: 0; }
+}
+
 /* 5.15 : « réduire les animations » : plus de pulsations ni d'échos (Tailwind) ;
    l'état reste lisible par la couleur et le texte. */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
   .animate-pulse-slow,
   .animate-ping,
-  .animate-bounce {
+  .animate-bounce,
+  .online-dot::after {
     animation: none !important;
   }
 }

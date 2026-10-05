@@ -14,11 +14,11 @@ export interface ChangelogBadge {
 }
 
 export const CHANGELOG_BADGES: ChangelogBadge[] = [
-  { id: "new", label: "Nouveau", plural: "Nouveautés", color: "#5cf2b0" },
-  { id: "improvement", label: "Amélioration", plural: "Améliorations", color: "#4be8ff" },
-  { id: "fix", label: "Fix", plural: "Corrections", color: "#ff8a4c" },
-  { id: "balance", label: "Équilibrage", plural: "Équilibrages", color: "#ffd86b" },
-  { id: "admin", label: "Admin", plural: "Admin", color: "#a78bfa" },
+  { id: "new", label: "Nouveau", plural: "Nouveautés", color: "var(--color-mint-glow)" },
+  { id: "improvement", label: "Amélioration", plural: "Améliorations", color: "var(--color-cyan-glow)" },
+  { id: "fix", label: "Fix", plural: "Corrections", color: "var(--color-ember-glow)" },
+  { id: "balance", label: "Équilibrage", plural: "Équilibrages", color: "var(--color-gold-glow)" },
+  { id: "admin", label: "Admin", plural: "Admin", color: "var(--color-violet-glow)" },
 ];
 
 const ALIASES: Record<string, ChangelogBadgeId> = {

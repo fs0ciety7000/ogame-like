@@ -1,7 +1,8 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, Flag, Search, User } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowUpCircle, FlaskConical, Flag, Gift, Hammer, Search, User, Zap } from "lucide-react";
 import { subscribeAlliances } from "@/services/allianceService";
 import { BUILDINGS } from "@/game/buildings";
 import { UNITS } from "@/game/units";
@@ -12,7 +13,12 @@ import { ALL_NAV_ITEMS, useHiddenRoutes } from "@/components/layout/NavBar";
 import { closeCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
+import { usePlayerStore } from "@/store/playerStore";
+import { claimAllRewards, claimStreak, enqueueUnitBuild, GameActionError, startBuildingUpgrade, startResearch } from "@/services/playerService";
+import { applyBuildingDiscount, getBuildingUpgradeCost } from "@/game/buildings";
+import type { BuildingId } from "@/types/game";
+import { canAffordAll } from "@/game/resources";
 
 interface PaletteItem {
   key: string;
@@ -30,6 +36,7 @@ export function CommandPalette() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
   const hidden = useHiddenRoutes();
+  const player = usePlayerStore((s) => s.player);
 
   useEffect(() => {
     if (!open) return;
@@ -92,8 +99,63 @@ export function CommandPalette() {
       .slice(0, 4)
       .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-violet-glow" />, run: () => navigate("/game/labo") }));
 
-    return [...navItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
-  }, [query, players, alliances, navigate, hidden]);
+    // 5.16 : actions directes (améliorer, rechercher, construire, réclamer) ; le serveur valide tout.
+    const run = (label: string, action: () => Promise<unknown>) => () => {
+      void action()
+        .then(() => toast.success(label))
+        .catch((err) => toast.error(err instanceof GameActionError ? err.message : "Action impossible."));
+    };
+    const actionItems: PaletteItem[] = [];
+    if (player) {
+      const words = ["reclamer", "réclamer", "tout", "recompense", "récompense", "serie", "série"];
+      if (!q || words.some((w) => w.startsWith(q) || q.startsWith(w))) {
+        actionItems.push(
+          { key: "act-claim-all", label: "Tout réclamer", sublabel: "Action", icon: <Gift className="h-4 w-4 text-gold-glow" />, run: run("Récompenses réclamées.", claimAllRewards) },
+          { key: "act-streak", label: "Réclamer la série du jour", sublabel: "Action", icon: <Zap className="h-4 w-4 text-gold-glow" />, run: run("Série réclamée.", claimStreak) },
+        );
+      }
+      for (const b of BUILDINGS.filter((x) => match(x.name)).slice(0, 3)) {
+        const level = player.buildings[b.id as BuildingId]?.level ?? 0;
+        if (level <= 0 || (b.maxLevel && level >= b.maxLevel)) continue;
+        const cost = applyBuildingDiscount(getBuildingUpgradeCost(b, level + 1), player.bonuses?.buildingUpgradeDiscount ?? 0);
+        const ok = canAffordAll(player.resources, cost);
+        actionItems.push({
+          key: `act-up-${b.id}`,
+          label: `Améliorer ${b.name} → niv. ${level + 1}`,
+          sublabel: ok ? "Action" : "Ressources insuffisantes",
+          icon: <ArrowUpCircle className={cn("h-4 w-4", ok ? "text-mint-glow" : "text-slate-600")} />,
+          run: run(`${b.name} : amélioration lancée.`, () => startBuildingUpgrade(player.uid, b.id as BuildingId)),
+        });
+      }
+      for (const t of TECHNOLOGIES.filter((x) => match(x.nom)).slice(0, 3)) {
+        const level = player.techLevels?.[t.id] ?? 0;
+        actionItems.push({
+          key: `act-tech-${t.id}`,
+          label: `Rechercher ${t.nom} → niv. ${level + 1}`,
+          sublabel: "Action",
+          icon: <FlaskConical className="h-4 w-4 text-mint-glow" />,
+          run: run(`${t.nom} : recherche lancée.`, () => startResearch(player.uid, t.id)),
+        });
+      }
+      // « 10 chasseur » : construire 10 unités.
+      const qty = /^(\d{1,5})\s+(.+)$/.exec(q);
+      if (qty) {
+        const n = Number(qty[1]);
+        for (const u of UNITS.filter((x) => x.name.toLowerCase().includes(qty[2])).slice(0, 3)) {
+          if (!((player.units[u.id]?.level ?? 0) > 0)) continue;
+          actionItems.push({
+            key: `act-unit-${u.id}`,
+            label: `Construire ${formatNumber(n)} × ${u.name}`,
+            sublabel: "Action",
+            icon: <Hammer className="h-4 w-4 text-mint-glow" />,
+            run: run(`${formatNumber(n)} × ${u.name} en construction.`, () => enqueueUnitBuild(player.uid, u.id, n)),
+          });
+        }
+      }
+    }
+
+    return [...actionItems, ...navItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
+  }, [query, players, alliances, navigate, hidden, player]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -119,7 +181,7 @@ export function CommandPalette() {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Page, joueur, alliance, unité, bâtiment, technologie…"
+              placeholder="Page, joueur, action (« améliorer », « 10 chasseur », « réclamer »)…"
               className="w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") {
@@ -149,7 +211,7 @@ export function CommandPalette() {
                   onClick={() => activate(item)}
                   onMouseEnter={() => setActiveIndex(i)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                    "hud-cut-sm flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
                     i === activeIndex ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300",
                   )}
                 >

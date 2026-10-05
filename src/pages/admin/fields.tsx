@@ -142,7 +142,7 @@ export function SelectField<T extends string>({
 export function CheckboxField({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
   return (
     <label className="flex items-start gap-2 pt-5 text-sm text-slate-200">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 accent-cyan-400" />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-1 accent-cyan-glow" />
       <span>
         {label}
         {hint && <span className="block text-[11px] text-slate-500">{hint}</span>}

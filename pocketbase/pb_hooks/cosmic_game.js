@@ -103,6 +103,10 @@ __export(hooksEntry_exports, {
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   LOGIC_VERSION: () => LOGIC_VERSION,
   LOOT_TABLES: () => LOOT_TABLES,
+  MAIL_CAMPAIGNS_KEY: () => MAIL_CAMPAIGNS_KEY,
+  MAIL_HISTORY_MAX: () => MAIL_HISTORY_MAX,
+  MAIL_SCHEDULE_KEY: () => MAIL_SCHEDULE_KEY,
+  MAIL_SCHEDULE_MAX: () => MAIL_SCHEDULE_MAX,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
@@ -186,6 +190,7 @@ __export(hooksEntry_exports, {
   buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
+  campaignsState: () => campaignsState,
   canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
   canMessage: () => canMessage,
@@ -228,6 +233,7 @@ __export(hooksEntry_exports, {
   compileGazette: () => compileGazette,
   completeFleetReturn: () => completeFleetReturn,
   completeTradeContract: () => completeTradeContract,
+  computeCatchup: () => computeCatchup,
   computeGameStats: () => computeGameStats,
   computeLiveBalance: () => computeLiveBalance,
   computeTerritories: () => computeTerritories,
@@ -256,6 +262,7 @@ __export(hooksEntry_exports, {
   describeGain: () => describeGain,
   describeLoot: () => describeLoot,
   detectResourceAnomalies: () => detectResourceAnomalies,
+  developmentScore: () => developmentScore,
   eliteNotice: () => eliteNotice,
   eliteRanking: () => eliteRanking,
   eliteWindow: () => eliteWindow,
@@ -287,6 +294,9 @@ __export(hooksEntry_exports, {
   formatInt: () => formatInt,
   foughtWarlords: () => foughtWarlords,
   gazetteDue: () => gazetteDue,
+  gazettePrevious: () => gazettePrevious,
+  gazetteSince: () => gazetteSince,
+  gazetteSnapshots: () => gazetteSnapshots,
   gazetteState: () => gazetteState,
   generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
@@ -311,8 +321,10 @@ __export(hooksEntry_exports, {
   grantTokens: () => grantTokens,
   growWarlord: () => growWarlord,
   hasFullChallenges: () => hasFullChallenges,
+  inSegment: () => inSegment,
   inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
+  instrumentHtml: () => instrumentHtml,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isPublic: () => isPublic,
@@ -326,6 +338,7 @@ __export(hooksEntry_exports, {
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
   linkReferrer: () => linkReferrer,
+  lootTokensThisWeek: () => lootTokensThisWeek,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   makeRelic: () => makeRelic,
@@ -350,6 +363,7 @@ __export(hooksEntry_exports, {
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeProcedural: () => normalizeProcedural,
+  normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
   offerReserved: () => offerReserved,
@@ -444,6 +458,7 @@ __export(hooksEntry_exports, {
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
   sanitizePactMessage: () => sanitizePactMessage,
+  scheduleState: () => scheduleState,
   scoreBattle: () => scoreBattle,
   scoreSpin: () => scoreSpin,
   seasonBossFlightMinutes: () => seasonBossFlightMinutes,
@@ -473,6 +488,7 @@ __export(hooksEntry_exports, {
   takeFromPot: () => takeFromPot,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
+  trackCampaign: () => trackCampaign,
   tutorialRaidPower: () => tutorialRaidPower,
   unclaimedRewardees: () => unclaimedRewardees,
   unitsAwayOf: () => unitsAwayOf,
@@ -1385,10 +1401,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY14 = 864e5;
+  const DAY16 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY14) * DAY14;
-  return new Date(midnight - (day + 6) % 7 * DAY14).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY16) * DAY16;
+  return new Date(midnight - (day + 6) % 7 * DAY16).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -3147,6 +3163,13 @@ function weekOfLocal(localMs) {
 }
 
 // src/game/events.ts
+function scheduledOccurrences(s) {
+  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
+  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
+  const out = [];
+  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY3, endMs: s.endMs + i * weeks * 7 * DAY3 });
+  return out;
+}
 var EVENT_RULES = {
   rotationEnabled: true,
   bossMonthly: true,
@@ -3355,16 +3378,27 @@ function rotationEvent(window) {
 }
 function scheduledEvents() {
   var _a;
-  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
     const type = findEventType(s.type);
-    return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
-  }).filter((e3) => e3 !== null);
+    if (!type || !(s.endMs > s.startMs)) return [];
+    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
+  });
 }
 function eventAt(now) {
   const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
   if (scheduled) return scheduled;
   const rotation = rotationEvent(weekendWindow(now));
   return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function weekendEventsBetween(from, to) {
+  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
+  for (let w = -1; w < 60; w++) {
+    const win = weekendWindow(from, w);
+    if (win.startMs >= to) break;
+    const r = rotationEvent(win);
+    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
 }
 function eventBoundaries(from, to) {
   const points = /* @__PURE__ */ new Set();
@@ -3418,6 +3452,75 @@ function playerResearchTimeFactor(player, now) {
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
 
+// src/game/catchup.ts
+var CATCHUP_RULES = {
+  enabled: true,
+  /** Bonus maximal (0,25 = +25 % de production). */
+  maxBonus: 0.25,
+  /** En dessous de ce ratio de la médiane : bonus maximal. */
+  fullBelow: 0.1,
+  /** À partir de ce ratio de la médiane : plus de bonus. */
+  endsAt: 0.5,
+  /** Nombre minimal de joueurs actifs pour calculer une médiane fiable. */
+  minPlayers: 5,
+  /** Fenêtre d'activité (jours) pour compter un joueur dans la médiane. */
+  activeDays: 7
+};
+function developmentScore(p) {
+  var _a, _b;
+  let total2 = 0;
+  for (const b of Object.values((_a = p.buildings) != null ? _a : {})) total2 += Math.max(0, Number(b == null ? void 0 : b.level) || 0);
+  for (const lvl of Object.values((_b = p.techLevels) != null ? _b : {})) total2 += Math.max(0, Number(lvl) || 0);
+  return total2;
+}
+function median(values) {
+  const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (v.length === 0) return 0;
+  const mid = Math.floor(v.length / 2);
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+}
+function catchupBonus(score, med, rules = CATCHUP_RULES) {
+  if (!rules.enabled || !(med > 0) || !(rules.maxBonus > 0)) return 0;
+  const ratio = Math.max(0, score) / med;
+  if (ratio >= rules.endsAt) return 0;
+  if (ratio <= rules.fullBelow) return rules.maxBonus;
+  const span = rules.endsAt - rules.fullBelow;
+  return span > 0 ? rules.maxBonus * ((rules.endsAt - ratio) / span) : 0;
+}
+function catchupFactorAt(input, at) {
+  var _a;
+  const c = (_a = input.bonuses) == null ? void 0 : _a.catchup;
+  if (!c || !(Number(c.factor) > 1) || !(at < Number(c.untilMs))) return 1;
+  return Math.min(1 + CATCHUP_RULES.maxBonus + 1e-4, Number(c.factor));
+}
+function catchupUntil(input) {
+  var _a;
+  const c = (_a = input.bonuses) == null ? void 0 : _a.catchup;
+  return c && Number(c.factor) > 1 ? Number(c.untilMs) || 0 : 0;
+}
+function computeCatchup(players, now, rules = CATCHUP_RULES) {
+  const active = players.filter((p) => now - p.lastActiveMs < rules.activeDays * 864e5);
+  const med = active.length >= rules.minPlayers ? median(active.map((p) => p.score)) : 0;
+  const bonuses = {};
+  for (const p of players) {
+    const bonus = catchupBonus(p.score, med, rules);
+    bonuses[p.uid] = bonus > 0 ? { factor: Math.round((1 + bonus) * 1e3) / 1e3, untilMs: now + 26 * 36e5, ratio: Math.round(p.score / med * 1e3) / 1e3 } : null;
+  }
+  return { median: med, bonuses };
+}
+function validateCatchupRules(r) {
+  var _a, _b;
+  if (!r) return [];
+  const errors = [];
+  if (r.maxBonus !== void 0 && !(r.maxBonus >= 0 && r.maxBonus <= 1)) errors.push("Rattrapage : bonus maximal entre 0 et 1 (1 = +100 %).");
+  const full = (_a = r.fullBelow) != null ? _a : CATCHUP_RULES.fullBelow;
+  const ends = (_b = r.endsAt) != null ? _b : CATCHUP_RULES.endsAt;
+  if (!(full >= 0 && ends > full && ends <= 1)) errors.push("Rattrapage : il faut 0 \u2264 plein bonus < fin du bonus \u2264 1.");
+  if (r.minPlayers !== void 0 && !(Number.isInteger(r.minPlayers) && r.minPlayers >= 2)) errors.push("Rattrapage : au moins 2 joueurs actifs pour la m\xE9diane.");
+  if (r.activeDays !== void 0 && !(r.activeDays >= 1 && r.activeDays <= 60)) errors.push("Rattrapage : fen\xEAtre d'activit\xE9 entre 1 et 60 jours.");
+  return errors;
+}
+
 // src/game/economy.ts
 var ECONOMY_RULES = {
   /** Énergie consommée par seconde et par place de hangar occupée. */
@@ -3443,7 +3546,7 @@ function boostUntil(input) {
   return Number.isFinite(v) ? v : 0;
 }
 function boostAt(input, at) {
-  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+  return (at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1) * catchupFactorAt(input, at);
 }
 function storageCapacityOf(input) {
   var _a;
@@ -3512,7 +3615,9 @@ function advanceResources(input, elapsedSeconds, startMs) {
   let at = startMs;
   const freeUntil = upkeepFreeUntil(input);
   const boostEnd = boostUntil(input);
+  const catchupEnd = catchupUntil(input);
   const cuts = [
+    ...catchupEnd > startMs && catchupEnd < endMs ? [catchupEnd] : [],
     ...eventBoundaries(startMs, endMs),
     ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
     ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
@@ -4939,7 +5044,7 @@ function removeTitle(p, label3) {
 }
 var tokensLabel = (n) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
 function playerCasino(p) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const c = (_a = p.casino) != null ? _a : {};
   const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
   const w = (_b = c.week) != null ? _b : {};
@@ -4947,7 +5052,16 @@ function playerCasino(p) {
   for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
   const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
   const history = (Array.isArray(c.history) ? c.history : []).filter((h) => !!h && typeof h === "object" && Number.isFinite(Number(h.atMs)) && typeof h.outcome === "string" && h.outcome in OUTCOME_POINTS).slice(0, CASINO_HISTORY_MAX);
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week, history };
+  const lw = (_d = c.lootWeek) != null ? _d : null;
+  return __spreadValues({
+    tokens: int(c.tokens),
+    dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "",
+    spins: int(c.spins),
+    wins: int(c.wins),
+    jackpots: int(c.jackpots),
+    week,
+    history
+  }, lw && typeof lw.id === "string" ? { lootWeek: { id: lw.id, tokens: int(lw.tokens) } } : {});
 }
 function casinoWeekId(now) {
   const day = new Date(now).getUTCDay();
@@ -5082,10 +5196,19 @@ function defaultLootTables() {
   };
 }
 var LOOT_TABLES = defaultLootTables();
-function setLootTables(tables) {
+var LOOT_TOKEN_RULES = { weeklyCap: 25 };
+var DEFAULT_LOOT_TOKEN_CAP = 25;
+function setLootTables(tables, weeklyCap) {
   var _a;
   const d = defaultLootTables();
   for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
+  LOOT_TOKEN_RULES.weeklyCap = Number.isFinite(weeklyCap) && weeklyCap >= 0 ? Math.floor(weeklyCap) : DEFAULT_LOOT_TOKEN_CAP;
+}
+function lootTokensThisWeek(player, now) {
+  const lw = playerCasino(player).lootWeek;
+  const used = lw && lw.id === casinoWeekId(now) ? lw.tokens : 0;
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  return { used, cap, left: cap > 0 ? Math.max(0, cap - used) : null };
 }
 function validateLootTables(tables) {
   var _a, _b, _c, _d;
@@ -5138,9 +5261,14 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficu
   if (((_a = t.tokenChance) != null ? _a : 0) > 0 && random() < Math.min(1, ((_b = t.tokenChance) != null ? _b : 0) * mult * diff)) {
     const lo = Math.max(1, Math.floor((_c = t.tokenMin) != null ? _c : 1));
     const hi = Math.max(lo, Math.floor((_d = t.tokenMax) != null ? _d : lo));
-    const n = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-    const got = grantTokens(player, n);
-    if (got > 0) drop.tokens = got;
+    const rolled = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+    const week = lootTokensThisWeek(player, now);
+    const n = week.left === null ? rolled : Math.min(rolled, week.left);
+    const got = n > 0 ? grantTokens(player, n) : 0;
+    if (got > 0) {
+      drop.tokens = got;
+      player.casino = __spreadProps(__spreadValues({}, playerCasino(player)), { lootWeek: { id: casinoWeekId(now), tokens: week.used + got } });
+    }
   }
   return drop;
 }
@@ -7867,6 +7995,10 @@ function previousSeasonId(now = Date.now()) {
   const d = new Date(now);
   return currentSeasonId(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 1);
 }
+function seasonEndMs(now = Date.now()) {
+  const d = new Date(now);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+}
 function seasonXpFor(entry, seasonId) {
   var _a, _b;
   if (entry.seasonId === seasonId) return (_a = entry.seasonXp) != null ? _a : 0;
@@ -10504,7 +10636,7 @@ var DEBRIS_RULES = {
   percent: 0.3,
   /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
   lifetimeHours: 48,
-  /** Capacité de ramassage d'un recycleur, par niveau. */
+  /** Ancien réglage (capacité fixe par niveau), remplacé en 5.16 par la cargaison (CAP) du drone. Ignoré. */
   capacityPerLevel: 250,
   recyclerUnitId: "drone_recuperateur"
 };
@@ -10538,14 +10670,9 @@ function mergeDebris(field, add2, location, now) {
     updatedAtMs: now
   };
 }
-function recyclerCapacity(units, fleet) {
-  var _a, _b;
-  let capacity = 0;
-  for (const [unitId, qty] of Object.entries(fleet != null ? fleet : {})) {
-    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
-    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, (_b = (_a = units[unitId]) == null ? void 0 : _a.level) != null ? _b : 1);
-  }
-  return capacity;
+function recyclerCapacity(player, fleet) {
+  const drones = Math.max(0, Math.floor(Number(fleet == null ? void 0 : fleet[DEBRIS_RULES.recyclerUnitId]) || 0));
+  return drones > 0 ? playerCargoCapacity(player, { [DEBRIS_RULES.recyclerUnitId]: drones }) : 0;
 }
 function collectDebris(field, capacity) {
   var _a, _b, _c, _d, _e, _f, _g;
@@ -11291,7 +11418,7 @@ function lossesPower(p, losses) {
   var _a, _b;
   return Math.round(computeFleetPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, losses, ["attack", "defense"]));
 }
-function median(values) {
+function median2(values) {
   if (values.length === 0) return 0;
   const s = [...values].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -11313,11 +11440,11 @@ function warlordReference(actives) {
     buildings[b.id] = levels.length ? levels.reduce((a, c) => a + c, 0) / levels.length : 0;
   }
   return {
-    median: median(powers),
+    median: median2(powers),
     max: powers.length ? Math.max(...powers) : 0,
-    medianXp: median(xps),
+    medianXp: median2(xps),
     maxXp: xps.length ? Math.max(...xps) : 0,
-    medianSeasonXp: median(humans.map((p) => {
+    medianSeasonXp: median2(humans.map((p) => {
       var _a;
       return (_a = p.seasonXp) != null ? _a : 0;
     })),
@@ -12331,7 +12458,7 @@ var ofFaction = (f) => /^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`;
 var ofName = (name) => /^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`;
 var clamp3 = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 var round2 = (x) => Math.round(x * 100) / 100;
-function median2(xs) {
+function median3(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -12373,7 +12500,7 @@ function worldDigest(players, now) {
       return (_b2 = (_a2 = s.activity) == null ? void 0 : _a2[k]) != null ? _b2 : 0;
     });
     totals[k] = counts.reduce((a, b) => a + b, 0);
-    weeklyMedian[k] = round2(median2(counts) / observedDays * 7);
+    weeklyMedian[k] = round2(median3(counts) / observedDays * 7);
     const best = counts.reduce((bi, c, i) => c > counts[bi] ? i : bi, 0);
     if (counts[best] > 0) heroes[k] = { pseudo: active[best].pseudo, count: counts[best] };
   }
@@ -12399,11 +12526,11 @@ function worldDigest(players, now) {
     totals,
     heroes,
     episodes,
-    passMedianTier: median2(tiers2),
+    passMedianTier: median3(tiers2),
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
     chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
-    allianceSizeMedian: median2(Object.values(active.reduce((acc, p) => {
+    allianceSizeMedian: median3(Object.values(active.reduce((acc, p) => {
       var _a2;
       return p.allianceId ? __spreadProps(__spreadValues({}, acc), { [p.allianceId]: ((_a2 = acc[p.allianceId]) != null ? _a2 : 0) + 1 }) : acc;
     }, {})))
@@ -13865,7 +13992,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 // src/game/analytics.ts
 var HOUR9 = 36e5;
 var DAY10 = 24 * HOUR9;
-function median3(values) {
+function median4(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -13986,12 +14113,12 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         var _a;
         return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY10;
       }).length,
-      medianPlaytimeHours: round1(median3(players.map((p) => {
+      medianPlaytimeHours: round1(median4(players.map((p) => {
         var _a;
         return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
       }))),
       ranks: [...families.entries()].map(([label3, count2]) => ({ label: label3, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
-      medianXp: median3(players.map((p) => {
+      medianXp: median4(players.map((p) => {
         var _a;
         return (_a = p.xp) != null ? _a : 0;
       })),
@@ -14012,9 +14139,9 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         return {
           id: r.id,
           name: r.name,
-          median: Math.floor(median3(amounts)),
+          median: Math.floor(median4(amounts)),
           total: Math.floor(amounts.reduce((a, v) => a + v, 0)),
-          medianRate: round1(median3(rates.map((rt) => {
+          medianRate: round1(median4(rates.map((rt) => {
             var _a;
             return (_a = rt[r.id]) != null ? _a : 0;
           })))
@@ -14152,7 +14279,7 @@ function computeBalance(players, reports, now, windowDays) {
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
     byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY10]);
   });
-  const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median3(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+  const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median4(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
   recent.forEach((r) => {
     var _a2;
@@ -14190,7 +14317,7 @@ function computeBalance(players, reports, now, windowDays) {
     for (const p of players) {
       const amount3 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
       if (amount3 < 1e6) continue;
-      const others = median3(players.filter((o) => o !== p).map((o) => {
+      const others = median4(players.filter((o) => o !== p).map((o) => {
         var _a2, _b2;
         return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
       }));
@@ -14399,6 +14526,7 @@ var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
+var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14425,7 +14553,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14433,7 +14561,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14487,6 +14615,7 @@ function applyGameContent(overrides) {
       seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14511,7 +14640,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_W = content.relicSettings) == null ? void 0 : _W.loot);
+  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot, (_Z = content.relicSettings) == null ? void 0 : _Z.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14533,11 +14662,12 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _X = content.rules.allianceBoss, { bosses: allianceBosses } = _X, allianceBossRules = __objRest(_X, ["bosses"]);
+  const __ = content.rules.allianceBoss, { bosses: allianceBosses } = __, allianceBossRules = __objRest(__, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
+  Object.assign(CATCHUP_RULES, content.rules.catchup);
   current = content;
   return content;
 }
@@ -14559,10 +14689,11 @@ var RULE_GROUP_LABELS = {
   seasonBoss: "Boss de saison",
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
-  streak: "S\xE9rie de connexion"
+  streak: "S\xE9rie de connexion",
+  catchup: "Rattrapage"
 };
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -14595,11 +14726,17 @@ function validateRules(rules) {
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  errors.push(...validateCatchupRules(merged.catchup));
+  for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
+    if (ev.repeatWeeks === void 0) continue;
+    if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_g = ev.repeatCount) != null ? _g : 0) >= 2 && ((_h = ev.repeatCount) != null ? _h : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+  }
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
     for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_f = st.chest) == null ? void 0 : _f[key];
+      const r = (_i = st.chest) == null ? void 0 : _i[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
     }
   }
@@ -14613,7 +14750,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const errors = [];
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
@@ -14711,7 +14848,9 @@ function validateGameContent(content) {
   errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
   errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
   errors.push(...validateLootTables((_m = content.relicSettings) == null ? void 0 : _m.loot));
-  errors.push(...validateTitles((_n = content.titles) != null ? _n : []));
+  const cap = (_n = content.relicSettings) == null ? void 0 : _n.lootTokenCap;
+  if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
+  errors.push(...validateTitles((_o = content.titles) != null ? _o : []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
@@ -15563,16 +15702,56 @@ function empowerWarlord(npc, growth = COALITION_RULES.failGrowth) {
   }
 }
 
+// src/game/agenda.ts
+var DAY13 = 24 * 36e5;
+function upcomingAgenda(now, days = 30, extra = []) {
+  const to = now + days * DAY13;
+  const items = [];
+  for (const w of bossWindows(now, leviathanSchedule(), 6)) {
+    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "\u{1F40B}", source: w.fixed ? { type: "levDate", startMs: w.startMs } : { type: "levGen", startMs: w.startMs } });
+  }
+  const months = chroniclesConfig().months;
+  for (const w of bossWindows(now, seasonBossSchedule(), 6)) {
+    if (w.startMs >= to) continue;
+    const local = new Date(w.startMs + 2 * 36e5);
+    const monthId = `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, "0")}`;
+    const month2 = months.find((m) => m.id === monthId);
+    if (month2) items.push({ id: `boss-${w.startMs}`, kind: "seasonboss", title: month2.boss.name, startMs: w.startMs, endMs: w.endMs, link: "/game/boss", fixed: w.fixed, emoji: "\u2694\uFE0F", source: w.fixed ? { type: "sbDate", startMs: w.startMs } : { type: "sbGen", startMs: w.startMs } });
+  }
+  for (const e3 of weekendEventsBetween(now, to))
+    items.push(__spreadValues({ id: e3.key, kind: "event", title: e3.type.name, startMs: e3.startMs, endMs: e3.endMs, link: "/game", emoji: e3.type.emoji }, e3.scheduled ? { fixed: true, source: { type: "scheduled", id: e3.key.slice(0, e3.key.lastIndexOf(":")) } } : { source: { type: "rotation", startMs: e3.startMs, eventType: e3.type.id } }));
+  for (const m of months) {
+    for (let i = 0; i < 4; i++) {
+      const at = episodeUnlockMs(m.id, i);
+      if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : \xE9pisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/chroniques", emoji: "\u{1F4DC}" });
+    }
+  }
+  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY13)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "\u{1F3C6}" });
+  return [...items, ...extra.filter((x) => {
+    var _a;
+    return ((_a = x.endMs) != null ? _a : x.startMs) > now && x.startMs < to;
+  })].sort((a, b) => a.startMs - b.startMs);
+}
+
 // src/game/gazette.ts
 var GAZETTE_KEY = "gazette";
 var GAZETTE_RULES = { publishHour: 9, keepIssues: 8 };
+var numMap = (v) => v && typeof v === "object" ? v : {};
 function gazetteState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
-  return {
+  return __spreadValues({
     issues: Array.isArray(r.issues) ? r.issues.filter((i) => i && typeof i.id === "string") : [],
     lastWeekId: typeof r.lastWeekId === "string" ? r.lastWeekId : "",
-    xpSnapshot: r.xpSnapshot && typeof r.xpSnapshot === "object" ? r.xpSnapshot : {}
-  };
+    xpSnapshot: numMap(r.xpSnapshot),
+    ascSnapshot: numMap(r.ascSnapshot),
+    powerSnapshot: numMap(r.powerSnapshot)
+  }, r.prevSnapshots && typeof r.prevSnapshots === "object" ? { prevSnapshots: { xp: numMap(r.prevSnapshots.xp), asc: numMap(r.prevSnapshots.asc), power: numMap(r.prevSnapshots.power) } } : {});
+}
+function gazetteSnapshots(state, now) {
+  var _a;
+  const replacing = ((_a = state.issues[0]) == null ? void 0 : _a.weekId) === allianceWeekId(now);
+  if (replacing && state.prevSnapshots) return state.prevSnapshots;
+  return { xp: state.xpSnapshot, asc: state.ascSnapshot, power: state.powerSnapshot };
 }
 function gazettePublishAt(now) {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
@@ -15580,6 +15759,16 @@ function gazettePublishAt(now) {
 }
 function gazetteDue(state, now) {
   return state.lastWeekId !== allianceWeekId(now) && now >= gazettePublishAt(now);
+}
+function gazettePrevious(state, now) {
+  const week = allianceWeekId(now);
+  return state.issues.find((i) => i.weekId !== week);
+}
+function gazetteSince(state, now) {
+  var _a, _b;
+  const week = now - 7 * 864e5;
+  const last = (_b = (_a = gazettePrevious(state, now)) == null ? void 0 : _a.toMs) != null ? _b : 0;
+  return last > week && last < now ? last : week;
 }
 function gazetteNumber(n) {
   const v = Math.round(n);
@@ -15590,7 +15779,27 @@ function gazetteNumber(n) {
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 var fmt = gazetteNumber;
+var MEDALS = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+var ROMAN2 = ["", "I", "II", "III", "IV", "V"];
+var DAY_NAMES2 = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function parisDay3(ms) {
+  const d = new Date(ms);
+  const y = d.getUTCFullYear();
+  const lastSunday = (m) => {
+    const end = new Date(Date.UTC(y, m + 1, 0));
+    return Date.UTC(y, m, end.getUTCDate() - end.getUTCDay(), 1);
+  };
+  const local = new Date(ms + (ms >= lastSunday(2) && ms < lastSunday(9) ? 2 : 1) * 36e5);
+  return `${DAY_NAMES2[local.getUTCDay()]} ${local.getUTCHours()} h`;
+}
+function topCounts2(items, key) {
+  var _a;
+  const m = /* @__PURE__ */ new Map();
+  for (const it of items) m.set(key(it), ((_a = m.get(key(it))) != null ? _a : 0) + 1);
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
 function compileGazette(input, number) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const { now, sinceMs } = input;
   const inWeek = (t) => t >= sinceMs && t < now;
   const sections = [];
@@ -15620,38 +15829,134 @@ function compileGazette(input, number) {
   }
   const hasSnapshot = Object.keys(input.xpSnapshot).length > 0;
   const progress = input.players.map((p) => {
-    var _a, _b;
-    return { pseudo: p.pseudo, gain: hasSnapshot ? p.xp - ((_a = input.xpSnapshot[p.uid]) != null ? _a : p.xp) : (_b = p.seasonXp) != null ? _b : 0 };
+    var _a2, _b2;
+    return { pseudo: p.pseudo, gain: hasSnapshot ? p.xp - ((_a2 = input.xpSnapshot[p.uid]) != null ? _a2 : p.xp) : (_b2 = p.seasonXp) != null ? _b2 : 0 };
   }).filter((p) => p.gain > 0).sort((a, b) => b.gain - a.gain).slice(0, 3);
   if (progress.length > 0) {
     sections.push({
       kind: "progress",
       title: hasSnapshot ? "Ils ont le plus progress\xE9" : "En t\xEAte de la saison",
-      lines: progress.map((p, i) => `${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${p.pseudo} : +${fmt(p.gain)} XP`)
+      lines: progress.map((p, i) => `${MEDALS[i]} ${p.pseudo} : +${fmt(p.gain)} XP`)
     });
   }
-  const raid = input.raids.filter((r) => inWeek(r.timestamp) && r.loot > 0).sort((a, b) => b.loot - a.loot)[0];
-  if (raid) {
-    sections.push({ kind: "raid", title: "Le casse de la semaine", lines: [`${raid.attackerPseudo} a vid\xE9 les coffres de ${raid.defenderPseudo} : ${fmt(raid.loot)} ressources emport\xE9es.`] });
+  const ascSnap = (_a = input.ascSnapshot) != null ? _a : {};
+  if (Object.keys(ascSnap).length > 0) {
+    const asc = input.players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.ascensions) != null ? _a2 : 0) > ((_b2 = ascSnap[p.uid]) != null ? _b2 : 0);
+    });
+    if (asc.length > 0) {
+      sections.push({ kind: "ascension", title: "Ascensions", lines: asc.slice(0, 6).map((p) => {
+        var _a2;
+        return `${p.pseudo} franchit l'Ascension ${ROMAN2[Math.min(5, (_a2 = p.ascensions) != null ? _a2 : 0)] || p.ascensions} et repart plus fort.`;
+      }) });
+    }
   }
-  const warlord = [...input.warlords].sort((a, b) => b.power - a.power)[0];
-  if (warlord) {
-    sections.push({ kind: "warlord", title: "Le seigneur \xE0 surveiller", lines: [`${warlord.name} aligne ${fmt(warlord.power)} de puissance. Prudence aux abords de son territoire.`] });
+  const weekRaids = input.raids.filter((r) => inWeek(r.timestamp) && r.loot > 0);
+  const raid = [...weekRaids].sort((a, b) => b.loot - a.loot)[0];
+  if (raid) {
+    const raiders = topCounts2(weekRaids, (r) => r.attackerPseudo);
+    const lines = [`${raid.attackerPseudo} a vid\xE9 les coffres de ${raid.defenderPseudo} : ${fmt(raid.loot)} ressources emport\xE9es.`];
+    if (raiders[0] && raiders[0][1] >= 2) lines.push(`Le plus actif : ${raiders[0][0]}, avec ${raiders[0][1]} pillages r\xE9ussis.`);
+    sections.push({ kind: "raid", title: "Le casse de la semaine", lines });
+  }
+  const defenses = ((_b = input.defenses) != null ? _b : []).filter((d) => inWeek(d.timestamp));
+  const wall = topCounts2(defenses, (d) => d.defenderPseudo)[0];
+  if (wall) {
+    sections.push({ kind: "defense", title: "Le rempart", lines: [`${wall[0]} a repouss\xE9 ${wall[1]} attaque${wall[1] > 1 ? "s" : ""}. Les pillards iront voir ailleurs.`] });
+  }
+  const trades = ((_c = input.trades) != null ? _c : []).filter((t) => inWeek(t.filledAtMs));
+  if (trades.length > 0) {
+    const big = [...trades].sort((a, b) => b.amount - a.amount)[0];
+    const seller = topCounts2(trades, (t) => t.sellerPseudo)[0];
+    sections.push({
+      kind: "market",
+      title: "La place du march\xE9",
+      lines: [
+        `${trades.length} \xE9change${trades.length > 1 ? "s" : ""} conclu${trades.length > 1 ? "s" : ""}, ${fmt(trades.reduce((a, t) => a + t.amount, 0))} ressources ont chang\xE9 de mains.`,
+        `Plus grosse affaire : ${big.sellerPseudo} c\xE8de ${fmt(big.amount)} ressources \xE0 ${big.buyerPseudo}.`,
+        ...seller && seller[1] >= 3 ? [`Marchand de la semaine : ${seller[0]} (${seller[1]} ventes).`] : []
+      ]
+    });
+  }
+  const gifts = ((_d = input.gifts) != null ? _d : []).filter((g) => inWeek(g.timestamp));
+  if (gifts.length > 0) {
+    const giver = topCounts2(gifts, (g) => g.fromPseudo)[0];
+    sections.push({
+      kind: "solidarity",
+      title: "Entraide",
+      lines: [`${gifts.length} envoi${gifts.length > 1 ? "s" : ""} de ressources entre commandants, ${fmt(gifts.reduce((a, g) => a + g.amount, 0))} au total.`, ...giver ? [`Le plus g\xE9n\xE9reux : ${giver[0]}.`] : []]
+    });
+  }
+  const founded = ((_e = input.alliances) != null ? _e : []).filter((a) => inWeek(a.createdAtMs));
+  if (founded.length > 0) {
+    sections.push({ kind: "alliance", title: "Nouvelles banni\xE8res", lines: founded.slice(0, 6).map((a) => `[${a.tag}] ${a.name} hisse ses couleurs.`) });
+  }
+  const powerSnap = (_f = input.powerSnapshot) != null ? _f : {};
+  const rising = input.warlords.map((w) => __spreadProps(__spreadValues({}, w), { gain: powerSnap[w.name] !== void 0 ? w.power - powerSnap[w.name] : 0 })).filter((w) => w.gain > 0).sort((a, b) => b.gain - a.gain)[0];
+  const strongest = [...input.warlords].sort((a, b) => b.power - a.power)[0];
+  if (rising) {
+    sections.push({ kind: "warlord", title: "Le seigneur qui monte", lines: [`${rising.name} gagne ${fmt(rising.gain)} de puissance en une semaine (${fmt(rising.power)} au total). Prudence aux abords de son territoire.`] });
+  } else if (strongest) {
+    sections.push({ kind: "warlord", title: "Le seigneur \xE0 surveiller", lines: [`${strongest.name} aligne ${fmt(strongest.power)} de puissance. Prudence aux abords de son territoire.`] });
   }
   const newcomers = input.players.filter((p) => p.createdAtMs && inWeek(p.createdAtMs)).map((p) => p.pseudo);
   if (newcomers.length > 0) {
     sections.push({ kind: "newcomers", title: "Bienvenue aux nouveaux commandants", lines: [newcomers.slice(0, 12).join(", ") + (newcomers.length > 12 ? ` et ${newcomers.length - 12} autres` : "") + "."] });
   }
+  const agenda = upcomingAgenda(now, 7).filter((i) => i.startMs >= now);
+  if (agenda.length > 0) {
+    sections.push({ kind: "agenda", title: "Cette semaine dans le secteur", lines: agenda.slice(0, 6).map((i) => `${parisDay3(i.startMs)} : ${i.title}.`) });
+  }
+  const prevSections = new Map(((_h = (_g = input.previous) == null ? void 0 : _g.sections) != null ? _h : []).map((s) => [s.kind, JSON.stringify(s.lines)]));
+  const fresh = sections.filter((s) => s.kind === "agenda" || prevSections.get(s.kind) !== JSON.stringify(s.lines));
+  const stats = {
+    battles: (_i = input.battles) != null ? _i : weekRaids.length + defenses.length,
+    raids: weekRaids.length,
+    defenses: defenses.length,
+    loot: weekRaids.reduce((a, r) => a + r.loot, 0),
+    trades: trades.length,
+    tradeVolume: trades.reduce((a, t) => a + t.amount, 0),
+    gifts: gifts.length,
+    newcomers: newcomers.length,
+    activePlayers: input.players.filter((p) => {
+      var _a2;
+      return ((_a2 = p.lastActiveMs) != null ? _a2 : 0) >= sinceMs;
+    }).length
+  };
   const killed = bosses.find((b) => b.status === "killed");
-  const headline = killed ? `${killed.name} tombe sous les coups du secteur` : wars.find((w) => w.winnerTag) ? `[${wars.find((w) => w.winnerTag).winnerTag}] gagne sa guerre` : vendettas.find((v) => v.won) ? `${vendettas.find((v) => v.won).warlordName} humili\xE9 par ${vendettas.find((v) => v.won).ownerPseudo}` : raid ? `${raid.attackerPseudo} signe le casse de la semaine` : progress[0] ? `${progress[0].pseudo} file en t\xEAte` : "Semaine calme dans le secteur";
+  const wonWar = wars.find((w) => w.winnerTag);
+  const wonVendetta = vendettas.find((v) => v.won);
+  const candidates = [
+    killed && `${killed.name} tombe sous les coups du secteur`,
+    wonWar && `[${wonWar.winnerTag}] gagne sa guerre`,
+    wonVendetta && `${wonVendetta.warlordName} humili\xE9 par ${wonVendetta.ownerPseudo}`,
+    raid && `${raid.attackerPseudo} signe le casse de la semaine`,
+    wall && wall[1] >= 2 && `${wall[0]}, rempart du secteur`,
+    progress[0] && `${progress[0].pseudo} file en t\xEAte`,
+    rising && `${rising.name} gagne en puissance`,
+    founded[0] && `[${founded[0].tag}] hisse ses couleurs`
+  ].filter((h) => typeof h === "string");
+  const headline = (_k = (_j = candidates.find((h) => {
+    var _a2;
+    return h !== ((_a2 = input.previous) == null ? void 0 : _a2.headline);
+  })) != null ? _j : candidates[0]) != null ? _k : "Semaine calme dans le secteur";
   const weekId2 = allianceWeekId(now);
-  return { id: `gz-${weekId2}-${now}`, number, weekId: weekId2, publishedAtMs: now, fromMs: sinceMs, toMs: now, headline, sections };
+  return { id: `gz-${weekId2}-${now}`, number, weekId: weekId2, publishedAtMs: now, fromMs: sinceMs, toMs: now, headline, sections: fresh, stats };
 }
-function publishGazette(state, issue, players) {
+function publishGazette(state, issue, players, warlords = []) {
+  var _a;
+  const replacing = ((_a = state.issues[0]) == null ? void 0 : _a.weekId) === issue.weekId;
   return {
     issues: [issue, ...state.issues.filter((i) => i.weekId !== issue.weekId)].slice(0, GAZETTE_RULES.keepIssues),
     lastWeekId: issue.weekId,
-    xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp]))
+    prevSnapshots: replacing && state.prevSnapshots ? state.prevSnapshots : { xp: state.xpSnapshot, asc: state.ascSnapshot, power: state.powerSnapshot },
+    xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp])),
+    ascSnapshot: Object.fromEntries(players.map((p) => {
+      var _a2;
+      return [p.uid, (_a2 = p.ascensions) != null ? _a2 : 0];
+    })),
+    powerSnapshot: Object.fromEntries(warlords.map((w) => [w.name, Math.round(w.power)]))
   };
 }
 
@@ -16002,7 +16307,7 @@ function renamePlayer(player, raw, now) {
 var BALANCE_HISTORY_KEY = "balance_history";
 var BALANCE_HISTORY_DAYS = 180;
 var isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-function median4(xs) {
+function median5(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -16029,7 +16334,7 @@ function balanceSnapshot(live, reports, now) {
     raidsWon: live.factions.reduce((a, f) => a + f.raidsWon, 0),
     raidsLost: live.factions.reduce((a, f) => a + f.raidsLost, 0),
     lairsTaken: live.factions.reduce((a, f) => a + f.lairsTaken, 0),
-    medianProduction: Math.round(median4(live.players.map((p) => p.productionPerHour))),
+    medianProduction: Math.round(median5(live.players.map((p) => p.productionPerHour))),
     avgHangarAttack: hangars.length ? Math.round(hangars.reduce((a, b) => a + b, 0) / hangars.length * 1e3) / 1e3 : 0,
     bestDefense: live.bestDefense,
     bestAttack: live.bestAttack,
@@ -20271,20 +20576,20 @@ var BROADCAST_SEGMENTS = [
   { id: "alliance", label: "Une alliance", hint: "Tous les membres de l'alliance choisie." },
   { id: "noAlliance", label: "Sans alliance", hint: "Joueurs qui n'ont pas encore rejoint d'alliance." }
 ];
-var DAY13 = 24 * 36e5;
+var DAY14 = 24 * 36e5;
 function broadcastTargets(players, segment, now, allianceId) {
   const idle = (p) => now - Math.min(now, lastActivity(p));
   switch (segment) {
     case "all":
       return players;
     case "active7":
-      return players.filter((p) => idle(p) < 7 * DAY13);
+      return players.filter((p) => idle(p) < 7 * DAY14);
     case "inactive7":
-      return players.filter((p) => idle(p) >= 7 * DAY13 && idle(p) < 30 * DAY13);
+      return players.filter((p) => idle(p) >= 7 * DAY14 && idle(p) < 30 * DAY14);
     case "inactive30":
-      return players.filter((p) => idle(p) >= 30 * DAY13);
+      return players.filter((p) => idle(p) >= 30 * DAY14);
     case "new7":
-      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY13);
+      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY14);
     case "alliance":
       return allianceId ? players.filter((p) => p.allianceId === allianceId) : [];
     case "noAlliance":
@@ -20534,7 +20839,70 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.15.14" : "dev";
+var LOGIC_VERSION = true ? "5.16.0" : "dev";
+
+// src/game/mailSegments.ts
+var MAIL_SEGMENTS = [
+  { id: "all", label: "Tous les joueurs joignables", hint: "Adresse v\xE9rifi\xE9e, pas d\xE9sinscrit." },
+  { id: "active7", label: "Actifs (7 derniers jours)", hint: "Connect\xE9s dans la semaine." },
+  { id: "inactive7", label: "Inactifs depuis 7 jours", hint: "Pas connect\xE9s depuis au moins 7 jours : les faire revenir." },
+  { id: "inactive30", label: "Inactifs depuis 30 jours", hint: "Partis depuis un mois ou plus." },
+  { id: "newcomers14", label: "Nouveaux (moins de 14 jours)", hint: "Inscrits ces deux derni\xE8res semaines." },
+  { id: "noAlliance", label: "Sans alliance", hint: "Pour les inviter \xE0 en rejoindre une." },
+  { id: "alliance", label: "Une alliance", hint: "Les membres d'une alliance choisie." }
+];
+var DAY15 = 864e5;
+function normalizeSegment(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const id = MAIL_SEGMENTS.some((s) => s.id === r.id) ? r.id : "all";
+  return id === "alliance" ? { id, allianceId: typeof r.allianceId === "string" ? r.allianceId : "" } : { id };
+}
+function inSegment(seg, p, now) {
+  const last = Number(p.lastActiveMs) || 0;
+  switch (seg.id) {
+    case "active7":
+      return now - last < 7 * DAY15;
+    case "inactive7":
+      return now - last >= 7 * DAY15;
+    case "inactive30":
+      return now - last >= 30 * DAY15;
+    case "newcomers14":
+      return now - (Number(p.createdAtMs) || 0) < 14 * DAY15;
+    case "noAlliance":
+      return !p.allianceId;
+    case "alliance":
+      return !!seg.allianceId && p.allianceId === seg.allianceId;
+    default:
+      return true;
+  }
+}
+var MAIL_CAMPAIGNS_KEY = "mail_campaigns";
+var MAIL_SCHEDULE_KEY = "mail_scheduled";
+var MAIL_HISTORY_MAX = 20;
+var MAIL_SCHEDULE_MAX = 10;
+function campaignsState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { list: Array.isArray(r.list) ? r.list.filter((c) => c && typeof c.id === "string").slice(0, MAIL_HISTORY_MAX) : [] };
+}
+function scheduleState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { list: Array.isArray(r.list) ? r.list.filter((c) => c && typeof c.id === "string" && Number(c.sendAtMs) > 0).slice(0, MAIL_SCHEDULE_MAX) : [] };
+}
+function trackCampaign(state, campaignId, uid, kind) {
+  return {
+    list: state.list.map((c) => {
+      if (c.id !== campaignId) return c;
+      const opened = c.opened.includes(uid) ? c.opened : [...c.opened, uid];
+      const clicked = kind === "click" && !c.clicked.includes(uid) ? [...c.clicked, uid] : c.clicked;
+      return __spreadProps(__spreadValues({}, c), { opened, clicked });
+    })
+  };
+}
+function instrumentHtml(html, pixelUrl, track) {
+  const withLinks = html.replace(/href="(https?:\/\/[^"]+)"/g, (m, url2) => url2.includes("/api/cosmic/unsubscribe") ? m : `href="${track(url2.replace(/&amp;/g, "&"))}"`);
+  const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">`;
+  return withLinks.includes("</body>") ? withLinks.replace("</body>", `${pixel}</body>`) : withLinks + pixel;
+}
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {

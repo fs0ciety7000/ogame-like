@@ -62,7 +62,7 @@ export const FORMULA_SECTIONS = [
 ] as const;
 
 function Formula({ children }: { children: ReactNode }) {
-  return <pre className="overflow-x-auto whitespace-pre-wrap border-l-2 border-cyan-glow/60 bg-space-950/70 px-3 py-2 font-mono text-[12px] leading-relaxed text-cyan-100">{children}</pre>;
+  return <pre className="overflow-x-auto whitespace-pre-wrap border-l-2 border-cyan-glow/60 bg-space-950/70 px-3 py-2 font-mono text-[12px] leading-relaxed text-slate-100">{children}</pre>;
 }
 
 function Mine({ title, children }: { title?: string; children: ReactNode }) {

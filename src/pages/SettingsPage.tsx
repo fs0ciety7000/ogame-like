@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { RemindersCard } from "@/components/game/RemindersCard";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { HudSwitch } from "@/components/ui/hud";
@@ -721,7 +722,7 @@ function SoundCard() {
                 value={Math.round(volumes[c.id] * 100)}
                 aria-label={`Volume ${c.label}`}
                 onChange={(e) => setSfxVolume(c.id, Number(e.target.value) / 100)}
-                className="w-full accent-cyan-400"
+                className="w-full accent-cyan-glow"
               />
               <span className="text-xs text-slate-500">{c.description}</span>
             </div>
@@ -778,6 +779,7 @@ export function SettingsPage() {
       <SoundCard />
       <HelpCard />
       <BrowserNotificationsCard />
+      <RemindersCard />
       <VacationCard />
       <AllianceNotifsCard />
       <EmailNewsCard />

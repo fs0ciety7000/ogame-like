@@ -19,7 +19,10 @@ describe("debris", () => {
   });
 
   it("collects proportionally within the recyclers' capacity", () => {
-    expect(recyclerCapacity({ drone_recuperateur: { level: 3, count: 10 } }, { drone_recuperateur: 4, fregate: 2 })).toBe(3000);
+    // 5.16 : capacité = cargaison du drone (CAP 10 × niveau 3) × 4 drones ; les autres vaisseaux ne ramassent rien.
+    const owner = { units: { drone_recuperateur: { level: 3, count: 10 } }, techLevels: {} } as unknown as Parameters<typeof recyclerCapacity>[0];
+    expect(recyclerCapacity(owner, { drone_recuperateur: 4, fregate: 2 })).toBe(120);
+    expect(recyclerCapacity(owner, { fregate: 2 })).toBe(0);
     const out = collectDebris({ scrap: 1000, energy: 500 }, 900);
     expect(out.taken).toEqual({ scrap: 600, energy: 300 });
     expect(out.remaining).toEqual({ scrap: 400, energy: 200 });

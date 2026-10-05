@@ -602,7 +602,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
                     key={i}
                     type="button"
                     onClick={() => setChosen(i + 1)}
-                    className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-400 bg-violet-400/20 text-white" : "border-white/10 text-slate-400 hover:border-violet-400/50")}
+                    className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-glow bg-violet-glow/20 text-white" : "border-white/10 text-slate-400 hover:border-violet-glow/50")}
                   >
                     {i + 1}
                   </button>

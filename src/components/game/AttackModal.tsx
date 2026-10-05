@@ -262,8 +262,8 @@ export function AttackModal({
                 const rows = (["assault", "decoy"] as const).filter((t) => stock[t].length > 0);
                 if (rows.length === 0) return null;
                 return (
-                  <div className="mt-3 flex flex-col gap-1.5 border border-violet-400/25 bg-violet-400/[0.05] px-3 py-2 text-xs">
-                    <p className="flex items-center gap-1.5 text-violet-300">
+                  <div className="mt-3 flex flex-col gap-1.5 border border-violet-glow/25 bg-violet-glow/[0.05] px-3 py-2 text-xs">
+                    <p className="flex items-center gap-1.5 text-violet-glow">
                       <FlaskConical className="h-3.5 w-3.5" /> Capsules embarquées (invisibles à l'espionnage)
                     </p>
                     {rows.map((type) => {
@@ -277,7 +277,7 @@ export function AttackModal({
                             Aucune
                           </button>
                           {levels.map((l) => (
-                            <button key={l} type="button" onClick={() => set(l)} className={value === l ? "border border-violet-300 bg-violet-400/20 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-400"}>
+                            <button key={l} type="button" onClick={() => set(l)} className={value === l ? "border border-violet-glow bg-violet-glow/20 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-400"}>
                               {capsulePct(l)} %
                             </button>
                           ))}

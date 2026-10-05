@@ -475,6 +475,22 @@ cronAdd("cosmic_balance_history", "11 3 * * *", () => {
   }
 });
 
+// 5.16 : rattrapage de production des petits empires (médiane des joueurs actifs, chaque nuit).
+cronAdd("cosmic_catchup", "27 3 * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).catchupTick(Date.now());
+    console.log(`[cosmic] rattrapage : médiane ${out.median}, ${out.boosted} empire(s) aidé(s)`);
+  } catch (err) {
+    console.log(`[cosmic] rattrapage : ${err}`);
+  }
+});
+
+routerAdd("POST", "/api/cosmic/admin/catchup", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.catchupTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
 /* ---------- v5.5 : actions d'administration sur un joueur ---------- */
 
 routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAction(e), $apis.requireAuth("users", "_superusers"));
@@ -819,6 +835,18 @@ onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).allianceMessageC
 
 /** POST /api/cosmic/admin/mail — décompte, envoi de test, envoi à tous (administrateurs). */
 routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db.js`).adminMail(e), $apis.requireAuth("users", "_superusers"));
+
+// 5.16 : suivi des campagnes (ouverture, clic) et envois programmés.
+routerAdd("GET", "/api/cosmic/mail/o", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "open"));
+routerAdd("GET", "/api/cosmic/mail/c", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "click"));
+cronAdd("cosmic_mail_schedule", "*/5 * * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).mailScheduleTick(Date.now());
+    if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
+  } catch (err) {
+    console.log(`[cosmic] campagnes programmées : ${err}`);
+  }
+});
 
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
 routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));

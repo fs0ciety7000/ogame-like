@@ -62,7 +62,7 @@ export function SpyReportView({ report }: { report: SpyReport }) {
             <ShieldAlert className="h-3.5 w-3.5" /> sondes abattues
           </span>
         )}
-        {report.anomaly && <span className="font-semibold text-violet-300">⚗ anomalie chimique : flotte et défenses peut-être faussées</span>}
+        {report.anomaly && <span className="font-semibold text-violet-glow">⚗ anomalie chimique : flotte et défenses peut-être faussées</span>}
       </div>
       {tier === 0 && <p className="text-xs text-slate-500">Brouillage trop fort : envoie plus de sondes ou monte ta techno Espionnage.</p>}
       <div className="grid gap-3 sm:grid-cols-2">

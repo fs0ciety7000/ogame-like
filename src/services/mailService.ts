@@ -23,7 +23,9 @@ export async function loadCampaign(c: MailCampaign): Promise<{ html: string; tex
   return { html, text };
 }
 
-type MailBody = { subject: string; html: string; text: string; fromName?: string };
+import { campaignsState, MAIL_CAMPAIGNS_KEY, MAIL_SCHEDULE_KEY, scheduleState, type MailSegment, type ScheduledCampaign, type SentCampaign } from "@/game/mailSegments";
+
+type MailBody = { subject: string; html: string; text: string; fromName?: string; segment?: MailSegment };
 
 function call<T>(body: Record<string, unknown>): Promise<T> {
   return pb.send<T>("/api/cosmic/admin/mail", { method: "POST", body: { apiUrl: pb.baseURL, ...body } }).catch((err) => {
@@ -31,7 +33,10 @@ function call<T>(body: Record<string, unknown>): Promise<T> {
   });
 }
 
-export const mailCount = () => call<{ recipients: number; optedOut: number; smtp: boolean }>({ action: "count" });
+export const mailCount = (segment?: MailSegment) => call<{ recipients: number; optedOut: number; smtp: boolean }>({ action: "count", segment });
+/** 5.16 : envoi programmé (traité toutes les 5 min par le serveur) et annulation. */
+export const mailSchedule = (m: MailBody, sendAtMs: number) => call<{ id: string; sendAtMs: number }>({ action: "schedule", sendAtMs, ...m });
+export const mailUnschedule = (id: string) => call<{ ok: boolean }>({ action: "unschedule", id });
 export const mailTest = (m: MailBody, to?: string) => call<{ sent: number; to: string }>({ action: "test", to, ...m });
 export const mailSend = (m: MailBody) => call<{ sent: number; failed: number; failedPseudos: string[] }>({ action: "send", confirm: "ENVOYER", ...m });
 
@@ -43,4 +48,17 @@ export async function setEmailOptOut(uid: string, optOut: boolean) {
 /** v4.0 : notifications d'alliance (canal, canal diplomatique, annonces). */
 export async function setNotifPrefs(uid: string, prefs: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean }) {
   await pb.collection("players").update(uid, { notifPrefs: prefs });
+}
+
+/** 5.16 : historique des campagnes (ouvertures, clics) et envois programmés. */
+export async function loadMailState(): Promise<{ campaigns: SentCampaign[]; scheduled: ScheduledCampaign[] }> {
+  const read = async (key: string) => {
+    try {
+      return (await pb.collection("game_config").getFirstListItem<{ data: unknown }>(pb.filter("key = {:key}", { key }))).data;
+    } catch {
+      return null;
+    }
+  };
+  const [c, s] = await Promise.all([read(MAIL_CAMPAIGNS_KEY), read(MAIL_SCHEDULE_KEY)]);
+  return { campaigns: campaignsState(c).list, scheduled: scheduleState(s).list };
 }

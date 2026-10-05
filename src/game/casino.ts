@@ -126,6 +126,8 @@ export interface PlayerCasino {
   week: CasinoWeek;
   /** 5.15.12 : derniers tirages (le plus récent d'abord, 20 au plus). */
   history?: CasinoHistoryEntry[];
+  /** 5.16 : jetons gagnés en combat cette semaine (plafond hebdomadaire). */
+  lootWeek?: { id: string; tokens: number };
 }
 
 export interface CasinoHistoryEntry {
@@ -456,7 +458,17 @@ export function playerCasino(p: Pick<PlayerState, "casino">): PlayerCasino {
   const history = (Array.isArray(c.history) ? c.history : [])
     .filter((h): h is CasinoHistoryEntry => !!h && typeof h === "object" && Number.isFinite(Number(h.atMs)) && typeof h.outcome === "string" && h.outcome in OUTCOME_POINTS)
     .slice(0, CASINO_HISTORY_MAX);
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week, history };
+  const lw = (c.lootWeek ?? null) as Partial<{ id: string; tokens: number }> | null;
+  return {
+    tokens: int(c.tokens),
+    dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "",
+    spins: int(c.spins),
+    wins: int(c.wins),
+    jackpots: int(c.jackpots),
+    week,
+    history,
+    ...(lw && typeof lw.id === "string" ? { lootWeek: { id: lw.id, tokens: int(lw.tokens) } } : {}),
+  };
 }
 
 /** Lundi 00 h (UTC) de la semaine : identifiant du bilan hebdomadaire. */

@@ -145,7 +145,7 @@ export function SeasonPassPage() {
 
       <Card className="p-4">
         <div className="h-2.5 w-full overflow-hidden bg-white/5">
-          <div className="h-full bg-gradient-to-r from-cyan-glow via-violet-400 to-gold-glow transition-all" style={{ width: `${(st.points / max) * 100}%` }} />
+          <div className="h-full bg-gradient-to-r from-cyan-glow via-violet-glow to-gold-glow transition-all" style={{ width: `${(st.points / max) * 100}%` }} />
         </div>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
           {SOURCES.map(([k, label]) => (

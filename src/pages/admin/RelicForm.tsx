@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/assets";
 import { currentGameContent } from "@/game/content";
 import { describeRelic, RARITIES, RELIC_EFFECT_LABELS, validateRelics, type RelicEffect, type RelicRarity, type RelicSettings, type RelicTemplate } from "@/game/relics";
-import { defaultLootTables, LOOT_SOURCE_LABELS, LOOT_SOURCES, validateLootTables, type LootSource, type LootTable, type LootTables } from "@/game/loot";
+import { DEFAULT_LOOT_TOKEN_CAP, defaultLootTables, LOOT_SOURCE_LABELS, LOOT_SOURCES, validateLootTables, type LootSource, type LootTable, type LootTables } from "@/game/loot";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
@@ -212,6 +212,13 @@ export function RelicSettingsCard() {
           onChange={(v) => set({ expeditionPerHour: v ?? 0 })}
         />
         <NumberField label="Chance maximale en expédition (0,15 = 15 %)" value={settings.expeditionMax} min={0} step={0.01} onChange={(v) => set({ expeditionMax: v ?? 0 })} />
+        <NumberField
+          label="Plafond hebdo de jetons gagnés en combat (0 = sans plafond)"
+          value={settings.lootTokenCap ?? DEFAULT_LOOT_TOKEN_CAP}
+          min={0}
+          step={5}
+          onChange={(v) => set({ lootTokenCap: Math.max(0, Math.round(v ?? 0)) })}
+        />
       </Section>
 
       <LootTablesEditor value={settings.loot as Partial<LootTables> | undefined} onChange={(loot) => set({ loot: loot as RelicSettings["loot"] })} />

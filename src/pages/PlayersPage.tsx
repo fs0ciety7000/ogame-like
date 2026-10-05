@@ -4,6 +4,7 @@ import { useShowMore } from "@/hooks/useShowMore";
 import { EmptyState } from "@/components/ui/hud";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { bindingPactBetween } from "@/game/diplomacy";
+import { OnlineDot } from "@/components/ui/online-dot";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AscensionStars } from "@/components/game/AscensionCard";
@@ -351,11 +352,12 @@ export function PlayersPage() {
                 </span>
                 <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="relative h-12 w-12 max-sm:h-11 max-sm:w-11">
                   <PlayerAvatar uid={p.uid} pseudo={p.pseudo} file={p.avatar} className="h-full w-full" />
+                  <OnlineDot uid={p.uid} className="absolute -right-0.5 -top-0.5" />
                 </button>
                 <div className="min-w-0">
                   <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
                     <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 max-w-full truncate text-left hover:text-cyan-glow">
-                      <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} />
+                      <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} presence={false} />
                     </button>
                     <AscensionStars count={p.ascensions} />
                     <StaffBadge uid={p.uid} compact />

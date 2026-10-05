@@ -32,6 +32,7 @@ import {
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
+import { UpgradeCompare } from "@/components/game/UpgradeCompare";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
 import { buildPlan, nextPlannedLevel, planSlots } from "@/game/buildPlan";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -281,9 +282,14 @@ export function BuildingsPage() {
                           const wait = secondsToAfford(cost, player.resources, rates);
                           return (
                             <>
-                              <Button variant="warn" className="w-full" disabled={pending === building.id || wait > 0} onClick={() => void handleUpgrade(building.id)}>
-                                Améliorer → niv. {nextLevel}
-                              </Button>
+                              <UpgradeCompare building={building} level={level} cost={cost} seconds={time}>
+                                {/* span : l'infobulle s'affiche même quand le bouton est désactivé. */}
+                                <span className="block">
+                                  <Button variant="warn" className="w-full" disabled={pending === building.id || wait > 0} onClick={() => void handleUpgrade(building.id)}>
+                                    Améliorer → niv. {nextLevel}
+                                  </Button>
+                                </span>
+                              </UpgradeCompare>
                               {wait > 0 && <BlockedReason>{affordText(wait)}</BlockedReason>}
                             </>
                           );

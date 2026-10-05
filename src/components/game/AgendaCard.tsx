@@ -1,6 +1,6 @@
 import { useIsAdmin } from "@/services/adminService";
 import { Link } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CalendarPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { HudChip, EmptyState } from "@/components/ui/hud";
@@ -12,6 +12,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { useSeasonBoss } from "@/services/seasonBossService";
 import { isActive } from "@/game/leviathan";
 import { bossCountdown } from "@/components/game/BossStage";
+import { agendaToIcs, downloadIcs } from "@/lib/ical";
 import { cn, alpha } from "@/lib/utils";
 
 /* v5.10.5 : frise des 30 prochains jours sur l'accueil (boss, événements,
@@ -145,7 +146,16 @@ export function AgendaCard({ now }: { now: number }) {
         <h2 className="hud-title flex items-center gap-2 text-sm">
           <CalendarDays className="h-4 w-4 text-cyan-glow" /> {view === "mois" ? "Ce mois-ci" : `Les ${DAYS} prochains jours`}
         </h2>
-        <div className="ml-auto flex gap-1" role="tablist" aria-label="Vue de l'agenda">
+        <HudChip asChild size="sm" tone="neutral" className="ml-auto">
+          <button
+            type="button"
+            title="Télécharger les rendez-vous des 30 prochains jours (.ics), avec un rappel 30 min avant"
+            onClick={() => downloadIcs(agendaToIcs(items.filter((i) => (i.endMs ?? i.startMs) > now), window.location.origin, now))}
+          >
+            <CalendarPlus className="h-3 w-3" /> Mon agenda
+          </button>
+        </HudChip>
+        <div className="flex gap-1" role="tablist" aria-label="Vue de l'agenda">
           {(["frise", "mois"] as const).map((v) => (
             <HudChip key={v} asChild size="sm" tone={view === v ? "accent" : "neutral"}>
               <button type="button" role="tab" aria-selected={view === v} onClick={() => pick(v)}>

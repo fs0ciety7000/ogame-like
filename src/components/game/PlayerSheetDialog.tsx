@@ -1,3 +1,4 @@
+import { usePlayerStore } from "@/store/playerStore";
 import { toast } from "sonner";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { relicImage } from "@/game/relics";
@@ -13,6 +14,9 @@ import { KESH, rankName } from "@/game/bounties";
 import { assetUrl } from "@/lib/assets";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { FollowOnlineButton } from "@/components/game/RemindersCard";
+import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
+import { useDirectoryStore } from "@/store/directoryStore";
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { fetchPlayerSheet, type PlayerSheet } from "@/services/playerService";
@@ -20,7 +24,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { seasonLabel } from "@/game/seasons";
-import { cn, formatNumber, alpha } from "@/lib/utils";
+import { cn, formatNumber, alpha, timeAgo } from "@/lib/utils";
 import { findCommander } from "@/game/commanders";
 import { describeRelic, findTemplate, rarityInfo } from "@/game/relics";
 import { ACHIEVEMENTS, TIER_LABELS as ACH_TIER_LABELS } from "@/game/achievements";
@@ -98,6 +102,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
           {entry && !entry.npc ? (
             <div className="relative shrink-0">
               <PlayerAvatar uid={entry.uid} pseudo={entry.pseudo} file={entry.avatar} className="h-16 w-16" />
+              <OnlineDot uid={entry.uid} size="md" className="absolute -left-1 -top-1" />
               <img src={getRankIcon(entry.xp)} alt="" className="absolute -bottom-2 -right-2 h-7 w-7 object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]" />
             </div>
           ) : (
@@ -107,10 +112,12 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
           {!feats?.showcase?.emblem && feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
           <div className="min-w-0">
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
-              <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} />
+              <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} presence={false} />
               {entry?.npc && <NpcBadge />}
               {(entry?.vacationUntilMs ?? 0) > Date.now() && <VacationBadge untilMs={entry!.vacationUntilMs!} />}
             </DialogTitle>
+            {entry && !entry.npc && <PresenceLine uid={entry.uid} />}
+            {entry && !entry.npc && entry.uid !== usePlayerStore.getState().player?.uid && <FollowOnlineButton uid={entry.uid} pseudo={entry.pseudo} />}
             <AscensionStars count={entry?.ascensions} full className="mt-1" />
             {entry && (
               <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow">
@@ -288,4 +295,17 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
       </DialogContent>
     </Dialog>
   );
+}
+
+/** 5.16 : « En ligne » (pastille pulsée) ou « Vu il y a… ». */
+function PresenceLine({ uid }: { uid: string }) {
+  const online = useIsOnline(uid);
+  const last = useDirectoryStore((s) => s.lastActiveOf[uid]);
+  return online ? (
+    <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-mint-glow">
+      <OnlineDot uid={uid} /> En ligne
+    </p>
+  ) : last ? (
+    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Vu {timeAgo(last)}</p>
+  ) : null;
 }

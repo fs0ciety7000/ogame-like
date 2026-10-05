@@ -341,7 +341,7 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
           </p>
         </>
       ) : (
-        <p className="mt-1.5 font-mono text-[9px] text-slate-500">{rate > 0 ? <span className="text-violet-300">+{formatPerSecond(rate)} · gisement</span> : "non plafonnée"}</p>
+        <p className="mt-1.5 font-mono text-[9px] text-slate-500">{rate > 0 ? <span className="text-violet-glow">+{formatPerSecond(rate)} · gisement</span> : "non plafonnée"}</p>
       )}
     </div>
   );
