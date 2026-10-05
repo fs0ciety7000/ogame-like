@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HudTag } from "@/components/ui/hud";
+import { HudTag, StatTile } from "@/components/ui/hud";
 import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
@@ -279,6 +279,42 @@ export function BalancePanel() {
               </tbody>
             </table>
           </div>
+        </Section>
+      )}
+
+      {live?.v516 && (
+        <Section title="Nouveautés 5.16 — sur les joueurs actifs" aside={<span className="text-[11px] text-slate-500">Les propositions de réglage apparaissent dans la liste plus haut</span>}>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <StatTile
+              size="sm"
+              tone="accent"
+              label="Expéditions profondes"
+              value={<span className="font-mono">{live.v516.expeditions.deepPct} %</span>}
+              sub={`${f(live.v516.expeditions.deep)} sur ${f(live.v516.expeditions.total)} · ${f(live.v516.expeditions.deepAmbushLost)} embuscades perdues`}
+            />
+            <StatTile
+              size="sm"
+              tone="ember"
+              label="Traités en cours"
+              value={<span className="font-mono">{f(live.v516.treaties.pact + live.v516.treaties.escort + live.v516.treaties.embargo)}</span>}
+              sub={`péage ${live.v516.treaties.pact} · escorte ${live.v516.treaties.escort} · embargo ${live.v516.treaties.embargo} · ${live.v516.treaties.players} joueur(s)`}
+            />
+            <StatTile
+              size="sm"
+              tone="mint"
+              label="Rattrapage actif"
+              value={<span className="font-mono">{live.v516.catchup.boosted}</span>}
+              sub={`${live.v516.catchup.boostedPct} % des actifs · moyenne +${live.v516.catchup.avgBonusPct} % · max +${live.v516.catchup.maxBonusPct} %`}
+            />
+            <StatTile
+              size="sm"
+              tone="gold"
+              label="Plafond de jetons atteint"
+              value={<span className="font-mono">{live.v516.lootTokens.capped}</span>}
+              sub={`${live.v516.lootTokens.cappedPct} % des actifs · moyenne ${live.v516.lootTokens.avgThisWeek} / ${live.v516.lootTokens.cap} cette semaine`}
+            />
+          </div>
+          <p className="text-xs text-slate-500">Mutateur du mois : {live.v516.mutator ? <strong className="text-slate-300">{live.v516.mutator.name}</strong> : "aucun"}.</p>
         </Section>
       )}
 

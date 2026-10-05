@@ -37,6 +37,9 @@ export interface PlayerStats {
   /** v3.1 : Léviathans abattus (participation), expéditions terminées. */
   leviathanKills?: number;
   expeditions?: number;
+  /** 5.17 : expéditions terminées après au moins une étape profonde, et embuscades perdues en profondeur. */
+  deepExpeditions?: number;
+  deepAmbushLost?: number;
   traded?: number;
   /** v5.10 : cadeaux envoyés à d'autres joueurs. */
   giftsSent?: number;

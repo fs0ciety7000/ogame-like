@@ -692,28 +692,28 @@ function inScope(g, scope) {
   const s = (_a = g.scope) != null ? _a : "all";
   return s === "all" || s === scope;
 }
-function rawEffectTotal(grants, layer, stat2, opts = {}) {
+function rawEffectTotal(grants, layer, stat3, opts = {}) {
   let total2 = 0;
   for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat2 || !inScope(g, opts.scope)) continue;
+    if (g.layer !== layer || g.stat !== stat3 || !inScope(g, opts.scope)) continue;
     if (opts.target !== void 0 && g.target !== opts.target) continue;
     total2 += g.value;
   }
   return total2;
 }
-function clampEffect(stat2, layer, total2) {
+function clampEffect(stat3, layer, total2) {
   var _a;
-  const info = EFFECT_STATS[stat2];
+  const info = EFFECT_STATS[stat3];
   let v = total2;
   const cap = (_a = info.cap) == null ? void 0 : _a[layer];
   if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
   return v;
 }
-function effectTotal(grants, layer, stat2, opts = {}) {
-  return clampEffect(stat2, layer, rawEffectTotal(grants, layer, stat2, opts));
+function effectTotal(grants, layer, stat3, opts = {}) {
+  return clampEffect(stat3, layer, rawEffectTotal(grants, layer, stat3, opts));
 }
-function formatEffectValue(stat2, value2) {
-  const info = EFFECT_STATS[stat2];
+function formatEffectValue(stat3, value2) {
+  const info = EFFECT_STATS[stat3];
   const sign = info.reduction ? "\u2212" : value2 < 0 ? "\u2212" : "+";
   const abs2 = Math.abs(value2);
   const dec = (x) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -1565,8 +1565,8 @@ function territoryBonus(t, now) {
 }
 function territoryEffects(t, now) {
   var _a, _b;
-  const pct5 = territoryBonus(t, now);
-  return pct5 > 0 ? [{ stat: "productionAll", value: pct5, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
+  const pct6 = territoryBonus(t, now);
+  return pct6 > 0 ? [{ stat: "productionAll", value: pct6, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
 }
 
 // src/game/format.ts
@@ -1727,9 +1727,9 @@ function techEffectGrants(techLevels2) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
     for (const e3 of techEffects(tech)) {
-      const stat2 = TECH_EFFECT_STAT[e3.type];
-      if (!stat2) continue;
-      out.push({ stat: stat2, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      const stat3 = TECH_EFFECT_STAT[e3.type];
+      if (!stat3) continue;
+      out.push({ stat: stat3, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
     }
   }
   return out;
@@ -1737,8 +1737,8 @@ function techEffectGrants(techLevels2) {
 function techBonus(techLevels2, type, target) {
   var _a;
   if (!techLevels2) return 0;
-  const stat2 = TECH_EFFECT_STAT[type];
-  if (stat2) return effectTotal(techEffectGrants(techLevels2), "tech", stat2, { target });
+  const stat3 = TECH_EFFECT_STAT[type];
+  if (stat3) return effectTotal(techEffectGrants(techLevels2), "tech", stat3, { target });
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
@@ -2086,12 +2086,12 @@ function getBuildingUpgradeTime(building, nextLevel) {
 }
 function getRepairPercent(buildings) {
   var _a;
-  let pct5 = 0;
+  let pct6 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    pct5 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+    pct6 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
-  return pct5;
+  return pct6;
 }
 function repairPercentAt(effect, level3) {
   var _a;
@@ -3728,8 +3728,8 @@ function protectedAmount(buildings, res, techLevels2, allianceLevels, player) {
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
   const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
-  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
+  const pct6 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct6) : 0;
 }
 function rareRewardScale(player) {
   var _a;
@@ -4538,28 +4538,28 @@ function activateCapsule(player, typeIn, levelIn, now) {
   const st = synthesisState(player);
   const current2 = st[type];
   if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct5 = takeCapsule(player, type, levelIn);
+  const pct6 = takeCapsule(player, type, levelIn);
   const after = synthesisState(player);
-  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  after[type] = { pct: pct6, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
   player.synthesis = after;
-  return pct5;
+  return pct6;
 }
 function consumeArmor(player, now) {
   const st = synthesisState(player);
   if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct5 = st.armor.pct;
+  const pct6 = st.armor.pct;
   st.armor = null;
   player.synthesis = st;
-  return pct5;
+  return pct6;
 }
 function activeVeil(player, now) {
   const v = synthesisState(player).veil;
   return v && v.untilMs > now ? v.pct : 0;
 }
-function decoyUnits(real, pct5, pool, random = Math.random) {
+function decoyUnits(real, pct6, pool, random = Math.random) {
   var _a;
   const out = {};
-  const swing = pct5 / 100;
+  const swing = pct6 / 100;
   for (const [id, qty] of Object.entries(real)) {
     if (!(qty > 0)) continue;
     const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
@@ -4572,9 +4572,9 @@ function decoyUnits(real, pct5, pool, random = Math.random) {
   }
   return out;
 }
-function veilCounts(entries, pct5, random = Math.random) {
+function veilCounts(entries, pct6, random = Math.random) {
   if (!entries) return entries;
-  const swing = pct5 / 100;
+  const swing = pct6 / 100;
   return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
 }
 function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
@@ -5287,15 +5287,15 @@ function validateLootTables(tables) {
     const t = tables == null ? void 0 : tables[src];
     if (!t) continue;
     const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
-    const pct5 = (v) => typeof v === "number" && v >= 0 && v <= 1;
-    if (t.relicChance !== void 0 && !pct5(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
-    if (t.capsuleChance !== void 0 && !pct5(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
+    const pct6 = (v) => typeof v === "number" && v >= 0 && v <= 1;
+    if (t.relicChance !== void 0 && !pct6(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
+    if (t.capsuleChance !== void 0 && !pct6(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
     if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
     const min = (_a = t.capsuleMin) != null ? _a : 1;
     const max = (_b = t.capsuleMax) != null ? _b : 10;
     if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
     if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
-    if (t.tokenChance !== void 0 && !pct5(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
+    if (t.tokenChance !== void 0 && !pct6(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
     const tmin = (_c = t.tokenMin) != null ? _c : 1;
     const tmax = (_d = t.tokenMax) != null ? _d : 1;
     if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
@@ -6642,8 +6642,8 @@ function targetPower(faction, player) {
 function raidPower(faction, player, notoriety, adapt = 1) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
-  const pct5 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct5 * adapt));
+  const pct6 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct6 * adapt));
 }
 function exposedStock(player) {
   var _a, _b, _c;
@@ -8303,7 +8303,7 @@ function empireEffects(player, now = Date.now()) {
 }
 function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
-  const sum3 = (stat2) => effectTotal(grants, "empire", stat2, { scope });
+  const sum3 = (stat3) => effectTotal(grants, "empire", stat3, { scope });
   m.attack = sum3("attack");
   m.defense = sum3("defense");
   m.buildTime = sum3("buildTime");
@@ -8634,15 +8634,15 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
-function unitStat(units, techLevels2, unitId, stat2) {
+function unitStat(units, techLevels2, unitId, stat3) {
   var _a, _b, _c, _d;
   const def3 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def3 == null ? void 0 : def3[stat2]) != null ? _a : 0;
+  const base = (_a = def3 == null ? void 0 : def3[stat3]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
   let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat2 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat2 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  if (stat3 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat3 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
   return value2;
 }
 function computeFleetPower(units, techLevels2, fleet, stats) {
@@ -8762,8 +8762,8 @@ function resolveCombat(params) {
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
+      const pct6 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
+      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct6);
       wanted[res] = amount3;
       total2 += amount3;
     }
@@ -8957,8 +8957,8 @@ var BOSS_PHASE_RULES = {
 };
 var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
 function bossFightPhase(state) {
-  const pct5 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
-  return pct5 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct5 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+  const pct6 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct6 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct6 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
 }
 function bossWeakness(state) {
   const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
@@ -10002,10 +10002,10 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
-    const pct5 = between(R.wreckMinPct, R.wreckMaxPct, random);
+    const pct6 = between(R.wreckMinPct, R.wreckMaxPct, random);
     const found = {};
     for (const [id, n] of Object.entries(fleet.units)) {
-      const extra = Math.floor(n * pct5);
+      const extra = Math.floor(n * pct6);
       if (extra > 0) found[id] = extra;
     }
     if (Object.keys(found).length === 0) {
@@ -10032,6 +10032,7 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
         var _a2;
         return [r, (n != null ? n : 0) - ((_a2 = lostLoot[r]) != null ? _a2 : 0)];
       }));
+      bumpStat(player, "deepAmbushLost");
       text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a d\xFB fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
@@ -10094,6 +10095,7 @@ function finishExpedition(player, fleet, now, random = Math.random) {
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
   applyXpDelta(player, xp, now);
   bumpStat(player, "expeditions");
+  if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   let relic = "";
   if (random() < expeditionRelicChance(fleet.expedition.hours)) {
     const item = rollRelic("expedition", now, random);
@@ -16597,6 +16599,52 @@ function renamePlayer(player, raw, now) {
   return { pseudo, login: pseudoLogin(pseudo) };
 }
 
+// src/game/balance/v516.ts
+var stat2 = (p, k) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[k]) || 0;
+};
+var pct5 = (n, d) => d > 0 ? Math.round(n / d * 1e3) / 10 : 0;
+function computeBalance516(active, now) {
+  var _a;
+  const total2 = active.reduce((a, p) => a + stat2(p, "expeditions"), 0);
+  const deep = active.reduce((a, p) => a + stat2(p, "deepExpeditions"), 0);
+  const treaties = { pact: 0, escort: 0, embargo: 0, players: 0 };
+  for (const p of active) {
+    let any = false;
+    for (const st of Object.values((_a = p.pirates) != null ? _a : {})) {
+      const t = activeTreaty(st, now);
+      if (t) {
+        treaties[t.kind] += 1;
+        any = true;
+      }
+    }
+    if (any) treaties.players += 1;
+  }
+  const bonuses = active.map((p) => catchupFactorAt(p, now) - 1).filter((b) => b > 0);
+  const week = casinoWeekId(now);
+  const tokens = active.map((p) => {
+    var _a2;
+    const lw = (_a2 = p.casino) == null ? void 0 : _a2.lootWeek;
+    return lw && lw.id === week ? Number(lw.tokens) || 0 : 0;
+  });
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  const capped = cap > 0 ? tokens.filter((t) => t >= cap).length : 0;
+  const m = activeMutator(now);
+  return {
+    expeditions: { total: total2, deep, deepPct: pct5(deep, total2), deepAmbushLost: active.reduce((a, p) => a + stat2(p, "deepAmbushLost"), 0) },
+    treaties,
+    catchup: {
+      boosted: bonuses.length,
+      boostedPct: pct5(bonuses.length, active.length),
+      avgBonusPct: bonuses.length ? Math.round(bonuses.reduce((a, b) => a + b, 0) / bonuses.length * 1e3) / 10 : 0,
+      maxBonusPct: bonuses.length ? Math.round(Math.max(...bonuses) * 1e3) / 10 : 0
+    },
+    lootTokens: { cap, capped, cappedPct: pct5(capped, active.length), avgThisWeek: active.length ? Math.round(tokens.reduce((a, b) => a + b, 0) / active.length * 10) / 10 : 0 },
+    mutator: m ? { id: m.id, name: m.name } : null
+  };
+}
+
 // src/game/balance/history.ts
 var BALANCE_HISTORY_KEY = "balance_history";
 var BALANCE_HISTORY_DAYS = 180;
@@ -16694,7 +16742,7 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     var _a, _b;
     return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
   });
-  const pct5 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
+  const pct6 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
   const factions2 = FACTIONS.map((f) => {
     var _a, _b, _c, _d;
     let raidsWon = 0, raidsLost = 0, lairsTaken = 0, lairsOpen = 0;
@@ -16714,15 +16762,16 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     activePlayers: active.length,
     players: rows,
     unitPlaces,
-    pvp: { battles: pvp.length, attackerWinPct: pct5(pvp), windowDays },
-    warlordBattles: { battles: wl.length, attackerWinPct: pct5(wl) },
+    pvp: { battles: pvp.length, attackerWinPct: pct6(pvp), windowDays },
+    warlordBattles: { battles: wl.length, attackerWinPct: pct6(wl) },
     factions: factions2,
     warlords: warlords.map((w) => {
       var _a, _b, _c, _d;
       return { pseudo: w.pseudo, power: Math.round(computeFullPower((_a = w.units) != null ? _a : {}, (_b = w.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower((_c = w.units) != null ? _c : {}, (_d = w.techLevels) != null ? _d : {})) };
     }).sort((a, b) => b.power - a.power),
     bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
-    bestAttack: Math.max(0, ...rows.map((r) => r.attack))
+    bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
+    v516: computeBalance516(active, now)
   };
 }
 

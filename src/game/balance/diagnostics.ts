@@ -1,4 +1,5 @@
 import { WARLORD_RULES } from "@/game/warlords";
+import { computeBalance516, findings516, type Balance516 } from "@/game/balance/v516";
 import { TECHNOLOGIES, techEffects } from "@/game/technologies";
 import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
@@ -25,7 +26,7 @@ export type Severity = "critical" | "warning" | "info";
 export interface Proposal {
   id: string;
   severity: Severity;
-  area: "Unités" | "Défenses" | "Économie" | "Missions" | "Reliques" | "Factions" | "Combats" | "Seigneurs" | "Hangars";
+  area: "Unités" | "Défenses" | "Économie" | "Missions" | "Reliques" | "Factions" | "Combats" | "Seigneurs" | "Hangars" | "Expéditions" | "Casino";
   finding: string;
   proposal: string;
   /** Onglet de l'administration où appliquer le réglage. */
@@ -177,6 +178,8 @@ export interface LiveBalance {
   bestAttack: number;
   /** v5.5 : photos quotidiennes (ajoutées par le serveur). */
   history?: BalanceSnapshot[];
+  /** 5.17 : suivi des nouveautés de la 5.16. */
+  v516?: Balance516;
 }
 
 function places(units: PlayerState["units"], ids: string[]): number {
@@ -253,6 +256,7 @@ export function computeLiveBalance(
     warlords: warlords.map((w) => ({ pseudo: w.pseudo, power: Math.round(computeFullPower(w.units ?? {}, w.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower(w.units ?? {}, w.techLevels ?? {})) })).sort((a, b) => b.power - a.power),
     bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
     bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
+    v516: computeBalance516(active, now),
   };
 }
 
@@ -308,6 +312,8 @@ export function liveFindings(live: LiveBalance): Proposal[] {
   for (const u of live.unitPlaces.slice(0, 8)) {
     if (traps.has(u.id)) out.push({ id: `trap-used-${u.id}`, severity: "critical", area: "Unités", finding: `${u.name} occupe ${fmt(u.places)} places chez ${u.owners} joueurs alors que c'est une unité piège.`, proposal: "Corriger ses places (voir plus haut) : le gain de puissance pour ces joueurs sera immédiat.", where: "Unités" });
   }
+  // 5.17 : nouveautés de la 5.16 (expéditions profondes, traités, rattrapage, jetons).
+  if (live.v516) out.push(...findings516(live.v516, live.activePlayers));
   return out;
 }
 
