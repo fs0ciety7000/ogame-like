@@ -4819,6 +4819,8 @@ const CONTENT_MIGRATIONS = [
       { id: "etoile_noire", field: "stats", from: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 }, to: { attaque: 4000, defense: 4000, vitesse: 1, cargo: 1000 } },
       { id: "etoile_noire", field: "levelBonus", from: 1700, to: 900 },
       { id: "roquette", field: "stats", from: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 }, to: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 } },
+      { id: "traqueur_kesh", field: "cost", from: { scrap: 6000, energy: 3000 }, to: { scrap: 3000, energy: 1500 } },
+      { id: "traqueur_kesh", field: "hangarSpace", from: 25, to: 3 },
     ],
   },
   // 5.18 : vaisseaux à quai engagés à 50 % (Riposte 100 %), si les règles enregistrées ont encore les anciennes valeurs.

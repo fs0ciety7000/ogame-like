@@ -23,6 +23,8 @@ import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { COMBAT_RULES, unitStat } from "@/game/combat";
+import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -40,6 +42,10 @@ export function UnitsPage() {
   const fleets = useFleetStore((s) => s.fleets);
   const away = useMemo(() => (uid ? unitsAwayOf(fleets, uid) : {}), [fleets, uid]);
   const rates = useProductionRates(player);
+  // 5.18 : onglets Attaque / Défense et filtre par classe (calculée d'après les stats).
+  const [tab, setTab] = useState<"attack" | "defense">("attack");
+  const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
+  const classes = useMemo(() => unitClasses(UNITS), []);
 
   if (!player || !queues) return null;
 
@@ -126,8 +132,34 @@ export function UnitsPage() {
         })}
       </div>
 
+      <div className="flex flex-col gap-2">
+        <Tabs value={tab} onValueChange={(v) => {
+            setTab(v === "defense" ? "defense" : "attack");
+            setClassFilter("all");
+          }}>
+          <TabsList>
+            <TabsTrigger value="attack">
+              Attaque <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "attack").length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="defense">
+              Défense <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "defense").length}</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Classe d'unité">
+          {(["all", "light", "medium", "heavy", "support"] as const)
+            .filter((c) => c === "all" || UNITS.some((u) => u.category === tab && classes[u.id] === c))
+            .map((c) => (
+              <Button key={c} size="sm" variant={classFilter === c ? "secondary" : "ghost"} aria-pressed={classFilter === c} onClick={() => setClassFilter(c)}>
+                {c === "all" ? "Toutes" : UNIT_CLASS_LABELS[c]}
+              </Button>
+            ))}
+          <span className="text-[11px] text-slate-500">Classe calculée d'après l'attaque et la résistance (points de vie).</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5">
-        {UNITS.map((unit, index) => {
+        {UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter)).map((unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);
@@ -178,9 +210,12 @@ export function UnitsPage() {
               <Card className="hud-glitch flex h-full flex-col">
                 <HudBrackets />
                 <div className="relative px-4 pt-4">
-                  <HudTag tone={unit.category === "attack" ? "danger" : "accent"}>
-                    {unit.category === "attack" ? "Attaque" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
-                  </HudTag>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <HudTag tone={unit.category === "attack" ? "danger" : "accent"}>
+                      {unit.category === "attack" ? "Attaque" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
+                    </HudTag>
+                    <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
+                  </div>
                 </div>
                 <div className="hud-stage relative mt-2 grid h-44 place-items-center">
                   <LevelUpBurst level={data.level} colorVar="var(--color-cyan-glow)" />
