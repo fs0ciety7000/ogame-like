@@ -138,11 +138,13 @@ const SCALE: Record<Kind, number> = { light: 0.75, medium: 0.9, heavy: 1, statio
 /* ---------- modèles low-poly (poly.pizza, voir public/assets/models/ships/CREDITS.md) ---------- */
 
 type ModelId = "quaternius" | "mastjie";
-/** Modèle par silhouette (les stations restent procédurales) et longueur à l'écran. */
+/** Modèle par silhouette et longueur à l'écran (la tourelle procédurale ne sert que si le modèle manque). */
 const MODEL_OF: Partial<Record<Kind, { id: ModelId; length: number }>> = {
   light: { id: "quaternius", length: 2.2 },
   medium: { id: "mastjie", length: 2.4 },
   heavy: { id: "mastjie", length: 3.6 },
+  // Défenses : mêmes modèles des deux côtés (déjà en position, sans arrivée en distorsion).
+  station: { id: "mastjie", length: 2.4 },
 };
 /** Axe avant connu du modèle ; « auto » : détection (axe le plus long, extrémité la plus étroite).
  *  mastjie est un chasseur à cockpit sphérique et ailes hexagonales : son axe le plus long est la
