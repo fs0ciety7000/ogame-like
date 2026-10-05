@@ -1,6 +1,7 @@
 import { GameActionError } from "@/game/errors";
 import { familyIndex, getRankIndex } from "@/game/ranks";
-import { EFFECT_STATS, formatEffectValue, type EffectGrant, type EffectScope, type EffectStat } from "@/game/effects";
+import { describeEffect, EFFECT_STATS, formatEffectValue, validateComposedEffect, type EffectGrant, type EffectScope, type EffectStat } from "@/game/effects";
+import { validUnitSelector } from "@/game/effectTargets";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -150,7 +151,7 @@ export const COMMANDERS: CommanderDef[] = BASE_COMMANDERS.map((c) => ({ ...c, ro
 
 /** « Attaque +5 %, Production de toutes les ressources (colonies) +4 % » au niveau l. */
 export function roleBonusText(role: CommanderId, l: number): string {
-  const parts = (ROLE_EFFECTS[role] ?? []).map((e) => `${EFFECT_STATS[e.stat].label}${e.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e.stat, e.perLevel * l)}`);
+  const parts = (ROLE_EFFECTS[role] ?? []).map((e) => (e.target || (e.scope && e.scope !== "colonies") ? describeEffect(e.stat, e.perLevel * l, e.target, e.scope) : `${EFFECT_STATS[e.stat].label}${e.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e.stat, e.perLevel * l)}`));
   if (role === "spy") parts.push(`${Math.round(l * COMMANDER_RULES.anomalyPerLevel * 100)} % de flairer une anomalie chimique`);
   return parts.join(", ");
 }
@@ -540,6 +541,8 @@ export interface OfficerRoleOverride {
   title?: string;
   /** Valeur par niveau de chaque effet du rôle, dans l'ordre de ROLE_EFFECTS. */
   perLevel?: number[];
+  /** 5.23 : effets composés ajoutés au rôle (grandeur × cible × portée, valeur par niveau). */
+  extra?: RoleEffect[];
 }
 
 export interface OfficersConfig {
@@ -567,10 +570,13 @@ export function defaultRoleEffects(role: CommanderId): RoleEffect[] {
 export function setOfficers(cfg: OfficersConfig | undefined): void {
   for (const role of COMMANDER_ROLES) {
     const o = cfg?.roles?.[role];
-    ROLE_EFFECTS[role] = DEFAULT_ROLE_EFFECTS[role].map((e, i) => {
-      const v = Number(o?.perLevel?.[i]);
-      return { ...e, perLevel: Number.isFinite(v) && v >= 0 ? v : e.perLevel };
-    });
+    ROLE_EFFECTS[role] = [
+      ...DEFAULT_ROLE_EFFECTS[role].map((e, i) => {
+        const v = Number(o?.perLevel?.[i]);
+        return { ...e, perLevel: Number.isFinite(v) && v >= 0 ? v : e.perLevel };
+      }),
+      ...(o?.extra ?? []).filter((e) => e && e.stat in EFFECT_STATS && Number.isFinite(e.perLevel) && e.perLevel > 0),
+    ];
     const def = COMMANDERS.find((c) => c.id === role);
     if (def) {
       def.name = o?.name?.trim() || DEFAULT_NAMES[role].name;
@@ -594,6 +600,10 @@ export function validateOfficers(cfg: OfficersConfig | undefined): string[] {
       continue;
     }
     for (const v of o?.perLevel ?? []) if (!(typeof v === "number" && v >= 0 && v <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : valeur par niveau entre 0 et 1 (0,01 = 1 %).`);
+    for (const e of o?.extra ?? []) {
+      for (const m of validateComposedEffect(e, validUnitSelector)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : ${m}.`);
+      if (!(typeof e?.perLevel === "number" && e.perLevel > 0 && e.perLevel <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : effet ajouté, valeur par niveau entre 0 et 1.`);
+    }
   }
   const r = cfg.rules ?? {};
   const int = (v: unknown, min: number) => v === undefined || (Number.isInteger(v) && (v as number) >= min);

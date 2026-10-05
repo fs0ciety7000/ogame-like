@@ -3,14 +3,20 @@ import { motion } from "framer-motion";
 import { CombatIntro } from "@/components/fx/CombatIntro";
 import { emblemOptions, profileStyle } from "@/game/profile";
 import { getRankIcon } from "@/game/ranks";
-import { warlordsConfig } from "@/game/warlords";
+import { isWarlordUid, warlordsConfig } from "@/game/warlords";
+import { AttackModal } from "@/components/game/AttackModal";
+import { Button } from "@/components/ui/button";
+import { Save, Swords } from "lucide-react";
+import { toast } from "sonner";
+import { saveFleetPreset } from "@/lib/fleetPresets";
+import { useAuthStore } from "@/store/authStore";
 import { FACTIONS } from "@/game/pirates";
 import { usePlayerStore } from "@/store/playerStore";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
 import { CombatReplayAuto } from "@/components/game/CombatReplayAuto";
 import { CombatLossTable, CombatReportDetail } from "@/components/game/CombatReportDetail";
-import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
+import { closeCombatResult, useCombatModalStore, type CombatDisplay } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
@@ -82,7 +88,10 @@ export function CombatResultModal() {
     ((current.perspective === "attacker" && current.outcome === "attacker_win") ||
       (current.perspective === "defender" && current.outcome === "defender_win"));
 
+  const [followUp, setFollowUp] = useState<{ uid: string; pseudo: string; fleet?: Record<string, number> } | null>(null);
+
   return (
+    <>
     <Dialog open={current !== null} onOpenChange={(open) => !open && closeCombatResult()}>
       {current && (
         <DialogContent className="relative sm:max-w-3xl">
@@ -126,6 +135,14 @@ export function CombatResultModal() {
             <CombatLossTable title="Pertes adverses" tone="danger" losses={current.opponentLosses} recovered={current.opponentRecovered} units={current.combatLog?.units?.filter((u) => u.side !== current.perspective)} />
           </div>
 
+          <CombatFollowUp
+            current={current}
+            onAttack={(t) => {
+              closeCombatResult();
+              setFollowUp(t);
+            }}
+          />
+
           <div className="mt-4">
             <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">
               {current.perspective === "attacker" ? "Butin" : "Ressources perdues"}
@@ -155,5 +172,43 @@ export function CombatResultModal() {
         </DialogContent>
       )}
     </Dialog>
+    <AttackModal target={followUp ? { uid: followUp.uid, pseudo: followUp.pseudo } : null} initialFleet={followUp?.fleet} onClose={() => setFollowUp(null)} />
+    </>
   );
 }
+
+/** 5.23 : suites d'un combat : réattaquer avec la même flotte, enregistrer la composition, riposter. */
+function CombatFollowUp({ current, onAttack }: { current: CombatDisplay; onAttack: (t: { uid: string; pseudo: string; fleet?: Record<string, number> }) => void }) {
+  const uid = useAuthStore((s) => s.user?.uid);
+  // Joueurs et seigneurs seulement (pas les pirates, boss ou primes).
+  if (!current.opponentUid || current.opponentUid === uid || !(/^[a-z0-9]{15}$/.test(current.opponentUid) || isWarlordUid(current.opponentUid))) return null;
+  const attacker = current.perspective === "attacker";
+  const fleet = attacker ? current.myFleet : undefined;
+  const hasFleet = !!fleet && Object.values(fleet).some((n) => n > 0);
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      {attacker ? (
+        <Button size="sm" onClick={() => onAttack({ uid: current.opponentUid!, pseudo: current.opponentPseudo, fleet })}>
+          <Swords className="mr-1.5 h-4 w-4" /> {hasFleet ? "Réattaquer avec la même flotte" : "Réattaquer"}
+        </Button>
+      ) : (
+        <Button size="sm" variant="danger" onClick={() => onAttack({ uid: current.opponentUid!, pseudo: current.opponentPseudo })}>
+          <Swords className="mr-1.5 h-4 w-4" /> Riposter
+        </Button>
+      )}
+      {attacker && hasFleet && uid && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            saveFleetPreset(uid, `Contre ${current.opponentPseudo}`, fleet!);
+            toast.success("Composition enregistrée", { description: "Retrouve-la dans la fenêtre d'attaque (raccourcis)." });
+          }}
+        >
+          <Save className="mr-1.5 h-4 w-4" /> Enregistrer cette flotte
+        </Button>
+      )}
+    </div>
+  );
+}
+

@@ -5,7 +5,10 @@ import { FormationPicker, TargetPriorityPicker, type TargetPriorityChoice } from
 import type { FormationId } from "@/game/formations";
 import { useEffect, useMemo, useState } from "react";
 import { simulateAgainstReport } from "@/game/simulator";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { isWarlordUid } from "@/game/warlords";
+import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
+import { DepartureDelayPicker } from "@/components/game/DepartureDelayPicker";
 import { lootFactor } from "@/game/events";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { fetchLatestSpyReport } from "@/services/playerService";
@@ -27,6 +30,8 @@ import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestU
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
+import { weakTargetFactor } from "@/game/pvp";
+import { HudCallout } from "@/components/ui/hud";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { GameIcon } from "@/components/ui/game-icon";
@@ -38,16 +43,26 @@ import { FlaskConical } from "lucide-react";
 export function AttackModal({
   target,
   onClose,
+  initialFleet,
 }: {
-  target: { uid: string; pseudo: string } | null;
+  target: { uid: string; pseudo: string; xp?: number } | null;
   onClose: () => void;
+  /** 5.23 : flotte proposée à l'ouverture (réattaquer depuis un rapport), dans la limite du stock. */
+  initialFleet?: Record<string, number>;
 }) {
   const player = usePlayerStore((s) => s.player);
   const uid = useAuthStore((s) => s.user?.uid);
   const [fleet, setFleet] = useState<Record<string, number>>({});
+  // 5.23 : réattaquer avec la même flotte (ramenée aux vaisseaux à quai).
+  useEffect(() => {
+    if (!target || !initialFleet) return;
+    const owned = usePlayerStore.getState().player?.units ?? {};
+    setFleet(Object.fromEntries(Object.entries(initialFleet).map(([id, n]) => [id, Math.min(n, owned[id]?.count ?? 0)]).filter(([, n]) => (n as number) > 0)));
+  }, [target?.uid, initialFleet]);
   const [submitting, setSubmitting] = useState(false);
   const [formation, setFormation] = useState<FormationId>("balanced");
   const [priority, setPriority] = useState<TargetPriorityChoice>("");
+  const [delay, setDelay] = useState(0);
   // v4.0 : capsules du Labo de synthèse (niveau choisi, 0 = aucune).
   const [assault, setAssault] = useState(0);
   const [decoy, setDecoy] = useState(0);
@@ -85,10 +100,29 @@ export function AttackModal({
   const slow = player && hasShips ? slowestUnits(player.units, selected) : null;
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
+  // 5.23 : seigneur visé : son rang et son trait entrent dans l'estimation (contrés par l'élite).
+  const lord = useWarlordsStore((st) => st.list.find((w) => w.uid === target?.uid));
+  useEffect(() => {
+    if (isWarlordUid(target?.uid)) void loadWarlords().catch(() => undefined);
+  }, [target?.uid]);
   const estimate = useMemo(
-    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid), priority || undefined) : null),
+    () =>
+      player && hasShips && spy
+        ? simulateAgainstReport(
+            player,
+            selected,
+            spy,
+            lootFactor(Date.now()),
+            formation,
+            playerModifiers(player).attack + capsulePct(assault) / 100,
+            isWarlordUid(target?.uid),
+            priority || undefined,
+            playerCombatEffects(player, isWarlordUid(target?.uid) ? "warlord" : "pvp"),
+            lord ? { personality: lord.personality, rank: lord.rank ?? 1 } : undefined,
+          )
+        : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
-    [player, fleet, spy, formation, assault, target?.uid, priority],
+    [player, fleet, spy, formation, assault, target?.uid, priority, lord],
   );
 
   const handleConfirm = async () => {
@@ -100,7 +134,8 @@ export function AttackModal({
     setSubmitting(true);
     try {
       const capsules = { ...(assault ? { assault } : {}), ...(decoy ? { decoy } : {}) };
-      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(priority ? { targetPriority: priority } : {}), ...(assault || decoy ? { capsules } : {}) });
+      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(priority ? { targetPriority: priority } : {}), ...(assault || decoy ? { capsules } : {}), ...(delay > 0 ? { delayMinutes: delay } : {}) });
+      setDelay(0);
       setAssault(0);
       setDecoy(0);
       setFleet({});
@@ -125,6 +160,12 @@ export function AttackModal({
           <p className="text-sm text-slate-400">
             Cible : <strong className="text-slate-200">{target.pseudo}</strong> · distance {Math.round(distance)}
           </p>
+          {/* 5.23 : cible bien moins expérimentée : butin et XP dégressifs. */}
+          {player && target.xp !== undefined && !isWarlordUid(target.uid) && weakTargetFactor(player.xp ?? 0, target.xp) < 1 && (
+            <HudCallout tone="ember" className="mt-2 text-xs">
+              Cible bien moins expérimentée : butin et XP réduits à <span className="font-mono">{Math.round(weakTargetFactor(player.xp ?? 0, target.xp) * 100)} %</span>.
+            </HudCallout>
+          )}
 
           {!player || submitting ? (
             submitting ? <RadarScan label="Décollage de la flotte…" /> : <SkeletonList rows={4} className="py-2" />
@@ -260,6 +301,7 @@ export function AttackModal({
 
               <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
               <TargetPriorityPicker value={priority} onChange={setPriority} className="mt-3" />
+              <DepartureDelayPicker value={delay} onChange={setDelay} className="mt-3" />
               {player && <HullWarning player={player} fleet={selected} />}
 
               {/* v4.0 : capsules du Labo de synthèse */}
@@ -342,7 +384,7 @@ export function AttackModal({
                             ))}
                           </p>
                         )}
-                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-600">{estimate.notes[0]}</p>}
+                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-500">{estimate.notes.join(" · ")}</p>}
                       </div>
                     );
                   })()

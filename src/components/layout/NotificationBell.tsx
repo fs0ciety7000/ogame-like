@@ -35,11 +35,21 @@ export function NotificationBell() {
     // Toutes les nouveautés dans une même catégorie : on ouvre sur celle-ci.
     const cats = new Set(pending.map((n) => NOTIFICATION_CATEGORIES.find((c) => c.id !== "all" && inCategory(n.kind, c.id))?.id ?? "all"));
     setTab(cats.size === 1 ? [...cats][0] : "all");
-    if (uid) pending.forEach((n) => void markNotificationRead(uid, n.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- uniquement à l'ouverture, pas à chaque nouvelle notification reçue pendant la consultation
   }, [open]);
 
+  // 5.23 : lu par catégorie : un onglet consulté est marqué lu ; « Tout » se marque d'un bouton.
+  const markRead = (cat: NotificationCategory) => {
+    if (!uid) return;
+    items.filter((n) => !n.read && inCategory(n.kind, cat)).forEach((n) => void markNotificationRead(uid, n.id));
+  };
+  useEffect(() => {
+    if (open && tab !== "all") markRead(tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- à l'ouverture d'un onglet
+  }, [open, tab]);
+
   const shown = items.filter((n) => inCategory(n.kind, tab));
+  const unreadIn = (cat: NotificationCategory) => items.filter((n) => !n.read && inCategory(n.kind, cat)).length;
 
   return (
     <DropdownMenu open={open} onOpenChange={setBellOpen}>
@@ -68,7 +78,7 @@ export function NotificationBell() {
         </div>
         <div className="flex flex-wrap gap-1 px-1 pb-2" role="tablist">
           {NOTIFICATION_CATEGORIES.map((c) => {
-            const count = items.filter((n) => freshIds.has(n.id) && inCategory(n.kind, c.id)).length;
+            const count = unreadIn(c.id);
             return (
               <button
                 key={c.id}
@@ -87,6 +97,15 @@ export function NotificationBell() {
             );
           })}
         </div>
+        {unreadIn(tab) > 0 && (
+          <button
+            type="button"
+            onClick={() => markRead(tab)}
+            className="hud-cut-sm mx-1 mb-2 self-end border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
+          >
+            {tab === "all" ? "Tout marquer lu" : `Marquer « ${NOTIFICATION_CATEGORIES.find((c) => c.id === tab)?.label ?? ""} » lu`} ({unreadIn(tab)})
+          </button>
+        )}
         <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
           {shown.length === 0 && <EmptyState size="sm" icon="🔔" title="Rien ici" className="px-3 py-4">Rien dans cette catégorie pour l'instant.</EmptyState>}
           {groupNotifications(shown).map((g) => {

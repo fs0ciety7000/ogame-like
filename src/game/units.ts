@@ -1,6 +1,7 @@
-import { playerModifiers } from "@/game/modifiers";
+import { empireEffects, playerModifiers } from "@/game/modifiers";
+import { unitEffect } from "@/game/effectTargets";
 import type { UnitCategory } from "@/types/game";
-import { BLUEPRINT_UNITS, techReductionFactor } from "@/game/technologies";
+import { BLUEPRINT_UNITS, techEffectGrants, techReductionFactor } from "@/game/technologies";
 
 export interface UnitStats {
   attaque: number;
@@ -386,6 +387,8 @@ export function getUnitBuildTime(unit: UnitDef, techLevels?: Record<string, numb
   const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total / 100));
   // v2.6 : réduction des technos « temps de construction des unités » ;
   // v5.14 : puis le Mécanicien en poste (couche empire du circuit d'effets).
-  const empire = player ? 1 - playerModifiers(player).unitTime : 1;
+  // 5.23 : puis les réductions ciblées (cette unité, sa classe ou sa catégorie).
+  const targeted = player || techLevels ? 1 - unitEffect([...techEffectGrants(techLevels), ...(player ? empireEffects(player) : [])], "unitBuildTime", unit.id) : 1;
+  const empire = (player ? 1 - playerModifiers(player).unitTime : 1) * targeted;
   return techLevels || empire !== 1 ? Math.max(1, Math.round(base * techReductionFactor(techLevels, "unit_time") * empire)) : base;
 }

@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { pb } from "@/lib/pocketbase";
 import { currentGameContent } from "@/game/content";
-import { PERSONALITY_LABELS, TIER_LABELS, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
+import { PERSONALITY_LABELS, TIER_LABELS, WARLORD_ALERT_RATIO, type WarlordHistoryPoint, type WarlordPublic, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
-import { fetchWarlords } from "@/services/warlordService";
+import { fetchWarlords, type WarlordsView } from "@/services/warlordService";
+import { HudCallout, HudChip } from "@/components/ui/hud";
+import { UNIT_CLASS_LABELS } from "@/game/unitClasses";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { formatNumber } from "@/lib/utils";
 import { normalizeRankRules, RANK_NAMES, RANK_NUMERALS, type WarlordRankRules } from "@/game/warlordRanks";
@@ -78,11 +80,15 @@ export function WarlordsPanel() {
   const [cfg, setCfg] = useState<WarlordsConfig>(() => structuredClone(currentGameContent().warlords));
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
-  const [power, setPower] = useState<Record<string, { power: number; absentUntilMs: number; rank?: number; threat?: number }>>({});
+  const [power, setPower] = useState<Record<string, Pick<WarlordPublic, "power" | "absentUntilMs" | "rank" | "threat" | "history" | "counter">>>({});
+  const [balance, setBalance] = useState<WarlordsView["balance"]>(undefined);
 
   const refreshLive = () =>
     fetchWarlords()
-      .then((v) => setPower(Object.fromEntries(v.warlords.map((w) => [w.id, { power: w.power, absentUntilMs: w.absentUntilMs, rank: w.rank, threat: w.threat }]))))
+      .then((v) => {
+        setPower(Object.fromEntries(v.warlords.map((w) => [w.id, { power: w.power, absentUntilMs: w.absentUntilMs, rank: w.rank, threat: w.threat, history: w.history, counter: w.counter }])));
+        setBalance(v.balance);
+      })
       .catch(() => undefined);
   useEffect(() => {
     void refreshLive();
@@ -148,6 +154,23 @@ export function WarlordsPanel() {
         </div>
       </div>
 
+      {/* 5.23 : alerte d'équilibrage : un seigneur au-delà de 1,5 fois le 2e joueur. */}
+      {balance && balance.alerts.length > 0 && (
+        <HudCallout tone="ember" className="text-xs">
+          {balance.alerts.map((a) => (
+            <span key={a.id} className="block">
+              {a.name} : <span className="font-mono">{formatNumber(a.power)}</span>, soit <span className="font-mono">×{String(a.ratio).replace(".", ",")}</span> le 2e joueur (
+              <span className="font-mono">{formatNumber(a.second)}</span>). Baisse la « Puissance visée » ou lance la tâche pour le recaler.
+            </span>
+          ))}
+        </HudCallout>
+      )}
+      {balance && balance.alerts.length === 0 && balance.second > 0 && (
+        <p className="text-xs text-slate-500">
+          Aucun seigneur au-delà de ×{String(WARLORD_ALERT_RATIO).replace(".", ",")} le 2e joueur (<span className="font-mono">{formatNumber(balance.second)}</span>).
+        </p>
+      )}
+
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Réglages globaux">
           <CheckboxField label="Seigneurs actifs" checked={cfg.settings.enabled} onChange={(v) => setCfg((c) => ({ ...c, settings: { ...c.settings, enabled: v } }))} hint="Désactivés : leurs empires sont retirés à la prochaine tâche horaire." />
@@ -179,6 +202,7 @@ export function WarlordsPanel() {
             </button>
             {isOpen && (
               <div className="grid grid-cols-1 gap-3 border-t border-white/5 p-3 sm:grid-cols-2">
+                {live?.history && live.history.length > 0 && <WarlordHistory history={live.history} counter={live.counter} />}
                 <TextField label="Nom" value={d.name} onChange={(v) => setDef(d.id, { name: v })} />
                 <CheckboxField label="Actif" checked={d.enabled} onChange={(v) => setDef(d.id, { enabled: v })} />
                 <SelectField<WarlordPersonality>
@@ -229,6 +253,41 @@ export function WarlordsPanel() {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+/** 5.23 : courbe de puissance et changements de rang d'un seigneur (relevés de la tâche horaire). */
+function WarlordHistory({ history, counter }: { history: WarlordHistoryPoint[]; counter?: WarlordPublic["counter"] }) {
+  const max = Math.max(1, ...history.map((h) => h.power));
+  const w = 300;
+  const h = 48;
+  const pts = history.map((p, i) => `${history.length > 1 ? (i / (history.length - 1)) * w : w / 2},${h - (p.power / max) * (h - 4) - 2}`).join(" ");
+  const changes = history.filter((p, i) => i === 0 || p.rank !== history[i - 1].rank).slice(-6).reverse();
+  const day = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="flex flex-col gap-2 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Historique</span>
+        {counter && (
+          <HudChip size="sm" tone="ember">
+            Contre-composition : classe {UNIT_CLASS_LABELS[counter.cls]} jusqu'au {day(counter.untilMs)}
+          </HudChip>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-12 w-full" preserveAspectRatio="none" aria-label="Puissance du seigneur">
+        <polyline points={pts} fill="none" stroke="var(--color-cyan-glow)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <p className="font-mono text-[11px] text-slate-500">
+        max {formatNumber(max)} · dernier {formatNumber(history[history.length - 1].power)} · {history.length} relevés
+      </p>
+      <ul className="text-xs text-slate-300">
+        {changes.map((c) => (
+          <li key={c.atMs}>
+            <span className="font-mono text-slate-500">{day(c.atMs)}</span> · rang {RANK_NUMERALS[c.rank - 1]} ({RANK_NAMES[c.rank - 1]}) · <span className="font-mono">{formatNumber(c.power)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

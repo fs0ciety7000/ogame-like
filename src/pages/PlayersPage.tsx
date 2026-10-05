@@ -1,4 +1,6 @@
 import { ShowMoreButton } from "@/components/ui/panel";
+import { MassSpyDialog } from "@/components/game/MassSpyDialog";
+import { quickProbeCount, quickSpy } from "@/lib/quickSpy";
 import { useShowMore } from "@/hooks/useShowMore";
 import { EmptyState } from "@/components/ui/hud";
 import { TitleBadge } from "@/components/game/TitleBadge";
@@ -19,6 +21,7 @@ import {
   ShieldPlus,
   Mail,
   Crosshair,
+  Radar,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -54,6 +57,7 @@ type LeaderboardMode = "total" | "season" | "alliances" | "divisions";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
+  const [massSpy, setMassSpy] = useState(false);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<LeaderboardMode>("total");
@@ -71,6 +75,7 @@ export function PlayersPage() {
   const [attackTarget, setAttackTarget] = useState<{
     uid: string;
     pseudo: string;
+    xp?: number;
   } | null>(null);
   const [sheetTarget, setSheetTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{
@@ -195,6 +200,13 @@ export function PlayersPage() {
         title="Classement des joueurs"
         description="Espionne ou attaque les autres empires."
       />
+      {/* 5.23 : espionnage en masse (5 cibles) et tableau comparatif. */}
+      <div className="-mt-2 flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setMassSpy(true)}>
+          <Radar className="mr-1.5 h-4 w-4" /> Espionnage en masse
+        </Button>
+      </div>
+      <MassSpyDialog open={massSpy} onClose={() => setMassSpy(false)} candidates={humans.map((p) => ({ uid: p.uid, pseudo: p.pseudo }))} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={mode} onValueChange={(v) => setMode(v as LeaderboardMode)} className="min-w-0 max-w-full">
@@ -384,6 +396,11 @@ export function PlayersPage() {
                   <RankChip xp={displayXp} suffix={xpSuffix} showProgress={mode !== "season"} className="max-lg:hidden" />
                 )}
                 <div className="flex items-center divide-x divide-cyan-glow/15 border border-cyan-glow/15 max-sm:col-span-full max-sm:justify-self-end">
+                  {!isSelf && (
+                    <Button variant="ghost" size="icon" title={`Sondes en 1 clic (${quickProbeCount()})`} aria-label={`Envoyer ${quickProbeCount()} sondes à ${p.pseudo}`} onClick={() => void quickSpy({ uid: p.uid, pseudo: p.pseudo })}>
+                      <Radar className="h-4 w-4 text-cyan-glow" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -421,7 +438,7 @@ export function PlayersPage() {
                       }
                       className="group relative"
                       onClick={() =>
-                        setAttackTarget({ uid: p.uid, pseudo: p.pseudo })
+                        setAttackTarget({ uid: p.uid, pseudo: p.pseudo, xp: p.xp })
                       }
                     >
                       <Sword className="h-4 w-4" />

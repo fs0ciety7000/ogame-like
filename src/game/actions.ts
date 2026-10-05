@@ -28,6 +28,7 @@ import { flushState, type NewNotification } from "@/game/flush";
 import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
 import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
+import { playerUnitCost } from "@/game/effectTargets";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
 import { claimContract, recordContract, rerollContract } from "@/game/contracts";
@@ -237,7 +238,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
       }
 
-      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
+      // 5.23 : réductions de coût ciblées (reliques, technos, officiers).
+      const each = playerUnitCost(unit, player, now);
+      pay(player, { scrap: each.scrap * qty, energy: each.energy * qty }, now);
       recordContract(player, "build_units", qty, now);
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
@@ -252,8 +255,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const qty = positiveInt(action.qty, "Quantité");
       if ((player.units[unit.id]?.count ?? 0) < qty) throw new GameActionError("Tu n'as pas assez d'unités à vendre.");
       player.units[unit.id].count -= qty;
-      player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
-      player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
+      // 5.23 : revente à la moitié du prix payé aujourd'hui (réductions comprises).
+      const each = playerUnitCost(unit, player, now);
+      player.resources.scrap += Math.floor(each.scrap * 0.5) * qty;
+      player.resources.energy += Math.floor(each.energy * 0.5) * qty;
       return undefined;
     }
 

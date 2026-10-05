@@ -13,6 +13,8 @@ import type { FormationId, PostureId } from "@/game/formations";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { lootFactor } from "@/game/events";
+import { playerModifiers } from "@/game/modifiers";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { simulateAgainstReport, simulateLair, simulateRaid, simulateSandbox, type SimOutcome, type SimSide } from "@/game/simulator";
 import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { subscribeSpyLog } from "@/services/playerService";
@@ -226,7 +228,7 @@ export function SimulatorPage() {
       return simulateRaid(player, faction, notoriety ?? pirateState(player, faction.id).notoriety);
     }
     if (!hasFleet) return null;
-    if (kind === "player") return report ? simulateAgainstReport(attacker, sent, report, lootFactor(Date.now()), formation) : null;
+    if (kind === "player") return report ? simulateAgainstReport(attacker, sent, report, lootFactor(Date.now()), formation, playerModifiers(player).attack, false, undefined, playerCombatEffects(player, "pvp")) : null;
     if (kind === "lair") return faction ? simulateLair(attacker, sent, faction, formation) : null;
     const atk: SimSide = { units: attackerUnits, techLevels: freeFleet ? {} : player.techLevels };
     return simulateSandbox(atk, sent, { units: defUnits, techLevels: {}, shieldPct: shield / 100, resources: { scrap: defScrap } }, 1, { formation, posture: defPosture });

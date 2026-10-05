@@ -545,7 +545,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true } } = {},
+  options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number } = {},
 ): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
 }

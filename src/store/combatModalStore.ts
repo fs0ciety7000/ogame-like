@@ -18,6 +18,9 @@ export interface CombatDisplay {
   loot: Partial<Record<RareResourceId, number>> | null;
   /** 5.18 : déroulé en tours (absent des anciens rapports). */
   combatLog?: CombatLog;
+  /** 5.23 : adversaire et flotte engagée (réattaquer, riposter, enregistrer la composition). */
+  opponentUid?: string;
+  myFleet?: Record<string, number>;
 }
 
 interface CombatModalState {
@@ -87,6 +90,7 @@ export function combatDisplayFromReport(report: BattleReport): CombatDisplay {
     opponentRecovered: report.attackerRecovered,
     loot: report.loot,
     combatLog: report.combatLog,
+    opponentUid: report.attackerUid,
   };
 }
 
@@ -96,7 +100,7 @@ export function combatDisplayFromReport(report: BattleReport): CombatDisplay {
  *  de recevoir en tant que défenseur). Ici on compare avec son propre uid. */
 export function combatDisplayFromReportForViewer(report: BattleReport, viewerUid: string): CombatDisplay {
   if (report.attackerUid === viewerUid) {
-    return combatDisplayFromAttackerResult(report.defenderPseudo, report);
+    return { ...combatDisplayFromAttackerResult(report.defenderPseudo, report), opponentUid: report.defenderUid, myFleet: report.attackerFleet };
   }
   return combatDisplayFromReport(report);
 }

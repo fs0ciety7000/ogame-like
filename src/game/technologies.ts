@@ -1,4 +1,4 @@
-import { effectTotal, TECH_REDUCTION_CAP, type EffectGrant, type EffectStat } from "@/game/effects";
+import { describeEffect, effectTotal, isUnitSelector, TECH_REDUCTION_CAP, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectScope, type EffectStat } from "@/game/effects";
 /** Effets historiques (un seul par techno, avant la v2.6). */
 export type TechEffect =
   | "unlock_recipe"
@@ -26,7 +26,9 @@ export type TechEffectType =
   | "fleet_upkeep"
   | "counter_spy"
   | "hangar_capacity"
-  | "repair_speed";
+  | "repair_speed"
+  // 5.23 : effet composé (grandeur × cible × portée), valeur par niveau.
+  | "stat";
 
 /** Un effet octroyé par une technologie, multiplié par son niveau. */
 export interface TechEffectDef {
@@ -37,6 +39,9 @@ export interface TechEffectDef {
   target?: string;
   /** Bâtiments débloqués (unlock_buildings), en plus de ceux qui citent la techno. */
   targets?: string[];
+  /** 5.23 : effet composé (type « stat ») : grandeur et portée ; la cible est `target`. */
+  stat?: EffectStat;
+  scope?: EffectScope;
 }
 
 export interface TechDef {
@@ -81,6 +86,7 @@ export const TECH_EFFECT_DEFAULTS: Partial<Record<TechEffectType, number>> = {
   counter_spy: 1,
   hangar_capacity: 0.05,
   repair_speed: 0.1,
+  stat: 0.02,
 };
 
 /** Plafond des réductions cumulées (temps, coûts, entretien) et de la part à l'abri. */
@@ -110,6 +116,7 @@ export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
   counter_spy: "Contre-espionnage (points par niveau)",
   hangar_capacity: "Capacité des hangars d'attaque ou de défense (% par niveau)",
   repair_speed: "Cadence de l'Atelier de réparation (% par niveau)",
+  stat: "Effet composé : grandeur, cible et portée (valeur par niveau)",
 };
 
 /** Effets chiffrés (une valeur par niveau) ; les autres débloquent. */
@@ -203,9 +210,9 @@ export function techEffectGrants(techLevels: Record<string, number> | undefined)
     const level = techLevels[tech.id] ?? 0;
     if (level <= 0) continue;
     for (const e of techEffects(tech)) {
-      const stat = TECH_EFFECT_STAT[e.type];
+      const stat = e.type === "stat" ? e.stat : TECH_EFFECT_STAT[e.type];
       if (!stat) continue;
-      out.push({ stat, target: e.target, value: level * effectValuePerLevel(e), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      out.push({ stat, target: e.target, ...(e.type === "stat" && e.scope && e.scope !== "all" ? { scope: e.scope } : {}), value: level * effectValuePerLevel(e), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
     }
   }
   return out;
@@ -314,6 +321,7 @@ const EFFECT_MAX_PER_LEVEL: Partial<Record<TechEffectType, number>> = {
   protected_storage: 0.5,
   counter_spy: 10,
   hangar_capacity: 0.5,
+  stat: 0.5,
 };
 
 /** Erreurs d'un effet de techno (type, cible, valeur). */
@@ -328,6 +336,7 @@ export function validateTechEffect(
   if (e.type === "hangar_capacity" && e.target !== "attack" && e.target !== "defense") errors.push(`${label} : hangar visé manquant (attaque ou défense).`);
   if (e.type === "unlock_next_level" && e.target && !refs.unitIds.has(e.target)) errors.push(`${label} : unité « ${e.target} » inexistante.`);
   for (const id of e.targets ?? []) if (!refs.buildingIds.has(id)) errors.push(`${label} : bâtiment « ${id} » inexistant.`);
+  if (e.type === "stat") for (const m of validateComposedEffect(e as Partial<ComposedEffect>, (sel) => isUnitSelector(sel, (id) => refs.unitIds.has(id)))) errors.push(`${label} : ${m}.`);
   if (e.value !== undefined) {
     const max = EFFECT_MAX_PER_LEVEL[e.type] ?? 5;
     if (!Number.isFinite(e.value) || e.value < 0 || e.value > max) errors.push(`${label} : valeur par niveau de « ${TECH_EFFECT_LABELS[e.type]} » entre 0 et ${max}.`);
@@ -373,6 +382,8 @@ export function describeTechEffect(e: TechEffectDef, level: number, names: { res
       return `+${pct(v)} de capacité des hangars ${e.target === "defense" ? "de défense" : "d'attaque"}`;
     case "repair_speed":
       return `+${pct(v)} de cadence de l'Atelier`;
+    case "stat":
+      return e.stat ? describeEffect(e.stat, v, e.target, e.scope) : "Effet composé à régler";
     case "unlock_recipe":
       return `${level} recette(s) débloquée(s)`;
     case "unlock_buildings":

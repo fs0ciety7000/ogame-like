@@ -17,8 +17,12 @@ export const PVP_RULES = {
   newbieProtectionMs: 72 * 60 * 60 * 1000,
   /** v3.4 : bouclier après une ascension. */
   ascensionShieldMs: 72 * 60 * 60 * 1000,
-  /** Impossible d'attaquer un joueur N fois moins expérimenté… */
+  /** 5.23 : contre un joueur N fois moins expérimenté, butin et XP dégressifs… */
   maxXpRatio: 3,
+  /** …jusqu'à ce plancher (part gardée du butin et de l'XP)… */
+  weakTargetFloor: 0.25,
+  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes). */
+  hardXpRatio: 12,
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
    *  bloquerait mutuellement en début de partie). */
   xpGapFloor: 500,
@@ -191,15 +195,25 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  // L'XP des seigneurs suit la médiane des joueurs : un joueur très avancé ne pouvait plus en
+  // (voir weakTargetFactor plus bas pour la dégressivité)
+// L'XP des seigneurs suit la médiane des joueurs : un joueur très avancé ne pouvait plus en
   // attaquer aucun. Une victoire sur un adversaire bien plus faible rapporte peu d'XP (computeCombatXp).
-  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  // 5.23 : entre ×maxXpRatio et ×hardXpRatio, l'attaque passe avec butin et XP réduits (weakTargetFactor).
+  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.hardXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",
-      message: `Ce joueur est trop faible pour toi (moins d'un tiers de ton XP).`,
+      message: `Ce joueur est bien trop faible pour toi (moins d'un ${PVP_RULES.hardXpRatio}e de ton XP).`,
     };
   }
 
   return { allowed: true };
+}
+
+/** 5.23 : part du butin et de l'XP gardée contre une cible bien moins expérimentée.
+ *  1 jusqu'à ×maxXpRatio d'écart, puis proportionnelle, jamais sous weakTargetFloor. */
+export function weakTargetFactor(attackerXp: number, defenderXp: number, defenderIsNpc = false): number {
+  if (defenderIsNpc || attackerXp < PVP_RULES.xpGapFloor || !(attackerXp > 0)) return 1;
+  const k = (Math.max(0, defenderXp) * PVP_RULES.maxXpRatio) / attackerXp;
+  return k >= 1 ? 1 : Math.max(PVP_RULES.weakTargetFloor, Math.round(k * 100) / 100);
 }

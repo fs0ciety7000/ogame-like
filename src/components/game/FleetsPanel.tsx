@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { fleetProgress, type Fleet } from "@/game/fleets";
+import { awaitingDeparture, fleetProgress, type Fleet } from "@/game/fleets";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
@@ -247,6 +247,7 @@ export function FleetsPanel({
                 loot > 0 &&
                 ` · ${f.mission === "recycle" ? "débris" : "butin"} ${formatCompact(loot)}`}
               {f.recalled && " · rappelée"}
+              {awaitingDeparture(f, now) && <span className="text-cyan-glow"> · décollage programmé dans <span className="font-mono">{formatClock(Math.floor((f.departAtMs - now) / 1000))}</span></span>}
             </p>
             <div className="mt-1.5 flex items-center gap-2">
               <Progress

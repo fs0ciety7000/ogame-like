@@ -18,6 +18,11 @@ export type EffectStat =
   | "repair"
   | "repairSpeed"
   | "loot"
+  // 5.23 : grandeurs ciblées (unité, classe ou catégorie : voir effectTargets.ts)
+  | "unitAttack"
+  | "unitHp"
+  | "classEdge"
+  | "shield"
   // Économie
   | "productionAll"
   | "production"
@@ -29,6 +34,8 @@ export type EffectStat =
   | "buildTime"
   | "researchTime"
   | "unitTime"
+  | "unitBuildTime"
+  | "unitCost"
   // Flottes
   | "cargo"
   | "fleetSpeed"
@@ -45,8 +52,18 @@ export type EffectStat =
 export type EffectLayer = "tech" | "empire";
 
 /** Où l'effet s'applique. « all » partout ; « home » planète mère ; « colonies » ;
- *  « pvp » seulement entre joueurs (capsules). */
-export type EffectScope = "all" | "home" | "colonies" | "pvp";
+ *  « pvp » seulement entre joueurs (capsules). 5.23 : « pve » contre tous les PNJ
+ *  (pirates, primes, expéditions, boss, seigneurs) ; « warlord » contre les seigneurs. */
+export type EffectScope = "all" | "home" | "colonies" | "pvp" | "pve" | "warlord";
+
+export const EFFECT_SCOPE_LABELS: Record<EffectScope, string> = {
+  all: "Partout",
+  home: "Planète mère",
+  colonies: "Colonies",
+  pvp: "Contre les joueurs",
+  pve: "Contre les PNJ",
+  warlord: "Contre les seigneurs",
+};
 
 export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season";
 
@@ -60,7 +77,8 @@ export interface EffectSourceRef {
 
 export interface EffectGrant {
   stat: EffectStat;
-  /** Ressource (production) ou hangar (hangarCapacity : attack | defense). */
+  /** Ressource (production), hangar (hangarCapacity : attack | defense) ou,
+   *  5.23, sélecteur d'unités (unit:<id>, class:<light|medium|heavy>, cat:<attack|defense>). */
   target?: string;
   value: number;
   layer: EffectLayer;
@@ -78,6 +96,10 @@ export interface EffectStatInfo {
   cap?: Partial<Record<EffectLayer, number>>;
   /** Plancher du total (avant plafond). */
   floor?: number;
+  /** 5.23 : la cible est un sélecteur d'unités (voir effectTargets.ts). */
+  unitTarget?: boolean;
+  /** 5.23 : portées proposées par l'éditeur d'effets. */
+  scopes?: EffectScope[];
   group: "combat" | "economie" | "durees" | "flottes" | "renseignement";
 }
 
@@ -86,6 +108,9 @@ export const TECH_REDUCTION_CAP = 0.75;
 /** Plafond des réductions de durée de la couche empire. */
 export const EMPIRE_TIME_CAP = 0.5;
 
+/** 5.23 : portées d'un effet de combat. */
+const COMBAT_SCOPES: EffectScope[] = ["all", "pvp", "pve", "warlord"];
+
 export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   attack: { label: "Attaque", unit: "pct", group: "combat" },
   defense: { label: "Défense", unit: "pct", group: "combat" },
@@ -93,6 +118,10 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   repair: { label: "Vaisseaux réparés", unit: "pct", group: "combat" },
   repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },
   loot: { label: "Butin pillé", unit: "pct", group: "combat" },
+  unitAttack: { label: "Attaque des unités ciblées", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
+  unitHp: { label: "Points de vie des unités ciblées", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
+  classEdge: { label: "Avantage de classe", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
+  shield: { label: "Bouclier planétaire", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.15, empire: 0.15 }, floor: 0 },
   productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
   storage: { label: "Capacité des entrepôts", unit: "pct", group: "economie" },
@@ -102,6 +131,8 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   unitTime: { label: "Temps de production des unités", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  unitBuildTime: { label: "Temps de production des unités ciblées", unit: "pct", reduction: true, group: "durees", unitTarget: true, cap: { tech: 0.5, empire: 0.5 }, floor: 0 },
+  unitCost: { label: "Coût des unités ciblées", unit: "pct", reduction: true, group: "economie", unitTarget: true, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
   cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
   fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
@@ -132,7 +163,8 @@ export interface SumOptions {
 
 function inScope(g: EffectGrant, scope: EffectScope | undefined): boolean {
   const s = g.scope ?? "all";
-  return s === "all" || s === scope;
+  // 5.23 : un effet « contre les PNJ » joue aussi contre les seigneurs.
+  return s === "all" || s === scope || (s === "pve" && scope === "warlord");
 }
 
 /** Total brut d'une grandeur dans une couche (sans plafond). */
@@ -210,8 +242,60 @@ export function formatEffectValue(stat: EffectStat, value: number): string {
 }
 
 /** Libellé d'une grandeur, cible comprise (« Production de Ferraille »). */
-export function effectStatLabel(stat: EffectStat, target?: string, names: { resource?: (id: string) => string } = {}): string {
+export function effectStatLabel(stat: EffectStat, target?: string, names: { resource?: (id: string) => string; unit?: (selector: string) => string } = {}): string {
   if (stat === "production" && target) return `Production de ${names.resource?.(target) ?? target}`;
+  // 5.23 : « Attaque des unités ciblées » → « Attaque des unités ciblées : Sentinelle ».
+  if (EFFECT_STATS[stat].unitTarget && target) return `${EFFECT_STATS[stat].label.replace(/ des unités ciblées$/, "")} : ${(names.unit ?? unitTargetLabeler)(target)}`;
   if (stat === "hangarCapacity" && target) return `Capacité des hangars ${target === "defense" ? "de défense" : "d'attaque"}`;
   return EFFECT_STATS[stat].label;
+}
+
+/* ---------- 5.23 : effets composés (grandeur × cible × portée × valeur) ---------- */
+
+/** Effet composé dans l'administration (reliques, technologies, officiers). */
+export interface ComposedEffect {
+  stat: EffectStat;
+  /** Ressource, hangar ou sélecteur d'unités selon la grandeur. */
+  target?: string;
+  scope?: EffectScope;
+}
+
+/** Libellé d'un sélecteur d'unités (renseigné par effectTargets.ts : pas de cycle). */
+let unitTargetLabeler: (selector: string) => string = (s) => s;
+export function setUnitTargetLabeler(fn: (selector: string) => string): void {
+  unitTargetLabeler = fn;
+}
+
+const RESOURCE_TARGET_LABELS: Record<string, string> = { scrap: "ferraille", energy: "énergie", nano: "nanocomposants", data: "données anciennes" };
+
+/** « +10 % · Attaque : Sentinelle (contre les PNJ) ». */
+export function describeEffect(stat: EffectStat, value: number, target?: string, scope?: EffectScope): string {
+  const label = effectStatLabel(stat, target, { unit: unitTargetLabeler, resource: (id) => RESOURCE_TARGET_LABELS[id] ?? id });
+  const where = scope && scope !== "all" ? ` (${EFFECT_SCOPE_LABELS[scope].toLowerCase()})` : "";
+  return `${formatEffectValue(stat, value)} · ${label}${where}`;
+}
+
+/** Sélecteurs de groupes d'unités (voir effectTargets.ts). */
+export const UNIT_GROUP_SELECTORS = ["cat:attack", "cat:defense", "class:light", "class:medium", "class:heavy", "class:support"];
+
+/** Sélecteur d'unités bien formé (vide : toutes les unités). */
+export function isUnitSelector(sel: string | undefined, hasUnit: (id: string) => boolean): boolean {
+  if (!sel) return true;
+  if (sel.startsWith("unit:")) return hasUnit(sel.slice(5));
+  return UNIT_GROUP_SELECTORS.includes(sel);
+}
+
+/** Erreurs d'un effet composé (`validTarget` : sélecteur d'unités valide). */
+export function validateComposedEffect(c: Partial<ComposedEffect> | undefined, validTarget: (sel: string | undefined) => boolean): string[] {
+  if (!c || !c.stat || !(c.stat in EFFECT_STATS)) return [`grandeur « ${c?.stat ?? ""} » inconnue`];
+  const info = EFFECT_STATS[c.stat];
+  const errors: string[] = [];
+  if (info.unitTarget && !validTarget(c.target)) errors.push(`cible « ${c.target} » inconnue`);
+  if (c.scope && c.scope !== "all") {
+    const allowed = info.scopes ?? ["all", "home", "colonies"];
+    if (!allowed.includes(c.scope)) errors.push(`portée « ${EFFECT_SCOPE_LABELS[c.scope] ?? c.scope} » sans effet sur ${info.label.toLowerCase()}`);
+  }
+  if (c.stat === "production" && c.target && !(c.target in RESOURCE_TARGET_LABELS)) errors.push(`ressource « ${c.target} » inconnue`);
+  if (c.stat === "hangarCapacity" && c.target && c.target !== "attack" && c.target !== "defense") errors.push("hangar : attack ou defense");
+  return errors;
 }

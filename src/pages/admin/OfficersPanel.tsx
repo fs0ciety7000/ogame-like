@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Medal, RotateCcw, Save } from "lucide-react";
+import { Medal, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudCallout, HudChip } from "@/components/ui/hud";
 import { currentGameContent } from "@/game/content";
 import { COMMANDER_ROLES, COMMANDER_RULES, COMMANDER_SOURCES, COMMANDERS, defaultRoleEffects, RARE_OFFICER_RULES, validateOfficers, type CommanderId, type OfficersConfig } from "@/game/commanders";
-import { EFFECT_STATS, formatEffectValue } from "@/game/effects";
+import { describeEffect, EFFECT_STATS, formatEffectValue } from "@/game/effects";
+import { ComposedEffectFields } from "@/pages/admin/ComposedEffectFields";
 import { SEASON_CATALOG, THEME_PRIMARY } from "@/game/seasonCatalog";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { NumberField, Section } from "@/pages/admin/fields";
@@ -116,6 +117,18 @@ export function OfficersPanel() {
                   </div>
                 );
               })}
+              {(o.extra ?? []).map((e, i) => (
+                <div key={`x${i}`} className="hud-cut-sm grid grid-cols-1 gap-2 border border-cyan-glow/15 bg-black/25 p-2 sm:grid-cols-2">
+                  <ComposedEffectFields value={e} onChange={(c) => setRole(id, { extra: (o.extra ?? []).map((x, j) => (j === i ? { ...c, perLevel: x.perLevel } : x)) })} onPreset={(p) => setRole(id, { extra: (o.extra ?? []).map((x, j) => (j === i ? { ...p.effect, perLevel: p.suggest.officer } : x)) })} />
+                  <NumberField label="Valeur par niveau" value={e.perLevel} min={0} step={0.001} onChange={(v) => setRole(id, { extra: (o.extra ?? []).map((x, j) => (j === i ? { ...x, perLevel: v ?? 0 } : x)) })} hint={`Niv. ${COMMANDER_RULES.maxLevel} : ${describeEffect(e.stat, e.perLevel * COMMANDER_RULES.maxLevel, e.target, e.scope)}`} />
+                  <Button size="sm" variant="ghost" className="self-start" onClick={() => setRole(id, { extra: (o.extra ?? []).filter((_, j) => j !== i) })}>
+                    <Trash2 className="mr-1 h-3.5 w-3.5 text-danger-glow" /> Retirer cet effet
+                  </Button>
+                </div>
+              ))}
+              <Button size="sm" variant="secondary" className="self-start" onClick={() => setRole(id, { extra: [...(o.extra ?? []), { stat: "unitAttack", perLevel: 0.005 }] })}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un effet composé
+              </Button>
               <p className="text-[11px] text-slate-500">Progresse avec : {COMMANDER_SOURCES[id].map((s) => `${s.label} (+${s.xp})`).join(", ")}.</p>
             </div>
           );

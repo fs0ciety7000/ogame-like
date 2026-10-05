@@ -18,7 +18,7 @@ export const PAGE_TIPS: Record<string, string> = {
   "/game/labo": "Les recherches débloquent les unités et donnent des bonus permanents (production, combat, vitesse…). Survole une technologie pour voir ses effets.",
   "/game/missions": "Envoie des unités en mission : elles reviennent avec des ressources et de l'XP. Les unités engagées ne défendent pas ta base pendant ce temps.",
   "/game/galaxie": "La carte montre les autres commandants. Espionne avant d'attaquer : le rapport révèle ressources, flotte et défenses selon ton niveau d'Espionnage.",
-  "/game/joueurs": "Tous les commandants du serveur. Les débutants sont protégés 72 h, et on ne peut pas attaquer un joueur bien moins expérimenté que soi.",
+  "/game/joueurs": "Tous les commandants du serveur. Les débutants sont protégés 72 h ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.",
   "/game/combats": "Le journal de tes combats et espionnages. Depuis un rapport d'espionnage, « Simuler une attaque » estime l'issue avant d'envoyer ta flotte.",
   "/game/simulateur": "Teste un combat sans risque : la formule est exactement celle des vrais combats. Le résultat indique la puissance qu'il te faudrait pour gagner.",
   "/game/menaces": "Les factions surveillent les commandants trop riches ou trop agressifs. Paie le tribut ou repousse leurs raids pour localiser leur repaire.",

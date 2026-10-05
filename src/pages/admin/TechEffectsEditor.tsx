@@ -18,6 +18,8 @@ import {
   type TechEffectType,
 } from "@/game/technologies";
 import { cn } from "@/lib/utils";
+import { EFFECT_STATS } from "@/game/effects";
+import { ComposedEffectFields } from "@/pages/admin/ComposedEffectFields";
 
 /* Éditeur des effets d'une technologie (v2.6) : plusieurs effets, chacun
    avec son type, sa cible éventuelle et sa valeur par niveau. */
@@ -25,7 +27,9 @@ import { cn } from "@/lib/utils";
 const GROUPS: { label: string; types: TechEffectType[] }[] = [
   { label: "Économie", types: ["energy_efficiency", "resource_production", "storage_capacity", "protected_storage", "building_discount"] },
   { label: "Durées", types: ["building_time", "unit_time", "research_time"] },
-  { label: "Flotte et combat", types: ["unit_attack", "unit_defense", "fleet_speed", "cargo_capacity", "fleet_upkeep", "counter_spy", "hangar_capacity"] },
+  { label: "Flotte et combat", types: ["unit_attack", "unit_defense", "fleet_speed", "cargo_capacity", "fleet_upkeep", "counter_spy", "hangar_capacity", "repair_speed"] },
+  // 5.23 : n'importe quelle grandeur, ciblée (unité, classe, catégorie) et avec une portée.
+  { label: "Composé", types: ["stat"] },
   { label: "Déblocages", types: ["unlock_next_level", "unlock_buildings", "unlock_recipe", "unlock_defense_units", "unlock_attack_units"] },
 ];
 
@@ -41,7 +45,8 @@ function names() {
 }
 
 /** Pourcentages affichés en % dans le champ (0,1 ↔ 10). */
-function isPercent(type: TechEffectType) {
+function isPercent(type: TechEffectType, e?: TechEffectDef) {
+  if (type === "stat") return !e?.stat || EFFECT_STATS[e.stat].unit === "pct";
   return type !== "counter_spy";
 }
 
@@ -65,7 +70,7 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
       {effects.length === 0 && <p className="text-xs text-slate-500">Aucun effet : la technologie ne sert que de prérequis.</p>}
       {effects.map((e, i) => {
         const numeric = NUMERIC_TECH_EFFECTS.includes(e.type);
-        const pct = isPercent(e.type);
+        const pct = isPercent(e.type, e);
         const def = TECH_EFFECT_DEFAULTS[e.type] ?? 0;
         const shown = e.type === "unlock_buildings" || e.type === "unlock_hangars" ? { ...e, targets: [...new Set([...linkedBuildings.map((b) => b.id), ...(e.targets ?? [])])] } : e;
         return (
@@ -75,7 +80,7 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Effet {i + 1}</span>
                 <select
                   value={e.type === "unlock_hangars" ? "unlock_buildings" : e.type}
-                  onChange={(ev) => patch(i, { type: ev.target.value as TechEffectType, value: undefined, target: undefined, targets: undefined })}
+                  onChange={(ev) => patch(i, { type: ev.target.value as TechEffectType, value: undefined, target: undefined, targets: undefined, stat: ev.target.value === "stat" ? "unitAttack" : undefined, scope: undefined })}
                   className={SELECT}
                 >
                   {GROUPS.map((g) => (
@@ -89,6 +94,8 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
                   ))}
                 </select>
               </label>
+
+              {e.type === "stat" && <ComposedEffectFields value={e} onChange={(c) => patch(i, { stat: c.stat, target: c.target, scope: c.scope })} onPreset={(p) => patch(i, { stat: p.effect.stat, target: p.effect.target, scope: p.effect.scope, value: p.suggest.tech })} />}
 
               {e.type === "resource_production" && (
                 <label className="flex flex-col gap-1">

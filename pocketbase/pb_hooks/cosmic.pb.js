@@ -439,6 +439,9 @@ routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
   return e.json(200, db.liveBalance(Date.now(), true).live);
 }, $apis.requireAuth("users", "_superusers"));
 
+/** 5.23 : GET /api/cosmic/admin/whatif — empires réels (joueurs comptés pour l'équilibrage et seigneurs) pour le simulateur « et si ». */
+routerAdd("GET", "/api/cosmic/admin/whatif", (e) => require(`${__hooks}/cosmic_db.js`).adminWhatIfData(e), $apis.requireAuth("users", "_superusers"));
+
 /** 5.17.1 : audit de l'XP et de l'activité des joueurs (vue d'ensemble, puis un joueur en détail). */
 routerAdd("GET", "/api/cosmic/admin/activity", (e) => require(`${__hooks}/cosmic_db.js`).adminActivity(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/admin/player-audit", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAudit(e), $apis.requireAuth("users", "_superusers"));
@@ -743,14 +746,28 @@ routerAdd("POST", "/api/cosmic/messages/typing", (e) => require(`${__hooks}/cosm
 /* ---------- v5.10.5 : règles vérifiées avant enregistrement ---------- */
 
 onRecordCreateRequest((e) => {
-  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  const db = require(`${__hooks}/cosmic_db.js`);
+  db.guardRulesConfig(e);
   e.next();
+  // 5.23 : journal de contenu (la section n'était pas personnalisée).
+  db.snapshotContent(e, "create");
 }, "game_config");
 
 onRecordUpdateRequest((e) => {
-  require(`${__hooks}/cosmic_db.js`).guardRulesConfig(e);
+  const db = require(`${__hooks}/cosmic_db.js`);
+  db.guardRulesConfig(e);
+  // 5.23 : journal de contenu (état d'avant l'enregistrement).
+  db.snapshotContent(e, "update");
   e.next();
 }, "game_config");
+
+onRecordDeleteRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).snapshotContent(e, "delete");
+  e.next();
+}, "game_config");
+
+/** 5.23 : POST /api/cosmic/admin/content/rollback { versionId } */
+routerAdd("POST", "/api/cosmic/admin/content/rollback", (e) => require(`${__hooks}/cosmic_db.js`).contentRollback(e), $apis.requireAuth("users", "_superusers"));
 
 /* ---------- Journal des actions d'administration ---------- */
 

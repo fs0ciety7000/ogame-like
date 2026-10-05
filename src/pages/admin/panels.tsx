@@ -98,7 +98,9 @@ export function RulesPanel() {
           <NumberField label="Délai entre 2 attaques sur une même cible (h)" value={pvp.attackCooldownMs / HOUR} min={0} step={0.25} onChange={(v) => setPvp({ attackCooldownMs: (v ?? 0) * HOUR })} />
           <NumberField label="Bouclier après une défaite (min)" value={pvp.shieldAfterDefeatMs / MIN} min={0} step={5} onChange={(v) => setPvp({ shieldAfterDefeatMs: (v ?? 0) * MIN })} />
           <NumberField label="Protection débutant (h)" value={pvp.newbieProtectionMs / HOUR} min={0} step={1} onChange={(v) => setPvp({ newbieProtectionMs: (v ?? 0) * HOUR })} hint="Levée dès que le joueur attaque." />
-          <NumberField label="Écart d'XP maximal (×)" value={pvp.maxXpRatio} min={1} step={0.5} onChange={(v) => setPvp({ maxXpRatio: v ?? 1 })} hint="Cible interdite si son XP × cette valeur < ton XP." />
+          <NumberField label="Écart d'XP sans réduction (×)" value={pvp.maxXpRatio} min={1} step={0.5} onChange={(v) => setPvp({ maxXpRatio: v ?? 1 })} hint="Au-delà, butin et XP diminuent avec l'écart." />
+          <NumberField label="Part minimale gardée (butin, XP)" value={pvp.weakTargetFloor} min={0} step={0.05} onChange={(v) => setPvp({ weakTargetFloor: v ?? 0 })} hint="0,25 = 25 %." />
+          <NumberField label="Écart d'XP maximal (×)" value={pvp.hardXpRatio} min={1} step={1} onChange={(v) => setPvp({ hardXpRatio: v ?? 1 })} hint="Cible interdite si son XP × cette valeur < ton XP." />
           <NumberField label="…à partir de (XP de l'attaquant)" value={pvp.xpGapFloor} min={0} step={50} onChange={(v) => setPvp({ xpGapFloor: v ?? 0 })} />
         </Section>
         <Section title="XP et butin">

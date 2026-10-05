@@ -41,7 +41,7 @@ function Line({ line }: { line: EffectSheetLine }) {
           {line.sources.map((s) => (
             <HudChip key={`${s.source.kind}-${s.source.id}-${s.scope}`} size="sm" tone={SOURCE_TONE[s.source.kind]} className="whitespace-normal" title={EFFECT_SOURCE_LABELS[s.source.kind]}>
               {s.source.label} {formatEffectValue(line.stat, s.value)}
-              {s.scope === "pvp" ? " · entre joueurs" : s.scope === "colonies" ? " · colonies" : s.scope === "home" ? " · planète mère" : ""}
+              {s.scope === "pvp" ? " · entre joueurs" : s.scope === "colonies" ? " · colonies" : s.scope === "home" ? " · planète mère" : s.scope === "pve" ? " · contre les PNJ" : s.scope === "warlord" ? " · contre les seigneurs" : ""}
             </HudChip>
           ))}
         </div>

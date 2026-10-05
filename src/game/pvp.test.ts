@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp, PVP_RULES, type AttackContext } from "@/game/pvp";
+import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp, PVP_RULES, weakTargetFactor, type AttackContext } from "@/game/pvp";
 
 describe("computeCombatXp", () => {
   it("attacker win: scales with the defender's strength (farming the weak pays little)", () => {
@@ -90,8 +90,14 @@ describe("checkAttackAllowed", () => {
     expect(checkAttackAllowed({ ...base, attackerXp: 400_000, defenderXp: 9000, defenderIsWarlord: true, lastAttackOnTargetMs: NOW - 60_000 }).reason).toBe("cooldown");
   });
 
-  it("forbids attacking a player with less than a third of your XP (once past the floor)", () => {
-    expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 900 }).reason).toBe("too_weak");
+  it("5.23 : cible faible attaquable avec butin et XP dégressifs, refusée au-delà de ×12", () => {
+    expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 900 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 240 }).reason).toBe("too_weak");
     expect(checkAttackAllowed({ ...base, attackerXp: 400, defenderXp: 0 }).allowed).toBe(true);
+    expect(weakTargetFactor(3000, 1000)).toBe(1);
+    expect(weakTargetFactor(3000, 500)).toBe(0.5);
+    expect(weakTargetFactor(3000, 250)).toBe(PVP_RULES.weakTargetFloor);
+    expect(weakTargetFactor(3000, 100, true)).toBe(1);
+    expect(weakTargetFactor(400, 10)).toBe(1);
   });
 });

@@ -21,8 +21,9 @@ import { eventDebrisPercent, lootFactor } from "@/game/events";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { applyXpDelta } from "@/game/seasons";
-import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp } from "@/game/pvp";
+import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp, weakTargetFactor } from "@/game/pvp";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
+import { edgeParam, playerCombatEffects } from "@/game/effectTargets";
 import { consumeArmor } from "@/game/synthesis";
 import { consumeAegis } from "@/game/relics";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -112,6 +113,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
+  // 5.23 : cible bien moins expérimentée : butin et XP dégressifs (plus de blocage dès ×3).
+  const weak = weakTargetFactor(input.attacker.xp ?? 0, defender.xp ?? 0, !!defender.npc || !!input.attacker.npc);
 
   const fleet: Record<string, number> = {};
   for (const [unitId, raw] of Object.entries(input.fleet ?? {})) {
@@ -175,6 +178,12 @@ export function performAttack(input: AttackInput): AttackOutput {
   }
   const baseShield = getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch));
   const lordEdge = mods && (mods.edgeBonus || mods.edgeCancelled) ? { bonus: mods.edgeBonus, cancel: mods.edgeCancelled } : undefined;
+  // 5.23 : effets ciblés des deux camps (reliques, technos, officiers), selon l'adversaire.
+  const scope = lord ? "warlord" : "pvp";
+  const atkFx = playerCombatEffects(attacker, scope, now);
+  const defFx = playerCombatEffects(owner, scope, now);
+  const attackerEdge = edgeParam(atkFx, lordSide === "attacker" ? lordEdge : undefined);
+  const defenderEdge = edgeParam(defFx, lordSide === "defender" ? lordEdge : undefined);
   const combat = resolveCombat({
     ...formation,
     // v5.9 : les Traqueurs Kesh gardent leur +50 % contre les seigneurs de guerre (PNJ).
@@ -185,10 +194,11 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenseFactor: posture.defenseFactor * (mods?.defenseFactor ?? 1),
     homeFleetFactor: mods?.homeFleetFactor !== undefined ? (posture.homeFleetFactor ?? COMBAT_RULES.homeFleetDefenseFactor) * mods.homeFleetFactor : posture.homeFleetFactor,
     ...(mods?.retreatAt !== undefined ? { retreatAt: mods.retreatAt } : {}),
-    ...(lordEdge ? { classEdge: lordSide === "attacker" ? { attacker: lordEdge } : { defender: lordEdge } } : {}),
+    ...(attackerEdge || defenderEdge ? { classEdge: { ...(attackerEdge ? { attacker: attackerEdge } : {}), ...(defenderEdge ? { defender: defenderEdge } : {}) } } : {}),
+    unitBonus: { attacker: atkFx.units, defender: defFx.units },
     targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : undefined,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
-    lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
+    lootMultiplier: lootFactor(now) * (1 + atkMods.loot) * weak,
     garrisons: input.garrisons ?? [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
@@ -199,7 +209,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderUnits: attacker.npc ? (def.units ?? {}) : withoutElite(def.units ?? {}),
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def.buildings), owner),
-    defenderShieldPct: mods?.shieldIgnored ? 0 : baseShield + (mods?.shieldBonus ?? 0),
+    defenderShieldPct: mods?.shieldIgnored ? 0 : baseShield + (mods?.shieldBonus ?? 0) + defFx.shield,
     // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
     attackerHull: workshopState(attacker).hull,
     defenderHull: colony ? undefined : workshopState(owner).hull,
@@ -210,7 +220,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   });
 
   // Égide de la Reine : la première défaite de la semaine n'est pas pillée.
-  const aegis = combat.outcome === "attacker_win" && Object.values(combat.loot ?? {}).some((n) => (n ?? 0) > 0) && consumeAegis(owner, now);
+  const aegis = combat.outcome !== "defender_win" && Object.values(combat.loot ?? {}).some((n) => (n ?? 0) > 0) && consumeAegis(owner, now);
   if (aegis) combat.loot = {};
   if (input.lootCap !== undefined && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap * (mods?.lootFactor ?? 1));
 
@@ -256,6 +266,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   }
 
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def.npc);
+  if (xp.attackerXp > 0 && weak < 1) xp.attackerXp = Math.round(xp.attackerXp * weak);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 3600_000) setStat(attacker, "phoenix", 1);

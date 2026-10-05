@@ -1,4 +1,5 @@
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { colonyOf, colonyView } from "@/game/colonies";
 import { computeFleetPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { workshopState } from "@/game/workshop";
@@ -57,7 +58,10 @@ export function threatEstimate(
   // 5.20 : verdict joué par le combat en tours (riposte, retraite, coques abîmées de la planète mère) ;
   // les garnisons, sans unités connues ici, renforcent la défense en proportion de leur puissance.
   const base = homeDefensePower(units, player.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor);
+  // 5.23 : effets ciblés du défenseur (contre les PNJ pour un raid pirate).
+  const fx = playerCombatEffects(player, fleet.mission === "pirate" ? "pve" : "pvp");
   const sim = resolveCombat({
+    unitBonus: { defender: fx.units },
     attackerUnits: player.units ?? {},
     attackerTechLevels: player.techLevels ?? {},
     attackerRepairPct: 0,
@@ -67,7 +71,7 @@ export function threatEstimate(
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: 0,
     defenderResources: {},
-    defenderShieldPct: shield,
+    defenderShieldPct: shield + fx.shield,
     homeFleetFactor: posture.homeFleetFactor,
     defenseFactor: posture.defenseFactor,
     defenderPowerFactor: (1 + playerModifiers(player).defense) * (1 + (base > 0 ? garrisonPower / base : 0)),

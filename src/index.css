@@ -2042,10 +2042,38 @@ main {
   from { opacity: 0; transform: translateX(6px); }
   to { opacity: 1; transform: none; }
 }
+/* 5.23 : transition HUD : le contenu se révèle derrière une ligne de balayage aux couleurs du thème. */
+.tab-enter[data-state="active"] { position: relative; animation: tab-enter 0.22s ease-out, tab-reveal 0.32s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tab-enter[data-state="active"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  pointer-events: none;
+  background: var(--color-cyan-glow);
+  box-shadow: 0 0 12px var(--color-cyan-glow);
+  opacity: 0;
+  animation: tab-scan 0.36s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 1;
+}
+@keyframes tab-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes tab-scan {
+  0% { left: 0; opacity: 0.9; }
+  85% { opacity: 0.6; }
+  100% { left: 100%; opacity: 0; }
+}
+[role="tab"][data-state="active"] { animation: tab-underline 0.25s ease-out; }
+@keyframes tab-underline {
+  from { box-shadow: inset 0 0 0 0 var(--color-cyan-glow); }
+}
 .meter-fill { transform-origin: left center; animation: meter-fill 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes meter-fill { from { transform: scaleX(0); } }
 .cal-cell { animation: cal-cell 0.35s ease-out both; animation-delay: calc(var(--d, 0) * 18ms); }
 @keyframes cal-cell { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) {
-  .tab-enter[data-state="active"], .meter-fill, .cal-cell { animation: none; }
+  .tab-enter[data-state="active"], .meter-fill, .cal-cell, [role="tab"][data-state="active"] { animation: none; }
+  .tab-enter[data-state="active"]::before { display: none; }
 }

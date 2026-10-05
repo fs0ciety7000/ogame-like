@@ -1,4 +1,5 @@
 import { eliteStatus } from "@/game/eliteUnits";
+import { playerUnitCost } from "@/game/effectTargets";
 import { PERSONALITY_LABELS } from "@/game/warlords";
 import { Link } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
@@ -387,7 +388,7 @@ export function UnitsPage() {
                         );
                       })()}
 
-                      <CostPills cost={{ scrap: unit.cost.scrap * qty(unit.id), energy: unit.cost.energy * qty(unit.id) }} stock={player.resources} seconds={buildTime} perUnit />
+                      <CostPills cost={{ scrap: playerUnitCost(unit, player).scrap * qty(unit.id), energy: playerUnitCost(unit, player).energy * qty(unit.id) }} stock={player.resources} seconds={buildTime} perUnit />
 
                       {queueInfo ? (
                         <p className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-mint-glow">
@@ -418,7 +419,8 @@ export function UnitsPage() {
                       </div>
                       <QtyStepper value={qty(unit.id)} onChange={(v) => setQty(unit.id, v)} max={Math.max(1, Math.floor(freeSpace / unit.hangarSpace))} />
                       {(() => {
-                        const batch = { scrap: unit.cost.scrap * qty(unit.id), energy: unit.cost.energy * qty(unit.id) };
+                        const each = playerUnitCost(unit, player);
+                        const batch = { scrap: each.scrap * qty(unit.id), energy: each.energy * qty(unit.id) };
                         const wait = secondsToAfford(batch, player.resources, rates);
                         const noRoom = neededSpace > freeSpace;
                         return (
