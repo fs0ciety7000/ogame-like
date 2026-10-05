@@ -101,6 +101,7 @@ __export(hooksEntry_exports, {
   LEAGUES_KEY: () => LEAGUES_KEY,
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
+  LOGIC_VERSION: () => LOGIC_VERSION,
   LOOT_TABLES: () => LOOT_TABLES,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
@@ -20524,6 +20525,9 @@ function grantLeagueTitle(player, title, rank2, now) {
   player.titles = [...((_a = player.titles) != null ? _a : []).filter((t) => t.label !== title), entry];
   if (!player.activeTitle) player.activeTitle = title;
 }
+
+// src/game/logicVersion.ts
+var LOGIC_VERSION = true ? "5.15.13" : "dev";
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {

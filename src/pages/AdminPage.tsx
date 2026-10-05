@@ -79,6 +79,7 @@ import { AdminsPanel } from "@/pages/admin/AdminsPanel";
 import { ReportsPanel } from "@/pages/admin/ReportsPanel";
 import { useReportBadges } from "@/services/reportService";
 import { AdminStatusStrip } from "@/pages/admin/AdminStatusStrip";
+import { HooksVersionCallout } from "@/pages/admin/HooksVersionCallout";
 import { useMaintenance } from "@/services/maintenanceService";
 import { useContentStore } from "@/services/contentService";
 import type { ContentSection } from "@/game/content";
@@ -252,6 +253,7 @@ export function AdminPage() {
         title="Console d'administration"
         description="Contenu du jeu, règles, joueurs et maintenance. Chaque enregistrement s'applique immédiatement à tous les joueurs."
       />
+      <HooksVersionCallout />
       {tab !== "health" && <AdminStatusStrip onOpen={(id) => setParams({ onglet: id }, { replace: true })} />}
       <Tabs value={tab} orientation="vertical" onValueChange={(v) => setParams({ onglet: v }, { replace: true })} className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[13.5rem_minmax(0,1fr)]">
         <TabsPrimitive.List aria-label="Sections de l'administration" className="hud-cut-sm -mx-1 flex gap-1 overflow-x-auto border border-cyan-glow/10 bg-space-950/60 p-1.5 lg:sticky lg:top-0 lg:mx-0 lg:max-h-[calc(100vh-2rem)] lg:flex-col lg:gap-0 lg:self-start lg:overflow-y-auto lg:p-2.5">
