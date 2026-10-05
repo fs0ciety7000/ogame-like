@@ -2,13 +2,13 @@
 version: 5.17.2
 iteration: 105
 date: 2026-10-05
-title: Seigneurs attaquables par tous et comparaison de deux joueurs
+title: Plus aucune protection pour les PNJ et comparaison de deux joueurs
 ---
 Un correctif pour les joueurs avancés, et un nouvel outil de comparaison pour l'équipe.
 
 ## Correctif : les Seigneurs de guerre
 - Un joueur très avancé ne pouvait plus attaquer aucun Seigneur : « Ce joueur est trop faible pour toi (moins d'un tiers de ton XP) ». L'XP des Seigneurs suit la médiane des joueurs actifs, pas la tienne. Au-delà de trois fois l'XP du plus fort, tous devenaient intouchables.
-- L'écart d'XP protège désormais seulement les joueurs humains. Les Seigneurs restent attaquables quelle que soit ton avance, avec le même délai entre deux attaques.
+- Les PNJ n'ont plus aucune protection de joueur : ni écart d'XP, ni protection de débutant, ni vacances, ni bouclier après défaite, ni Voile, ni bouclier d'ascension. Seul le délai entre deux attaques sur le même Seigneur reste dû.
 - Une victoire sur un Seigneur bien plus faible que toi rapporte peu d'XP (4 XP au minimum, selon l'écart de puissance) : pas de farm possible.
 
 ## Administration : comparer deux joueurs
