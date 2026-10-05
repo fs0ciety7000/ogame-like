@@ -9263,8 +9263,9 @@ function resolveCombat(params) {
   const maxDmg = Math.max(0, Math.min(0.99, R.hullMaxDamage));
   const settle = (t, start, factor = 1) => {
     const lost = Math.max(0, start - t.count) * factor;
-    let destroyed = lost * (1 - share);
-    let damaged = t.damaged + lost * share;
+    const prior = t.owned > 0 ? Math.min(maxDmg, t.damaged / t.owned) : 0;
+    let destroyed = lost * (1 - share) / (1 - prior);
+    let damaged = t.damaged - destroyed * prior + lost * share;
     const over = damaged - maxDmg * (t.owned - destroyed);
     if (over > 0) {
       const k = over / (1 - maxDmg);
@@ -21935,7 +21936,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.19.0" : "dev";
+var LOGIC_VERSION = true ? "5.20.0" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

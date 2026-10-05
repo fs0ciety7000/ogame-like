@@ -1000,6 +1000,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const before = await snap(bId);
     await admin.collection("players").update(bId, {
       units: { chasseur: { level: 1, count: 50 } },
+      // 5.20 : flotte neuve (pas de dégâts hérités des tests précédents).
+      workshop: null,
       resources: RICH,
       buildings: { ...before!.buildings, extracteur_ferraille: { level: 5, unlocked: true } },
     });
@@ -1572,7 +1574,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const fleets: string[] = [];
     const elite = await admin.collection("game_config").getFirstListItem('key="bounty_elite"').catch(() => null);
     try {
-      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 200 } }, resources: RICH, bounties: {} });
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 200 } }, workshop: null, resources: RICH, bounties: {} });
       const board = viewBounties(await snap(bId), Date.now()).board;
       const contract = board.find((c) => c.tier === 1)!;
       const sent = await bs.sendBountyHunt(contract.id, { chasseur: 200 }, "balanced");

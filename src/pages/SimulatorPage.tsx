@@ -85,7 +85,7 @@ function LossList({ title, losses, recovered }: { title: string; losses: Record<
               <span className="truncate">{findUnit(id)?.name ?? id}</span>
               <span className="font-mono tabular-nums">
                 −{formatNumber(n)}
-                {recovered?.[id] ? <span className="text-mint-glow"> (+{formatNumber(recovered[id])} réparés)</span> : null}
+                {recovered?.[id] ? <span className="text-mint-glow"> (+{formatNumber(recovered[id])} à l'Atelier)</span> : null}
               </span>
             </li>
           ))}

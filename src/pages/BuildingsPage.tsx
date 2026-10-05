@@ -12,7 +12,10 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ascensionProgress } from "@/components/game/AscensionCard";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkshopPanel } from "@/components/game/WorkshopPanel";
+import { workshopState } from "@/game/workshop";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -49,8 +52,12 @@ export function BuildingsPage() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
   const rates = useProductionRates(player);
+  // 5.20 : onglets Bâtiments / Atelier de réparation (?onglet=atelier).
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("onglet") === "atelier" ? "atelier" : "batiments";
 
   if (!player || !queues) return null;
+  const repairing = workshopState(player).jobs.length;
 
   const handleUnlock = async (buildingId: BuildingId) => {
     if (!uid) return;
@@ -102,6 +109,18 @@ export function BuildingsPage() {
           <Link to="/game/ascension">Ascension disponible · voir la page</Link>
         </HudChip>
       )}
+      <Tabs value={tab} onValueChange={(v) => setParams(v === "atelier" ? { onglet: "atelier" } : {}, { replace: true })} className="flex flex-col gap-4">
+        <TabsList className="self-start">
+          <TabsTrigger value="batiments">Bâtiments</TabsTrigger>
+          <TabsTrigger value="atelier">
+            Atelier de réparation
+            {repairing > 0 && <span className="ml-1.5 font-mono text-ember-glow">{repairing}</span>}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="atelier">
+          <WorkshopPanel player={player} now={now} />
+        </TabsContent>
+        <TabsContent value="batiments" className="flex flex-col gap-4">
       <BuildPlanCard player={player} queues={queues} now={now} />
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
@@ -304,6 +323,8 @@ export function BuildingsPage() {
           );
         })}
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -417,8 +417,11 @@ export function resolveCombat(params: {
   const maxDmg = Math.max(0, Math.min(0.99, R.hullMaxDamage));
   const settle = (t: Stack, start: number, factor = 1) => {
     const lost = Math.max(0, start - t.count) * factor;
-    let destroyed = lost * (1 - share);
-    let damaged = t.damaged + lost * share;
+    // Les dégâts déjà subis sont répartis sur tout le stock : une unité détruite emporte sa part
+    // (il fallait moins de PV pour l'achever), le reste de l'usure demeure sur les survivantes.
+    const prior = t.owned > 0 ? Math.min(maxDmg, t.damaged / t.owned) : 0;
+    let destroyed = (lost * (1 - share)) / (1 - prior);
+    let damaged = t.damaged - destroyed * prior + lost * share;
     const over = damaged - maxDmg * (t.owned - destroyed);
     if (over > 0) {
       const k = over / (1 - maxDmg);

@@ -199,3 +199,29 @@ export function withFleet(units: Units, fleet: Record<string, number>): Units {
   }
   return out;
 }
+
+export interface WorkshopView {
+  rate: number;
+  level: number;
+  jobs: { job: WorkshopJob; endsAtMs: number; progress: number }[];
+  /** Types d'unités abîmés (à la base), du plus atteint au moins atteint. */
+  hulls: { unitId: string; percent: number; missing: number; count: number }[];
+  hullDoneAtMs: number | null;
+  /** Fin de toutes les réparations (file + coques). */
+  doneAtMs: number | null;
+}
+
+/** Vue de l'Atelier à l'instant `now` (avance simulée depuis la dernière mise à jour du serveur). */
+export function workshopView(player: PlayerState, now: number): WorkshopView {
+  const clone = { ...player, units: structuredClone(player.units ?? {}), workshop: player.workshop ? structuredClone(player.workshop) : player.workshop } as PlayerState;
+  advanceWorkshop(clone, now);
+  const eta = workshopEta(clone, now);
+  const st = workshopState(clone);
+  const hulls = Object.entries(st.hull)
+    .filter(([id, hp]) => hp > 0 && (clone.units[id]?.count ?? 0) > 0)
+    .map(([unitId, missing]) => ({ unitId, percent: hullPercent(clone, unitId), missing: Math.min(missing, hullMax(clone, unitId) * COMBAT_RULES.hullMaxDamage), count: clone.units[unitId]?.count ?? 0 }))
+    .sort((a, b) => a.percent - b.percent);
+  const jobs = eta.jobs.map(({ job, endsAtMs }) => ({ job, endsAtMs, progress: job.hpTotal > 0 ? 1 - job.hpLeft / job.hpTotal : 1 }));
+  const lastJob = jobs.length ? jobs[jobs.length - 1].endsAtMs : null;
+  return { rate: eta.rate, level: atelierLevel(player), jobs, hulls, hullDoneAtMs: eta.hullDoneAtMs, doneAtMs: eta.hullDoneAtMs ?? lastJob };
+}

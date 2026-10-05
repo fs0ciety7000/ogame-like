@@ -37,6 +37,25 @@ describe("5.20 points de vie conservés", () => {
     expect(r.attackerHull!.chasseur).toBeLessThanOrEqual(survivors * 300 * COMBAT_RULES.hullMaxDamage + 1);
   });
 
+  it("les unités détruites emportent leur part des dégâts : pas de destruction en cascade des survivantes", () => {
+    // 1 000 chasseurs usés à 30 %, face à une défense qui en détruit une bonne partie.
+    const r = resolveCombat({
+      attackerUnits: { chasseur: { level: 1, count: 1000 } },
+      attackerTechLevels: {},
+      attackerRepairPct: 0,
+      fleet: { chasseur: 1000 },
+      defenderUnits: { lance_gravitationnelle: { level: 1, count: 40 } },
+      defenderTechLevels: {},
+      defenderRepairPct: 0,
+      defenderResources: {},
+      attackerHull: { chasseur: 1000 * 300 * 0.3 },
+    });
+    const survivors = 1000 - (r.attackerLosses.chasseur ?? 0);
+    expect(survivors).toBeGreaterThan(0);
+    // L'usure moyenne des survivantes reste du même ordre (pas 90 %).
+    expect((r.attackerHull?.chasseur ?? 0) / (survivors * 300)).toBeLessThan(0.6);
+  });
+
   it("une flotte abîmée se bat moins bien", () => {
     const fresh = duel();
     const damaged = duel({ chasseur: 200 * 300 * 0.5 });
