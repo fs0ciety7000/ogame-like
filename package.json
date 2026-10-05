@@ -13,6 +13,9 @@
     "build:hooks": "node pocketbase/build-hooks.mjs"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@noble/curves": "^1.9.7",
     "@noble/hashes": "^1.8.0",
     "@radix-ui/react-dialog": "^1.1.6",

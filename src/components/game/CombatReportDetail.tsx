@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Crosshair, Pause, Play, RotateCcw, Shield, Sparkles, Swords, Wrench } from "lucide-react";
-import { HUD_TONE, HudCallout, HudTag } from "@/components/ui/hud";
+import { HUD_TONE, HudCallout } from "@/components/ui/hud";
 import { findUnit } from "@/game/units";
 import { UNIT_CLASS_LABELS } from "@/game/unitClasses";
 import { COMBAT_RULES } from "@/game/combat";
@@ -33,17 +33,17 @@ function HpChart({ log, mine, round }: { log: CombatLog; mine: Side; round: numb
   const path = (vs: number[]) => vs.map((v, k) => `${k ? "L" : "M"}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   const theirs: Side = mine === "attacker" ? "defender" : "attacker";
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-20 w-full" role="img" aria-label="Points de vie restants de chaque camp, tour par tour">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-20 w-full" role="img" aria-label="Points de vie restants de chaque camp, tour par tour">
       {[0.25, 0.5, 0.75].map((g) => (
-        <line key={g} x1={4} x2={W - 4} y1={y(g)} y2={y(g)} stroke="currentColor" className="text-white/5" />
+        <line key={g} x1={4} x2={W - 4} y1={y(g)} y2={y(g)} stroke="currentColor" className="text-slate-100/5" />
       ))}
-      <line x1={4} x2={W - 4} y1={y(COMBAT_RULES.attackerWinBelow)} y2={y(COMBAT_RULES.attackerWinBelow)} stroke={HUD_TONE.ember} strokeDasharray="3 3" strokeOpacity={0.5} />
-      <path d={path(series(theirs))} fill="none" stroke={HUD_TONE.danger} strokeWidth={2} />
-      <path d={path(series(mine))} fill="none" stroke={HUD_TONE.accent} strokeWidth={2} />
+      <line x1={4} x2={W - 4} y1={y(COMBAT_RULES.attackerWinBelow)} y2={y(COMBAT_RULES.attackerWinBelow)} stroke={HUD_TONE.ember} strokeDasharray="3 3" strokeOpacity={0.5} vectorEffect="non-scaling-stroke" />
+      <path d={path(series(theirs))} fill="none" stroke={HUD_TONE.danger} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+      <path d={path(series(mine))} fill="none" stroke={HUD_TONE.accent} strokeWidth={2} vectorEffect="non-scaling-stroke" />
       <line x1={x(round)} x2={x(round)} y1={2} y2={H - 2} stroke="currentColor" className="text-slate-400" strokeOpacity={0.6} />
       {(["accent", "danger"] as const).map((tone) => {
         const vs = series(tone === "accent" ? mine : theirs);
-        return <circle key={tone} cx={x(round)} cy={y(vs[round] ?? 0)} r={3} fill={HUD_TONE[tone]} />;
+        return <ellipse key={tone} cx={x(round)} cy={y(vs[round] ?? 0)} rx={2} ry={4} fill={HUD_TONE[tone]} />;
       })}
     </svg>
   );
@@ -72,7 +72,11 @@ function UnitRow({ u, round, tone, enemyName, maxDealt }: { u: CombatLogUnit; ro
         </div>
         <div className="mt-0.5 flex flex-wrap justify-between gap-x-2 font-mono text-[10px] text-slate-500">
           <span>
-            {lostNow >= 0.5 ? <span className="text-danger-glow">−{formatNumber(Math.round(lostNow))} </span> : null}
+            {lostNow >= 0.5 ? (
+              <span className="text-danger-glow" title="Hors de combat pendant la bataille. Après le combat, une partie de ces PV perdus reste en dégâts sur les coques au lieu de détruire des unités (voir le bilan).">
+                −{formatNumber(Math.round(lostNow))} hors de combat{" "}
+              </span>
+            ) : null}
             {u.hullAfter !== undefined && round >= (u.left.length || 1) && u.hullAfter < 0.995 && <span style={{ color: HUD_TONE.ember }}>coque {pct(u.hullAfter)}</span>}
           </span>
           {u.dealt > 0 && (
@@ -227,8 +231,8 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
               <span>Toi</span>
               <span style={{ color: HUD_TONE.accent }}>{pct(myHp)} PV</span>
             </p>
-            <div className="mt-0.5 h-2 overflow-hidden bg-white/[0.06]">
-              <motion.i className="block h-full" style={{ background: HUD_TONE.accent }} initial={false} animate={{ width: pct(myHp) }} transition={{ duration: 0.35 }} />
+            <div className="relative mt-0.5 h-2 overflow-hidden bg-white/[0.06]">
+              <motion.i className="absolute inset-y-0 left-0 block" style={{ background: HUD_TONE.accent }} initial={false} animate={{ width: pct(myHp) }} transition={{ duration: 0.35 }} />
             </div>
             {r && <p className="mt-0.5 font-mono text-[10px] text-slate-500">tirs : {formatCompact(myDmg)}</p>}
           </div>
@@ -238,15 +242,15 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
               <span style={{ color: HUD_TONE.danger }}>{pct(theirHp)} PV</span>
               <span>Adversaire</span>
             </p>
-            <div className="mt-0.5 flex h-2 justify-end overflow-hidden bg-white/[0.06]">
-              <motion.i className="block h-full" style={{ background: HUD_TONE.danger }} initial={false} animate={{ width: pct(theirHp) }} transition={{ duration: 0.35 }} />
+            <div className="relative mt-0.5 h-2 overflow-hidden bg-white/[0.06]">
+              <motion.i className="absolute inset-y-0 right-0 block" style={{ background: HUD_TONE.danger }} initial={false} animate={{ width: pct(theirHp) }} transition={{ duration: 0.35 }} />
             </div>
             {r && <p className="mt-0.5 font-mono text-[10px] text-slate-500">tirs : {formatCompact(theirDmg)}</p>}
           </div>
         </div>
         <HpChart log={log} mine={mine} round={round} />
         <p className="font-mono text-[10px] text-slate-500">
-          Pointillés : sous <span className="text-slate-300">{Math.round(COMBAT_RULES.attackerWinBelow * 100)} %</span> de PV, le défenseur tombe. L'attaquant décroche après{" "}
+          « Hors de combat » : unités neutralisées pendant la bataille ; après coup, une partie redevient des coques abîmées (le bilan ne compte que les détruites). Pointillés : sous <span className="text-slate-300">{Math.round(COMBAT_RULES.attackerWinBelow * 100)} %</span> de PV, le défenseur tombe. L'attaquant décroche après{" "}
           <span className="text-slate-300">{Math.round(COMBAT_RULES.retreatAt * 100)} %</span> de PV perdus.
         </p>
       </section>
@@ -289,9 +293,9 @@ export function CombatLossTable({ title, losses, recovered, units, tone }: { tit
           <thead className="font-mono text-[9px] uppercase tracking-wider text-slate-500">
             <tr>
               <th className="py-1 font-normal">Unité</th>
-              {units && <th className="text-right font-normal">Engagées</th>}
-              <th className="text-right font-normal">Détruites</th>
-              <th className="text-right font-normal" title="Sauvées : parties à l'Atelier (vaisseaux) ou reconstruites (défenses)">Sauvées</th>
+              {units && <th className="pl-2 text-right font-normal">Engagées</th>}
+              <th className="pl-2 text-right font-normal">Détruites</th>
+              <th className="pl-2 text-right font-normal" title="Sauvées : parties à l'Atelier (vaisseaux) ou reconstruites (défenses)">Sauvées</th>
             </tr>
           </thead>
           <tbody>
@@ -302,7 +306,11 @@ export function CombatLossTable({ title, losses, recovered, units, tone }: { tit
                 <tr key={id} className="border-t border-white/5">
                   <td className="py-1 text-slate-200">
                     {findUnit(id)?.name ?? id}
-                    {u?.[0]?.hullAfter !== undefined && u[0].hullAfter < 0.995 && <HudTag tone="ember" className="ml-1.5">coque {pct(u[0].hullAfter)}</HudTag>}
+                    {u?.[0]?.hullAfter !== undefined && u[0].hullAfter < 0.995 && (
+                      <span className="block font-mono text-[10px]" style={{ color: HUD_TONE.ember }}>
+                        coque {pct(u[0].hullAfter)}
+                      </span>
+                    )}
                   </td>
                   {units && <td className="text-right font-mono text-slate-400">{start !== undefined ? formatNumber(Math.round(start)) : "—"}</td>}
                   <td className="text-right font-mono text-danger-glow">{(losses[id] ?? 0) > 0 ? `−${formatNumber(losses[id])}` : "—"}</td>

@@ -1,4 +1,3 @@
-import { MutatorCallout } from "@/components/game/MutatorCallout";
 import { profileStyle } from "@/game/profile";
 import { Card } from "@/components/ui/card";
 import { HudPanel } from "@/components/ui/panel";
@@ -10,34 +9,31 @@ import { economySnapshot } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import { Fragment, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Eye, Factory, EyeOff, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Link } from "react-router-dom";
+import { closestCorners, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ArrowDown, ArrowUp, Check, Columns2, Eye, EyeOff, Factory, GripVertical, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { StatTile } from "@/components/ui/hud";
+import { HudCallout, StatTile } from "@/components/ui/hud";
 import { QueueStrip } from "@/components/game/QueueStrip";
-import { DASHBOARD_SECTIONS, defaultLayout, moveSection, setDashboardLayout, toggleSection, useDashboardLayout, type DashboardSection } from "@/lib/dashboardLayout";
+import { columnOf, DASHBOARD_SECTIONS, defaultLayout, dropSection, moveSection, setDashboardLayout, switchColumn, toggleSection, useDashboardLayout, type DashboardColumn, type DashboardLayout, type DashboardSection } from "@/lib/dashboardLayout";
+import { ProgressHub } from "@/components/game/ProgressHub";
 import { getRankLabel } from "@/game/ranks";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { StoryDialog } from "@/components/game/StoryDialog";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
-import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
+import { HomePlanet } from "@/components/game/HomePlanet";
 import { PlanetPhotoMode } from "@/components/game/PlanetPhotoMode";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { WorkshopHomeCard } from "@/components/game/WorkshopHomeCard";
-import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
 import { CasinoBanner } from "@/components/casino/CasinoBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
-import { ChallengeCard } from "@/components/game/ChallengeCard";
-import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
-import { PassProgressCard } from "@/components/game/PassProgressCard";
-import { MonthRecapCard } from "@/components/game/MonthRecapCard";
-import { ChronicleHomeCard } from "@/components/game/ChronicleHomeCard";
-import { DailyMissionsCard } from "@/components/game/DailyMissionsCard";
 import { RunningContestCard } from "@/components/game/RunningContestCard";
 import { AgendaCard } from "@/components/game/AgendaCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
@@ -58,7 +54,13 @@ export function DashboardPage() {
   const queues = usePlayerStore((s) => s.queues);
   const fleets = useFleetStore((s) => s.fleets);
   const layout = useDashboardLayout();
-  const [customizing, setCustomizing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<DashboardLayout | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const cockpit = useCockpitView((s) => s.enabled);
 
   if (!player) return null;
@@ -90,7 +92,7 @@ export function DashboardPage() {
   const now = Date.now();
   const armor = synthesisState(player).armor;
   // v4.8 : planète plus grande (bureau), adaptée à l'écran sur mobile.
-  const planetSize = typeof window !== "undefined" && window.innerWidth >= 640 ? 150 : 116;
+  const planetSize = typeof window !== "undefined" && window.innerWidth >= 640 ? 130 : 116;
   const planetLife = {
     synth: synthLevel(player),
     armor: !!armor && armor.untilMs > now,
@@ -109,61 +111,11 @@ export function DashboardPage() {
 
   const sections: Record<DashboardSection, ReactNode> = {
     next: <NextActionsCard />,
-    planet: (
-      <Card className="flex flex-wrap items-center justify-center gap-6 p-4 sm:justify-start sm:p-5">
-        <div className="mx-auto sm:mx-0">
-          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} look={profileStyle(player).planet} />
-        </div>
-        <div>
-          <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
-          <p className="font-display text-3xl text-slate-100">{developmentPercent}%</p>
-          <p className="mt-1 text-xs text-slate-500">
-            {totalBuildingLevels} / {maxBuildingLevels} niveaux de bâtiments cumulés
-          </p>
-          <div className="mt-4">
-            <HomePlanetLegend buildings={player.buildings} />
-          </div>
-          <div className="-ml-2 mt-2">
-            <PlanetPhotoMode buildings={player.buildings} life={planetLife} look={profileStyle(player).planet} caption={player.pseudo} />
-          </div>
-        </div>
-      </Card>
-    ),
-    colonies: <ColoniesCard />,
     fleets: <FleetsPanel hideWhenEmpty />,
-    workshop: <WorkshopHomeCard />,
-    leviathan: <LeviathanBanner />,
-    challenge: (
-      <div className="flex flex-col gap-3">
-        <WeeklyRecapCard />
-        {/* 5.16 : règle spéciale du mois. */}
-        <MutatorCallout compact />
-        {/* 5.15.7 : passe et mois en cours sur l'accueil. */}
-        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-          <DailyMissionsCard now={now} />
-          <PassProgressCard now={now} />
-          <MonthRecapCard now={now} />
-          <ChronicleHomeCard now={now} />
-        </div>
-        <RunningContestCard />
-        <AgendaCard now={now} />
-        <ChallengeCard />
-      </div>
-    ),
-    event: (
-      <>
-        <EventCard />
-        <CasinoBanner player={player} />
-      </>
-    ),
-    contracts: (
-      <div id="contrats" className="scroll-mt-24">
-        <ContractsCard />
-      </div>
-    ),
+    progress: <ProgressHub now={now} />,
     economy: (
-      <div className="grid gap-4 lg:grid-cols-3">
-        <HudPanel icon={<Factory />} title="Production / seconde" tone="mint">
+      <div className="grid gap-4 md:grid-cols-[16rem_minmax(0,1fr)]">
+        <HudPanel icon={<Factory />} title="Production / s" tone="mint">
           <div className="grid gap-2">
             {RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
               const net = economy.net[r.id] ?? 0;
@@ -172,41 +124,118 @@ export function DashboardPage() {
                 <div key={r.id} className="flex items-center gap-2 text-sm">
                   <ResourceIcon id={r.id} className="h-6 w-6" />
                   <span className="text-slate-300">{r.name}</span>
-                  <span className={full ? "ml-auto text-xs font-semibold uppercase text-ember-glow" : net < 0 ? "ml-auto text-danger-glow" : "ml-auto text-mint-glow"}>
-                    {full ? "entrepôt plein" : `${net >= 0 ? "+" : ""}${formatNumber(Math.round(net))}/s`}
+                  <span className={cn("ml-auto font-mono", full ? "text-xs font-semibold uppercase text-ember-glow" : net < 0 ? "text-danger-glow" : "text-mint-glow")}>
+                    {full ? "plein" : `${net >= 0 ? "+" : ""}${formatNumber(Math.round(net))}`}
                   </span>
                 </div>
               );
             })}
             <div className="mt-1 space-y-0.5 border-t border-white/5 pt-2 text-[11px] text-slate-500">
-              {economy.upkeep > 0 && <p><GameIcon name="repair" /> Entretien de la flotte : −{formatNumber(Math.round(economy.upkeep))} énergie/s</p>}
-              {Number.isFinite(economy.capacity) && <p><GameIcon name="storage" /> Entrepôt : {formatNumber(economy.capacity)} par ressource</p>}
+              {economy.upkeep > 0 && <p><GameIcon name="repair" /> Entretien : −<span className="font-mono">{formatNumber(Math.round(economy.upkeep))}</span> énergie/s</p>}
+              {Number.isFinite(economy.capacity) && <p><GameIcon name="storage" /> Entrepôt : <span className="font-mono">{formatNumber(economy.capacity)}</span></p>}
               {economy.outage && <p className="font-semibold text-danger-glow"><GameIcon name="energy" /> Panne d'énergie : production à 50 %</p>}
             </div>
           </div>
         </HudPanel>
-        <div className="lg:col-span-2">
-          <UpcomingTimeline queues={queues} now={now} />
-        </div>
-      </div>
-    ),
-    power: (
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatTile label="Puissance d'attaque" value={formatCompact(attackPower)} tone="mint" />
-        <StatTile label="Puissance défensive" value={formatCompact(defensePower)} tone="accent" />
-        <StatTile label="Victoires" value={player.victories} tone="gold" />
-        <StatTile label="Défaites" value={player.defeats} tone="danger" />
+        <UpcomingTimeline queues={queues} now={now} />
       </div>
     ),
     log: <SystemLogPanel />,
+    empire: (
+      <Card className="flex flex-col gap-4 p-4 sm:p-5">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} look={profileStyle(player).planet} />
+          <div>
+            <p className="hud-eyebrow text-[10px] text-slate-500">Développement de l'empire</p>
+            <p className="font-display text-3xl text-slate-100">
+              <span className="font-mono">{developmentPercent}</span> %
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              <span className="font-mono">{totalBuildingLevels}</span> / <span className="font-mono">{maxBuildingLevels}</span> niveaux de bâtiments
+            </p>
+          </div>
+          <PlanetPhotoMode buildings={player.buildings} life={planetLife} look={profileStyle(player).planet} caption={player.pseudo} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <StatTile size="sm" label="Attaque" value={<span className="font-mono">{formatCompact(attackPower)}</span>} tone="accent" />
+          <StatTile size="sm" label="Défense" value={<span className="font-mono">{formatCompact(defensePower)}</span>} tone="accent" />
+          <StatTile size="sm" label="Victoires" value={<span className="font-mono">{formatNumber(player.victories ?? 0)}</span>} tone="mint" />
+          <StatTile size="sm" label="Défaites" value={<span className="font-mono">{formatNumber(player.defeats ?? 0)}</span>} tone="danger" />
+        </div>
+        {/* 5.21.1 : raccourcis vers le détail (la légende des bâtiments a quitté l'accueil). */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <Link to="/game/batiments" className="text-cyan-glow hover:underline">Bâtiments</Link>
+          <Link to="/game/statistiques" className="text-cyan-glow hover:underline">Statistiques de l'empire</Link>
+          <Link to="/game/combats" className="text-cyan-glow hover:underline">Journal de combat</Link>
+        </div>
+      </Card>
+    ),
+    workshop: <WorkshopHomeCard />,
+    colonies: <ColoniesCard />,
+    leviathan: <LeviathanBanner />,
+    events: (
+      <div className="flex flex-col gap-4">
+        <EventCard />
+        <CasinoBanner player={player} />
+        <RunningContestCard />
+        <AgendaCard now={now} />
+      </div>
+    ),
+  };
+
+  const visible = (col: DashboardColumn) => (draft ?? layout)[col].filter((id) => !layout.hidden.includes(id));
+  const column = (col: DashboardColumn) =>
+    editing ? (
+      <SortableColumn col={col} ids={visible(col)}>
+        {visible(col).map((id) => (
+          <EditableSlot key={id} id={id} layout={layout}>
+            {sections[id]}
+          </EditableSlot>
+        ))}
+      </SortableColumn>
+    ) : (
+      <div className="flex min-w-0 flex-col gap-6">
+        {visible(col).map((id) => (
+          <Fragment key={id}>{sections[id]}</Fragment>
+        ))}
+      </div>
+    );
+
+  // 5.21.1 : glisser-déposer (dnd-kit : souris, tactile après un appui long, clavier).
+  const findCol = (l: DashboardLayout, id: string): DashboardColumn | null => (l.main.includes(id as DashboardSection) ? "main" : l.side.includes(id as DashboardSection) ? "side" : id === "col-main" ? "main" : id === "col-side" ? "side" : null);
+  const onDragOver = (e: DragOverEvent) => {
+    if (!e.over) return;
+    const cur = draft ?? layout;
+    const from = findCol(cur, String(e.active.id));
+    const to = findCol(cur, String(e.over.id));
+    if (!from || !to || from === to) return;
+    const overId = String(e.over.id).startsWith("col-") ? null : (e.over.id as DashboardSection);
+    setDraft(dropSection(cur, e.active.id as DashboardSection, to, overId));
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    const cur = draft ?? layout;
+    setDraft(null);
+    if (!e.over) return;
+    const col = findCol(cur, String(e.active.id));
+    if (!col) return;
+    const list = cur[col];
+    const from = list.indexOf(e.active.id as DashboardSection);
+    const to = String(e.over.id).startsWith("col-") ? list.length - 1 : list.indexOf(e.over.id as DashboardSection);
+    setDashboardLayout(from >= 0 && to >= 0 && from !== to ? { ...cur, [col]: arrayMove(list, from, to) } : cur);
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Cosmic Empires / Commandement"
         title={`Bienvenue, ${player.pseudo}`}
         description={`Rang ${getRankLabel(player.xp)} — ${formatNumber(player.xp)} XP`}
+        right={
+          <Button variant={editing ? "primary" : "ghost"} size="sm" onClick={() => setEditing((e) => !e)}>
+            {editing ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />}
+            {editing ? "Terminer" : "Personnaliser"}
+          </Button>
+        }
       />
       <QueueStrip queues={queues} now={now} />
 
@@ -214,53 +243,84 @@ export function DashboardPage() {
       <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
 
-      {layout.order
-        .filter((id) => !layout.hidden.includes(id))
-        .map((id) => (
-          <Fragment key={id}>{sections[id]}</Fragment>
-        ))}
+      {editing && (
+        <HudCallout tone="accent" className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+          <span className="flex-1">
+            Glisse une carte par sa poignée pour la déplacer, dans sa colonne ou dans l'autre (appui long sur écran tactile, ou Espace puis flèches au clavier). Mémorisé sur cet appareil.
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setDashboardLayout(defaultLayout())}>
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Disposition par défaut
+          </Button>
+        </HudCallout>
+      )}
 
-      <div className="flex justify-center">
-        <Button variant="ghost" size="sm" onClick={() => setCustomizing(true)}>
-          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" /> Personnaliser l'accueil
-        </Button>
-      </div>
-      <DashboardCustomizer open={customizing} onClose={() => setCustomizing(false)} />
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={() => setDraft(layout)} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDraft(null)}>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          {column("main")}
+          {column("side")}
+        </div>
+      </DndContext>
+
+      {editing && layout.hidden.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span className="hud-eyebrow text-[10px] text-slate-500">Cartes masquées</span>
+          {layout.hidden.map((id) => (
+            <Button key={id} variant="outline" size="sm" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
+              <Eye className="mr-1.5 h-3.5 w-3.5" /> {sectionLabel(id)}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function DashboardCustomizer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const layout = useDashboardLayout();
-  const label = (id: DashboardSection) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.label ?? id;
+const sectionLabel = (id: DashboardSection) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.label ?? id;
+
+/** Colonne déposable (accepte une carte même vide). */
+function SortableColumn({ col, ids, children }: { col: DashboardColumn; ids: DashboardSection[]; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${col}` });
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogTitle>Personnaliser l'accueil</DialogTitle>
-        <DialogDescription>Remonte ce qui compte pour toi, masque le reste. Mémorisé sur cet appareil.</DialogDescription>
-        <div className="mt-3 flex flex-col gap-1.5">
-          {layout.order.map((id, i) => {
-            const hidden = layout.hidden.includes(id);
-            return (
-              <div key={id} className={cn("flex items-center gap-2 border border-white/10 bg-white/[0.02] px-2 py-1.5 text-sm", hidden && "opacity-50")}>
-                <span className="flex-1 text-slate-200">{label(id)}</span>
-                <button type="button" title="Monter" disabled={i === 0} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, -1))}>
-                  <ArrowUp className="h-4 w-4" />
-                </button>
-                <button type="button" title="Descendre" disabled={i === layout.order.length - 1} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, 1))}>
-                  <ArrowDown className="h-4 w-4" />
-                </button>
-                <button type="button" title={hidden ? "Afficher" : "Masquer"} className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
-                  {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <Button variant="ghost" size="sm" className="mt-3" onClick={() => setDashboardLayout(defaultLayout())}>
-          <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Disposition par défaut
-        </Button>
-      </DialogContent>
-    </Dialog>
+    <SortableContext id={`col-${col}`} items={ids} strategy={verticalListSortingStrategy}>
+      <div ref={setNodeRef} className={cn("flex min-h-32 min-w-0 flex-col gap-6 border border-dashed p-2 transition-colors", isOver ? "border-cyan-glow/50" : "border-white/10")}>
+        {children}
+      </div>
+    </SortableContext>
+  );
+}
+
+/** Carte en mode personnalisation : poignée glissable, flèches, changement de colonne, masquer. */
+function EditableSlot({ id, layout, children }: { id: DashboardSection; layout: DashboardLayout; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const col = columnOf(layout, id);
+  const list = layout[col];
+  const i = list.indexOf(id);
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("relative border border-cyan-glow/20 bg-space-900/60", isDragging && "z-20 border-cyan-glow/70 shadow-[0_0_24px_var(--color-cyan-glow)] opacity-90")}
+    >
+      <div className="flex items-center gap-2 border-b border-cyan-glow/15 px-2 py-1.5">
+        <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} title="Glisser pour déplacer" className="cursor-grab touch-none p-1 text-cyan-glow active:cursor-grabbing">
+          <GripVertical className="h-4 w-4" aria-hidden />
+        </button>
+        <span className="flex-1 truncate font-display text-xs font-semibold uppercase tracking-[0.1em] text-slate-200">{sectionLabel(id)}</span>
+        <button type="button" title="Monter" disabled={i <= 0} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, -1))}>
+          <ArrowUp className="h-4 w-4" />
+        </button>
+        <button type="button" title="Descendre" disabled={i >= list.length - 1} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, 1))}>
+          <ArrowDown className="h-4 w-4" />
+        </button>
+        <button type="button" title={col === "main" ? "Passer dans la colonne latérale" : "Passer dans la colonne principale"} className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(switchColumn(layout, id))}>
+          <Columns2 className="h-4 w-4" />
+        </button>
+        <button type="button" title="Masquer" className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
+          <EyeOff className="h-4 w-4" />
+        </button>
+      </div>
+      {/* Aperçu réduit et inerte : la carte se déplace d'un bloc. */}
+      <div className="pointer-events-none max-h-56 overflow-hidden p-2 opacity-70 empty:p-3 empty:before:text-xs empty:before:text-slate-500 empty:before:content-['Rien_à_afficher_pour_le_moment']">{children}</div>
+    </div>
   );
 }
