@@ -20,6 +20,13 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - Rappels personnels (Réglages → Rappels, ou bouton « Me prévenir quand il se connecte » sur la fiche d'un joueur) : alerte quand l'entrepôt atteint 75, 90 ou 100 %, ou quand un joueur suivi se connecte. Une seule alerte tant que la condition dure, avec notification du navigateur si elle est autorisée.
 - Comparateur au survol de « Améliorer » : production, entrepôt, réparation ou hangar avant et après, durée, coût total, et temps pour que le gain de production rembourse l'amélioration.
 
+
+## Administration
+- Planificateur : un événement ajouté peut se répéter (chaque semaine ×4, toutes les 2 semaines ×4, toutes les 4 semaines ×6). Le bouton « Copier ce mois vers le suivant » reprend les dates précises et les événements programmés au même jour de la semaine et au même rang (« 2e samedi » → « 2e samedi »).
+- Agenda des joueurs : le bouton « Mon agenda » télécharge les rendez-vous des 30 prochains jours (.ics) avec un rappel 30 minutes avant. Il fonctionne avec Google Agenda, Outlook et Calendrier.
+- E-mails : choix des destinataires (tous, actifs, inactifs depuis 7 ou 30 jours, nouveaux, sans alliance, une alliance), avec le nombre visé. L'envoi peut être programmé : le serveur l'envoie à l'heure dite, à 5 minutes près, et on peut l'annuler.
+- Suivi des campagnes : taux d'ouverture (image invisible) et de clic (liens suivis et signés, aucune redirection détournable) pour les 20 dernières campagnes. Seuls des identifiants hachés sont conservés.
+
 ## Équilibre
 - Rattrapage des petits empires : chaque nuit, le serveur compare le développement de chaque joueur actif (niveaux de bâtiments et de technologies cumulés) à la médiane des joueurs actifs. Sous 10 % de la médiane, la production gagne +25 %. Le bonus baisse ensuite en ligne droite et disparaît à 50 %. Il est figé pour la journée et apparaît dans le détail de la production. Tout se règle dans Règles → Rattrapage.
 - Plafond hebdomadaire des jetons de butin : les jetons tirés en combat (boss, seigneurs, menaces, joueurs, expéditions) s'arrêtent à 25 par semaine, réglables dans les réglages des reliques. Le jeton du jour, la série, les défis, le passe et les récompenses fixes des boss n'y comptent pas. La jauge est affichée au casino.

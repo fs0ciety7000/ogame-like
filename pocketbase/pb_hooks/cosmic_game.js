@@ -103,6 +103,10 @@ __export(hooksEntry_exports, {
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   LOGIC_VERSION: () => LOGIC_VERSION,
   LOOT_TABLES: () => LOOT_TABLES,
+  MAIL_CAMPAIGNS_KEY: () => MAIL_CAMPAIGNS_KEY,
+  MAIL_HISTORY_MAX: () => MAIL_HISTORY_MAX,
+  MAIL_SCHEDULE_KEY: () => MAIL_SCHEDULE_KEY,
+  MAIL_SCHEDULE_MAX: () => MAIL_SCHEDULE_MAX,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
@@ -186,6 +190,7 @@ __export(hooksEntry_exports, {
   buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
+  campaignsState: () => campaignsState,
   canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
   canMessage: () => canMessage,
@@ -316,8 +321,10 @@ __export(hooksEntry_exports, {
   grantTokens: () => grantTokens,
   growWarlord: () => growWarlord,
   hasFullChallenges: () => hasFullChallenges,
+  inSegment: () => inSegment,
   inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
+  instrumentHtml: () => instrumentHtml,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isPublic: () => isPublic,
@@ -356,6 +363,7 @@ __export(hooksEntry_exports, {
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
   normalizeProcedural: () => normalizeProcedural,
+  normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
   offerReserved: () => offerReserved,
@@ -450,6 +458,7 @@ __export(hooksEntry_exports, {
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
   sanitizePactMessage: () => sanitizePactMessage,
+  scheduleState: () => scheduleState,
   scoreBattle: () => scoreBattle,
   scoreSpin: () => scoreSpin,
   seasonBossFlightMinutes: () => seasonBossFlightMinutes,
@@ -479,6 +488,7 @@ __export(hooksEntry_exports, {
   takeFromPot: () => takeFromPot,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
+  trackCampaign: () => trackCampaign,
   tutorialRaidPower: () => tutorialRaidPower,
   unclaimedRewardees: () => unclaimedRewardees,
   unitsAwayOf: () => unitsAwayOf,
@@ -1391,10 +1401,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY15 = 864e5;
+  const DAY16 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY15) * DAY15;
-  return new Date(midnight - (day + 6) % 7 * DAY15).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY16) * DAY16;
+  return new Date(midnight - (day + 6) % 7 * DAY16).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -3153,6 +3163,13 @@ function weekOfLocal(localMs) {
 }
 
 // src/game/events.ts
+function scheduledOccurrences(s) {
+  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
+  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
+  const out = [];
+  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY3, endMs: s.endMs + i * weeks * 7 * DAY3 });
+  return out;
+}
 var EVENT_RULES = {
   rotationEnabled: true,
   bossMonthly: true,
@@ -3361,10 +3378,11 @@ function rotationEvent(window) {
 }
 function scheduledEvents() {
   var _a;
-  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).map((s) => {
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
     const type = findEventType(s.type);
-    return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
-  }).filter((e3) => e3 !== null);
+    if (!type || !(s.endMs > s.startMs)) return [];
+    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
+  });
 }
 function eventAt(now) {
   const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
@@ -14675,7 +14693,7 @@ var RULE_GROUP_LABELS = {
   catchup: "Rattrapage"
 };
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -14709,11 +14727,16 @@ function validateRules(rules) {
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
+  for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
+    if (ev.repeatWeeks === void 0) continue;
+    if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_g = ev.repeatCount) != null ? _g : 0) >= 2 && ((_h = ev.repeatCount) != null ? _h : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+  }
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
     for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_f = st.chest) == null ? void 0 : _f[key];
+      const r = (_i = st.chest) == null ? void 0 : _i[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
     }
   }
@@ -20817,6 +20840,69 @@ function grantLeagueTitle(player, title, rank2, now) {
 
 // src/game/logicVersion.ts
 var LOGIC_VERSION = true ? "5.16.0" : "dev";
+
+// src/game/mailSegments.ts
+var MAIL_SEGMENTS = [
+  { id: "all", label: "Tous les joueurs joignables", hint: "Adresse v\xE9rifi\xE9e, pas d\xE9sinscrit." },
+  { id: "active7", label: "Actifs (7 derniers jours)", hint: "Connect\xE9s dans la semaine." },
+  { id: "inactive7", label: "Inactifs depuis 7 jours", hint: "Pas connect\xE9s depuis au moins 7 jours : les faire revenir." },
+  { id: "inactive30", label: "Inactifs depuis 30 jours", hint: "Partis depuis un mois ou plus." },
+  { id: "newcomers14", label: "Nouveaux (moins de 14 jours)", hint: "Inscrits ces deux derni\xE8res semaines." },
+  { id: "noAlliance", label: "Sans alliance", hint: "Pour les inviter \xE0 en rejoindre une." },
+  { id: "alliance", label: "Une alliance", hint: "Les membres d'une alliance choisie." }
+];
+var DAY15 = 864e5;
+function normalizeSegment(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const id = MAIL_SEGMENTS.some((s) => s.id === r.id) ? r.id : "all";
+  return id === "alliance" ? { id, allianceId: typeof r.allianceId === "string" ? r.allianceId : "" } : { id };
+}
+function inSegment(seg, p, now) {
+  const last = Number(p.lastActiveMs) || 0;
+  switch (seg.id) {
+    case "active7":
+      return now - last < 7 * DAY15;
+    case "inactive7":
+      return now - last >= 7 * DAY15;
+    case "inactive30":
+      return now - last >= 30 * DAY15;
+    case "newcomers14":
+      return now - (Number(p.createdAtMs) || 0) < 14 * DAY15;
+    case "noAlliance":
+      return !p.allianceId;
+    case "alliance":
+      return !!seg.allianceId && p.allianceId === seg.allianceId;
+    default:
+      return true;
+  }
+}
+var MAIL_CAMPAIGNS_KEY = "mail_campaigns";
+var MAIL_SCHEDULE_KEY = "mail_scheduled";
+var MAIL_HISTORY_MAX = 20;
+var MAIL_SCHEDULE_MAX = 10;
+function campaignsState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { list: Array.isArray(r.list) ? r.list.filter((c) => c && typeof c.id === "string").slice(0, MAIL_HISTORY_MAX) : [] };
+}
+function scheduleState(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { list: Array.isArray(r.list) ? r.list.filter((c) => c && typeof c.id === "string" && Number(c.sendAtMs) > 0).slice(0, MAIL_SCHEDULE_MAX) : [] };
+}
+function trackCampaign(state, campaignId, uid, kind) {
+  return {
+    list: state.list.map((c) => {
+      if (c.id !== campaignId) return c;
+      const opened = c.opened.includes(uid) ? c.opened : [...c.opened, uid];
+      const clicked = kind === "click" && !c.clicked.includes(uid) ? [...c.clicked, uid] : c.clicked;
+      return __spreadProps(__spreadValues({}, c), { opened, clicked });
+    })
+  };
+}
+function instrumentHtml(html, pixelUrl, track) {
+  const withLinks = html.replace(/href="(https?:\/\/[^"]+)"/g, (m, url2) => url2.includes("/api/cosmic/unsubscribe") ? m : `href="${track(url2.replace(/&amp;/g, "&"))}"`);
+  const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">`;
+  return withLinks.includes("</body>") ? withLinks.replace("</body>", `${pixel}</body>`) : withLinks + pixel;
+}
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {

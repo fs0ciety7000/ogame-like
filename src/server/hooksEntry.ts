@@ -194,3 +194,4 @@ export { LOGIC_VERSION } from "@/game/logicVersion";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";
+export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HISTORY_MAX, MAIL_SCHEDULE_KEY, MAIL_SCHEDULE_MAX, normalizeSegment, scheduleState, trackCampaign } from "@/game/mailSegments";

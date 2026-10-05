@@ -5207,7 +5207,10 @@ function renameRequest(e) {
 /* ---------- Campagnes e-mail (v3.9.2) ---------- */
 
 /** Joueurs joignables : compte vérifié, nouvelles acceptées. */
-function mailRecipients(app) {
+function mailRecipients(app, segment, now) {
+  const game = loadGame();
+  const seg = game.normalizeSegment(segment);
+  const at = now || Date.now();
   const out = [];
   let optedOut = 0;
   app.findRecordsByFilter("users", "verified = true", "", 0, 0, {}).forEach((u) => {
@@ -5217,6 +5220,8 @@ function mailRecipients(app) {
       optedOut += 1;
       return;
     }
+    // 5.16 : segment (activité, ancienneté, alliance).
+    if (!game.inSegment(seg, { lastActiveMs: player.getInt("lastActiveMs"), createdAtMs: player.getInt("createdAtMs"), allianceId: player.getString("allianceId") }, at)) return;
     const email = u.getString("email");
     if (email) out.push({ email, player });
   });
@@ -5224,13 +5229,22 @@ function mailRecipients(app) {
 }
 
 function unsubscribeUrl(player, apiUrl) {
+  return `${apiUrl}/api/cosmic/unsubscribe?u=${encodeURIComponent(player.id)}&t=${encodeURIComponent(mailToken(player))}`;
+}
+
+function mailToken(player) {
   let token = player.getString("mailToken");
   if (!token) {
     token = $security.randomString(32);
     player.set("mailToken", token);
     $app.save(player);
   }
-  return `${apiUrl}/api/cosmic/unsubscribe?u=${encodeURIComponent(player.id)}&t=${encodeURIComponent(token)}`;
+  return token;
+}
+
+/** 5.16 : signature d'un lien de suivi (campagne, joueur, adresse) : empêche les redirections forgées. */
+function mailSig(campaignId, uid, token, url) {
+  return $security.sha256(`${campaignId}|${uid}|${token}|${url || ""}`).slice(0, 20);
 }
 
 function personalize(str, pseudo, unsubUrl, html) {
@@ -5241,34 +5255,100 @@ function personalize(str, pseudo, unsubUrl, html) {
     .join(unsubUrl);
 }
 
-/** POST /api/cosmic/admin/mail { action: "count" | "test" | "send", subject, html, text, apiUrl, confirm?, dryRun? } */
+function mailFrom(fromName) {
+  const meta = $app.settings().meta;
+  return { address: meta.senderAddress, name: String(fromName || "").trim() || meta.senderName || "Cosmic Empires" };
+}
+
+/** Envoie une campagne à un segment, avec pixel d'ouverture et liens suivis ; l'inscrit dans l'historique. */
+function sendCampaign(c, actor) {
+  const game = loadGame();
+  const now = Date.now();
+  const recipients = mailRecipients($app, c.segment, now);
+  const campaignId = `m${now.toString(36)}${$security.randomString(4)}`;
+  const from = mailFrom(c.fromName);
+  let sent = 0;
+  const failed = [];
+  recipients.list.forEach((r, i) => {
+    const player = r.player;
+    const pseudo = player.getString("pseudo");
+    try {
+      const token = mailToken(player);
+      const url = unsubscribeUrl(player, c.apiUrl);
+      const base = `${c.apiUrl}/api/cosmic/mail`;
+      const pixel = `${base}/o?c=${campaignId}&u=${encodeURIComponent(player.id)}&s=${mailSig(campaignId, player.id, token, "")}`;
+      const track = (link) => `${base}/c?c=${campaignId}&u=${encodeURIComponent(player.id)}&l=${encodeURIComponent(link)}&s=${mailSig(campaignId, player.id, token, link)}`;
+      const html = game.instrumentHtml(personalize(c.html, pseudo, url, true), pixel, track);
+      $app.newMailClient().send(
+        new MailerMessage({
+          from,
+          to: [{ address: r.email }],
+          subject: personalize(c.subject, pseudo, url, false),
+          html,
+          text: personalize(c.text, pseudo, url, false),
+          headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+        }),
+      );
+      sent += 1;
+    } catch (err) {
+      failed.push(pseudo);
+      console.log(`[cosmic] campagne : échec pour ${player.id} : ${err}`);
+    }
+    // Limite du fournisseur (2 envois par seconde chez Resend).
+    if (i < recipients.list.length - 1) sleep(600);
+  });
+  $app.runInTransaction((txApp) => {
+    const rec = configRecord(txApp, game.MAIL_CAMPAIGNS_KEY);
+    const st = game.campaignsState(rec ? toPlain(rec).data : null);
+    const entry = { id: campaignId, subject: c.subject, segment: game.normalizeSegment(c.segment), sentAtMs: now, sent, failed: failed.length, opened: [], clicked: [] };
+    writeConfig(txApp, game.MAIL_CAMPAIGNS_KEY, { list: [entry].concat(st.list).slice(0, game.MAIL_HISTORY_MAX) });
+  });
+  try {
+    const log = new Record($app.findCollectionByNameOrId("admin_logs"));
+    log.load({
+      actorId: actor ? actor.id : "superuser",
+      actorName: actor ? actor.name : "superuser",
+      action: "create",
+      targetCollection: "emails",
+      recordId: campaignId,
+      recordLabel: `Campagne e-mail : ${c.subject}`,
+      changes: { envoyés: sent, échecs: failed.length, segment: c.segment },
+      createdAtMs: now,
+    });
+    $app.save(log);
+  } catch (_) {
+    /* journal facultatif */
+  }
+  return { sent, failed: failed.length, failedPseudos: failed, campaignId };
+}
+
+/** POST /api/cosmic/admin/mail { action: "count" | "test" | "send" | "schedule" | "unschedule", subject, html, text, apiUrl, segment?, sendAtMs?, confirm?, dryRun? } */
 function adminMail(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
   const req = body(e);
   const action = String(req.action || "");
-  const recipients = mailRecipients($app);
-  if (action === "count") return e.json(200, { recipients: recipients.list.length, optedOut: recipients.optedOut, smtp: mailEnabled() });
+  const segment = game.normalizeSegment(req.segment);
+  if (action === "count") {
+    const recipients = mailRecipients($app, segment);
+    return e.json(200, { recipients: recipients.list.length, optedOut: recipients.optedOut, smtp: mailEnabled() });
+  }
+  if (action === "unschedule") {
+    const id = String(req.id || "");
+    $app.runInTransaction((txApp) => {
+      const rec = configRecord(txApp, game.MAIL_SCHEDULE_KEY);
+      const st = game.scheduleState(rec ? toPlain(rec).data : null);
+      writeConfig(txApp, game.MAIL_SCHEDULE_KEY, { list: st.list.filter((c) => c.id !== id) });
+    });
+    return e.json(200, { ok: true });
+  }
   const subject = String(req.subject || "").trim();
   const html = String(req.html || "");
   const text = String(req.text || "");
   const apiUrl = String(req.apiUrl || "").replace(/\/+$/, "");
   if (!subject || !html) throw new BadRequestError("Objet et contenu requis.");
   if (!/^https?:\/\/[^\s]+$/.test(apiUrl)) throw new BadRequestError("Adresse du serveur invalide.");
-  const meta = $app.settings().meta;
-  const from = { address: meta.senderAddress, name: String(req.fromName || "").trim() || meta.senderName || "Cosmic Empires" };
-  const sendOne = (email, pseudo, player, demo) => {
-    // Test : lien de démonstration (ne désinscrit personne).
-    const url = demo ? `${apiUrl}/api/cosmic/unsubscribe?demo=1` : unsubscribeUrl(player, apiUrl);
-    const message = new MailerMessage({
-      from,
-      to: [{ address: email }],
-      subject: personalize(subject, pseudo, url, false),
-      html: personalize(html, pseudo, url, true),
-      text: personalize(text, pseudo, url, false),
-      headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-    });
-    $app.newMailClient().send(message);
-  };
+  const actor = e.auth ? { id: e.auth.id, name: e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") } : null;
 
   if (action === "test") {
     if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
@@ -5284,48 +5364,86 @@ function adminMail(e) {
         player = null;
       }
     }
+    const pseudo = player ? player.getString("pseudo") : "de test";
+    // Test : lien de démonstration (ne désinscrit personne), sans suivi.
+    const url = `${apiUrl}/api/cosmic/unsubscribe?demo=1`;
     try {
-      sendOne(to, player ? player.getString("pseudo") : "de test", player, true);
+      $app.newMailClient().send(
+        new MailerMessage({ from: mailFrom(req.fromName), to: [{ address: to }], subject: personalize(subject, pseudo, url, false), html: personalize(html, pseudo, url, true), text: personalize(text, pseudo, url, false), headers: { "List-Unsubscribe": `<${url}>` } }),
+      );
     } catch (err) {
       throw new BadRequestError(`Envoi impossible : ${err}`);
     }
     return e.json(200, { sent: 1, to });
   }
 
+  if (action === "schedule") {
+    const sendAtMs = Math.floor(Number(req.sendAtMs) || 0);
+    if (!(sendAtMs > Date.now() + 60000)) throw new BadRequestError("Choisis une date d'envoi dans le futur (au moins 1 minute).");
+    if (sendAtMs > Date.now() + 60 * 86400000) throw new BadRequestError("Programmation limitée à 60 jours.");
+    let entry = null;
+    $app.runInTransaction((txApp) => {
+      const rec = configRecord(txApp, game.MAIL_SCHEDULE_KEY);
+      const st = game.scheduleState(rec ? toPlain(rec).data : null);
+      if (st.list.length >= game.MAIL_SCHEDULE_MAX) throw new BadRequestError(`${game.MAIL_SCHEDULE_MAX} campagnes programmées au plus.`);
+      entry = { id: `s${Date.now().toString(36)}`, subject, html, text, fromName: String(req.fromName || ""), apiUrl, segment, sendAtMs, createdBy: actor ? actor.name : "superuser" };
+      writeConfig(txApp, game.MAIL_SCHEDULE_KEY, { list: st.list.concat([entry]).sort((a, b) => a.sendAtMs - b.sendAtMs) });
+    });
+    return e.json(200, { id: entry.id, sendAtMs });
+  }
+
   if (action !== "send") throw new BadRequestError("Action inconnue.");
   if (req.confirm !== "ENVOYER") throw new BadRequestError("Confirmation manquante.");
-  if (req.dryRun) return e.json(200, { sent: 0, failed: 0, recipients: recipients.list.length, dryRun: true });
+  if (req.dryRun) return e.json(200, { sent: 0, failed: 0, recipients: mailRecipients($app, segment).list.length, dryRun: true });
   if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
-  let sent = 0;
-  const failed = [];
-  recipients.list.forEach((r, i) => {
-    try {
-      sendOne(r.email, r.player.getString("pseudo"), r.player);
-      sent += 1;
-    } catch (err) {
-      failed.push(r.player.getString("pseudo"));
-      console.log(`[cosmic] campagne : échec pour ${r.player.id} : ${err}`);
-    }
-    // Limite du fournisseur (2 envois par seconde chez Resend).
-    if (i < recipients.list.length - 1) sleep(600);
+  return e.json(200, sendCampaign({ subject, html, text, fromName: req.fromName, apiUrl, segment }, actor));
+}
+
+/** 5.16 : tâche planifiée : envoie les campagnes programmées dont l'heure est passée. */
+function mailScheduleTick(now) {
+  const game = loadGame();
+  let due = [];
+  $app.runInTransaction((txApp) => {
+    const rec = configRecord(txApp, game.MAIL_SCHEDULE_KEY);
+    const st = game.scheduleState(rec ? toPlain(rec).data : null);
+    due = st.list.filter((c) => c.sendAtMs <= now);
+    if (due.length > 0) writeConfig(txApp, game.MAIL_SCHEDULE_KEY, { list: st.list.filter((c) => c.sendAtMs > now) });
   });
-  try {
-    const log = new Record($app.findCollectionByNameOrId("admin_logs"));
-    log.load({
-      actorId: e.auth ? e.auth.id : "superuser",
-      actorName: e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser",
-      action: "create",
-      targetCollection: "emails",
-      recordId: "campagne",
-      recordLabel: `Campagne e-mail : ${subject}`,
-      changes: { envoyés: sent, échecs: failed.length },
-      createdAtMs: Date.now(),
-    });
-    $app.save(log);
-  } catch (_) {
-    /* journal facultatif */
+  if (due.length > 0 && !mailEnabled()) {
+    console.log("[cosmic] campagne programmée : SMTP non configuré, envoi annulé.");
+    return [];
   }
-  return e.json(200, { sent, failed: failed.length, failedPseudos: failed });
+  return due.map((c) => sendCampaign(c, { id: "planificateur", name: `Programmée par ${c.createdBy}` }));
+}
+
+/** 5.16 : GET /api/cosmic/mail/o (ouverture, pixel) et /api/cosmic/mail/c (clic, redirection). */
+function mailTrack(e, kind) {
+  const q = e.requestInfo().query || {};
+  const campaignId = String(q.c || "");
+  const uid = String(q.u || "");
+  const link = kind === "click" ? String(q.l || "") : "";
+  const sig = String(q.s || "");
+  const player = uid ? findOrNull($app, "players", uid) : null;
+  const valid = !!player && /^m[a-z0-9]+$/i.test(campaignId) && sig === mailSig(campaignId, uid, player.getString("mailToken"), link) && (kind === "open" || /^https?:\/\//.test(link));
+  if (valid) {
+    try {
+      const game = loadGame();
+      $app.runInTransaction((txApp) => {
+        const rec = configRecord(txApp, game.MAIL_CAMPAIGNS_KEY);
+        if (!rec) return;
+        // Identifiant haché : la liste est lisible publiquement (game_config).
+        const st = game.trackCampaign(game.campaignsState(toPlain(rec).data), campaignId, $security.sha256(uid).slice(0, 12), kind);
+        writeConfig(txApp, game.MAIL_CAMPAIGNS_KEY, st);
+      });
+    } catch (err) {
+      console.log(`[cosmic] suivi de campagne : ${err}`);
+    }
+  }
+  if (kind === "click") return e.redirect(302, valid ? link : String($app.settings().meta.appURL || "/"));
+  // GIF transparent 1×1.
+  e.response.header().set("Content-Type", "image/gif");
+  e.response.header().set("Cache-Control", "no-store");
+  return e.blob(200, "image/gif", [71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 0, 0, 0, 255, 255, 255, 33, 249, 4, 1, 0, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59]);
 }
 
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — lien de désinscription des e-mails. */
@@ -7319,4 +7437,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

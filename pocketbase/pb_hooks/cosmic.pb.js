@@ -836,6 +836,18 @@ onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).allianceMessageC
 /** POST /api/cosmic/admin/mail — décompte, envoi de test, envoi à tous (administrateurs). */
 routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db.js`).adminMail(e), $apis.requireAuth("users", "_superusers"));
 
+// 5.16 : suivi des campagnes (ouverture, clic) et envois programmés.
+routerAdd("GET", "/api/cosmic/mail/o", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "open"));
+routerAdd("GET", "/api/cosmic/mail/c", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "click"));
+cronAdd("cosmic_mail_schedule", "*/5 * * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).mailScheduleTick(Date.now());
+    if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
+  } catch (err) {
+    console.log(`[cosmic] campagnes programmées : ${err}`);
+  }
+});
+
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
 routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
 routerAdd("POST", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));

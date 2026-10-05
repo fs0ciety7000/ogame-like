@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  BarChart3,
+  Clock,
   Download,
   FileText,
   Loader2,
@@ -18,8 +20,21 @@ import { IconSelect } from "@/components/ui/icon-select";
 import { usePlayerStore } from "@/store/playerStore";
 import { EMAIL_MARKDOWN_TEMPLATE, markdownToEmail } from "@/lib/emailMarkdown";
 import { cn } from "@/lib/utils";
+import { HudPanel } from "@/components/ui/panel";
+import {
+  MAIL_SEGMENTS,
+  segmentLabel,
+  type MailSegment,
+  type ScheduledCampaign,
+  type SentCampaign,
+} from "@/game/mailSegments";
+import { subscribeAlliances } from "@/services/allianceService";
+import type { Alliance } from "@/types/game";
 import {
   listCampaigns,
+  loadMailState,
+  mailSchedule,
+  mailUnschedule,
   loadCampaign,
   mailCount,
   mailSend,
@@ -67,15 +82,30 @@ export function MailPanel() {
     [mode, md],
   );
 
+  // 5.16 : segment visé, envoi programmé, historique (ouvertures, clics).
+  const [segment, setSegment] = useState<MailSegment>({ id: "all" });
+  const [sendAt, setSendAt] = useState("");
+  const [history, setHistory] = useState<{
+    campaigns: SentCampaign[];
+    scheduled: ScheduledCampaign[];
+  }>({ campaigns: [], scheduled: [] });
+  const alliances = useAllianceList();
+  const refreshHistory = () => void loadMailState().then(setHistory);
+
   useEffect(() => {
     void listCampaigns().then((list) => {
       setCampaigns(list);
       if (list[0]) setId(list[0].id);
     });
-    void mailCount()
+    refreshHistory();
+  }, []);
+
+  useEffect(() => {
+    if (segment.id === "alliance" && !segment.allianceId) return setCount(null);
+    void mailCount(segment)
       .then(setCount)
       .catch(() => setCount(null));
-  }, []);
+  }, [segment]);
 
   const campaign = campaigns.find((c) => c.id === id);
   useEffect(() => {
@@ -130,8 +160,24 @@ export function MailPanel() {
     [content, pseudo],
   );
   const body = content
-    ? { subject, html: content.html, text: content.text, fromName }
+    ? { subject, html: content.html, text: content.text, fromName, segment }
     : null;
+
+  const schedule = async () => {
+    if (!body || !sendAt) return;
+    try {
+      const out = await mailSchedule(body, new Date(sendAt).getTime());
+      toast.success(
+        `Campagne programmée pour le ${new Date(out.sendAtMs).toLocaleString("fr-FR")}.`,
+      );
+      setSendAt("");
+      refreshHistory();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Programmation impossible.",
+      );
+    }
+  };
 
   const test = async () => {
     if (!body) return;
@@ -255,6 +301,44 @@ export function MailPanel() {
               placeholder="Support Cosmic Empires"
             />
           </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-400">
+            Destinataires
+            <select
+              value={segment.id}
+              onChange={(e) =>
+                setSegment(
+                  e.target.value === "alliance"
+                    ? { id: "alliance", allianceId: alliances[0]?.id ?? "" }
+                    : { id: e.target.value as MailSegment["id"] },
+                )
+              }
+              className="h-9 border border-white/10 bg-space-950 px-2 text-sm text-slate-100"
+            >
+              {MAIL_SEGMENTS.map((sg) => (
+                <option key={sg.id} value={sg.id}>
+                  {sg.label}
+                </option>
+              ))}
+            </select>
+            {segment.id === "alliance" && (
+              <select
+                value={segment.allianceId ?? ""}
+                onChange={(e) =>
+                  setSegment({ id: "alliance", allianceId: e.target.value })
+                }
+                className="h-9 border border-white/10 bg-space-950 px-2 text-sm text-slate-100"
+              >
+                {alliances.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    [{a.tag}] {a.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span className="text-[11px] text-slate-500">
+              {MAIL_SEGMENTS.find((sg) => sg.id === segment.id)?.hint}
+            </span>
+          </label>
           <p className="flex items-center gap-1.5 text-xs text-slate-400">
             <Users className="h-3.5 w-3.5" />
             {count ? (
@@ -340,7 +424,32 @@ export function MailPanel() {
             {(count?.recipients ?? 0) > 1 ? "s" : ""}
           </Button>
           {result && <p className="text-xs text-mint-glow">{result}</p>}
+          <div className="mt-1 flex flex-col gap-1.5 border-t border-white/10 pt-2">
+            <p className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Clock className="h-3.5 w-3.5 text-cyan-glow" /> Ou programmer
+              l'envoi (le serveur l'envoie à l'heure dite, à ±5 min)
+            </p>
+            <Input
+              type="datetime-local"
+              value={sendAt}
+              onChange={(e) => setSendAt(e.target.value)}
+              className="font-mono"
+            />
+            <Button
+              variant="secondary"
+              disabled={!body || !sendAt || busy !== null}
+              onClick={() => void schedule()}
+            >
+              <Clock className="h-4 w-4" /> Programmer
+            </Button>
+          </div>
         </Card>
+
+        <MailHistory
+          history={history}
+          onCancel={(cid) => void mailUnschedule(cid).then(refreshHistory)}
+          onRefresh={refreshHistory}
+        />
       </div>
 
       <div
@@ -409,5 +518,109 @@ export function MailPanel() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function useAllianceList(): Alliance[] {
+  const [list, setList] = useState<Alliance[]>([]);
+  useEffect(() => subscribeAlliances(setList), []);
+  return list;
+}
+
+/** 5.16 : envois programmés et historique des campagnes (taux d'ouverture et de clic). */
+function MailHistory({
+  history,
+  onCancel,
+  onRefresh,
+}: {
+  history: { campaigns: SentCampaign[]; scheduled: ScheduledCampaign[] };
+  onCancel: (id: string) => void;
+  onRefresh: () => void;
+}) {
+  const pct = (n: number, of: number) =>
+    of > 0 ? `${Math.round((n / of) * 100)} %` : "—";
+  return (
+    <HudPanel
+      icon={<BarChart3 />}
+      title="Suivi des campagnes"
+      aside={
+        <Button size="sm" variant="ghost" onClick={onRefresh}>
+          Actualiser
+        </Button>
+      }
+    >
+      {history.scheduled.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {history.scheduled.map((c) => (
+            <li
+              key={c.id}
+              className="hud-cut-sm flex items-center gap-2 border border-cyan-glow/20 bg-cyan-glow/[0.04] px-2 py-1.5 text-xs"
+            >
+              <Clock className="h-3.5 w-3.5 shrink-0 text-cyan-glow" />
+              <span className="min-w-0 flex-1 truncate text-slate-200">
+                {c.subject}
+              </span>
+              <span className="shrink-0 font-mono text-[11px] text-slate-400">
+                {new Date(c.sendAtMs).toLocaleString("fr-FR", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => onCancel(c.id)}>
+                Annuler
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {history.campaigns.length === 0 ? (
+        <p className="text-xs text-slate-500">
+          Aucune campagne envoyée depuis le suivi (5.16).
+        </p>
+      ) : (
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 gap-y-1 text-xs">
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            Campagne
+          </span>
+          <span className="text-right font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            Envoyés
+          </span>
+          <span className="text-right font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            Ouverts
+          </span>
+          <span className="text-right font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+            Clics
+          </span>
+          {history.campaigns.map((c) => (
+            <div key={c.id} className="contents">
+              <span className="min-w-0">
+                <span className="block truncate text-slate-200">
+                  {c.subject}
+                </span>
+                <span className="font-mono text-[10px] text-slate-500">
+                  {new Date(c.sentAtMs).toLocaleDateString("fr-FR")} ·{" "}
+                  {segmentLabel(c.segment)}
+                </span>
+              </span>
+              <span className="text-right font-mono tabular-nums text-slate-300">
+                {c.sent}
+              </span>
+              <span className="text-right font-mono tabular-nums text-mint-glow">
+                {pct(c.opened.length, c.sent)}
+              </span>
+              <span className="text-right font-mono tabular-nums text-gold-glow">
+                {pct(c.clicked.length, c.sent)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-slate-500">
+        Ouvertures mesurées par une image invisible : certaines boîtes mail les
+        bloquent, le taux réel est souvent plus haut. Les clics sont fiables.
+      </p>
+    </HudPanel>
   );
 }

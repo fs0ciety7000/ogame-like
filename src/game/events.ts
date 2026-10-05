@@ -37,6 +37,18 @@ export interface ScheduledEvent {
   type: string;
   startMs: number;
   endMs: number;
+  /** 5.16 : récurrence : toutes les N semaines (1 à 8), `repeatCount` occurrences au total (2 à 26). */
+  repeatWeeks?: number;
+  repeatCount?: number;
+}
+
+/** 5.16 : occurrences d'un événement programmé (récurrence comprise). */
+export function scheduledOccurrences(s: ScheduledEvent): { startMs: number; endMs: number }[] {
+  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
+  const count = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
+  const out: { startMs: number; endMs: number }[] = [];
+  for (let i = 0; i < count; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY, endMs: s.endMs + i * weeks * 7 * DAY });
+  return out;
 }
 
 export interface GameEvent {
@@ -363,12 +375,11 @@ function rotationEvent(window: { startMs: number; endMs: number; week: number; n
 }
 
 function scheduledEvents(): GameEvent[] {
-  return (EVENT_RULES.scheduled ?? [])
-    .map((s) => {
-      const type = findEventType(s.type);
-      return type && s.endMs > s.startMs ? { key: `${s.id}:${s.startMs}`, type, startMs: s.startMs, endMs: s.endMs, scheduled: true } : null;
-    })
-    .filter((e): e is GameEvent => e !== null);
+  return (EVENT_RULES.scheduled ?? []).flatMap((s) => {
+    const type = findEventType(s.type);
+    if (!type || !(s.endMs > s.startMs)) return [];
+    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
+  });
 }
 
 /** Événement actif à cet instant (un événement programmé passe avant la rotation). */

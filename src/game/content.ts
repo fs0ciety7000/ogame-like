@@ -337,6 +337,12 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
+  // 5.16 : récurrence des événements programmés.
+  for (const ev of merged.events.scheduled ?? []) {
+    if (ev.repeatWeeks === undefined) continue;
+    if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("Événement programmé : récurrence entre 1 et 8 semaines.");
+    if (!(Number.isInteger(ev.repeatCount) && (ev.repeatCount ?? 0) >= 2 && (ev.repeatCount ?? 0) <= 26)) errors.push("Événement programmé : entre 2 et 26 occurrences.");
+  }
   // 5.15.9 : série de connexion (7 jours, bornes du coffre dans l'ordre).
   const st = merged.streak;
   if (st) {
