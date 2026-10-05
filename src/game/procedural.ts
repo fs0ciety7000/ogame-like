@@ -245,9 +245,9 @@ export interface Archetype {
 }
 
 /** Archétypes dont l'illustration du boss existe (public/assets/chronicles/auto/<id>-boss.webp). */
-export const AUTO_ART: string[] = [];
+export const AUTO_ART: string[] = ["meute"];
 /** 5.16 : archétypes dont le sceau existe (public/assets/chronicles/auto/<id>-sceau.webp), indépendamment du boss. */
-export const AUTO_SEALS: string[] = ["meute", "inquisition", "culte"];
+export const AUTO_SEALS: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 
 export const ARCHETYPES: Archetype[] = [
   {
