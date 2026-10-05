@@ -2,6 +2,7 @@ import { allianceSiegeFactor } from "@/game/alliances";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { computeFleetPower, computeFullPower, pveAttackFactor } from "@/game/combat";
+import { bossAssaultLosses } from "@/game/workshop";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
 import { BOSS_REMINDERS, bossWindows, EVENT_RULES, parisOffsetMs, type BossSchedule } from "@/game/events";
@@ -419,19 +420,23 @@ export function resolveLeviathanAssault(
   fleet: Record<string, number>,
   formation: string | undefined,
   now: number,
-): { state: LeviathanState; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
+): {
+  state: LeviathanState;
+  damage: number;
+  survivors: Record<string, number>;
+  lost: Record<string, number>;
+  /** 5.21 : unités sauvées, à réparer à l'Atelier (elles ne rentrent pas avec la flotte). */
+  recovered: Record<string, number>;
+  /** 5.21 : PV manquants à ajouter aux coques, par type. */
+  hull: Record<string, number>;
+  killed: boolean;
+} {
   const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const survivors: Record<string, number> = {};
-  const lost: Record<string, number> = {};
-  for (const [id, qty] of Object.entries(fleet)) {
-    const raw = active ? Math.floor(qty * lossPct) : 0;
-    const gone = raw - Math.floor(raw * repair);
-    if (gone > 0) lost[id] = gone;
-    survivors[id] = qty - gone;
-  }
+  // 5.21 : unités sauvées à l'Atelier, dégâts conservés sur les survivantes.
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
   const c = state.contributions[player.uid] ?? { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
@@ -457,6 +462,8 @@ export function resolveLeviathanAssault(
     damage,
     survivors,
     lost,
+    recovered,
+    hull,
     killed,
   };
 }

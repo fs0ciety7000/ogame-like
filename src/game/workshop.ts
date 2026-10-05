@@ -32,7 +32,7 @@ export interface WorkshopJob {
   addedAtMs: number;
 }
 
-export type WorkshopSource = "attack" | "defense" | "bounty" | "lair" | "raid" | "expedition";
+export type WorkshopSource = "attack" | "defense" | "bounty" | "lair" | "raid" | "expedition" | "boss";
 
 export const WORKSHOP_SOURCE_LABELS: Record<WorkshopSource, string> = {
   attack: "Attaque",
@@ -41,6 +41,7 @@ export const WORKSHOP_SOURCE_LABELS: Record<WorkshopSource, string> = {
   lair: "Repaire",
   raid: "Raid repoussé",
   expedition: "Expédition",
+  boss: "Boss",
 };
 
 export interface PlayerWorkshop {
@@ -95,9 +96,61 @@ export function hullPercent(player: Pick<PlayerState, "units" | "techLevels" | "
   return Math.max(0, 1 - missing / max);
 }
 
+/** 5.21 : état moyen des coques de toutes les unités, pondéré par les PV (1 = intactes). */
+export function overallHull(player: Pick<PlayerState, "units" | "techLevels" | "workshop">): number {
+  let max = 0;
+  let missing = 0;
+  for (const id of Object.keys(player.units ?? {})) {
+    const m = hullMax(player, id);
+    if (!(m > 0)) continue;
+    max += m;
+    missing += Math.min(m * COMBAT_RULES.hullMaxDamage, workshopState(player).hull[id] ?? 0);
+  }
+  return max > 0 ? 1 - missing / max : 1;
+}
+
+/**
+ * 5.21 : pertes d'un assaut de boss (ou de proie d'élite), à `lossPct` de chaque type :
+ * les unités sauvées par l'Atelier partent en réparation, les survivantes gardent une part
+ * des PV perdus en dégâts, comme au combat en tours.
+ */
+export function bossAssaultLosses(player: Pick<PlayerState, "units" | "techLevels">, fleet: Record<string, number>, lossPct: number, repair: number, active: boolean) {
+  const survivors: Record<string, number> = {};
+  const lost: Record<string, number> = {};
+  const recovered: Record<string, number> = {};
+  const hull: Record<string, number> = {};
+  const share = Math.min(0.95, Math.max(0, COMBAT_RULES.hullDamageShare));
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const saved = Math.floor(raw * repair);
+    const gone = raw - saved;
+    if (gone > 0) lost[id] = gone;
+    if (saved > 0) recovered[id] = saved;
+    survivors[id] = qty - raw;
+    const wear = active && survivors[id] > 0 ? Math.round(qty * lossPct * (share / (1 - share)) * unitBaseHp(player.units ?? {}, player.techLevels ?? {}, id)) : 0;
+    if (wear > 0) hull[id] = wear;
+  }
+  return { survivors, lost, recovered, hull };
+}
+
+/** 5.21 : usure d'un assaut de boss : unités sauvées à l'Atelier, dégâts ajoutés aux coques. */
+export function applyBossWear(player: PlayerState, wear: { recovered?: Record<string, number>; hull?: Record<string, number>; survivors?: Record<string, number> }, now: number) {
+  if (player.npc) return;
+  const st = workshopState(player);
+  // Les survivants sont encore en vol : ils comptent dans le stock de PV.
+  const stock = { units: withFleet(player.units ?? {}, wear.survivors ?? {}), techLevels: player.techLevels };
+  for (const [id, hp] of Object.entries(wear.hull ?? {})) {
+    const max = hullMax(stock, id);
+    if (hp > 0 && max > 0) st.hull[id] = Math.round(Math.min(max * COMBAT_RULES.hullMaxDamage, (st.hull[id] ?? 0) + hp));
+  }
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  sendToWorkshop(player, wear.recovered ?? {}, now, "boss", false);
+}
+
 /** Enregistre les dégâts rendus par le moteur de combat (PV manquants par type). */
 export function applyHull(player: PlayerState, hull: Record<string, number> | undefined) {
-  if (!hull || player.npc) return;
+  if (!hull) return;
   const st = workshopState(player);
   for (const [id, hp] of Object.entries(hull)) {
     if (hp > 0) st.hull[id] = Math.round(hp);
@@ -125,10 +178,33 @@ export function sendToWorkshop(player: PlayerState, recovered: Record<string, nu
   player.workshop = st;
 }
 
+/**
+ * 5.21 : un seigneur de guerre garde ses dégâts mais n'a pas d'Atelier : ses équipages
+ * réparent une part fixe de ses PV par heure (sa puissance est sans commune mesure avec
+ * une cadence en PV par seconde). Ses unités sauvées reviennent toujours aussitôt.
+ */
+function advanceWarlordHull(player: PlayerState, now: number, instant: boolean) {
+  const st = workshopState(player);
+  const hours = Math.max(0, (now - (st.updatedAtMs || now)) / 3600_000);
+  st.updatedAtMs = now;
+  for (const id of Object.keys(st.hull)) {
+    const max = hullMax(player, id);
+    const left = instant || !(max > 0) ? 0 : st.hull[id] - max * COMBAT_RULES.warlordHullRepairPerHour * hours;
+    if (left < 1) delete st.hull[id];
+    else st.hull[id] = Math.round(left);
+  }
+  st.jobs = [];
+  player.workshop = st;
+}
+
 /** Fait avancer les réparations jusqu'à `now`. Rend les unités réparées et une notification. */
 export function advanceWorkshop(player: PlayerState, now: number, instant = false): NewNotification[] {
   const w = player.workshop;
-  if (!w || player.npc) return [];
+  if (!w) return [];
+  if (player.npc) {
+    advanceWarlordHull(player, now, instant);
+    return [];
+  }
   const st = workshopState(player);
   const since = st.updatedAtMs || now;
   let budget = instant ? Infinity : Math.max(0, (now - since) / 1000) * workshopRate(player);

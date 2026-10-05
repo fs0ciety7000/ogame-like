@@ -61,6 +61,8 @@ export const COMBAT_RULES = {
   workshopHpPerSec: 30,
   workshopLevelGain: 0.25,
   workshopBaseFactor: 0.2,
+  /** 5.21 : seigneurs de guerre : part de leurs PV réparée par heure (0,08 : ≈ 12 h pour une coque à 0 %). */
+  warlordHullRepairPerHour: 0.08,
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */

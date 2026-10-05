@@ -386,6 +386,7 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
   if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
   if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
+  if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : réparation horaire des seigneurs entre 0 et 1.");
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;

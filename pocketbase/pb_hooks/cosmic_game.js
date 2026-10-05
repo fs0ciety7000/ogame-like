@@ -168,6 +168,7 @@ __export(hooksEntry_exports, {
   anomalyChance: () => anomalyChance,
   answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
+  applyBossWear: () => applyBossWear,
   applyGameContent: () => applyGameContent,
   applyLegacyBattleReport: () => applyLegacyBattleReport,
   applyLegacyGift: () => applyLegacyGift,
@@ -3405,8 +3406,57 @@ function workshopUnits(player) {
   for (const j of workshopState(player).jobs) out[j.unitId] = ((_a = out[j.unitId]) != null ? _a : 0) + j.count;
   return out;
 }
+function hullMax(player, unitId) {
+  var _a, _b, _c, _d, _e;
+  const count2 = (_c = (_b = (_a = player.units) == null ? void 0 : _a[unitId]) == null ? void 0 : _b.count) != null ? _c : 0;
+  return count2 > 0 ? count2 * unitBaseHp((_d = player.units) != null ? _d : {}, (_e = player.techLevels) != null ? _e : {}, unitId) : 0;
+}
+function overallHull(player) {
+  var _a, _b;
+  let max = 0;
+  let missing = 0;
+  for (const id of Object.keys((_a = player.units) != null ? _a : {})) {
+    const m = hullMax(player, id);
+    if (!(m > 0)) continue;
+    max += m;
+    missing += Math.min(m * COMBAT_RULES.hullMaxDamage, (_b = workshopState(player).hull[id]) != null ? _b : 0);
+  }
+  return max > 0 ? 1 - missing / max : 1;
+}
+function bossAssaultLosses(player, fleet, lossPct, repair, active) {
+  var _a, _b;
+  const survivors = {};
+  const lost = {};
+  const recovered = {};
+  const hull = {};
+  const share = Math.min(0.95, Math.max(0, COMBAT_RULES.hullDamageShare));
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const saved = Math.floor(raw * repair);
+    const gone = raw - saved;
+    if (gone > 0) lost[id] = gone;
+    if (saved > 0) recovered[id] = saved;
+    survivors[id] = qty - raw;
+    const wear = active && survivors[id] > 0 ? Math.round(qty * lossPct * (share / (1 - share)) * unitBaseHp((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, id)) : 0;
+    if (wear > 0) hull[id] = wear;
+  }
+  return { survivors, lost, recovered, hull };
+}
+function applyBossWear(player, wear, now) {
+  var _a, _b, _c, _d, _e;
+  if (player.npc) return;
+  const st = workshopState(player);
+  const stock = { units: withFleet((_a = player.units) != null ? _a : {}, (_b = wear.survivors) != null ? _b : {}), techLevels: player.techLevels };
+  for (const [id, hp] of Object.entries((_c = wear.hull) != null ? _c : {})) {
+    const max = hullMax(stock, id);
+    if (hp > 0 && max > 0) st.hull[id] = Math.round(Math.min(max * COMBAT_RULES.hullMaxDamage, ((_d = st.hull[id]) != null ? _d : 0) + hp));
+  }
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  sendToWorkshop(player, (_e = wear.recovered) != null ? _e : {}, now, "boss", false);
+}
 function applyHull(player, hull) {
-  if (!hull || player.npc) return;
+  if (!hull) return;
   const st = workshopState(player);
   for (const [id, hp] of Object.entries(hull)) {
     if (hp > 0) st.hull[id] = Math.round(hp);
@@ -3428,10 +3478,27 @@ function sendToWorkshop(player, recovered, now, source, fromBase) {
   }
   player.workshop = st;
 }
+function advanceWarlordHull(player, now, instant) {
+  const st = workshopState(player);
+  const hours2 = Math.max(0, (now - (st.updatedAtMs || now)) / 36e5);
+  st.updatedAtMs = now;
+  for (const id of Object.keys(st.hull)) {
+    const max = hullMax(player, id);
+    const left = instant || !(max > 0) ? 0 : st.hull[id] - max * COMBAT_RULES.warlordHullRepairPerHour * hours2;
+    if (left < 1) delete st.hull[id];
+    else st.hull[id] = Math.round(left);
+  }
+  st.jobs = [];
+  player.workshop = st;
+}
 function advanceWorkshop(player, now, instant = false) {
   var _a, _b, _c;
   const w = player.workshop;
-  if (!w || player.npc) return [];
+  if (!w) return [];
+  if (player.npc) {
+    advanceWarlordHull(player, now, instant);
+    return [];
+  }
   const st = workshopState(player);
   const since = st.updatedAtMs || now;
   let budget = instant ? Infinity : Math.max(0, (now - since) / 1e3) * workshopRate(player);
@@ -6308,14 +6375,7 @@ function resolveEliteAssault(state, player, fleet, formation, now) {
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
-  const survivors = {};
-  const lost = {};
-  for (const [id, qty] of Object.entries(fleet)) {
-    const raw = active ? Math.floor(qty * lossPct) : 0;
-    const gone = raw - Math.floor(raw * repair);
-    if (gone > 0) lost[id] = gone;
-    survivors[id] = qty - gone;
-  }
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
   const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
@@ -6329,6 +6389,8 @@ function resolveEliteAssault(state, player, fleet, formation, now) {
     damage,
     survivors,
     lost,
+    recovered,
+    hull,
     killed
   };
 }
@@ -9060,7 +9122,9 @@ var COMBAT_RULES = {
   /** Atelier de réparation : PV réparés par seconde au niveau 1, gain par niveau, et cadence sans Atelier. */
   workshopHpPerSec: 30,
   workshopLevelGain: 0.25,
-  workshopBaseFactor: 0.2
+  workshopBaseFactor: 0.2,
+  /** 5.21 : seigneurs de guerre : part de leurs PV réparée par heure (0,08 : ≈ 12 h pour une coque à 0 %). */
+  warlordHullRepairPerHour: 0.08
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
@@ -9587,14 +9651,7 @@ function resolveLeviathanAssault(state, player, fleet, formation, now) {
   const active = isActive(state, now);
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const survivors = {};
-  const lost = {};
-  for (const [id, qty] of Object.entries(fleet)) {
-    const raw = active ? Math.floor(qty * lossPct) : 0;
-    const gone = raw - Math.floor(raw * repair);
-    if (gone > 0) lost[id] = gone;
-    survivors[id] = qty - gone;
-  }
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
   const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
@@ -9617,6 +9674,8 @@ function resolveLeviathanAssault(state, player, fleet, formation, now) {
     damage,
     survivors,
     lost,
+    recovered,
+    hull,
     killed
   };
 }
@@ -12554,6 +12613,7 @@ function warlordPublic(d, npc, rt, state, now) {
     color: o.color,
     bio: d.bio,
     power: npc ? empirePower(npc) : 0,
+    hull: npc ? Math.round(overallHull(npc) * 1e3) / 1e3 : 1,
     absentUntilMs: (_a = rt == null ? void 0 : rt.absentUntilMs) != null ? _a : 0,
     vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null
   };
@@ -12635,9 +12695,9 @@ function performAttack(input) {
     defenderTechLevels: (_q = def3.techLevels) != null ? _q : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
     defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
-    // 5.20 : dégâts conservés (planète mère des joueurs ; ni colonies ni PNJ).
-    attackerHull: attacker.npc ? void 0 : workshopState(attacker).hull,
-    defenderHull: colony || owner.npc ? void 0 : workshopState(owner).hull,
+    // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
+    attackerHull: workshopState(attacker).hull,
+    defenderHull: colony ? void 0 : workshopState(owner).hull,
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries((_r = def3.resources) != null ? _r : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch, def3))])
@@ -12650,10 +12710,8 @@ function performAttack(input) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
   const attackerToWorkshop = !attacker.npc;
-  if (attackerToWorkshop) {
-    applyHull(attacker, combat.attackerHull);
-    sendToWorkshop(attacker, combat.attackerRecovered, now, "attack", true);
-  }
+  applyHull(attacker, combat.attackerHull);
+  if (attackerToWorkshop) sendToWorkshop(attacker, combat.attackerRecovered, now, "attack", true);
   const survivors = {};
   for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_t = combat.attackerLosses[unitId]) != null ? _t : 0) - (attackerToWorkshop ? (_u = combat.attackerRecovered[unitId]) != null ? _u : 0 : 0));
   if (input.inFlight) {
@@ -12677,8 +12735,8 @@ function performAttack(input) {
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }
+  if (!colony) applyHull(owner, combat.defenderHull);
   if (!colony && !owner.npc) {
-    applyHull(owner, combat.defenderHull);
     const ships = Object.fromEntries(Object.entries(combat.defenderRecovered).map(([id, n]) => {
       var _a2, _b2;
       return [id, n - ((_b2 = (_a2 = combat.defenderRebuilt) == null ? void 0 : _a2[id]) != null ? _b2 : 0)];
@@ -15782,6 +15840,7 @@ function validateRules(rules) {
   if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
   if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
   if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
+  if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
@@ -17404,10 +17463,62 @@ function computeBalance516(active, now) {
   };
 }
 
+// src/game/balance/combatTypes.ts
+var COMBAT_519_SINCE_MS = Date.UTC(2026, 9, 5, 16, 10);
+var COMBAT_KINDS = {
+  pvp: { label: "Joueur contre joueur (attaquant)", side: "attack", target: [55, 60] },
+  warlord: { label: "Attaques de seigneurs de guerre", side: "attack", target: [40, 60] },
+  reprisal: { label: "R\xE9pliques des seigneurs (d\xE9fense)", side: "defense", target: [50, 70] },
+  bounty: { label: "Primes Kesh'Vaar", side: "attack", target: [85, 90] },
+  lair: { label: "Assauts de repaires", side: "attack", target: [60, 80] },
+  raid: { label: "Raids de faction (d\xE9fense)", side: "defense", target: [60, 80] }
+};
+var isWarlord = (uid) => !!uid && uid.startsWith("npc");
+function combatKind(r) {
+  var _a, _b;
+  const a = (_a = r.attackerUid) != null ? _a : "";
+  const d = (_b = r.defenderUid) != null ? _b : "";
+  if (!a || !d) return null;
+  if (d.startsWith("bounty_")) return "bounty";
+  if (d.startsWith("lair_")) return "lair";
+  if (a === "pirates") return "raid";
+  if (isWarlord(a)) return "reprisal";
+  if (isWarlord(d)) return "warlord";
+  return "pvp";
+}
+var isPvpReport = (r) => combatKind(r) === "pvp";
+function playerWon(kind, outcome) {
+  return COMBAT_KINDS[kind].side === "attack" ? outcome === "attacker_win" : outcome !== "attacker_win";
+}
+function combatTypeStats(reports, since = COMBAT_519_SINCE_MS, until = Infinity) {
+  var _a;
+  const acc = /* @__PURE__ */ new Map();
+  for (const r of reports) {
+    if (r.timestamp < since || r.timestamp > until) continue;
+    const kind = combatKind(r);
+    if (!kind) continue;
+    const a = (_a = acc.get(kind)) != null ? _a : { battles: 0, wins: 0 };
+    a.battles++;
+    if (playerWon(kind, r.outcome)) a.wins++;
+    acc.set(kind, a);
+  }
+  return Object.keys(COMBAT_KINDS).map((kind) => {
+    var _a2;
+    const a = (_a2 = acc.get(kind)) != null ? _a2 : { battles: 0, wins: 0 };
+    const pct6 = a.battles >= 5 ? Math.round(a.wins / a.battles * 100) : null;
+    const [lo, hi] = COMBAT_KINDS[kind].target;
+    return { kind, battles: a.battles, playerWins: a.wins, playerWinPct: pct6, status: pct6 === null ? "none" : pct6 < lo ? "low" : pct6 > hi ? "high" : "ok" };
+  });
+}
+function combatTypeCounts(reports, since, until) {
+  const out = {};
+  for (const s of combatTypeStats(reports, since, until)) if (s.battles > 0) out[s.kind] = [s.battles, s.playerWins];
+  return out;
+}
+
 // src/game/balance/history.ts
 var BALANCE_HISTORY_KEY = "balance_history";
 var BALANCE_HISTORY_DAYS = 180;
-var isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
 function median5(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
@@ -17417,7 +17528,7 @@ function median5(xs) {
 function balanceSnapshot(live, reports, now) {
   var _a, _b;
   const day = reports.filter((r) => r.timestamp >= now - 864e5 && r.timestamp <= now);
-  const pvp = day.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const pvp = day.filter(isPvpReport);
   const wl = day.filter((r) => {
     var _a2, _b2;
     return ((_a2 = r.attackerUid) == null ? void 0 : _a2.startsWith("npc")) || ((_b2 = r.defenderUid) == null ? void 0 : _b2.startsWith("npc"));
@@ -17440,7 +17551,8 @@ function balanceSnapshot(live, reports, now) {
     bestDefense: live.bestDefense,
     bestAttack: live.bestAttack,
     topWarlord: (_b = (_a = live.warlords[0]) == null ? void 0 : _a.power) != null ? _b : 0,
-    homeDefenseBonus: COMBAT_RULES.homeDefenseBonus
+    homeDefenseBonus: COMBAT_RULES.homeDefenseBonus,
+    kinds: combatTypeCounts(reports, now - 864e5, now)
   };
 }
 function pushSnapshot(history, snap) {
@@ -17495,8 +17607,7 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
   }).filter((u) => u.places > 0).sort((a, b) => b.places - a.places);
   const since = now - windowDays * 864e5;
   const recent = reports.filter((r) => r.timestamp >= since);
-  const isNpc2 = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-  const pvp = recent.filter((r) => !isNpc2(r.attackerUid) && !isNpc2(r.defenderUid));
+  const pvp = recent.filter(isPvpReport);
   const wl = recent.filter((r) => {
     var _a, _b;
     return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
@@ -17530,7 +17641,8 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     }).sort((a, b) => b.power - a.power),
     bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
     bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
-    v516: computeBalance516(active, now)
+    v516: computeBalance516(active, now),
+    combatTypes: { sinceMs: COMBAT_519_SINCE_MS, kinds: combatTypeStats(reports, COMBAT_519_SINCE_MS, now) }
   };
 }
 

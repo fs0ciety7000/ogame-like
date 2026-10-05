@@ -195,6 +195,14 @@ export function RulesPanel() {
             hint="Réparation des coques par les équipages."
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopBaseFactor: v ?? 0 } }))}
           />
+          <NumberField
+            label="Seigneurs de guerre : part des PV réparée par heure (0,08 = 8 %)"
+            value={rules.combat.warlordHullRepairPerHour}
+            min={0}
+            step={0.01}
+            hint="Ils n'ont pas d'Atelier : à 0,08, une coque très abîmée est réparée en ≈ 12 h."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, warlordHullRepairPerHour: v ?? 0 } }))}
+          />
         </Section>
         <Section title="Combat en tours (5.18)">
           <NumberField

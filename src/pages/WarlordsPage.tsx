@@ -155,6 +155,11 @@ export function WarlordsPage() {
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">
                         Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />
                       </span>
+                      {(w.hull ?? 1) < 0.95 && (
+                        <span className="hud-chip hud-chip-sm hud-tone-ember" title="Ses unités gardent les dégâts de ses derniers combats : il se bat moins bien tant que ses équipages n'ont pas réparé.">
+                          Coque <span className="font-mono">{Math.round((w.hull ?? 1) * 100)} %</span> · affaibli
+                        </span>
+                      )}
                     </div>
                     <p className="line-clamp-3 text-xs leading-relaxed text-slate-400">{w.bio}</p>
                     {gone && (

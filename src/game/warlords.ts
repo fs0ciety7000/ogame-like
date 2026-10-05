@@ -10,6 +10,7 @@ import { onVacation } from "@/game/vacation";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
 import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { overallHull } from "@/game/workshop";
 
 /* =====================================================
    Seigneurs de guerre (v4.2) : dix empires tenus par le jeu, placés sur la
@@ -763,6 +764,8 @@ export interface WarlordPublic {
   color: string;
   bio: string;
   power: number;
+  /** 5.21 : état moyen des coques (1 = intactes). */
+  hull?: number;
   absentUntilMs: number;
   vendetta: Pick<Vendetta, "id" | "ownerUid" | "ownerPseudo" | "allianceId" | "endsAtMs" | "goal" | "dealt"> | null;
 }
@@ -784,6 +787,7 @@ export function warlordPublic(d: WarlordDef, npc: PlayerState | null, rt: Warlor
     color: o.color,
     bio: d.bio,
     power: npc ? empirePower(npc) : 0,
+    hull: npc ? Math.round(overallHull(npc) * 1000) / 1000 : 1,
     absentUntilMs: rt?.absentUntilMs ?? 0,
     vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null,
   };
