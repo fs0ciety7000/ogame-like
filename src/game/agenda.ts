@@ -25,7 +25,12 @@ export interface AgendaItem {
   /** Combat déjà terminé dans cette fenêtre (affichage). */
   done?: boolean;
   /** Règle d'origine, pour le planificateur (date précise d'un boss, événement programmé). */
-  source?: { type: "levDate" | "sbDate"; startMs: number } | { type: "scheduled"; id: string };
+  source?:
+    | { type: "levDate" | "sbDate"; startMs: number }
+    | { type: "scheduled"; id: string }
+    /** 5.15.14 : apparition régulière (boss) ou week-end de la rotation, déplaçable aussi. */
+    | { type: "levGen" | "sbGen"; startMs: number }
+    | { type: "rotation"; startMs: number; eventType: string };
 }
 
 export const AGENDA_COLORS: Record<AgendaKind, string> = {
@@ -52,7 +57,7 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
   const to = now + days * DAY;
   const items: AgendaItem[] = [];
   for (const w of bossWindows(now, leviathanSchedule(), 6)) {
-    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "🐋", ...(w.fixed ? { source: { type: "levDate" as const, startMs: w.startMs } } : {}) });
+    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "🐋", source: w.fixed ? { type: "levDate", startMs: w.startMs } : { type: "levGen", startMs: w.startMs } });
   }
   const months = chroniclesConfig().months;
   for (const w of bossWindows(now, seasonBossSchedule(), 6)) {
@@ -60,10 +65,10 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
     const local = new Date(w.startMs + 2 * 3600_000);
     const monthId = `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, "0")}`;
     const month = months.find((m) => m.id === monthId);
-    if (month) items.push({ id: `boss-${w.startMs}`, kind: "seasonboss", title: month.boss.name, startMs: w.startMs, endMs: w.endMs, link: "/game/boss", fixed: w.fixed, emoji: "⚔️", ...(w.fixed ? { source: { type: "sbDate" as const, startMs: w.startMs } } : {}) });
+    if (month) items.push({ id: `boss-${w.startMs}`, kind: "seasonboss", title: month.boss.name, startMs: w.startMs, endMs: w.endMs, link: "/game/boss", fixed: w.fixed, emoji: "⚔️", source: w.fixed ? { type: "sbDate", startMs: w.startMs } : { type: "sbGen", startMs: w.startMs } });
   }
   for (const e of weekendEventsBetween(now, to))
-    items.push({ id: e.key, kind: "event", title: e.type.name, startMs: e.startMs, endMs: e.endMs, link: "/game", emoji: e.type.emoji, ...(e.scheduled ? { fixed: true, source: { type: "scheduled" as const, id: e.key.slice(0, e.key.lastIndexOf(":")) } } : {}) });
+    items.push({ id: e.key, kind: "event", title: e.type.name, startMs: e.startMs, endMs: e.endMs, link: "/game", emoji: e.type.emoji, ...(e.scheduled ? { fixed: true, source: { type: "scheduled" as const, id: e.key.slice(0, e.key.lastIndexOf(":")) } } : { source: { type: "rotation" as const, startMs: e.startMs, eventType: e.type.id } }) });
   for (const m of months) {
     for (let i = 0; i < 4; i++) {
       const at = episodeUnlockMs(m.id, i);

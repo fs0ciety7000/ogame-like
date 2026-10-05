@@ -200,6 +200,7 @@ export function leviathanSchedule(): BossSchedule {
     startHour: LEVIATHAN_RULES.startHour ?? 18,
     durationHours: LEVIATHAN_RULES.durationHours,
     dates: EVENT_RULES.bossDates ?? [],
+    skips: EVENT_RULES.bossSkips ?? [],
     ...(weekly ? { weekly: { minGapDays } } : {}),
   };
 }
