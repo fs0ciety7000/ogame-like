@@ -51,6 +51,15 @@ export const EXPEDITION_RULES = {
   forceMaxPower: 0.8,
   /** Péage demandé par une faction : heures de production commune. */
   tollHours: 1,
+  /** 5.16 : expéditions en chaîne. Au dernier secteur, la flotte peut pousser plus loin
+   *  (jusqu'à `maxDepth` étapes de plus, d'une demi-durée chacune). */
+  maxDepth: 3,
+  /** Butin de chaque étape profonde : × (1 + deepLootBonus × profondeur). */
+  deepLootBonus: 0.25,
+  /** Puissance des embuscades et des passages forcés : × (1 + deepRisk × profondeur). */
+  deepRisk: 0.2,
+  /** Embuscade perdue en profondeur : part de la cale perdue. */
+  deepLootLoss: 0.3,
 };
 
 export type ExpeditionEventKind = keyof typeof EXPEDITION_RULES.weights;
@@ -60,16 +69,58 @@ export interface ExpeditionLogEntry {
   atMs: number;
   kind: ExpeditionEventKind;
   text: string;
-  /** Choix fait face à une faction. */
-  choice?: "toll" | "force";
+  /** Choix fait face à une faction, ou pour la suite (5.16). */
+  choice?: "toll" | "force" | "deeper" | "return";
+  /** 5.16 : profondeur de l'étape (0 = trajet normal). */
+  depth?: number;
 }
 
 export interface ExpeditionState {
   hours: number;
   log: ExpeditionLogEntry[];
-  /** Rencontre en attente d'une décision. */
-  pending: { stage: 1 | 2; factionId: string; deadlineMs: number; toll: Partial<Record<ResourceId, number>> } | null;
+  /** Rencontre en attente d'une décision (5.16 : `kind: "deeper"` = pousser plus loin ou rentrer). */
+  pending: { stage: 1 | 2; factionId: string; deadlineMs: number; toll: Partial<Record<ResourceId, number>>; kind?: "faction" | "deeper" } | null;
   formation?: string;
+  /** 5.16 : étapes de plus déjà parcourues. */
+  depth?: number;
+}
+
+/** 5.16 : profondeur actuelle de l'expédition. */
+export function expeditionDepth(fleet: Pick<ExpeditionFleet, "expedition">): number {
+  return Math.max(0, Math.floor(Number(fleet.expedition.depth) || 0));
+}
+
+/** 5.16 : durée d'une étape profonde (la moitié de la durée choisie). */
+export function deepLegMs(fleet: Pick<ExpeditionFleet, "expedition">): number {
+  return Math.max(1, fleet.expedition.hours) * 1800_000;
+}
+
+/** 5.16 : la flotte peut-elle encore pousser plus loin ? */
+export function canGoDeeper(fleet: ExpeditionFleet): boolean {
+  return expeditionDepth(fleet) < EXPEDITION_RULES.maxDepth && fleetShips(fleet.units) > 0;
+}
+
+/** 5.16 : propose de pousser plus loin (décision, sinon retour au bout du délai). */
+export function offerDeeper(fleet: ExpeditionFleet, now: number): void {
+  fleet.expedition.pending = { stage: 2, factionId: "", deadlineMs: now + EXPEDITION_RULES.choiceMinutes * 60_000, toll: {}, kind: "deeper" };
+}
+
+/** 5.16 : décision « pousser plus loin » ou « rentrer ». Renvoie le texte et si la flotte repart. */
+export function resolveDeeper(fleet: ExpeditionFleet, choiceIn: unknown, now: number): { text: string; deeper: boolean } {
+  const pending = fleet.expedition.pending;
+  if (!pending || pending.kind !== "deeper") throw new GameActionError("Aucune décision en attente pour cette expédition.");
+  const deeper = choiceIn === "deeper" && canGoDeeper(fleet);
+  fleet.expedition.pending = null;
+  if (!deeper) {
+    const text = "La flotte fait demi-tour : la cale est sécurisée.";
+    fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text, choice: "return", depth: expeditionDepth(fleet) }];
+    return { text, deeper: false };
+  }
+  const depth = expeditionDepth(fleet) + 1;
+  fleet.expedition.depth = depth;
+  const text = `Cap sur des secteurs inconnus (profondeur ${depth}) : butin ×${(1 + EXPEDITION_RULES.deepLootBonus * depth).toFixed(2).replace(".", ",")}, mais les embuscades se durcissent.`;
+  fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text, choice: "deeper", depth }];
+  return { text, deeper: true };
 }
 
 export type ExpeditionFleet = Omit<Fleet, "id"> & { id?: string; expedition: ExpeditionState };
@@ -82,6 +133,15 @@ function addLoot(fleet: ExpeditionFleet, gain: Partial<Record<ResourceId, number
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) if (n > 0) loot[res] = (loot[res] ?? 0) + Math.floor(n);
   fleet.loot = loot;
 }
+
+/** 5.16 : gain multiplié selon la profondeur (en place, pour que le texte affiche le vrai gain). */
+function deepen(fleet: ExpeditionFleet, gain: Partial<Record<ResourceId, number>>): Partial<Record<ResourceId, number>> {
+  const mult = 1 + EXPEDITION_RULES.deepLootBonus * expeditionDepth(fleet);
+  if (mult === 1) return gain;
+  return Object.fromEntries(Object.entries(gain).map(([r, n]) => [r, Math.floor((n ?? 0) * mult)])) as Partial<Record<ResourceId, number>>;
+}
+
+const riskOf = (fleet: ExpeditionFleet) => 1 + EXPEDITION_RULES.deepRisk * expeditionDepth(fleet);
 
 /** Liste lisible : « 1 200 ferraille, 300 énergie ». */
 export function fleetShips(units: Record<string, number>): number {
@@ -174,13 +234,13 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
   if (kind === "nothing") {
     text = "Calme plat : rien d'intéressant dans ce secteur.";
   } else if (kind === "deposit") {
-    const gain = productionHours(player, between(R.depositMinHours, R.depositMaxHours, random));
+    const gain = deepen(fleet, productionHours(player, between(R.depositMinHours, R.depositMaxHours, random)));
     addLoot(fleet, gain);
     text = `Gisement repéré et exploité : ${describeGain(gain)}.`;
   } else if (kind === "rare") {
     const value = sum(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
     const each = Math.max(1, Math.floor(value / Math.max(1, R.rareRate) / 4));
-    const gain = { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each };
+    const gain = deepen(fleet, { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each });
     addLoot(fleet, gain);
     text = `Trésor rare dans une station abandonnée : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
@@ -197,11 +257,16 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
     fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => [id, n + (found[id] ?? 0)]));
     text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
-    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
     if (won) {
-      const gain = productionHours(player, R.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
       addLoot(fleet, gain);
       text = `Embuscade repoussée (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}.`;
+    } else if (expeditionDepth(fleet) > 0 && fleet.loot) {
+      // 5.16 : en profondeur, une défaite coûte une partie de la cale.
+      const lostLoot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, Math.floor((n ?? 0) * R.deepLootLoss)])) as Partial<Record<ResourceId, number>>;
+      fleet.loot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, (n ?? 0) - (lostLoot[r as ResourceId] ?? 0)]));
+      text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a dû fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
     }
@@ -211,20 +276,20 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
       text = "Des signaux lointains, puis plus rien.";
     } else {
       const toll = productionHours(player, R.tollHours);
-      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 60_000, toll };
+      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 60_000, toll, kind: "faction" };
       text = `${faction.name} barre la route et exige un péage de ${describeGain(toll)}.`;
       fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
       return { text, pending: true };
     }
   }
-  fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
+  fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text, ...(expeditionDepth(fleet) > 0 ? { depth: expeditionDepth(fleet) } : {}) }];
   return { text, pending: false };
 }
 
 /** Décision face à une faction (le joueur, ou « péage » par défaut à l'échéance). */
 export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFleet, choiceIn: unknown, now: number, random: () => number): string {
   const pending = fleet.expedition.pending;
-  if (!pending) throw new GameActionError("Aucune décision en attente pour cette expédition.");
+  if (!pending || pending.kind === "deeper") throw new GameActionError("Aucune décision en attente pour cette expédition.");
   const choice = choiceIn === "force" ? "force" : "toll";
   const faction = FACTIONS.find((f) => f.id === pending.factionId);
   const name = faction?.name ?? "La faction";
@@ -242,10 +307,10 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
     if (st) st.notoriety = Math.max(0, st.notoriety - 1);
     text = `Péage payé à ${name} (${describeGain(paid)}) : la flotte passe, et ta réputation s'améliore.`;
   } else {
-    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet));
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
-      const gain = productionHours(player, EXPEDITION_RULES.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));
       addLoot(fleet, gain);
       text = `Passage forcé face à ${name} (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}. Ta notoriété grimpe.`;
     } else {
@@ -260,7 +325,8 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
 
 /** Fin de l'expédition : XP créditée (les survivants et le butin rentrent via completeFleetReturn). */
 export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, now: number, random: () => number = Math.random): NewNotification {
-  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour);
+  // 5.16 : chaque étape profonde compte une demi-durée d'XP en plus.
+  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
   applyXpDelta(player, xp, now);
   bumpStat(player, "expeditions");
   // v4.0 : une relique, parfois (5 % à 2 h, jusqu'à 15 % à 8 h).
@@ -271,11 +337,12 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
   }
   // v5.14 : table de butin « expédition » (en plus de la relique ci-dessus).
   // 5.15 : les longues expéditions (plus risquées) donnent plus souvent des jetons (4 h = difficulté 1).
-  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours, 4)));
+  // 5.16 : la profondeur compte aussi comme difficulté (plus de chances de jetons).
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours * (1 + 0.5 * expeditionDepth(fleet)), 4)));
   return {
     kind: "fleet",
     title: relic ? "Expédition terminée : relique !" : "Expédition terminée",
-    message: `Ta flotte est rentrée : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}${loot}`,
+    message: `Ta flotte est rentrée${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false,
   };

@@ -1008,22 +1008,32 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(ps.sendFleet("", { chasseur: 20 }, "expedition", { hours: 2 })).rejects.toThrow(/déjà/);
       await expect(ps.recallFleet(sent.id)).rejects.toThrow(/rappelée/);
       const xp = (await snap(bId))!.xp ?? 0;
+      // 5.16 : au dernier secteur, on pousse une fois plus loin, puis on rentre.
+      let deeperDone = false;
       const step = async (field: "arriveAtMs" | "returnAtMs") => {
         await admin.collection("fleets").update(sent.id, { [field]: Date.now() - 1000 });
         await ps.syncPlayer("");
         let f = await pb.collection("fleets").getOne(sent.id);
-        if (f.status === "decision") {
-          f = await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: sent.id, choice: "force" } });
+        for (let i = 0; i < 3 && f.status === "decision"; i++) {
+          const deeper = f.expedition?.pending?.kind === "deeper";
+          const choice = deeper ? (deeperDone ? "return" : "deeper") : "force";
+          if (deeper && !deeperDone) deeperDone = true;
+          f = await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: sent.id, choice } });
         }
         return f;
       };
       const mid = await step("arriveAtMs");
       expect(["returning", "done"]).toContain(mid.status);
       expect(mid.expedition.log.length).toBeGreaterThanOrEqual(1);
-      const end = mid.status === "done" ? mid : await step("returnAtMs");
+      let end = mid.status === "done" ? mid : await step("returnAtMs");
+      if (end.status === "returning") {
+        // Étape profonde : partie pour une demi-durée.
+        expect(end.expedition.depth).toBe(1);
+        end = await step("returnAtMs");
+      }
       expect(end.status).toBe("done");
       const after = await snap(bId);
-      expect(after!.xp).toBeGreaterThanOrEqual(xp + 120); // + XP du succès « Grand large »
+      expect(after!.xp).toBeGreaterThanOrEqual(xp + (deeperDone ? 180 : 120)); // 2 h × 60 XP (+ 50 % par profondeur) + succès « Grand large »
       expect(after!.stats.expeditions).toBe(1);
       expect(after!.units.chasseur.count).toBeGreaterThan(30);
     } finally {

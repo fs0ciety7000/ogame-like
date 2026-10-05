@@ -2,7 +2,7 @@ import { useState } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
-import { Compass, Swords, Coins } from "lucide-react";
+import { Compass, Swords, Coins, Home } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -63,7 +63,7 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
       <DialogContent>
         <DialogTitle>Lancer une expédition</DialogTitle>
         <p className="text-sm text-slate-400">
-          Au moins {EXPEDITION_RULES.minShips} vaisseaux (hors sondes). Deux événements t'attendent : à mi-parcours puis au retour.
+          Au moins {EXPEDITION_RULES.minShips} vaisseaux (hors sondes). Deux événements t'attendent : à mi-parcours puis au dernier secteur. Ensuite, tu peux pousser plus loin (jusqu'à {EXPEDITION_RULES.maxDepth} fois) pour un butin plus gros, au risque d'en perdre une partie.
         </p>
         <div className="mt-3 flex flex-col gap-1.5">
           {ids.length === 0 && (
@@ -110,17 +110,21 @@ function ActiveExpedition({ fleet }: { fleet: Fleet }) {
   const now = Date.now();
   const [busy, setBusy] = useState(false);
   const exp = fleet.expedition;
-  const total = fleet.durationMs ?? 1;
-  const end = fleet.departAtMs + total;
+  const depth = exp?.depth ?? 0;
+  // 5.16 : en profondeur, le retour suit la dernière étape (returnAtMs).
+  const end = depth > 0 && fleet.returnAtMs ? fleet.returnAtMs : fleet.departAtMs + (fleet.durationMs ?? 1);
+  const total = Math.max(1, end - fleet.departAtMs);
   const progress = Math.min(1, Math.max(0, (now - fleet.departAtMs) / total));
   const pending = fleet.status === "decision" ? exp?.pending : null;
-  const faction = pending ? FACTIONS.find((f) => f.id === pending.factionId) : null;
+  const deeperDecision = pending?.kind === "deeper";
+  const faction = pending && !deeperDecision ? FACTIONS.find((f) => f.id === pending.factionId) : null;
+  const nextMult = 1 + EXPEDITION_RULES.deepLootBonus * (depth + 1);
 
-  const choose = async (choice: "toll" | "force") => {
+  const choose = async (choice: "toll" | "force" | "deeper" | "return") => {
     setBusy(true);
     try {
       await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: fleet.id, choice } });
-      toast.success(choice === "toll" ? "Péage payé, la flotte passe." : "Passage forcé engagé !");
+      toast.success({ toll: "Péage payé, la flotte passe.", force: "Passage forcé engagé !", deeper: "Cap sur l'inconnu !", return: "La flotte rentre, cale sécurisée." }[choice]);
     } catch (err) {
       toast.error((err as { response?: { message?: string } }).response?.message ?? "Décision impossible.");
     } finally {
@@ -133,10 +137,39 @@ function ActiveExpedition({ fleet }: { fleet: Fleet }) {
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <HudTag tone={pending ? "gold" : "accent"}>{pending ? "Décision requise" : fleet.status === "outbound" ? "Vers l'inconnu" : "Sur le retour"}</HudTag>
         <span className="text-slate-400">{exp?.hours ?? Math.round(total / 3600_000)} h</span>
+        {depth > 0 && (
+          <HudTag tone="violet">
+            Profondeur {depth} / {EXPEDITION_RULES.maxDepth}
+          </HudTag>
+        )}
         <span className="ml-auto font-mono text-xs text-slate-400">{pending ? `réponse avant ${formatDuration(Math.max(0, Math.floor((pending.deadlineMs - now) / 1000)))}` : `retour dans ${formatDuration(Math.max(0, Math.floor((end - now) / 1000)))}`}</span>
       </div>
       <Progress value={progress * 100} />
-      {pending && (
+      {pending && deeperDecision && (
+        <div className="hud-cut-sm border border-violet-glow/40 bg-violet-glow/[0.06] p-3">
+          <p className="text-sm text-slate-200">
+            Dernier secteur atteint. <strong>Rentrer</strong> sécurise la cale, ou <strong>pousser plus loin</strong> (profondeur {depth + 1}, {formatDuration((exp?.hours ?? 2) * 1800)} de plus).
+          </p>
+          <ul className="mt-1.5 grid gap-0.5 text-[11px] text-slate-400">
+            <li>
+              Butin des prochains événements <b className="font-mono text-mint-glow">×{nextMult.toFixed(2).replace(".", ",")}</b>, XP +{Math.round(50 * (depth + 1))} %
+            </li>
+            <li>
+              Embuscades et passages forcés <b className="font-mono text-danger-glow">+{Math.round(EXPEDITION_RULES.deepRisk * 100 * (depth + 1))} %</b> plus durs ; une embuscade perdue coûte <b className="font-mono text-danger-glow">{Math.round(EXPEDITION_RULES.deepLootLoss * 100)} %</b> de la cale
+            </li>
+          </ul>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void choose("return")}>
+              <Home className="mr-1 h-3.5 w-3.5" /> Rentrer
+            </Button>
+            <Button size="sm" variant="warn" disabled={busy} onClick={() => void choose("deeper")}>
+              <Compass className="mr-1 h-3.5 w-3.5" /> Pousser plus loin
+            </Button>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500">Sans réponse, la flotte rentre.</p>
+        </div>
+      )}
+      {pending && !deeperDecision && (
         <div className="hud-cut-sm border border-gold-glow/40 bg-gold-glow/[0.06] p-3">
           <p className="text-sm text-slate-200">
             <strong>{faction?.name ?? "Une faction"}</strong> barre la route et exige {describeGain(pending.toll)}.
@@ -156,7 +189,7 @@ function ActiveExpedition({ fleet }: { fleet: Fleet }) {
         <ul className="space-y-1 text-xs text-slate-300">
           {exp!.log.map((l, i) => (
             <li key={i} className="border-l-2 border-cyan-glow/30 pl-2">
-              <span className="text-slate-500">{l.stage === 1 ? "Mi-parcours" : "Dernier secteur"} · </span>
+              <span className="text-slate-500">{l.depth ? `Profondeur ${l.depth}` : l.stage === 1 ? "Mi-parcours" : "Dernier secteur"} · </span>
               {l.text}
             </li>
           ))}

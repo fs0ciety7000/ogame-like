@@ -193,6 +193,7 @@ __export(hooksEntry_exports, {
   campaignsState: () => campaignsState,
   canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
+  canGoDeeper: () => canGoDeeper,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
   casinoOpen: () => casinoOpen,
@@ -253,6 +254,7 @@ __export(hooksEntry_exports, {
   dailyTreasuryBonus: () => dailyTreasuryBonus,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
+  deepLegMs: () => deepLegMs,
   defaultGameContent: () => defaultGameContent,
   defaultQueues: () => defaultQueues,
   depositWarChest: () => depositWarChest,
@@ -278,6 +280,7 @@ __export(hooksEntry_exports, {
   errorQuotaKey: () => errorQuotaKey,
   eveReminderDue: () => eveReminderDue,
   exchangeAmber: () => exchangeAmber,
+  expeditionDepth: () => expeditionDepth,
   expeditionRelicChance: () => expeditionRelicChance,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
@@ -366,6 +369,7 @@ __export(hooksEntry_exports, {
   normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
+  offerDeeper: () => offerDeeper,
   offerReserved: () => offerReserved,
   onVacation: () => onVacation,
   openVendetta: () => openVendetta,
@@ -437,6 +441,7 @@ __export(hooksEntry_exports, {
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
   resolveBountyHunt: () => resolveBountyHunt,
+  resolveDeeper: () => resolveDeeper,
   resolveEliteAssault: () => resolveEliteAssault,
   resolveExpeditionChoice: () => resolveExpeditionChoice,
   resolveLairAssault: () => resolveLairAssault,
@@ -9708,8 +9713,45 @@ var EXPEDITION_RULES = {
   forceMinPower: 0.5,
   forceMaxPower: 0.8,
   /** Péage demandé par une faction : heures de production commune. */
-  tollHours: 1
+  tollHours: 1,
+  /** 5.16 : expéditions en chaîne. Au dernier secteur, la flotte peut pousser plus loin
+   *  (jusqu'à `maxDepth` étapes de plus, d'une demi-durée chacune). */
+  maxDepth: 3,
+  /** Butin de chaque étape profonde : × (1 + deepLootBonus × profondeur). */
+  deepLootBonus: 0.25,
+  /** Puissance des embuscades et des passages forcés : × (1 + deepRisk × profondeur). */
+  deepRisk: 0.2,
+  /** Embuscade perdue en profondeur : part de la cale perdue. */
+  deepLootLoss: 0.3
 };
+function expeditionDepth(fleet) {
+  return Math.max(0, Math.floor(Number(fleet.expedition.depth) || 0));
+}
+function deepLegMs(fleet) {
+  return Math.max(1, fleet.expedition.hours) * 18e5;
+}
+function canGoDeeper(fleet) {
+  return expeditionDepth(fleet) < EXPEDITION_RULES.maxDepth && fleetShips(fleet.units) > 0;
+}
+function offerDeeper(fleet, now) {
+  fleet.expedition.pending = { stage: 2, factionId: "", deadlineMs: now + EXPEDITION_RULES.choiceMinutes * 6e4, toll: {}, kind: "deeper" };
+}
+function resolveDeeper(fleet, choiceIn, now) {
+  const pending = fleet.expedition.pending;
+  if (!pending || pending.kind !== "deeper") throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
+  const deeper = choiceIn === "deeper" && canGoDeeper(fleet);
+  fleet.expedition.pending = null;
+  if (!deeper) {
+    const text2 = "La flotte fait demi-tour : la cale est s\xE9curis\xE9e.";
+    fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text: text2, choice: "return", depth: expeditionDepth(fleet) }];
+    return { text: text2, deeper: false };
+  }
+  const depth = expeditionDepth(fleet) + 1;
+  fleet.expedition.depth = depth;
+  const text = `Cap sur des secteurs inconnus (profondeur ${depth}) : butin \xD7${(1 + EXPEDITION_RULES.deepLootBonus * depth).toFixed(2).replace(".", ",")}, mais les embuscades se durcissent.`;
+  fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text, choice: "deeper", depth }];
+  return { text, deeper: true };
+}
 var between = (min, max, random) => min + (max - min) * random();
 var sum2 = (r) => Object.values(r).reduce((a, b) => a + (b != null ? b : 0), 0);
 function addLoot(fleet, gain) {
@@ -9718,6 +9760,12 @@ function addLoot(fleet, gain) {
   for (const [res, n] of Object.entries(gain)) if (n > 0) loot[res] = ((_b = loot[res]) != null ? _b : 0) + Math.floor(n);
   fleet.loot = loot;
 }
+function deepen(fleet, gain) {
+  const mult = 1 + EXPEDITION_RULES.deepLootBonus * expeditionDepth(fleet);
+  if (mult === 1) return gain;
+  return Object.fromEntries(Object.entries(gain).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * mult)]));
+}
+var riskOf = (fleet) => 1 + EXPEDITION_RULES.deepRisk * expeditionDepth(fleet);
 function fleetShips(units) {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
 }
@@ -9802,13 +9850,13 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
   if (kind === "nothing") {
     text = "Calme plat : rien d'int\xE9ressant dans ce secteur.";
   } else if (kind === "deposit") {
-    const gain = productionHours(player, between(R.depositMinHours, R.depositMaxHours, random));
+    const gain = deepen(fleet, productionHours(player, between(R.depositMinHours, R.depositMaxHours, random)));
     addLoot(fleet, gain);
     text = `Gisement rep\xE9r\xE9 et exploit\xE9 : ${describeGain(gain)}.`;
   } else if (kind === "rare") {
     const value2 = sum2(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
     const each = Math.max(1, Math.floor(value2 / Math.max(1, R.rareRate) / 4));
-    const gain = { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each };
+    const gain = deepen(fleet, { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each });
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
@@ -9831,11 +9879,18 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
       return `${n} ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
     }).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
-    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
     if (won) {
-      const gain = productionHours(player, R.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
       addLoot(fleet, gain);
       text = `Embuscade repouss\xE9e (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}.`;
+    } else if (expeditionDepth(fleet) > 0 && fleet.loot) {
+      const lostLoot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * R.deepLootLoss)]));
+      fleet.loot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => {
+        var _a;
+        return [r, (n != null ? n : 0) - ((_a = lostLoot[r]) != null ? _a : 0)];
+      }));
+      text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a d\xFB fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
     }
@@ -9845,19 +9900,19 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
       text = "Des signaux lointains, puis plus rien.";
     } else {
       const toll = productionHours(player, R.tollHours);
-      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll };
+      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll, kind: "faction" };
       text = `${faction.name} barre la route et exige un p\xE9age de ${describeGain(toll)}.`;
       fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
       return { text, pending: true };
     }
   }
-  fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
+  fleet.expedition.log = [...fleet.expedition.log, __spreadValues({ stage, atMs: now, kind, text }, expeditionDepth(fleet) > 0 ? { depth: expeditionDepth(fleet) } : {})];
   return { text, pending: false };
 }
 function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
   var _a, _b;
   const pending = fleet.expedition.pending;
-  if (!pending) throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
+  if (!pending || pending.kind === "deeper") throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
   const choice = choiceIn === "force" ? "force" : "toll";
   const faction = FACTIONS.find((f) => f.id === pending.factionId);
   const name = (_a = faction == null ? void 0 : faction.name) != null ? _a : "La faction";
@@ -9875,10 +9930,10 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
     if (st) st.notoriety = Math.max(0, st.notoriety - 1);
     text = `P\xE9age pay\xE9 \xE0 ${name} (${describeGain(paid)}) : la flotte passe, et ta r\xE9putation s'am\xE9liore.`;
   } else {
-    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet));
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
-      const gain = productionHours(player, EXPEDITION_RULES.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));
       addLoot(fleet, gain);
       text = `Passage forc\xE9 face \xE0 ${name} (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}. Ta notori\xE9t\xE9 grimpe.`;
     } else {
@@ -9892,7 +9947,7 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
 }
 function finishExpedition(player, fleet, now, random = Math.random) {
   var _a;
-  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour);
+  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
   applyXpDelta(player, xp, now);
   bumpStat(player, "expeditions");
   let relic = "";
@@ -9900,11 +9955,11 @@ function finishExpedition(player, fleet, now, random = Math.random) {
     const item = rollRelic("expedition", now, random);
     if (addRelic(player, item)) relic = ` Relique trouv\xE9e : ${relicLabel(item)} !`;
   }
-  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours, 4)));
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours * (1 + 0.5 * expeditionDepth(fleet)), 4)));
   return {
     kind: "fleet",
     title: relic ? "Exp\xE9dition termin\xE9e : relique !" : "Exp\xE9dition termin\xE9e",
-    message: `Ta flotte est rentr\xE9e : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
+    message: `Ta flotte est rentr\xE9e${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false
   };

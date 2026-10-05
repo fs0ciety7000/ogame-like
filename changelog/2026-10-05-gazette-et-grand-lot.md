@@ -14,6 +14,12 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - Les chiffres de la semaine (combats, butin, échanges, commandants actifs) sont comparés au numéro précédent.
 - Mise en page alignée sur le design system : manchette, tuiles de chiffres et une couleur par rubrique.
 
+## Expéditions en chaîne
+- Au dernier secteur, la flotte ne rentre plus d'office : tu choisis de rentrer (cale sécurisée) ou de pousser plus loin, jusqu'à 3 fois. Chaque étape dure la moitié de la durée choisie.
+- Chaque profondeur multiplie le butin des événements suivants (×1,25, ×1,5, ×1,75), et l'XP de fin gagne +50 % par profondeur. Les chances de jetons augmentent aussi.
+- En contrepartie, les embuscades et les passages forcés sont 20 % plus durs par profondeur, et une embuscade perdue en profondeur fait perdre 30 % de la cale.
+- Sans réponse dans les 30 minutes, la flotte rentre. Le journal de l'expédition indique la profondeur de chaque événement.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.
