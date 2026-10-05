@@ -1342,11 +1342,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(overview.window).toBe("7d");
     expect(overview.missionCeiling24h).toBe(23_040);
     const row = overview.rows.find((r: { uid: string }) => r.uid === bId);
-    expect(row).toMatchObject({ pseudo: B.pseudo, gainedSource: "ledger" });
+    // Registre ouvert pendant ce test : il ne couvre pas 7 jours, la reconstitution fait foi.
+    expect(row).toMatchObject({ pseudo: B.pseudo, gainedSource: "notifications" });
     expect(row.gained.bySource.attack).toBeGreaterThan(0);
     const audit = await admin.send(`/api/cosmic/admin/player-audit?q=${encodeURIComponent(B.pseudo)}`, { method: "GET" });
     expect(audit.player.uid).toBe(bId);
     expect(audit.windows["7d"].ledger.bySource.attack).toBeGreaterThan(0);
+    expect(audit.windows["7d"].bestSource).toBe("notifications");
     expect(audit.battleCount).toBeGreaterThan(0);
     expect(audit.pairs.some((x: { uid: string }) => x.uid === aId)).toBe(true);
     expect(Array.isArray(audit.flags)).toBe(true);

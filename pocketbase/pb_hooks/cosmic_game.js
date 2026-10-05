@@ -184,6 +184,7 @@ __export(hooksEntry_exports, {
   balanceSnapshot: () => balanceSnapshot,
   battlePairs: () => battlePairs,
   beaconReturn: () => beaconReturn,
+  bestTotals: () => bestTotals,
   bindingPactBetween: () => bindingPactBetween,
   blogPostFromRecord: () => blogPostFromRecord,
   bossEndLabel: () => bossEndLabel,
@@ -347,6 +348,7 @@ __export(hooksEntry_exports, {
   leagueInfo: () => leagueInfo,
   leagueTick: () => leagueTick,
   leagueWeekLabel: () => leagueWeekLabel,
+  ledgerCovers: () => ledgerCovers,
   ledgerSince: () => ledgerSince,
   ledgerTotals: () => ledgerTotals,
   leviathanRanking: () => leviathanRanking,
@@ -1719,6 +1721,14 @@ function ledgerSince(stats) {
   var _a;
   const keys = Object.keys((_a = stats == null ? void 0 : stats.xpHours) != null ? _a : {}).map(Number);
   return keys.length ? Math.min(...keys) * HOUR : null;
+}
+function ledgerCovers(sinceMs, now, ms) {
+  if (sinceMs === null) return false;
+  const span = Math.max(1, Math.round(ms / HOUR));
+  return sinceMs <= (hourIndex(now) - span + 1) * HOUR;
+}
+function bestTotals(ledger, rebuilt, sinceMs, now, ms) {
+  return ledgerCovers(sinceMs, now, ms) ? { totals: ledger, source: "ledger" } : { totals: rebuilt, source: "notifications" };
 }
 function missionXpCeiling(ms, eventFactor = 1) {
   let perHour = 0;

@@ -19,3 +19,7 @@ Un correctif pour les joueurs avancés, et un nouvel outil de comparaison pour l
   - l'activité heure par heure.
 - Un tableau chiffré met en regard une trentaine d'indicateurs avec leur rapport : XP par jour, XP par source, part du plafond des missions, heures actives, combats, missions, record de missions en un jour, temps de jeu, échanges, actions de l'équipe… Les écarts de plus de trois fois ressortent en or.
 - Les combats entre les deux joueurs sont signalés, et la comparaison se copie en JSON.
+
+## Administration : chiffres justes juste après le déploiement
+- Le registre d'XP n'existe que depuis la 5.17.1. Jusqu'ici, dès qu'il contenait quelques heures, il remplaçait la reconstitution sur 24 heures et 7 jours : un joueur pouvait n'afficher que quelques centaines d'XP sur la semaine.
+- Le registre n'est maintenant utilisé que s'il couvre toute la période demandée. Sinon, l'XP reconstituée depuis les notifications fait foi, et les signaux d'alerte sont calculés sur ces chiffres.

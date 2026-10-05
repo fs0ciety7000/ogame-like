@@ -78,6 +78,18 @@ export function ledgerSince(stats: PlayerState["stats"]): number | null {
   return keys.length ? Math.min(...keys) * HOUR : null;
 }
 
+/** Le registre couvre-t-il toute la fenêtre ? Sinon (déploiement récent), la reconstitution fait foi. */
+export function ledgerCovers(sinceMs: number | null, now: number, ms: number): boolean {
+  if (sinceMs === null) return false;
+  const span = Math.max(1, Math.round(ms / HOUR));
+  return sinceMs <= (hourIndex(now) - span + 1) * HOUR;
+}
+
+/** Totaux à afficher : le registre s'il couvre la fenêtre, sinon les notifications. */
+export function bestTotals(ledger: XpTotals, rebuilt: XpTotals, sinceMs: number | null, now: number, ms: number): { totals: XpTotals; source: "ledger" | "notifications" } {
+  return ledgerCovers(sinceMs, now, ms) ? { totals: ledger, source: "ledger" } : { totals: rebuilt, source: "notifications" };
+}
+
 /** XP de missions possible au maximum sur une durée : toutes les missions relancées sans temps mort. */
 export function missionXpCeiling(ms: number, eventFactor = 1): number {
   let perHour = 0;

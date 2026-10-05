@@ -699,10 +699,10 @@ function adminActivity(e) {
     const uid = r.id;
     const stats = parseJsonField(r, "stats", {}) || {};
     const list = byPlayer[uid] || [];
-    const ledger = game.ledgerTotals(stats, now, ms);
-    const rebuilt = sumXp(list, now - ms);
-    const dayLedger = game.ledgerTotals(stats, now, 24 * AUDIT_HOUR);
-    const day = dayLedger.total !== 0 ? dayLedger : sumXp(list, now - 24 * AUDIT_HOUR);
+    // 5.17.2 : le registre ne fait foi que s'il couvre toute la fenêtre (sinon : notifications).
+    const since = game.ledgerSince(stats);
+    const best = game.bestTotals(game.ledgerTotals(stats, now, ms), sumXp(list, now - ms), since, now, ms);
+    const day = game.bestTotals(game.ledgerTotals(stats, now, 24 * AUDIT_HOUR), sumXp(list, now - 24 * AUDIT_HOUR), since, now, 24 * AUDIT_HOUR).totals;
     const act = game.activityProfile(list.filter((n) => n.createdAtMs >= now - 24 * AUDIT_HOUR).map((n) => n.createdAtMs), now, 24 * AUDIT_HOUR);
     const cur = currentActivity(game, queues[uid], fleetsBy[uid], now);
     return {
@@ -716,8 +716,8 @@ function adminActivity(e) {
       testMode: r.getBool("testMode"),
       allianceId: r.getString("allianceId"),
       // Registre exact quand il couvre la fenêtre, sinon reconstitution par les notifications.
-      gained: ledger.total !== 0 ? ledger : rebuilt,
-      gainedSource: ledger.total !== 0 ? "ledger" : "notifications",
+      gained: best.totals,
+      gainedSource: best.source,
       xp24h: day.total,
       missionXp24h: day.bySource.mission || 0,
       activeHours24h: act.activeHours,
@@ -766,7 +766,10 @@ function adminPlayerAudit(e) {
   const windows = {};
   ["1h", "24h", "7d"].forEach((w) => {
     const ms = game.windowMs(w);
-    windows[w] = { ledger: game.ledgerTotals(stats, now, ms), rebuilt: sumXp(xpNotifs, now - ms), missionCeiling: game.missionXpCeiling(ms, Math.max(1, game.missionRewardFactor(now))) };
+    const ledger = game.ledgerTotals(stats, now, ms);
+    const rebuilt = sumXp(xpNotifs, now - ms);
+    const best = game.bestTotals(ledger, rebuilt, game.ledgerSince(stats), now, ms);
+    windows[w] = { ledger, rebuilt, best: best.totals, bestSource: best.source, missionCeiling: game.missionXpCeiling(ms, Math.max(1, game.missionRewardFactor(now))) };
   });
   const day = notifs.filter((n) => n.createdAtMs >= now - 24 * AUDIT_HOUR).map((n) => n.createdAtMs);
   const act24 = game.activityProfile(day, now, 24 * AUDIT_HOUR);
@@ -803,7 +806,7 @@ function adminPlayerAudit(e) {
   const all = xpNotificationsSince(game, now - 24 * AUDIT_HOUR, "");
   const actives = $app.findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: week }).map((r) => sumXp(all[r.id], now - 24 * AUDIT_HOUR).total);
   const pc = game.percentiles(actives);
-  const day24 = windows["24h"].ledger.total !== 0 ? windows["24h"].ledger : windows["24h"].rebuilt;
+  const day24 = windows["24h"].best;
   const flags = game.auditFlags({
     now,
     xp: p.xp || 0,

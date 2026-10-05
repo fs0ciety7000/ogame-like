@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyXpDelta } from "@/game/seasons";
-import { activityProfile, auditFlags, battlePairs, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, recordXp } from "@/game/xpAudit";
+import { activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, recordXp } from "@/game/xpAudit";
 import type { PlayerState } from "@/types/game";
 
 const HOUR = 3600_000;
@@ -25,6 +25,19 @@ describe("registre d'XP", () => {
     applyXpDelta(p, -20, NOW, "attack");
     expect(p.xp).toBe(40);
     expect(ledgerTotals(p.stats, NOW, HOUR).bySource).toEqual({ mission: 60, attack: -20 });
+  });
+});
+
+describe("registre ou reconstitution", () => {
+  it("ne prend le registre que s'il couvre toute la fenêtre (5.17.2)", () => {
+    const ledger = { total: 497, bySource: { mission: 497 } };
+    const rebuilt = { total: 54_529, bySource: { mission: 45_361 } };
+    const since = Math.floor(NOW / HOUR) * HOUR; // registre ouvert cette heure-ci
+    expect(ledgerCovers(since, NOW, 24 * HOUR)).toBe(false);
+    expect(bestTotals(ledger, rebuilt, since, NOW, 7 * 24 * HOUR)).toEqual({ totals: rebuilt, source: "notifications" });
+    expect(bestTotals(ledger, rebuilt, since, NOW, HOUR).source).toBe("ledger");
+    expect(bestTotals(ledger, rebuilt, NOW - 8 * 24 * HOUR, NOW, 7 * 24 * HOUR).source).toBe("ledger");
+    expect(bestTotals(ledger, rebuilt, null, NOW, HOUR).source).toBe("notifications");
   });
 });
 
