@@ -1,6 +1,6 @@
 # 5.21 : prompts Midjourney des nouvelles illustrations
 
-Les trois unités ont leur illustration définitive (512 × 512). Seule la relique Clé de soudure utilise encore une **image provisoire** (copie de la Matrice de réparation) : il suffit de remplacer le fichier, le chemin ne change pas.
+Toutes les illustrations de la 5.21 sont en place (unités en 512 × 512, relique au format des autres reliques). Les prompts restent ici pour les régénérer.
 
 Rappels de style (voir `docs/DESIGN.md`) :
 
@@ -36,7 +36,7 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## Relique (`public/assets/relics/cle_soudure.webp`)
 
-Provisoire : copie de la Matrice de réparation.
+En place.
 
 ```
 /imagine prompt: sci-fi game relic icon, an ornate antique welding key tool made of brass and dark alloy, glowing filament tip with tiny sparks, engraved runes along the handle, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250
