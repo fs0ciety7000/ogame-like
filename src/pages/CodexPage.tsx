@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { CODEX_CATEGORIES, CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, type CodexCategory, type CodexEntry } from "@/game/codex";
-import { claimCodexTitle, fetchNpcOpponents } from "@/services/codexService";
+import { bossesFoughtBy, CODEX_CATEGORIES, CODEX_TITLE, codexCategoryState, codexEntries, codexProgress, foughtWarlords, type CodexCategory, type CodexEntry } from "@/game/codex";
+import { claimCodexCategoryReward, claimCodexTitle, fetchNpcOpponents } from "@/services/codexService";
+import { useBossHistory } from "@/services/bossHistoryService";
+import { TokenIcon } from "@/components/casino/TokenIcon";
+import { AmberAmount } from "@/components/ui/amber";
 import { GameActionError } from "@/services/playerService";
 import { useContentStore } from "@/services/contentService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -28,7 +31,12 @@ export function CodexPage() {
   useEffect(() => {
     if (uid) void fetchNpcOpponents(uid).then(setOpponents).catch(() => undefined);
   }, [uid]);
-  const entries = useMemo(() => (player ? codexEntries(player, foughtWarlords(opponents), Date.now()) : []), [player, opponents]);
+  const history = useBossHistory();
+  const entries = useMemo(
+    () => (player ? codexEntries(player, foughtWarlords(opponents), Date.now(), { bossesFought: bossesFoughtBy(history ?? [], player.uid) }) : []),
+    [player, opponents, history],
+  );
+  const [claiming, setClaiming] = useState<CodexCategory | null>(null);
   if (!player) return null;
   const progress = codexProgress(entries);
   const shown = tab === "all" ? entries : entries.filter((e) => e.category === tab);
@@ -43,6 +51,19 @@ export function CodexPage() {
       toast.error(err instanceof GameActionError ? err.message : "Impossible pour le moment.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  // 5.15.11 : récompense d'une catégorie complète.
+  const claimCategory = async (c: CodexCategory) => {
+    setClaiming(c);
+    try {
+      const out = await claimCodexCategoryReward(c);
+      toast.success(`Catégorie « ${CODEX_CATEGORIES.find((x) => x.id === c)?.label} » complète !`, { description: `+${out.tokens} jetons, +${out.amber} Ambre.` });
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Impossible pour le moment.");
+    } finally {
+      setClaiming(null);
     }
   };
 
@@ -69,6 +90,39 @@ export function CodexPage() {
           </Button>
         )}
       </Card>
+
+      {/* 5.15.11 : avancement par catégorie, et sa récompense une fois complète. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        {CODEX_CATEGORIES.map((c) => {
+          const st = codexCategoryState(player, entries, c.id);
+          const paid = st.reward.tokens > 0 || st.reward.amber > 0;
+          return (
+            <div key={c.id} className={cn("hud-cut-sm flex flex-col gap-1.5 border bg-white/[0.02] p-2.5", st.complete ? "border-gold-glow/40" : "border-white/10")}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">{c.label}</span>
+                <span className="font-mono text-xs tabular-nums text-slate-100">
+                  {st.unlocked}/{st.total}
+                </span>
+              </div>
+              <div className="h-1 bg-white/5">
+                <div className="h-full bg-gold-glow/70 transition-[width] duration-500" style={{ width: `${st.total ? (st.unlocked / st.total) * 100 : 0}%` }} />
+              </div>
+              {paid &&
+                (st.claimed ? (
+                  <span className="font-mono text-[10px] text-mint-glow">Récompense reçue</span>
+                ) : st.complete ? (
+                  <Button size="sm" disabled={claiming !== null} onClick={() => void claimCategory(c.id)}>
+                    Réclamer
+                  </Button>
+                ) : (
+                  <span className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                    <TokenIcon size={11} /> {st.reward.tokens} · <AmberAmount value={st.reward.amber} />
+                  </span>
+                ))}
+            </div>
+          );
+        })}
+      </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as CodexCategory | "all")}>
         <div className="-mx-1 overflow-x-auto px-1">
@@ -132,6 +186,16 @@ export function CodexPage() {
                 <p className="hud-eyebrow text-[10px] text-gold-glow">{CODEX_CATEGORIES.find((c) => c.id === open.category)?.label}</p>
                 <DialogTitle className="text-xl">{open.name}</DialogTitle>
                 <p className="-mt-1 text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{open.subtitle}</p>
+                {open.facts && open.facts.length > 0 && (
+                  <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-y border-white/5 py-2 text-xs">
+                    {open.facts.map((f) => (
+                      <div key={f.label} className="contents">
+                        <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">{f.label}</dt>
+                        <dd className="text-slate-200">{f.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 {open.text.split(/\n\s*\n/).map((para, i) => (
                   <p key={i} className="text-sm leading-relaxed text-slate-300">
                     {para}

@@ -10,7 +10,7 @@ import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -132,6 +132,7 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "var(--color-gold-glow)",
     items: [
       { to: "/game/passe", label: "Passe", icon: Ticket },
+      { to: "/game/chroniques", label: "Chroniques", icon: Scroll },
       { to: "/game/succes", label: "Succès", icon: Medal },
       { to: "/game/codex", label: "Codex", icon: BookOpen },
       { to: "/game/journal", label: "Journal", icon: ScrollText },

@@ -61,6 +61,10 @@ export function ChroniclesCard() {
         </div>
       </div>
       {month.synopsis && <p className="px-4 pt-3 text-sm italic text-slate-300">{month.synopsis}</p>}
+      {/* 5.15.11 : la page des Chroniques détaille tout (frise, bonus, chapitres passés). */}
+      <Link to="/game/chroniques" className="mx-4 mt-2 inline-flex items-center gap-1 self-start font-mono text-[11px] uppercase tracking-[0.12em] text-cyan-glow hover:underline">
+        Ouvrir les Chroniques →
+      </Link>
       <div className="grid gap-2 p-4 sm:grid-cols-2">
         {month.episodes.map((e, i) => {
           const locked = i >= open;

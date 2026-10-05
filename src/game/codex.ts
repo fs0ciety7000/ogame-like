@@ -1,4 +1,10 @@
 import { chroniclesConfig, chronicleMonthId, episodeUnlockMs } from "@/game/chronicles";
+import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
+import type { BossHistoryEntry } from "@/game/bossHistory";
+import { GameActionError } from "@/game/errors";
+import { grantPassReward } from "@/game/seasonPass";
+import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
+import { WORLD_BOSSES } from "@/game/worldBosses";
 import { FACTIONS } from "@/game/pirates";
 import { UNITS } from "@/game/units";
 import { warlordUid, warlordsConfig } from "@/game/warlords";
@@ -30,6 +36,12 @@ export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string 
   { id: "legends", label: "Légendes", hint: "Débloquée par un exploit rarissime." },
 ];
 
+/** 5.15.11 : ligne de la fiche, tirée des données du jeu (« Faiblesse : Frégate »). */
+export interface CodexFact {
+  label: string;
+  value: string;
+}
+
 export interface CodexEntry {
   id: string;
   category: CodexCategory;
@@ -40,29 +52,87 @@ export interface CodexEntry {
   unlocked: boolean;
   /** Couleur d'accent (factions, seigneurs). */
   color?: string;
+  /** 5.15.11 : fiche technique générée depuis les données. */
+  facts?: CodexFact[];
 }
+
+/** 5.15.11 : ce que le joueur a affronté hors rapports de combat (Hall of fame des boss). */
+export interface CodexExtra {
+  /** Noms des boss (mondiaux, d'alliance) contre lesquels le joueur a frappé. */
+  bossesFought?: ReadonlySet<string>;
+}
+
+/** Boss contre lesquels `uid` figure au classement d'un combat archivé. */
+export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<string> {
+  const out = new Set<string>();
+  for (const e of history) if ((e.ranking ?? e.top ?? []).some((r) => r.uid === uid)) out.add(e.name);
+  return out;
+}
+
+const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 
 type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
-export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number): CodexEntry[] {
+export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
+  const bossesFought = extra.bossesFought ?? new Set<string>();
   const out: CodexEntry[] = [];
   const threatened = new Set(player.stats?.threatenedBy ?? []);
   for (const f of FACTIONS.filter((x) => x.enabled)) {
-    out.push({ id: `faction:${f.id}`, category: "factions", name: f.name, subtitle: `${f.leader} · ${f.enforcer}`, image: f.emblem ?? f.art, text: f.story, unlocked: threatened.has(f.id), color: f.color });
+    out.push({
+      id: `faction:${f.id}`,
+      category: "factions",
+      name: f.name,
+      subtitle: `${f.leader} · ${f.enforcer}`,
+      image: f.emblem ?? f.art,
+      text: f.story,
+      unlocked: threatened.has(f.id),
+      color: f.color,
+      facts: [
+        { label: "Chef", value: f.leader },
+        { label: "Bras armé", value: f.enforcer },
+      ],
+    });
   }
   for (const d of warlordsConfig().defs.filter((x) => x.enabled)) {
-    out.push({ id: `warlord:${d.id}`, category: "warlords", name: d.name, subtitle: "Seigneur de guerre", image: d.portrait, text: d.bio, unlocked: fought.has(d.id) });
+    out.push({
+      id: `warlord:${d.id}`,
+      category: "warlords",
+      name: d.name,
+      subtitle: "Seigneur de guerre",
+      image: d.portrait,
+      text: d.bio,
+      unlocked: fought.has(d.id),
+      facts: [
+        { label: "Tempérament", value: PERSONALITY_LABELS[d.personality] ?? d.personality },
+        { label: "Puissance", value: TIER_LABELS[d.tier] ?? d.tier },
+      ],
+    });
   }
-  out.push({
-    id: "boss:leviathan",
-    category: "bosses",
-    name: "Le Léviathan",
-    subtitle: "Boss mondial",
-    image: "/assets/leviathan/leviathan-portrait.webp",
-    text: "Une bête de la taille d'une lune qui remonte des abysses du secteur un week-end par mois. Tout le serveur frappe ensemble ; ceux qui frappent le plus fort repartent avec ses reliques.",
-    unlocked: (player.stats?.leviathanKills ?? 0) > 0,
-  });
+  // 5.15.11 : les boss mondiaux de la rotation, chacun sa fiche (le Léviathan garde la sienne).
+  for (const b of WORLD_BOSSES.filter((x) => x.enabled !== false)) {
+    const leviathan = b.id === "leviathan";
+    out.push({
+      id: leviathan ? "boss:leviathan" : `worldboss:${b.id}`,
+      category: "bosses",
+      name: b.name,
+      subtitle: `Boss mondial · ${b.epithet}`,
+      image: leviathan ? "/assets/leviathan/leviathan-portrait.webp" : b.image,
+      text: b.story,
+      unlocked: bossesFought.has(b.name) || (leviathan && (player.stats?.leviathanKills ?? 0) > 0),
+      color: b.accent,
+      facts: [
+        { label: "Phases", value: b.phases.map((p) => p.name).join(" → ") },
+        { label: "Structure", value: `×${b.hpMult} (Léviathan = ×1)` },
+        { label: "Faiblesse en phase 3", value: b.weakness.map(unitName).join(", ") },
+        { label: "Titre du premier", value: b.title },
+      ],
+    });
+  }
+  // 5.15.11 : boss d'alliance (débloqué au premier assaut de ton alliance où tu as frappé).
+  for (const b of ALLIANCE_BOSSES) {
+    out.push({ id: `allianceboss:${b.id}`, category: "bosses", name: b.name, subtitle: "Boss d'alliance", image: b.image, text: b.lore, unlocked: bossesFought.has(b.name), facts: [{ label: "Affronté", value: "en alliance, chaque semaine de boss" }] });
+  }
   const currentMonth = chronicleMonthId(now);
   const emblems = new Set((player.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []);
   for (const m of chroniclesConfig().months) {
@@ -86,7 +156,20 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     unlocked: Math.floor(Number((player.casino as { jackpots?: number } | undefined)?.jackpots) || 0) > 0,
   });
   for (const u of UNITS) {
-    out.push({ id: `unit:${u.id}`, category: "units", name: u.name, subtitle: u.category === "defense" ? "Défense" : "Flotte", image: u.image, text: u.description, unlocked: !!player.units?.[u.id] });
+    out.push({
+      id: `unit:${u.id}`,
+      category: "units",
+      name: u.name,
+      subtitle: u.category === "defense" ? "Défense" : "Flotte",
+      image: u.image,
+      text: u.description,
+      unlocked: !!player.units?.[u.id],
+      facts: [
+        { label: "Attaque", value: String(u.stats.attaque) },
+        { label: "Défense", value: String(u.stats.defense) },
+        ...(u.category === "defense" ? [] : [{ label: "Vitesse", value: String(u.stats.vitesse) }, { label: "Soute", value: String(u.stats.cargo) }]),
+      ],
+    });
   }
   return out;
 }
@@ -109,4 +192,42 @@ export function grantCodexTitle(player: PlayerState, entries: CodexEntry[]): boo
   if ((player.titles ?? []).some((t) => t.label === CODEX_TITLE)) return false;
   player.titles = [...(player.titles ?? []), { label: CODEX_TITLE, seasonId: "codex", rank: 1 }];
   return true;
+}
+
+/* ---------- 5.15.11 : récompense par catégorie complète ---------- */
+
+/** Jetons et Ambre d'une catégorie terminée (une fois). Les Chroniques, toujours ouvertes, ne paient pas. */
+export const CODEX_CATEGORY_REWARDS: Record<CodexCategory, { tokens: number; amber: number }> = {
+  factions: { tokens: 5, amber: 25 },
+  warlords: { tokens: 8, amber: 40 },
+  bosses: { tokens: 10, amber: 50 },
+  units: { tokens: 5, amber: 25 },
+  chronicles: { tokens: 0, amber: 0 },
+  legends: { tokens: 10, amber: 60 },
+};
+
+export function codexClaimedCategories(player: Pick<PlayerState, "stats">): string[] {
+  const raw = (player.stats as { codexClaimed?: unknown } | undefined)?.codexClaimed;
+  return Array.isArray(raw) ? raw.map(String) : [];
+}
+
+/** Avancement d'une catégorie et état de sa récompense. */
+export function codexCategoryState(player: Pick<PlayerState, "stats">, entries: CodexEntry[], category: CodexCategory): { unlocked: number; total: number; complete: boolean; claimed: boolean; reward: { tokens: number; amber: number } } {
+  const list = entries.filter((e) => e.category === category);
+  const unlocked = list.filter((e) => e.unlocked).length;
+  return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: CODEX_CATEGORY_REWARDS[category] };
+}
+
+/** Réclame la récompense d'une catégorie complète (serveur). */
+export function claimCodexCategory(player: PlayerState, entries: CodexEntry[], category: unknown, now: number): { tokens: number; amber: number } {
+  const id = String(category) as CodexCategory;
+  if (!CODEX_CATEGORIES.some((c) => c.id === id)) throw new GameActionError("Catégorie inconnue.");
+  const st = codexCategoryState(player, entries, id);
+  if (st.reward.tokens <= 0 && st.reward.amber <= 0) throw new GameActionError("Pas de récompense pour cette catégorie.");
+  if (st.claimed) throw new GameActionError("Récompense déjà reçue.");
+  if (!st.complete) throw new GameActionError(`Catégorie incomplète (${st.unlocked} / ${st.total}).`);
+  if (st.reward.tokens > 0) grantPassReward(player, { kind: "tokens", count: st.reward.tokens }, "codex", now);
+  if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now);
+  player.stats = { ...(player.stats ?? {}), codexClaimed: [...codexClaimedCategories(player), id] } as PlayerState["stats"];
+  return st.reward;
 }

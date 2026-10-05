@@ -79,8 +79,17 @@ export interface ChronicleMonth {
   auto?: ChapterAuto;
 }
 
+/** 5.15.11 : bonus versé à chaque épisode terminé, et à la fin du chapitre (tous les mois). */
+export interface ChronicleBonus {
+  episode: { tokens: number; amber: number };
+  chapter: { tokens: number; amber: number };
+}
+
+export const DEFAULT_CHRONICLE_BONUS: ChronicleBonus = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
+
 export interface ChroniclesConfig {
   months: ChronicleMonth[];
+  bonus?: ChronicleBonus;
 }
 
 const L = (speaker: StoryLine["speaker"], text: string): StoryLine => ({ speaker, text });
@@ -372,11 +381,38 @@ export const DEFAULT_CHRONICLES: ChroniclesConfig = {
   ],
 };
 
-let config: ChroniclesConfig = structuredClone(DEFAULT_CHRONICLES);
+let config: ChroniclesConfig = { ...structuredClone(DEFAULT_CHRONICLES), bonus: structuredClone(DEFAULT_CHRONICLE_BONUS) };
+
+const num = (v: unknown, d: number) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : d);
+
+/** Bonus fusionné avec les valeurs par défaut (chiffres entiers, positifs). */
+export function normalizeChronicleBonus(b: Partial<ChronicleBonus> | null | undefined): ChronicleBonus {
+  const d = DEFAULT_CHRONICLE_BONUS;
+  return {
+    episode: { tokens: num(b?.episode?.tokens, d.episode.tokens), amber: num(b?.episode?.amber, d.episode.amber) },
+    chapter: { tokens: num(b?.chapter?.tokens, d.chapter.tokens), amber: num(b?.chapter?.amber, d.chapter.amber) },
+  };
+}
 
 export function setChronicles(next: Partial<ChroniclesConfig> | null | undefined): void {
-  config = { months: Array.isArray(next?.months) && next!.months.length > 0 ? structuredClone(next!.months) : structuredClone(DEFAULT_CHRONICLES.months) };
+  config = {
+    months: Array.isArray(next?.months) && next!.months.length > 0 ? structuredClone(next!.months) : structuredClone(DEFAULT_CHRONICLES.months),
+    bonus: normalizeChronicleBonus(next?.bonus),
+  };
   setMonthPasses(config.months);
+}
+
+/** Bonus en vigueur (épisode et chapitre). */
+export function chronicleBonus(): ChronicleBonus {
+  return config.bonus ?? normalizeChronicleBonus(null);
+}
+
+/** Bonus en récompenses du passe (jetons, Ambre), sans les montants nuls. */
+export function bonusRewards(b: { tokens: number; amber: number }): PassReward[] {
+  const out: PassReward[] = [];
+  if (b.tokens > 0) out.push({ kind: "tokens", count: b.tokens });
+  if (b.amber > 0) out.push({ kind: "amber", amount: b.amber });
+  return out;
 }
 
 export function chroniclesConfig(): ChroniclesConfig {
@@ -384,7 +420,7 @@ export function chroniclesConfig(): ChroniclesConfig {
 }
 
 export function defaultChroniclesConfig(): ChroniclesConfig {
-  return structuredClone(DEFAULT_CHRONICLES);
+  return { ...structuredClone(DEFAULT_CHRONICLES), bonus: structuredClone(DEFAULT_CHRONICLE_BONUS) };
 }
 
 export function validateChronicles(cfg: Partial<ChroniclesConfig> | undefined): string[] {
@@ -495,9 +531,12 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
   addPassPoints(player, "chronicle", now);
-  const gained = (e.reward ?? []).map((r) => grantPassReward(player, r, month.id, now, random));
+  // 5.15.11 : bonus de l'épisode (jetons, Ambre) avant sa récompense propre.
+  const bonus = chronicleBonus();
+  const gained = [...bonusRewards(bonus.episode), ...(e.reward ?? [])].map((r) => grantPassReward(player, r, month.id, now, random));
   // v5.4 : chapitre terminé : titre, bannière et récompense de fin.
   const chapter = month.episodes.every((_, k) => st.claimed.includes(k));
+  if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month.id, now, random)));
   if (chapter && month.completion) {
     const after = chronicleState(player, now);
     if (!after.chapters.includes(month.id)) after.chapters = [...after.chapters, month.id];

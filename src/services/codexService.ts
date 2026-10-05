@@ -14,3 +14,8 @@ export async function fetchNpcOpponents(uid: string): Promise<string[]> {
 export function claimCodexTitle() {
   return callGame<{ title: string }>("codex/claim");
 }
+
+/** 5.15.11 : récompense d'une catégorie complète du Codex (jetons, Ambre). */
+export function claimCodexCategoryReward(category: string) {
+  return callGame<{ category: string; tokens: number; amber: number }>("codex/claim", { category });
+}

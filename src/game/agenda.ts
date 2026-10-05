@@ -67,7 +67,7 @@ export function upcomingAgenda(now: number, days = 30, extra: AgendaItem[] = [])
   for (const m of months) {
     for (let i = 0; i < 4; i++) {
       const at = episodeUnlockMs(m.id, i);
-      if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : épisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/passe", emoji: "📜" });
+      if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : épisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/chroniques", emoji: "📜" });
     }
   }
   for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "🏆" });
