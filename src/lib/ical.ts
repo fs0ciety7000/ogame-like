@@ -4,7 +4,7 @@ import type { AgendaItem } from "@/game/agenda";
    les ajouter à Google Agenda, Outlook ou Calendrier (Apple). Heures en UTC. */
 
 const stamp = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-const escape = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+const escape = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 
 /** Coupe les lignes à 75 octets environ (RFC 5545). */
 function fold(line: string): string {

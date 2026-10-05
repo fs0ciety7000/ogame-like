@@ -14,4 +14,9 @@ describe("export iCal de l'agenda (5.16)", () => {
     expect(ics).toContain("TRIGGER:-PT30M");
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
   });
+
+  it("échappe aussi les points-virgules (RFC 5545)", () => {
+    const ics = agendaToIcs([{ id: "a", kind: "leviathan", title: "Raid ; défense", startMs: Date.UTC(2026, 9, 9, 16), endMs: Date.UTC(2026, 9, 9, 18), link: "/game", emoji: "⚔️" }], "https://empire.fs0ciety.org", Date.UTC(2026, 9, 5));
+    expect(ics).toContain("SUMMARY:⚔️ Raid \\; défense");
+  });
 });
