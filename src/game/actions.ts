@@ -1,4 +1,5 @@
 import { playerModifiers } from "@/game/modifiers";
+import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
@@ -56,6 +57,7 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 export type GameAction =
   | { type: "vacationEnd" }
   | { type: "chronicleClaim"; episode: number }
+  | { type: "dailyClaim"; index: number }
   | { type: "cancel"; target: CancelTarget }
   | { type: "sync"; playtimeDeltaSeconds?: number }
   | { type: "unlockBuilding"; buildingId: string }
@@ -434,6 +436,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "chronicleClaim":
       return claimChronicle(player, action.episode, now);
+
+    case "dailyClaim":
+      // 5.15.12 : mission du jour (1 jeton, bonus aux trois).
+      return claimDailyMission(player, action.index, now);
 
     case "cancel":
       // v4.7 : annulation au prorata (100 % la première minute ou si rien n'a commencé).

@@ -7,7 +7,7 @@ const ALLIANCE_TABS = ["fiche", "defi", "saga", "objectif", "calendrier", "membr
 /** 5.15 : quatorze onglets regroupés en cinq sections, chacune avec ses sous-onglets. */
 const ALLIANCE_SECTIONS: { id: string; label: string; tabs: { id: string; label: string }[] }[] = [
   { id: "qg", label: "QG", tabs: [{ id: "membres", label: "Membres et canal" }, { id: "fiche", label: "Fiche et rangs" }] },
-  { id: "activites", label: "Activités", tabs: [{ id: "objectif", label: "Objectif du jour" }, { id: "defi", label: "Défi de la semaine" }, { id: "saga", label: "Saga" }, { id: "calendrier", label: "Calendrier" }] },
+  { id: "activites", label: "Activités", tabs: [{ id: "semaine", label: "Semaine" }, { id: "objectif", label: "Objectif du jour" }, { id: "defi", label: "Défi de la semaine" }, { id: "saga", label: "Saga" }, { id: "calendrier", label: "Calendrier" }] },
   { id: "economie", label: "Économie", tabs: [{ id: "tresor", label: "Trésor" }, { id: "recherches", label: "Recherches" }, { id: "projets", label: "Projets" }] },
   { id: "operations", label: "Opérations", tabs: [{ id: "boss", label: "Boss" }, { id: "guerre", label: "Guerre" }, { id: "diplomatie", label: "Diplomatie" }, { id: "renseignement", label: "Renseignement" }] },
   { id: "classement", label: "Classement", tabs: [{ id: "classement", label: "Classement" }] },
@@ -16,6 +16,7 @@ const sectionOf = (tab: string) => ALLIANCE_SECTIONS.find((s) => s.tabs.some((t)
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { useEffect, useRef, useState } from "react";
 import { AllianceBossTab } from "@/components/game/AllianceBossTab";
+import { AllianceWeekTab } from "@/components/game/AllianceWeekTab";
 import { normalizeAllianceBoss } from "@/game/allianceBoss";
 import { isOnline } from "@/game/retention";
 import { useDirectoryStore } from "@/store/directoryStore";
@@ -340,6 +341,9 @@ function AllianceRoom({
           </div>
         )}
       </div>
+      <TabsContent value="semaine">
+        <AllianceWeekTab alliance={alliance} onOpen={setTab} />
+      </TabsContent>
       <TabsContent value="saga">
         <AllianceSagaTab allianceId={alliance.id} />
       </TabsContent>

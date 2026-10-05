@@ -177,6 +177,26 @@ export function CasinoPage() {
     }
   };
 
+  const pullFive = async () => {
+    if (busy) return;
+    setBusy(true);
+    const outcomes: string[] = [];
+    try {
+      for (let i = 0; i < 5; i++) {
+        const r = await spinSlot();
+        outcomes.push(OUTCOME_LABELS[r.outcome]);
+        setOverride({ tokens: r.tokens, base });
+        if (r.tokens < 1) break;
+      }
+      toast.success(`${outcomes.length} tirages`, { description: outcomes.join(" · ") });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Tirage impossible.");
+    } finally {
+      setBusy(false);
+      reloadCasino();
+    }
+  };
+
   const onReelStop = (i: number) => {
     stops.current += 1;
     playSlotStop(i);
@@ -316,6 +336,10 @@ export function CasinoPage() {
             <Button variant="ghost" size="sm" asChild>
               <Link to="/game/concours">Concours du pot commun (admin)</Link>
             </Button>
+            {/* 5.15.12 : cinq tirages d'un coup, sans animation (tests). */}
+            <Button variant="ghost" size="sm" disabled={busy || tokens < 1} onClick={() => void pullFive()}>
+              Tirer ×5 (admin)
+            </Button>
             </div>
           )}
           {settings && !open && (
@@ -354,6 +378,23 @@ export function CasinoPage() {
           </HudPanel>
 
           <WeekRecap player={player} />
+
+          {/* 5.15.12 : mes derniers tirages. */}
+          <HudPanel icon={<History />} title="Mes derniers tirages" aside={<span className="font-mono text-[11px] text-slate-500">{(mine?.history ?? []).length} / 20</span>}>
+            {(mine?.history ?? []).length === 0 ? (
+              <EmptyState size="sm" icon="🎰" title="Aucun tirage">Tes 20 derniers tirages s'afficheront ici.</EmptyState>
+            ) : (
+              <ul className="grid max-h-72 gap-1 overflow-y-auto pr-1 text-xs">
+                {(mine?.history ?? []).map((h, i) => (
+                  <li key={`${h.atMs}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-white/5 pb-1 last:border-0">
+                    <span className="w-12 shrink-0 font-mono text-[10px] text-slate-500">{new Date(h.atMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className={cn("min-w-0 flex-1 truncate", h.outcome === "lose" ? "text-slate-500" : h.outcome === "jackpot" ? "text-gold-glow" : "text-slate-200")}>{OUTCOME_LABELS[h.outcome]}</span>
+                    <Gains resources={h.resources} className="flex flex-wrap gap-2 font-mono tabular-nums text-slate-300" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </HudPanel>
 
           {casino && <TournamentCard casino={casino} uid={player.uid} />}
 

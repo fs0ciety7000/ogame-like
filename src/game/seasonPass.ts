@@ -1,4 +1,5 @@
 import { grantTokens, tokensLabel } from "@/game/casino";
+import { parisDay } from "@/game/retention";
 import { GameActionError } from "@/game/errors";
 import { addDossiers, findCommander, unlockSeasonCommander } from "@/game/commanders";
 import type { ChronicleObjective } from "@/game/chronicles";
@@ -181,6 +182,8 @@ export interface PassState {
   notifiedTier?: number;
   /** v5.14.1 : paliers dont le défi est relevé. */
   cleared?: number[];
+  /** 5.15.12 : actions du jour (heure de Paris) et missions du jour réclamées. */
+  daily?: { day: string; counts: Record<string, number>; claimed: number[] };
   /** v5.14.1 : avancée du défi en cours (un palier à la fois), par action. */
   challenge?: Record<string, number>;
 }
@@ -211,7 +214,15 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
     ...(Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}),
     ...(cleared.length ? { cleared } : {}),
     ...(Object.keys(challenge).length ? { challenge } : {}),
+    ...(raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {}),
   };
+}
+
+/** 5.15.12 : compteurs et réclamations du jour (valeurs positives seulement). */
+function normalizeDaily(d: NonNullable<PassState["daily"]>): NonNullable<PassState["daily"]> {
+  const counts: Record<string, number> = {};
+  for (const [k, v] of Object.entries(d.counts ?? {})) if (Number(v) > 0) counts[k] = Number(v);
+  return { day: d.day, counts, claimed: (Array.isArray(d.claimed) ? d.claimed : []).map(Number).filter((n) => n >= 0 && n < 10) };
 }
 
 /**
@@ -333,6 +344,10 @@ export function trackActivity(player: PlayerState, key: string, now: number, tim
   if (!(times > 0)) return;
   const st = passState(player, now);
   st.activity = { ...(st.activity ?? {}), [key]: (st.activity?.[key] ?? 0) + times };
+  // 5.15.12 : compteurs du jour (missions du jour).
+  const day = parisDay(now);
+  const daily = st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
+  st.daily = { ...daily, counts: { ...daily.counts, [key]: (daily.counts[key] ?? 0) + times } };
   // v5.14.1 : défi du palier en cours (le surplus ne passe pas au palier suivant).
   // 5.15.4 : en mode cumulé, le total du mois (activity) suffit.
   if (isCumulativePass(st.seasonId)) {

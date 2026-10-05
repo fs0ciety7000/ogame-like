@@ -43,6 +43,7 @@ import { WarpOverlay } from "@/components/game/WarpOverlay";
 import { RankUpCelebration } from "@/components/game/RankUpCelebration";
 import { FxLayer } from "@/components/game/FxLayer";
 import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
+import { SeasonReport } from "@/components/game/SeasonReport";
 import { UltimatumDialog } from "@/components/game/PirateUltimatum";
 import { AnnouncementDialog } from "@/components/game/Announcement";
 import { CommandPalette } from "@/components/layout/CommandPalette";
@@ -258,6 +259,7 @@ export function AppShell() {
       <RaidAlert />
       <RankUpCelebration />
       <AwaySummaryModal />
+      <SeasonReport />
       <UltimatumDialog />
       <AnnouncementDialog />
       <CommandPalette />
