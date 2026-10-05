@@ -1,3 +1,4 @@
+import { DEFAULT_PLANET_LOOK } from "@/game/planetLook";
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { assignCommanders, commanderLevel, grantCommanderXp, recruitCommander, xpForLevel, COMMANDER_RULES } from "@/game/commanders";
@@ -106,7 +107,7 @@ describe("v4.0 profile", () => {
     const p = player();
     expect(() => setProfileStyle(p, { banner: "leviathan" })).toThrow(/verrouillée/);
     setProfileStyle(p, { banner: "braise", motto: "  <b>Personne\n ne passe</b>  " });
-    expect(p.profileStyle).toEqual({ banner: "braise", emblem: "rank", motto: "bPersonne ne passe/b", pinned: [] });
+    expect(p.profileStyle).toEqual({ banner: "braise", emblem: "rank", motto: "bPersonne ne passe/b", pinned: [], planet: DEFAULT_PLANET_LOOK });
     expect(sanitizeMotto("x".repeat(100))).toHaveLength(60);
     p.stats = { ...(p.stats ?? {}), leviathanKills: 1 } as PlayerState["stats"];
     setProfileStyle(p, { banner: "leviathan", emblem: "leviathan" });
