@@ -475,6 +475,22 @@ cronAdd("cosmic_balance_history", "11 3 * * *", () => {
   }
 });
 
+// 5.16 : rattrapage de production des petits empires (médiane des joueurs actifs, chaque nuit).
+cronAdd("cosmic_catchup", "27 3 * * *", () => {
+  try {
+    const out = require(`${__hooks}/cosmic_db.js`).catchupTick(Date.now());
+    console.log(`[cosmic] rattrapage : médiane ${out.median}, ${out.boosted} empire(s) aidé(s)`);
+  } catch (err) {
+    console.log(`[cosmic] rattrapage : ${err}`);
+  }
+});
+
+routerAdd("POST", "/api/cosmic/admin/catchup", (e) => {
+  const db = require(`${__hooks}/cosmic_db.js`);
+  if (!e.hasSuperuserAuth() && !db.isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  return e.json(200, db.catchupTick(Date.now()));
+}, $apis.requireAuth("users", "_superusers"));
+
 /* ---------- v5.5 : actions d'administration sur un joueur ---------- */
 
 routerAdd("POST", "/api/cosmic/admin/player-action", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAction(e), $apis.requireAuth("users", "_superusers"));

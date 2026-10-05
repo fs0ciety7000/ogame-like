@@ -1,6 +1,6 @@
 import { addRelic, relicLabel, rollRelic, type RelicRarity, RARITIES } from "@/game/relics";
 import { addCapsule, CAPSULE_TYPES, CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
-import { grantTokens } from "@/game/casino";
+import { casinoWeekId, grantTokens, playerCasino } from "@/game/casino";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -60,9 +60,24 @@ export function defaultLootTables(): LootTables {
 /** Tables en vigueur (remplacées par applyGameContent). */
 export const LOOT_TABLES: LootTables = defaultLootTables();
 
-export function setLootTables(tables: Partial<Record<LootSource, Partial<LootTable>>> | undefined): void {
+/** 5.16 : plafond hebdomadaire des jetons gagnés en combat (toutes sources), pour que
+ *  l'économie du casino ne s'emballe pas chez les joueurs qui enchaînent les combats.
+ *  Les jetons du quotidien, de la série, des défis et du passe n'y comptent pas. */
+export const LOOT_TOKEN_RULES = { weeklyCap: 25 };
+export const DEFAULT_LOOT_TOKEN_CAP = 25;
+
+export function setLootTables(tables: Partial<Record<LootSource, Partial<LootTable>>> | undefined, weeklyCap?: number): void {
   const d = defaultLootTables();
   for (const src of LOOT_SOURCES) LOOT_TABLES[src] = { ...d[src], ...(tables?.[src] ?? {}) };
+  LOOT_TOKEN_RULES.weeklyCap = Number.isFinite(weeklyCap) && (weeklyCap as number) >= 0 ? Math.floor(weeklyCap as number) : DEFAULT_LOOT_TOKEN_CAP;
+}
+
+/** Jetons de combat déjà gagnés cette semaine, et ce qu'il reste avant le plafond (null : pas de plafond). */
+export function lootTokensThisWeek(player: Pick<PlayerState, "casino">, now: number): { used: number; cap: number; left: number | null } {
+  const lw = playerCasino(player).lootWeek;
+  const used = lw && lw.id === casinoWeekId(now) ? lw.tokens : 0;
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  return { used, cap, left: cap > 0 ? Math.max(0, cap - used) : null };
 }
 
 export function validateLootTables(tables: Partial<Record<LootSource, Partial<LootTable>>> | undefined): string[] {
@@ -130,9 +145,15 @@ export function rollLoot(player: PlayerState, source: LootSource, now: number, r
   if ((t.tokenChance ?? 0) > 0 && random() < Math.min(1, (t.tokenChance ?? 0) * mult * diff)) {
     const lo = Math.max(1, Math.floor(t.tokenMin ?? 1));
     const hi = Math.max(lo, Math.floor(t.tokenMax ?? lo));
-    const n = lo + (Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1));
-    const got = grantTokens(player, n);
-    if (got > 0) drop.tokens = got;
+    const rolled = lo + (Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1));
+    // 5.16 : plafond hebdomadaire.
+    const week = lootTokensThisWeek(player, now);
+    const n = week.left === null ? rolled : Math.min(rolled, week.left);
+    const got = n > 0 ? grantTokens(player, n) : 0;
+    if (got > 0) {
+      drop.tokens = got;
+      player.casino = { ...playerCasino(player), lootWeek: { id: casinoWeekId(now), tokens: week.used + got } };
+    }
   }
   return drop;
 }

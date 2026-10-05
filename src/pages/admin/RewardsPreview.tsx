@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { GameRules } from "@/game/content";
 import { seasonPayoutSummary } from "@/game/seasons";
 import { streakWeekSummary } from "@/game/streak";
-import { NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { catchupBonus } from "@/game/catchup";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
 /* 5.15.9 : série de connexion réglable, et aperçu « avant / après » en direct
@@ -121,6 +122,38 @@ export function StreakSection({ rules, setRules, saved }: { rules: GameRules; se
         ]}
         note="Le coffre compte pour sa valeur moyenne. Les joueurs voient les nouveaux chiffres dès l'enregistrement."
       />
+    </Section>
+  );
+}
+
+/** 5.16 : rattrapage de production des petits empires, avec la courbe du bonus. */
+export function CatchupSection({ rules, setRules }: { rules: GameRules; setRules: SetRules }) {
+  const c = rules.catchup;
+  const set = (patch: Partial<GameRules["catchup"]>) => setRules((r) => ({ ...r, catchup: { ...r.catchup, ...patch } }));
+  const points = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75];
+  return (
+    <Section title="Rattrapage des petits empires">
+      <CheckboxField label="Activer le rattrapage" checked={c.enabled} onChange={(v) => set({ enabled: v })} />
+      <NumberField label="Bonus maximal (0,25 = +25 %)" value={c.maxBonus} min={0} step={0.05} onChange={(v) => set({ maxBonus: v ?? 0 })} />
+      <NumberField label="Bonus plein sous (part de la médiane)" value={c.fullBelow} min={0} step={0.05} onChange={(v) => set({ fullBelow: v ?? 0 })} />
+      <NumberField label="Plus de bonus à partir de (part de la médiane)" value={c.endsAt} min={0.05} step={0.05} onChange={(v) => set({ endsAt: v ?? 0.5 })} />
+      <NumberField label="Joueurs actifs minimum pour la médiane" value={c.minPlayers} min={2} step={1} onChange={(v) => set({ minPlayers: Math.round(v ?? 5) })} />
+      <NumberField label="Actif = connecté dans les N derniers jours" value={c.activeDays} min={1} step={1} onChange={(v) => set({ activeDays: v ?? 7 })} />
+      <div className="flex flex-col gap-1.5 border border-white/5 bg-white/[0.02] p-2.5 sm:col-span-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Bonus selon le développement (niveaux de bâtiments + technos, comparés à la médiane)</p>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          {points.map((ratio) => {
+            const b = catchupBonus(ratio, 1, c);
+            return (
+              <div key={ratio} className="flex flex-col items-center gap-0.5">
+                <span className="font-mono text-[10px] text-slate-500">{Math.round(ratio * 100)} %</span>
+                <span className={cn("font-mono text-sm tabular-nums", b > 0 ? "text-mint-glow" : "text-slate-600")}>{b > 0 ? `+${formatDecimal(b * 100, 1)} %` : "="}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-slate-500">Calculé chaque nuit par le serveur pour les joueurs actifs, figé pour la journée. Visible par le joueur dans le détail de sa production.</p>
+      </div>
     </Section>
   );
 }

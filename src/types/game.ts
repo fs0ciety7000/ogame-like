@@ -64,6 +64,8 @@ export interface PlayerBonuses {
   unitAttackBonus: number;
   buildingUpgradeDiscount: number;
   unlockedRecipes: number;
+  /** 5.16 : bonus de rattrapage de production, figé pour la journée par le serveur. */
+  catchup?: { factor: number; untilMs: number; ratio: number } | null;
 }
 
 export interface ResourceHistoryPoint {

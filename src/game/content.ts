@@ -21,6 +21,7 @@ import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES, validateBossSchedule } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { STREAK_RULES } from "@/game/streak";
+import { CATCHUP_RULES, validateCatchupRules } from "@/game/catchup";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -64,6 +65,8 @@ export interface GameRules {
   wars: typeof WAR_RULES;
   /** 5.15.9 : série de connexion (heures, jetons, Ambre du 6e jour, coffre du 7e). */
   streak: typeof STREAK_RULES;
+  /** 5.16 : rattrapage de production des petits empires. */
+  catchup: typeof CATCHUP_RULES;
 }
 
 export interface GameContent {
@@ -112,6 +115,7 @@ const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
 const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 const DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
+const DEFAULT_CATCHUP_RULES = { ...CATCHUP_RULES };
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
@@ -140,7 +144,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES },
   });
 }
 
@@ -207,6 +211,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       seasonBoss: { ...defaults.rules.seasonBoss, ...(overrides.rules?.seasonBoss ?? {}) },
       allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
+      catchup: { ...defaults.rules.catchup, ...(overrides.rules?.catchup ?? {}) },
       streak: (() => {
         const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
         const d = defaults.rules.streak;
@@ -233,7 +238,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   // Après les chapitres : un passe de saison publié remplace le passe du chapitre.
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables(content.relicSettings?.loot as Parameters<typeof setLootTables>[0]);
+  setLootTables(content.relicSettings?.loot as Parameters<typeof setLootTables>[0], content.relicSettings?.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -262,6 +267,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
+  Object.assign(CATCHUP_RULES, content.rules.catchup);
   current = content;
   return content;
 }
@@ -287,6 +293,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
   streak: "Série de connexion",
+  catchup: "Rattrapage",
 };
 
 /**
@@ -329,6 +336,7 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (sbr.flightMinutes !== undefined && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
+  errors.push(...validateCatchupRules(merged.catchup));
   // 5.15.9 : série de connexion (7 jours, bornes du coffre dans l'ordre).
   const st = merged.streak;
   if (st) {
@@ -456,6 +464,8 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateAchievements(content.achievements ?? []));
   errors.push(...validateRelics(content.relics ?? [], content.relicSettings ?? defaultRelicSettings()));
   errors.push(...validateLootTables(content.relicSettings?.loot as Parameters<typeof validateLootTables>[0]));
+  const cap = content.relicSettings?.lootTokenCap;
+  if (cap !== undefined && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
   errors.push(...validateTitles(content.titles ?? []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));

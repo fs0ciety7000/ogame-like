@@ -16,7 +16,7 @@ import { TournamentCard } from "@/components/casino/TournamentCard";
 import { WeekRecap } from "@/components/casino/WeekRecap";
 import { LEAGUE_TIERS } from "@/game/leagues";
 import { ACHIEVEMENT_TOKENS } from "@/game/achievements";
-import { LOOT_TABLES } from "@/game/loot";
+import { LOOT_TABLES, lootTokensThisWeek } from "@/game/loot";
 import { casinoOpen, dailyTokenReady, jackpotAmounts, jackpotOdds, nextCasinoOpening, OUTCOME_LABELS, playerCasino, type CasinoSettings, type SlotSymbol, type SpinOutcome } from "@/game/casino";
 import { claimDailyToken, spinSlot, useCasino, type SpinResult } from "@/services/casinoService";
 import { useServerPot } from "@/services/serverPotService";
@@ -499,6 +499,8 @@ export function CasinoPage() {
 /** 5.15 : toutes les façons de gagner des jetons, avec les chiffres en vigueur. */
 function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
   const r = settings.rewards;
+  const player = usePlayerStore((st) => st.player);
+  const lootWeek = player ? lootTokensThisWeek(player, Date.now()) : null;
   const pct = (v: number | undefined) => `${Math.round((v ?? 0) * 100)} %`;
   const rows: [string, string][] = [
     ["Jeton du jour", `${settings.dailyTokens} par jour (réserve de ${settings.maxTokens})`],
@@ -523,6 +525,20 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
         ))}
       </ul>
       <p className="text-[11px] text-slate-500">Les chances de butin augmentent face à un adversaire plus fort que toi (jusqu'à ×2).</p>
+      {lootWeek && lootWeek.left !== null && (
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Jetons de butin cette semaine</span>
+            <span className="font-mono tabular-nums text-slate-100">
+              {lootWeek.used} / {lootWeek.cap}
+            </span>
+          </p>
+          <div className="h-1 bg-white/5">
+            <div className="meter-fill h-full bg-gold-glow" style={{ width: `${Math.min(100, (lootWeek.used / Math.max(1, lootWeek.cap)) * 100)}%` }} />
+          </div>
+          <p className="text-[10px] text-slate-500">Plafond remis à zéro chaque lundi. Le jeton du jour, la série, les défis et le passe n'y comptent pas.</p>
+        </div>
+      )}
     </HudPanel>
   );
 }

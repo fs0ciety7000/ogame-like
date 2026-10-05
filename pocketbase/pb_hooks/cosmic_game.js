@@ -228,6 +228,7 @@ __export(hooksEntry_exports, {
   compileGazette: () => compileGazette,
   completeFleetReturn: () => completeFleetReturn,
   completeTradeContract: () => completeTradeContract,
+  computeCatchup: () => computeCatchup,
   computeGameStats: () => computeGameStats,
   computeLiveBalance: () => computeLiveBalance,
   computeTerritories: () => computeTerritories,
@@ -256,6 +257,7 @@ __export(hooksEntry_exports, {
   describeGain: () => describeGain,
   describeLoot: () => describeLoot,
   detectResourceAnomalies: () => detectResourceAnomalies,
+  developmentScore: () => developmentScore,
   eliteNotice: () => eliteNotice,
   eliteRanking: () => eliteRanking,
   eliteWindow: () => eliteWindow,
@@ -329,6 +331,7 @@ __export(hooksEntry_exports, {
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
   linkReferrer: () => linkReferrer,
+  lootTokensThisWeek: () => lootTokensThisWeek,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   makeRelic: () => makeRelic,
@@ -3431,6 +3434,75 @@ function playerResearchTimeFactor(player, now) {
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
 
+// src/game/catchup.ts
+var CATCHUP_RULES = {
+  enabled: true,
+  /** Bonus maximal (0,25 = +25 % de production). */
+  maxBonus: 0.25,
+  /** En dessous de ce ratio de la médiane : bonus maximal. */
+  fullBelow: 0.1,
+  /** À partir de ce ratio de la médiane : plus de bonus. */
+  endsAt: 0.5,
+  /** Nombre minimal de joueurs actifs pour calculer une médiane fiable. */
+  minPlayers: 5,
+  /** Fenêtre d'activité (jours) pour compter un joueur dans la médiane. */
+  activeDays: 7
+};
+function developmentScore(p) {
+  var _a, _b;
+  let total2 = 0;
+  for (const b of Object.values((_a = p.buildings) != null ? _a : {})) total2 += Math.max(0, Number(b == null ? void 0 : b.level) || 0);
+  for (const lvl of Object.values((_b = p.techLevels) != null ? _b : {})) total2 += Math.max(0, Number(lvl) || 0);
+  return total2;
+}
+function median(values) {
+  const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (v.length === 0) return 0;
+  const mid = Math.floor(v.length / 2);
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+}
+function catchupBonus(score, med, rules = CATCHUP_RULES) {
+  if (!rules.enabled || !(med > 0) || !(rules.maxBonus > 0)) return 0;
+  const ratio = Math.max(0, score) / med;
+  if (ratio >= rules.endsAt) return 0;
+  if (ratio <= rules.fullBelow) return rules.maxBonus;
+  const span = rules.endsAt - rules.fullBelow;
+  return span > 0 ? rules.maxBonus * ((rules.endsAt - ratio) / span) : 0;
+}
+function catchupFactorAt(input, at) {
+  var _a;
+  const c = (_a = input.bonuses) == null ? void 0 : _a.catchup;
+  if (!c || !(Number(c.factor) > 1) || !(at < Number(c.untilMs))) return 1;
+  return Math.min(1 + CATCHUP_RULES.maxBonus + 1e-4, Number(c.factor));
+}
+function catchupUntil(input) {
+  var _a;
+  const c = (_a = input.bonuses) == null ? void 0 : _a.catchup;
+  return c && Number(c.factor) > 1 ? Number(c.untilMs) || 0 : 0;
+}
+function computeCatchup(players, now, rules = CATCHUP_RULES) {
+  const active = players.filter((p) => now - p.lastActiveMs < rules.activeDays * 864e5);
+  const med = active.length >= rules.minPlayers ? median(active.map((p) => p.score)) : 0;
+  const bonuses = {};
+  for (const p of players) {
+    const bonus = catchupBonus(p.score, med, rules);
+    bonuses[p.uid] = bonus > 0 ? { factor: Math.round((1 + bonus) * 1e3) / 1e3, untilMs: now + 26 * 36e5, ratio: Math.round(p.score / med * 1e3) / 1e3 } : null;
+  }
+  return { median: med, bonuses };
+}
+function validateCatchupRules(r) {
+  var _a, _b;
+  if (!r) return [];
+  const errors = [];
+  if (r.maxBonus !== void 0 && !(r.maxBonus >= 0 && r.maxBonus <= 1)) errors.push("Rattrapage : bonus maximal entre 0 et 1 (1 = +100 %).");
+  const full = (_a = r.fullBelow) != null ? _a : CATCHUP_RULES.fullBelow;
+  const ends = (_b = r.endsAt) != null ? _b : CATCHUP_RULES.endsAt;
+  if (!(full >= 0 && ends > full && ends <= 1)) errors.push("Rattrapage : il faut 0 \u2264 plein bonus < fin du bonus \u2264 1.");
+  if (r.minPlayers !== void 0 && !(Number.isInteger(r.minPlayers) && r.minPlayers >= 2)) errors.push("Rattrapage : au moins 2 joueurs actifs pour la m\xE9diane.");
+  if (r.activeDays !== void 0 && !(r.activeDays >= 1 && r.activeDays <= 60)) errors.push("Rattrapage : fen\xEAtre d'activit\xE9 entre 1 et 60 jours.");
+  return errors;
+}
+
 // src/game/economy.ts
 var ECONOMY_RULES = {
   /** Énergie consommée par seconde et par place de hangar occupée. */
@@ -3456,7 +3528,7 @@ function boostUntil(input) {
   return Number.isFinite(v) ? v : 0;
 }
 function boostAt(input, at) {
-  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+  return (at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1) * catchupFactorAt(input, at);
 }
 function storageCapacityOf(input) {
   var _a;
@@ -3525,7 +3597,9 @@ function advanceResources(input, elapsedSeconds, startMs) {
   let at = startMs;
   const freeUntil = upkeepFreeUntil(input);
   const boostEnd = boostUntil(input);
+  const catchupEnd = catchupUntil(input);
   const cuts = [
+    ...catchupEnd > startMs && catchupEnd < endMs ? [catchupEnd] : [],
     ...eventBoundaries(startMs, endMs),
     ...freeUntil > startMs && freeUntil < endMs ? [freeUntil] : [],
     ...boostEnd > startMs && boostEnd < endMs ? [boostEnd] : [],
@@ -4952,7 +5026,7 @@ function removeTitle(p, label3) {
 }
 var tokensLabel = (n) => `${n} jeton${n > 1 ? "s" : ""} du casino`;
 function playerCasino(p) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const c = (_a = p.casino) != null ? _a : {};
   const int = (v) => Math.max(0, Math.floor(Number(v) || 0));
   const w = (_b = c.week) != null ? _b : {};
@@ -4960,7 +5034,16 @@ function playerCasino(p) {
   for (const [k, v] of Object.entries((_c = w.resources) != null ? _c : {})) if (Number(v) > 0) resources[k] = Math.floor(Number(v));
   const week = { id: typeof w.id === "string" ? w.id : "", spins: int(w.spins), wins: int(w.wins), points: int(w.points), resources };
   const history = (Array.isArray(c.history) ? c.history : []).filter((h) => !!h && typeof h === "object" && Number.isFinite(Number(h.atMs)) && typeof h.outcome === "string" && h.outcome in OUTCOME_POINTS).slice(0, CASINO_HISTORY_MAX);
-  return { tokens: int(c.tokens), dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "", spins: int(c.spins), wins: int(c.wins), jackpots: int(c.jackpots), week, history };
+  const lw = (_d = c.lootWeek) != null ? _d : null;
+  return __spreadValues({
+    tokens: int(c.tokens),
+    dailyDay: typeof c.dailyDay === "string" ? c.dailyDay : "",
+    spins: int(c.spins),
+    wins: int(c.wins),
+    jackpots: int(c.jackpots),
+    week,
+    history
+  }, lw && typeof lw.id === "string" ? { lootWeek: { id: lw.id, tokens: int(lw.tokens) } } : {});
 }
 function casinoWeekId(now) {
   const day = new Date(now).getUTCDay();
@@ -5095,10 +5178,19 @@ function defaultLootTables() {
   };
 }
 var LOOT_TABLES = defaultLootTables();
-function setLootTables(tables) {
+var LOOT_TOKEN_RULES = { weeklyCap: 25 };
+var DEFAULT_LOOT_TOKEN_CAP = 25;
+function setLootTables(tables, weeklyCap) {
   var _a;
   const d = defaultLootTables();
   for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
+  LOOT_TOKEN_RULES.weeklyCap = Number.isFinite(weeklyCap) && weeklyCap >= 0 ? Math.floor(weeklyCap) : DEFAULT_LOOT_TOKEN_CAP;
+}
+function lootTokensThisWeek(player, now) {
+  const lw = playerCasino(player).lootWeek;
+  const used = lw && lw.id === casinoWeekId(now) ? lw.tokens : 0;
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  return { used, cap, left: cap > 0 ? Math.max(0, cap - used) : null };
 }
 function validateLootTables(tables) {
   var _a, _b, _c, _d;
@@ -5151,9 +5243,14 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficu
   if (((_a = t.tokenChance) != null ? _a : 0) > 0 && random() < Math.min(1, ((_b = t.tokenChance) != null ? _b : 0) * mult * diff)) {
     const lo = Math.max(1, Math.floor((_c = t.tokenMin) != null ? _c : 1));
     const hi = Math.max(lo, Math.floor((_d = t.tokenMax) != null ? _d : lo));
-    const n = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-    const got = grantTokens(player, n);
-    if (got > 0) drop.tokens = got;
+    const rolled = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+    const week = lootTokensThisWeek(player, now);
+    const n = week.left === null ? rolled : Math.min(rolled, week.left);
+    const got = n > 0 ? grantTokens(player, n) : 0;
+    if (got > 0) {
+      drop.tokens = got;
+      player.casino = __spreadProps(__spreadValues({}, playerCasino(player)), { lootWeek: { id: casinoWeekId(now), tokens: week.used + got } });
+    }
   }
   return drop;
 }
@@ -11308,7 +11405,7 @@ function lossesPower(p, losses) {
   var _a, _b;
   return Math.round(computeFleetPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, losses, ["attack", "defense"]));
 }
-function median(values) {
+function median2(values) {
   if (values.length === 0) return 0;
   const s = [...values].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -11330,11 +11427,11 @@ function warlordReference(actives) {
     buildings[b.id] = levels.length ? levels.reduce((a, c) => a + c, 0) / levels.length : 0;
   }
   return {
-    median: median(powers),
+    median: median2(powers),
     max: powers.length ? Math.max(...powers) : 0,
-    medianXp: median(xps),
+    medianXp: median2(xps),
     maxXp: xps.length ? Math.max(...xps) : 0,
-    medianSeasonXp: median(humans.map((p) => {
+    medianSeasonXp: median2(humans.map((p) => {
       var _a;
       return (_a = p.seasonXp) != null ? _a : 0;
     })),
@@ -12348,7 +12445,7 @@ var ofFaction = (f) => /^le\s/.test(f) ? f.replace(/^le\s/, "du ") : `de ${f}`;
 var ofName = (name) => /^Le\s/.test(name) ? name.replace(/^Le\s/, "du ") : /^Les\s/.test(name) ? name.replace(/^Les\s/, "des ") : `de ${lcArticle(name)}`;
 var clamp3 = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 var round2 = (x) => Math.round(x * 100) / 100;
-function median2(xs) {
+function median3(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -12390,7 +12487,7 @@ function worldDigest(players, now) {
       return (_b2 = (_a2 = s.activity) == null ? void 0 : _a2[k]) != null ? _b2 : 0;
     });
     totals[k] = counts.reduce((a, b) => a + b, 0);
-    weeklyMedian[k] = round2(median2(counts) / observedDays * 7);
+    weeklyMedian[k] = round2(median3(counts) / observedDays * 7);
     const best = counts.reduce((bi, c, i) => c > counts[bi] ? i : bi, 0);
     if (counts[best] > 0) heroes[k] = { pseudo: active[best].pseudo, count: counts[best] };
   }
@@ -12416,11 +12513,11 @@ function worldDigest(players, now) {
     totals,
     heroes,
     episodes,
-    passMedianTier: median2(tiers2),
+    passMedianTier: median3(tiers2),
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
     chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
-    allianceSizeMedian: median2(Object.values(active.reduce((acc, p) => {
+    allianceSizeMedian: median3(Object.values(active.reduce((acc, p) => {
       var _a2;
       return p.allianceId ? __spreadProps(__spreadValues({}, acc), { [p.allianceId]: ((_a2 = acc[p.allianceId]) != null ? _a2 : 0) + 1 }) : acc;
     }, {})))
@@ -13882,7 +13979,7 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 // src/game/analytics.ts
 var HOUR9 = 36e5;
 var DAY10 = 24 * HOUR9;
-function median3(values) {
+function median4(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -14003,12 +14100,12 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         var _a;
         return now - ((_a = p.createdAtMs) != null ? _a : 0) < 7 * DAY10;
       }).length,
-      medianPlaytimeHours: round1(median3(players.map((p) => {
+      medianPlaytimeHours: round1(median4(players.map((p) => {
         var _a;
         return ((_a = p.playtimeSeconds) != null ? _a : 0) / 3600;
       }))),
       ranks: [...families.entries()].map(([label3, count2]) => ({ label: label3, count: count2 })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label)),
-      medianXp: median3(players.map((p) => {
+      medianXp: median4(players.map((p) => {
         var _a;
         return (_a = p.xp) != null ? _a : 0;
       })),
@@ -14029,9 +14126,9 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
         return {
           id: r.id,
           name: r.name,
-          median: Math.floor(median3(amounts)),
+          median: Math.floor(median4(amounts)),
           total: Math.floor(amounts.reduce((a, v) => a + v, 0)),
-          medianRate: round1(median3(rates.map((rt) => {
+          medianRate: round1(median4(rates.map((rt) => {
             var _a;
             return (_a = rt[r.id]) != null ? _a : 0;
           })))
@@ -14169,7 +14266,7 @@ function computeBalance(players, reports, now, windowDays) {
     const family = getRank((_a2 = p.xp) != null ? _a2 : 0).family;
     byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p.createdAtMs) / DAY10]);
   });
-  const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median3(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
+  const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median4(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
   recent.forEach((r) => {
     var _a2;
@@ -14207,7 +14304,7 @@ function computeBalance(players, reports, now, windowDays) {
     for (const p of players) {
       const amount3 = (_b = (_a = p.resources) == null ? void 0 : _a[r.id]) != null ? _b : 0;
       if (amount3 < 1e6) continue;
-      const others = median3(players.filter((o) => o !== p).map((o) => {
+      const others = median4(players.filter((o) => o !== p).map((o) => {
         var _a2, _b2;
         return (_b2 = (_a2 = o.resources) == null ? void 0 : _a2[r.id]) != null ? _b2 : 0;
       }));
@@ -14416,6 +14513,7 @@ var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
 var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
+var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14442,7 +14540,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14450,7 +14548,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14504,6 +14602,7 @@ function applyGameContent(overrides) {
       seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14528,7 +14627,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_W = content.relicSettings) == null ? void 0 : _W.loot);
+  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot, (_Z = content.relicSettings) == null ? void 0 : _Z.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14550,11 +14649,12 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _X = content.rules.allianceBoss, { bosses: allianceBosses } = _X, allianceBossRules = __objRest(_X, ["bosses"]);
+  const __ = content.rules.allianceBoss, { bosses: allianceBosses } = __, allianceBossRules = __objRest(__, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
+  Object.assign(CATCHUP_RULES, content.rules.catchup);
   current = content;
   return content;
 }
@@ -14576,7 +14676,8 @@ var RULE_GROUP_LABELS = {
   seasonBoss: "Boss de saison",
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
-  streak: "S\xE9rie de connexion"
+  streak: "S\xE9rie de connexion",
+  catchup: "Rattrapage"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f;
@@ -14612,6 +14713,7 @@ function validateRules(rules) {
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  errors.push(...validateCatchupRules(merged.catchup));
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
@@ -14630,7 +14732,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
   const errors = [];
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
@@ -14728,7 +14830,9 @@ function validateGameContent(content) {
   errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
   errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
   errors.push(...validateLootTables((_m = content.relicSettings) == null ? void 0 : _m.loot));
-  errors.push(...validateTitles((_n = content.titles) != null ? _n : []));
+  const cap = (_n = content.relicSettings) == null ? void 0 : _n.lootTokenCap;
+  if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
+  errors.push(...validateTitles((_o = content.titles) != null ? _o : []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
@@ -16185,7 +16289,7 @@ function renamePlayer(player, raw, now) {
 var BALANCE_HISTORY_KEY = "balance_history";
 var BALANCE_HISTORY_DAYS = 180;
 var isNpc = (uid) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-function median4(xs) {
+function median5(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
@@ -16212,7 +16316,7 @@ function balanceSnapshot(live, reports, now) {
     raidsWon: live.factions.reduce((a, f) => a + f.raidsWon, 0),
     raidsLost: live.factions.reduce((a, f) => a + f.raidsLost, 0),
     lairsTaken: live.factions.reduce((a, f) => a + f.lairsTaken, 0),
-    medianProduction: Math.round(median4(live.players.map((p) => p.productionPerHour))),
+    medianProduction: Math.round(median5(live.players.map((p) => p.productionPerHour))),
     avgHangarAttack: hangars.length ? Math.round(hangars.reduce((a, b) => a + b, 0) / hangars.length * 1e3) / 1e3 : 0,
     bestDefense: live.bestDefense,
     bestAttack: live.bestAttack,

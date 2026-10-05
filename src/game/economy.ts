@@ -10,6 +10,7 @@ import type { Buildings, PlayerState, ResourceId, Resources, TechLevels, Units }
 import { empireEffects, playerModifiers } from "@/game/modifiers";
 import type { EffectScope } from "@/game/effects";
 import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
+import { catchupFactorAt, catchupUntil } from "@/game/catchup";
 
 /* =====================================================
    Économie continue : production, plafond de l'entrepôt, entretien de
@@ -61,6 +62,8 @@ export interface EconomyInput {
   storageFactor?: number;
   /** v5.14 : portée des effets (« colonies » : Gouverneure en poste comprise). */
   effectScope?: EffectScope;
+  /** 5.16 : bonus de rattrapage (bonuses.catchup). */
+  bonuses?: { catchup?: { factor: number; untilMs: number; ratio: number } | null } | null;
 }
 
 /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
@@ -72,7 +75,7 @@ function boostUntil(input: EconomyInput): number {
 }
 
 function boostAt(input: EconomyInput, at: number): number {
-  return at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1;
+  return (at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1) * catchupFactorAt(input, at);
 }
 
 /** Capacité de l'entrepôt, Intendant en poste compris (v4.0). */
@@ -167,7 +170,9 @@ export function advanceResources(input: EconomyInput, elapsedSeconds: number, st
   // v3.4 : l'entretien de flotte reprend à la fin de la suspension d'ascension.
   const freeUntil = upkeepFreeUntil(input);
   const boostEnd = boostUntil(input);
+  const catchupEnd = catchupUntil(input);
   const cuts = [
+    ...(catchupEnd > startMs && catchupEnd < endMs ? [catchupEnd] : []),
     ...eventBoundaries(startMs, endMs),
     ...(freeUntil > startMs && freeUntil < endMs ? [freeUntil] : []),
     ...(boostEnd > startMs && boostEnd < endMs ? [boostEnd] : []),
@@ -270,7 +275,9 @@ export function productionBonuses(input: EconomyInput, now: number, res: Resourc
     bySource[label] = (bySource[label] ?? 0) + g.value;
   }
   for (const label of ["Officiers", "Secteurs d'alliance", "Reliques et talents"]) if ((bySource[label] ?? 0) > 0.0001) out.push({ label, pct: bySource[label] });
-  if (boostAt(input, now) > 1) out.push({ label: "Gelée de la Reine", pct: KESH_BOOST_PCT });
+  if (now < boostUntil(input)) out.push({ label: "Gelée de la Reine", pct: KESH_BOOST_PCT });
+  const catchup = catchupFactorAt(input, now);
+  if (catchup > 1) out.push({ label: "Rattrapage", pct: catchup - 1 });
   const ev = productionMultipliers(now)[res];
   if (ev && ev !== 1) out.push({ label: "Événement en cours", pct: ev - 1 });
   return out;

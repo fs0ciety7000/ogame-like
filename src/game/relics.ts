@@ -91,6 +91,8 @@ export interface RelicSettings {
   rarities: Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
   /** v5.14 : tables de butin des combats (loot.ts), par source. */
   loot?: Partial<Record<string, Record<string, unknown>>>;
+  /** 5.16 : plafond hebdomadaire de jetons du casino gagnés en combat (0 = sans plafond). */
+  lootTokenCap?: number;
 }
 
 export function defaultRelicSettings(): RelicSettings {
