@@ -1,9 +1,10 @@
 import { targetsPlayer } from "@/game/fleets";
+import { quickProbeCount, quickSpy } from "@/lib/quickSpy";
 import { PublicPlanet } from "@/components/game/PublicPlanet";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
+import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Radar, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -612,6 +613,9 @@ export function GalaxyPage() {
                       <Sword className="mr-1 h-4 w-4" /> Attaquer
                     </Button>
                   )}
+                  <Button variant="outline" size="icon" title={`Sondes en 1 clic (${quickProbeCount()})`} aria-label={`Envoyer des sondes à ${selected.pseudo}`} onClick={() => void quickSpy({ uid: selected.uid, pseudo: selected.pseudo })}>
+                    <Radar className="h-4 w-4" />
+                  </Button>
                   <Button variant="outline" size="icon" title="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Eye className="h-4 w-4" />
                   </Button>

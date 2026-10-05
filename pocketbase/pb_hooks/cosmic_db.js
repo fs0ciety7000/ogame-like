@@ -1758,6 +1758,12 @@ function launchFleetRequest(e) {
     } catch (err) {
       throw db.asHttpError(game, err);
     }
+    // 5.23 : décollage programmé (unités engagées tout de suite, départ et arrivée décalés).
+    const delayMs = game.fleetDelayMs(mission, body.delayMinutes);
+    if (delayMs > 0) {
+      out.fleet.departAtMs += delayMs;
+      out.fleet.arriveAtMs += delayMs;
+    }
     db.savePlayer(txApp, game, attacker, out.attacker, out.attackerQueues);
     db.notify(txApp, attackerUid, out.attackerNotifications);
     if (out.defenderNotifications.length > 0) db.notify(txApp, target ? target.uid : targetUid, out.defenderNotifications);

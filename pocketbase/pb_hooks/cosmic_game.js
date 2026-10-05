@@ -315,6 +315,7 @@ __export(hooksEntry_exports, {
   finishAllTimers: () => finishAllTimers,
   finishAllianceResearch: () => finishAllianceResearch,
   finishExpedition: () => finishExpedition,
+  fleetDelayMs: () => fleetDelayMs,
   flushPlayer: () => flushPlayer,
   formatInt: () => formatInt,
   foughtWarlords: () => foughtWarlords,
@@ -12178,7 +12179,7 @@ function recallFleet(fleet, uid, now) {
   if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas \xEAtre rappel\xE9e.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus \xEAtre rappel\xE9e.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est d\xE9j\xE0 au contact.");
-  return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) });
+  return __spreadProps(__spreadValues({}, fleet), { status: "returning", recalled: true, returnAtMs: now + Math.max(0, now - fleet.departAtMs) });
 }
 function completeFleetReturn(owner, fleet, now) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
@@ -12559,6 +12560,13 @@ function performFleetReturn(ownerIn, ownerQueues, fleet, now) {
   const flushed = flushState(__spreadProps(__spreadValues({}, ownerIn), { buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }), ownerQueues, now);
   const done = completeFleetReturn(flushed.player, fleet, now);
   return { owner: done.owner, queues: flushed.queues, notifications: [...flushed.notifications, ...done.notifications] };
+}
+var SCHEDULABLE_MISSIONS = ["attack", "spy", "transport", "recycle", "garrison"];
+var FLEET_DELAY_MAX_MINUTES = 12 * 60;
+function fleetDelayMs(mission, minutes) {
+  const m = Math.floor(Number(minutes));
+  if (!SCHEDULABLE_MISSIONS.includes(mission) || !(m > 0)) return 0;
+  return Math.min(FLEET_DELAY_MAX_MINUTES, m) * 6e4;
 }
 
 // src/game/warlordRanks.ts

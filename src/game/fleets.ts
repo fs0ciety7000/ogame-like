@@ -283,7 +283,8 @@ export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
   if (fleet.mission === "expedition" || fleet.mission === "leviathan" || fleet.mission === "seasonboss" || fleet.mission === "allianceboss" || fleet.mission === "elite") throw new GameActionError("Cette flotte ne peut pas être rappelée.");
   if (fleet.status !== "outbound") throw new GameActionError("Cette flotte ne peut plus être rappelée.");
   if (now >= fleet.arriveAtMs) throw new GameActionError("Trop tard : la flotte est déjà au contact.");
-  return { ...fleet, status: "returning", recalled: true, returnAtMs: now + (now - fleet.departAtMs) };
+  // 5.23 : rappelée avant son décollage programmé : elle est encore à quai.
+  return { ...fleet, status: "returning", recalled: true, returnAtMs: now + Math.max(0, now - fleet.departAtMs) };
 }
 
 /** Retour à la base : survivants et butin rejoignent le propriétaire. */
@@ -788,4 +789,20 @@ export function performFleetReturn(
   const flushed = flushState({ ...ownerIn, buildings: withMissingBuildings(ownerIn.buildings, ownerIn.resources) }, ownerQueues, now);
   const done = completeFleetReturn(flushed.player, fleet, now);
   return { owner: done.owner, queues: flushed.queues, notifications: [...flushed.notifications, ...done.notifications] };
+}
+
+/** 5.23 : missions dont le décollage peut être programmé, et délai maximal. */
+export const SCHEDULABLE_MISSIONS: FleetMission[] = ["attack", "spy", "transport", "recycle", "garrison"];
+export const FLEET_DELAY_MAX_MINUTES = 12 * 60;
+
+/** 5.23 : délai de décollage demandé (minutes entières), borné ; 0 si la mission ne s'y prête pas. */
+export function fleetDelayMs(mission: string, minutes: unknown): number {
+  const m = Math.floor(Number(minutes));
+  if (!SCHEDULABLE_MISSIONS.includes(mission as FleetMission) || !(m > 0)) return 0;
+  return Math.min(FLEET_DELAY_MAX_MINUTES, m) * 60_000;
+}
+
+/** 5.23 : la flotte attend son décollage programmé. */
+export function awaitingDeparture(f: Pick<Fleet, "departAtMs" | "status">, now: number): boolean {
+  return f.status === "outbound" && f.departAtMs > now;
 }
