@@ -1,6 +1,7 @@
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { colonyOf, colonyView } from "@/game/colonies";
-import { computeFleetPower, getShieldPercent, homeDefensePower } from "@/game/combat";
+import { computeFleetPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
+import { workshopState } from "@/game/workshop";
 import { postureEffects } from "@/game/formations";
 import { playerModifiers } from "@/game/modifiers";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -53,6 +54,26 @@ export function threatEstimate(
   const garrisonPower = garrison * ALLIANCE_RULES.garrisonPower;
   const defense = (homeDefensePower(units, player.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor) + garrisonPower) * (1 + playerModifiers(player).defense);
   const ratio = attack > 0 ? defense / attack : Infinity;
-  const verdict: ThreatVerdict = ratio >= 1.25 ? "safe" : ratio >= 0.8 ? "close" : "danger";
+  // 5.20 : verdict joué par le combat en tours (riposte, retraite, coques abîmées de la planète mère) ;
+  // les garnisons, sans unités connues ici, renforcent la défense en proportion de leur puissance.
+  const base = homeDefensePower(units, player.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor);
+  const sim = resolveCombat({
+    attackerUnits: player.units ?? {},
+    attackerTechLevels: player.techLevels ?? {},
+    attackerRepairPct: 0,
+    fleet: known ? {} : (fleet.units ?? {}),
+    attackerPowerOverride: known ? raw : undefined,
+    defenderUnits: units,
+    defenderTechLevels: player.techLevels ?? {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderShieldPct: shield,
+    homeFleetFactor: posture.homeFleetFactor,
+    defenseFactor: posture.defenseFactor,
+    defenderPowerFactor: (1 + playerModifiers(player).defense) * (1 + (base > 0 ? garrisonPower / base : 0)),
+    defenderHull: colony ? undefined : workshopState(player).hull,
+  });
+  const verdict: ThreatVerdict =
+    sim.outcome === "attacker_win" ? "danger" : sim.outcome === "draw" || sim.defenderLossPercent >= 0.5 ? "close" : "safe";
   return { attack, defense, garrison: garrisonPower, shield, estimated: !known && fleet.mission !== "pirate", ratio, verdict, targetName: colony ? colony.name : "planète mère" };
 }

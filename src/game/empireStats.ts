@@ -1,9 +1,10 @@
 import { ACHIEVEMENTS } from "@/game/achievements";
+import { hullPercent, workshopUnits } from "@/game/workshop";
 import { BUILDINGS, effectiveBuildingLevel, getUnitCapacity } from "@/game/buildings";
 import { chronicleState } from "@/game/chronicles";
 import { colonyBiome, colonyDefenseHangar, colonyHourlyRates, colonyStorage, depositLevel, type Colony } from "@/game/colonies";
 import { allianceShieldBonus } from "@/game/alliances";
-import { computeFullPower, getShieldPercent, homeDefensePower, unitStat } from "@/game/combat";
+import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, unitStat } from "@/game/combat";
 import { commanderLevel, commanderSlots, commandersState, findCommander, type OfficerId } from "@/game/commanders";
 import { COMMON_RESOURCES, economySnapshot, protectedAmount } from "@/game/economy";
 import type { Fleet, FleetMission } from "@/game/fleets";
@@ -56,6 +57,10 @@ export interface UnitLine {
   /** Puissance totale portée par cette unité (ATK pour la flotte, ATK + DEF pour les défenses). */
   power: number;
   places: number;
+  /** 5.20 : unités immobilisées à l'Atelier, état de la coque (0 → 1) et PV au combat (stock à pleine santé). */
+  workshop: number;
+  hull: number;
+  hp: number;
 }
 
 export interface EmpireStats {
@@ -86,6 +91,12 @@ export interface EmpireStats {
     defensePlaces: { used: number; capacity: number };
     modifiedAttack: number;
     modifiedDefense: number;
+    /** 5.20 : coque moyenne (pondérée par les PV), PV totaux et manquants, unités à l'Atelier, attaque réelle (coques comprises). */
+    hullPct: number;
+    hpTotal: number;
+    hpMissing: number;
+    inWorkshop: number;
+    effectiveAttack: number;
   };
   fleets: { inFlight: number; byMission: Partial<Record<FleetMission, number>>; unitsAway: number };
   command: {
@@ -140,6 +151,7 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
   const stats = playerStats(player);
   const colonies = player.colonies ?? [];
   const away = unitsAwayOf(fleets, player.uid);
+  const repairDock = workshopUnits(player);
   const colonyPlanets = colonies.map((c) => colonyPlanet(c, player));
 
   // ---- Planète mère ----
@@ -148,8 +160,9 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
   const homeLevels = sum(BUILDINGS.map((b) => effectiveBuildingLevel(player.buildings, b.id)));
   const usedPlaces = (ids: string[], counts: Record<string, number>) => sum(ids.map((id) => (counts[id] ?? 0) * (findUnit(id)?.hangarSpace ?? 1)));
   const homeCounts = Object.fromEntries(Object.entries(units).map(([id, s]) => [id, s?.count ?? 0]));
-  const attackPlaces = { used: usedPlaces(OFFENSIVE_UNITS, homeCounts) + usedPlaces(OFFENSIVE_UNITS, away), capacity: getUnitCapacity(player.buildings, "attack", tech) };
-  const defensePlaces = { used: usedPlaces(DEFENSIVE_UNITS, homeCounts), capacity: getUnitCapacity(player.buildings, "defense", tech) };
+  // 5.20 : les unités à l'Atelier gardent leur place de hangar.
+  const attackPlaces = { used: usedPlaces(OFFENSIVE_UNITS, homeCounts) + usedPlaces(OFFENSIVE_UNITS, away) + usedPlaces(OFFENSIVE_UNITS, repairDock), capacity: getUnitCapacity(player.buildings, "attack", tech) };
+  const defensePlaces = { used: usedPlaces(DEFENSIVE_UNITS, homeCounts) + usedPlaces(DEFENSIVE_UNITS, repairDock), capacity: getUnitCapacity(player.buildings, "defense", tech) };
   const homeDefense = Math.round(homeDefensePower(units, tech));
   const home: PlanetStats = {
     id: "home",
@@ -174,8 +187,13 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
     const awayN = away[u.id] ?? 0;
     const colN = colonyCounts[u.id] ?? 0;
     const per = u.category === "attack" ? atk : atk + def;
-    return { id: u.id, name: u.name, category: u.category, level, home: homeN, away: awayN, colonies: colN, attack: Math.round(atk), defense: Math.round(def), power: Math.round(per * (homeN + awayN + colN)), places: (homeN + awayN) * u.hangarSpace };
-  }).filter((l) => l.level > 0 || l.home + l.away + l.colonies > 0);
+    const docked = repairDock[u.id] ?? 0;
+    const hp = (homeN + awayN) * Math.max(1, def) * COMBAT_RULES.hpPerResistance;
+    return { id: u.id, name: u.name, category: u.category, level, home: homeN, away: awayN, colonies: colN, attack: Math.round(atk), defense: Math.round(def), power: Math.round(per * (homeN + awayN + colN)), places: (homeN + awayN + docked) * u.hangarSpace, workshop: docked, hull: hullPercent(player, u.id), hp: Math.round(hp) };
+  }).filter((l) => l.level > 0 || l.home + l.away + l.colonies + l.workshop > 0);
+  const hpTotal = sum(lines.map((l) => l.hp));
+  const hpMissing = sum(lines.map((l) => l.hp * (1 - l.hull)));
+  const effectiveAttack = Math.round(sum(lines.filter((l) => l.category === "attack").map((l) => l.attack * (l.home + l.away) * l.hull)) * (1 + mods.attack));
   const attackHome = Math.round(computeFullPower(units, tech, OFFENSIVE_UNITS, ["attack"]));
   const awayUnits: Units = Object.fromEntries(Object.entries(away).map(([id, n]) => [id, { level: units[id]?.level ?? 1, count: n }]));
   const attackAway = Math.round(computeFullPower(awayUnits, tech, OFFENSIVE_UNITS, ["attack"]));
@@ -248,6 +266,11 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
       defensePlaces,
       modifiedAttack: Math.round((attackHome + attackAway) * (1 + mods.attack)),
       modifiedDefense: Math.round(homeDefense * (1 + mods.defense)),
+      hullPct: hpTotal > 0 ? 1 - hpMissing / hpTotal : 1,
+      hpTotal,
+      hpMissing: Math.round(hpMissing),
+      inWorkshop: sum(Object.values(repairDock)),
+      effectiveAttack,
     },
     fleets: { inFlight: mine.length, byMission, unitsAway: sum(Object.values(away)) },
     command: {

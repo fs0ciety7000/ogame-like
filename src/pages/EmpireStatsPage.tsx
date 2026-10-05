@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { Link } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
-import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Zap } from "lucide-react";
+import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudTag, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -222,7 +222,13 @@ export function EmpireStatsPage() {
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <HeroTile label="Rang" display={o.rank} sub={`${n(o.xp)} XP · ${n(o.seasonXp)} cette saison`} icon={Crown} tone={GOLD} />
           <HeroTile label="Production / h" value={st.economy.totalPerHour} sub={`ressources communes, ${st.planets.length} planète(s)`} icon={Factory} tone={CYAN} />
-          <HeroTile label="Attaque (bonus compris)" value={m.modifiedAttack} sub={`${n(m.attackHome)} à quai · ${n(m.attackAway)} en vol`} icon={Swords} tone={EMBER} />
+          <HeroTile
+            label="Attaque (bonus compris)"
+            value={m.modifiedAttack}
+            sub={m.hullPct < 0.995 ? `réelle ${n(m.effectiveAttack)} (coques à ${pct(m.hullPct)}) · ${n(m.attackAway)} en vol` : `${n(m.attackHome)} à quai · ${n(m.attackAway)} en vol`}
+            icon={Swords}
+            tone={EMBER}
+          />
           <HeroTile label="Défense planète mère" value={m.modifiedDefense} sub={`bouclier ${pct(m.shieldPct, 1)} · colonies ${n(m.coloniesDefense)}`} icon={Shield} tone={MINT} />
           <HeroTile
             label="Combats"
@@ -379,6 +385,9 @@ export function EmpireStatsPage() {
                 { label: "Attaque en vol", value: m.attackAway, tone: GOLD },
                 { label: "Défense mère (brute)", value: m.homeDefense, tone: MINT },
                 { label: "Défense colonies", value: m.coloniesDefense, tone: VIOLET },
+                // 5.20 : points de vie conservés entre les combats et Atelier de réparation.
+                { label: `Coque moyenne · ${pct(m.hullPct)}`, value: m.hpTotal - m.hpMissing, tone: m.hullPct >= 0.8 ? MINT : m.hullPct >= 0.4 ? EMBER : DANGER },
+                { label: "À l'Atelier", value: m.inWorkshop, tone: m.inWorkshop > 0 ? EMBER : CYAN },
               ].map((x) => (
                 <div key={x.label} className="border-l-2 bg-white/[0.02] px-3 py-2" style={{ borderColor: `color-mix(in srgb, ${x.tone} 50%, transparent)` }}>
                   <Mini label={x.label} value={<Num value={x.value} />} tone={x.tone} />
@@ -401,6 +410,7 @@ export function EmpireStatsPage() {
                     <th className="py-2 pr-3 text-right font-normal">Colonies</th>
                     <th className="py-2 pr-3 text-right font-normal">ATK</th>
                     <th className="py-2 pr-3 text-right font-normal">RÉS</th>
+                    <th className="py-2 pr-3 text-right font-normal">Coque</th>
                     <th className="w-40 py-2 pr-3 font-normal">Puissance</th>
                     <th className="py-2 text-right font-normal">Places</th>
                   </tr>
@@ -430,6 +440,15 @@ export function EmpireStatsPage() {
                         <td className="py-2 pr-3 text-right font-mono text-violet-glow">{u.colonies ? n(u.colonies) : <span className="text-slate-600">—</span>}</td>
                         <td className="py-2 pr-3 text-right font-mono text-slate-300">{n(u.attack)}</td>
                         <td className="py-2 pr-3 text-right font-mono text-slate-300">{n(u.defense)}</td>
+                        <td className="py-2 pr-3 text-right font-mono" style={{ color: u.hull >= 0.8 ? MINT : u.hull >= 0.4 ? EMBER : DANGER }} title={u.workshop ? `${u.workshop} à l'Atelier` : undefined}>
+                          {pct(u.hull)}
+                          {u.workshop > 0 && (
+                            <span className="ml-1 inline-flex items-center gap-0.5 text-ember-glow">
+                              +{n(u.workshop)}
+                              <Wrench className="h-3 w-3" aria-label="à l'Atelier" />
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2 pr-3">
                           <div className="flex items-center gap-2">
                             <Bar value={u.power / maxUnitPower} tone={tone} className="flex-1" />
@@ -444,7 +463,9 @@ export function EmpireStatsPage() {
               </table>
             </div>
           )}
-          <p className="text-[11px] text-slate-500">Puissance : ATK pour la flotte, ATK + RÉS pour les défenses (comme au combat), avant le bonus à domicile et tes bonus de commandement.</p>
+          <p className="text-[11px] text-slate-500">
+            Puissance : ATK pour la flotte, ATK + RÉS pour les défenses, avant le bonus à domicile et tes bonus de commandement. Coque : points de vie restants (PV = RÉS × 30) ; une unité abîmée tire et encaisse moins jusqu'à sa réparation à l'Atelier. Valeur = PV restants.
+          </p>
         </Section>
 
         <div className="grid gap-5 lg:grid-cols-2">

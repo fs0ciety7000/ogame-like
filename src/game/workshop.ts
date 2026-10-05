@@ -1,7 +1,8 @@
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { findUnit } from "@/game/units";
-import type { NewNotification, PlayerState, Units } from "@/types/game";
+import type { NewNotification } from "@/game/flush";
+import type { PlayerState, Units } from "@/types/game";
 
 /* =====================================================
    5.20 : Atelier de réparation et points de vie conservés.
