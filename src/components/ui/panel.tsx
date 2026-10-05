@@ -74,3 +74,24 @@ export function ShowMoreButton({ more, step, onClick }: { more: number; step: nu
     </Button>
   );
 }
+
+/** 5.21.2 : pagination « Précédent / Suivant » (20 par page par défaut). Rien si une seule page. */
+export const PAGE_SIZE = 20;
+export function Pager({ page, total, size = PAGE_SIZE, onPage }: { page: number; total: number; size?: number; onPage: (p: number) => void }) {
+  const pages = Math.max(1, Math.ceil(total / size));
+  if (pages <= 1) return null;
+  const p = Math.min(page, pages - 1);
+  return (
+    <nav className="flex items-center justify-between gap-2 pt-2" aria-label="Pagination">
+      <Button variant="ghost" size="sm" disabled={p <= 0} onClick={() => onPage(p - 1)}>
+        ← Précédent
+      </Button>
+      <span className="font-mono text-[11px] text-slate-400">
+        {p * size + 1}–{Math.min(total, (p + 1) * size)} sur {total} · page {p + 1} / {pages}
+      </span>
+      <Button variant="ghost" size="sm" disabled={p >= pages - 1} onClick={() => onPage(p + 1)}>
+        Suivant →
+      </Button>
+    </nav>
+  );
+}

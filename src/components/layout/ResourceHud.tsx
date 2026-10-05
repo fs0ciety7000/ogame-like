@@ -49,7 +49,7 @@ export function ResourceHud() {
         const trend = history.slice(-12).map((p) => p.r[res.id] ?? 0);
         const full = economy.full.includes(res.id);
         const fill = Number.isFinite(economy.capacity) && economy.capacity > 0 ? (resources[res.id] / economy.capacity) * 100 : 0;
-        // v4.9.3 : entrepôt presque plein (≥ 85 %) — bordure dorée et temps avant plein.
+        // v4.9.3 : entrepôt presque plein (≥ 85 %) — temps avant plein.
         const nearFull = !full && fill >= 85;
         const secondsToFull = !full && rate > 0 && Number.isFinite(economy.capacity) ? Math.max(0, (economy.capacity - resources[res.id]) / rate) : null;
         return (
@@ -63,7 +63,8 @@ export function ResourceHud() {
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
                   "hud-cut-sm relative flex min-w-[9.5rem] items-center gap-2 overflow-hidden border bg-space-900/70 px-2.5 pb-2 pt-1.5 xl:flex-1",
-                  full ? "border-ember-glow/60" : nearFull ? "border-gold-glow/50" : "border-cyan-glow/15",
+                  // 5.21.2 : cadre à la couleur du thème ; seule la mention « plein » garde la couleur d'alerte.
+                  full ? "border-cyan-glow/45" : nearFull ? "border-cyan-glow/30" : "border-cyan-glow/15",
                 )}
               >
                 <ResourceIcon id={res.id} className="h-8 w-8" />
@@ -80,7 +81,7 @@ export function ResourceHud() {
                     ) : null}
                   </div>
                   {nearFull && secondsToFull !== null ? (
-                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-gold-glow">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
+                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-ember-glow">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
                   ) : (
                     <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
                   )}
@@ -91,7 +92,7 @@ export function ResourceHud() {
                     className="block h-full transition-[width] duration-700"
                     style={{
                       width: `${Math.min(100, fill)}%`,
-                      background: full ? "var(--color-ember-glow)" : fill > 85 ? "var(--color-gold-glow)" : "linear-gradient(90deg, var(--color-cyan-glow), var(--color-mint-glow))",
+                      background: full || fill > 85 ? "var(--color-cyan-glow)" : "linear-gradient(90deg, var(--color-cyan-glow), var(--color-mint-glow))",
                     }}
                   />
                 </span>

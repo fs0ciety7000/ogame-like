@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HudTag } from "@/components/ui/hud";
+import { PAGE_SIZE, Pager } from "@/components/ui/panel";
 import { BlogPostForm } from "@/components/blog/BlogPostForm";
 import { BLOG_CATEGORIES, blogCategory, blogDate, blogDateTime, isPublic, readingMinutes, type BlogPost } from "@/game/blog";
 import { addBlogAuthor, authorAvatarUrl, BLOG_URL, createBlogPost, fetchAllBlogPosts, fetchBlogAuthors, updateBlogPost, gameAvatarBlob, removeBlogAuthor, saveMyAuthorProfile, useBlogAccess, type BlogAuthor } from "@/services/blogService";
@@ -35,6 +36,9 @@ export function BlogEditorPage() {
   const [authors, setAuthors] = useState<BlogAuthor[]>([]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  // 5.21.2 : 20 articles par page.
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [filter, q]);
 
   const load = useCallback(async () => {
     try {
@@ -77,7 +81,8 @@ export function BlogEditorPage() {
   const pseudo = player?.pseudo ?? "Équipe";
   if (editing) return <BlogPostForm initial={editing.post} images={editing.images} authorPseudo={pseudo} onBack={() => setEditing(null)} onSaved={() => void load()} />;
 
-  const visibleIds = shown.map((x) => x.post.id);
+  const pageItems = shown.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleIds = pageItems.map((x) => x.post.id);
   const picked = (posts ?? []).filter((x) => selected.has(x.post.id)).map((x) => x.post);
   const allPicked = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
   const toggle = (id: string) =>
@@ -167,7 +172,7 @@ export function BlogEditorPage() {
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-white/5">
-              {shown.map(({ post: p, images }) => {
+              {pageItems.map(({ post: p, images }) => {
                 const st = statusOf(p, now);
                 const cat = blogCategory(p.category);
                 return (
@@ -204,6 +209,7 @@ export function BlogEditorPage() {
               })}
             </ul>
           )}
+          <Pager page={page} total={shown.length} onPage={setPage} />
         </Card>
 
         <div className="flex flex-col gap-5">
@@ -253,6 +259,7 @@ async function importDraft(d: BlogDraftFile, pseudo: string): Promise<void> {
 function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] | null; pseudo: string; onImported: () => void }) {
   const drafts = useMemo(() => bundledBlogDrafts(), []);
   const [busy, setBusy] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   if (drafts.length === 0) return null;
   const known = new Set(existing ?? []);
   const pending = drafts.filter((d) => !known.has(d.slug));
@@ -289,7 +296,7 @@ function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] 
       </div>
       <p className="text-xs text-slate-400">Rédigés à l'avance. L'import crée un brouillon avec sa couverture : relis-le, puis publie-le.</p>
       <ul className="flex flex-col gap-1.5">
-        {drafts.map((d) => {
+        {drafts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((d) => {
           const imported = known.has(d.slug);
           const cat = blogCategory(d.category);
           return (
@@ -313,6 +320,7 @@ function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] 
           );
         })}
       </ul>
+      <Pager page={page} total={drafts.length} onPage={setPage} />
     </Card>
   );
 }
