@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { pb } from "@/lib/pocketbase";
 import { callGame, endVacation } from "@/services/playerService";
-import type { Vendetta, WarlordPublic } from "@/game/warlords";
+import type { Vendetta, WarlordPowerAlert, WarlordPublic } from "@/game/warlords";
 import type { VacationState } from "@/game/vacation";
 import type { Coalition } from "@/game/coalition";
 
@@ -12,6 +12,8 @@ export interface WarlordsView {
   history: Vendetta[];
   /** v4.7 : coalition en cours (ou la dernière terminée). */
   coalition?: Coalition | null;
+  /** 5.23 : administration seulement : seigneurs trop forts face au 2e joueur. */
+  balance?: { second: number; alerts: WarlordPowerAlert[] };
 }
 
 export function fetchWarlords(): Promise<WarlordsView> {

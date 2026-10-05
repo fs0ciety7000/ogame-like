@@ -1,4 +1,4 @@
-import { computeFleetPower, computeFullPower, homeDefensePower } from "@/game/combat";
+import { CLASS_BEATS, computeFleetPower, computeFullPower, homeDefensePower } from "@/game/combat";
 import { shieldUntil } from "@/game/bounties";
 import { BUILDINGS } from "@/game/buildings";
 import { COMMON_RESOURCES } from "@/game/economy";
@@ -7,7 +7,8 @@ import { distanceBetween } from "@/game/fleets";
 import { productionHours } from "@/game/pirates";
 import { checkAttackAllowed } from "@/game/pvp";
 import { onVacation } from "@/game/vacation";
-import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { unitClasses } from "@/game/unitClasses";
 import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { overallHull } from "@/game/workshop";
@@ -74,6 +75,9 @@ export const WARLORD_RULES = {
   shrinkPerDay: 0.25,
   /** 5.23 : au-delà de ce multiple de la puissance visée, recalage immédiat à 1,2 fois. */
   snapAbove: 2,
+  /** 5.23 : durée de la contre-composition, et poids de la classe renforcée dans l'armée visée. */
+  counterDays: 7,
+  counterWeight: 2,
   /** 5.22.1 : un joueur plus de N fois au-dessus du suivant est écarté de la référence (compte admin, de test…). */
   outlierRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
@@ -425,21 +429,25 @@ function pickUnits(pool: string[], tier: WarlordTier): string[] {
 }
 
 /** Composition visée pour une puissance donnée (unités de niveau 1, sans technologie). */
-export function desiredArmy(d: Pick<WarlordDef, "tier" | "personality">, targetPower: number): Record<string, number> {
+export function desiredArmy(d: Pick<WarlordDef, "tier" | "personality">, targetPower: number, counter?: WarlordRuntime["counter"] | null, now = 0): Record<string, number> {
   const share = WARLORD_RULES.offenseShare[d.personality] ?? 0.5;
   const out: Record<string, number> = {};
   const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
   const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
   // Puissance d'une unité telle que la compte empirePower (vaisseaux : attaque + part à quai).
   const unitPower = (id: string) => computeFullPower({ [id]: { level: 1, count: 1 } }, {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
-  ships.forEach((id) => {
-    const per = unitPower(id);
-    if (per > 0) out[id] = Math.ceil((targetPower * share) / ships.length / per);
-  });
-  defenses.forEach((id) => {
-    const per = unitPower(id);
-    if (per > 0) out[id] = Math.ceil((targetPower * (1 - share)) / defenses.length / per);
-  });
+  // 5.23 : contre-composition : la classe qui bat celle de son dernier vainqueur pèse plus (même puissance totale).
+  const classes = counter && counter.untilMs > now ? unitClasses() : null;
+  const weight = (id: string) => (classes && classes[id] === counter!.cls ? WARLORD_RULES.counterWeight : 1);
+  const spread = (ids: string[], power: number) => {
+    const total = ids.reduce((a, id) => a + weight(id), 0);
+    ids.forEach((id) => {
+      const per = unitPower(id);
+      if (per > 0 && total > 0) out[id] = Math.ceil((power * weight(id)) / total / per);
+    });
+  };
+  spread(ships, targetPower * share);
+  spread(defenses, targetPower * (1 - share));
   return out;
 }
 
@@ -454,6 +462,46 @@ export interface WarlordRuntime {
   threat?: number;
   rank?: number;
   ascendedAtMs?: number;
+  /** 5.23 : relevés (rang, puissance) toutes les 12 h et à chaque changement de rang. */
+  history?: WarlordHistoryPoint[];
+  /** 5.23 : contre-composition après une défaite face à un joueur (classe renforcée, jusqu'à). */
+  counter?: { cls: "light" | "medium" | "heavy"; untilMs: number; vs?: string };
+}
+
+export interface WarlordHistoryPoint {
+  atMs: number;
+  rank: number;
+  power: number;
+}
+
+/** 5.23 : ajoute un relevé si le rang a changé ou si le dernier date de 12 h ; 60 relevés au plus. */
+export function recordWarlordHistory(rt: WarlordRuntime, rank: number, power: number, now: number): WarlordRuntime {
+  const list = rt.history ?? [];
+  const last = list[list.length - 1];
+  if (last && last.rank === rank && now - last.atMs < 12 * 3600_000) return rt;
+  return { ...rt, history: [...list, { atMs: now, rank, power: Math.round(power) }].slice(-60) };
+}
+
+/** 5.23 : classe dominante d'une flotte (puissance d'attaque par classe). */
+export function dominantClass(fleet: Record<string, number>): "light" | "medium" | "heavy" | null {
+  const classes = unitClasses();
+  const by: Record<string, number> = {};
+  for (const [id, n] of Object.entries(fleet ?? {})) {
+    const cls = classes[id];
+    if (!cls || cls === "support" || !(n > 0)) continue;
+    by[cls] = (by[cls] ?? 0) + n * (findUnit(id)?.stats.attaque ?? 0);
+  }
+  const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
+  return top && top[1] > 0 ? (top[0] as "light" | "medium" | "heavy") : null;
+}
+
+/** 5.23 : battu par un joueur, le seigneur renforce la classe qui bat la sienne (7 jours). */
+export function adaptWarlord(rt: WarlordRuntime, attackerFleet: Record<string, number>, now: number, vs?: string): WarlordRuntime {
+  const dom = dominantClass(attackerFleet);
+  if (!dom) return rt;
+  const beats = (Object.entries(CLASS_BEATS) as ["light" | "medium" | "heavy", string][]).find(([, beaten]) => beaten === dom)?.[0];
+  if (!beats) return rt;
+  return { ...rt, counter: { cls: beats, untilMs: now + WARLORD_RULES.counterDays * 86400_000, ...(vs ? { vs } : {}) } };
 }
 
 export function emptyRuntime(): WarlordRuntime {
@@ -467,7 +515,7 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
   const hoursSince = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 3600_000)) : 0;
   const out = rt.seeded ? addThreat({ ...rt }, (rules.threat.perDay * hoursSince) / 24, rules).rt : { ...rt, threat: rt.threat ?? 0, rank: rankOf(rt, rules) };
   const target = Math.round(warlordTargetPower(d, ref) * rankPowerFactor(rankOf(out, rules), rules));
-  const desired = desiredArmy(d, target);
+  const desired = desiredArmy(d, target, rt.counter, now);
   const hours = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 3600_000)) : 1;
   const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours / 24)) : 1;
   // 5.18 : arrondi à l'unité inférieure ; si rien ne pousse, une seule unité (la plus en retard) —
@@ -533,7 +581,9 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;
-  return out;
+  if (out.counter && out.counter.untilMs <= now) delete out.counter;
+  // 5.23 : historique (rang, puissance) pour l'administration.
+  return recordWarlordHistory(out, rankOf(out, rules), empirePower(npc), now);
 }
 
 /** Vendetta gagnée : 30 % de chaque unité perdue. */
@@ -828,6 +878,9 @@ export interface WarlordPublic {
   nextThreshold?: number | null;
   trait?: string | null;
   absentUntilMs: number;
+  /** 5.23 : historique (rang, puissance) et contre-composition en cours. */
+  history?: WarlordHistoryPoint[];
+  counter?: { cls: "light" | "medium" | "heavy"; untilMs: number } | null;
   vendetta: Pick<Vendetta, "id" | "ownerUid" | "ownerPseudo" | "allianceId" | "endsAtMs" | "goal" | "dealt"> | null;
 }
 
@@ -851,6 +904,8 @@ export function warlordPublic(d: WarlordDef, npc: PlayerState | null, rt: Warlor
     hull: npc ? Math.round(overallHull(npc) * 1000) / 1000 : 1,
     ...rankFields(d, rt),
     absentUntilMs: rt?.absentUntilMs ?? 0,
+    history: rt?.history ?? [],
+    counter: rt?.counter && rt.counter.untilMs > now ? { cls: rt.counter.cls, untilMs: rt.counter.untilMs } : null,
     vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null,
   };
 }
@@ -878,4 +933,28 @@ export function ascendantRelic(d: Pick<WarlordDef, "id">, now: number, random: (
   const pool = mythicTemplates();
   const tpl = pool[Math.floor(random() * pool.length) % pool.length];
   return makeRelic(tpl.id, "mythic", now, `ascendant:${d.id}`, random);
+}
+
+/** 5.23 : seuil d'alerte (administration) : un seigneur plus de N fois au-dessus du 2e joueur. */
+export const WARLORD_ALERT_RATIO = 1.5;
+
+export interface WarlordPowerAlert {
+  id: string;
+  name: string;
+  power: number;
+  /** Puissance du 2e joueur (le 1er peut être un compte à part). */
+  second: number;
+  ratio: number;
+}
+
+/** 5.23 : seigneurs trop forts par rapport au 2e joueur (comptes écartés de l'équilibrage déjà retirés). */
+export function warlordPowerAlerts(warlords: { id: string; name: string; power: number }[], humanPowers: number[], ratio = WARLORD_ALERT_RATIO): { second: number; alerts: WarlordPowerAlert[] } {
+  const sorted = humanPowers.filter((v) => v > 0).sort((a, b) => b - a);
+  const second = sorted[1] ?? sorted[0] ?? 0;
+  if (!(second > 0)) return { second: 0, alerts: [] };
+  const alerts = warlords
+    .filter((w) => w.power > second * ratio)
+    .map((w) => ({ id: w.id, name: w.name, power: w.power, second, ratio: Math.round((w.power / second) * 100) / 100 }))
+    .sort((a, b) => b.ratio - a.ratio);
+  return { second, alerts };
 }

@@ -153,6 +153,7 @@ __export(hooksEntry_exports, {
   activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
   activityProfile: () => activityProfile,
+  adaptWarlord: () => adaptWarlord,
   addCapsule: () => addCapsule,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
@@ -451,6 +452,7 @@ __export(hooksEntry_exports, {
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recordVendettaDamage: () => recordVendettaDamage,
   recordVendettaWin: () => recordVendettaWin,
+  recordWarlordHistory: () => recordWarlordHistory,
   recordWin: () => recordWin,
   recyclerCapacity: () => recyclerCapacity,
   reelsFor: () => reelsFor,
@@ -558,6 +560,7 @@ __export(hooksEntry_exports, {
   warlordFleetPower: () => warlordFleetPower,
   warlordLine: () => warlordLine,
   warlordLootCap: () => warlordLootCap,
+  warlordPowerAlerts: () => warlordPowerAlerts,
   warlordPublic: () => warlordPublic,
   warlordRankRules: () => warlordRankRules,
   warlordReference: () => warlordReference,
@@ -12749,6 +12752,9 @@ var WARLORD_RULES = {
   shrinkPerDay: 0.25,
   /** 5.23 : au-delà de ce multiple de la puissance visée, recalage immédiat à 1,2 fois. */
   snapAbove: 2,
+  /** 5.23 : durée de la contre-composition, et poids de la classe renforcée dans l'armée visée. */
+  counterDays: 7,
+  counterWeight: 2,
   /** 5.22.1 : un joueur plus de N fois au-dessus du suivant est écarté de la référence (compte admin, de test…). */
   outlierRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
@@ -13056,22 +13062,52 @@ function pickUnits(pool, tier) {
   const start = tier === "weak" ? 0 : tier === "medium" ? third : sorted.length - Math.max(2, third);
   return sorted.slice(start, start + 2).length === 2 ? sorted.slice(start, start + 2) : sorted.slice(-2);
 }
-function desiredArmy(d, targetPower2) {
+function desiredArmy(d, targetPower2, counter, now = 0) {
   var _a;
   const share = (_a = WARLORD_RULES.offenseShare[d.personality]) != null ? _a : 0.5;
   const out = {};
   const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
   const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
   const unitPower = (id) => computeFullPower({ [id]: { level: 1, count: 1 } }, {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
-  ships.forEach((id) => {
-    const per = unitPower(id);
-    if (per > 0) out[id] = Math.ceil(targetPower2 * share / ships.length / per);
-  });
-  defenses.forEach((id) => {
-    const per = unitPower(id);
-    if (per > 0) out[id] = Math.ceil(targetPower2 * (1 - share) / defenses.length / per);
-  });
+  const classes = counter && counter.untilMs > now ? unitClasses() : null;
+  const weight = (id) => classes && classes[id] === counter.cls ? WARLORD_RULES.counterWeight : 1;
+  const spread = (ids, power) => {
+    const total2 = ids.reduce((a, id) => a + weight(id), 0);
+    ids.forEach((id) => {
+      const per = unitPower(id);
+      if (per > 0 && total2 > 0) out[id] = Math.ceil(power * weight(id) / total2 / per);
+    });
+  };
+  spread(ships, targetPower2 * share);
+  spread(defenses, targetPower2 * (1 - share));
   return out;
+}
+function recordWarlordHistory(rt, rank2, power, now) {
+  var _a;
+  const list = (_a = rt.history) != null ? _a : [];
+  const last = list[list.length - 1];
+  if (last && last.rank === rank2 && now - last.atMs < 12 * 36e5) return rt;
+  return __spreadProps(__spreadValues({}, rt), { history: [...list, { atMs: now, rank: rank2, power: Math.round(power) }].slice(-60) });
+}
+function dominantClass(fleet) {
+  var _a, _b, _c;
+  const classes = unitClasses();
+  const by = {};
+  for (const [id, n] of Object.entries(fleet != null ? fleet : {})) {
+    const cls = classes[id];
+    if (!cls || cls === "support" || !(n > 0)) continue;
+    by[cls] = ((_a = by[cls]) != null ? _a : 0) + n * ((_c = (_b = findUnit(id)) == null ? void 0 : _b.stats.attaque) != null ? _c : 0);
+  }
+  const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
+  return top && top[1] > 0 ? top[0] : null;
+}
+function adaptWarlord(rt, attackerFleet, now, vs) {
+  var _a;
+  const dom = dominantClass(attackerFleet);
+  if (!dom) return rt;
+  const beats = (_a = Object.entries(CLASS_BEATS).find(([, beaten]) => beaten === dom)) == null ? void 0 : _a[0];
+  if (!beats) return rt;
+  return __spreadProps(__spreadValues({}, rt), { counter: __spreadValues({ cls: beats, untilMs: now + WARLORD_RULES.counterDays * 864e5 }, vs ? { vs } : {}) });
 }
 function emptyRuntime() {
   return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0, threat: 0, rank: 1 };
@@ -13082,7 +13118,7 @@ function growWarlord(npc, d, ref, rt, now) {
   const hoursSince = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 36e5)) : 0;
   const out = rt.seeded ? addThreat(__spreadValues({}, rt), rules.threat.perDay * hoursSince / 24, rules).rt : __spreadProps(__spreadValues({}, rt), { threat: (_a = rt.threat) != null ? _a : 0, rank: rankOf(rt, rules) });
   const target = Math.round(warlordTargetPower(d, ref) * rankPowerFactor(rankOf(out, rules), rules));
-  const desired = desiredArmy(d, target);
+  const desired = desiredArmy(d, target, rt.counter, now);
   const hours2 = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 36e5)) : 1;
   const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours2 / 24)) : 1;
   let grew = false;
@@ -13139,7 +13175,8 @@ function growWarlord(npc, d, ref, rt, now) {
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;
-  return out;
+  if (out.counter && out.counter.untilMs <= now) delete out.counter;
+  return recordWarlordHistory(out, rankOf(out, rules), empirePower(npc), now);
 }
 function shatterWarlord(npc, loss = WARLORD_RULES.vendetta.powerLoss) {
   var _a;
@@ -13335,7 +13372,7 @@ function settleVendettas(state, now) {
   return lost;
 }
 function warlordPublic(d, npc, rt, state, now) {
-  var _a;
+  var _a, _b;
   const o = warlordOrigin(d.origin);
   const v = activeVendetta(state, d.id, now);
   return __spreadProps(__spreadValues({
@@ -13355,6 +13392,8 @@ function warlordPublic(d, npc, rt, state, now) {
     hull: npc ? Math.round(overallHull(npc) * 1e3) / 1e3 : 1
   }, rankFields(d, rt)), {
     absentUntilMs: (_a = rt == null ? void 0 : rt.absentUntilMs) != null ? _a : 0,
+    history: (_b = rt == null ? void 0 : rt.history) != null ? _b : [],
+    counter: (rt == null ? void 0 : rt.counter) && rt.counter.untilMs > now ? { cls: rt.counter.cls, untilMs: rt.counter.untilMs } : null,
     vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null
   });
 }
@@ -13378,6 +13417,15 @@ function ascendantRelic(d, now, random = Math.random) {
   const pool = mythicTemplates();
   const tpl = pool[Math.floor(random() * pool.length) % pool.length];
   return makeRelic(tpl.id, "mythic", now, `ascendant:${d.id}`, random);
+}
+var WARLORD_ALERT_RATIO = 1.5;
+function warlordPowerAlerts(warlords, humanPowers, ratio = WARLORD_ALERT_RATIO) {
+  var _a, _b;
+  const sorted = humanPowers.filter((v) => v > 0).sort((a, b) => b - a);
+  const second = (_b = (_a = sorted[1]) != null ? _a : sorted[0]) != null ? _b : 0;
+  if (!(second > 0)) return { second: 0, alerts: [] };
+  const alerts = warlords.filter((w) => w.power > second * ratio).map((w) => ({ id: w.id, name: w.name, power: w.power, second, ratio: Math.round(w.power / second * 100) / 100 })).sort((a, b) => b.ratio - a.ratio);
+  return { second, alerts };
 }
 
 // src/game/attack.ts

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { simulateAgainstReport } from "@/game/simulator";
 import { playerCombatEffects } from "@/game/effectTargets";
 import { isWarlordUid } from "@/game/warlords";
+import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { lootFactor } from "@/game/events";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { fetchLatestSpyReport } from "@/services/playerService";
@@ -88,10 +89,29 @@ export function AttackModal({
   const slow = player && hasShips ? slowestUnits(player.units, selected) : null;
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
+  // 5.23 : seigneur visé : son rang et son trait entrent dans l'estimation (contrés par l'élite).
+  const lord = useWarlordsStore((st) => st.list.find((w) => w.uid === target?.uid));
+  useEffect(() => {
+    if (isWarlordUid(target?.uid)) void loadWarlords().catch(() => undefined);
+  }, [target?.uid]);
   const estimate = useMemo(
-    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid), priority || undefined, playerCombatEffects(player, isWarlordUid(target?.uid) ? "warlord" : "pvp")) : null),
+    () =>
+      player && hasShips && spy
+        ? simulateAgainstReport(
+            player,
+            selected,
+            spy,
+            lootFactor(Date.now()),
+            formation,
+            playerModifiers(player).attack + capsulePct(assault) / 100,
+            isWarlordUid(target?.uid),
+            priority || undefined,
+            playerCombatEffects(player, isWarlordUid(target?.uid) ? "warlord" : "pvp"),
+            lord ? { personality: lord.personality, rank: lord.rank ?? 1 } : undefined,
+          )
+        : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
-    [player, fleet, spy, formation, assault, target?.uid, priority],
+    [player, fleet, spy, formation, assault, target?.uid, priority, lord],
   );
 
   const handleConfirm = async () => {
@@ -351,7 +371,7 @@ export function AttackModal({
                             ))}
                           </p>
                         )}
-                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-600">{estimate.notes[0]}</p>}
+                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-500">{estimate.notes.join(" · ")}</p>}
                       </div>
                     );
                   })()

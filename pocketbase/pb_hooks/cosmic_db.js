@@ -7041,6 +7041,18 @@ function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
     won = game.recordVendettaDamage(state, atkDef.id, defender.player.uid, defender.rec.getString("allianceId"), dealt, now);
     warlordSay(txApp, game, state, atkDef, humanPlain(defender.rec), outcome === "attacker_win" ? "won" : "repelled", now, false);
   }
+  // 5.23 : battu par un joueur, le seigneur adapte sa composition (classe qui bat celle du vainqueur).
+  try {
+    if (defDef && outcome === "attacker_win") {
+      state.byId[defDef.id] = game.adaptWarlord(Object.assign(game.emptyRuntime(), state.byId[defDef.id] || {}), (result.report && result.report.attackerFleet) || {}, now, attacker.player.pseudo);
+    } else if (atkDef && outcome === "defender_win") {
+      const home = {};
+      Object.keys(defender.player.units || {}).forEach((id) => (home[id] = (defender.player.units[id] && defender.player.units[id].count) || 0));
+      state.byId[atkDef.id] = game.adaptWarlord(Object.assign(game.emptyRuntime(), state.byId[atkDef.id] || {}), home, now, defender.player.pseudo);
+    }
+  } catch (err) {
+    console.log(`[cosmic] contre-composition : ${err}`);
+  }
   // 5.22 : menace du seigneur selon l'issue (le rang peut monter ou descendre).
   const T = game.warlordRankRules().threat;
   const delta = defDef ? (outcome === "attacker_win" ? T.raided : outcome === "defender_win" ? T.defenseWon : 0) : outcome === "attacker_win" ? T.attackWon : outcome === "defender_win" ? T.attackLost : 0;
@@ -7204,7 +7216,22 @@ function warlordsList(e) {
     : [];
   const history = state.vendettas.filter((v) => v.status !== "active").slice(-10);
   const coal = game.readCoalitions(state);
-  return e.json(200, { warlords: list, history, rules: { vendetta: game.WARLORD_RULES.vendetta, coalition: game.COALITION_RULES }, coalition: coal.coalition || coal.history[0] || null });
+  // 5.23 : administration : alerte quand un seigneur dépasse 1,5 fois le 2e joueur actif.
+  let balance = undefined;
+  if (isGameAdmin(e)) {
+    try {
+      const excluded = balanceExcludedUids($app, game);
+      const powers = $app
+        .findRecordsByFilter("players", "npc = '' && resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - game.WARLORD_RULES.activeDays * 86400000 })
+        .map(humanPlain)
+        .filter((h) => countsForBalance(h, excluded, game))
+        .map((h) => game.empirePower(h));
+      balance = game.warlordPowerAlerts(list, powers);
+    } catch (err) {
+      console.log(`[cosmic] alerte seigneurs : ${err}`);
+    }
+  }
+  return e.json(200, { warlords: list, history, rules: { vendetta: game.WARLORD_RULES.vendetta, coalition: game.COALITION_RULES }, coalition: coal.coalition || coal.history[0] || null, balance });
 }
 
 /** POST /api/cosmic/warlords { action: "vendetta", warlordId, scope } */
