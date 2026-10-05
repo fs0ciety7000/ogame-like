@@ -12567,6 +12567,8 @@ var WARLORD_RULES = {
   maxDefenseRatio: 1.5,
   /** 5.22.1 : armée au-delà de la puissance visée : part de l'excédent perdue par jour. */
   shrinkPerDay: 0.25,
+  /** 5.23 : au-delà de ce multiple de la puissance visée, recalage immédiat à 1,2 fois. */
+  snapAbove: 2,
   /** 5.22.1 : un joueur plus de N fois au-dessus du suivant est écarté de la référence (compte admin, de test…). */
   outlierRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
@@ -12895,7 +12897,7 @@ function emptyRuntime() {
   return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0, threat: 0, rank: 1 };
 }
 function growWarlord(npc, d, ref, rt, now) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
   const rules = warlordRankRules();
   const hoursSince = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 36e5)) : 0;
   const out = rt.seeded ? addThreat(__spreadValues({}, rt), rules.threat.perDay * hoursSince / 24, rules).rt : __spreadProps(__spreadValues({}, rt), { threat: (_a = rt.threat) != null ? _a : 0, rank: rankOf(rt, rules) });
@@ -12919,19 +12921,24 @@ function growWarlord(npc, d, ref, rt, now) {
     const state = (_d = npc.units[lagging.id]) != null ? _d : { level: 1, count: 0 };
     npc.units[lagging.id] = { level: Math.max(1, state.level || 1), count: ((_e = state.count) != null ? _e : 0) + 1 };
   }
+  const now0 = empirePower(npc);
+  if (rt.seeded && now0 > target * WARLORD_RULES.snapAbove) {
+    const k = target * 1.2 / now0;
+    for (const [id, state] of Object.entries(npc.units)) if (((_f = state == null ? void 0 : state.count) != null ? _f : 0) > 0) npc.units[id] = __spreadProps(__spreadValues({}, state), { count: Math.floor(state.count * k) });
+  }
   if (rt.seeded && empirePower(npc) > target * 1.1) {
     const shrink = Math.min(1, WARLORD_RULES.shrinkPerDay * (hours2 / 24));
     for (const [id, state] of Object.entries(npc.units)) {
-      const want = (_f = desired[id]) != null ? _f : 0;
-      const count2 = (_g = state == null ? void 0 : state.count) != null ? _g : 0;
+      const want = (_g = desired[id]) != null ? _g : 0;
+      const count2 = (_h = state == null ? void 0 : state.count) != null ? _h : 0;
       if (count2 > want) npc.units[id] = __spreadProps(__spreadValues({}, state), { count: Math.max(want, count2 - Math.ceil((count2 - want) * shrink)) });
     }
   }
   const buildStep = !rt.seeded || now - rt.lastBuildingAtMs >= WARLORD_RULES.buildingLevelEveryHours * 36e5;
   if (buildStep) {
     for (const b of BUILDINGS) {
-      const want = Math.min(b.maxLevel, Math.round(((_h = ref.buildings[b.id]) != null ? _h : 0) * ((_i = WARLORD_RULES.buildingFactor[d.tier]) != null ? _i : 1)));
-      const cur = (_k = (_j = npc.buildings[b.id]) == null ? void 0 : _j.level) != null ? _k : 0;
+      const want = Math.min(b.maxLevel, Math.round(((_i = ref.buildings[b.id]) != null ? _i : 0) * ((_j = WARLORD_RULES.buildingFactor[d.tier]) != null ? _j : 1)));
+      const cur = (_l = (_k = npc.buildings[b.id]) == null ? void 0 : _k.level) != null ? _l : 0;
       if (want > cur) npc.buildings[b.id] = { level: rt.seeded ? cur + 1 : want, unlocked: true };
     }
     out.lastBuildingAtMs = now;
@@ -12939,16 +12946,16 @@ function growWarlord(npc, d, ref, rt, now) {
   const stockHours = d.personality === "builder" ? WARLORD_RULES.stockHours.builder : WARLORD_RULES.stockHours.default;
   const stock = productionHours(npc, stockHours);
   for (const res of COMMON_RESOURCES) {
-    const want = (_l = stock[res]) != null ? _l : 0;
-    const cur = (_m = npc.resources[res]) != null ? _m : 0;
+    const want = (_m = stock[res]) != null ? _m : 0;
+    const cur = (_n = npc.resources[res]) != null ? _n : 0;
     if (cur < want) npc.resources[res] = Math.min(want, cur + (rt.seeded ? Math.ceil(want * hours2 / 12) : want));
   }
   const xpTarget = warlordTargetXp(d, ref);
-  const xp = (_n = npc.xp) != null ? _n : 0;
+  const xp = (_o = npc.xp) != null ? _o : 0;
   const xpStep = Math.ceil(xpTarget * WARLORD_RULES.xpGrowthPerHour * hours2);
   npc.xp = xp < xpTarget ? rt.seeded ? Math.min(xpTarget, xp + xpStep) : xpTarget : xp;
   const seasonTarget = Math.round((ref.medianSeasonXp || 0) * tierFactor(d));
-  npc.seasonXp = Math.max((_o = npc.seasonXp) != null ? _o : 0, rt.seeded ? Math.min(seasonTarget, ((_p = npc.seasonXp) != null ? _p : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
+  npc.seasonXp = Math.max((_p = npc.seasonXp) != null ? _p : 0, rt.seeded ? Math.min(seasonTarget, ((_q = npc.seasonXp) != null ? _q : 0) + Math.ceil(seasonTarget * 0.05)) : seasonTarget);
   npc.resourcesUpdatedAtMs = now;
   out.seeded = true;
   out.lastTickMs = now;

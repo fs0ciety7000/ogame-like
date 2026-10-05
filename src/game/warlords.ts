@@ -72,6 +72,8 @@ export const WARLORD_RULES = {
   maxDefenseRatio: 1.5,
   /** 5.22.1 : armée au-delà de la puissance visée : part de l'excédent perdue par jour. */
   shrinkPerDay: 0.25,
+  /** 5.23 : au-delà de ce multiple de la puissance visée, recalage immédiat à 1,2 fois. */
+  snapAbove: 2,
   /** 5.22.1 : un joueur plus de N fois au-dessus du suivant est écarté de la référence (compte admin, de test…). */
   outlierRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
@@ -487,6 +489,13 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
     npc.units[lagging.id] = { level: Math.max(1, state.level || 1), count: (state.count ?? 0) + 1 };
   }
   // v5.5 : armée trop forte (plafond relevé ou joueurs partis) : elle fond d'une part de l'excédent.
+  // 5.23 : plus de 2 fois la puissance visée (référence recalée, joueurs partis) : recalage
+  // immédiat à 1,2 fois, au lieu d'attendre des jours de fonte.
+  const now0 = empirePower(npc);
+  if (rt.seeded && now0 > target * WARLORD_RULES.snapAbove) {
+    const k = (target * 1.2) / now0;
+    for (const [id, state] of Object.entries(npc.units)) if ((state?.count ?? 0) > 0) npc.units[id] = { ...state, count: Math.floor(state.count * k) };
+  }
   if (rt.seeded && empirePower(npc) > target * 1.1) {
     // 5.22.1 : fonte plus rapide que la croissance (25 % de l'excédent par jour).
     const shrink = Math.min(1, WARLORD_RULES.shrinkPerDay * (hours / 24));

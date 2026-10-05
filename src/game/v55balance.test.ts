@@ -45,6 +45,15 @@ describe("v5.5 plafond des seigneurs", () => {
     growWarlord(npc, strong, ref, { ...emptyRuntime(), seeded: true, lastTickMs: NOW - 24 * HOUR }, NOW);
     expect(empirePower(npc)).toBeLessThan(before);
   });
+
+  it("5.23 : plus de 2 fois la puissance visée : recalée tout de suite près de la cible", () => {
+    const ref = warlordReference(players);
+    const target = warlordTargetPower(strong, ref);
+    const npc = base({ npc: "warlord" as never, units: { fregate: { level: 1, count: 2_000_000 } } });
+    expect(empirePower(npc)).toBeGreaterThan(target * WARLORD_RULES.snapAbove);
+    growWarlord(npc, strong, ref, { ...emptyRuntime(), seeded: true, lastTickMs: NOW - HOUR }, NOW);
+    expect(empirePower(npc)).toBeLessThanOrEqual(target * 1.3);
+  });
 });
 
 describe("v5.5 Extension des hangars", () => {
