@@ -10602,7 +10602,8 @@ function checkAttackAllowed(ctx) {
   if (ctx.attackerUid === ctx.defenderUid) {
     return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
   }
-  if (ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
+  const npc = !!ctx.defenderIsWarlord;
+  if (!npc && ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
     const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
     if (now < until) {
       return {
@@ -10613,10 +10614,10 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
-  if (ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
+  if (!npc && ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
     return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
   }
-  if (ctx.lastDefenderDefeatMs !== null && !ctx.defenderIsWarlord) {
+  if (!npc && ctx.lastDefenderDefeatMs !== null) {
     const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
     if (now < until) {
       return {
@@ -10627,11 +10628,11 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
-  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+  if (!npc && ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
     const until = ctx.defenderShieldUntilMs;
     return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
   }
-  if (ctx.defenderAscendedAtMs) {
+  if (!npc && ctx.defenderAscendedAtMs) {
     const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
     if (now < until) {
       return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
@@ -10648,7 +10649,7 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
-  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",
@@ -21499,7 +21500,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.17.1" : "dev";
+var LOGIC_VERSION = true ? "5.17.2" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

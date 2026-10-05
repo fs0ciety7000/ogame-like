@@ -96,6 +96,7 @@ export interface AttackContext {
   /** v4.2 : fin des vacances du défenseur (ms), s'il est en vacances. */
   defenderVacationUntilMs?: number;
   /** v4.2 : un seigneur de guerre n'a pas de bouclier après une défaite. */
+  /** Cible PNJ (seigneur de guerre…) : aucune protection de joueur, seulement le délai entre deux attaques. */
   defenderIsWarlord?: boolean;
 }
 
@@ -124,7 +125,12 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-même !" };
   }
 
-  if (ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
+  // 5.17.2 : les PNJ (seigneurs de guerre…) n'ont aucune protection de joueur :
+  // ni débutant, ni vacances, ni bouclier, ni Voile, ni ascension, ni écart d'XP.
+  // Seul le délai entre deux attaques sur la même cible reste dû.
+  const npc = !!ctx.defenderIsWarlord;
+
+  if (!npc && ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
     const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
     if (now < until) {
       return {
@@ -136,11 +142,11 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  if (ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
+  if (!npc && ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
     return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
   }
 
-  if (ctx.lastDefenderDefeatMs !== null && !ctx.defenderIsWarlord) {
+  if (!npc && ctx.lastDefenderDefeatMs !== null) {
     const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
     if (now < until) {
       return {
@@ -152,12 +158,12 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  if (ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+  if (!npc && ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
     const until = ctx.defenderShieldUntilMs;
     return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
   }
 
-  if (ctx.defenderAscendedAtMs) {
+  if (!npc && ctx.defenderAscendedAtMs) {
     const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
     if (now < until) {
       return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'élever : bouclier d'ascension encore ${formatWait(until - now)}.` };
@@ -176,7 +182,9 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  // L'XP des seigneurs suit la médiane des joueurs : un joueur très avancé ne pouvait plus en
+  // attaquer aucun. Une victoire sur un adversaire bien plus faible rapporte peu d'XP (computeCombatXp).
+  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",

@@ -75,6 +75,21 @@ describe("checkAttackAllowed", () => {
     expect(check.until).toBe(NOW + 3600 * 1000);
   });
 
+  it("gives NPC targets no player protection at all (5.17.2)", () => {
+    const npc = { ...base, defenderIsWarlord: true };
+    expect(checkAttackAllowed({ ...npc, defenderCreatedAtMs: NOW - 60_000 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...npc, defenderVacationUntilMs: NOW + 3600_000 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...npc, lastDefenderDefeatMs: NOW - 60_000 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...npc, defenderShieldUntilMs: NOW + 3600_000 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...npc, defenderAscendedAtMs: NOW - 60_000 }).allowed).toBe(true);
+  });
+
+  it("lets a strong player attack a warlord whatever the XP gap (5.17.2)", () => {
+    expect(checkAttackAllowed({ ...base, attackerXp: 400_000, defenderXp: 9000, defenderIsWarlord: true }).allowed).toBe(true);
+    // Le délai entre deux attaques reste dû.
+    expect(checkAttackAllowed({ ...base, attackerXp: 400_000, defenderXp: 9000, defenderIsWarlord: true, lastAttackOnTargetMs: NOW - 60_000 }).reason).toBe("cooldown");
+  });
+
   it("forbids attacking a player with less than a third of your XP (once past the floor)", () => {
     expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 900 }).reason).toBe("too_weak");
     expect(checkAttackAllowed({ ...base, attackerXp: 400, defenderXp: 0 }).allowed).toBe(true);

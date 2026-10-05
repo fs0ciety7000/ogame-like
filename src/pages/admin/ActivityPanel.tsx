@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Activity, AlertTriangle, ArrowLeft, Clock, Copy, Gift, History, ListChecks, Radar, RefreshCw, Search, ShieldAlert, Store, Swords, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, Clock, Copy, GitCompare, Gift, History, ListChecks, Radar, RefreshCw, Search, ShieldAlert, Store, Swords, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, HudChip, StatTile, type HudTone } from "@/components/ui/hud";
@@ -8,7 +8,7 @@ import { HudPanel } from "@/components/ui/panel";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { AUDIT_WINDOWS, XP_SOURCE_LABELS, type AuditFlag, type AuditWindow, type XpSource, type XpTotals } from "@/game/xpAudit";
 import { fetchActivity, fetchPlayerAudit, type ActivityOverview, type ActivityRow, type PlayerAudit } from "@/services/adminActivityService";
-import { cn, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
+import { cn, formatDecimal, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 
 /* 5.17.1 : activité des joueurs en temps réel et audit d'un joueur (XP par
    source, rythme, combats, échanges, actions de l'équipe, signaux d'alerte). */
@@ -101,6 +101,12 @@ export function ActivityPanel() {
   const [query, setQuery] = useState("");
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [audited, setAudited] = useState<string | null>(null);
+  // 5.17.2 : comparaison de deux joueurs côte à côte.
+  const [picked, setPicked] = useState<string[]>([]);
+  const [compared, setCompared] = useState<[string, string] | null>(null);
+  const [cmpA, setCmpA] = useState("");
+  const [cmpB, setCmpB] = useState("");
+  const togglePick = (uid: string) => setPicked((p) => (p.includes(uid) ? p.filter((x) => x !== uid) : [...p, uid].slice(-2)));
 
   const load = useCallback(async () => {
     try {
@@ -113,16 +119,17 @@ export function ActivityPanel() {
 
   useEffect(() => {
     void load();
-    if (!live || audited) return;
+    if (!live || audited || compared) return;
     const id = window.setInterval(() => void load(), REFRESH_MS);
     return () => window.clearInterval(id);
-  }, [load, live, audited]);
+  }, [load, live, audited, compared]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (data?.rows ?? []).filter((r) => (!q || r.pseudo.toLowerCase().includes(q)) && (!flaggedOnly || r.flags.some((f) => f.severity !== "info")));
   }, [data, query, flaggedOnly]);
 
+  if (compared) return <PlayerCompareView pair={compared} onBack={() => setCompared(null)} onOpen={(q) => (setCompared(null), setAudited(q))} />;
   if (audited) return <PlayerAuditView q={audited} onBack={() => setAudited(null)} />;
 
   const flagged = (data?.rows ?? []).filter((r) => r.flags.some((f) => f.severity === "high")).length;
@@ -174,6 +181,20 @@ export function ActivityPanel() {
                 <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Auditer « {query.trim() || "…"} »
               </Button>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Comparer</span>
+              <Input value={cmpA} onChange={(e) => setCmpA(e.target.value)} placeholder="Joueur 1 (ex. Lap1)" className="w-40" />
+              <Input value={cmpB} onChange={(e) => setCmpB(e.target.value)} placeholder="Joueur 2 (ex. Vince)" className="w-40" />
+              <Button size="sm" variant="outline" disabled={!cmpA.trim() || !cmpB.trim()} onClick={() => setCompared([cmpA.trim(), cmpB.trim()])}>
+                <GitCompare className="mr-1 h-3.5 w-3.5" /> Comparer
+              </Button>
+              {picked.length === 2 && (
+                <Button size="sm" variant="primary" onClick={() => setCompared([picked[0], picked[1]])}>
+                  <GitCompare className="mr-1 h-3.5 w-3.5" /> Comparer les 2 cochés
+                </Button>
+              )}
+              {picked.length > 0 && <span className="font-mono text-[10px] text-slate-500">{picked.length} / 2 coché(s)</span>}
+            </div>
             {rows.length === 0 ? (
               <EmptyState icon={<Users />} title="Aucun joueur" size="sm">
                 Rien ne correspond au filtre.
@@ -183,6 +204,7 @@ export function ActivityPanel() {
                 <table className="w-full min-w-[860px] text-left text-xs">
                   <thead className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
                     <tr>
+                      <th className="w-6 py-1.5" aria-label="Comparer" />
                       <th className="py-1.5 pr-2">Joueur</th>
                       <th className="py-1.5 pr-2 text-right">XP gagnée</th>
                       <th className="w-40 py-1.5 pr-2">Sources</th>
@@ -195,7 +217,7 @@ export function ActivityPanel() {
                   </thead>
                   <tbody>
                     {rows.slice(0, 200).map((r) => (
-                      <ActivityTableRow key={r.uid} r={r} ceiling24h={data.missionCeiling24h} onOpen={() => setAudited(r.uid)} />
+                      <ActivityTableRow key={r.uid} r={r} ceiling24h={data.missionCeiling24h} onOpen={() => setAudited(r.uid)} picked={picked.includes(r.uid)} onPick={() => togglePick(r.uid)} />
                     ))}
                   </tbody>
                 </table>
@@ -211,10 +233,13 @@ export function ActivityPanel() {
   );
 }
 
-function ActivityTableRow({ r, ceiling24h, onOpen }: { r: ActivityRow; ceiling24h: number; onOpen: () => void }) {
+function ActivityTableRow({ r, ceiling24h, onOpen, picked, onPick }: { r: ActivityRow; ceiling24h: number; onOpen: () => void; picked: boolean; onPick: () => void }) {
   const missionPct = ceiling24h > 0 ? Math.round((r.missionXp24h / ceiling24h) * 100) : 0;
   return (
-    <tr className="cursor-pointer border-t border-slate-800 hover:bg-cyan-glow/[0.04]" onClick={onOpen}>
+    <tr className={cn("cursor-pointer border-t border-slate-800 hover:bg-cyan-glow/[0.04]", picked && "bg-cyan-glow/[0.06]")} onClick={onOpen}>
+      <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={picked} onChange={onPick} aria-label={`Comparer ${r.pseudo}`} className="accent-cyan-glow" />
+      </td>
       <td className="py-1.5 pr-2">
         <div className="flex items-center gap-1.5">
           <span aria-label={r.online ? "en ligne" : "hors ligne"} className={cn("h-1.5 w-1.5 shrink-0 rounded-full", r.online ? "bg-mint-glow" : "bg-slate-700")} />
@@ -572,6 +597,188 @@ function PlayerAuditView({ q, onBack }: { q: string; onBack: () => void }) {
             <dd className="font-mono text-slate-200">{formatDuration(p.playtimeSeconds)}</dd>
           </div>
         </dl>
+      </HudPanel>
+    </div>
+  );
+}
+
+/** 5.17.2 : deux joueurs côte à côte (indicateurs, sources d'XP, rythme, signaux). */
+function PlayerCompareView({ pair, onBack, onOpen }: { pair: [string, string]; onBack: () => void; onOpen: (q: string) => void }) {
+  const [audits, setAudits] = useState<[PlayerAudit, PlayerAudit] | null>(null);
+  const [error, setError] = useState("");
+  const [win, setWin] = useState<AuditWindow>("24h");
+
+  const load = useCallback(async () => {
+    try {
+      const [x, y] = await Promise.all([fetchPlayerAudit(pair[0]), fetchPlayerAudit(pair[1])]);
+      setAudits([x, y]);
+      setError("");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [pair]);
+
+  useEffect(() => {
+    void load();
+    const id = window.setInterval(() => void load(), REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, [load]);
+
+  const header = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button size="sm" variant="ghost" onClick={onBack}>
+        <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Tous les joueurs
+      </Button>
+      {AUDIT_WINDOWS.map((w) => (
+        <Button key={w.id} size="sm" variant={w.id === win ? "primary" : "outline"} onClick={() => setWin(w.id)}>
+          {w.label}
+        </Button>
+      ))}
+      <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void load()}>
+        <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
+      </Button>
+      {audits && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            void navigator.clipboard.writeText(JSON.stringify({ a: audits[0], b: audits[1] }, null, 1)).then(
+              () => toast.success("Comparaison copiée"),
+              () => toast.error("Copie impossible"),
+            )
+          }
+        >
+          <Copy className="mr-1 h-3.5 w-3.5" /> Copier (JSON)
+        </Button>
+      )}
+    </div>
+  );
+  if (error || !audits) {
+    return (
+      <div className="flex flex-col gap-4">
+        {header}
+        {error ? (
+          <EmptyState icon={<Search />} title="Comparaison impossible">
+            {error}
+          </EmptyState>
+        ) : (
+          <SkeletonCards count={3} />
+        )}
+      </div>
+    );
+  }
+  const shown = (a: PlayerAudit) => (a.windows[win].ledger.total !== 0 ? a.windows[win].ledger : a.windows[win].rebuilt);
+  const days = (a: PlayerAudit) => Math.max(1, (a.now - a.player.createdAtMs) / 86_400_000);
+  const rows: { label: string; get: (a: PlayerAudit) => number; fmt?: (n: number) => string }[] = [
+    { label: "XP totale", get: (a) => a.player.xp },
+    { label: "XP de saison", get: (a) => a.player.seasonXp },
+    { label: "XP par jour depuis l'inscription", get: (a) => Math.round(a.player.xp / days(a)) },
+    { label: `XP gagnée (${AUDIT_WINDOWS.find((w) => w.id === win)?.label.toLowerCase()})`, get: (a) => shown(a).total },
+    ...(Object.keys(XP_SOURCE_LABELS) as XpSource[]).map((src) => ({ label: `· ${XP_SOURCE_LABELS[src]}`, get: (a: PlayerAudit) => shown(a).bySource[src] ?? 0 })),
+    { label: "Part du plafond des missions", get: (a) => Math.round(((shown(a).bySource.mission ?? 0) / Math.max(1, a.windows[win].missionCeiling)) * 100), fmt: (n) => `${n} %` },
+    { label: "Heures actives sur 24 h", get: (a) => a.activity.activeHours24h },
+    { label: "Plus longue série (7 j, heures)", get: (a) => a.activity.longestStreak7d },
+    { label: "Combats (7 j)", get: (a) => a.battleCount },
+    { label: "Victoires (total)", get: (a) => a.player.victories },
+    { label: "Défaites (total)", get: (a) => a.player.defeats },
+    { label: "Missions terminées (total)", get: (a) => Number(a.stats.missions) || 0 },
+    { label: "Record de missions en un jour", get: (a) => Number(a.stats.bestMissionDay) || 0 },
+    { label: "Expéditions", get: (a) => Number(a.stats.expeditions) || 0 },
+    { label: "Primes", get: (a) => Number(a.stats.bounties) || 0 },
+    { label: "Succès débloqués", get: (a) => a.player.achievements },
+    { label: "Jours joués (60 derniers)", get: (a) => a.player.activeDays },
+    { label: "Temps de jeu (heures)", get: (a) => Math.round(a.player.playtimeSeconds / 3600) },
+    { label: "Échanges au marché (7 j)", get: (a) => a.trades.length },
+    { label: "Cadeaux (7 j)", get: (a) => a.gifts.length },
+    { label: "Actions de l'équipe", get: (a) => a.adminLogs.length },
+  ];
+  const [x, y] = audits;
+  const mutual = x.battles.filter((b) => (b.attackerUid === y.player.uid || b.defenderUid === y.player.uid)).length;
+  const startHour = Math.floor(x.now / 3600_000) - 23;
+  const hourLabel = (h: number) => new Date(h * 3600_000).toLocaleString("fr-FR", { hour: "2-digit", timeZone: "Europe/Paris" });
+
+  return (
+    <div className="flex flex-col gap-4">
+      {header}
+      <div className="grid gap-4 md:grid-cols-2">
+        {audits.map((a) => (
+          <HudPanel
+            key={a.player.uid}
+            icon={<ShieldAlert />}
+            title={a.player.pseudo}
+            tone={a.flags.some((f) => f.severity === "high") ? "danger" : a.flags.length ? "gold" : "mint"}
+            aside={
+              <Button size="sm" variant="ghost" onClick={() => onOpen(a.player.uid)}>
+                Audit complet
+              </Button>
+            }
+          >
+            <div className="flex flex-wrap gap-1">
+              <HudChip size="sm" tone={a.player.online ? "mint" : "neutral"}>
+                {a.player.online ? "en ligne" : `vu ${a.player.lastActiveMs ? timeAgo(a.player.lastActiveMs) : "jamais"}`}
+              </HudChip>
+              {a.player.testMode && (
+                <HudChip size="sm" tone="danger">
+                  compte test
+                </HudChip>
+              )}
+            </div>
+            <SourceBar totals={shown(a)} />
+            <SourceLegend totals={shown(a)} />
+            {a.flags.length === 0 ? (
+              <span className="text-xs text-mint-glow">Aucun signal.</span>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {a.flags.map((f) => (
+                  <li key={f.id} className="flex items-start gap-2 text-xs">
+                    <HudChip size="sm" tone={SEVERITY_TONE[f.severity]}>
+                      {SEVERITY_LABEL[f.severity]}
+                    </HudChip>
+                    <span className="min-w-0 text-slate-300" title={f.detail}>
+                      {f.title}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Bars values={a.activity.byHour24} tone="var(--color-mint-glow)" height={36} labelEvery={6} labelOf={(i) => hourLabel(startHour + i)} />
+          </HudPanel>
+        ))}
+      </div>
+
+      <HudPanel icon={<GitCompare />} title="Comparaison chiffrée" tone="accent" aside={mutual > 0 ? <HudChip size="sm" tone="gold">{mutual} combat(s) entre eux sur 7 j</HudChip> : undefined}>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-xs">
+            <thead className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+              <tr>
+                <th className="py-1.5 pr-2">Indicateur</th>
+                <th className="py-1.5 pr-2 text-right">{x.player.pseudo}</th>
+                <th className="py-1.5 pr-2 text-right">{y.player.pseudo}</th>
+                <th className="py-1.5 text-right">Rapport</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const vx = r.get(x);
+                const vy = r.get(y);
+                const fmt = r.fmt ?? ((n: number) => formatNumber(n));
+                const ratio = vy !== 0 ? vx / vy : vx !== 0 ? Infinity : 1;
+                const far = ratio >= 3 || ratio <= 1 / 3;
+                return (
+                  <tr key={r.label} className="border-t border-slate-800">
+                    <td className="py-1 pr-2 text-slate-400">{r.label}</td>
+                    <td className={cn("py-1 pr-2 text-right font-mono", vx > vy ? "text-slate-100" : "text-slate-400")}>{fmt(vx)}</td>
+                    <td className={cn("py-1 pr-2 text-right font-mono", vy > vx ? "text-slate-100" : "text-slate-400")}>{fmt(vy)}</td>
+                    <td className={cn("py-1 text-right font-mono", far ? "text-gold-glow" : "text-slate-500")}>
+                      {vx === 0 && vy === 0 ? "—" : !Number.isFinite(ratio) ? "∞" : `×${formatDecimal(ratio, 1)}`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-500">« Rapport » = joueur 1 ÷ joueur 2 ; en or quand l'écart dépasse ×3.</p>
       </HudPanel>
     </div>
   );
