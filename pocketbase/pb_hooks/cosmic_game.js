@@ -2684,17 +2684,18 @@ var XP_TIER_RULES = {
   /** Pendant un week-end à bonus de missions, les seuils des missions suivent le bonus. */
   eventScaling: true,
   /** Seuils journaliers (XP avant réduction) : [plein tarif jusqu'à, demi-tarif jusqu'à]. */
+  // 5.18 : le jeu actif (expéditions, primes, combats, factions) rapporte plus que les missions.
   tiers: {
-    mission: [3e3, 6e3],
-    expedition: [1500, 3e3],
-    bounty: [1200, 2400],
-    attack: [800, 1600],
-    defense: [600, 1200],
-    pirate: [800, 1600],
-    contract: [600, 1200]
+    mission: [2e3, 4e3],
+    expedition: [4e3, 8e3],
+    bounty: [4e3, 8e3],
+    attack: [3e3, 6e3],
+    defense: [2500, 5e3],
+    pirate: [3e3, 6e3],
+    contract: [1500, 3e3]
   },
   /** Bonus au jeu actif (appliqués avant les paliers). */
-  multipliers: { expedition: 1.5, bounty: 1.5 }
+  multipliers: { expedition: 1.5, bounty: 1.5, attack: 1.5, pirate: 1.5, defense: 1.25 }
 };
 function tierThresholds(source, now, rules = XP_TIER_RULES) {
   const t = rules.tiers[source];

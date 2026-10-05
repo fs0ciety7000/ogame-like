@@ -1425,17 +1425,6 @@ function resolveAttackArrival(txApp, game, rec, now) {
   });
   // v4.2 : seigneur parti (vendetta perdue) : la flotte rentre sans combattre.
   const absent = defender && defender.player.npc ? warlordAbsence(txApp, game, defenderUid, now) : null;
-  // 5.18 : pacte de non-agression signé (ou en préavis) pendant le vol : demi-tour sans combat.
-  const pact = defender && !defender.player.npc ? bindingPact(txApp, game, attacker.rec.getString("allianceId"), defender.rec.getString("allianceId"), now) : null;
-  if (pact) {
-    const tag = pact.allianceA === defender.rec.getString("allianceId") ? pact.tagA : pact.tagB;
-    rec.set("status", "returning");
-    rec.set("returnAtMs", now + tripMs);
-    rec.set("outcome", "none");
-    txApp.save(rec);
-    notify(txApp, fleet.ownerUid, [{ kind: "fleet", title: "Attaque annulée : pacte de non-agression", message: `Un pacte lie ton alliance à [${tag}] : ta flotte fait demi-tour sans combattre contre ${defender.player.pseudo}.`, createdAtMs: now, read: false }]);
-    return;
-  }
   const result = defender && !absent
     ? game.performAttack({
         now,
@@ -1690,14 +1679,7 @@ function launchFleetRequest(e) {
       if (!contractRec) throw new NotFoundError("Contrat introuvable.");
       target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
-    // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
-    if (mission === "attack" && target) {
-      const pact = bindingPact(txApp, game, attacker.rec.getString("allianceId"), target.allianceId, now);
-      if (pact) {
-        const tag = pact.allianceA === target.allianceId ? pact.tagA : pact.tagB;
-        throw new BadRequestError(`Pacte de non-agression avec [${tag}] : attaque impossible${pact.status === "ending" ? " jusqu'à la fin du préavis" : ""}.`);
-      }
-    }
+    // 5.18 : un pacte de non-agression n'empêche plus l'attaque à titre personnel (seulement la guerre d'alliance).
     let expeditionsActive = 0;
     let expeditionsToday = 0;
     let leviathan = null;

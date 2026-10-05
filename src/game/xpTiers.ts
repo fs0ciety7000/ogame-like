@@ -25,17 +25,18 @@ export const XP_TIER_RULES = {
   /** Pendant un week-end à bonus de missions, les seuils des missions suivent le bonus. */
   eventScaling: true,
   /** Seuils journaliers (XP avant réduction) : [plein tarif jusqu'à, demi-tarif jusqu'à]. */
+  // 5.18 : le jeu actif (expéditions, primes, combats, factions) rapporte plus que les missions.
   tiers: {
-    mission: [3000, 6000],
-    expedition: [1500, 3000],
-    bounty: [1200, 2400],
-    attack: [800, 1600],
-    defense: [600, 1200],
-    pirate: [800, 1600],
-    contract: [600, 1200],
+    mission: [2000, 4000],
+    expedition: [4000, 8000],
+    bounty: [4000, 8000],
+    attack: [3000, 6000],
+    defense: [2500, 5000],
+    pirate: [3000, 6000],
+    contract: [1500, 3000],
   } as Record<TieredSource, [number, number]>,
   /** Bonus au jeu actif (appliqués avant les paliers). */
-  multipliers: { expedition: 1.5, bounty: 1.5 } as Partial<Record<XpSource, number>>,
+  multipliers: { expedition: 1.5, bounty: 1.5, attack: 1.5, pirate: 1.5, defense: 1.25 } as Partial<Record<XpSource, number>>,
 };
 
 export type XpTierRules = typeof XP_TIER_RULES;

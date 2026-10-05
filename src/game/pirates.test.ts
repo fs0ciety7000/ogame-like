@@ -1,3 +1,4 @@
+import { XP_TIER_RULES } from "@/game/xpTiers";
 import { COMMANDER_XP } from "@/game/commanders";
 import { describe, expect, it } from "vitest";
 import {
@@ -144,7 +145,7 @@ describe("Factions hostiles", () => {
     const out = resolvePirateRaid(varan, p, defaultQueues(), Math.round(defensivePower(p) * 0.5), [], NOW);
     expect(out.combat.outcome).toBe("defender_win");
     expect(out.bounty.scrap).toBeGreaterThan(0);
-    expect(out.player.xp).toBe(varan.bounty.xp);
+    expect(out.player.xp).toBe(Math.round(varan.bounty.xp * (XP_TIER_RULES.multipliers.pirate ?? 1)));
     expect(pirateState(out.player, "varan")).toMatchObject({ notoriety: 3, repelled: 5, lairOpen: true, raidsWon: 1 });
     expect(out.debris.scrap).toBeGreaterThan(0);
     expect(out.report.attackerUid).toBe("pirates");
@@ -170,7 +171,7 @@ describe("Factions hostiles", () => {
     const won = resolvePirateRaid(gravhorn, hunter, defaultQueues(), Math.round(homeFleetPower(hunter) * 0.5), [], NOW);
     expect(won.combat.outcome).toBe("defender_win");
     expect(won.bounty).toMatchObject({ reinforcedSteel: 200, aiFragment: 200 });
-    expect(won.player.xp).toBe(gravhorn.bounty.xp);
+    expect(won.player.xp).toBe(Math.round(gravhorn.bounty.xp * (XP_TIER_RULES.multipliers.pirate ?? 1)));
     expect(won.report.attackerPseudo).toMatch(/Ambre/);
   });
 

@@ -17,10 +17,11 @@ describe("paliers d'XP journaliers", () => {
 
   it("applique les seuils de la source, jour par jour (heure de Paris)", () => {
     const p = { stats: {} } as Pick<PlayerState, "stats">;
-    expect(applyXpTiers(p, "mission", 3000, NOW, rules)).toBe(3000);
+    const [first] = rules.tiers.mission;
+    expect(applyXpTiers(p, "mission", first, NOW, rules)).toBe(first);
     expect(applyXpTiers(p, "mission", 60, NOW, rules)).toBe(30);
-    // Autre source : compteur séparé, plein tarif.
-    expect(applyXpTiers(p, "defense", 40, NOW, rules)).toBe(40);
+    // Autre source : compteur séparé, plein tarif (bonus de défense compris).
+    expect(applyXpTiers(p, "defense", 40, NOW, rules)).toBe(Math.round(40 * (rules.multipliers.defense ?? 1)));
     // Lendemain : remise à zéro.
     expect(applyXpTiers(p, "mission", 60, NOW + 24 * 3600_000, rules)).toBe(60);
   });
