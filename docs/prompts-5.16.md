@@ -14,9 +14,9 @@ Les 5 boss mondiaux, les 7 officiers rares, l'en-tête du passe et le sceau « c
 
 | Fichiers manquants | Nombre | Repli actuel | Prompts |
 |:--|--:|:--|:--|
-| `public/assets/chronicles/auto/<archétype>-boss.webp` pour confrerie, cartel, choeur, gravhorn, culte, inquisition | 6 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » |
+| `public/assets/chronicles/auto/inquisition-boss.webp` | 1 | images des chapitres faits main | `docs/prompts-generateur-5.4.md`, « Boss » |
 
-Les 7 sceaux et le boss de la Meute sont faits.
+Les 7 sceaux et 6 boss sur 7 sont faits.
 
 Une fois une image déposée, ajouter l'identifiant de l'archétype dans `AUTO_ART` (boss) ou `AUTO_SEALS` (sceau), dans `src/game/procedural.ts`. Un test vérifie que chaque identifiant déclaré a bien son fichier.
 

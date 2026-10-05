@@ -12756,7 +12756,7 @@ function objectiveCount(type, d, difficulty) {
   const raw = m > 0 ? clamp3(m * difficulty, base * 0.5, base * 3) : base * difficulty;
   return Math.max(1, Math.round(raw));
 }
-var AUTO_ART = ["meute"];
+var AUTO_ART = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "meute"];
 var AUTO_SEALS = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 var ARCHETYPES = [
   {
