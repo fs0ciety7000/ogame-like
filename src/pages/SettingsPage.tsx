@@ -721,7 +721,7 @@ function SoundCard() {
                 value={Math.round(volumes[c.id] * 100)}
                 aria-label={`Volume ${c.label}`}
                 onChange={(e) => setSfxVolume(c.id, Number(e.target.value) / 100)}
-                className="w-full accent-cyan-400"
+                className="w-full accent-cyan-glow"
               />
               <span className="text-xs text-slate-500">{c.description}</span>
             </div>

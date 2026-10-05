@@ -172,7 +172,7 @@ export function BlogEditorPage() {
                 const cat = blogCategory(p.category);
                 return (
                   <li key={p.id} className={cn("flex flex-wrap items-center gap-3 py-3", selected.has(p.id) && "bg-cyan-glow/[0.04]")}>
-                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={`Sélectionner « ${p.title} »`} className="h-4 w-4 shrink-0 cursor-pointer accent-cyan-400" />
+                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={`Sélectionner « ${p.title} »`} className="h-4 w-4 shrink-0 cursor-pointer accent-cyan-glow" />
                     <button type="button" onClick={() => setEditing({ post: p, images })} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                       <span className="h-14 w-24 shrink-0 border border-white/10 bg-space-900 bg-cover bg-center" style={p.coverUrl ? { backgroundImage: `url('${p.coverUrl}')` } : undefined} />
                       <span className="min-w-0">

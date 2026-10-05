@@ -95,7 +95,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
                 Durée : <strong className="text-slate-200">{formatDuration(minutes * 60)}</strong>
                 <input
                   type="range"
-                  className="mt-1 w-full accent-cyan-400"
+                  className="mt-1 w-full accent-cyan-glow"
                   min={PATROL_RULES.minMinutes}
                   max={PATROL_RULES.maxMinutes}
                   step={30}
@@ -271,7 +271,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
                 Stationnement : <strong className="text-slate-200">{hours} h</strong>
                 <input
                   type="range"
-                  className="mt-1 w-full accent-cyan-400"
+                  className="mt-1 w-full accent-cyan-glow"
                   min={ALLIANCE_RULES.garrisonMinHours}
                   max={ALLIANCE_RULES.garrisonMaxHours}
                   step={1}

@@ -68,10 +68,10 @@ export function HardResetCard() {
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-1.5 text-slate-200">
-          <input type="radio" className="accent-red-400" checked={scope === "all"} onChange={() => setScope("all")} /> Tous les joueurs ({players.length})
+          <input type="radio" className="accent-danger-glow" checked={scope === "all"} onChange={() => setScope("all")} /> Tous les joueurs ({players.length})
         </label>
         <label className="flex items-center gap-1.5 text-slate-200">
-          <input type="radio" className="accent-red-400" checked={scope === "player"} onChange={() => setScope("player")} /> Un joueur :
+          <input type="radio" className="accent-danger-glow" checked={scope === "player"} onChange={() => setScope("player")} /> Un joueur :
         </label>
         <select
           value={uid}

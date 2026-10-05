@@ -169,7 +169,7 @@ export function FleetsPanel({
             </p>
             <ThreatGauge fleet={f} className="mt-1.5" />
             {f.anomaly && (
-              <p className="mt-1 text-[11px] font-semibold text-violet-300">
+              <p className="mt-1 text-[11px] font-semibold text-violet-glow">
                 ⚗ Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.
               </p>
             )}

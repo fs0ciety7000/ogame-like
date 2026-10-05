@@ -25,9 +25,13 @@ export function setSeasonSkin(enabled: boolean) {
   useSeasonSkinStore.setState({ enabled });
 }
 
-/** Teinte du mois, ou null (désactivée, ou pas de chronique ce mois-ci). */
-export function useSeasonAccent(): { accent: string; label: string } | null {
+/** Teinte du mois, ou null (désactivée, ou pas de chronique ce mois-ci).
+ *  5.16 : `accent` est mêlée à l'accent du thème choisi (le mois colore, le thème reste maître) ;
+ *  `raw` garde la couleur pure du mois (illustrations, liserés de boss). */
+export function useSeasonAccent(): { accent: string; raw: string; label: string } | null {
   const enabled = useSeasonSkinStore((s) => s.enabled);
   if (!enabled) return null;
-  return chronicleOf(Date.now())?.theme ?? null;
+  const theme = chronicleOf(Date.now())?.theme;
+  if (!theme) return null;
+  return { ...theme, raw: theme.accent, accent: `color-mix(in srgb, ${theme.accent} 30%, var(--th-accent))` };
 }

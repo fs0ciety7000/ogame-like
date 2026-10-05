@@ -318,7 +318,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                   <Input value={d.version} onChange={(e) => set({ version: e.target.value.slice(0, 20) })} placeholder="5.8" className="h-9" />
                 </label>
                 <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" checked={d.pinned} onChange={(e) => set({ pinned: e.target.checked })} className="accent-cyan-400" />
+                  <input type="checkbox" checked={d.pinned} onChange={(e) => set({ pinned: e.target.checked })} className="accent-cyan-glow" />
                   <Pin className="h-3.5 w-3.5 text-gold-glow" /> Épingler en tête du blog
                 </label>
               </div>

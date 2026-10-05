@@ -562,7 +562,7 @@ body {
   position: absolute;
   border-radius: 999px;
   filter: blur(90px);
-  opacity: 0.26;
+  opacity: 0.2;
   animation: var(--animate-drift);
   /* Fondu de teinte quand on change de page. */
   transition: background-color 1.6s ease;

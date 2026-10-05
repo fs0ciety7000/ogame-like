@@ -33,11 +33,11 @@ export function SeasonGlow() {
   const image = fighting ? bossMonthOf(boss)?.boss.image : undefined;
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
-      {image && <img src={assetUrl(image)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.07] mix-blend-screen blur-[2px]" />}
+      {image && <img src={assetUrl(image)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.05] mix-blend-luminosity blur-[2px] grayscale" />}
       <div className={fighting ? "absolute inset-x-0 top-0 h-0.5 animate-pulse" : "absolute inset-x-0 top-0 h-px"} style={{ background: `linear-gradient(90deg, transparent, ${season.accent}, transparent)` }} />
-      <div className="absolute -top-40 left-1/2 h-80 w-[70vw] -translate-x-1/2 rounded-full blur-3xl" style={{ background: season.accent, opacity: fighting ? 0.24 : 0.12 }} />
-      <div className="absolute -bottom-40 -right-20 h-72 w-72 rounded-full blur-3xl" style={{ background: season.accent, opacity: fighting ? 0.16 : 0.08 }} />
-      {fighting && <div className="absolute -bottom-40 -left-20 h-72 w-72 rounded-full opacity-[0.12] blur-3xl" style={{ background: season.accent }} />}
+      <div className="absolute -top-40 left-1/2 h-80 w-[70vw] -translate-x-1/2 rounded-full blur-3xl" style={{ background: season.accent, opacity: fighting ? 0.14 : 0.08 }} />
+      <div className="absolute -bottom-40 -right-20 h-72 w-72 rounded-full blur-3xl" style={{ background: season.accent, opacity: fighting ? 0.1 : 0.05 }} />
+      {fighting && <div className="absolute -bottom-40 -left-20 h-72 w-72 rounded-full opacity-[0.08] blur-3xl" style={{ background: season.accent }} />}
     </div>
   );
 }

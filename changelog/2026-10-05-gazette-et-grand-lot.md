@@ -19,4 +19,5 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - Plafond hebdomadaire des jetons de butin : les jetons tirés en combat (boss, seigneurs, menaces, joueurs, expéditions) s'arrêtent à 25 par semaine, réglables dans les réglages des reliques. Le jeton du jour, la série, les défis, le passe et les récompenses fixes des boss n'y comptent pas. La jauge est affichée au casino.
 
 ## Correctifs
+- Couleurs du thème respectées partout : l'habillage du mois (et le boss de saison en cours) n'impose plus sa teinte orange. Il se mêle désormais à la couleur du thème, et l'image du boss en fond n'apporte plus que du relief, sans couleur. Les nébuleuses de chaque page, la frise de l'agenda, les badges du changelog et les quelques couleurs fixes restantes (violet, cyan) suivent le thème choisi. Un test empêche leur retour.
 - Recyclage : la capacité affichée et appliquée est désormais la cargaison (CAP) du Drone récupérateur, exactement comme sur sa fiche (CAP × niveau, technologies de cale et officiers compris). L'ancien réglage fixe « 250 par niveau », qui donnait 2 500 par drone au niveau 10 quelle que soit la fiche, est retiré.

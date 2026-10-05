@@ -36,7 +36,7 @@ function fromLocalInput(value: string): number | null {
 function Toggle({ label, hint, checked, disabled, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className={cn("flex cursor-pointer items-start gap-2 border border-white/5 p-2", disabled && "cursor-not-allowed opacity-50")}>
-      <input type="checkbox" className="mt-0.5 accent-cyan-400" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="mt-0.5 accent-cyan-glow" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>
         <span className="block text-xs font-semibold text-slate-200">{label}</span>
         <span className="block text-[11px] text-slate-500">{hint}</span>

@@ -33,13 +33,14 @@ export interface AgendaItem {
     | { type: "rotation"; startMs: number; eventType: string };
 }
 
+/** 5.16 : couleurs du thème choisi (variables CSS), plus de teintes figées. */
 export const AGENDA_COLORS: Record<AgendaKind, string> = {
-  leviathan: "#ff5c7a",
-  seasonboss: "#ff8a4c",
-  event: "#4be8ff",
-  chronicle: "#a78bfa",
-  season: "#ffd86b",
-  contest: "#5cf2b0",
+  leviathan: "var(--color-danger-glow)",
+  seasonboss: "var(--color-ember-glow)",
+  event: "var(--color-cyan-glow)",
+  chronicle: "var(--color-violet-glow)",
+  season: "var(--color-gold-glow)",
+  contest: "var(--color-mint-glow)",
 };
 
 export const AGENDA_LABELS: Record<AgendaKind, string> = {

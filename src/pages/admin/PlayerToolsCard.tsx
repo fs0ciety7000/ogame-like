@@ -40,7 +40,7 @@ export function PlayerToolsCard({ player, onDone }: { player: AdminPlayer; onDon
         <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-200" title="Constructions, recherches, unités et missions se terminent aussitôt ; aucun délai entre deux changements de poste d'officier.">
           <input
             type="checkbox"
-            className="accent-cyan-400"
+            className="accent-cyan-glow"
             checked={!!player.testMode}
             disabled={busy}
             onChange={(e) => void run(e.target.checked ? "Compte test activé" : "Compte test désactivé", () => adminPlayerAction(player.id, { action: "testMode", on: e.target.checked }))}

@@ -782,7 +782,7 @@ export function PlayersPanel() {
                       type="checkbox"
                       checked={st.unlocked}
                       title="Débloqué"
-                      className="accent-cyan-400"
+                      className="accent-cyan-glow"
                       onChange={(e) => set({ buildings: { ...draft.buildings, [b.id]: { ...st, unlocked: e.target.checked } } })}
                     />
                   </div>
